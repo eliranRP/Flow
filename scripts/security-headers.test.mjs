@@ -14,11 +14,11 @@ function directives(csp) {
   }));
 }
 
-test("every path gets the security headers, with the CSP report-only", () => {
+test("every path gets the security headers, with the CSP enforced", () => {
   const all = parseHeaders(read("public/_headers")).get("/*");
   assert.ok(all, "app/public/_headers has a /* rule");
-  assert.equal(all.get("content-security-policy-report-only"), CSP_PLACEHOLDER);
-  assert.equal(all.has("content-security-policy"), false, "the enforced CSP waits for the report-only period (0192)");
+  assert.equal(all.get("content-security-policy"), CSP_PLACEHOLDER);
+  assert.equal(all.has("content-security-policy-report-only"), false, "the CSP is enforced, not report-only (0242)");
   assert.equal(all.get("x-frame-options"), "DENY");
   assert.equal(all.get("x-content-type-options"), "nosniff");
   assert.equal(all.get("referrer-policy"), "strict-origin-when-cross-origin");
@@ -78,7 +78,7 @@ test("the placeholder is filled exactly once", () => {
 });
 
 test("a built dist names its own inline scripts", { skip: !existsSync(new URL("dist/_headers", root)) && "no app/dist" }, () => {
-  const csp = parseHeaders(read("dist/_headers")).get("/*")?.get("content-security-policy-report-only") ?? "";
+  const csp = parseHeaders(read("dist/_headers")).get("/*")?.get("content-security-policy") ?? "";
   const allowed = directives(csp).get("script-src") ?? [];
   for (const file of ["dist/index.html", "dist/404.html", "dist/app-shell"]) {
     for (const source of inlineScripts(read(file))) assert.ok(allowed.includes(scriptHash(source)), `${file} inline script is allowed`);

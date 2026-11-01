@@ -29,7 +29,7 @@ Every path (`/*`) gets these headers. The build writes the CSP into `dist/_heade
 
 **Why `'unsafe-inline'` for styles.** The inserted `<style>` elements hold values computed at runtime (the scrollbar gap), so hashes cannot list them, and the libraries take no nonce. Injected CSS cannot run script; script-src stays strict, which is what stops XSS.
 
-**Enforcing.** The CSP stays report-only for two weeks of normal use after this deploys. There is no report endpoint; violations show in the browser console, and the check is to open each tab, a sheet, sign-in and the auth callback on the hosted app with the console open. With none found, a follow-up PR renames the header to `Content-Security-Policy`, with the same value. A new third-party origin (a font, analytics, an embed) must be added to the policy in the same PR that adds it.
+**Enforcing.** The CSP stays report-only for two weeks of normal use after this deploys. There is no report endpoint; violations show in the browser console, and the check is to open each tab, a sheet, sign-in and the auth callback on the hosted app with the console open. With none found, a follow-up PR renames the header to `Content-Security-Policy`, with the same value. A new third-party origin (a font, analytics, an embed) must be added to the policy in the same PR that adds it. Done: see [0242](0242-csp-enforced.md).
 
 ## Alternatives rejected
 

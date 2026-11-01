@@ -520,6 +520,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | --- | --- | --- |
 | <a id="flow-838"></a>[FLOW-838](tasks/FLOW-838.md) | txn-step e2e: prev and next walk the list is flaky on CI | BUG (e2e) |
 | <a id="flow-839"></a>[FLOW-839](tasks/FLOW-839.md) | A daily and weekly security scan agent | SMALL CYCLE (docs) |
+| <a id="flow-841"></a>[FLOW-841](tasks/FLOW-841.md) | The Content-Security-Policy is enforced | SMALL CYCLE |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
