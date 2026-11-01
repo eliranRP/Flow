@@ -7,7 +7,7 @@ import { israelToday } from "../ui/date-math";
 import { ForecastScreen } from "./forecast-screen";
 import { topToast } from "../ui/top-toast";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { lineProjects } from "./forecast-add-line";
+import { addLineReady, lineProjects } from "./forecast-add-line";
 
 function LocationProbe() {
   const location = useLocation();
@@ -380,5 +380,16 @@ describe("lineProjects (FLOW-1006)", () => {
       { id: "old", name: "Old Ct", status: "finished" },
     ], "office")).toEqual([{ id: "p1", name: "Elm St" }, { id: "office", name: "כללי" }]);
     expect(lineProjects([{ id: "p1", name: "Elm St", status: "active" }], null)).toEqual([{ id: "p1", name: "Elm St" }]);
+  });
+});
+
+describe("addLineReady (FLOW-1006)", () => {
+  it("waits for the projects and the overhead project, but a failed overhead read does not hide the row", () => {
+    expect(addLineReady(false, false, { project: undefined, failed: false })).toBe(true);
+    expect(addLineReady(true, false, { project: null, failed: false })).toBe(false);
+    expect(addLineReady(true, true, { project: undefined, failed: false })).toBe(false);
+    expect(addLineReady(true, true, { project: undefined, failed: true })).toBe(true);
+    expect(addLineReady(true, true, { project: null, failed: false })).toBe(true);
+    expect(addLineReady(true, true, { project: { id: "office", name: "Office" }, failed: false })).toBe(true);
   });
 });

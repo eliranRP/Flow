@@ -56,3 +56,13 @@ export function lineProjects(projects: ReadonlyArray<{ id: string; name: string;
   const active = projects.filter((project) => project.status !== "finished" && project.id !== overheadId).map(({ id, name }) => ({ id, name }));
   return overheadId == null ? active : [...active, { id: overheadId, name: GENERAL_NAME }];
 }
+
+/**
+ * Whether the add row can show: the projects are read, and the overhead project is known, so it is listed as
+ * כללי and never under its own name for a moment. A failed overhead read does not hide the row: the projects
+ * are listed as they are.
+ */
+export function addLineReady(live: boolean, projectsRead: boolean, overhead: { project: unknown; failed: boolean }): boolean {
+  if (!live) return true;
+  return projectsRead && (overhead.project !== undefined || overhead.failed);
+}

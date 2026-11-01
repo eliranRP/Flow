@@ -19,7 +19,7 @@ import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
 import { ChangedLine, dayMonth, FORECAST_TITLE, ForecastFootnote, ForecastRowButton, MovedRow, signed } from "./forecast-parts";
 import { ForecastProjectView } from "./forecast-project-view";
-import { ForecastAddLine, lineProjects } from "./forecast-add-line";
+import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
 import { useOverheadProject } from "../overhead-project";
 import { type ForecastProject, forecastProjects } from "../forecast-projects";
 import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
@@ -446,8 +446,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             ) : null}
             </>
           )}
-          {/* Waits for the overhead project too, so it is listed as כללי, never under its own name for a moment. */}
-          {live && (projects.data == null || overhead.project === undefined) ? null : <ForecastAddLine month={month} projects={lineProjects(projectList, overheadId)} search={search} />}
+          {!addLineReady(live, projects.data != null, overhead) ? null : <ForecastAddLine month={month} projects={lineProjects(projectList, overheadId)} search={search} />}
           <ForecastFootnote />
         </>
       )}
