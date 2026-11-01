@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -92,6 +92,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category_delete"` | `id` | the category id `delete_category` used |
 | `undo` `kind: "category_move"` | `id` | the source category id `move_category_lines` used |
 | `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
+| `undo` `kind: "tax_bracket"` | `id` | the company id `set_tax_bracket` returned |
+| `get_property_returns`, `get_property_return_lines` | `project_id` | `list_projects` id |
 | `rename_category` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_name"` | `id` | the category id `rename_category` used |
 | `get_project_categories` | `id` | `list_projects` `projects[].id` |
@@ -903,7 +905,7 @@ Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior 
 { "idempotency_key": "inv-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "currency": "USD", "purchase_minor": 25000000, "arv_minor": 40000000, "value_date": null }
 ```
 
-Sets a project's investment figures: `currency` (an ISO code such as `USD` or `ILS`, default `ILS`; it cannot be cleared, and changing it does not convert the figures), then `purchase_minor`, `arv_minor` (after-repair value) and `value_minor` (worth today), in minor units of that currency, and `value_date` (YYYY-MM-DD). Name at least one; a key left out keeps its figure and `null` clears it. An amount must be a whole number of minor units, 0 or more; anything else, a currency that is not three capital letters, an impossible date, another key or none of the five is `validation`. Output `data`: the currency and figures after, `project_id`, `undo_kind: "project_investment"` and `id`. Undo puts back the currency and figures before, and is `conflict` when any of them changed since. Another company's project is `refused` / `project not found`. `get_project` returns the figures with rehab and equity in `investment` ([0143](../decisions/0143-project-investment.md)).
+Sets a project's investment figures: `currency` (an ISO code such as `USD` or `ILS`, default `ILS`; it cannot be cleared, and changing it does not convert the figures), then `purchase_minor`, `arv_minor` (after-repair value) and `value_minor` (worth today), in minor units of that currency, and `value_date` (YYYY-MM-DD), then `units` (how many units the property has, 1 to 9999) and `land_minor` (the land's part of the purchase, in minor units). Every value is kept by its date in `project_values` for `get_property_returns` appreciation; a value for an earlier date drops the values after it, so an undo leaves no value behind. Name at least one; a key left out keeps its figure and `null` clears it. An amount must be a whole number of minor units, 0 or more; anything else, a currency that is not three capital letters, an impossible date, another key or none of the seven is `validation`. Output `data`: the currency and figures after, `project_id`, `undo_kind: "project_investment"` and `id`. Undo puts back the currency and figures before (units and land too), and is `conflict` when any of them changed since. Another company's project is `refused` / `project not found`. `get_project` returns the figures with rehab and equity in `investment` ([0143](../decisions/0143-project-investment.md)).
 
 ### set_category_rehab
 
@@ -1172,6 +1174,43 @@ The company's next month, as Home's החודש הבא card, the Projects tab and
 `party_charges`, `transaction_id` required ([0178](../decisions/0178-party-charges.md)). Read tool. Output `data`: the line's charges from the same supplier (expense) or customer (income) in its currency and context (the same loan when the line pays one, else the same project and category), as the app's "לעומת הרגיל" sheet shows them. `party` as in `get_line_recurring` (`null` with no party, and then empty lists). `month` (YYYY-MM) is the line's; `month_amount_minor` the context's total that month. `typical_amount_minor` is the recurring charge's usual amount when it recurs and every line of the line's project is in this context (`typical_source: "recurring"`), else the median of its earlier complete months when it has at least 2 of the last 6 (`"earlier_months"`), else `null`. `change_percent` is signed and rounded, by size (92 is 92% more than usual; for income, a negative one is less money in). `others` counts its other charges in the last 24 months. `months[]` are the 6 months up to the line's, oldest first (`month`, `amount_minor`); `charges[]` the 12 newest posted ones (`id`, `doc_date`, `amount_minor`; a line still pending at the bank is not one, [0184](../decisions/0184-pending-bank-lines-hidden.md)). Expenses are negative. Another company's line is `refused`. A split line counts only its own part in the context (its project and category), never the whole transfer, and the recurring usual amount is the owner's when set ([0189](../decisions/0189-recurring-split-parts-usual-amount.md)).
 
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
+
+## Property returns · FLOW-450
+
+A property's returns the way *Real Estate by the Numbers* analyses a rental, with the lines behind every figure ([0244](../decisions/0244-property-returns.md)). Nothing is guessed: a figure whose input is missing is `null`, and `missing` names the input.
+
+### get_property_returns
+
+```json
+{ "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "from": "2026-01-01", "to": "2026-12-31" }
+```
+
+`from` and `to` are both given or neither (default: the last 12 months to today, Israel time). Amounts are minor units of the project's investment currency; lines in another currency are left out and their currencies listed in `other_currencies`. It reads the cash basis: posted, paid lines filed to the project, and its share of shared lines.
+
+- `statement`: `income_minor`, `opex_minor`, `noi_minor` (income + opex), `debt_service_minor`, `capex_minor`, `cash_flow_minor` (NOI + debt service + CapEx; the book puts CapEx below NOI), `not_counted_minor`, then `lines` (per line: `amount_minor`, `lines`) and `by_category` (per line: `category_id`, `name`, `amount_minor`, `lines`, largest first). Costs are negative.
+- Which line a category feeds: income categories are `income`, kept-out income is `not_counted`; the principal, interest and fees parts of a loan payment are `debt_service`; a category with `set_category_rehab` `true` is `capex`; a kept-out category is `not_counted`; the rest, a loan's escrow part included, is `opex`.
+- `sources`: `cash_flow_minor`, `principal_minor` (principal paid in the period), `appreciation_minor` (the value on or before `to` less the value on or before `from`, from `project_values`), `tax_savings_minor` ((purchase + rehab − land) ÷ 27.5 years × the tax bracket, for the days of the period), `depreciation_year_minor`, `building_minor`, `total_minor` (the four added, a missing one left out) and `total_bp` (total on the money in the deal, per year).
+- `equity`: `equity_today_minor` (value − loan balance), `forced_equity_minor` (ARV − purchase − rehab), `money_in_minor` (purchase + rehab so far − the principal of the project's loans; a refinanced loan counts once, through the loan that replaced it).
+- `metrics`: `cash_on_cash_bp` and `cap_rate_bp` (per year, basis points), `dscr_milli` (NOI ÷ debt service × 1000), `cash_flow_per_unit_month_minor`.
+- `inputs` echoes the figures used, with `value_start` and `value_end`. `missing` lists `purchase`, `value`, `value_history` (no value on or before `from`), `land`, `tax_bracket`, `units`.
+
+Another company's project is `not_found`.
+
+### get_property_return_lines
+
+```json
+{ "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "line": "opex", "category_id": null, "limit": 50, "offset": 0 }
+```
+
+The lines behind one figure, newest first. `line` is `income`, `opex`, `debt_service`, `capex`, `not_counted` or `principal` (the principal parts alone) for the period (`from`, `to` as above), or `rehab` for all time (the lines in the building cost and the money in the deal). `category_id` narrows to one category. Output: `rows[]` (`transaction_id`, `description`, `supplier_name`, `category_id`, `category_name`, `date`, `amount_minor` signed as in `get_property_returns`, `parts`: the loan parts in it, `shared`), `has_more`, and `total_minor` and `count` for the whole figure. `limit` is 1 to 200 (default 50). An unknown `line` is `validation`; another company's project is `not_found`.
+
+### set_tax_bracket
+
+```json
+{ "idempotency_key": "tax-1", "tax_bracket_percent": 24 }
+```
+
+Sets the owner's marginal income tax bracket (owner only), a percent from 0 to 100 with at most two decimals; `null` clears it. `get_property_returns` uses it for the tax savings of depreciation. Output `data`: `id` (the company), `tax_bracket_bp` (2400 = 24%), `prior`, `undo_kind: "tax_bracket"`. Undo, with the company id, puts the prior bracket back; it is `conflict` once the bracket was changed again.
 
 ## Loans · cycle 5
 
