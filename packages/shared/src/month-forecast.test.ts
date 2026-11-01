@@ -210,10 +210,10 @@ describe("buildMonthForecast: only the charges due this month (decision 0199)", 
   });
 
   describe("FLOW-1005: the project forecast edits of the month", () => {
-    const onProject = {
+    const onProject: ExpectedMonths = {
       ...expected,
       recurring: expected.recurring.map((party) => (party.party_id === "p-rent" ? { ...party, project_id: "pj-1" } : party)),
-    } as ExpectedMonths;
+    };
     const edit = (patch: Partial<MonthForecastEdit>): MonthForecastEdit => ({
       id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c-refund", category_name: "Utility refund",
       direction: "income", amount_minor: 17176, start_month: "2026-10", matched_transaction_id: null, ...patch,
