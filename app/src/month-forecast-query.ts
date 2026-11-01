@@ -8,7 +8,7 @@ import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * FLOW-141: the month-end forecast's data. Four reads (expected months, open invoices, the month's overrides and,
- * FLOW-1005, the projects' forecast edits of the month) go through the shared builder. FLOW-1007: Home's forecast
+ * FLOW-1005, the projects' forecast edits of the month) go through the shared builder. FLOW-1008: Home's forecast
  * row and the תזרים צפוי screen read this same query, so they show one number. It sits apart from the screen's
  * writes (forecast-month.ts), and the builder loads with its reads, so neither is in Home's entry.
  */

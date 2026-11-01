@@ -161,7 +161,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const older = useCashMonthData(monthKey);
   const base = cash.data?.base_currency ?? "ILS";
   // FLOW-364: the previous month up to the same day (the current month), and the month-end forecast for the
-  // forecast row (FLOW-1007: the תזרים צפוי screen's own read, so both show one number). Both on the current month only.
+  // forecast row (FLOW-1008: the תזרים צפוי screen's own read, so both show one number). Both on the current month only.
   const sameDay = useCashToDayQuery(shiftMonthKey(monthKey, -1), Number(today.slice(8, 10)), isCurrent);
   const monthForecast = useMonthForecastQuery(currentKey, isCurrent);
 

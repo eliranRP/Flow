@@ -107,7 +107,7 @@ function bandOf(): HTMLElement {
   return band;
 }
 
-describe("Home's forecast row (FLOW-1007)", () => {
+describe("Home's forecast row (FLOW-1008)", () => {
   it("shows the תזרים צפוי screen's own number: still to come, the owner's edits, a supplier bill as money out", async () => {
     rpc.impl = (name) => {
       const data: Record<string, unknown> = {
