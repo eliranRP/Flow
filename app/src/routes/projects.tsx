@@ -53,11 +53,25 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
       {/* FLOW-451: what the investment page's figures are made of: the statement, a line, a metric, a part. */}
-      <Route path="projects/:projectId/investment/returns" element={<PropertyStatementScreen />} />
-      <Route path="projects/:projectId/investment/returns/:line" element={<PropertyReturnLineScreen />} />
-      <Route path="projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen />} />
-      <Route path="projects/:projectId/investment/part/:part" element={<PropertyPartScreen />} />
+      {/* Two paths, not four: Cloudflare Pages takes at most 100 dynamic _redirects rules. */}
+      <Route path="projects/:projectId/investment/:section" element={<PropertyReturnsSection />} />
+      <Route path="projects/:projectId/investment/:section/:key" element={<PropertyReturnsItem />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
     </>
   );
+}
+
+/** /investment/returns is the statement; any other section goes back to the investment page. */
+function PropertyReturnsSection() {
+  const { section } = useParams();
+  return section === "returns" ? <PropertyStatementScreen /> : <Navigate to=".." relative="path" replace />;
+}
+
+/** /investment/returns/<line>, /investment/metric/<metric> and /investment/part/<part>. */
+function PropertyReturnsItem() {
+  const { section } = useParams();
+  if (section === "returns") return <PropertyReturnLineScreen />;
+  if (section === "metric") return <PropertyMetricScreen />;
+  if (section === "part") return <PropertyPartScreen />;
+  return <Navigate to="../.." relative="path" replace />;
 }

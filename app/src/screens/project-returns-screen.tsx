@@ -194,7 +194,8 @@ function LineBody({ line, categoryId, r, base, search, projectId, name, lines }:
 /** One line of the statement (or the principal parts): its categories, then its transactions by month. */
 export function PropertyReturnLineScreen({ sample, base: baseProp }: { sample?: ReturnsSample; base?: string } = {}) {
   const page = useReturnsPage(sample, baseProp);
-  const { line } = useParams();
+  const { line: named, key } = useParams();
+  const line = named ?? key;
   const location = useLocation();
   const categoryId = new URLSearchParams(location.search).get("category");
   if (!isReturnLine(line)) return <Navigate replace to={`${page.base}/returns${page.search}`} />;

@@ -56,7 +56,8 @@ function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: Propert
 /** A metric: cash-on-cash, cap rate, DSCR or cash flow per unit, with what it is made of. */
 export function PropertyMetricScreen({ sample, base: baseProp }: { sample?: ReturnsSample; base?: string } = {}) {
   const page = useReturnsPage(sample, baseProp);
-  const { metric } = useParams();
+  const { metric: named, key } = useParams();
+  const metric = named ?? key;
   if (!isMetric(metric)) return <Navigate replace to={`${page.base}${page.search}`} />;
   const title = page.returns == null ? "מדד" : metricPage(metric, page.returns).title;
   return (
@@ -85,7 +86,8 @@ function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey;
 /** A part of a figure (the building cost, the money in the deal, the forced equity) and its rehab lines, all time. */
 export function PropertyPartScreen({ sample, base: baseProp }: { sample?: ReturnsSample; base?: string } = {}) {
   const page = useReturnsPage(sample, baseProp);
-  const { part } = useParams();
+  const { part: named, key } = useParams();
+  const part = named ?? key;
   if (!isPart(part)) return <Navigate replace to={`${page.base}${page.search}`} />;
   const title = page.returns == null ? "חישוב" : partPage(part, page.returns).title;
   const back = page.returns == null ? "השקעה" : partPage(part, page.returns).back;
