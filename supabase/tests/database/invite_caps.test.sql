@@ -119,7 +119,7 @@ select public.switch_company(pg_temp.id('a'));
 select is(public.invite_member('ic-13@example.com', 'viewer')->>'existing', 'false',
   'a day later company A invites again');
 
--- flow-mcp's invite_member says why: invite_limit, not the generic refusal.
+-- A flow-mcp token cannot invite at all (decision 0241), at the cap or not.
 reset role;
 select public.store_mcp_credential(pg_temp.id('owner'), 'hash-ic-write-0001',
   array['read', 'write'], now() + interval '90 days', 'pepper-1');
@@ -132,8 +132,8 @@ select set_config('request.jwt.claim.sub', pg_temp.id('owner')::text, true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claims', json_build_object(
   'sub', pg_temp.id('owner'), 'role', 'authenticated', 'mcp_tid', pg_temp.id('cred'))::text, true);
-select is(public.mcp_invite_member('ic-mcp-1', 'ic-mcp@example.com', 'viewer')->'error',
-  '{"code": "refused", "message": "invite_limit"}'::jsonb, 'flow-mcp''s invite_member is refused with invite_limit');
+select throws_ok($$select public.invite_member('ic-mcp@example.com', 'viewer')$$, '42501', 'forbidden',
+  'a flow-mcp token is refused before the cap is read');
 select is(pg_temp.invites(pg_temp.id('a')), 20, 'and wrote no invite');
 
 -- claim_invite_email: three sends per invite, then invite_email_limit.

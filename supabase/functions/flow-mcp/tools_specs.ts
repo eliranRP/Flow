@@ -443,7 +443,7 @@ function writeTools() {
         },
       },
     }, true),
-    toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job.", {
+    toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job. No undo: it brings Flow in line with the bank, as the scheduled sync does.", {
       idempotency_key: { type: "string" },
     }, true),
     toolSpec("set_bank_accounts", "Choose which accounts of one Mercury connection sync to Flow (owner only), as the app's step 3 and its synced accounts list do. slot from list_bank_connections; account_ids: the accounts that sync, at least one, each listed on that connection; every other listed account is left out and not asked about again. from: where an account added now starts: start (all Mercury keeps) or a day (YYYY-MM-DD, not after today). Left out: the first choice starts at the start, an account added later starts today. Accounts already synced keep their start. An account taken out keeps the lines already imported; new ones stop. Returns id (the connection), slot, account_ids, skipped_account_ids, added (accounts newly synced), import_from (the connection's earliest start, or start) and reread (true when the next sync reads back to the new start; sync_bank brings the lines in now) and undo_kind (bank_accounts: undo with the connection id puts the accounts and starts back, a conflict once they changed again; lines already imported stay). Refusals: forbidden owner only; validation for an account not on the connection, a bad day or a day after today; not_found for a slot with no connection.", {
@@ -484,16 +484,6 @@ function writeTools() {
     toolSpec("rename_company", "Rename this company. 2 to 100 characters (code points) after trimming, with no control character. Undo restores the prior name.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
-    }, true),
-    toolSpec("invite_member", "Invite someone to this company by email (owner only), as Settings → צוות → הזמנה does. role is viewer (read only, the default) or editor (can file, split and change lines, but not the team, the company's name or currency, connectors or Jev settings). No email is sent: they see the invite after signing in with Google with that email, and join or decline it. Inviting an email with a pending invite again changes its role and returns existing true (no undo). The owner's own email or a member's is refused (already a member). More than 50 pending invites is refused (too many invites); more than 10 new invites for the company, or 20 by this user, in any 24 hours is refused (invite_limit). Returns id, email (lower case), role, status, existing and undo_kind; undo is kind invite with the invite id and cancels it while it is still pending.", {
-      idempotency_key: { type: "string" },
-      email: { type: "string" },
-      role: { type: "string", enum: ["editor", "viewer"] },
-    }, true),
-    toolSpec("set_member_role", "Change a member's role (owner only): editor or viewer. member_id is the member's user_id from list_team. Returns user_id, role, prior_role and undo_kind; undo is kind member_role with the user id, a conflict once the role changed again.", {
-      idempotency_key: { type: "string" },
-      member_id: { type: "string" },
-      role: { type: "string", enum: ["editor", "viewer"] },
     }, true),
     toolSpec("remove_member", "Remove a member from this company (owner only); they lose access at once. member_id is the member's user_id from list_team; the owner is not a member. Returns user_id, prior_role and undo_kind; undo is kind member_remove with the user id and adds them back with that role.", {
       idempotency_key: { type: "string" },

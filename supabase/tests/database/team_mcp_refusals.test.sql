@@ -1,9 +1,10 @@
--- FLOW-601 (decision 0167). The MCP team writes refuse with the reasons docs/mcp/TOOLS.md names,
--- not the generic "The write was refused.". Invented names and @example.com emails only.
+-- FLOW-601 (decision 0167). remove_member refuses with the reason docs/mcp/TOOLS.md names, not the generic
+-- "The write was refused.". Inviting and role changes are not MCP writes (decision 0241); see
+-- team_mcp_no_invites.test.sql. Invented names and @example.com emails only.
 
 begin;
 
-select plan(6);
+select plan(1);
 
 do $users$
 begin
@@ -40,24 +41,9 @@ $$;
 grant execute on function pg_temp.as_mcp() to authenticated, service_role;
 
 select pg_temp.as_mcp();
-select is(public.mcp_invite_member('tr-1', ' TR-Owner@example.com ', 'viewer')->'error',
-  '{"code": "refused", "message": "already a member"}'::jsonb, 'the owner''s own email is already a member');
-select is(public.mcp_invite_member('tr-2', 'not an email', 'viewer')->'error',
-  '{"code": "refused", "message": "invalid email"}'::jsonb, 'a malformed email is invalid email');
-select is(public.mcp_set_member_role('tr-3', (select id from tr where label = 'stranger'), 'editor')->'error',
-  '{"code": "refused", "message": "member not found"}'::jsonb, 'set_member_role on a non-member is member not found');
 select is(public.mcp_remove_member('tr-4', (select id from tr where label = 'stranger'))->'error',
   '{"code": "refused", "message": "member not found"}'::jsonb, 'remove_member on a non-member is member not found');
 
-reset role;
-insert into public.company_invites (company_id, email, role, invited_by)
-select (select id from tr where label = 'a'), 'tr-fill-' || n || '@example.com', 'viewer', (select id from tr where label = 'owner')
-from generate_series(1, 50) n;
-select pg_temp.as_mcp();
-select is(public.mcp_invite_member('tr-5', 'tr-one-more@example.com', 'viewer')->'error',
-  '{"code": "refused", "message": "too many invites"}'::jsonb, 'the 51st pending invite is too many invites');
-select is(public.mcp_invite_member('tr-6', 'tr-fill-1@example.com', 'editor')->'data'->>'existing', 'true',
-  'and a pending email still answers its invite (positive control)');
 
 select * from finish();
 rollback;
