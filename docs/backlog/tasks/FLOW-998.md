@@ -9,4 +9,4 @@
 - [x] Then the pick becomes one grouped pass over the charges' lines, with the same tie order. A full tie (same count and same latest date), arbitrary before, takes the lowest category id.
 - [x] Same answers: the outputs of `recurring_parties`, `recurring_schedule`, `recurring_changes`, `expected_months` and `company_next_month_inputs`, for every company on a local database and several days, are byte for byte the same before and after.
 - **Acceptance:** the recurring pgTAP files pass; local medians before and after in the PR; production after the deploy in the next report.
-- **Production (2026-11-01 report):** `recurring_parties` 79 → 64 ms, `recurring_changes` 81 → 64 ms (Flow QA, database time).
+- **Production (2026-11-01 report):** `recurring_parties` 79 → 64 ms (Flow QA, database time; 79 ms in the 2026-10-31 report).
