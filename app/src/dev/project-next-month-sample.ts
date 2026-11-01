@@ -120,7 +120,7 @@ export const JUNIPER_NEXT_EDITED: NextMonthSample = {
   ...JUNIPER_NEXT,
   edits: [
     { id: "e-repairs", kind: "change", row_key: "avg:repairs", category_id: null, direction: null, amount_minor: 120_000, pace: "once", start_month: "2026-11" },
-    { id: "e-power", kind: "remove", row_key: "avg:power", category_id: null, direction: null, amount_minor: null, pace: "once", start_month: "2026-11" },
+    { id: "e-power", kind: "remove", row_key: "avg:power", category_id: null, direction: null, amount_minor: null, pace: "month", start_month: "2026-11" },
     {
       id: "e-mgmt", kind: "add", row_key: null, category_id: "property-mgmt", category_name: "ניהול נכס", direction: "expense",
       amount_minor: 30_500, pace: "month", start_month: "2026-11",

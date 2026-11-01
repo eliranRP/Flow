@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(54);
+select plan(57);
 
 do $users$
 begin
@@ -124,6 +124,19 @@ select is(pg_temp.count_for(pg_temp.m('next2')), 1, 'a yearly line skips the mon
 insert into pfe_out (label, body)
 values ('remove1', public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:00000000-0000-4000-8000-0000000000a2'));
 select is(pg_temp.out_of('remove1')->'edit'->>'kind', 'remove', 'a row is taken out of the month');
+-- FLOW-1003: a removal holds from its month on, until the row is brought back.
+select is(pg_temp.out_of('remove1')->'edit'->>'pace', 'month', 'a removal is from its month on');
+select is(
+  (select count(*)::integer from jsonb_array_elements(public.project_forecast_edits_for(pg_temp.id('project'), pg_temp.m('next12'))) x
+   where x->>'kind' = 'remove' and x->>'row_key' = 'avg:00000000-0000-4000-8000-0000000000a2'),
+  1,
+  'a removed row stays out of the months after'
+);
+select is(
+  public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('next'), 'avg:00000000-0000-4000-8000-0000000000a2')->'undo',
+  '{"drop": [], "put": []}'::jsonb,
+  'a row removed for an earlier month is already out of the next one'
+);
 select is(
   public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:00000000-0000-4000-8000-0000000000a2')->'undo',
   '{"drop": [], "put": []}'::jsonb,
@@ -245,11 +258,11 @@ select is(pg_temp.out_of('reset2')->>'removed', '1', 'a month''s reset drops the
 select is(pg_temp.count_for(pg_temp.m('now')), 3, 'this month''s edits stay');
 select public.undo_project_forecast(pg_temp.id('project'), pg_temp.out_of('reset2')->'undo');
 
--- An added line that starts this month is removed outright; a paced one that started earlier, for one month.
+-- An added line that starts this month is removed outright; a paced one that started earlier, from that month on.
 insert into pfe_out (label, body)
 values ('remove2', public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'add:' || (pg_temp.out_of('add1')->'edit'->>'id')));
 select is(pg_temp.out_of('remove2')->'edit', 'null'::jsonb, 'removing a line added this month deletes it');
-select is(pg_temp.count_for(pg_temp.m('next3')), 1, 'it is gone from the months after too');
+select is(pg_temp.count_for(pg_temp.m('next3')), 2, 'it is gone from the months after too (the monthly change and the removal stay)');
 select is(
   public.undo_project_forecast(pg_temp.id('project'), pg_temp.out_of('remove2')->'undo')->>'put',
   '1',
@@ -258,7 +271,7 @@ select is(
 select is(
   public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('next12'), 'add:' || (pg_temp.out_of('add2')->'edit'->>'id'))->'edit'->>'kind',
   'remove',
-  'a yearly line added for an earlier month is taken out of that month only'
+  'a yearly line added for an earlier month is taken out from that month on'
 );
 
 -- MCP writes, with a write token for the owner.

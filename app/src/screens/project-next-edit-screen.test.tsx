@@ -113,9 +113,9 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
     await waitFor(() => {
       expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "avg:power" });
     });
-    expect(await screen.findByText("הוסר מהצפי: חשמל ומים")).toBeTruthy();
+    expect(await screen.findByText("הוסר מהצפי מנובמבר והלאה: חשמל ומים")).toBeTruthy();
     // FLOW-969: the removal can be taken back, from under the header, and its ביטול sends the undo.
-    expect(screen.getByText("הוסר מהצפי: חשמל ומים").closest<HTMLElement>("[data-place]")?.dataset.place).toBe("top");
+    expect(screen.getByText("הוסר מהצפי מנובמבר והלאה: חשמל ומים").closest<HTMLElement>("[data-place]")?.dataset.place).toBe("top");
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: UNDO }); });
   });
