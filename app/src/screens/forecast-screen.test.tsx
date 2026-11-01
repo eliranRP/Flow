@@ -37,20 +37,43 @@ describe("ForecastScreen", () => {
     expect(other).not.toHaveAttribute("aria-expanded");
   });
 
+  it("switches to לפי פרויקט: a section per project with its net, the general costs last, and a row opens its page (FLOW-1004)", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("project")} />, { route: "/forecast" });
+    expect(screen.getByRole("radio", { name: "לפי פרויקט" })).toHaveAttribute("aria-checked", "true");
+    const names = Array.from(document.querySelectorAll(".ui-forecast-section-head > span:first-child")).map((node) => node.textContent);
+    expect(names).toEqual(["Northgate Co", "Elm St", "כללי"]);
+    const elm = screen.getByRole("region", { name: "Elm St" });
+    expect(within(elm).getByText("+$1,476")).toBeTruthy();
+    expect(within(elm).getAllByRole("button").map((row) => row.getAttribute("aria-label"))).toEqual([
+      "Elm St, unit 2, +$1,650",
+      expect.stringMatching(/^(Streaming|Cloud storage), −\$87$/),
+      expect.stringMatching(/^(Streaming|Cloud storage), −\$87$/),
+    ]);
+    fireEvent.click(within(elm).getByRole("button", { name: "Elm St, unit 2, +$1,650" }));
+    expect(screen.getByRole("heading", { name: /Elm St, unit 2/ })).toBeTruthy();
+  });
+
   it("moves between the views with the arrow keys, focus following the checked chip (roving tabindex)", () => {
     renderWithProviders(<div dir="rtl"><ForecastScreen sample={monthForecastBoardSample("board")} /></div>, { route: "/forecast" });
     const items = screen.getByRole("radio", { name: "לפי פריט" });
+    const projects = screen.getByRole("radio", { name: "לפי פרויקט" });
     const categories = screen.getByRole("radio", { name: "לפי קטגוריה" });
     expect(items).toHaveAttribute("tabindex", "0");
+    expect(projects).toHaveAttribute("tabindex", "-1");
     expect(categories).toHaveAttribute("tabindex", "-1");
-    // Under dir=rtl the next chip is to the left (with two chips, either arrow reaches the other one).
+    // Under dir=rtl the next chip is to the left: פריט, then פרויקט, then קטגוריה.
     items.focus();
     fireEvent.keyDown(items, { key: "ArrowLeft" });
+    expect(projects).toHaveAttribute("aria-checked", "true");
+    expect(document.activeElement).toBe(projects);
+    fireEvent.keyDown(projects, { key: "ArrowLeft" });
     expect(categories).toHaveAttribute("aria-checked", "true");
     expect(categories).toHaveAttribute("tabindex", "0");
     expect(document.activeElement).toBe(categories);
     expect(screen.getByRole("region", { name: "יוצא" })).toBeTruthy();
     fireEvent.keyDown(categories, { key: "ArrowRight" });
+    expect(projects).toHaveAttribute("aria-checked", "true");
+    fireEvent.keyDown(projects, { key: "ArrowRight" });
     expect(items).toHaveAttribute("aria-checked", "true");
     expect(document.activeElement).toBe(items);
   });

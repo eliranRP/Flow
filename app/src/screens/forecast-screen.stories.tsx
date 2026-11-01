@@ -44,6 +44,9 @@ export const Changed: Story = { name: "Forecast · changed, reset line", render:
 export const AllArrived: Story = { name: "Forecast · all arrived", render: () => <BoardForecast variant="empty" /> };
 /** לפי קטגוריה: each category's month so far and still to come, with the rent category open (MonthForecastCategory). */
 export const ForecastByCategory: Story = { name: "Forecast · by category", render: () => <BoardForecast variant="category" /> };
+
+/** לפי פרויקט (FLOW-1004): a section per project with its net, the general costs last. */
+export const ForecastByProject: Story = { name: "Forecast · by project", render: () => <BoardForecast variant="project" /> };
 /** FLOW-970: the forecast's read failed: the title stays, the failure card says what happened, with נסו שוב and צריך עזרה?. */
 export const ForecastFailed: Story = { name: "Forecast · failed", render: () => <BoardForecast variant="failed" /> };
 /** FLOW-970: offline, the board's figures stay with the moment they are from. */

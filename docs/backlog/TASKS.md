@@ -412,6 +412,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1001"></a>[FLOW-1001](tasks/FLOW-1001.md) | The company צפי page lists every general-cost row | BUG |
 | <a id="flow-1002"></a>[FLOW-1002](tasks/FLOW-1002.md) | A general-cost row is edited like any project's row | SMALL UI |
 | <a id="flow-1003"></a>[FLOW-1003](tasks/FLOW-1003.md) | A removed forecast row stays out the next months | SMALL DB |
+| <a id="flow-1004"></a>[FLOW-1004](tasks/FLOW-1004.md) | The month-end forecast by project | SMALL UI |
 
 ## Projects and reports
 

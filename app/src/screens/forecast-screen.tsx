@@ -17,7 +17,9 @@ import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
 import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
-import { ChangedLine, dayMonth, FORECAST_TITLE, ForecastFootnote, itemWhat, itemWhen, MovedRow, signed } from "./forecast-parts";
+import { ChangedLine, dayMonth, FORECAST_TITLE, ForecastFootnote, ForecastRowButton, MovedRow, signed } from "./forecast-parts";
+import { ForecastProjectView } from "./forecast-project-view";
+import { type ForecastProject, forecastProjects } from "../forecast-projects";
 import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
 import { ForecastCategoryView, type ForecastView, ForecastViewSwitch } from "./forecast-category-view";
 import { ForecastItemPage } from "./forecast-item-page";
@@ -42,6 +44,8 @@ export type ForecastSample = {
   soFar?: ForecastSoFar;
   view?: ForecastView;
   openCategories?: readonly string[];
+  /** לפי פרויקט's names and order (the dashboard's projects, live). */
+  projects?: readonly ForecastProject[];
   failed?: boolean;
   offlineSince?: number;
 };
@@ -70,24 +74,6 @@ function decodeKey(raw: string): string | null {
 /** The big number: the sign is U+2212 when it is negative, as Home's line writes it. */
 export function forecastBigText(minor: bigint, currency = "ILS"): string {
   return minor < 0n ? signed(minor, "−", currency) : formatAmountText(minor, currency);
-}
-
-function ForecastRowButton({ item, today, onOpen, leaving }: { item: ForecastItem; today: string; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
-  const name = item.name === "" ? "ללא שם" : item.name;
-  const amount = item.direction === "income" ? signed(item.minor, "+", item.currency) : signed(item.minor, "−", item.currency);
-  const figure = <Amount agorot={item.minor} size="list" currency={item.currency} direction={item.direction} income={item.direction === "income"} />;
-  return (
-    <li className={cx("ui-forecast-li", leaving && "ui-forecast-leaving")}>
-      <button type="button" className="ui-forecast-row" data-forecast-key={item.key} onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
-        <span className="ui-forecast-initial" aria-hidden="true">{name.slice(0, 1)}</span>
-        <span className="ui-forecast-text">
-          <span className="ui-forecast-name">{name}</span>
-          <span className="ui-forecast-meta">{`${itemWhat(item)} · ${itemWhen(item, today)}`}</span>
-        </span>
-        <span className={cx("ui-forecast-amount", item.overridden && "ui-forecast-edited")}>{figure}</span>
-      </button>
-    </li>
-  );
 }
 
 function ForecastSection({
@@ -168,7 +154,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const open = openKey == null ? null : build?.items.find((item) => item.key === openKey) ?? null;
   const soFarQuery = useForecastSoFarQuery(month, base, live && byCategory && data != null);
   const categories = useCategoriesQuery(live && (byCategory || open?.category_id != null));
-  const projects = useDashboardQuery(live && open?.project_id != null);
+  const byProject = view === "projects";
+  const projects = useDashboardQuery(live && (byProject || open?.project_id != null));
   // A sample with no month by category draws its categories with nothing so far, never a skeleton that stays.
   const soFar = live ? soFarQuery.data ?? null : sample.soFar ?? NO_SO_FAR;
   // The row that opened the page takes the focus back when it closes.
@@ -361,7 +348,25 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
           )}
           <ChangedLine changed={changed} onReset={resetAll} />
           <ForecastViewSwitch view={view} onPick={setView} />
-          {byCategory ? (
+          {byProject ? (
+            live && projects.data == null ? (
+              projects.isError ? (
+                <PageLoadFailed title="הפרויקטים לא נטענו" offline={!online} onRetry={() => void projects.refetch()} />
+              ) : (
+                <DelayedSkeleton>
+                  <ListSkeleton />
+                </DelayedSkeleton>
+              )
+            ) : (
+              <ForecastProjectView
+                groups={forecastProjects(build, sample?.projects ?? projects.data?.projects ?? [])}
+                currency={base}
+                today={today}
+                onOpenItem={openItem}
+                leavingKey={leavingKey}
+              />
+            )
+          ) : byCategory ? (
             soFar == null ? (
               live && soFarQuery.isError ? (
                 <PageLoadFailed title="הקטגוריות לא נטענו" offline={!online} onRetry={() => void soFarQuery.refetch()} />

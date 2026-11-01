@@ -211,9 +211,10 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
  * `board` is the MonthForecast frame; `changed` moves its largest invoice to next month (the
  * MonthForecastChanged frame); `empty` has nothing left to arrive (StatesForecastEmpty); `category` opens
  * לפי קטגוריה with the rent category open (MonthForecastCategory); `failed` is the forecast's failed read and
- * `offline` the board's figures from 09:41 with no connection (FLOW-970).
+ * `offline` the board's figures from 09:41 with no connection (FLOW-970); `project` opens לפי פרויקט, with Elm St's
+ * rent and two small charges filed to Elm St and the Northgate invoice to Northgate Co (FLOW-1004).
  */
-export type BoardForecastVariant = "board" | "changed" | "empty" | "category" | "failed" | "offline";
+export type BoardForecastVariant = "board" | "changed" | "empty" | "category" | "project" | "failed" | "offline";
 
 /** 09:41 Israel time on the board's day: the moment the offline frame's figures are from. */
 const BOARD_OFFLINE_SINCE = Date.parse("2026-10-11T06:41:00Z");
@@ -225,6 +226,7 @@ const BOARD_OFFLINE_SINCE = Date.parse("2026-10-11T06:41:00Z");
  */
 export function monthForecastBoardSample(variant: BoardForecastVariant = "board"): MonthForecastSampleShape {
   const empty = variant === "empty";
+  const byProject = variant === "project";
   const today = empty ? "2026-10-30" : "2026-10-11";
   const small = [
     ["Streaming", 8700],
@@ -255,8 +257,9 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
         months_seen: 6,
         seen_this_month: false,
         category_id: "cat-bills",
+        ...(byProject && index < 2 ? { project_id: "p-elm" } : {}),
       })),
-      { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false, category_id: "cat-rent" },
+      { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false, category_id: "cat-rent", ...(byProject ? { project_id: "p-elm" } : {}) },
     ],
   };
   const unpaid = empty ? [] : [
@@ -298,7 +301,8 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     months: cashMonths([["2026-05", 23_100, 27_400], ["2026-06", 31_200, 24_800], ["2026-07", 28_600, 26_100], ["2026-08", 27_900, 29_300], ["2026-09", 14_200, 52_400], ["2026-10", 24_878, 42_069]]),
     data: { month: "2026-10", base: "USD", build, overrides },
     soFar,
-    view: category ? "categories" : "items",
+    view: category ? "categories" : byProject ? "projects" : "items",
+    ...(byProject ? { projects: [{ id: "p-north", name: "Northgate Co" }, { id: "p-elm", name: "Elm St" }] } : {}),
     openCategories: category ? ["income:cat-rent"] : [],
     ...(variant === "failed" ? { failed: true } : {}),
     ...(variant === "offline" ? { offlineSince: BOARD_OFFLINE_SINCE } : {}),

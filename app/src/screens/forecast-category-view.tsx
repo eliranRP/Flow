@@ -7,11 +7,12 @@ import { onRadioArrow } from "../ui/segmented-control";
 import { type ForecastCategoryRow, type ForecastCategorySide, itemCharge } from "./forecast-categories";
 import { itemLate, itemWhen, signed } from "./forecast-parts";
 
-/** The two views of the forecast (the board's chips): one row per item, or one per category. */
-export type ForecastView = "items" | "categories";
+/** The views of the forecast (the board's chips): one row per item, items by project (FLOW-1004), or one row per category. */
+export type ForecastView = "items" | "projects" | "categories";
 
 const VIEWS: readonly (readonly [ForecastView, string])[] = [
   ["items", "לפי פריט"],
+  ["projects", "לפי פרויקט"],
   ["categories", "לפי קטגוריה"],
 ];
 
