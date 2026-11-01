@@ -418,6 +418,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1006"></a>[FLOW-1006](tasks/FLOW-1006.md) | הוספת קטגוריה לצפי on the תזרים צפוי screen | SMALL UI |
 | <a id="flow-1008"></a>[FLOW-1008](tasks/FLOW-1008.md) | Home's forecast row shows the תזרים צפוי screen's number | SMALL UI |
 | <a id="flow-1009"></a>[FLOW-1009](tasks/FLOW-1009.md) | The forecast item page's back link sits under the notch | SMALL UI |
+| <a id="flow-1010"></a>[FLOW-1010](tasks/FLOW-1010.md) | כל כמה זמן on a forecast item's page | DB + UI |
 
 ## Projects and reports
 

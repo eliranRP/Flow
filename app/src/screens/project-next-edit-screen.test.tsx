@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import type { ForecastLoan } from "../project-next-loans";
 import { draftOf } from "../project-next-edit";
@@ -238,5 +238,24 @@ describe("ProjectNextEditScreen, a loan row (decision 0190)", () => {
     expect(amountField()).toHaveValue(draftOf(next?.interestMinor ?? 0n));
     expect(screen.getByText("נובמבר · הוצאה · לפי ההלוואה")).toBeTruthy();
     expect(screen.getByText("ההלוואה עצמה לא משתנה. השינוי שלך גובר על לוח ההלוואה בצפי.")).toBeTruthy();
+  });
+});
+
+describe("ProjectNextEditScreen, an added line's pace (FLOW-1010)", () => {
+  it("starts at the line's own pace, so saving a new amount keeps it repeating", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { edit: {}, undo: UNDO } : null, error: null }));
+    renderWithProviders(
+      <Routes>
+        <Route path="/projects/:projectId/profit/next" element={<p>the forecast page</p>} />
+        <Route path="/projects/:projectId/profit/next/edit/:rowKey" element={<ProjectNextEditScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_EDITED, rowKey: "add:e-mgmt" }} />} />
+      </Routes>,
+      { route: "/projects/juniper-ct/profit/next/edit/add:e-mgmt" },
+    );
+    expect(screen.getByRole("button", { name: "כל כמה זמן: כל חודש" })).toBeTruthy();
+    fireEvent.change(amountField(), { target: { value: "320" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.objectContaining({ p_edit: { row_key: "add:e-mgmt", amount_minor: 32_000, pace: "month" } }));
+    });
   });
 });

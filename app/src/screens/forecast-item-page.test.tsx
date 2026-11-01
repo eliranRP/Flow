@@ -267,3 +267,60 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     await waitFor(() => { expect(screen.getAllByTestId("where").at(-1)?.textContent).toBe("/forecast"); });
   });
 });
+
+describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
+  function withAddedLine(lineStart: string): ForecastSample {
+    const sample = board();
+    const base = sample.data.build.income[0];
+    if (base == null) throw new Error("no income item");
+    const added = { ...base, key: "added:e-1", kind: "added" as const, name: "הכנסות שכירות", usual: 72_900n, minor: 72_900n, project_id: "p-green", project_name: null, pace: "once", line_start: lineStart, overridden: false, moved_out: false, late_days: 0, expected_on: null, due_on: null };
+    const build = { ...sample.data.build, items: [...sample.data.build.items, added], income: [added, ...sample.data.build.income] };
+    return { ...sample, data: { ...sample.data, build } };
+  }
+
+  it("makes a line added this month repeat: the project forecast's pace sheet writes the line itself", async () => {
+    rpc.mockClear();
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    fireEvent.click(await screen.findByRole("button", { name: "כל כמה זמן: פעם אחת" }));
+    const sheet = await screen.findByRole("dialog", { name: "כל כמה זמן" });
+    // The radios: פעם אחת, כל חודש, כל חודשיים, כל רבעון, כל שנה.
+    const month = within(sheet).getAllByRole("radio").find((radio) => {
+      const text = radio.textContent;
+      return text.startsWith("כל חודש") && !text.startsWith("כל חודשיים");
+    });
+    if (month == null) throw new Error("no monthly radio");
+    fireEvent.click(month);
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", {
+        p_project_id: "p-green",
+        p_month: "2026-10",
+        p_edit: { row_key: "add:e-1", amount_minor: 72_900, pace: "month" },
+      });
+    });
+  });
+
+  it("shows the pace of a line added in an earlier month, and opens the project's forecast to change it", async () => {
+    renderForecast(withAddedLine("2026-09"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    const row = await screen.findByRole("link", { name: "כל כמה זמן: פעם אחת" });
+    expect(row).toHaveAttribute("href", "/projects/p-green/profit/next");
+  });
+
+  it("shows a recurring charge's pace and opens the charge, where it is set", async () => {
+    const sample = board();
+    const charge = sample.data.build.items.find((item) => item.kind === "recurring");
+    if (charge == null) throw new Error("no recurring item");
+    renderForecast(sample, `/forecast/item/${encodeURIComponent(charge.key)}`);
+    const row = await screen.findByRole("link", { name: "כל כמה זמן: כל חודש" });
+    expect(row.getAttribute("href")).toMatch(/^\/recurring\//);
+  });
+
+  it("has no pace row on an invoice", async () => {
+    const sample = board();
+    const invoice = sample.data.build.items.find((item) => item.kind === "invoice");
+    if (invoice == null) throw new Error("no invoice");
+    renderForecast(sample, `/forecast/item/${encodeURIComponent(invoice.key)}`);
+    await screen.findByRole("button", { name: /^מתי צפוי/ });
+    expect(screen.queryByRole("link", { name: /^כל כמה זמן/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^כל כמה זמן/ })).toBeNull();
+  });
+});

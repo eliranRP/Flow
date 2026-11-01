@@ -169,6 +169,7 @@ function forecastItemJson(item: ForecastItem) {
     key: item.key,
     direction: item.direction,
     kind: item.kind,
+    pace: item.pace,
     name: item.name,
     currency: item.currency,
     usual_minor: Number(item.usual),
