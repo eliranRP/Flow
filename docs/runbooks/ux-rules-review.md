@@ -1,6 +1,6 @@
 # UX rules review (every 3 days)
 
-A recurring review of the UI code that reached `main` since the last run, against the UX/UI rules in [`.claude/skills/ux-ui-design-review-rules/`](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) (142 rules: hierarchy, forms, tables and mobile, feedback and states, charts, motion, tokens and accessibility). The owner asked for it on 2026-11-01. It runs in the **UI/UX review** lane, next to the [mobile UI/UX review cycle](ui-ux-review-cycle.md): that cycle screenshots whole screens; this one reads each change. Like that cycle, it never builds fixes; it files them as tasks for the UI lanes.
+A recurring review of the UI code that reached `main` since the last run, against the UX/UI rules in [`.claude/skills/ux-ui-design-review-rules/`](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) (142 rules: hierarchy, forms, tables and mobile, feedback and states, charts, motion, tokens and accessibility). The owner asked for it on 2026-11-01. It runs in the **UI/UX review** lane, in turns with the [mobile UI/UX review cycle](ui-ux-review-cycle.md) (the lane runs one job at a time): that cycle screenshots whole screens; this one reads each change. Like that cycle, it never builds fixes; it files them as tasks for the UI lanes.
 
 | Run | When (Israel time) | Scope |
 | --- | --- | --- |
@@ -16,13 +16,13 @@ The scheduled task fires into one long-running cloud session. That session's his
 
 ## Scope
 
-The base is the `main` sha recorded at the end of the last run. With none, use `git rev-list -1 --before="3 days ago" origin/main`. List the PRs merged in `<base>..origin/main` (`git log --format='%h %s'`), and keep the files a user sees: `app/src/**/*.tsx`, `app/src/**/*.css`, `app/src/ui/**`, copy and string files. Skip PRs that change only docs, tests, migrations, edge functions or CI. If nothing is in scope, say so in one line and stop.
+The base is the `main` sha recorded at the end of the last run. With none, use `git rev-list -1 --before="3 days ago" origin/main`. List the commits in `<base>..origin/main` (`git log --format='%h %s'`; each subject ends with its PR number), and keep the files a user sees: `app/src/**/*.tsx`, `app/src/**/*.css`, `app/src/ui/**`, copy and string files. Skip PRs that change only docs, tests, migrations, edge functions or CI. If nothing is in scope, say so in one line and stop.
 
 ## Review
 
 1. Group the in-scope changes by screen. For each screen, state its purpose and its one primary action (SKILL.md "How to run a review").
 2. Read the diff and enough of the component around it to see the states: empty, loading, error, offline, long data, keyboard, touch.
-3. Shoot the changed screens: build Storybook (`pnpm --filter app build-storybook`) and run `node scripts/story-shots.mjs --dir app/storybook-static --out <tmp> <storyId>...` for the stories of the changed components (320 and 393 px, dark and light). Block service workers. If the build fails, review from code and say so.
+3. Shoot the changed screens: build Storybook (`pnpm build-storybook`) and run `node scripts/story-shots.mjs --dir app/storybook-static --out <tmp> <storyId>...` for the stories of the changed components (320 and 393 px, dark and light). Block service workers. Desktop widths are reviewed from the code. If the build fails, review from code and say so.
 4. Go through the rule files in the SKILL.md order, skipping those that don't apply. Flag only what the diff or the shots show, with evidence (file:line or shot name). DESIGN-RULES and the owner's decisions win over the skill where they disagree: drop the finding, and note the conflict in the report once.
 5. Use subagents for a large scope: one per screen group, on Sonnet 5.5, with "report findings with file:line, rule file § n, severity and a concrete fix; don't change code". Check every finding yourself before you count it.
 
