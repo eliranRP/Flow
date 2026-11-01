@@ -132,13 +132,13 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "after_overhead": boolean,"base_currency": string,"books_closed_through": string | null,"cash_basis": string,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
+                    "after_overhead": boolean,"base_currency": string,"books_closed_through": string | null,"cash_basis": string,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_bracket_bp": number | null,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_bracket_bp"?: number | null,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_bracket_bp"?: number | null,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
                     {
@@ -1021,15 +1021,40 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"projects": {
+                },"project_values": {
                   Row: {
-                    "after_overhead": boolean | null,"arv_minor": number | null,"budget_agorot": number | null,"company_id": string,"created_at": string,"finished_on": string | null,"group_id": string | null,"id": string,"investment_currency": string,"name": string,"purchase_minor": number | null,"state_label": string | null,"status": Database["public"]['Enums']["project_status"],"sumit_budget_section_id": number | null,"updated_at": string,"value_date": string | null,"value_minor": number | null
+                    "company_id": string,"created_at": string,"project_id": string,"value_date": string,"value_minor": number
                   }
                   Insert: {
-                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id": string,"created_at"?: string,"finished_on"?: string | null,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"name": string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
+                    "company_id": string,"created_at"?: string,"project_id": string,"value_date": string,"value_minor": number
                   }
                   Update: {
-                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id"?: string,"created_at"?: string,"finished_on"?: string | null,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"name"?: string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
+                    "company_id"?: string,"created_at"?: string,"project_id"?: string,"value_date"?: string,"value_minor"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_values_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_values_company_id_project_id_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"projects": {
+                  Row: {
+                    "after_overhead": boolean | null,"arv_minor": number | null,"budget_agorot": number | null,"company_id": string,"created_at": string,"finished_on": string | null,"group_id": string | null,"id": string,"investment_currency": string,"land_minor": number | null,"name": string,"purchase_minor": number | null,"state_label": string | null,"status": Database["public"]['Enums']["project_status"],"sumit_budget_section_id": number | null,"units": number | null,"updated_at": string,"value_date": string | null,"value_minor": number | null
+                  }
+                  Insert: {
+                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id": string,"created_at"?: string,"finished_on"?: string | null,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"land_minor"?: number | null,"name": string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"units"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
+                  }
+                  Update: {
+                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id"?: string,"created_at"?: string,"finished_on"?: string | null,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"land_minor"?: number | null,"name"?: string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"units"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
                   }
                   Relationships: [
                     {
@@ -1737,6 +1762,12 @@ isOneToOne: false
 "get_project_group":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
                            },
+"get_property_return_lines":
+{ Args: { "p_category_id"?: string,"p_from"?: string,"p_limit"?: number,"p_line": string,"p_offset"?: number,"p_project_id": string,"p_to"?: string }; Returns: Json
+                           },
+"get_property_returns":
+{ Args: { "p_from"?: string,"p_project_id": string,"p_to"?: string }; Returns: Json
+                           },
 "get_setup_suggestions":
 { Args: { "p_today"?: string }; Returns: Json
                            },
@@ -2135,6 +2166,9 @@ isOneToOne: false
 "mcp_set_project_investment":
 { Args: { "p_idempotency_key": string,"p_patch": Json,"p_project_id": string }; Returns: Json
                            },
+"mcp_set_tax_bracket":
+{ Args: { "p_bp": number,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_split_line":
 { Args: { "p_idempotency_key": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
@@ -2439,6 +2473,9 @@ isOneToOne: false
                            },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
+                           },
+"set_tax_bracket":
+{ Args: { "p_bp": number }; Returns: Json
                            },
 "set_transaction_cash":
 { Args: { "p_id": string,"p_in_cash": boolean }; Returns: Json

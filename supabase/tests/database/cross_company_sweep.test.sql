@@ -170,6 +170,7 @@ begin
   insert into private.category_moves (company_id, from_id, into_id, moved)
   values (a, category2, category, '[]'::jsonb) returning id into token; perform pg_temp.put('move', token);
 
+  insert into public.project_values (company_id, project_id, value_date, value_minor) values (a, project, '2026-01-31', 4321987); -- FLOW-450: a value of A's property
   insert into public.project_groups (company_id, name) values (a, 'Victim Sample Group') returning id into token;
   perform pg_temp.put('group', token);
   update public.projects set group_id = token where id = project;
