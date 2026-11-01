@@ -74,8 +74,8 @@ Severity guide: **Critical**: one company reads or changes another company's dat
 
 | ID | Attack | Where in Flow | How to check |
 | --- | --- | --- | --- |
-| F1 | Vulnerable dependencies | `pnpm-lock.yaml`, Deno imports | `pnpm audit --prod` and `pnpm audit`. The Dependabot lane bumps versions; this agent reports only what that lane hasn't picked up, and anything Critical. |
-| F2 | Unpinned remote imports | `deno.json`, `import_map.json` (`esm.sh`, `npm:`, `jsr:`) | Every import is pinned to an exact version. Flag new unpinned or `@latest` imports. |
+| F1 | Vulnerable dependencies | `pnpm-lock.yaml`, Deno imports | `pnpm audit --prod` and `pnpm audit`. Dependabot and the daily Dependabot review handle routine bumps; this agent fixes what they haven't, Critical first. Dependabot doesn't cover the Deno imports (`.github/dependabot.yml`), so check those by hand against their advisories. |
+| F2 | Unpinned remote imports | Each function's `deno.json` and `import_map.json` under `supabase/functions/` (`esm.sh`, `npm:`, `jsr:`) | Every import is pinned to an exact version. Flag new unpinned or `@latest` imports. |
 | F3 | GitHub Actions injection | `.github/workflows/` | No `pull_request_target` that checks out the head; no `${{ github.event.* }}` text (titles, bodies, branch names) inside `run:`, which must go through `env:`; least `permissions:`; fork PRs get no secrets. Keep: actions pinned by full SHA. |
 | F4 | Install-time code | `package.json` scripts, `patches/`, new dependencies | New `postinstall`/`prepare` scripts in dependencies; every file in `patches/` is reviewed when it changes. |
 | F5 | Lockfile and override tampering | `pnpm-lock.yaml`, `pnpm.overrides` | A diff that changes a resolved URL or integrity hash without a version bump. |

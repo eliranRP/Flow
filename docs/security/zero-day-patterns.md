@@ -42,9 +42,9 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** feed the same input to both sides: `https://allowed.example@evil.example`, `https://allowed.example.evil.example`, mixed case, a trailing dot, `%2e`, duplicate keys, invalid UTF-8.
 
 ### P6. Text that looks like something else
-- **Seen in:** Trojan Source (CVE-2021-42574): bidirectional control characters made code read differently from how it runs. GitHub (2019): the dotless `ı` mapped to `i` when an email was uppercased, so a password reset went to the wrong address.
+- **Seen in:** Trojan Source (CVE-2021-42574): bidirectional control characters made code read differently from how it runs. GitHub (2019, write-up "Hacking GitHub with Unicode's dotless 'i'" by John Gracey): the dotless `ı` mapped to `i` when an email was case-folded, so a password reset went to the wrong address.
 - **Pattern:** Unicode normalization, case mapping, or direction marks make two different values look, or compare, the same.
-- **In Flow:** this is a Hebrew, right-to-left app. Payee and file names with U+202E (right-to-left override) or other bidi controls can make an amount or a name read wrong. Invite email matching and payee de-duplication need to be checked for case and Unicode normalization (NFC/NFKC).
+- **In Flow:** this is a Hebrew, right-to-left app, so text direction and normalization matter more than usual: user-entered names, email matching and de-duplication.
 - **Hunt:** names with bidi controls, zero-width characters and homoglyphs. Check that the code compares normalized values, and that the screen shows a name exactly as it's stored, inside `<bdi>`.
 
 ### P7. An argument shape nobody expected
@@ -66,7 +66,7 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** D1 in Stage 1, plus redirects, DNS names that resolve to private addresses, IPv6 and decimal IP forms.
 
 ### P10. An id that isn't checked
-- **Seen in:** Optus (2022): an API endpoint returned customer records for any id, with no authentication.
+- **Seen in:** the Optus breach (2022, Australia): reported as an internet-facing API that returned customer records with no authentication.
 - **Pattern:** a resource is fetched by id, and the id is taken as proof of access.
 - **In Flow:** every route param (`invoiceId`, `itemKey`, `partyId`, project ids) and every MCP id argument. The risk is highest on new screens, which add new RPCs.
 - **Hunt:** B1. For each new RPC, call it as a member of company B with an id from company A, in a test.
