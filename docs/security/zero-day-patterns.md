@@ -66,7 +66,7 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** D1 in Stage 1, plus redirects, DNS names that resolve to private addresses, IPv6 and decimal IP forms.
 
 ### P10. An id that isn't checked
-- **Seen in:** the Optus breach (2022, Australia): reported as an internet-facing API that returned customer records with no authentication.
+- **Seen in:** the Optus breach (2022, Australia): an internet-facing API returned customer records with no authentication, as the Australian Information Commissioner's 2024 court case against Optus describes.
 - **Pattern:** a resource is fetched by id, and the id is taken as proof of access.
 - **In Flow:** every route param (`invoiceId`, `itemKey`, `partyId`, project ids) and every MCP id argument. The risk is highest on new screens, which add new RPCs.
 - **Hunt:** B1. For each new RPC, call it as a member of company B with an id from company A, in a test.
