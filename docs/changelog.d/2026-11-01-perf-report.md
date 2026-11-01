@@ -1,0 +1,1 @@
+The 2026-11-01 daily perf report is in `docs/qa/perf/`. FLOW-998 is in production: `recurring_parties` fell from 79 to 64 ms in the database. Review (FLOW-984, ready to build) and the company profit page's next month are still over 0.5 s.
