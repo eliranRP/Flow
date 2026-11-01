@@ -79,7 +79,8 @@ function rowAction(row: FormulaRow, resolve: Resolve, readOnly: boolean): RowAct
     return resolve({ kind: "edit", field: row.value.add });
   }
   if (row.target == null) return null;
-  if (readOnly && row.target.kind === "edit") return null;
+  // A viewer opens no input, and not the purchase's acquisition lines (the investment card's row is static for them).
+  if (readOnly && (row.target.kind === "edit" || (row.target.kind === "line" && row.target.line === "acquisition"))) return null;
   return resolve(row.target);
 }
 

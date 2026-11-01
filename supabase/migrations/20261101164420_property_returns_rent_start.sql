@@ -79,9 +79,10 @@ as $$
       )
   ),
   rent as (
-    -- The first rent payment: the first income line that counts.
+    -- The first rent payment: the first income line that counts, in the project's investment currency.
     select min(x.line_date) as first_rent
     from cash x
+    join public.projects pr on pr.id = p_project_id and pr.investment_currency = x.currency
     where x.kind = 'income' and not coalesce(x.excluded_from_pnl, false)
   )
   select x.transaction_id, x.part::text, x.category_id, x.currency, x.amount_minor, x.line_date, x.shared,

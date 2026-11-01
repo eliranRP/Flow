@@ -46,8 +46,10 @@ Deno.test("get_property_return_lines forwards the line, the category and the pag
     name: "get_property_return_lines",
     body: { p_project_id: PROJECT, p_line: "opex", p_category_id: CATEGORY, p_limit: 20, p_offset: 40 },
   });
-  await callTool("get_property_return_lines", { project_id: PROJECT, line: "holding" }, ["read"], rpc);
-  assertEquals(calls.at(-1)?.body.p_line, "holding");
+  for (const line of ["income", "opex", "debt_service", "capex", "principal", "before_rent", "not_counted", "acquisition", "renovation", "holding", "financing", "money_in"]) {
+    await callTool("get_property_return_lines", { project_id: PROJECT, line }, ["read"], rpc);
+    assertEquals(calls.at(-1)?.body.p_line, line);
+  }
   await callTool("get_property_return_lines", { project_id: PROJECT, line: "rehab" }, ["read"], rpc);
   assertEquals(calls.at(-1), {
     name: "get_property_return_lines",

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(61);
+select plan(66);
 
 do $users$
 begin
@@ -239,6 +239,36 @@ select is((public.get_property_return_lines(pg_temp.id('flat'), 'holding')->>'to
   'the holding costs line lists its lines');
 select is((public.get_property_return_lines(pg_temp.id('flat'), 'money_in')->>'count')::integer, 5,
   'money in lists the purchase, the two holding costs and the two loan proceeds');
+
+-- FLOW-453 review: a line in another currency before the first rent does not move the rent start,
+-- and a rehab cost and a loan payment before the rent land in renovation and holding, not CapEx.
+reset role;
+insert into prr (label, id) values ('curr', tests.fixture_project(pg_temp.id('co'), 'Example Currency Duplex'));
+insert into prr (label, id) values
+  ('curr_rent', tests.fixture_line(pg_temp.id('co'), 'prr:curr-rent', 100000, 'income', pg_temp.id('curr'), pg_temp.id('rent'), '2026-03-01')),
+  ('curr_roof', tests.fixture_line(pg_temp.id('co'), 'prr:curr-roof', 50000, p_project => pg_temp.id('curr'), p_category => pg_temp.id('roof'), p_doc_date => '2026-02-10')),
+  ('curr_usd', tests.fixture_line(pg_temp.id('co'), 'prr:curr-usd', 500000, 'income', pg_temp.id('curr'), pg_temp.id('rent'), '2026-01-15', p_currency => 'USD')),
+  ('curr_pay', tests.fixture_line(pg_temp.id('co'), 'prr:curr-pay', 100000, p_project => pg_temp.id('curr'), p_category => pg_temp.id('interest'), p_doc_date => '2026-02-15'));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values (pg_temp.id('co'), 'Currency mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 0, 'ILS', pg_temp.id('curr'));
+select tests.loan_split(pg_temp.id('curr_pay'), (select id from public.loans where name = 'Currency mortgage'), (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', coalesce(
+      (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+      pg_temp.id('interest')),
+    'needs_review', false) order by v.n)
+  from (values (1, 'interest', 50000), (2, 'escrow', 10000), (3, 'principal', 40000)) as v(n, part, amount)));
+select tests.authenticate_as('prr_owner');
+select is(public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->>'first_rent', '2026-03-01',
+  'the first rent is the rent in the investment currency, not the USD line before it');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'equity'->'money_in_parts'->>'renovation_minor')::bigint, -50000::bigint,
+  'a rehab cost before the first rent is renovation');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'equity'->'money_in_parts'->>'holding_minor')::bigint, -100000::bigint,
+  'a loan payment before the first rent is holding');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'capex_minor')::bigint, 0::bigint,
+  'the rehab cost before the rent is not CapEx');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'before_rent_minor')::bigint, -150000::bigint,
+  'the period costs before the rent are listed apart');
 
 select * from finish();
 rollback;

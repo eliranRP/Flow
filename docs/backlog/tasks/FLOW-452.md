@@ -11,3 +11,8 @@
 - [ ] `missing` does not name `rehab` when rehab is null because of costs in another currency.
 - [ ] Tests: the tax bracket sheet's save and clear, a viewer on the returns pages, the paging row.
 - [ ] (FLOW-453) The ⓘ sheets show an operator and a signed amount, so a subtracted part reads "− −$210,000". Show the amount unsigned next to its operator in every sheet (the sums stay signed).
+- [ ] (FLOW-453 r1) `get_property_returns`: check the range after the project lookup, so another company's project with a bad range reads as not found.
+- [ ] (FLOW-453 r1) Decision 0245: say that a kept-out category switched into rehab counts as CapEx after the first rent.
+- [ ] (FLOW-453 r1) "מחיר רכישה (מהתנועות)" includes closing costs: name it רכישה וסגירה where it means both.
+- [ ] (FLOW-453 r1) The statement's before_rent count can count a transaction twice (holding and renovation).
+- [ ] (FLOW-453 r1) The principal page's hero is positive while its lines are negative.

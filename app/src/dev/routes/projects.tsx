@@ -7,7 +7,7 @@ import { ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens"
 import { ProjectInvestmentScreen } from "../../screens/project-investment-screen";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "../../screens/project-returns-screen";
 import { PropertyMetricScreen, PropertyPartScreen } from "../../screens/project-returns-detail-screen";
-import type { LinesSource } from "../../screens/project-returns-data";
+import { RETURN_LINES, type LinesSource } from "../../screens/project-returns-data";
 import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../returns-sample";
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject, thisMonth } from "../project-cash-sample";
@@ -183,7 +183,7 @@ export function DevPropertyStatement() {
 
 export function DevPropertyLine() {
   const { line = "opex" } = useParams();
-  const known: readonly string[] = ["income", "opex", "debt_service", "capex", "not_counted", "principal"];
+  const known: readonly string[] = RETURN_LINES;
   return <PropertyReturnLineScreen sample={useDevReturnsSample(known.includes(line) ? (line as LinesSource) : "opex")} base={DEV_INVESTMENT} />;
 }
 
