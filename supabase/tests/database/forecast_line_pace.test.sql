@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(7);
+select plan(10);
 
 do $users$
 begin
@@ -69,6 +69,31 @@ values ('later', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp
   jsonb_build_object('row_key', 'add:' || pg_temp.id('line'), 'amount_minor', 80000)));
 select is(pg_temp.out_of('later')->'edit'->>'kind', 'change', 'a later month''s edit of the line is a change');
 select isnt(pg_temp.out_of('later')->'edit'->>'id', pg_temp.id('line')::text, 'and not the line itself');
+
+-- A change of the line for its first month, made the old way: the next save there drops it, and its undo
+-- puts it back.
+reset role;
+insert into public.project_forecast_edits (company_id, project_id, kind, row_key, amount_minor, pace, start_month)
+select p.company_id, p.id, 'change', 'add:' || pg_temp.id('line'), 50000, 'once', pg_temp.m('now')
+from public.projects p where p.id = pg_temp.id('project');
+select tests.authenticate_as('flp_owner');
+insert into flp_out (label, body)
+values ('over', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'),
+  jsonb_build_object('row_key', 'add:' || pg_temp.id('line'), 'amount_minor', 90000, 'pace', 'month')));
+select is(
+  (select count(*)::integer from jsonb_array_elements(public.project_forecast_edits_for(pg_temp.id('project'), pg_temp.m('now'))) x
+   where x->>'kind' = 'change' and x->>'row_key' = 'add:' || pg_temp.id('line')),
+  0,
+  'an older change of the line for its first month goes, so the new amount is the one used'
+);
+select is(jsonb_array_length(pg_temp.out_of('over')->'undo'->'put'), 2, 'the undo holds the line and the change');
+select public.undo_project_forecast(pg_temp.id('project'), pg_temp.out_of('over')->'undo');
+select is(
+  (select x->>'amount_minor' from jsonb_array_elements(public.project_forecast_edits_for(pg_temp.id('project'), pg_temp.m('now'))) x
+   where x->>'kind' = 'change' and x->>'row_key' = 'add:' || pg_temp.id('line')),
+  '50000',
+  'and the undo puts the change back'
+);
 
 select * from finish();
 rollback;

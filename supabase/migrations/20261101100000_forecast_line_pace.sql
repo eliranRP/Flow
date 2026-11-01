@@ -20,6 +20,7 @@ declare
   cat_kind text;
   prior public.project_forecast_edits%rowtype;
   added public.project_forecast_edits%rowtype;
+  gone jsonb;
   written public.project_forecast_edits%rowtype;
   undo jsonb;
 begin
@@ -52,12 +53,21 @@ begin
       where e.id = substr(v_row_key, 5)::uuid and e.project_id = p_project and e.company_id = p_company and e.kind = 'add'
       for update;
       if found and added.start_month = p_month then
+        -- A change of the line made for this month before (the old path) would still set its amount: it goes,
+        -- and the undo puts it back with the line.
+        with d as (
+          delete from public.project_forecast_edits e
+          where e.project_id = p_project and e.company_id = p_company and e.kind = 'change' and e.row_key = v_row_key
+            and e.start_month = p_month
+          returning private.pfe_json(e) as j
+        )
+        select coalesce(jsonb_agg(d.j), '[]'::jsonb) into gone from d;
         update public.project_forecast_edits e
         set amount_minor = v_amount, pace = v_pace, created_by = auth.uid(), created_at = now()
         where e.id = added.id
         returning * into written;
         return jsonb_build_object('edit', private.pfe_json(written),
-          'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', jsonb_build_array(private.pfe_json(added))),
+          'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', jsonb_build_array(private.pfe_json(added)) || gone),
           'after', jsonb_build_array(private.pfe_json(written)));
       end if;
     end if;
