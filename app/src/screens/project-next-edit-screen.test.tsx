@@ -19,11 +19,12 @@ afterEach(() => {
 
 const UNDO = { drop: ["new-edit"], put: [] };
 
-function renderEdit(preset: Partial<ProjectNextEditSample> = {}, add = false) {
+function renderEdit(preset: Partial<ProjectNextEditSample> = {}, add = false, query = "") {
   const sample: ProjectNextEditSample = { ...JUNIPER_PROFIT, next: JUNIPER_NEXT, ...preset };
-  const path = add ? "/projects/juniper-ct/profit/next/add" : "/projects/juniper-ct/profit/next/edit/x";
+  const path = add ? `/projects/juniper-ct/profit/next/add${query}` : "/projects/juniper-ct/profit/next/edit/x";
   return renderWithProviders(
     <Routes>
+      <Route path="/forecast" element={<p>the month-end forecast</p>} />
       <Route path="/projects/:projectId/profit/next" element={<p>the forecast page</p>} />
       <Route path="/projects/:projectId/profit/next/add" element={<ProjectNextEditScreen add sample={sample} />} />
       <Route path="/projects/:projectId/profit/next/edit/:rowKey" element={<ProjectNextEditScreen sample={sample} />} />
@@ -174,6 +175,35 @@ describe("ProjectNextEditScreen, a new line", () => {
       });
     });
     expect(await screen.findByText("נוסף לצפי: ניהול נכס")).toBeTruthy();
+  });
+
+  it("adds a line for this month from the תזרים צפוי screen, and goes back there (FLOW-1006)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T09:00:00Z"));
+    try {
+      rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { edit: {}, undo: UNDO } : null, error: null }));
+      renderEdit({ categoryId: "property-mgmt" }, true, "?month=2026-10&back=forecast");
+      expect(screen.getByText("רק בצפי של אוקטובר")).toBeTruthy();
+      fireEvent.change(amountField(), { target: { value: "171.76" } });
+      fireEvent.click(screen.getByRole("button", { name: "הוספה לצפי" }));
+      await waitFor(() => {
+        expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.objectContaining({ p_month: "2026-10" }));
+      });
+      expect(await screen.findByText("the month-end forecast")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("ignores a month that has ended, or one past the forecast's", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T09:00:00Z"));
+    try {
+      renderEdit({ categoryId: "property-mgmt" }, true, "?month=2026-09");
+      expect(screen.getByText("רק בצפי של נובמבר")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("asks for an amount when the picked category has no usual month", async () => {

@@ -2,7 +2,7 @@ import "../ui/lazy.css";
 import { type CategoryRow, formatAmountText } from "@flow/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { parseAmountMinor } from "../add-entry";
 import { projectRows } from "../by-currency";
 import { useCompanyCurrency } from "../company-currency";
@@ -34,7 +34,7 @@ import { useWriteGate } from "../use-is-viewer";
 import { useGoBack } from "../ui/back";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
-import { formatDayMonth } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
 import { ForecastAmountField, ForecastBars } from "../ui/forecast-edit-parts";
 import { IconRow } from "../ui/icon-row";
 import { ProjectsIcon, RepeatIcon, TagIcon } from "../ui/icons";
@@ -95,7 +95,9 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const goBack = useGoBack();
-  const backTo = `/projects/${projectId}/profit/next${search}`;
+  // FLOW-1006: the תזרים צפוי screen adds a line for this month (?month=) and comes back to itself (?back=forecast).
+  const [searchParams] = useSearchParams();
+  const backTo = add && searchParams.get("back") === "forecast" ? `/forecast${search}` : `/projects/${projectId}/profit/next${search}`;
   const gate = useWriteGate(backTo);
   const companyCurrency = useCompanyCurrency();
   const detail = useProjectQuery(sample ? "" : projectId, allTime());
@@ -104,7 +106,12 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
   const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null);
   const currency = next.currency;
-  const writes = useProjectForecastWrites(projectId, next.month);
+  const askedMonth = add ? searchParams.get("month") : null;
+  // Only this month or the forecast's own (next) month: a month that has ended is not forecast.
+  const month = askedMonth != null && /^\d{4}-(0[1-9]|1[0-2])$/.test(askedMonth) && askedMonth >= israelToday().slice(0, 7) && askedMonth <= next.month
+    ? askedMonth
+    : next.month;
+  const writes = useProjectForecastWrites(projectId, month);
   const create = useCreateForecastCategory();
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));
   const [pace, setPace] = useState<ForecastPace>(sample?.pace ?? "once");
@@ -117,7 +124,6 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const paceRef = useRef<HTMLButtonElement>(null);
 
   const forecast = next.forecast;
-  const month = next.month;
   const categories = next.categories;
   const row = add || forecast == null ? null : forecast.rows.find((item) => item.key === rowKey) ?? forecast.removed.find((item) => item.key === rowKey) ?? null;
   const choices = useMemo(() => categoryChoices({

@@ -1,4 +1,4 @@
-import { buildMonthForecast, type ForecastBuild, type ForecastOverrideRow } from "@flow/shared";
+import { buildMonthForecast, type ForecastBuild, type ForecastOverrideRow, parseMonthEdits } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { readStoredCurrency } from "./company-currency";
 import { getSupabase } from "./lib/supabase";
@@ -12,7 +12,8 @@ import { waitForAccessToken } from "./wait-for-session";
  * FLOW-141: the month-end forecast's data. Three reads (expected months, open invoices, the
  * month's overrides) go through the shared builder, so the screen and Home's number agree. Writes
  * are the app's RPCs (set_forecast_item, reset_forecast_month); their undo is the previous state,
- * sent back the same way.
+ * sent back the same way. FLOW-1005: a fourth read, the projects' forecast edits of the month
+ * (company_forecast_edits_for), counts the lines the owner added and drops the charges they removed.
  */
 
 export type MonthForecast = {
@@ -60,16 +61,19 @@ export function useMonthForecastQuery(month: string, active = true) {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const [expected, unpaid, overrides, base] = await Promise.all([
+      const [expected, unpaid, overrides, edits, base] = await Promise.all([
         supabase.rpc("expected_months", { p_months: 1 }),
         supabase.rpc("list_unpaid", {}),
         supabase.rpc("forecast_overrides_for", { p_month: month }),
+        supabase.rpc("company_forecast_edits_for", { p_month: month }),
         // A failed read fails the forecast: counting a dollar company in shekels would show nothing due.
         readStoredCurrency(),
       ]);
       if (expected.error) throw expected.error;
       if (unpaid.error) throw unpaid.error;
       if (overrides.error) throw overrides.error;
+      if (edits.error) throw edits.error;
+      const projectEdits = parseMonthEdits(edits.data);
       const schemas = await loadReadSchemas();
       const rows = schemas.unpaidRowSchema.array().parse(unpaid.data ?? []);
       const current = (overrides.data ?? []) as ForecastOverrideRow[];
@@ -82,6 +86,8 @@ export function useMonthForecastQuery(month: string, active = true) {
           expected: schemas.expectedMonthsSchema.parse(expected.data),
           unpaid: rows,
           overrides: current,
+          edits: projectEdits.edits,
+          overheadProjectId: projectEdits.overheadProjectId,
         }),
       };
     },

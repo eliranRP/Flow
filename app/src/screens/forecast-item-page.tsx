@@ -43,6 +43,10 @@ function lateText(days: number): string {
  * recurring charge opens its own page (קבועים › the charge); the list is the fallback for a key with no party.
  */
 function sourceOf(item: ForecastItem, search: string): { title: string; hint: string; to: string } {
+  // FLOW-1005: a line the owner added to a project's forecast opens that project's צפי page.
+  if (item.kind === "added") {
+    return { title: "שורה בצפי של הפרויקט", hint: "פתיחת הצפי של הפרויקט", to: item.project_id == null ? `/forecast${search}` : `/projects/${item.project_id}/profit/next${search}` };
+  }
   if (item.kind !== "invoice") {
     const charge = itemCharge(item);
     const to = charge == null ? `/recurring${search}` : chargeHref(charge.direction, charge.partyId, search, charge.projectId);
@@ -134,7 +138,7 @@ export function ForecastItemPage({
   const shownAmount = amount === "" ? "" : `${income ? "+" : "−"}${symbol}${groupThousands(amount)}`;
   const whenText = when === "week" ? "השבוע" : when === "moved" ? "לא החודש" : `עד ${dayMonth(monthEndChoice)}`;
   const whenHint = when === "moved" ? `יוצא מהצפי של ${monthLabel}` : late ? "עבר המועד הרגיל" : `בצפי של ${monthLabel}`;
-  const kindText = item.kind !== "invoice" ? "קבוע" : income ? "חשבונית פתוחה" : "חשבון ספק פתוח";
+  const kindText = item.kind === "added" ? "הוספת" : item.kind !== "invoice" ? "קבוע" : income ? "חשבונית פתוחה" : "חשבון ספק פתוח";
 
   // Escape closes the When sheet first (the sheet's own), then the page.
   useEffect(() => {
@@ -201,7 +205,9 @@ export function ForecastItemPage({
         <IconRow className="ui-forecast-page-row" titled icon={<DocumentIcon size={22} />} label={source.title} value={source.hint} to={source.to} name={`${source.title}, ${source.hint}`} />
       </List>
       <p className="ui-forecast-page-hint">
-        {item.kind !== "invoice" ? `משנה רק את הצפי של ${monthLabel}. החיוב הקבוע לא משתנה.` : "משנה רק את הצפי. החשבונית עצמה לא משתנה."}
+        {item.kind === "added"
+          ? `משנה רק את הצפי של ${monthLabel}. השורה בצפי של הפרויקט לא משתנה.`
+          : item.kind !== "invoice" ? `משנה רק את הצפי של ${monthLabel}. החיוב הקבוע לא משתנה.` : "משנה רק את הצפי. החשבונית עצמה לא משתנה."}
       </p>
       <Button variant="primary" full onClick={save}>שמירת השינוי בצפי</Button>
       <ChoiceSheet

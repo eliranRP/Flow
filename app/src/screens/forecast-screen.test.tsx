@@ -6,6 +6,13 @@ import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
 import { ForecastScreen } from "./forecast-screen";
 import { topToast } from "../ui/top-toast";
+import { Route, Routes, useLocation } from "react-router-dom";
+import { addLineReady, lineProjects } from "./forecast-add-line";
+
+function LocationProbe() {
+  const location = useLocation();
+  return <p>{`${location.pathname}${location.search}`}</p>;
+}
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null, error: null })));
 
@@ -51,6 +58,21 @@ describe("ForecastScreen", () => {
     ]);
     fireEvent.click(within(elm).getByRole("button", { name: "Elm St, unit 2, +$1,650" }));
     expect(screen.getByRole("heading", { name: /Elm St, unit 2/ })).toBeTruthy();
+  });
+
+  it("adds a line: הוספת קטגוריה לצפי asks which project, then opens its add page for this month (FLOW-1006)", async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/forecast" element={<ForecastScreen sample={monthForecastBoardSample("project")} />} />
+        <Route path="/projects/:projectId/profit/next/add" element={<LocationProbe />} />
+      </Routes>,
+      { route: "/forecast" },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הוספת קטגוריה לצפי" }));
+    const sheet = await screen.findByRole("dialog", { name: "לאיזה פרויקט" });
+    expect(within(sheet).getAllByRole("radio").map((row) => row.textContent)).toEqual(["Northgate Co", "Elm St"]);
+    fireEvent.click(within(sheet).getByRole("radio", { name: "Elm St" }));
+    expect(await screen.findByText("/projects/p-elm/profit/next/add?month=2026-10&back=forecast")).toBeTruthy();
   });
 
   it("moves between the views with the arrow keys, focus following the checked chip (roving tabindex)", () => {
@@ -347,5 +369,27 @@ describe("ForecastScreen", () => {
     const foot = document.querySelector(".ui-forecast-foot");
     expect(foot?.textContent).toContain("הקישו על פריט כדי לשנות סכום או מועד.");
     expect(foot?.querySelector("a")).toBeNull();
+  });
+});
+
+describe("lineProjects (FLOW-1006)", () => {
+  it("lists the active projects, then the overhead project as כללי; a finished one is left out", () => {
+    expect(lineProjects([
+      { id: "p1", name: "Elm St", status: "active" },
+      { id: "office", name: "Office", status: "active" },
+      { id: "old", name: "Old Ct", status: "finished" },
+    ], "office")).toEqual([{ id: "p1", name: "Elm St" }, { id: "office", name: "כללי" }]);
+    expect(lineProjects([{ id: "p1", name: "Elm St", status: "active" }], null)).toEqual([{ id: "p1", name: "Elm St" }]);
+  });
+});
+
+describe("addLineReady (FLOW-1006)", () => {
+  it("waits for the projects and the overhead project, but a failed overhead read does not hide the row", () => {
+    expect(addLineReady(false, false, { project: undefined, failed: false })).toBe(true);
+    expect(addLineReady(true, false, { project: null, failed: false })).toBe(false);
+    expect(addLineReady(true, true, { project: undefined, failed: false })).toBe(false);
+    expect(addLineReady(true, true, { project: undefined, failed: true })).toBe(true);
+    expect(addLineReady(true, true, { project: null, failed: false })).toBe(true);
+    expect(addLineReady(true, true, { project: { id: "office", name: "Office" }, failed: false })).toBe(true);
   });
 });

@@ -19,6 +19,8 @@ import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
 import { ChangedLine, dayMonth, FORECAST_TITLE, ForecastFootnote, ForecastRowButton, MovedRow, signed } from "./forecast-parts";
 import { ForecastProjectView } from "./forecast-project-view";
+import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
+import { useOverheadProject } from "../overhead-project";
 import { type ForecastProject, forecastProjects } from "../forecast-projects";
 import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
 import { ForecastCategoryView, type ForecastView, ForecastViewSwitch } from "./forecast-category-view";
@@ -155,7 +157,12 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const soFarQuery = useForecastSoFarQuery(month, base, live && byCategory && data != null);
   const categories = useCategoriesQuery(live && (byCategory || open?.category_id != null));
   const byProject = view === "projects";
-  const projects = useDashboardQuery(live && (byProject || open?.project_id != null));
+  // The projects name לפי פרויקט's sections, the item page's project and the add row's sheet (FLOW-1006).
+  const projects = useDashboardQuery(live);
+  const overhead = useOverheadProject(live);
+  const overheadId = overhead.project?.id ?? null;
+  const projectList: ForecastProject[] = sample?.projects?.slice()
+    ?? (projects.data?.projects ?? []).map(({ id, name, status }) => ({ id, name, status, is_overhead: id === overheadId }));
   // A sample with no month by category draws its categories with nothing so far, never a skeleton that stays.
   const soFar = live ? soFarQuery.data ?? null : sample.soFar ?? NO_SO_FAR;
   // The row that opened the page takes the focus back when it closes.
@@ -360,7 +367,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               )
             ) : (
               <ForecastProjectView
-                groups={forecastProjects(build, sample?.projects ?? projects.data?.projects ?? [])}
+                groups={forecastProjects(build, projectList)}
                 currency={base}
                 today={today}
                 onOpenItem={openItem}
@@ -439,6 +446,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             ) : null}
             </>
           )}
+          {!addLineReady(live, projects.data != null, overhead) ? null : <ForecastAddLine month={month} projects={lineProjects(projectList, overheadId)} search={search} />}
           <ForecastFootnote />
         </>
       )}

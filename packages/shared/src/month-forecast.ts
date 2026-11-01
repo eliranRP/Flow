@@ -12,6 +12,11 @@ import { dueInMonth } from "./recurring-due.ts";
  * months (dueInMonth, the rule the expected_months cells follow; decision 0199); a late one still
  * counts. A row's own number is never changed; an override only changes the forecast (its amount,
  * its day, or "not this month", which moves it out of the totals).
+ *
+ * FLOW-1005 (decision 0240): the owner's project forecast edits for the month count too, as each project's
+ * צפי page counts them (`company_forecast_edits_for`). A line they added is an item until its bank line
+ * comes; a recurring charge they removed leaves the forecast; a changed amount is the item's own number. A
+ * charge with no project takes the overhead project's edits. The category averages stay the project pages'.
  */
 
 /** One override as the server sends it (amounts are JSON numbers, whole agorot). */
@@ -22,14 +27,31 @@ export type ForecastOverrideRow = {
   moved_out: boolean;
 };
 
+/** One project forecast edit that applies to the month, as company_forecast_edits_for sends it. */
+export type MonthForecastEdit = {
+  id: string;
+  project_id: string;
+  kind: "change" | "remove" | "add";
+  /** `rec:<direction>:<party id>` for a recurring charge, `add:<edit id>` for an added line; null on an add. */
+  row_key: string | null;
+  category_id: string | null;
+  category_name?: string | null;
+  direction: "income" | "expense" | null;
+  amount_minor: number | null;
+  start_month: string;
+  /** An added line: the bank line that came as it this month, or null. */
+  matched_transaction_id?: string | null;
+};
+
 export type ForecastItem = {
   /**
    * `party:<direction>:<party id>:<currency>` for a recurring party (`:<project id>` added when the party is
-   * split by project, decision 0185), `invoice:<id>` for an invoice.
+   * split by project, decision 0185), `invoice:<id>` for an invoice, `added:<edit id>` for a line the owner
+   * added to a project's forecast (FLOW-1005).
    */
   key: string;
   direction: "income" | "expense";
-  kind: "recurring" | "invoice";
+  kind: "recurring" | "invoice" | "added";
   name: string;
   currency: string;
   /** Flow's own number, unsigned, in minor units. */
@@ -119,6 +141,9 @@ export function buildMonthForecast(input: {
   expected: ExpectedMonths | null;
   unpaid: readonly UnpaidRow[];
   overrides: readonly ForecastOverrideRow[];
+  /** FLOW-1005: the project forecast edits that apply to the month, and the project the general charges' edits are on. */
+  edits?: readonly MonthForecastEdit[];
+  overheadProjectId?: string | null;
   /** Sample data only: when set, dates are expected (usual day, or document date plus these days) and late items are marked. */
   paymentTermsDays?: number;
 }): ForecastBuild {
@@ -135,9 +160,25 @@ export function buildMonthForecast(input: {
     charges.set(base, (charges.get(base) ?? 0) + 1);
   }
   const thisMonth = input.expected?.today.slice(0, 7) ?? "";
+  // FLOW-1005: each row's edits by `<project>|<row key>`; the latest change of a row wins, as on the project page.
+  const overhead = input.overheadProjectId ?? null;
+  const removed = new Set<string>();
+  const changes = new Map<string, MonthForecastEdit>();
+  for (const edit of input.edits ?? []) {
+    if (edit.row_key == null) continue;
+    const at = `${edit.project_id}|${edit.row_key}`;
+    if (edit.kind === "remove") removed.add(at);
+    if (edit.kind !== "change" || edit.amount_minor == null) continue;
+    const held = changes.get(at);
+    if (held == null || held.start_month < edit.start_month) changes.set(at, edit);
+  }
   for (const party of input.expected?.recurring ?? []) {
     if (party.seen_this_month || party.currency !== input.base) continue;
     if (!dueInMonth(party.next_due_month, party.pace, thisMonth, thisMonth)) continue;
+    const owner = party.project_id ?? overhead;
+    const at = owner == null ? null : `${owner}|rec:${party.direction}:${party.party_id}`;
+    if (at != null && removed.has(at)) continue;
+    const changed = at == null ? null : changes.get(at)?.amount_minor ?? null;
     const base = `party:${party.direction}:${party.party_id}:${party.currency}`;
     raw.push({
       key: (charges.get(base) ?? 0) > 1 ? `${base}:${party.project_id ?? "none"}` : base,
@@ -145,7 +186,7 @@ export function buildMonthForecast(input: {
       kind: "recurring",
       name: party.name === "" ? "ללא שם" : party.name,
       currency: party.currency,
-      usual: abs(party.typical_amount_minor),
+      usual: changed == null ? abs(party.typical_amount_minor) : BigInt(changed),
       day: party.typical_day > 0 ? party.typical_day : null,
       description: null,
       category_id: party.category_id ?? null,
@@ -176,6 +217,32 @@ export function buildMonthForecast(input: {
     });
   }
 
+  // FLOW-1005: the lines the owner added to a project's forecast, in the company's currency (a project's lines
+  // are), until the bank line that came as one is in; one they took out again, or matched, is not expected.
+  for (const edit of input.edits ?? []) {
+    if (edit.kind !== "add" || edit.amount_minor == null || edit.direction == null) continue;
+    if (edit.matched_transaction_id != null) continue;
+    const at = `${edit.project_id}|add:${edit.id}`;
+    if (removed.has(at)) continue;
+    const changed = changes.get(at)?.amount_minor ?? null;
+    const usual = BigInt(changed ?? edit.amount_minor);
+    if (usual === 0n) continue;
+    raw.push({
+      key: `added:${edit.id}`,
+      direction: edit.direction,
+      kind: "added",
+      name: edit.category_name != null && edit.category_name !== "" ? edit.category_name : "ללא שם",
+      currency: input.base,
+      usual,
+      day: null,
+      description: null,
+      category_id: edit.category_id,
+      project_id: edit.project_id,
+      project_name: null,
+      expected_on: null,
+    });
+  }
+
   const items = raw.map((item) => applyOverride(item, overrideOf(overrides, item.key), today));
   const moved = items.filter((item) => item.moved_out).sort(byAmountThenName);
   const counted = items.filter((item) => !item.moved_out);
@@ -194,6 +261,44 @@ export function buildMonthForecast(input: {
     expenseTotal: sum([...expense, ...small]),
     changed: items.filter((item) => item.overridden).length,
   };
+}
+
+function text(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+/**
+ * company_forecast_edits_for's answer, checked by hand (no zod: Home reads this forecast before it paints, and the MCP builds it too).
+ * An edit that does not have the shape is left out, and a body with no edits list reads as none, so the month's
+ * own items always show; a failed read still fails the forecast.
+ */
+export function parseMonthEdits(data: unknown): { overheadProjectId: string | null; edits: MonthForecastEdit[] } {
+  const body = data as { overhead_project_id?: unknown; edits?: unknown } | null;
+  if (body == null || typeof body !== "object" || !Array.isArray(body.edits)) return { overheadProjectId: null, edits: [] };
+  const edits = (body.edits as unknown[]).flatMap((value): MonthForecastEdit[] => {
+    const row = value as Record<string, unknown> | null;
+    if (row == null || typeof row !== "object") return [];
+    const id = text(row.id);
+    const project = text(row.project_id);
+    const kind = row.kind;
+    const start = text(row.start_month);
+    const direction = row.direction === "income" || row.direction === "expense" ? row.direction : null;
+    const amount = typeof row.amount_minor === "number" && Number.isSafeInteger(row.amount_minor) ? row.amount_minor : null;
+    if (id == null || project == null || start == null || (kind !== "change" && kind !== "remove" && kind !== "add")) return [];
+    return [{
+      id,
+      project_id: project,
+      kind,
+      row_key: text(row.row_key),
+      category_id: text(row.category_id),
+      category_name: text(row.category_name),
+      direction,
+      amount_minor: amount,
+      start_month: start,
+      matched_transaction_id: text(row.matched_transaction_id),
+    }];
+  });
+  return { overheadProjectId: text(body.overhead_project_id), edits };
 }
 
 /** Home's number: the cash net today, plus the income still to come, minus the charges still to go. */

@@ -58,6 +58,8 @@ export function itemLate(item: ForecastItem, today: string): boolean {
 
 /** The row's first words: "חשבונית #1043", "חשבון ספק #VD-118" or "קבוע". */
 export function itemWhat(item: ForecastItem): string {
+  // FLOW-1005: a line the owner added to a project's forecast, as the project page names it.
+  if (item.kind === "added") return "הוספת";
   if (item.kind !== "invoice") return "קבוע";
   const label = item.direction === "income" ? "חשבונית" : "חשבון ספק";
   const number = item.description?.replace(/^(Invoice|Bill)\s*/i, "") ?? "";

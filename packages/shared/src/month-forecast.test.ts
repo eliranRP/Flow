@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UnpaidRow } from "./dashboard";
 import type { ExpectedMonths } from "./forecast";
-import { buildMonthForecast, forecastTotal, SMALL_CHARGE_MINOR } from "./month-forecast";
+import { buildMonthForecast, forecastTotal, type MonthForecastEdit, parseMonthEdits, SMALL_CHARGE_MINOR } from "./month-forecast";
 
 const expected: ExpectedMonths = {
   today: "2026-10-16",
@@ -207,5 +207,77 @@ describe("buildMonthForecast: only the charges due this month (decision 0199)", 
       overrides: [],
     });
     expect(names(build)).toEqual(["Monthly", "No Pace"]);
+  });
+
+  describe("FLOW-1005: the project forecast edits of the month", () => {
+    const onProject: ExpectedMonths = {
+      ...expected,
+      recurring: expected.recurring.map((party) => (party.party_id === "p-rent" ? { ...party, project_id: "pj-1" } : party)),
+    };
+    const edit = (patch: Partial<MonthForecastEdit>): MonthForecastEdit => ({
+      id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c-refund", category_name: "Utility refund",
+      direction: "income", amount_minor: 17176, start_month: "2026-10", matched_transaction_id: null, ...patch,
+    });
+
+    it("counts a line the owner added, under its project, until its bank line comes", () => {
+      const build = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [edit({})] });
+      const added = build.income.find((item) => item.key === "added:e-1");
+      expect([added?.kind, added?.name, added?.minor, added?.project_id]).toEqual(["added", "Utility refund", 17176n, "pj-1"]);
+      expect(build.incomeTotal).toBe(800000n + 250000n + 17176n);
+      const arrived = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [edit({ matched_transaction_id: "t-1" })] });
+      expect(arrived.items.some((item) => item.key === "added:e-1")).toBe(false);
+    });
+
+    it("leaves out a line the owner took out again, and uses a changed amount of it", () => {
+      const out = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [edit({}), edit({ id: "e-2", kind: "remove", row_key: "add:e-1", category_id: null, direction: null, amount_minor: null })] });
+      expect(out.items.some((item) => item.key === "added:e-1")).toBe(false);
+      const changed = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [edit({}), edit({ id: "e-3", kind: "change", row_key: "add:e-1", category_id: null, direction: null, amount_minor: 20000 })] });
+      expect(changed.items.find((item) => item.key === "added:e-1")?.minor).toBe(20000n);
+    });
+
+    it("drops a recurring charge removed on its project's forecast, and uses a changed amount", () => {
+      const removal = edit({ kind: "remove", row_key: "rec:expense:p-rent", category_id: null, direction: null, amount_minor: null });
+      const gone = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [removal] });
+      expect(gone.items.some((item) => item.name === "Rent Co")).toBe(false);
+      expect(gone.expenseTotal).toBe(3000n);
+      const change = edit({ kind: "change", row_key: "rec:expense:p-rent", category_id: null, direction: null, amount_minor: 450000 });
+      const rent = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [change] }).expense.find((item) => item.name === "Rent Co");
+      expect([rent?.usual, rent?.minor, rent?.overridden]).toEqual([450000n, 450000n, false]);
+      // Another project's edit of the same party does not touch it.
+      const elsewhere = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [], edits: [{ ...removal, project_id: "pj-2" }] });
+      expect(elsewhere.items.some((item) => item.name === "Rent Co")).toBe(true);
+    });
+
+    it("gives a charge with no project the overhead project's edits", () => {
+      const removal = edit({ project_id: "office", kind: "remove", row_key: "rec:income:p-retainer", category_id: null, direction: null, amount_minor: null });
+      expect(buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [], edits: [removal], overheadProjectId: "office" }).items.some((item) => item.name === "Retainer")).toBe(false);
+      expect(buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [], edits: [removal] }).items.some((item) => item.name === "Retainer")).toBe(true);
+    });
+
+    it("lets the month's own override still win over the project's amount", () => {
+      const change = edit({ kind: "change", row_key: "rec:expense:p-rent", category_id: null, direction: null, amount_minor: 450000 });
+      const build = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 400000, due_on: null, moved_out: false }], edits: [change] });
+      expect(build.expense.find((item) => item.name === "Rent Co")?.minor).toBe(400000n);
+    });
+  });
+});
+
+describe("parseMonthEdits (FLOW-1005)", () => {
+  it("reads the edits and the overhead project, leaving out a row without the shape", () => {
+    const parsed = parseMonthEdits({
+      overhead_project_id: "office",
+      edits: [
+        { id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c", category_name: "Refund", direction: "income", amount_minor: 100, start_month: "2026-11", matched_transaction_id: null },
+        { id: "e-2", project_id: "pj-1", kind: "weird", start_month: "2026-11" },
+        "not a row",
+      ],
+    });
+    expect(parsed.overheadProjectId).toBe("office");
+    expect(parsed.edits.map((edit) => edit.id)).toEqual(["e-1"]);
+  });
+
+  it("reads a body with no edits list as none, so the month's own items still show", () => {
+    expect(parseMonthEdits(null)).toEqual({ overheadProjectId: null, edits: [] });
+    expect(parseMonthEdits([])).toEqual({ overheadProjectId: null, edits: [] });
   });
 });

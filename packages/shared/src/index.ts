@@ -134,11 +134,13 @@ export {
   SMALL_CHARGE_MINOR,
   buildMonthForecast,
   forecastTotal,
+  parseMonthEdits,
 } from "./month-forecast.ts";
 export type {
   ForecastBuild,
   ForecastItem,
   ForecastOverrideRow,
+  MonthForecastEdit,
 } from "./month-forecast.ts";
 export { cashLinesSchema, cashMonthsSchema, cashToDaySchema, cashYearsSchema } from "./cash.ts";
 export type {

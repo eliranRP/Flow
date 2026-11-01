@@ -35,6 +35,7 @@ export const readRpcs = new Set([
   "jev_suggestions",
   "list_auto_assigned_today",
   "forecast_overrides_for",
+  "company_forecast_edits_for",
   "list_categories",
   "list_my_companies",
   "list_my_push_devices",

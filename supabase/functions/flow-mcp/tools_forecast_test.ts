@@ -29,6 +29,7 @@ function reads(name: string) {
     return { status: 200, json: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }] };
   }
   if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
+  if (name === "company_forecast_edits_for") return { status: 200, json: { month: "2026-10", overhead_project_id: null, edits: [] } };
   return { status: 500, json: null };
 }
 
@@ -53,11 +54,34 @@ Deno.test("get_forecast reads its RPCs and builds the items, totals and changed 
   assertEquals(data?.expense[0]?.usual_minor, 500000);
   // לפי קטגוריה groups the items by their category.
   assertEquals(data?.expense[0]?.category_id, "c-rent");
-  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid", "mcp_company_loan_currency"]);
+  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "company_forecast_edits_for", "expected_months", "forecast_overrides_for", "list_unpaid", "mcp_company_loan_currency"]);
   // Home's number: the cash net + the income still to come - the charges still to go (small ones included).
   assertEquals(data?.cash_net_minor, 120000);
   assertEquals(data?.big_number_minor, 120000 + 250000 - 480000);
   assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: "2026-10" });
+});
+
+Deno.test("get_forecast counts the projects' forecast edits of the month (FLOW-1005)", async () => {
+  const edits = {
+    month: "2026-10",
+    overhead_project_id: "office",
+    edits: [
+      { id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c-refund", category_name: "Utility refund", direction: "income", amount_minor: 17176, pace: "month", start_month: "2026-10", matched_transaction_id: null },
+      { id: "e-2", project_id: "office", kind: "remove", row_key: "rec:expense:p-rent", category_id: null, category_name: null, direction: null, amount_minor: null, pace: "month", start_month: "2026-10" },
+    ],
+  };
+  const { calls, rpc } = rpcOf((name) => name === "company_forecast_edits_for" ? { status: 200, json: edits } : reads(name));
+  const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
+  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as {
+    income: { key: string; kind: string; minor: number }[];
+    income_total_minor: number;
+    expense_total_minor: number;
+  } | null;
+  assertEquals(data?.income.find((item) => item.key === "added:e-1")?.kind, "added");
+  assertEquals(data?.income_total_minor, 250000 + 17176);
+  // Rent Co has no project: the overhead project's removal takes it out.
+  assertEquals(data?.expense_total_minor, 0);
+  assertEquals(calls.find((call) => call.name === "company_forecast_edits_for")?.body, { p_month: "2026-10" });
 });
 
 Deno.test("get_forecast counts a dollar company's items and cash in dollars", async () => {

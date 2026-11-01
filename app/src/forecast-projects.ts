@@ -1,7 +1,7 @@
 import type { ForecastBuild, ForecastItem } from "@flow/shared";
 
 /** A project as the dashboard lists it: the name לפי פרויקט shows, and whether it holds the general costs. */
-export type ForecastProject = { id: string; name: string; is_overhead?: boolean };
+export type ForecastProject = { id: string; name: string; status?: string; is_overhead?: boolean };
 
 /** One project's part of the month-end forecast: what is still to come in and out, and its net. */
 export type ForecastProjectGroup = {
