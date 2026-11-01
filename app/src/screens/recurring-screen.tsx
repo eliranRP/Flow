@@ -16,6 +16,9 @@ import { type RecurringListGroup, type RecurringListRow, RecurringBack, Recurrin
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
 import { RepeatIcon } from "../ui/icons";
+import { useDashboardQuery } from "../use-books";
+import { useOverheadProject } from "../overhead-project";
+import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
 import { topToast } from "../ui/top-toast";
 
 /** "אוקטובר 2026" for the day's month. */
@@ -191,6 +194,7 @@ export function RecurringScreen({
         if (row.alertKey != null) void ignore(row.alertKey, "נמשיך לצפות לו");
       }}
       onEnded={(row) => void end(row)}
+      addLine={live ? <RecurringAddLine month={today.slice(0, 7)} search={search} /> : null}
     />
   );
 }
@@ -280,4 +284,26 @@ function hintFor(row: ScheduleRow, line: RecurringLine, today: string, dismissed
 /** The suggestion as the list shows it: its day as dd/mm, its amount still in minor units. */
 function suggestionRow(suggestion: NonNullable<RecurringAlert["suggestion"]>): NonNullable<RecurringListRow["suggestion"]> {
   return { name: suggestion.party_name ?? "", partyId: suggestion.party_id, minor: suggestion.amount_minor, date: dayMonth(suggestion.doc_date) };
+}
+
+/**
+ * FLOW-1011 (owner, 2026-11-01: "add the ability to add it from the recurring screen"): הוספת קבוע לצפי under the
+ * groups. It asks which project (כללי is the overhead project), as the תזרים צפוי screen does, then opens that
+ * project's add page for this month at כל חודש, which comes back here. Its reads are its own, so a sample list
+ * (stories, tests) reads nothing.
+ */
+function RecurringAddLine({ month, search }: { month: string; search: string }) {
+  const projects = useDashboardQuery(true);
+  const overhead = useOverheadProject(true);
+  if (!addLineReady(true, projects.data != null, overhead)) return null;
+  return (
+    <ForecastAddLine
+      month={month}
+      projects={lineProjects(projects.data?.projects ?? [], overhead.project?.id ?? null)}
+      search={search}
+      back="recurring"
+      pace="month"
+      label="הוספת קבוע לצפי"
+    />
+  );
 }
