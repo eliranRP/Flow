@@ -30,7 +30,7 @@ $check$;
 
 update public.project_forecast_edits e set pace = 'month' where e.kind = 'remove' and e.pace = 'once';
 
-alter table public.project_forecast_edits add constraint project_forecast_edits_kind_check check (
+alter table public.project_forecast_edits add constraint project_forecast_edits_shape_check check (
   (kind = 'change' and row_key is not null and amount_minor is not null and category_id is null and direction is null)
   or (kind = 'remove' and row_key is not null and amount_minor is null and category_id is null and direction is null and pace in ('once', 'month'))
   or (kind = 'add' and row_key is null and category_id is not null and direction is not null and amount_minor is not null)
