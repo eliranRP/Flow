@@ -450,7 +450,8 @@ describe("the investment page's returns cards", () => {
     if (card == null) throw new Error("no card");
     expect(card.querySelector(".ui-ret-total")).toHaveTextContent(BEFORE_FIRST_RENT);
     expect(within(card).queryByText(/%$/)).toBeNull();
-    expect(within(card).getAllByText(BEFORE_FIRST_RENT)).toHaveLength(5);
+    // Once, in the total's place: the source rows leave their per-cents empty.
+    expect(within(card).getAllByText(BEFORE_FIRST_RENT)).toHaveLength(1);
     expect(within(card).getByText("$12,000")).toBeInTheDocument();
     const metrics = await screen.findByRole("region", { name: "מדדים" });
     expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent(BEFORE_FIRST_RENT);

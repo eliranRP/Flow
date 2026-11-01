@@ -159,7 +159,6 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
                   {before || share == null ? null : <bdi dir="ltr" className="ui-num">{percentText(share)}</bdi>}
                 </span>
               ) : null}
-              {amount && before ? <span className="ui-ret-source-note ui-ret-note">{BEFORE_FIRST_RENT}</span> : null}
               {source.hint == null ? null : <p className="ui-ret-source-hint">{source.hint}</p>}
             </div>
           );

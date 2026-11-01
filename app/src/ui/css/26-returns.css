@@ -134,14 +134,6 @@
   text-align: end;
 }
 
-/* Before the first rent: the note in the per-cent's place, on its own line, at the per-cent's edge. */
-.ui-ret-source-note {
-  grid-column: 4 / -1;
-  margin-block-start: calc(var(--space-2) * -1);
-  padding-block-end: var(--space-1);
-  text-align: end;
-}
-
 /* A hint under a row: its own row of the grid, from the label's track to the end. */
 .ui-ret-source-hint {
   grid-column: 2 / -1;
