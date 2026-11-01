@@ -204,7 +204,7 @@ export function useReviewQuery(active = true, project: string | null = null) {
   const preview = useHomePreview();
   const key = reviewListKey(preview, project);
   return useQuery({
-    queryKey: key,
+    queryKey: reviewListKey(preview, project),
     enabled: active && preview === "off",
     queryFn: async ({ client }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
@@ -235,13 +235,13 @@ export function useReviewQuery(active = true, project: string | null = null) {
 
 /** Reads the page after the loaded ones and appends it. A failure leaves the list as it is and says so in the meta. */
 async function loadMoreReview(client: QueryClient, preview: string, project: string | null): Promise<void> {
-  const listKey = reviewListKey(preview, project);
+  const key = reviewListKey(preview, project);
   const meta = metaOf(client, preview, project);
   const supabase = getSupabase();
   if (meta == null || meta.next == null || meta.loading || supabase == null) return;
   // A read of the whole list is under way: it brings these rows itself.
-  if (client.isFetching({ queryKey: listKey }) > 0) return;
-  const startedAt = client.getQueryState(listKey)?.dataUpdatedAt;
+  if (client.isFetching({ queryKey: key }) > 0) return;
+  const startedAt = client.getQueryState(key)?.dataUpdatedAt;
   putMeta(client, preview, project, { ...meta, loading: true, failed: false });
   try {
     const page = await readReviewPage(client, supabase, {
@@ -250,15 +250,15 @@ async function loadMoreReview(client: QueryClient, preview: string, project: str
       ...(project == null ? {} : { p_project: project }),
     });
     // The list was read again while this page was on the way: its cursor is stale.
-    if (client.getQueryState(listKey)?.dataUpdatedAt !== startedAt || client.isFetching({ queryKey: listKey }) > 0) {
+    if (client.getQueryState(key)?.dataUpdatedAt !== startedAt || client.isFetching({ queryKey: key }) > 0) {
       const now = metaOf(client, preview, project);
       if (now != null && now.loading) putMeta(client, preview, project, { ...now, loading: false });
       return;
     }
-    client.setQueryData<ReviewRow[]>(listKey, (old) => mergePage(old ?? [], page.items));
+    client.setQueryData<ReviewRow[]>(key, (old) => mergePage(old ?? [], page.items));
     putMeta(client, preview, project, {
       total: page.total,
-      loaded: client.getQueryData<ReviewRow[]>(listKey)?.length ?? 0,
+      loaded: client.getQueryData<ReviewRow[]>(key)?.length ?? 0,
       next: page.next,
       failed: false,
       loading: false,
