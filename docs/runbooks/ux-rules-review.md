@@ -1,6 +1,6 @@
 # UX rules review (every 3 days)
 
-A recurring review of the UI code that reached `main` since the last run, against the UX/UI rules in [`.claude/skills/ux-ui-design-review-rules/`](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) (142 rules: hierarchy, forms, tables and mobile, feedback and states, charts, motion, tokens and accessibility). The owner asked for it on 2026-11-01. It runs in the **UI/UX review** lane, in turns with the [mobile UI/UX review cycle](ui-ux-review-cycle.md) (the lane runs one job at a time): that cycle screenshots whole screens; this one reads each change. Like that cycle, it never builds fixes; it files them as tasks for the UI lanes.
+A recurring review of the UI code that reached `main` since the last run, against the UX/UI rules in [`.claude/skills/ux-ui-design-review-rules/`](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) (142 rules: hierarchy, forms, tables and mobile, feedback and states, charts, motion, tokens and accessibility). The owner asked for it on 2026-11-01. It runs in the **UI/UX review** lane, in turns with the [mobile UI/UX review cycle](ui-ux-review-cycle.md) (the lane runs one job at a time): that cycle screenshots whole screens; this one reads each change. Unlike that cycle, it also fixes what it finds: the owner asked on 2026-11-01 for each run to build the fixes, get them reviewed, merge and deploy them.
 
 | Run | When (Israel time) | Scope |
 | --- | --- | --- |
@@ -33,6 +33,17 @@ The base is the `main` sha recorded at the end of the last run. With none, use `
 - Add the ids under their areas in `tasks/index-source.md`, run `node scripts/backlog-index.mjs`, and open one docs PR, `UX rules review YYYY-MM-DD: <n> tasks`, with a `Claim` block (`Lane: UI/UX review`). Review and merge it through the normal [cycle](../backlog/README.md#the-cycle).
 - High severity (blocks a task, loses data, misleads, fails accessibility) is also called out in the report.
 
+## Fix, review, merge, deploy
+
+Every `SMALL UI` task the run filed, and any still open from earlier runs, is fixed in the same run (the owner's ask, 2026-11-01).
+
+1. **Batches by area.** One builder subagent per area batch, each in its own worktree and branch, so no two batches change the same file. Skip a task whose files an open PR is changing (read the `Claim` blocks); it waits for that PR and is picked up next run.
+2. **Each batch** follows the [cycle](../backlog/README.md#the-cycle): the smallest fix, the stories and tests of each fixed state, a [design log](../design/log/README.md) entry, a changelog fragment, the task files set to `in-progress (#PR)`, the gates, then a PR with a `Claim` block (`Lane: UI/UX review`).
+3. **Review.** One Haiku 5.5 reviewer per PR with the reviewer charter (code and pixels, the story shots at 320 and 393 px, dark and light), plus "check each fix against the rule its task cites". One fix round.
+4. **Merge** each PR once its reviewer approved the current head and its `pr` check is green (the owner's standing approval), then mark its tasks `done (#PR)`.
+5. **Deploy.** After the run's last merge, run the `ci` workflow by hand on `main` (Actions, ci, Run workflow), which deploys without waiting for the batch of five. Watch it to the end; if it fails, fix `main` first.
+6. **Not fixed in the run:** `PLAN FIRST` tasks wait for the owner's pick on a card; ask in the report.
+
 ## Report
 
 End every run with a short report, sent as a push notification when the tool is available (under 200 characters there; the full report as your reply):
@@ -40,4 +51,4 @@ End every run with a short report, sent as a push notification when the tool is 
 - **Scope:** `<base>..<head>`, the PRs reviewed. Record the head as the next run's base.
 - **Findings:** the SKILL.md table (screen, finding, rule, severity, fix), sorted by severity, with the task id of each.
 - **Top 3** fixes to do first.
-- **The tasks PR:** number and merge state.
+- **The tasks PR** and **each fix PR:** number, merge state, and the deploy run with its result.
