@@ -54,16 +54,28 @@ export const screenLoaders = {
 };
 
 /**
- * Fetches every on-demand screen; App calls it once the browser is idle. If a fetch fails here,
- * the tap fetches again. Tests await it so a lazy screen renders on the next tick.
+ * How many screens the idle preload fetches at once. All ~45 at once (about 170 files) filled a 4G link
+ * for over a second, so a screen tapped meanwhile waited behind them: Review's first visit took 2.1 s
+ * on the FLOW-804 phone, against 0.9 s once they were in (perf report 2026-11-01).
  */
-export async function preloadScreens(): Promise<void> {
+export const PRELOAD_AT_ONCE = 3;
+
+/**
+ * Fetches every on-demand screen, `atOnce` at a time in the order of screenLoaders; App calls it once
+ * the browser is idle. If a fetch fails here, the tap fetches again. Tests await it so a lazy screen
+ * renders on the next tick.
+ */
+export async function preloadScreens(atOnce = PRELOAD_AT_ONCE): Promise<void> {
   // FLOW-910: with them, the watch that reloads an open tab onto a new deploy's bundle; a new
   // worker takes over long after Home is up, and this keeps it out of Home's entry.
   void import("./sw-reload").then(({ watchServiceWorker }) => {
     watchServiceWorker();
   }, () => undefined);
-  await Promise.all([preloadSheet(), ...Object.values(screenLoaders).map((load) => load().catch(() => undefined))]);
+  const queue = Object.values(screenLoaders);
+  async function worker(): Promise<void> {
+    for (let load = queue.shift(); load != null; load = queue.shift()) await load().catch(() => undefined);
+  }
+  await Promise.all([preloadSheet(), ...Array.from({ length: Math.min(queue.length, Math.max(1, atOnce)) }, worker)]);
 }
 
 /**

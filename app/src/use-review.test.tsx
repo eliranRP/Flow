@@ -61,15 +61,22 @@ const supabase = {
     };
     return builder;
   },
-  rpc: (name: string, args: Record<string, unknown>) => {
-    server.calls.push({ name, args });
-    if (name !== "list_review_page") return Promise.resolve({ data: null, error: null });
-    if (server.failNext) {
-      server.failNext = false;
-      return Promise.resolve({ data: null, error: { message: "db down" } });
-    }
-    return Promise.resolve({ data: page(args as Args), error: null });
-  },
+  // Like supabase-js's query builder: nothing is sent until it is awaited, and every await sends it again.
+  rpc: (name: string, args: Record<string, unknown>) => ({
+    then<A, B = never>(onFulfilled?: (value: { data: unknown; error: unknown }) => A | PromiseLike<A>, onRejected?: (reason: unknown) => B | PromiseLike<B>) {
+      server.calls.push({ name, args });
+      let answer: { data: unknown; error: unknown } = { data: null, error: null };
+      if (name === "list_review_page") {
+        if (server.failNext) {
+          server.failNext = false;
+          answer = { data: null, error: { message: "db down" } };
+        } else {
+          answer = { data: page(args as Args), error: null };
+        }
+      }
+      return Promise.resolve(answer).then(onFulfilled, onRejected);
+    },
+  }),
 };
 
 vi.mock("./lib/supabase", () => ({ getSupabase: () => supabase }));
