@@ -31,6 +31,7 @@ insert into pg_allowed (sig) values
     ('claim_push_test()'),
     ('clear_loan_split(uuid)'),
     ('collapse_split(uuid,uuid)'),
+    ('company_forecast_edits_for(text)'),
     ('company_next_month_inputs(date)'),
     ('company_pnl_basis()'),
     ('count_transfer_matches()'),
