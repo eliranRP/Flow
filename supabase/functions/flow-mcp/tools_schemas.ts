@@ -73,8 +73,6 @@ export const WRITE_TOOL_NAMES = [
   "set_category_pnl",
   "set_overhead_project",
   "rename_company",
-  "invite_member",
-  "set_member_role",
   "remove_member",
   "add_loan",
   "update_loan",
@@ -178,8 +176,6 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
   set_overhead_project: new Set(["idempotency_key", "project_id"]),
   rename_company: new Set(["idempotency_key", "name"]),
-  invite_member: new Set(["idempotency_key", "email", "role"]),
-  set_member_role: new Set(["idempotency_key", "member_id", "role"]),
   remove_member: new Set(["idempotency_key", "member_id"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",

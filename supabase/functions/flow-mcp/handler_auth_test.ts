@@ -207,8 +207,6 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "set_category_pnl",
     "set_overhead_project",
     "rename_company",
-    "invite_member",
-    "set_member_role",
     "remove_member",
     "add_loan",
     "update_loan",

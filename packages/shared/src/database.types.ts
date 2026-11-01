@@ -1964,9 +1964,6 @@ isOneToOne: false
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
                            },
-"mcp_invite_member":
-{ Args: { "p_email": string,"p_idempotency_key": string,"p_role": string }; Returns: Json
-                           },
 "mcp_jev_accuracy":
 { Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
                            },
@@ -2125,9 +2122,6 @@ isOneToOne: false
                            },
 "mcp_set_loan_refinance":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_new_loan_id": string }; Returns: Json
-                           },
-"mcp_set_member_role":
-{ Args: { "p_idempotency_key": string,"p_role": string,"p_user_id": string }; Returns: Json
                            },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json

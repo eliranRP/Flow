@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(46);
+select plan(44);
 
 do $users$
 begin
@@ -120,10 +120,16 @@ grant execute on function pg_temp.ta_mcp() to authenticated, service_role;
 select pg_temp.ta_mcp();
 select set_config('request.headers', json_build_object('x-flow-company', pg_temp.ta_id('b'))::text, true);
 select is(public.mcp_remove_member('ta-1', pg_temp.ta_id('spare'))->>'ok', 'false', 'a token for a cannot remove b''s member');
-select is(public.mcp_set_member_role('ta-2', pg_temp.ta_id('editor'), 'viewer')->'data'->>'prior_role', 'editor',
-  'while it changes a''s member (positive control)');
+select throws_ok(format('select public.set_member_role(%L, %L)', pg_temp.ta_id('editor'), 'viewer'), '42501', 'forbidden',
+  'and no token changes a role, even in its own company (decision 0241)');
 select set_config('request.headers', '', true);
 reset role;
+-- Role changes made by a token before decision 0241, as the old tool wrote them (the undo kind stays).
+insert into private.mcp_writes (token_id, user_id, kind, company_id, prior) values
+  (pg_temp.ta_id('cred'), pg_temp.ta_id('owner'), 'member_role', pg_temp.ta_id('a'),
+    jsonb_build_object('user_id', pg_temp.ta_id('editor'), 'before', 'editor', 'after', 'viewer')),
+  (pg_temp.ta_id('cred'), pg_temp.ta_id('owner'), 'member_role', pg_temp.ta_id('a'),
+    jsonb_build_object('user_id', pg_temp.ta_id('viewer'), 'before', 'viewer', 'after', 'editor'));
 select is((select m.role from public.company_members m where m.company_id = pg_temp.ta_id('b') and m.user_id = pg_temp.ta_id('spare')),
   'viewer', 'b''s member is untouched');
 
@@ -144,12 +150,20 @@ select pg_temp.ta_mcp();
 select is(private.readable_company_id(), pg_temp.ta_id('a'), 'the owner''s own credential opens a (positive control)');
 
 -- MCP undo: only this company's own write, only while it still stands.
+reset role;
+-- An invite made by a token before decision 0241, as the old tool wrote it (the undo kind stays).
+with i as (
+  insert into public.company_invites (company_id, email, role, invited_by)
+  values (pg_temp.ta_id('a'), 'ta-undo@example.com', 'viewer', pg_temp.ta_id('owner'))
+  returning id
+)
+insert into ta (label, id) select 'mcp_inv', id from i;
+insert into private.mcp_writes (token_id, user_id, kind, company_id, prior)
+values (pg_temp.ta_id('cred'), pg_temp.ta_id('owner'), 'invite', pg_temp.ta_id('a'),
+  jsonb_build_object('invite_id', pg_temp.ta_id('mcp_inv')::text));
 select pg_temp.ta_mcp();
-insert into ta (label, id) select 'mcp_inv', (public.mcp_invite_member('ta-3', 'ta-undo@example.com', 'viewer')->'data'->>'id')::uuid;
-select is(public.mcp_invite_member('ta-4', 'ta-undo@example.com', 'editor')->'data'->>'undo_kind', null,
-  'inviting a pending email again has no undo');
-select is(public.mcp_invite_member('ta-4b', 'ta-new@example.com', 'editor')->'data'->>'existing', 'true',
-  'the agent re-sends an invite the owner made in the app');
+select throws_ok($$select public.invite_member('ta-new@example.com', 'editor')$$, '42501', 'forbidden',
+  'a token cannot invite (decision 0241)');
 select is(public.mcp_undo('ta-4c', 'invite', pg_temp.ta_id('inv'))->'error'->>'code', 'not_found',
   'and cannot undo (cancel) the owner''s own invite');
 reset role;
@@ -157,7 +171,6 @@ update public.company_invites set status = 'cancelled' where id = pg_temp.ta_id(
 select pg_temp.ta_mcp();
 select is(public.mcp_undo('ta-5', 'invite', pg_temp.ta_id('mcp_inv'))->'error'->>'code', 'conflict',
   'undo of an invite that is no longer pending is a conflict');
-select is(public.mcp_set_member_role('ta-6', pg_temp.ta_id('viewer'), 'editor')->'data'->>'prior_role', 'viewer', 'a role change');
 reset role;
 update public.company_members set role = 'viewer' where company_id = pg_temp.ta_id('a') and user_id = pg_temp.ta_id('viewer');
 select pg_temp.ta_mcp();

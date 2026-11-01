@@ -127,9 +127,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "books_closed"` | `id` | the company id `set_books_closed_through` used |
 | `book_line`, `get_line_legs` | `transaction_id` | `list_review.transaction_id`, `get_cash_lines` `rows[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
 | `undo` `kind: "book_line"` / `kind: "line_split"` | `id` | the line id `book_line` returned (`data.id`) |
-| `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
-| `undo` `kind: "invite"` | `id` | the invite id `invite_member` returned |
-| `undo` `kind: "member_role"`, `kind: "member_remove"` | `id` | the member's user id |
+| `remove_member` | `member_id` | `list_team` `members[].user_id` |
+| `undo` `kind: "member_remove"` | `id` | the member's user id |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -1015,7 +1014,7 @@ Output `data`: `{ "id", "name", "prior_name", "undo_kind": "company" }`. Undo wi
 
 There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_from`, lookback). Filtering after fetch would advance the cursor past dropped rows. `sync_bank` takes no dates and does not call `set_import_from`.
 
-`sync_bank` answers at once with `data`: `{ "job_id", "state": "running" }` and the pull keeps running after the response ([0102](../decisions/0102-sync-bank-jobs.md)). The same `idempotency_key` returns the same job (its current state, without a second pull). To retry a failed job, send a new key.
+`sync_bank` answers at once with `data`: `{ "job_id", "state": "running" }` and the pull keeps running after the response ([0102](../decisions/0102-sync-bank-jobs.md)). The same `idempotency_key` returns the same job (its current state, without a second pull). To retry a failed job, send a new key. There is no undo: it brings Flow in line with the bank, as the scheduled sync does.
 
 `not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started. A company may hold several Mercury connections ([0203](../decisions/0203-mercury-connections-and-synced-accounts.md)): one job syncs every connection whose accounts are chosen, and the counts add up. A connection whose accounts are not chosen yet syncs nothing; with none chosen the job fails with `not_found` / `bank is not connected`.
 
@@ -1698,25 +1697,13 @@ A company has an owner and members, each an editor or a viewer ([0167](../decisi
 
 `get_setup_suggestions`, no arguments ([FLOW-514](../backlog/TASKS.md#flow-514), migration `20261016192902_setup_suggestions.sql`). Read tool. The first-time setup's two suggestions, from the company's bank lines. Output `data`: `projects` (project names found in the lines; `[]` until a bank source is chosen) and `lenders[]`: recurring suppliers the company pays in its own currency in at least three months, with no loan of the same name yet. Each has `name`, `monthly_agorot` (positive minor units of the company's currency, the usual amount) and `since` (the date of its first line). Suggestions only: ask the owner before creating a loan or a project from one. A failed read returns `refused`, as the other reads do; a user with no company gets no data.
 
+### Inviting and roles
+
+Inviting people and changing a member's role are done in the app (Settings, צוות), not by MCP keys: there is no `invite_member` or `set_member_role` tool, and the database refuses both for a key ([0241](../decisions/0241-mcp-keys-cannot-invite.md)). `remove_member` stays, since it only takes access away and has undo. An earlier invite can still be cancelled with `undo` `kind: "invite"` while it is pending; an earlier role change is put back in the app.
+
 ### list_team
 
 No arguments. Output `data`: `{ "company_id", "role", "can_manage", "members": [{ "user_id", "name", "email", "role", "you" }], "invites": [{ "id", "email", "role", "created_at" }] }`. Members list the owner first. `name` is the Google profile name, else the email. `invites` are the pending ones, and only the owner sees them.
-
-### invite_member
-
-```json
-{ "idempotency_key": "inv-1", "email": "new.member@example.com", "role": "viewer" }
-```
-
-The owner only. `role` is `viewer` (the default) or `editor`. No email is sent: the person sees the invite in the app after signing in with Google with that email, and joins or declines it there. The email is stored in lower case. The owner's or a member's email is `refused` / `already a member`; a malformed one is `refused` / `invalid email`; more than 50 pending invites is `refused` / `too many invites`. More than 10 new invites for the company, or 20 by the same user across their companies, in any 24 hours is `refused` / `invite_limit` ([0195](../decisions/0195-invite-caps-redundant-indexes.md)); a cancelled invite still counts. An email with a pending invite gets that invite back with the new role and `existing: true`, and no undo. Output `data`: `{ "id", "email", "role", "status": "pending", "existing", "undo_kind": "invite" }`. Undo with `kind: "invite"` and the invite id cancels it while it is still pending, else `conflict`.
-
-### set_member_role
-
-```json
-{ "idempotency_key": "role-1", "member_id": "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f", "role": "editor" }
-```
-
-The owner only. `member_id` is the member's `user_id` from `list_team` (`user_id` itself is a reserved argument). Not a member is `refused` / `member not found`. Output `data`: `{ "user_id", "role", "prior_role", "undo_kind": "member_role" }`. Undo puts `prior_role` back, a `conflict` once the role changed again.
 
 ### remove_member
 

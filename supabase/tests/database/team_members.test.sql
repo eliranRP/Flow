@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(70);
+select plan(71);
 
 do $users$
 begin
@@ -206,12 +206,29 @@ select pg_temp.as_mcp();
 select set_config('request.headers', json_build_object('x-flow-company', pg_temp.id('b'))::text, true);
 select is(private.current_company_id(), pg_temp.id('a'), 'an MCP token ignores the header and keeps its company');
 select set_config('request.headers', '', true);
-insert into tm (label, id) select 'mcp_inv', (public.mcp_invite_member('tm-k1', 'new-member@example.com', 'editor')->'data'->>'id')::uuid;
-select is((pg_temp.invite('mcp_inv')).status, 'pending', 'MCP invite_member invites');
+-- Decision 0241: a token cannot invite or change a role. Writes made before it, as the old tools
+-- wrote them, are fixtures; the invite undo kind still works, the role undo is refused.
+select throws_ok($$select public.invite_member('new-member@example.com', 'editor')$$, '42501', 'forbidden',
+  'a token cannot invite');
+select throws_ok(format('select public.set_member_role(%L, %L)', pg_temp.id('editor'), 'viewer'), '42501', 'forbidden',
+  'or change a role');
+reset role;
+with i as (
+  insert into public.company_invites (company_id, email, role, invited_by)
+  values (pg_temp.id('a'), 'new-member@example.com', 'editor', pg_temp.id('owner'))
+  returning id
+)
+insert into tm (label, id) select 'mcp_inv', id from i;
+insert into private.mcp_writes (token_id, user_id, kind, company_id, prior) values
+  (pg_temp.id('cred'), pg_temp.id('owner'), 'invite', pg_temp.id('a'),
+    jsonb_build_object('invite_id', pg_temp.id('mcp_inv')::text)),
+  (pg_temp.id('cred'), pg_temp.id('owner'), 'member_role', pg_temp.id('a'),
+    jsonb_build_object('user_id', pg_temp.id('editor'), 'before', 'viewer', 'after', 'editor'));
+select pg_temp.as_mcp();
+select is((pg_temp.invite('mcp_inv')).status, 'pending', 'an invite a token made earlier is pending');
 select is(public.mcp_undo('tm-u1', 'invite', pg_temp.id('mcp_inv'))->>'ok', 'true', 'undo cancels it');
-select is(public.mcp_set_member_role('tm-k2', pg_temp.id('editor'), 'viewer')->'data'->>'prior_role', 'editor',
-  'MCP set_member_role');
-select is(public.mcp_undo('tm-u2', 'member_role', pg_temp.id('editor'))->>'ok', 'true', 'undo restores the role');
+select is(public.mcp_undo('tm-u2', 'member_role', pg_temp.id('editor'))->>'ok', 'false',
+  'but undo of a role change is refused for a token: the owner changes it in the app');
 select is(public.mcp_remove_member('tm-k3', pg_temp.id('editor'))->'data'->>'prior_role', 'editor', 'MCP remove_member');
 select is(public.mcp_undo('tm-u3', 'member_remove', pg_temp.id('editor'))->>'ok', 'true', 'undo adds the member back');
 select is(public.list_team()->'members'->1->>'role', 'editor', 'MCP list_team shows them as editor again');

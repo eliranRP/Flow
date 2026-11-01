@@ -1,7 +1,9 @@
-// Flow MCP team tools (FLOW-601): list_team, invite_member, set_member_role, remove_member and their
-// undo kinds. Fixtures: tools_test_support.ts.
+// Flow MCP team tools (FLOW-601): list_team, remove_member and the team undo kinds. Inviting and role
+// changes are not tools (decision 0241). Fixtures: tools_test_support.ts.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
+import { WRITE_TOOL_NAMES } from "./tools_schemas.ts";
+import { toolsFor } from "./tools_specs.ts";
 import { PROJECT, rpcOf } from "./tools_test_support.ts";
 
 const MEMBER = "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
@@ -32,62 +34,34 @@ Deno.test("list_team passes the team through and refuses a failed read or a writ
   assertEquals(writeOnly.isError, true);
 });
 
-Deno.test("invite_member forwards the email and role, viewer by default, and checks its arguments", async () => {
-  const { calls, rpc } = rpcOf(() => ({
-    status: 200,
-    json: { ok: true, data: { id: INVITE, email: "new@example.com", role: "viewer", status: "pending", existing: false, undo_kind: "invite" } },
-  }));
-  const invited = await callTool("invite_member", { idempotency_key: "inv-1", email: " New@Example.com " }, ["write"], rpc);
-  assertEquals(invited.isError, false);
-  assertEquals(calls[0], {
-    name: "mcp_invite_member",
-    body: { p_idempotency_key: "inv-1", p_email: "New@Example.com", p_role: "viewer" },
-  });
-  await callTool("invite_member", { idempotency_key: "inv-2", email: "new@example.com", role: "editor" }, ["write"], rpc);
-  assertEquals(calls[1].body, { p_idempotency_key: "inv-2", p_email: "new@example.com", p_role: "editor" });
-  const cases = [
-    callTool("invite_member", { email: "new@example.com" }, ["write"], rpc),
-    callTool("invite_member", { idempotency_key: "k", email: "x" }, ["write"], rpc),
-    callTool("invite_member", { idempotency_key: "k", email: "new@example.com", role: "owner" }, ["write"], rpc),
-    callTool("invite_member", { idempotency_key: "k", email: "new@example.com", company_id: PROJECT }, ["write"], rpc),
-  ];
-  for (const result of await Promise.all(cases)) {
-    assertEquals(result.isError, true);
-    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+Deno.test("invite_member and set_member_role are not tools: not listed, not callable (decision 0241)", async () => {
+  const listed = toolsFor(["read", "write"]).map((spec) => spec.name);
+  for (const name of ["invite_member", "set_member_role"]) {
+    assertEquals(listed.includes(name), false);
+    assertEquals((WRITE_TOOL_NAMES as readonly string[]).includes(name), false);
   }
-  const denied = await callTool("invite_member", { idempotency_key: "k", email: "new@example.com" }, ["read"], rpc);
-  assertEquals(denied.isError, true);
-  assertEquals(calls.length, 2);
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const attempts = [
+    callTool("invite_member", { idempotency_key: "k", email: "new@example.com" }, ["write"], rpc),
+    callTool("set_member_role", { idempotency_key: "k", member_id: MEMBER, role: "editor" }, ["write"], rpc),
+  ];
+  for (const result of await Promise.all(attempts)) assertEquals(result.isError, true);
+  assertEquals(calls, []);
 });
 
-Deno.test("invite_member passes the daily cap's refusal through by name (FLOW-928)", async () => {
-  const error = { code: "refused", message: "invite_limit" };
-  const { rpc } = rpcOf(() => ({ status: 200, json: { ok: false, error } }));
-  const refused = await callTool("invite_member", { idempotency_key: "inv-cap", email: "new@example.com" }, ["write"], rpc);
-  assertEquals(refused.isError, true);
-  assertEquals(refused.structuredContent, { ok: false, error });
-});
-
-Deno.test("set_member_role and remove_member take member_id (lower-cased; user_id is refused), and undo takes the team kinds", async () => {
+Deno.test("remove_member takes member_id (lower-cased; user_id is refused), and undo still takes the team kinds", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { user_id: MEMBER } } }));
-  await callTool("set_member_role", { idempotency_key: "r-1", member_id: MEMBER.toUpperCase(), role: "editor" }, ["write"], rpc);
-  assertEquals(calls[0], {
-    name: "mcp_set_member_role",
-    body: { p_idempotency_key: "r-1", p_user_id: MEMBER, p_role: "editor" },
-  });
-  await callTool("remove_member", { idempotency_key: "m-1", member_id: MEMBER }, ["write"], rpc);
-  assertEquals(calls[1], { name: "mcp_remove_member", body: { p_idempotency_key: "m-1", p_user_id: MEMBER } });
+  await callTool("remove_member", { idempotency_key: "m-1", member_id: MEMBER.toUpperCase() }, ["write"], rpc);
+  assertEquals(calls[0], { name: "mcp_remove_member", body: { p_idempotency_key: "m-1", p_user_id: MEMBER } });
   for (const kind of ["invite", "member_role", "member_remove"]) {
     const undone = await callTool("undo", { idempotency_key: `u-${kind}`, kind, id: MEMBER }, ["write"], rpc);
     assertEquals(undone.isError, false);
   }
-  assertEquals(calls.slice(2).map((call) => call.name), ["mcp_undo", "mcp_undo", "mcp_undo"]);
+  assertEquals(calls.slice(1).map((call) => call.name), ["mcp_undo", "mcp_undo", "mcp_undo"]);
   const bad = await Promise.all([
-    callTool("set_member_role", { idempotency_key: "k", member_id: MEMBER }, ["write"], rpc),
-    callTool("set_member_role", { idempotency_key: "k", member_id: "nope", role: "viewer" }, ["write"], rpc),
     callTool("remove_member", { idempotency_key: "k" }, ["write"], rpc),
     callTool("remove_member", { idempotency_key: "k", user_id: MEMBER }, ["write"], rpc),
   ]);
   for (const result of bad) assertEquals(result.isError, true);
-  assertEquals(calls.length, 5);
+  assertEquals(calls.length, 4);
 });
