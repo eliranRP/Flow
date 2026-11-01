@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(66);
+select plan(73);
 
 do $users$
 begin
@@ -147,7 +147,11 @@ select is(pg_temp.ret()->'equity'->'money_in_parts',
   '{"acquisition_minor": -15000000, "renovation_minor": 0, "holding_minor": -150000, "financing_minor": 11000000}'::jsonb,
   'money in, by part: the purchase line, holding costs before the rent (the 2025 repair and the insurance), the net loan proceeds; the depreciation journal counts nowhere');
 select is(pg_temp.ret()->'inputs'->>'purchase_source', 'lines', 'the purchase price comes from the lines');
-select is(pg_temp.ret()->'missing', '["value", "land", "tax_bracket", "units"]'::jsonb,
+select is((pg_temp.ret()->'inputs'->>'units')::integer, 1, 'units are 1 until the owner sets them (FLOW-454)');
+select is((pg_temp.ret()->'inputs'->>'units_default')::boolean, true, 'and the read says it is the default');
+select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 150833::bigint, 'so cash flow per unit is never missing');
+select is((pg_temp.ret()->'inputs'->>'taken_over_minor')::bigint, 0::bigint, 'a loan with its proceeds line is not part of the price');
+select is(pg_temp.ret()->'missing', '["value", "land", "tax_bracket"]'::jsonb,
   'every missing input is named');
 select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 4150000::bigint, 'money in the deal needs no typed input');
 select is(pg_temp.ret()->'sources'->>'appreciation_minor', null, 'appreciation waits for values');
@@ -269,6 +273,28 @@ select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-1
   'the rehab cost before the rent is not CapEx');
 select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'before_rent_minor')::bigint, -150000::bigint,
   'the period costs before the rent are listed apart');
+
+-- FLOW-454: a Sub2 deal. The bank shows only the cash brought to closing; the mortgage taken
+-- over (no proceeds line) is part of the price, a later refinance is not, and the money in stays cash.
+reset role;
+insert into prr (label, id) values ('sub2', tests.fixture_project(pg_temp.id('co'), 'Example Sub2'));
+insert into prr (label, id) values
+  ('s2buy', tests.fixture_line(pg_temp.id('co'), 'prr:s2buy', 3000000, p_project => pg_temp.id('sub2'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('s2rent', tests.fixture_line(pg_temp.id('co'), 'prr:s2rent', 200000, 'income', pg_temp.id('sub2'), pg_temp.id('rent'), '2026-10-13'));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values
+  (pg_temp.id('co'), 'Sub2 mortgage taken over', 29000000, 33750, 300, '2026-09-01', 150000, 0, 'ILS', pg_temp.id('sub2')),
+  (pg_temp.id('co'), 'Sub2 later refinance', 31000000, 70000, 360, '2027-06-01', 210000, 0, 'ILS', pg_temp.id('sub2'));
+select tests.authenticate_as('prr_owner');
+create or replace function pg_temp.sub2()
+returns jsonb
+language sql
+as $$ select public.get_property_returns(pg_temp.id('sub2'), '2026-01-01', '2026-12-31'); $$;
+grant execute on function pg_temp.sub2() to authenticated, service_role;
+select is((pg_temp.sub2()->'inputs'->>'taken_over_minor')::bigint, 29000000::bigint,
+  'the mortgage taken over at closing, with no proceeds line, is part of the price; the later refinance is not');
+select is((pg_temp.sub2()->'inputs'->>'purchase_minor')::bigint, 32000000::bigint, 'purchase = the cash at closing + the loan taken over');
+select is((pg_temp.sub2()->'equity'->>'money_in_minor')::bigint, 3000000::bigint, 'the money in stays the cash brought');
 
 select * from finish();
 rollback;

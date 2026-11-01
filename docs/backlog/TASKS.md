@@ -466,6 +466,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-451"></a>[FLOW-451](tasks/FLOW-451.md) | השקעה והלוואות v3: total return, equity, metrics, and every calculation opened | UI (design approved) |
 | <a id="flow-452"></a>[FLOW-452](tasks/FLOW-452.md) | Investment page v3: review nits | BACKLOG NIT |
 | <a id="flow-453"></a>[FLOW-453](tasks/FLOW-453.md) | A property's returns from the real lines: rent start, holding costs, net loan proceeds | MCP + UI |
+| <a id="flow-454"></a>[FLOW-454](tasks/FLOW-454.md) | Property returns on real deals: Sub2 purchase price, one unit by default, aligned rows, before the first rent | MCP + UI |
 
 ## Onboarding, Settings and connectors
 
