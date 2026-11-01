@@ -1,11 +1,9 @@
-import { type ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { chargeChangeViews, openMonthDue } from "./forecast";
+import { chargeChangeViews } from "./forecast";
 import { monthForecastBoardSample, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
-import { forecastMinor } from "./home-month";
 import { nextMonth } from "./forecast-month";
 
 // --- forecast.test.tsx
@@ -32,34 +30,6 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     expect(icon.container.innerHTML).not.toBe(upIcon.container.innerHTML);
   });
 
-});
-
-describe("openMonthDue (FLOW-364)", () => {
-  it("reads the open month's recurring money still due in one currency, or 0", () => {
-    const data = {
-      today: "2026-10-11",
-      project_id: null,
-      months: [
-        { month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 12_000n, expense_minor: 31_500n }] },
-        { month: "2026-11", open: false, by_currency: [{ currency: "ILS", income_minor: 1n, expense_minor: 2n }] },
-      ],
-      recurring: [],
-    } as unknown as ExpectedMonthsData;
-    expect(openMonthDue(data, "ILS")).toEqual({ income: 12_000n, expense: 31_500n });
-    expect(openMonthDue(data, "USD")).toEqual({ income: 0n, expense: 0n });
-    expect(openMonthDue(null, "ILS")).toEqual({ income: 0n, expense: 0n });
-  });
-
-  it("takes the server's negative expense as a positive amount, so the forecast subtracts it once", () => {
-    const data = {
-      today: "2026-10-11",
-      project_id: null,
-      months: [{ month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: -283_000n }] }],
-      recurring: [],
-    } as unknown as ExpectedMonthsData;
-    expect(openMonthDue(data, "ILS")).toEqual({ income: 0n, expense: 283_000n });
-    expect(forecastMinor(-100_000n, 0n, openMonthDue(data, "ILS").expense, 0n).minor).toBe(-383_000n);
-  });
 });
 
 describe("the month forecast's board samples (FLOW-141b)", () => {

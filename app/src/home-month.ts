@@ -72,21 +72,6 @@ export function splitParts(netMinor: bigint, profitMinor: bigint): SplitParts {
   };
 }
 
-/**
- * The forecast for the month's end: net so far, plus the recurring money in still due and the
- * open invoices, less the recurring money out still due. The three addends are positive amounts.
- * The row shows only when one of them is not 0.
- */
-export function forecastMinor(
-  netMinor: bigint,
-  recurringInMinor: bigint,
-  recurringOutMinor: bigint,
-  openInvoicesMinor: bigint,
-): { minor: bigint; show: boolean } {
-  const show = recurringInMinor !== 0n || recurringOutMinor !== 0n || openInvoicesMinor !== 0n;
-  return { minor: netMinor + recurringInMinor - recurringOutMinor + openInvoicesMinor, show };
-}
-
 export type DrawerCellState = "selected" | "data" | "future" | "before";
 
 export type DrawerCell = {
