@@ -1,6 +1,6 @@
 <a id="flow-984"></a>
 # FLOW-984 · Review loads its open items in pages, not all at once
-- **Type:** PLAN FIRST · **Status:** owner approved the plan (2026-10-31); ready to build · **Source:** the owner on 2026-10-28, from the perf steward's daily report ([2026-10-28](../../qa/perf/2026-10-28.md)) under decision [0230](../../decisions/0230-screens-data-in-half-a-second.md): page the Review screen.
+- **Type:** PLAN FIRST · **Status:** in-progress (perf steward, 2026-11-01, perf/flow-984); owner approved the plan (2026-10-31) · **Source:** the owner on 2026-10-28, from the perf steward's daily report ([2026-10-28](../../qa/perf/2026-10-28.md)) under decision [0230](../../decisions/0230-screens-data-in-half-a-second.md): page the Review screen.
 - **Files:** a new migration adding `public.list_review_page` (`list_review()` unchanged), `supabase/tests/database/review_paging.test.sql`, `app/src/read-schemas.ts`, `app/src/use-books.ts`, the Review screens (`review-screen.tsx`, `review-queue.tsx`, `review-lists.tsx`, `review-shared.tsx`, `change-form.tsx`) and their stories and tests, a decision record. The MCP tools and Home are unchanged.
 
 `list_review` returns every open item in one read: on the Flow QA sandbox about 1,280 items, 793 KB before compression, 0.7 to 1.0 s round trip and about 170 ms in the database. Review shows one card at a time and a list.
