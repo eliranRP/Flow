@@ -119,7 +119,7 @@ Work runs in **lanes**. A lane is one long-running agent thread that owns a kind
 | --- | --- | --- |
 | Dev task lane | **At most 2 at the same time** | Ready tasks from the [priority queue](TASKS.md#priority-queue) that are not UI building |
 | UI lanes | 2 | **All** UI building: screens, shared components, Storybook. Each lane owns whole areas and works one PR at a time ([design team](../design/DESIGN-TEAM.md)) |
-| UI/UX review cycle | 1 | The design lead. Screenshots the app at phone sizes after each deploy batch, reviews pixels and one-handed use, files findings as tasks for the UI lanes ([runbook](../runbooks/ui-ux-review-cycle.md)), and keeps DESIGN-RULES in step with the [design log](../design/log/README.md) |
+| UI/UX review cycle | 1 | The design lead. Screenshots the app at phone sizes after each deploy batch, reviews pixels and one-handed use, files findings as tasks for the UI lanes ([runbook](../runbooks/ui-ux-review-cycle.md)); every 3 days, reviews the UI changes since its last run against the [UX rules](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) ([runbook](../runbooks/ux-rules-review.md)); and keeps DESIGN-RULES in step with the [design log](../design/log/README.md) |
 | Production QA | 1 | The deploy and prod checks, including write tests, only in the sandbox QA company |
 | Backlog bug fixes | 1 | Open `BUG` and `BACKLOG NIT` items, small and high-impact first |
 | Security | 1 | The daily diff and weekly full security scan, and the fixes for what it confirms ([runbook](../runbooks/security-scan.md)) |
@@ -394,6 +394,7 @@ A brief is short. It points the builder to exactly what to read and change:
 | Decisions | [docs/decisions](../decisions/README.md) |
 | Changelog | [docs/changelog.md](../changelog.md), and entries not yet folded in: [docs/changelog.d/](../changelog.d/README.md) |
 | CI, deploy, rollback | [CI and CD](../runbooks/ci-cd.md), `.github/workflows/ci.yml` |
+| UX rules review | [Runbook](../runbooks/ux-rules-review.md), [the rules](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) |
 | Security scan | [Runbook](../runbooks/security-scan.md), [known attacks](../security/known-attacks.md), [zero-day patterns](../security/zero-day-patterns.md) |
 | Live checks with the read-only test account | [Live test account](../runbooks/live-test-account.md), [smoke user](../runbooks/smoke-user.md) |
 | Connectors | [connector contract](../tech/connector-contract.md), [connector UI states](../tech/connector-ui-states.md), [SUMIT runbook](../runbooks/sumit-connect.md), [Jev runbook](../runbooks/jev.md) |
