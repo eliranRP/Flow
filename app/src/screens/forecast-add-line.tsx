@@ -14,12 +14,21 @@ export type ForecastLineProject = { id: string; name: string };
  * overhead project, as the company's צפי page groups it), then opens that project's add page for this month,
  * which comes back here. With one project there is nothing to ask.
  */
-export function ForecastAddLine({ month, projects, search }: { month: string; projects: readonly ForecastLineProject[]; search: string }) {
+export function ForecastAddLine({ month, projects, search, back = "forecast", pace, label = "הוספת קטגוריה לצפי" }: {
+  month: string;
+  projects: readonly ForecastLineProject[];
+  search: string;
+  /** Where the add page comes back to: the תזרים צפוי screen, or קבועים (FLOW-1011). */
+  back?: "forecast" | "recurring";
+  /** FLOW-1011: the pace the add page starts at (קבועים adds a line every month). */
+  pace?: "month";
+  label?: string;
+}) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const extra = search.startsWith("?") ? `&${search.slice(1)}` : "";
-  const go = (projectId: string) => { void navigate(`/projects/${projectId}/profit/next/add?month=${month}&back=forecast${extra}`); };
+  const go = (projectId: string) => { void navigate(`/projects/${projectId}/profit/next/add?month=${month}&back=${back}${pace == null ? "" : `&pace=${pace}`}${extra}`); };
   const only = projects.length === 1 ? projects[0] : undefined;
   if (projects.length === 0) return null;
   return (
@@ -31,11 +40,11 @@ export function ForecastAddLine({ month, projects, search }: { month: string; pr
         onClick={() => { if (only != null) go(only.id); else setOpen(true); }}
       >
         <span className="ui-pn-add-mark" aria-hidden="true"><PlusIcon size={18} /></span>
-        הוספת קטגוריה לצפי
+        {label}
       </button>
       <ChoiceSheet
         copy={{
-          historyKey: "forecast-add-project",
+          historyKey: `${back}-add-project`,
           title: "לאיזה פרויקט",
           subtitle: "השורה נוספת לצפי של הפרויקט",
           choices: projects.map((project) => ({ value: project.id, label: project.name })),

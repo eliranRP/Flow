@@ -25,6 +25,7 @@ function renderEdit(preset: Partial<ProjectNextEditSample> = {}, add = false, qu
   return renderWithProviders(
     <Routes>
       <Route path="/forecast" element={<p>the month-end forecast</p>} />
+      <Route path="/recurring" element={<p>the recurring list</p>} />
       <Route path="/projects/:projectId/profit/next" element={<p>the forecast page</p>} />
       <Route path="/projects/:projectId/profit/next/add" element={<ProjectNextEditScreen add sample={sample} />} />
       <Route path="/projects/:projectId/profit/next/edit/:rowKey" element={<ProjectNextEditScreen sample={sample} />} />
@@ -190,6 +191,24 @@ describe("ProjectNextEditScreen, a new line", () => {
         expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.objectContaining({ p_month: "2026-10" }));
       });
       expect(await screen.findByText("the month-end forecast")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("adds a monthly line from קבועים: it starts at כל חודש and goes back there (FLOW-1011)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T09:00:00Z"));
+    try {
+      rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { edit: {}, undo: UNDO } : null, error: null }));
+      renderEdit({ categoryId: "property-mgmt" }, true, "?month=2026-10&back=recurring&pace=month");
+      expect(screen.getByRole("button", { name: "כל כמה זמן: כל חודש" })).toBeTruthy();
+      fireEvent.change(amountField(), { target: { value: "729" } });
+      fireEvent.click(screen.getByRole("button", { name: "הוספה לצפי" }));
+      await waitFor(() => {
+        expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.objectContaining({ p_month: "2026-10", p_edit: { category_id: "property-mgmt", amount_minor: 72_900, pace: "month" } }));
+      });
+      expect(await screen.findByText("the recurring list")).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }

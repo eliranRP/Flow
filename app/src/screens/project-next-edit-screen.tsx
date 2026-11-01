@@ -97,7 +97,10 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const goBack = useGoBack();
   // FLOW-1006: the תזרים צפוי screen adds a line for this month (?month=) and comes back to itself (?back=forecast).
   const [searchParams] = useSearchParams();
-  const backTo = add && searchParams.get("back") === "forecast" ? `/forecast${search}` : `/projects/${projectId}/profit/next${search}`;
+  const backParam = add ? searchParams.get("back") : null;
+  // FLOW-1011: קבועים adds a line too (?back=recurring), starting at כל חודש (?pace=month).
+  const backTo = backParam === "forecast" ? `/forecast${search}` : backParam === "recurring" ? `/recurring${search}` : `/projects/${projectId}/profit/next${search}`;
+  const askedPace = add && searchParams.get("pace") === "month" ? "month" : null;
   const gate = useWriteGate(backTo);
   const companyCurrency = useCompanyCurrency();
   const detail = useProjectQuery(sample ? "" : projectId, allTime());
@@ -164,7 +167,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const diff = bars == null ? null : historyDiff(amount == null ? null : BigInt(amount), bars.usual, currency, month);
   // FLOW-1010: an added line starts at its own pace, so a save in its first month (which edits the line) keeps it
   // repeating unless the owner picks another; any other row starts at once, as before.
-  const pace: ForecastPace = pickedPace ?? (row?.kind === "added" ? row.pace ?? "once" : "once");
+  const pace: ForecastPace = pickedPace ?? askedPace ?? (row?.kind === "added" ? row.pace ?? "once" : "once");
   const summary = paceSummary(pace, month, income);
   const hint = add
     ? `השורה נכנסת לצפי של ${projectName} בלבד. לא נוצרת תנועה.`

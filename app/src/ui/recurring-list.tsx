@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { Link } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { Avatar } from "./avatar";
@@ -76,6 +76,8 @@ export type RecurringListProps = {
   openId?: string;
   /** FLOW-963: offline, the moment the rows on screen are from; undefined when online. */
   offlineSince?: number;
+  /** FLOW-1011: under the groups, the row that adds a recurring line to a project's forecast. */
+  addLine?: ReactNode;
 };
 
 /** FLOW-986: קבועים is no longer a tab; it opens from Home, so Back goes there ("‹ בית"). */
@@ -90,7 +92,7 @@ export function RecurringBack() {
  * קבועות" and the expense groups under "הוצאות קבועות", one group per category. The amounts are
  * formatted here; the rows only say what they are.
  */
-export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, onIgnore, onStill, onEnded, openId, offlineSince }: RecurringListProps) {
+export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, onIgnore, onStill, onEnded, openId, offlineSince, addLine }: RecurringListProps) {
   const money = (minor: bigint) => formatAmountText(minor, currency);
   const lateHead = useId();
   const rowView = (row: RecurringListRow) => (
@@ -139,6 +141,7 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
           <ul className="ui-recurring-rows">{group.rows.map(rowView)}</ul>
         </section>
       ))}
+      {addLine}
     </div>
   );
 }

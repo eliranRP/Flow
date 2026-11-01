@@ -7,7 +7,7 @@ import { israelToday } from "../ui/date-math";
 import { ForecastScreen } from "./forecast-screen";
 import { topToast } from "../ui/top-toast";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { addLineReady, lineProjects } from "./forecast-add-line";
+import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
 
 function LocationProbe() {
   const location = useLocation();
@@ -391,5 +391,21 @@ describe("addLineReady (FLOW-1006)", () => {
     expect(addLineReady(true, true, { project: undefined, failed: true })).toBe(true);
     expect(addLineReady(true, true, { project: null, failed: false })).toBe(true);
     expect(addLineReady(true, true, { project: { id: "office", name: "Office" }, failed: false })).toBe(true);
+  });
+});
+
+describe("הוספת קבוע לצפי on קבועים (FLOW-1011)", () => {
+  it("asks which project, then opens its add page for this month at כל חודש, back to קבועים", async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/recurring" element={<ForecastAddLine month="2026-11" projects={[{ id: "p1", name: "Green 510 Gables" }, { id: "office", name: "כללי" }]} search="" back="recurring" pace="month" label="הוספת קבוע לצפי" />} />
+        <Route path="/projects/:projectId/profit/next/add" element={<LocationProbe />} />
+      </Routes>,
+      { route: "/recurring" },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הוספת קבוע לצפי" }));
+    const sheet = await screen.findByRole("dialog", { name: "לאיזה פרויקט" });
+    fireEvent.click(within(sheet).getByRole("radio", { name: "Green 510 Gables" }));
+    expect(await screen.findByText("/projects/p1/profit/next/add?month=2026-11&back=recurring&pace=month")).toBeTruthy();
   });
 });
