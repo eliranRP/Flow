@@ -122,9 +122,10 @@ Work runs in **lanes**. A lane is one long-running agent thread that owns a kind
 | UI/UX review cycle | 1 | The design lead. Screenshots the app at phone sizes after each deploy batch, reviews pixels and one-handed use, files findings as tasks for the UI lanes ([runbook](../runbooks/ui-ux-review-cycle.md)), and keeps DESIGN-RULES in step with the [design log](../design/log/README.md) |
 | Production QA | 1 | The deploy and prod checks, including write tests, only in the sandbox QA company |
 | Backlog bug fixes | 1 | Open `BUG` and `BACKLOG NIT` items, small and high-impact first |
+| Security | 1 | The daily diff and weekly full security scan, and the fixes for what it confirms ([runbook](../runbooks/security-scan.md)) |
 | MCP/data agent | 1 | Real data through the MCP tools. Never changes the repo |
 
-The UI lanes, review cycle, Production QA, and bug-fix lanes have their own slots. They don't count against the 2 dev task lanes. Don't start a third dev task lane; wait for one to finish.
+The UI lanes, review cycle, Production QA, bug-fix and security lanes have their own slots. They don't count against the 2 dev task lanes. Don't start a third dev task lane; wait for one to finish.
 
 ### Priority
 
@@ -171,7 +172,7 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 2. **When you start**, open the draft PR right away (step 2 of [How to take a task](#how-to-take-a-task)) with a `Claim` block at the top of the body:
    ```text
    Claim
-   - Lane: <dev lane 1 | dev lane 2 | UI lane 1 | UI lane 2 | UI/UX review | Production QA | bug fixes>
+   - Lane: <dev lane 1 | dev lane 2 | UI lane 1 | UI lane 2 | UI/UX review | Production QA | bug fixes | security>
    - Ids: FLOW-<id>, FLOW-<id>
    - Started: YYYY-MM-DD HH:MM UTC
    - Areas: <screens, tables, MCP tools>
