@@ -4,7 +4,7 @@
     "strict": true
   },
   "imports": {
-    "zod": "npm:zod@4.6.5"
+    "zod": "npm:zod@4.6.7"
   },
   "lock": {
     "path": "./deno.lock",
