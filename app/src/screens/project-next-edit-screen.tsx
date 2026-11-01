@@ -267,7 +267,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
               disabled={writes.pending}
               onClick={() => {
                 // Decision 0219: the row leaves at once; a failure puts it back on the list with the failure toast.
-                writes.mutate({ fn: "remove_project_forecast_row", rowKey: row.key, message: `הוסר מהצפי: ${row.name}` });
+                writes.mutate({ fn: "remove_project_forecast_row", rowKey: row.key, message: `הוסר מהצפי מ${monthWord(month)} והלאה: ${row.name}` });
                 goBack(backTo);
               }}
             >
