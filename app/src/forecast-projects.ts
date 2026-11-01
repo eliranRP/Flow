@@ -21,7 +21,8 @@ export const GENERAL_NAME = "כללי";
  * לפי פרויקט (FLOW-1004, owner 2026-11-01): the month-end forecast's counted items by project, the projects
  * in the dashboard's order, then the general costs (no project, or the overhead project, as the company's צפי
  * page groups them). A recurring charge names its project's id; an invoice names its project, matched to it by
- * name. The small charges count under their own projects; the items moved to next month are left out. The
+ * name (one the list does not name keeps its own name; a charge on a project the list does not name is
+ * general). The small charges count under their own projects; the items moved to next month are left out. The
  * groups' totals add up to the build's.
  */
 export function forecastProjects(build: ForecastBuild, projects: readonly ForecastProject[]): ForecastProjectGroup[] {
@@ -32,7 +33,9 @@ export function forecastProjects(build: ForecastBuild, projects: readonly Foreca
 
   function groupOf(item: ForecastItem): ForecastProjectGroup {
     const project = item.project_id != null ? byId.get(item.project_id) : item.project_name != null ? byName.get(item.project_name) : undefined;
-    const id = project?.id ?? item.project_id ?? null;
+    // A charge on a project the list does not name (deleted since) has no name to show: it counts as general.
+    if (item.project_id != null && project == null) return general;
+    const id = project?.id ?? null;
     if (id == null && item.project_name == null) return general;
     if (project?.is_overhead === true) return general;
     const key = id ?? `name:${item.project_name ?? ""}`;

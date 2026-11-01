@@ -35,6 +35,12 @@ describe("forecastProjects (FLOW-1004)", () => {
     expect(overhead.at(-1)?.projectId).toBeNull();
   });
 
+  it("counts a charge on a project the list does not name as general, never a second כללי", () => {
+    const groups = forecastProjects(build, [{ id: "p-north", name: "Northgate Co" }]);
+    expect(groups.map((group) => group.name)).toEqual(["Northgate Co", GENERAL_NAME]);
+    expect(groups.at(-1)?.income.map((item) => item.name)).toContain("Elm St, unit 2");
+  });
+
   it("has no כללי section when every item has a project", () => {
     const none = forecastProjects({ ...build, income: [], expense: [], small: build.small.filter((item) => item.project_id === "p-elm") }, projects);
     expect(none.map((group) => group.name)).toEqual(["Elm St"]);

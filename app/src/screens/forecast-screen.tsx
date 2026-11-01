@@ -349,7 +349,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
           <ChangedLine changed={changed} onReset={resetAll} />
           <ForecastViewSwitch view={view} onPick={setView} />
           {byProject ? (
-            live && projects.data == null ? (
+            // In preview the read is off (no fetch at all): the view draws with no names, everything as general.
+            live && projects.data == null && projects.fetchStatus !== "idle" ? (
               projects.isError ? (
                 <PageLoadFailed title="הפרויקטים לא נטענו" offline={!online} onRetry={() => void projects.refetch()} />
               ) : (
