@@ -417,6 +417,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1005"></a>[FLOW-1005](tasks/FLOW-1005.md) | The month-end forecast counts the projects' forecast edits | DB + UI |
 | <a id="flow-1006"></a>[FLOW-1006](tasks/FLOW-1006.md) | הוספת קטגוריה לצפי on the תזרים צפוי screen | SMALL UI |
 | <a id="flow-1008"></a>[FLOW-1008](tasks/FLOW-1008.md) | Home's forecast row shows the תזרים צפוי screen's number | SMALL UI |
+| <a id="flow-1009"></a>[FLOW-1009](tasks/FLOW-1009.md) | The forecast item page's back link sits under the notch | SMALL UI |
 
 ## Projects and reports
 
