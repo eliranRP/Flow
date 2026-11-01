@@ -9,7 +9,6 @@ import { assertNoError, useWrite } from "./use-write";
  * same way.
  */
 
-
 /** The last day of a YYYY-MM month (yyyy-mm-dd): the "עד סוף החודש" choice. */
 export function monthEndDay(month: string): string {
   const [year, mon] = month.split("-").map(Number);
