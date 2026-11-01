@@ -8,7 +8,8 @@ import { GENERAL_NAME } from "../forecast-projects";
 export type ForecastLineProject = { id: string; name: string };
 
 /**
- * FLOW-1006 (owner, 2026-11-01: "add the button to add a forecast transaction"): הוספה לצפי on the תזרים
+ * FLOW-1006 (owner, 2026-11-01: "add the button to add a forecast transaction", "like in project page"):
+ * הוספת קטגוריה לצפי, the project צפי page's own add row, on the תזרים
  * צפוי screen. A line belongs to a project's forecast, so the sheet asks which project first (כללי is the
  * overhead project, as the company's צפי page groups it), then opens that project's add page for this month,
  * which comes back here. With one project there is nothing to ask.
@@ -30,7 +31,7 @@ export function ForecastAddLine({ month, projects, search }: { month: string; pr
         onClick={() => { if (only != null) go(only.id); else setOpen(true); }}
       >
         <span className="ui-pn-add-mark" aria-hidden="true"><PlusIcon size={18} /></span>
-        הוספה לצפי
+        הוספת קטגוריה לצפי
       </button>
       <ChoiceSheet
         copy={{

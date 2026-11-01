@@ -157,7 +157,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const soFarQuery = useForecastSoFarQuery(month, base, live && byCategory && data != null);
   const categories = useCategoriesQuery(live && (byCategory || open?.category_id != null));
   const byProject = view === "projects";
-  // The projects name לפי פרויקט's sections, the item page's project and הוספה לצפי's sheet (FLOW-1006).
+  // The projects name לפי פרויקט's sections, the item page's project and the add row's sheet (FLOW-1006).
   const projects = useDashboardQuery(live);
   const overhead = useOverheadProject(live);
   const overheadId = overhead.project?.id ?? null;
@@ -446,7 +446,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             ) : null}
             </>
           )}
-          {live && projects.data == null ? null : <ForecastAddLine month={month} projects={lineProjects(projectList, overheadId)} search={search} />}
+          {/* Waits for the overhead project too, so it is listed as כללי, never under its own name for a moment. */}
+          {live && (projects.data == null || overhead.project === undefined) ? null : <ForecastAddLine month={month} projects={lineProjects(projectList, overheadId)} search={search} />}
           <ForecastFootnote />
         </>
       )}

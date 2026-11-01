@@ -60,7 +60,7 @@ describe("ForecastScreen", () => {
     expect(screen.getByRole("heading", { name: /Elm St, unit 2/ })).toBeTruthy();
   });
 
-  it("adds a line: הוספה לצפי asks which project, then opens its add page for this month (FLOW-1006)", async () => {
+  it("adds a line: הוספת קטגוריה לצפי asks which project, then opens its add page for this month (FLOW-1006)", async () => {
     renderWithProviders(
       <Routes>
         <Route path="/forecast" element={<ForecastScreen sample={monthForecastBoardSample("project")} />} />
@@ -68,7 +68,7 @@ describe("ForecastScreen", () => {
       </Routes>,
       { route: "/forecast" },
     );
-    fireEvent.click(screen.getByRole("button", { name: "הוספה לצפי" }));
+    fireEvent.click(screen.getByRole("button", { name: "הוספת קטגוריה לצפי" }));
     const sheet = await screen.findByRole("dialog", { name: "לאיזה פרויקט" });
     expect(within(sheet).getAllByRole("radio").map((row) => row.textContent)).toEqual(["Northgate Co", "Elm St"]);
     fireEvent.click(within(sheet).getByRole("radio", { name: "Elm St" }));

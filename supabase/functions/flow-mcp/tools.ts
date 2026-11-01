@@ -250,8 +250,7 @@ export async function callTool(
     return ok(unpaidReport(rows, overview.json as Record<string, unknown>));
   }
 
-  // FLOW-141: the month-end forecast. Its reads, one builder; the write tools live in tools_write.ts.
-  // FLOW-1005: the projects' forecast edits of the month count too, as in the app.
+  // FLOW-141: the month-end forecast, its reads (FLOW-1005: the projects' edits too), one builder; writes in tools_write.ts.
   if (name === "get_forecast") {
     const month = args.month ?? israelMonthKey();
     if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return fail("validation", "validation");
