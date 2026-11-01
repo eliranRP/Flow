@@ -1,5 +1,5 @@
 import { parseDecimalHalfEven } from "@flow/shared";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { Amount } from "../ui/amount";
@@ -13,6 +13,7 @@ import { INVESTMENT_LABELS, currencyWord, type InvestmentField, type InvestmentF
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField } from "../ui/money-field";
 import { Sheet } from "../ui/sheet";
+import { TextField } from "../ui/text-field";
 import { categoryHref } from "./project-category-screen";
 import {
   REHAB_TOTAL_ONLY,
@@ -193,12 +194,16 @@ export type InvestmentPatch = Partial<{
   arv_minor: number | null;
   value_minor: number | null;
   value_date: string | null;
+  land_minor: number | null;
+  units: number | null;
 }>;
 
-const PATCH_KEY: Record<InvestmentField, "purchase_minor" | "arv_minor" | "value_minor"> = {
+const PATCH_KEY: Record<InvestmentField, "purchase_minor" | "arv_minor" | "value_minor" | "land_minor" | "units"> = {
   purchase: "purchase_minor",
   arv: "arv_minor",
   value: "value_minor",
+  land: "land_minor",
+  units: "units",
 };
 
 /** What each figure is, in one line under its name (the board's edit sheet). */
@@ -206,9 +211,13 @@ const FIELD_HELP: Record<InvestmentField, string> = {
   purchase: "המחיר ששולם על הנכס. לא כולל עלויות סגירה שכבר נרשמו כהוצאה.",
   arv: "כמה הנכס יהיה שווה כשהשיפוץ יסתיים. משמש לחישוב ההשבחה הצפויה.",
   value: "הערכה של שווי הנכס היום, למשל משמאות או מעסקאות דומות.",
+  land: "החלק של הקרקע במחיר. קרקע לא מתבלה, ולכן אין עליה פחת. לרוב מופיע בשומת הארנונה.",
+  units: "כמה יחידות להשכרה יש בנכס. משמש לחישוב התזרים ליחידה.",
 };
 
 export const EMPTY_HOLD = "הסכום ריק. כדי למחוק אותו, הקישו מחיקה.";
+export const UNITS_HOLD = "מספר היחידות הוא בין 1 ל־9999.";
+const UNITS_EMPTY_HOLD = "המספר ריק. כדי למחוק אותו, הקישו מחיקה.";
 
 /** 125000050n → "1250000.5" (the field's own digits). */
 export function minorToRaw(value: bigint | null): string {
@@ -228,16 +237,28 @@ export function rawToMinor(raw: string): bigint | null {
   return parseDecimalHalfEven(clean.startsWith(".") ? `0${clean}` : clean, 2);
 }
 
-type Verdict = { kind: "clean" } | { kind: "hold" } | { kind: "save"; patch: InvestmentPatch };
+/** A figure in its field's own unit: minor units of money, or a count of units. */
+function toRaw(field: InvestmentField, value: bigint | null): string {
+  if (field === "units") return value == null ? "" : value.toString();
+  return minorToRaw(value);
+}
+
+function fromRaw(field: InvestmentField, raw: string): bigint | null {
+  if (field === "units") return /^\d+$/.test(raw) ? BigInt(raw) : null;
+  return rawToMinor(raw);
+}
+
+type Verdict = { kind: "clean" } | { kind: "hold"; message: string } | { kind: "save"; patch: InvestmentPatch };
 
 export function editVerdict(
   field: InvestmentField,
   base: { minor: bigint | null; date: string | null },
   draft: { raw: string; date: string; dateTouched: boolean },
 ): Verdict {
-  const amount = rawToMinor(draft.raw);
+  const amount = fromRaw(field, draft.raw);
   const amountChanged = amount !== base.minor;
-  if (amountChanged && amount == null) return { kind: "hold" };
+  if (amountChanged && amount == null) return { kind: "hold", message: field === "units" ? UNITS_EMPTY_HOLD : EMPTY_HOLD };
+  if (field === "units" && amountChanged && amount != null && (amount < 1n || amount > 9999n)) return { kind: "hold", message: UNITS_HOLD };
   if (field !== "value") {
     return amountChanged && amount != null ? { kind: "save", patch: { [PATCH_KEY[field]]: Number(amount) } } : { kind: "clean" };
   }
@@ -263,6 +284,7 @@ export function InvestmentEditSheet({
   field: InvestmentField;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The figure in its field's unit: minor units of money, or the count of units. */
   minor: bigint | null;
   date: string | null;
   /** Resolves true once saved. A failure toasts and keeps the sheet open. */
@@ -271,11 +293,11 @@ export function InvestmentEditSheet({
 }) {
   const label = INVESTMENT_LABELS[field];
   const today = israelToday();
-  const [raw, setRaw] = useState(() => minorToRaw(baseMinor));
+  const [raw, setRaw] = useState(() => toRaw(field, baseMinor));
   const [date, setDate] = useState(today);
   const [dateTouched, setDateTouched] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
-  const [hold, setHold] = useState(false);
+  const [hold, setHold] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const base = useRef({ minor: baseMinor, date: baseDate });
   const draft = useRef({ raw, date, dateTouched });
@@ -288,10 +310,10 @@ export function InvestmentEditSheet({
   useEffect(() => {
     if (!open) return;
     base.current = { minor: baseMinor, date: baseDate };
-    setRaw(minorToRaw(baseMinor));
+    setRaw(toRaw(field, baseMinor));
     setDate(israelToday());
     setDateTouched(false);
-    setHold(false);
+    setHold(null);
     holdShown.current = false;
     // Only a new open resets the draft; a refetch while it is open must not.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -304,13 +326,13 @@ export function InvestmentEditSheet({
     try {
       const ok = await pending;
       if (ok) {
-        const nextMinor = kind === "clear" ? null : rawToMinor(draft.current.raw);
+        const nextMinor = kind === "clear" ? null : fromRaw(field, draft.current.raw);
         base.current = field === "value"
           ? { minor: kind === "clear" ? null : (nextMinor ?? base.current.minor), date: kind === "clear" ? null : (patch.value_date ?? base.current.date) }
           : { minor: nextMinor, date: null };
-        setRaw(minorToRaw(base.current.minor));
+        setRaw(toRaw(field, base.current.minor));
         setDateTouched(false);
-        setHold(false);
+        setHold(null);
       }
       return ok;
     } finally {
@@ -327,11 +349,11 @@ export function InvestmentEditSheet({
     if (verdict.kind === "clean") return true;
     if (verdict.kind === "hold") {
       if (holdShown.current) {
-        setRaw(minorToRaw(base.current.minor));
+        setRaw(toRaw(field, base.current.minor));
         return true;
       }
       holdShown.current = true;
-      setHold(true);
+      setHold(verdict.message);
       return false;
     }
     return run(verdict.patch, "save");
@@ -340,10 +362,10 @@ export function InvestmentEditSheet({
   const setSheet = useSheetHistory("investment-edit", open, onOpenChange, guard);
 
   function discard() {
-    setRaw(minorToRaw(base.current.minor));
+    setRaw(toRaw(field, base.current.minor));
     setDate(israelToday());
     setDateTouched(false);
-    setHold(false);
+    setHold(null);
     holdShown.current = false;
   }
 
@@ -352,7 +374,7 @@ export function InvestmentEditSheet({
     const verdict = editVerdict(field, base.current, draft.current);
     if (verdict.kind === "hold") {
       holdShown.current = true;
-      setHold(true);
+      setHold(verdict.message);
       return;
     }
     if (verdict.kind === "save" && !(await run(verdict.patch, "save"))) return;
@@ -362,6 +384,21 @@ export function InvestmentEditSheet({
   async function clear() {
     if (busy) return;
     if (await run(clearPatch(field), "clear")) setSheet(false);
+  }
+
+  function change(next: string) {
+    setRaw(next);
+    if (hold != null) {
+      setHold(null);
+      holdShown.current = false;
+    }
+  }
+
+  function onEnter(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void submit();
+    }
   }
 
   const canClear = base.current.minor != null || (field === "value" && base.current.date != null);
@@ -388,27 +425,29 @@ export function InvestmentEditSheet({
       )}
     >
       <p className="ui-pinv-help">{FIELD_HELP[field]}</p>
-      <MoneyField
-        label="סכום"
-        value={raw}
-        prefix=""
-        disabled={busy}
-        enterKeyHint="done"
-        onValueChange={(next) => {
-          setRaw(next);
-          if (hold) {
-            setHold(false);
-            holdShown.current = false;
-          }
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            void submit();
-          }
-        }}
-      />
-      {hold ? <HoldLine onDiscard={discard}>{EMPTY_HOLD}</HoldLine> : null}
+      {field === "units" ? (
+        <TextField
+          label="מספר יחידות"
+          value={raw}
+          numeric
+          inputMode="numeric"
+          disabled={busy}
+          enterKeyHint="done"
+          onChange={(event) => { change(event.target.value.replace(/\D/g, "").slice(0, 4)); }}
+          onKeyDown={onEnter}
+        />
+      ) : (
+        <MoneyField
+          label="סכום"
+          value={raw}
+          prefix=""
+          disabled={busy}
+          enterKeyHint="done"
+          onValueChange={change}
+          onKeyDown={onEnter}
+        />
+      )}
+      {hold != null ? <HoldLine onDiscard={discard}>{hold}</HoldLine> : null}
       {field === "value" ? (
         <>
           <div className="ui-field">

@@ -13,6 +13,9 @@ import { loanNote } from "./project-investment-cards";
 import { REHAB_TOTAL_ONLY, rehabBreakdown, toProjectInvestment } from "./project-investment-data";
 import { ProjectInvestmentScreen, INVESTMENT_REFUSED, applySample } from "./project-investment-screen";
 import { EMPTY_HOLD, editVerdict, rawToMinor } from "./project-investment-sheets";
+import { birchLaneReturns } from "../dev/returns-sample";
+import type { PropertyReturns } from "./project-returns-data";
+import { toReturnsJson } from "./project-returns-test-support";
 
 type Result = { data: unknown; error: { message: string; code?: string } | null };
 type Call = { name: string; args: unknown };
@@ -70,6 +73,26 @@ function payload(inv: Record<string, unknown> = {}, extra: Record<string, unknow
   return { ...base, investment: { ...investment, ...inv }, ...extra };
 }
 
+/** The returns read on the same invented figures: equity ₪850,000, השבחה ₪337,600, money in ₪762,400. */
+function returnsOf(over: Partial<PropertyReturns["equity"]> = {}, inputs: Partial<PropertyReturns["inputs"]> = {}): Record<string, unknown> {
+  const r: PropertyReturns = {
+    ...birchLaneReturns,
+    currency: "ILS",
+    inputs: {
+      ...birchLaneReturns.inputs,
+      purchaseMinor: 125_000_000n,
+      arvMinor: 190_000_000n,
+      valueMinor: 165_000_000n,
+      rehabMinor: 31_240_000n,
+      borrowedMinor: 80_000_000n,
+      loanBalanceMinor: 80_000_000n,
+      ...inputs,
+    },
+    equity: { todayMinor: 85_000_000n, forcedMinor: 33_760_000n, moneyInMinor: 76_240_000n, ...over },
+  };
+  return toReturnsJson(r);
+}
+
 function wrap(node: React.ReactNode, entry = "/projects/p1/investment") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -91,9 +114,10 @@ function renderPage(options: { viewer?: boolean; entry?: string } = {}) {
 }
 
 /** The page's own read answers with `project`; `save` decides what set_project_investment says. */
-function serve(project: unknown = payload(), save: Result | null = null) {
+function serve(project: unknown = payload(), save: Result | null = null, returns: unknown = returnsOf()) {
   rpc.impl = (name) => {
     if (name === "set_project_investment" && save != null) return Promise.resolve(save);
+    if (name === "get_property_returns") return Promise.resolve({ data: returns, error: null });
     return Promise.resolve({ data: name === "get_project" ? project : name === "set_project_investment" ? { before: {}, after: {} } : null, error: null });
   };
 }
@@ -112,10 +136,11 @@ async function ready(): Promise<void> {
 }
 
 describe("the page", () => {
-  it("shows the equity card, the figures and the loans the project read", async () => {
+  it("shows the equity in the property, the figures and the loans the project read", async () => {
     serve();
     renderPage();
     await ready();
+    await screen.findByText("הון בנכס");
     expect(screen.getByText("₪1,250,000")).toBeInTheDocument();
     expect(screen.getByText("₪1,900,000")).toBeInTheDocument();
     expect(screen.getByText("₪1,650,000")).toBeInTheDocument();
@@ -129,22 +154,30 @@ describe("the page", () => {
     expect(rpc.calls.filter((call) => call.name === "get_project").every((call) => basisOf(call) !== "cash")).toBe(true);
   });
 
-  it("shows today's value split: equity share and the loans in the legend", async () => {
+  it("leads with the total return on the money in the deal and its four sources", async () => {
     serve();
     renderPage();
-    await ready();
-    expect(screen.getByText("52%")).toBeInTheDocument();
-    expect(screen.getByText("הון עצמי היום")).toBeInTheDocument();
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
+    if (card == null) throw new Error("no card");
+    expect(within(card).getByText("54.4%")).toBeInTheDocument();
+    expect(card).toHaveTextContent("על ₪762,400 בעסקה");
+    for (const source of ["תזרים", "החזר קרן", "עליית ערך", "חיסכון מס"]) {
+      expect(within(card).getByRole("button", { name: `איך מחושב: ${source}` })).toBeInTheDocument();
+    }
+    expect(within(card).getByRole("link", { name: "איך מחושב" })).toHaveAttribute("href", "/projects/p1/investment/returns");
   });
 
-  it("names a missing ARV instead of the השבחה, and offers הוספה", async () => {
-    serve(payload({ arv_minor: null, forced_equity_minor: null }));
+  it("names a missing ARV in the השבחה, and its הוספה opens the ARV sheet", async () => {
+    serve(payload({ arv_minor: null, forced_equity_minor: null }), null, returnsOf({ forcedMinor: null }, { arvMinor: null }));
     renderPage();
     await ready();
-    expect(screen.getByText("חסר שווי אחרי שיפוץ")).toBeInTheDocument();
+    const card = await screen.findByRole("region", { name: "הון בנכס" });
+    expect(within(card).getByText("חסר")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /שווי אחרי שיפוץ.*הוספה/ })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "הוספה" })).toHaveLength(1);
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "הוספה" }));
+    expect(await screen.findByRole("dialog", { name: "שווי אחרי שיפוץ (ARV)" })).toBeInTheDocument();
   });
 
   it("says another currency blocks the equity and lists the loan apart", async () => {
@@ -156,10 +189,11 @@ describe("the page", () => {
           { id: "l2", name: "הלוואה בדולר", currency: "USD", balance_minor: 12_000_000, status: "open" },
         ],
       },
-    ));
+    ), null, returnsOf({ todayMinor: null }));
     renderPage();
     await ready();
-    expect(screen.getByText("לא מחושב, יש הלוואה בדולר")).toBeInTheDocument();
+    const card = await screen.findByRole("region", { name: "הון בנכס" });
+    expect(within(card).getByText("לא מחושב")).toBeInTheDocument();
     expect(screen.getByText(/במטבע אחר/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /הלוואה בדולר/ })).toHaveTextContent("$120,000");
   });
@@ -168,7 +202,9 @@ describe("the page", () => {
     serve(payload({ arv_minor: null, forced_equity_minor: null }));
     const { container } = renderPage({ viewer: true });
     await ready();
-    expect(container.querySelectorAll(".ui-pinv-card button")).toHaveLength(0);
+    await screen.findByText("הון בנכס");
+    // A viewer still opens an ⓘ: it reads, it writes nothing.
+    expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => button.getAttribute("aria-label")?.startsWith("איך מחושב"))).toBe(true);
     expect(screen.queryByText("הוספה")).not.toBeInTheDocument();
     expect(screen.queryByText("+ הוספת הלוואה")).not.toBeInTheDocument();
     expect(container.querySelector('[aria-label="נתוני הנכס"] .ui-pinv-chevron')).toBeNull();
@@ -256,14 +292,18 @@ describe("the equity formulas", () => {
         return Promise.resolve({ data: { before: {}, after: {} }, error: null });
       }
       const forced = arv - 125_000_000 - 31_240_000;
+      if (name === "get_property_returns") return Promise.resolve({ data: returnsOf({ forcedMinor: BigInt(forced) }, { arvMinor: BigInt(arv) }), error: null });
       return Promise.resolve({ data: name === "get_project" ? payload({ arv_minor: arv, forced_equity_minor: forced }) : null, error: null });
     };
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי אחרי שיפוץ/ }));
+    await screen.findByText("הון בנכס");
+    fireEvent.click(screen.getByRole("button", { name: /^שווי אחרי שיפוץ/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "2000000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("₪437,600")).toBeInTheDocument();
+    // The returns are read again after the save.
+    expect(rpc.calls.filter((call) => call.name === "get_property_returns").length).toBeGreaterThan(1);
   });
 });
 
@@ -605,7 +645,7 @@ describe("investment helpers", () => {
   });
 
   it("holds an emptied figure instead of clearing it on close", () => {
-    expect(editVerdict("purchase", { minor: 100n, date: null }, { raw: "", date: "2026-10-08", dateTouched: false })).toEqual({ kind: "hold" });
+    expect(editVerdict("purchase", { minor: 100n, date: null }, { raw: "", date: "2026-10-08", dateTouched: false })).toEqual({ kind: "hold", message: EMPTY_HOLD });
     expect(editVerdict("purchase", { minor: null, date: null }, { raw: "", date: "2026-10-08", dateTouched: false })).toEqual({ kind: "clean" });
   });
 

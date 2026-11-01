@@ -14,6 +14,10 @@ const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().t
 const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
 const ProjectNextEditScreen = lazy(() => screenLoaders.projectNextEdit().then((m) => ({ default: m.ProjectNextEditScreen })));
 const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
+const PropertyStatementScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyStatementScreen })));
+const PropertyReturnLineScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyReturnLineScreen })));
+const PropertyMetricScreen = lazy(() => screenLoaders.propertyReturnsDetail().then((m) => ({ default: m.PropertyMetricScreen })));
+const PropertyPartScreen = lazy(() => screenLoaders.propertyReturnsDetail().then((m) => ({ default: m.PropertyPartScreen })));
 
 /**
  * A month's profit page (FLOW-140): the period comes from the month in the path. A link or an address that
@@ -48,6 +52,11 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/profit/next/add" element={<ProjectNextEditScreen add />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
+      {/* FLOW-451: what the investment page's figures are made of: the statement, a line, a metric, a part. */}
+      <Route path="projects/:projectId/investment/returns" element={<PropertyStatementScreen />} />
+      <Route path="projects/:projectId/investment/returns/:line" element={<PropertyReturnLineScreen />} />
+      <Route path="projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen />} />
+      <Route path="projects/:projectId/investment/part/:part" element={<PropertyPartScreen />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
     </>
   );

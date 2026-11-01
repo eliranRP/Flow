@@ -6,9 +6,6 @@ import { ChevronIcon } from "../ui/icons";
 import {
   INVESTMENT_LABELS,
   currencyWord,
-  currentEquityNote,
-  forcedEquityNote,
-  type EquityNote,
   type InvestmentField,
   type InvestmentFigures,
   type MinorInCurrency,
@@ -21,120 +18,6 @@ import type { InvestmentLoan } from "./project-investment-data";
 
 /** What the cards ask the screen to open. A viewer's cards open nothing. */
 export type InvestmentRowRefs = Record<InvestmentField | "rehab", RefObject<HTMLButtonElement | null>>;
-
-export const FORCED_FORMULA = "ARV פחות קנייה ושיפוץ";
-export const CURRENT_FORMULA = "שווי היום פחות הלוואות";
-
-/** A figure to add first: the ARV, else the purchase price; today's value for the other column. */
-function firstMissing(figures: InvestmentFigures, column: "forced" | "current"): InvestmentField | null {
-  if (column === "current") return figures.valueMinor == null ? "value" : null;
-  if (figures.arvMinor == null) return "arv";
-  return figures.purchaseMinor == null ? "purchase" : null;
-}
-
-function EquityColumn({
-  label,
-  formula,
-  minor,
-  note,
-  currency,
-  add,
-  addRef,
-}: {
-  label: string;
-  formula: string;
-  minor: bigint | null;
-  note: EquityNote | null;
-  currency: string;
-  /** Opens the sheet of the figure that is missing; absent for a viewer or when nothing is missing. */
-  add: (() => void) | undefined;
-  addRef: RefObject<HTMLButtonElement | null> | undefined;
-}) {
-  return (
-    <div className="ui-pinv-equity-col">
-      <span className="ui-pinv-hint">{label}</span>
-      {minor != null ? (
-        <>
-          <span className="ui-pinv-equity-figure">
-            <Amount agorot={minor} currency={currency} size="card" loss={minor < 0n} />
-          </span>
-          <span className="ui-pinv-hint ui-pinv-formula">{formula}</span>
-        </>
-      ) : (
-        <>
-          <span className="ui-pinv-missing">{note?.text ?? "לא מחושב"}</span>
-          {note?.kind === "missing" && add != null ? (
-            <button type="button" ref={addRef} className="ui-pinv-add" onClick={add}>הוספה</button>
-          ) : null}
-        </>
-      )}
-    </div>
-  );
-}
-
-function percentOf(part: bigint, whole: bigint): number {
-  if (whole <= 0n || part <= 0n) return 0;
-  return Math.round((Number(part) / Number(whole)) * 100);
-}
-
-/** The top card: the two equities, then today's value split between equity and loans. */
-export function EquityCard({
-  figures,
-  onAdd,
-  rows,
-}: {
-  figures: InvestmentFigures;
-  /** Opens a figure's edit sheet; absent for a viewer. */
-  onAdd: ((field: InvestmentField) => void) | undefined;
-  rows: InvestmentRowRefs;
-}) {
-  const { currency } = figures;
-  const forcedField = firstMissing(figures, "forced");
-  const currentField = firstMissing(figures, "current");
-  const equity = figures.currentEquityMinor;
-  const share = equity != null && figures.valueMinor != null ? percentOf(equity, figures.valueMinor) : null;
-  return (
-    <section className="ui-pinv-card ui-pinv-equity" aria-label="הון עצמי והשבחה">
-      <div className="ui-pinv-equity-grid">
-        <EquityColumn
-          label="השבחה צפויה"
-          formula={FORCED_FORMULA}
-          minor={figures.forcedEquityMinor}
-          note={forcedEquityNote(figures)}
-          currency={currency}
-          add={onAdd != null && forcedField != null ? () => { onAdd(forcedField); } : undefined}
-          addRef={forcedField == null ? undefined : rows[forcedField]}
-        />
-        <EquityColumn
-          label="הון עצמי היום"
-          formula={CURRENT_FORMULA}
-          minor={equity}
-          note={currentEquityNote(figures)}
-          currency={currency}
-          add={onAdd != null && currentField != null ? () => { onAdd(currentField); } : undefined}
-          addRef={currentField == null ? undefined : rows[currentField]}
-        />
-      </div>
-      <div className="ui-pinv-split">
-        {equity == null ? null : (
-          <div className="ui-pinv-bar" aria-hidden="true">
-            <span className="ui-pinv-bar-loan" style={{ flexGrow: Number(figures.loanMinor) }} />
-            <span className="ui-pinv-bar-own" style={{ flexGrow: Number(equity > 0n ? equity : 0n) }} />
-          </div>
-        )}
-        <div className="ui-pinv-legend ui-pinv-hint">
-          {share == null ? <span /> : (
-            <span><span className="ui-pinv-dot ui-pinv-dot-own" aria-hidden="true" />{"הון עצמי "}<bdi dir="ltr">{`${String(share)}%`}</bdi></span>
-          )}
-          <span>
-            <span className="ui-pinv-dot ui-pinv-dot-loan" aria-hidden="true" />{"הלוואות "}
-            <bdi dir="ltr"><Amount agorot={figures.loanMinor} currency={currency} /></bdi>
-          </span>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function OtherNote({ list, note }: { list: readonly MinorInCurrency[]; note?: string }) {
   if (list.length === 0) return null;
@@ -188,15 +71,20 @@ function FigureValue({ minor, currency, readOnly }: { minor: bigint | null; curr
   return <span className="ui-pinv-value ui-pinv-value-add">הוספה</span>;
 }
 
-/** "נתוני הנכס": the four figures; each opens its sheet (a viewer's open nothing). */
+/** The two figures only the returns read carries (FLOW-451): null while it loads. */
+export type PropertyExtras = { landMinor: bigint | null; units: number | null };
+
+/** "נתוני הנכס": the figures; each opens its sheet (a viewer's open nothing). */
 export function FiguresCard({
   figures,
+  extras,
   readOnly,
   onEdit,
   onRehab,
   rows,
 }: {
   figures: InvestmentFigures;
+  extras: PropertyExtras | null;
   readOnly: boolean;
   onEdit: (field: InvestmentField) => void;
   onRehab: () => void;
@@ -241,6 +129,25 @@ export function FiguresCard({
         onOpen={open("value")}
         buttonRef={rows.value}
       />
+      {extras == null ? null : (
+        <>
+          <FigureRow
+            title="קרקע"
+            note="בלי פחת · לחישוב חיסכון המס"
+            value={<FigureValue minor={extras.landMinor} currency={currency} readOnly={readOnly} />}
+            onOpen={open("land")}
+            buttonRef={rows.land}
+          />
+          <FigureRow
+            title="יחידות"
+            value={extras.units == null
+              ? <FigureValue minor={null} currency={currency} readOnly={readOnly} />
+              : <bdi dir="ltr" className="ui-pinv-value ui-num">{String(extras.units)}</bdi>}
+            onOpen={open("units")}
+            buttonRef={rows.units}
+          />
+        </>
+      )}
     </section>
   );
 }

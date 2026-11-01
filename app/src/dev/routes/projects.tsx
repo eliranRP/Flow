@@ -1,10 +1,14 @@
 import { useEffect } from "react";
 import { DevProjectProfitEmpty } from "./profit";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BackButton } from "../../ui/back";
 import { ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens";
 import { ProjectInvestmentScreen } from "../../screens/project-investment-screen";
+import { PropertyReturnLineScreen, PropertyStatementScreen } from "../../screens/project-returns-screen";
+import { PropertyMetricScreen, PropertyPartScreen } from "../../screens/project-returns-detail-screen";
+import type { LinesSource } from "../../screens/project-returns-data";
+import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../returns-sample";
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject, thisMonth } from "../project-cash-sample";
 import { kindNextSample } from "../project-kinds-next-sample";
@@ -131,9 +135,19 @@ function OpenInvestmentSheet({ sheet, field }: { sheet: string | null; field: st
   return null;
 }
 
+/** FLOW-451: the returns fixture: `?returns=missing` (no land, bracket, units or value a year back), `?returns=negative`. */
+function devReturns(params: URLSearchParams) {
+  const kind = params.get("returns");
+  return kind === "missing" ? birchLaneReturnsMissing : kind === "negative" ? birchLaneReturnsNegative : birchLaneReturns;
+}
+
+/** Where the fixtures' returns pages live, under the investment fixture. */
+const DEV_INVESTMENT = "/e2e/project-investment";
+
 /**
  * FLOW-446 (board Invest): `?arv=none` the missing ARV, `?negative=1` today's value under the loans,
- * `?sheet=edit&field=arv|purchase|value` and `?sheet=rehab` open a sheet through its row.
+ * `?sheet=edit&field=arv|purchase|value` and `?sheet=rehab` open a sheet through its row. FLOW-451:
+ * `?returns=` picks the returns fixture, and its figures open the pages under /e2e/project-investment/.
  */
 export function DevProjectInvestment() {
   const [params] = useSearchParams();
@@ -148,11 +162,37 @@ export function DevProjectInvestment() {
         sample={devProject}
         sampleInvestment={data}
         sampleCategories={birchLaneRehabCategories}
+        sampleReturns={devReturns(params)}
+        base={DEV_INVESTMENT}
         backTo="/e2e/project-detail?preview=1"
         today="2026-10-17"
       />
     </>
   );
+}
+
+/** FLOW-451: the statement, a line (`:line`), a metric (`:metric`) and a part (`:part`), on the returns fixture. */
+function useDevReturnsSample(lines: LinesSource) {
+  const [params] = useSearchParams();
+  return { returns: devReturns(params), projectName: devProject.name, lines: birchLaneReturnLines(lines) };
+}
+
+export function DevPropertyStatement() {
+  return <PropertyStatementScreen sample={useDevReturnsSample("opex")} base={DEV_INVESTMENT} />;
+}
+
+export function DevPropertyLine() {
+  const { line = "opex" } = useParams();
+  const known: readonly string[] = ["income", "opex", "debt_service", "capex", "not_counted", "principal"];
+  return <PropertyReturnLineScreen sample={useDevReturnsSample(known.includes(line) ? (line as LinesSource) : "opex")} base={DEV_INVESTMENT} />;
+}
+
+export function DevPropertyMetric() {
+  return <PropertyMetricScreen sample={useDevReturnsSample("opex")} base={DEV_INVESTMENT} />;
+}
+
+export function DevPropertyPart() {
+  return <PropertyPartScreen sample={useDevReturnsSample("rehab")} base={DEV_INVESTMENT} />;
 }
 
 const devLinks: Array<[string, string]> = [
@@ -202,5 +242,9 @@ export const projectsRoutes: DevRoute[] = [
   { path: "projects", element: <DevProjects /> },
   { path: "project-detail", element: <DevProjectDetail /> },
   { path: "project-investment", element: <DevProjectInvestment /> },
+  { path: "project-investment/returns", element: <DevPropertyStatement /> },
+  { path: "project-investment/returns/:line", element: <DevPropertyLine /> },
+  { path: "project-investment/metric/:metric", element: <DevPropertyMetric /> },
+  { path: "project-investment/part/:part", element: <DevPropertyPart /> },
   { path: "project-profit-empty", element: <DevProjectProfitEmpty /> },
 ];
