@@ -9,13 +9,78 @@ import { ChoiceSheet, type ChoiceSheetCopy } from "../ui/choice-sheet";
 import { cx } from "../ui/cx";
 import { FocusTitle } from "../ui/focus-title";
 import { IconRow } from "../ui/icon-row";
-import { CalendarIcon, DocumentIcon, PencilIcon, ProjectsIcon, TagIcon } from "../ui/icons";
+import { CalendarIcon, DocumentIcon, PencilIcon, ProjectsIcon, RepeatIcon, TagIcon } from "../ui/icons";
+import { PACE_WORDS, paceChoices } from "../project-next-edit";
+import type { ForecastPace } from "../project-next-month";
+import { useProjectForecastWrites } from "../project-forecast-writes";
 import { List } from "../ui/list-row";
 import { itemCharge } from "./forecast-categories";
 import { dayMonth, FORECAST_TITLE, itemLate, itemWhat } from "./forecast-parts";
 import { monthName } from "./home-parts";
 
 const WHEN_LAYER = "forecast-when";
+
+function paceWord(pace: string | null): string {
+  return pace != null && pace in PACE_WORDS ? PACE_WORDS[pace as ForecastPace] : "";
+}
+
+/**
+ * FLOW-1010 (owner, 2026-11-01: "I want to be able to add it as a recurring income"): כל כמה זמן on an item's
+ * page. A line the owner added, in the month it starts, picks its pace in the project forecast's own sheet (the
+ * line itself changes, so it repeats from this month on). A line added in an earlier month, and a recurring
+ * charge, show their pace and open where it is set: the project's צפי page, or the charge's page.
+ */
+function PaceRow({ item, month, search }: { item: ForecastItem; month: string; search: string }) {
+  const [open, setOpen] = useState(false);
+  const row = useRef<HTMLButtonElement>(null);
+  const writes = useProjectForecastWrites(item.project_id ?? "", month);
+  if (item.kind === "invoice" || item.pace == null) return null;
+  const word = paceWord(item.pace);
+  if (item.kind === "recurring") {
+    const charge = itemCharge(item);
+    const to = charge == null ? `/recurring${search}` : chargeHref(charge.direction, charge.partyId, search, charge.projectId);
+    return <IconRow className="ui-forecast-page-row" titled icon={<RepeatIcon size={22} />} label="כל כמה זמן" value="נקבע בחיוב הקבוע" endTag={<span className="ui-forecast-page-when">{word}</span>} to={to} name={`כל כמה זמן: ${word}`} />;
+  }
+  if (item.project_id == null) return null;
+  if (item.line_start !== month) {
+    return <IconRow className="ui-forecast-page-row" titled icon={<RepeatIcon size={22} />} label="כל כמה זמן" value="נקבע בצפי של הפרויקט" endTag={<span className="ui-forecast-page-when">{word}</span>} to={`/projects/${item.project_id}/profit/next${search}`} name={`כל כמה זמן: ${word}`} />;
+  }
+  const id = item.key.replace(/^added:/, "");
+  const income = item.direction === "income";
+  return (
+    <>
+      <IconRow
+        className="ui-forecast-page-row"
+        titled
+        icon={<RepeatIcon size={22} />}
+        label="כל כמה זמן"
+        value={item.pace === "once" ? `רק ב${monthName(month)}` : income ? "הכנסה קבועה בצפי" : "הוצאה קבועה בצפי"}
+        endTag={<span className="ui-forecast-page-when">{word}</span>}
+        name={`כל כמה זמן: ${word}`}
+        buttonRef={row}
+        onClick={() => { setOpen(true); }}
+      />
+      <ChoiceSheet<ForecastPace>
+        copy={{ historyKey: "forecast-pace", title: "כל כמה זמן", subtitle: `${item.name} · בצפי של הפרויקט`, choices: paceChoices(month) }}
+        open={open}
+        onOpenChange={setOpen}
+        value={item.pace as ForecastPace}
+        saving={null}
+        returnFocusRef={row}
+        panelClassName="ui-pace-sheet"
+        onPick={(pace, close) => {
+          close();
+          if (pace === item.pace) return;
+          writes.mutate({
+            fn: "set_project_forecast_edit",
+            edit: { row_key: `add:${id}`, amount_minor: Number(item.usual), pace },
+            message: pace === "once" ? `${item.name}: רק ב${monthName(month)}` : `${item.name}: ${PACE_WORDS[pace]}`,
+          });
+        }}
+      />
+    </>
+  );
+}
 
 /** The board's three choices: this week, to the month's end (or the item's own date), or not this month. */
 export type ForecastWhen = "week" | "monthEnd" | "moved";
@@ -202,6 +267,7 @@ export function ForecastItemPage({
           buttonRef={whenRow}
           onClick={() => { setWhenOpen(true); }}
         />
+        <PaceRow item={item} month={month} search={location.search} />
         <IconRow className="ui-forecast-page-row" titled icon={<DocumentIcon size={22} />} label={source.title} value={source.hint} to={source.to} name={`${source.title}, ${source.hint}`} />
       </List>
       <p className="ui-forecast-page-hint">

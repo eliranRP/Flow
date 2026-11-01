@@ -6,7 +6,7 @@ import { monthForecastBoardSample } from "./forecast-sample";
 function item(key: string, direction: "income" | "expense", kind: "recurring" | "invoice", lateDays = 0): ForecastItem {
   return {
     key, direction, kind, name: key, currency: "USD", usual: 10_000n, minor: 10_000n, day: null, description: null, due_on: null,
-    moved_out: false, overridden: false, expected_on: null, late_days: lateDays, category_id: null, project_id: null, project_name: null,
+    moved_out: false, overridden: false, expected_on: null, late_days: lateDays, category_id: null, project_id: null, project_name: null, pace: null, line_start: null,
   };
 }
 

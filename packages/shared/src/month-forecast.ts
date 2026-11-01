@@ -38,6 +38,8 @@ export type MonthForecastEdit = {
   category_name?: string | null;
   direction: "income" | "expense" | null;
   amount_minor: number | null;
+  /** once, month, 2months, quarter or year (FLOW-1010: an added line's pace shows on its page). */
+  pace?: string | null;
   start_month: string;
   /** An added line: the bank line that came as it this month, or null. */
   matched_transaction_id?: string | null;
@@ -76,6 +78,13 @@ export type ForecastItem = {
   project_id: string | null;
   /** An invoice's project, as the open-invoices list names it, or null. */
   project_name: string | null;
+  /**
+   * FLOW-1010: how often it repeats. A recurring charge's pace (month, 2months, quarter, year); an added line's
+   * (once too); null for an invoice.
+   */
+  pace: string | null;
+  /** FLOW-1010: an added line's first month (YYYY-MM): in that month its page can change its pace. Null otherwise. */
+  line_start: string | null;
 };
 
 export type ForecastBuild = {
@@ -192,6 +201,8 @@ export function buildMonthForecast(input: {
       category_id: party.category_id ?? null,
       project_id: party.project_id ?? null,
       project_name: null,
+      pace: party.pace ?? "month",
+      line_start: null,
       expected_on: today != null && party.typical_day > 0 ? `${today.slice(0, 7)}-${String(Math.min(party.typical_day, monthLength(today))).padStart(2, "0")}` : null,
     });
   }
@@ -213,6 +224,8 @@ export function buildMonthForecast(input: {
       category_id: row.category_id ?? null,
       project_id: null,
       project_name: row.project_name,
+      pace: null,
+      line_start: null,
       expected_on: terms != null ? addDays(row.doc_date, terms) : null,
     });
   }
@@ -239,6 +252,8 @@ export function buildMonthForecast(input: {
       category_id: edit.category_id,
       project_id: edit.project_id,
       project_name: null,
+      pace: edit.pace ?? "once",
+      line_start: edit.start_month,
       expected_on: null,
     });
   }
@@ -294,6 +309,7 @@ export function parseMonthEdits(data: unknown): { overheadProjectId: string | nu
       category_name: text(row.category_name),
       direction,
       amount_minor: amount,
+      pace: text(row.pace),
       start_month: start,
       matched_transaction_id: text(row.matched_transaction_id),
     }];

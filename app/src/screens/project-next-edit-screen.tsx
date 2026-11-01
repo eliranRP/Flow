@@ -114,7 +114,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const writes = useProjectForecastWrites(projectId, month);
   const create = useCreateForecastCategory();
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));
-  const [pace, setPace] = useState<ForecastPace>(sample?.pace ?? "once");
+  const [pickedPace, setPace] = useState<ForecastPace | null>(sample?.pace ?? null);
   const [picked, setPicked] = useState<CategoryChoice | null>(null);
   const [sheet, setSheet] = useState<"category" | "pace" | null>(sample?.sheet ?? null);
   const [query, setQuery] = useState(sample?.query ?? "");
@@ -162,6 +162,9 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const historyCategory = add ? chosen?.id ?? null : row?.categoryId ?? null;
   const bars = add && chosen == null ? null : historyBars(next.categoryMonths, historyCategory, currency);
   const diff = bars == null ? null : historyDiff(amount == null ? null : BigInt(amount), bars.usual, currency, month);
+  // FLOW-1010: an added line starts at its own pace, so a save in its first month (which edits the line) keeps it
+  // repeating unless the owner picks another; any other row starts at once, as before.
+  const pace: ForecastPace = pickedPace ?? (row?.kind === "added" ? row.pace ?? "once" : "once");
   const summary = paceSummary(pace, month, income);
   const hint = add
     ? `השורה נכנסת לצפי של ${projectName} בלבד. לא נוצרת תנועה.`
