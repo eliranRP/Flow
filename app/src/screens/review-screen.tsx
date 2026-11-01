@@ -5,7 +5,8 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useDashboardQuery, useProjectWaitingQuery, useReviewQuery } from "../use-books";
+import { useDashboardQuery, useProjectWaitingQuery } from "../use-books";
+import { useReviewDeepLink, useReviewPaging, useReviewQuery } from "../use-review";
 import { reviewFocusPath } from "../review-paths";
 import { SetupSampleReview } from "../setup/sample-review";
 import { useOnline } from "../ui/band-states";
@@ -45,7 +46,8 @@ export function ReviewScreen() {
   const holdWrites = useHoldWrites();
   const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
-  const review = useReviewQuery();
+  // FLOW-984: the queue is read in pages; a project filter reads that project's items in pages too.
+  const review = useReviewQuery(true, projectFilter);
   const bookings = useJevBookingsQuery(projectFilter == null);
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   // FLOW-971: the waiting list's Back and subtitle name the project.
@@ -76,6 +78,9 @@ export function ReviewScreen() {
     const ids = new Set(held.map((row) => row.review_id));
     return source.filter((row) => ids.has(row.id));
   }, [projectFilter, preview, source, waiting.data]);
+  const paging = useReviewPaging(activeRows.length, projectFilter);
+  // A link to a card the pages have not reached reads that one row before the screen decides it is gone.
+  const deepLink = useReviewDeepLink(listFocusId(params), activeRows, !e2eList && phase.kind === "ready", projectFilter);
   useEffect(() => {
     if (location.pathname !== "/review") {
       if (listing) focusedOrder.current = null;
@@ -96,9 +101,10 @@ export function ReviewScreen() {
       focusedOrder.current = rotateReview(activeRows, urlId);
       return;
     }
+    if (deepLink.reading) return;
     const head = queueAfterFocus(activeRows, urlId, focusedOrder.current).rows[0]?.id;
     if (head != null && head !== urlId) void navigate(reviewFocusPath(search, head), { replace: true });
-  }, [location.pathname, listing, params, activeRows, phase.kind, search, navigate, projectFilter]);
+  }, [location.pathname, listing, params, activeRows, phase.kind, search, navigate, projectFilter, deepLink.reading]);
   function rowsForFocus(rows: ReviewRow[]): ReviewRow[] {
     const urlId = listFocusId(params);
     if (listing || urlId == null) return rows;
@@ -125,15 +131,16 @@ export function ReviewScreen() {
       }
       const ids = new Set(held.map((row) => row.review_id));
       const rows = source.filter((row) => ids.has(row.id));
-      if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
-      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+      if (rows.length === 0 && !paging.more) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
+      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} paging={paging} />;
       const fromList = listFocusId(params) != null;
       const ordered = rowsForFocus(rows);
       return (
         <ReviewQueue
           rows={ordered}
           search={search}
-          listPlace={listPlace(rows, ordered, fromList)}
+          paging={paging}
+          listPlace={listPlace(rows, ordered, fromList, paging.total)}
           backTo={fromList ? reviewListPath(search) : back}
           homeTo={back}
           homeLabel="חזרה לפרויקט"
@@ -167,13 +174,14 @@ export function ReviewScreen() {
     return (
       <JevBookingReview
         bookings={waitingBookings}
-        queued={phase.kind === "ready" ? rows.length : 0}
+        queued={phase.kind === "ready" ? paging.total : 0}
         next={head != null ? { name: head.supplier_name ?? head.description, minor: head.amount_net, currency: head.currency ?? "ILS" } : null}
         search={search}
       />
     );
   }
-  if (!listing && !holdWrites && params.get("setup") === "1" && (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0))) {
+  const drained = phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0 && !paging.more);
+  if (!listing && !holdWrites && params.get("setup") === "1" && drained) {
     const fromCard = params.get("from") === "card";
     return (
       <SetupSampleReview
@@ -188,7 +196,7 @@ export function ReviewScreen() {
     ? { failed: { offline: phase.offline, onRetry: retryReview } }
     : { offlineSince: !online && review.dataUpdatedAt > 0 ? review.dataUpdatedAt : null };
   if (listing && phase.kind === "error") return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} state={listState} />;
-  if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
+  if (drained) {
     if (listing) return <ReviewAllList rows={EMPTY_REVIEW} bookings={listedBookings} search={search} backTo={`/review${search}`} state={listState} />;
     return (
       <ReviewEmpty
@@ -202,7 +210,7 @@ export function ReviewScreen() {
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
   }
-  if (listing) return <ReviewAllList rows={rows} bookings={listedBookings} search={search} backTo={`/review${search}`} state={listState} />;
+  if (listing) return <ReviewAllList rows={rows} bookings={listedBookings} search={search} backTo={`/review${search}`} state={listState} paging={paging} />;
   const ordered = rowsForFocus(rows);
   const setupRun = params.get("setup") === "1";
   const setupFromCard = params.get("from") === "card";
@@ -211,8 +219,9 @@ export function ReviewScreen() {
       rows={ordered}
       search={search}
       previewWrite={e2eWrite}
+      paging={e2eList ? undefined : paging}
       sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : e2eSuggest && reviewE2e != null ? reviewE2e.e2eSuggestJev : e2eCaseJev}
-      listPlace={listPlace(rows, ordered, fromList)}
+      listPlace={listPlace(rows, ordered, fromList, paging.total)}
       backTo={fromList ? reviewListPath(search) : undefined}
       setupHandoff={setupRun ? { fromCard: setupFromCard } : undefined}
       openPicker={e2eBoard === "sheet"}

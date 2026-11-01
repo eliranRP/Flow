@@ -105,7 +105,7 @@ test("the volatility parser reads headers, the last definition, and alter functi
   assert.equal(found.get("b"), "stable");
   assert.equal(found.get("c"), "volatile");
   const live = migrationVolatilities();
-  assert.equal(live.get("list_review"), "stable");
+  assert.equal(live.get("list_review_page"), "stable");
   assert.equal(live.get("approve_review_item"), "volatile");
 });
 

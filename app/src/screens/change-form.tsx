@@ -8,7 +8,8 @@ import { useHoldWrites, useWriteGate } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
-import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useReviewQuery } from "../use-books";
+import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
+import { reviewCacheUpdates, reviewListKey, useReviewDeepLink, useReviewQuery } from "../use-review";
 import { reviewFocusPath } from "../review-paths";
 import { assertNoError, useWrite } from "../use-write";
 import { approveFailure, approveShown } from "../approve-review";
@@ -88,8 +89,11 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const invalidate = useInvalidateBooks();
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
-  const review = useReviewQuery(sample == null);
+  // FLOW-984: the queue is read in pages. A card the pages have not reached is read on its own.
+  const project = params.get("project");
+  const review = useReviewQuery(sample == null, project);
   const item = params.get("item") ?? "";
+  const deepLink = useReviewDeepLink(item, review.data ?? [], review.isSuccess, project);
   const live = (review.data ?? []).find((entry) => entry.id === item);
   const [kept, setKept] = useState<ReviewRow | null>(null);
   useEffect(() => {
@@ -120,7 +124,9 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     ? ({ kind: "ready" } as const)
     : combinePhase(combinePhase(screenPhase(preview, dashboard), screenPhase(preview, categories)), screenPhase(preview, review));
   const direction = sample?.direction ?? row?.direction ?? "expense";
-  const formPhase = phase.kind === "ready" && sample == null && row == null ? ({ kind: "empty" } as const) : phase;
+  const formPhase = phase.kind === "ready" && sample == null && row == null
+    ? (deepLink.reading ? ({ kind: "loading" } as const) : ({ kind: "empty" } as const))
+    : phase;
   const income = direction === "income";
   const splitReview = sample?.split === true || reviewIsSplit(row);
   useEffect(() => {
@@ -219,7 +225,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       // and the queue's head takes the pin (the queue is not on screen under this sheet).
       window.setTimeout(() => {
         if (payload.line == null || reviewHold() !== payload.line) return;
-        const rows = queryClient.getQueryData<ReviewRow[]>(["review", preview]) ?? [];
+        const rows = queryClient.getQueryData<ReviewRow[]>(reviewListKey(preview, project)) ?? [];
         if (rows.some((entry) => entry.id === item)) return;
         releaseReviewHold(payload.line);
         if (rows[0] != null) pinReviewLine(rows[0].transaction_id);
@@ -245,10 +251,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
     optimistic: () => {
       dropped.current = true;
-      return [{
-        key: ["review", preview],
-        update: (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((entry) => entry.id !== item) : old),
-      }];
+      return reviewCacheUpdates(preview, project, (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((entry) => entry.id !== item) : old));
     },
     onError: (_error, payload) => {
       // The line is back in the cached queue: a later close from elsewhere is someone else's again.
@@ -321,14 +324,11 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
           key: transactionQueryOptions(preview, transactionId).queryKey,
           update: (old: unknown) => (old == null ? old : { ...(old), category_id: nextCategory, category_name: name }),
         },
-        {
-          key: ["review", preview],
-          update: (old: unknown) => (Array.isArray(old)
-            ? (old as ReviewRow[]).map((entry) => (entry.transaction_id === transactionId
-              ? { ...entry, category_id: nextCategory, category_name: name, category_suggested: false }
-              : entry))
-            : old),
-        },
+        ...reviewCacheUpdates(preview, project, (old: unknown) => (Array.isArray(old)
+          ? (old as ReviewRow[]).map((entry) => (entry.transaction_id === transactionId
+            ? { ...entry, category_id: nextCategory, category_name: name, category_suggested: false }
+            : entry))
+          : old)),
       ];
     },
     onError: (_error, payload) => { restorePick(payload); },
@@ -359,17 +359,14 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     optimistic: () => {
       const pickedField = fieldSave.current;
       if (pickedField == null) return [];
-      return [{
-        key: ["review", preview],
-        update: (old: unknown) => (Array.isArray(old)
-          ? (old as ReviewRow[]).map((entry) => {
-            if (entry.id !== item) return entry;
-            return pickedField.kind === "project"
-              ? { ...entry, project_id: pickedField.id, project_name: choiceName(projectOptions, pickedField.id), project_suggested: false }
-              : { ...entry, category_id: pickedField.id, category_name: choiceName(categoryOptions, pickedField.id), category_suggested: false };
-          })
-          : old),
-      }];
+      return reviewCacheUpdates(preview, project, (old: unknown) => (Array.isArray(old)
+        ? (old as ReviewRow[]).map((entry) => {
+          if (entry.id !== item) return entry;
+          return pickedField.kind === "project"
+            ? { ...entry, project_id: pickedField.id, project_name: choiceName(projectOptions, pickedField.id), project_suggested: false }
+            : { ...entry, category_id: pickedField.id, category_name: choiceName(categoryOptions, pickedField.id), category_suggested: false };
+        })
+        : old));
     },
     onError: (_error, payload) => { restorePick(payload); },
     onSuccess: () => {

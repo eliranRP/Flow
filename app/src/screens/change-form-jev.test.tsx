@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JevReviewState } from "./jev-review";
 import { ChangeForm } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
+import { reviewPage } from "./review-page-test-support";
 
 const state = vi.hoisted((): { jev: JevReviewState; row: Record<string, unknown> } => ({
   jev: { connectorOn: false, prefill: null },
@@ -40,7 +41,7 @@ const dashboard = {
 
 const supabase = {
   rpc: (name: string) => {
-    if (name === "list_review") return Promise.resolve({ data: [state.row], error: null });
+    if (name === "list_review_page") return Promise.resolve({ data: reviewPage([state.row]), error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "list_categories") {
       return Promise.resolve({

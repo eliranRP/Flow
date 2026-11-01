@@ -30,7 +30,7 @@ const reads: { screen: string; rpc: string; body: Record<string, unknown> }[] = 
   { screen: "Home", rpc: "cash_months", body: {} },
   { screen: "Home and profit", rpc: "get_dashboard", body: {} },
   { screen: "Projects", rpc: "projects_cash_month", body: {} },
-  { screen: "Review", rpc: "list_review", body: {} },
+  { screen: "Review", rpc: "list_review_page", body: { p_limit: 50 } },
   { screen: "Company profit", rpc: "get_breakdown", body: { p_direction: "expense", p_group_by: "category" } },
   { screen: "Company profit", rpc: "get_profit_months", body: {} },
   { screen: "Company profit", rpc: "company_next_month_inputs", body: {} },

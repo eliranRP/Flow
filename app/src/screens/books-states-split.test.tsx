@@ -9,6 +9,7 @@ import { CategoriesScreen, ChangeForm, ProjectDetailScreen, ProjectsScreen, Revi
 import { LineSplitScreen } from "./line-split";
 import { HomeScreen } from "./HomeScreen";
 import { roleShows } from "../test-waits";
+import { reviewPage } from "./review-page-test-support";
 
 // --- books-states-card.test.tsx
 
@@ -201,9 +202,9 @@ describe("rejected writes", () => {
 
   it("says a project expense is missing a category", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r1",
               transaction_id: "t1",
@@ -218,7 +219,7 @@ describe("rejected writes", () => {
               category_name: null,
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -234,9 +235,9 @@ describe("rejected writes", () => {
 
   it("keeps approve enabled when the card has no suggestion, and a tap asks for the project (FLOW-960)", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r1",
               transaction_id: "t1",
@@ -251,7 +252,7 @@ describe("rejected writes", () => {
               category_name: null,
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -428,9 +429,9 @@ describe("rejected writes", () => {
     const calls: string[] = [];
     rpc.impl = (name) => {
       calls.push(name);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r1",
               transaction_id: "t-shared",
@@ -445,7 +446,7 @@ describe("rejected writes", () => {
               category_name: "חומרים",
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -469,9 +470,9 @@ describe("rejected writes", () => {
     rpc.impl = (name, input) => {
       calls.push(name);
       args.push(input);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r-split",
               transaction_id: "t-split",
@@ -490,7 +491,7 @@ describe("rejected writes", () => {
               category_suggested: false,
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -518,9 +519,9 @@ describe("rejected writes", () => {
     rpc.impl = (name, input) => {
       calls.push(name);
       args.push(input);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r-shares",
               transaction_id: "t-shares",
@@ -539,7 +540,7 @@ describe("rejected writes", () => {
               category_suggested: false,
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -589,9 +590,9 @@ describe("rejected writes", () => {
           error: null,
         });
       }
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r1",
               transaction_id: "t1",
@@ -607,7 +608,7 @@ describe("rejected writes", () => {
               category_name: "חומרים",
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -641,10 +642,10 @@ describe("rejected writes", () => {
     const calls: string[] = [];
     rpc.impl = (name) => {
       calls.push(name);
-      if (name === "list_review") {
-        if (!open) return Promise.resolve({ data: [], error: null });
+      if (name === "list_review_page") {
+        if (!open) return Promise.resolve({ data: reviewPage([]), error: null });
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -659,7 +660,7 @@ describe("rejected writes", () => {
             project_name: "הרצל",
             category_name: "חומרים",
             supplier_name: "מחסן",
-          }],
+          }]),
           error: null,
         });
       }
@@ -711,9 +712,9 @@ describe("rejected writes", () => {
     const calls: string[] = [];
     rpc.impl = (name) => {
       calls.push(name);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "ליסינג",
@@ -728,7 +729,7 @@ describe("rejected writes", () => {
             project_name: null,
             category_name: null,
             supplier_name: "ליסינג הדרך בע״מ",
-          }],
+          }]),
           error: null,
         });
       }
@@ -786,10 +787,10 @@ describe("rejected writes", () => {
     let open = true;
     let projectArg: unknown = "missing";
     rpc.impl = (name, args) => {
-      if (name === "list_review") {
-        if (!open) return Promise.resolve({ data: [], error: null });
+      if (name === "list_review_page") {
+        if (!open) return Promise.resolve({ data: reviewPage([]), error: null });
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "תקבול",
@@ -802,7 +803,7 @@ describe("rejected writes", () => {
             project_name: null,
             category_name: null,
             supplier_name: "לקוח",
-          }],
+          }]),
           error: null,
         });
       }

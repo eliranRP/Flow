@@ -5,7 +5,7 @@
  * total at its right edge.
  */
 export function ReviewCount({ value, digits, side }: { value: number; digits: number; side: "index" | "total" }) {
-  const text = String(value);
+  const text = reviewCountText(value);
   return (
     <bdi
       className="ui-num ui-review-count"
@@ -23,7 +23,12 @@ export function ReviewCount({ value, digits, side }: { value: number; digits: nu
  * only the total itself crossing 9→10 or 99→100 (new lines arriving) widens it, which is rare.
  */
 export function reviewCountDigits(total: number): number {
-  return String(total).length;
+  return reviewCountText(total).length;
+}
+
+/** FLOW-984: a count with thousands commas ("1,287"); the queue can hold more than a thousand. */
+export function reviewCountText(value: number): string {
+  return value.toLocaleString("en-US");
 }
 
 /** FLOW-960: the most items the meter draws as segments. */

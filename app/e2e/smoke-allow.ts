@@ -40,7 +40,7 @@ export const readRpcs = new Set([
   "list_my_push_devices",
   "list_project_category",
   "list_project_groups",
-  "list_review",
+  "list_review_page",
   "list_team",
   "list_transfer_matches",
   "count_transfer_matches",

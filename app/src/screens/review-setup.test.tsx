@@ -9,6 +9,7 @@ import { ToastProvider } from "../ui/toast";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { ReviewScreen } from "./flow-screens";
 import { myCompaniesFor } from "../team-test-support";
+import { reviewPage } from "./review-page-test-support";
 
 const gate = vi.hoisted(() => ({ owner: "11111111-1111-1111-1111-111111111111" }));
 
@@ -142,7 +143,7 @@ afterEach(() => {
 describe("review setup handoff", () => {
   it("shows the sample card when the setup queue is empty", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1");
@@ -152,7 +153,7 @@ describe("review setup handoff", () => {
 
   it("shows the real queue when setup has items waiting", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל")]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1");
@@ -162,7 +163,7 @@ describe("review setup handoff", () => {
 
   it("continues home from the sample card when opened from the card", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1&from=card");
@@ -181,7 +182,7 @@ describe("review setup handoff", () => {
   it("does not show the sample card for a viewer", async () => {
     gate.owner = "other";
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1");
@@ -191,7 +192,7 @@ describe("review setup handoff", () => {
 
   it("toasts setup handoff after the first real approval", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל")]), error: null });
       if (name === "approve_review_item") return Promise.resolve({ data: null, error: null });
       return Promise.resolve({ data: null, error: null });
     };
@@ -210,7 +211,7 @@ describe("review setup handoff", () => {
 
   it("hands the first real approval back to Home when opened from the card", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל")]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1&from=card");

@@ -8,6 +8,8 @@
 export const LEDGER_KEYS = [
   "dashboard",
   "review",
+  // FLOW-984: the open count and next cursor of the review read; a refetch of "review" rewrites them.
+  "review-meta",
   "review-anomalies",
   "unpaid",
   "filed-today",

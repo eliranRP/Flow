@@ -6,7 +6,6 @@ import type {
   ProjectDetail,
   ProjectWaitingRow,
   ProfitMonths,
-  ReviewRow,
   SumitStatus,
   TransactionDetail,
   UnpaidRow,
@@ -21,20 +20,6 @@ import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
 import { type TxnMeta } from "./txn-meta";
 import { mercuryState, type MercuryState } from "./mercury-state";
-import {
-  JEV_CONNECTOR_STALE_MS,
-  beginJevScopeLookup,
-  companyIdFromReviewPayload,
-  completeJevScopeLookup,
-  dropLegacyJevConnectorKey,
-  jevConnectorQueryKey,
-  jevQueueKey,
-  jevQueueQueryKey,
-  seedJevConnectorFromLive,
-  jevScopeFollowsLive,
-  type JevScopeLookup,
-} from "./screens/jev-connector-scope";
-import { withJevDeadline } from "./screens/jev-deadline";
 
 interface BooksContextValue {
   period: PeriodChoice;
@@ -138,111 +123,6 @@ export function useFiledTodayQuery(active = true) {
       const { data, error } = await supabase.rpc("list_auto_assigned_today");
       if (error) throw error;
       return (await loadReadSchemas()).filedTodaySchema.array().parse(data);
-    },
-  });
-}
-
-function companyIdFromRow(company: { data: { id?: unknown } | null; error: unknown }): string | null {
-  if (company.error != null || company.data == null || typeof company.data.id !== "string" || company.data.id === "") return null;
-  return company.data.id;
-}
-
-type ScopeClient = NonNullable<ReturnType<typeof getSupabase>>;
-
-function readSessionUserId(supabase: ScopeClient): PromiseLike<string | null> {
-  if (typeof supabase.auth.getSession !== "function") return Promise.resolve(null);
-  return supabase.auth.getSession().then(
-    ({ data }) => {
-      const id = data.session?.user.id;
-      return id != null && id !== "" ? id : null;
-    },
-    () => null,
-  );
-}
-
-function readCompanyId(supabase: ScopeClient): PromiseLike<string | null> {
-  if (typeof supabase.from !== "function") return Promise.resolve(null);
-  return supabase.from("companies").select("id").limit(1).maybeSingle().then(companyIdFromRow, () => null);
-}
-
-/** Session and company share one deadline. A row that arrives later may still bind. */
-async function settleReviewJevScope(
-  supabase: ScopeClient,
-  listed: PromiseLike<{ data: unknown; error: unknown }>,
-  lookup: JevScopeLookup,
-  client: QueryClient,
-): Promise<void> {
-  const found: { userId: string | null; companyId: string | null } = { userId: null, companyId: null };
-  const userTask = Promise.resolve(readSessionUserId(supabase)).then((id) => {
-    found.userId = id;
-  });
-  const companyTask = Promise.resolve(readCompanyId(supabase)).then((id) => {
-    found.companyId = id;
-  });
-  await withJevDeadline(undefined, async () => {
-    await Promise.all([userTask, companyTask]);
-    return true;
-  }, false);
-  let payloadCompany: string | null = null;
-  let ids: string[] = [];
-  try {
-    const result = await listed;
-    if (result.error == null) {
-      payloadCompany = companyIdFromReviewPayload(result.data);
-      ids = (await loadReadSchemas()).reviewRowSchema.array().parse(result.data).map((row) => row.transaction_id);
-    }
-  } catch {
-    payloadCompany = null;
-  }
-  const publish = () => {
-    const resolvedCompany = payloadCompany ?? found.companyId;
-    const scope = found.userId != null && resolvedCompany != null
-      ? { userId: found.userId, companyId: resolvedCompany }
-      : null;
-    if (!completeJevScopeLookup(lookup, scope) || scope == null || jevScopeFollowsLive()) return;
-    if (jevQueueKey(ids) === "" || typeof supabase.from !== "function") return;
-    seedJevConnectorFromLive(client, scope);
-    void client.query({
-      queryKey: jevConnectorQueryKey(scope),
-      retry: false,
-      staleTime: JEV_CONNECTOR_STALE_MS,
-      // The Jev queue code loads with the review screens, not with Home.
-      queryFn: ({ signal }) => import("./screens/jev-review").then((jev) => jev.fetchJevConnector(signal)),
-    }).then((on) => {
-      if (!on) return undefined;
-      return client.query({
-        queryKey: jevQueueQueryKey(ids),
-        retry: false,
-        queryFn: ({ signal }) => import("./screens/jev-review").then((jev) => withJevDeadline(
-          signal,
-          (linked) => jev.loadJevSuggestions(ids, linked),
-          jev.JEV_QUEUE_STALLED,
-        )),
-      });
-    }).catch(() => undefined);
-  };
-  publish();
-  void Promise.all([userTask, companyTask]).then(publish);
-}
-
-export function useReviewQuery(active = true) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["review", preview],
-    enabled: active && preview === "off",
-    queryFn: async ({ client }): Promise<ReviewRow[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      dropLegacyJevConnectorKey();
-      const listed = supabase.rpc("list_review");
-      if (typeof supabase.from === "function") {
-        const lookup = beginJevScopeLookup();
-        void settleReviewJevScope(supabase, listed, lookup, client);
-      }
-      const { data, error } = await listed;
-      if (error) throw error;
-      return (await loadReadSchemas()).reviewRowSchema.array().parse(data);
     },
   });
 }

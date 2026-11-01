@@ -2,6 +2,7 @@ import type { ReviewRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ReviewAllList, ReviewQueue, ReviewScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
+import type { ReviewPaging } from "../use-review";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";
 import { ExampleBar, filedTodayCount, sampleReview } from "../ui/screen-stories-support";
 
@@ -92,6 +93,37 @@ export const ReviewAllEmpty: Story = {
   render: () => (
     <StoryRoute entry="/review/all" tabs>
       <ReviewAllList backTo="/review" search="" rows={[]} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-984: the queue loads in pages. The card counts from the server's total (1,287), though 50 are loaded. */
+const pagedLoaded: ReviewPaging = { total: 1287, more: true, loading: false, failed: false, loadMore: () => undefined, retry: () => undefined };
+
+export const ReviewCardPaged: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs>
+      <ExampleBar />
+      <ReviewQueue rows={[sampleReview, { ...sampleReview, id: "r2", transaction_id: "t2" }]} search="" sample paging={pagedLoaded} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-984: a page failed to load; a quiet row with ניסיון חוזר takes the next card's place. */
+export const ReviewCardPageFailed: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs>
+      <ExampleBar />
+      <ReviewQueue rows={[sampleReview]} search="" sample paging={{ ...pagedLoaded, failed: true }} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-984: the full list counts every open item and ends with the quiet row when a page failed. */
+export const ReviewAllPageFailed: Story = {
+  render: () => (
+    <StoryRoute entry="/review/all" tabs>
+      <ReviewAllList backTo="/review" search="" rows={[sampleReview]} paging={{ ...pagedLoaded, failed: true }} />
     </StoryRoute>
   ),
 };

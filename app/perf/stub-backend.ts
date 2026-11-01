@@ -32,8 +32,11 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
       return projectsCashMonth();
     case "list_unpaid":
       return demoUnpaid();
-    case "list_review":
-      return reviewCards();
+    case "list_review_page": {
+      // FLOW-984: the demo queue is one page that holds it all.
+      const items = reviewCards();
+      return { items, total: items.length, next: null };
+    }
     case "approve_review_item":
       return { ok: true };
     case "list_categories":
@@ -230,8 +233,13 @@ function persist(name: string, args: Record<string, unknown>, writes: Writes, an
     case "reassign_transaction":
       writes.projects.set(text(args.p_id), text(args.p_project_id));
       return [];
-    case "list_review":
-      return rows(answer)?.filter((row) => !writes.approved.has(text(row.id))) ?? answer;
+    case "list_review_page": {
+      const page = answer as { items?: unknown } | null;
+      const items = rows(page?.items);
+      if (page == null || items == null) return answer;
+      const open = items.filter((row) => !writes.approved.has(text(row.id)));
+      return { ...page, items: open, total: open.length };
+    }
     case "list_unpaid":
       return rows(answer)?.map((row) => ({ ...row, marked_paid_at: writes.paid.get(text(row.id)) === true ? "2026-10-11T08:00:00Z" : null })) ?? answer;
     case "list_categories":
