@@ -472,6 +472,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-451"></a>[FLOW-451](tasks/FLOW-451.md) | השקעה והלוואות v3: total return, equity, metrics, and every calculation opened | UI (design approved) |
 | <a id="flow-452"></a>[FLOW-452](tasks/FLOW-452.md) | Investment page v3: review nits | BACKLOG NIT |
 | <a id="flow-453"></a>[FLOW-453](tasks/FLOW-453.md) | A property's returns from the real lines: rent start, holding costs, net loan proceeds | MCP + UI |
+| <a id="flow-454"></a>[FLOW-454](tasks/FLOW-454.md) | Property returns on real deals: Sub2 purchase price, one unit by default, aligned rows, before the first rent | MCP + UI |
 | <a id="flow-455"></a>[FLOW-455](tasks/FLOW-455.md) | An account's page keeps its content while the period changes, and its year counts are whole | SMALL UI |
 | <a id="flow-456"></a>[FLOW-456](tasks/FLOW-456.md) | The report share sheet says why its button is off next to it, and picking projects starts from one | SMALL UI |
 | <a id="flow-457"></a>[FLOW-457](tasks/FLOW-457.md) | A property's returns: one minus per expense, true counts, a name for ∞, one label per figure | SMALL UI |

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(66);
+select plan(78);
 
 do $users$
 begin
@@ -147,7 +147,11 @@ select is(pg_temp.ret()->'equity'->'money_in_parts',
   '{"acquisition_minor": -15000000, "renovation_minor": 0, "holding_minor": -150000, "financing_minor": 11000000}'::jsonb,
   'money in, by part: the purchase line, holding costs before the rent (the 2025 repair and the insurance), the net loan proceeds; the depreciation journal counts nowhere');
 select is(pg_temp.ret()->'inputs'->>'purchase_source', 'lines', 'the purchase price comes from the lines');
-select is(pg_temp.ret()->'missing', '["value", "land", "tax_bracket", "units"]'::jsonb,
+select is((pg_temp.ret()->'inputs'->>'units')::integer, 1, 'units are 1 until the owner sets them (FLOW-454)');
+select is((pg_temp.ret()->'inputs'->>'units_default')::boolean, true, 'and the read says it is the default');
+select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 150833::bigint, 'so cash flow per unit is never missing');
+select is((pg_temp.ret()->'inputs'->>'taken_over_minor')::bigint, 0::bigint, 'a loan with its proceeds line is not part of the price');
+select is(pg_temp.ret()->'missing', '["value", "land", "tax_bracket"]'::jsonb,
   'every missing input is named');
 select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 4150000::bigint, 'money in the deal needs no typed input');
 select is(pg_temp.ret()->'sources'->>'appreciation_minor', null, 'appreciation waits for values');
@@ -269,6 +273,70 @@ select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-1
   'the rehab cost before the rent is not CapEx');
 select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'before_rent_minor')::bigint, -150000::bigint,
   'the period costs before the rent are listed apart');
+
+-- FLOW-454: a Sub2 deal. The bank shows only the cash brought to closing; the mortgage taken
+-- over (no proceeds line) is part of the price, a later refinance is not, and the money in stays cash.
+reset role;
+insert into prr (label, id) values ('sub2', tests.fixture_project(pg_temp.id('co'), 'Example Sub2'));
+insert into prr (label, id) values
+  ('s2buy', tests.fixture_line(pg_temp.id('co'), 'prr:s2buy', 3000000, p_project => pg_temp.id('sub2'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('s2rent', tests.fixture_line(pg_temp.id('co'), 'prr:s2rent', 200000, 'income', pg_temp.id('sub2'), pg_temp.id('rent'), '2026-10-13'));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values
+  (pg_temp.id('co'), 'Sub2 mortgage taken over', 29000000, 33750, 300, '2026-09-01', 150000, 0, 'ILS', pg_temp.id('sub2')),
+  (pg_temp.id('co'), 'Sub2 later refinance', 31000000, 70000, 360, '2027-06-01', 210000, 0, 'ILS', pg_temp.id('sub2'));
+select tests.authenticate_as('prr_owner');
+create or replace function pg_temp.sub2()
+returns jsonb
+language sql
+as $$ select public.get_property_returns(pg_temp.id('sub2'), '2026-01-01', '2026-12-31'); $$;
+grant execute on function pg_temp.sub2() to authenticated, service_role;
+select is((pg_temp.sub2()->'inputs'->>'taken_over_minor')::bigint, 29000000::bigint,
+  'the mortgage taken over at closing, with no proceeds line, is part of the price; the later refinance is not');
+select is((pg_temp.sub2()->'inputs'->>'purchase_minor')::bigint, 32000000::bigint, 'purchase = the cash at closing + the loan taken over');
+select is((pg_temp.sub2()->'equity'->>'money_in_minor')::bigint, 3000000::bigint, 'the money in stays the cash brought');
+
+-- FLOW-454 boundaries (0246), one project each so no loan's proceeds fall in another's window: the
+-- window from 30 days before the closing (2026-08-06) to 75 days after it; a proceeds line under 80%
+-- of the loan; exactly 80%; and proceeds 121 days before the first payment (outside) and 120 (inside).
+reset role;
+insert into prr (label, id) values
+  ('ea', tests.fixture_project(pg_temp.id('co'), 'Edge window')),
+  ('eb', tests.fixture_project(pg_temp.id('co'), 'Edge 79 percent')),
+  ('ec', tests.fixture_project(pg_temp.id('co'), 'Edge 80 percent')),
+  ('ed', tests.fixture_project(pg_temp.id('co'), 'Edge 121 days')),
+  ('ee', tests.fixture_project(pg_temp.id('co'), 'Edge 120 days'));
+insert into prr (label, id) values
+  ('ea-buy', tests.fixture_line(pg_temp.id('co'), 'prr:ea-buy', 3000000, p_project => pg_temp.id('ea'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('eb-buy', tests.fixture_line(pg_temp.id('co'), 'prr:eb-buy', 3000000, p_project => pg_temp.id('eb'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('ec-buy', tests.fixture_line(pg_temp.id('co'), 'prr:ec-buy', 3000000, p_project => pg_temp.id('ec'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('ed-buy', tests.fixture_line(pg_temp.id('co'), 'prr:ed-buy', 3000000, p_project => pg_temp.id('ed'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('ee-buy', tests.fixture_line(pg_temp.id('co'), 'prr:ee-buy', 3000000, p_project => pg_temp.id('ee'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-08-06')),
+  ('eb-proc', tests.fixture_line(pg_temp.id('co'), 'prr:eb-proc', 12700000, 'income', pg_temp.id('eb'), pg_temp.id('proceeds'), '2026-08-20')),
+  ('ec-proc', tests.fixture_line(pg_temp.id('co'), 'prr:ec-proc', 8000000, 'income', pg_temp.id('ec'), pg_temp.id('proceeds'), '2026-09-10')),
+  ('ed-proc', tests.fixture_line(pg_temp.id('co'), 'prr:ed-proc', 5000000, 'income', pg_temp.id('ed'), pg_temp.id('proceeds'), '2026-05-03')),
+  ('ee-proc', tests.fixture_line(pg_temp.id('co'), 'prr:ee-proc', 5000000, 'income', pg_temp.id('ee'), pg_temp.id('proceeds'), '2026-05-04'));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values
+  (pg_temp.id('co'), 'Edge too early', 1000000, 33750, 300, '2026-07-06', 150000, 0, 'ILS', pg_temp.id('ea')),
+  (pg_temp.id('co'), 'Edge 30 days before', 2000000, 33750, 300, '2026-07-07', 150000, 0, 'ILS', pg_temp.id('ea')),
+  (pg_temp.id('co'), 'Edge 75 days after', 4000000, 33750, 300, '2026-10-20', 150000, 0, 'ILS', pg_temp.id('ea')),
+  (pg_temp.id('co'), 'Edge too late', 8000000, 33750, 300, '2026-10-21', 150000, 0, 'ILS', pg_temp.id('ea')),
+  (pg_temp.id('co'), 'Edge 79 percent', 16000000, 33750, 300, '2026-09-01', 150000, 0, 'ILS', pg_temp.id('eb')),
+  (pg_temp.id('co'), 'Edge exactly 80 percent', 10000000, 33750, 300, '2026-09-15', 150000, 0, 'ILS', pg_temp.id('ec')),
+  (pg_temp.id('co'), 'Edge 121 days', 5000000, 33750, 300, '2026-09-01', 150000, 0, 'ILS', pg_temp.id('ed')),
+  (pg_temp.id('co'), 'Edge 120 days', 5000000, 33750, 300, '2026-09-01', 150000, 0, 'ILS', pg_temp.id('ee'));
+select tests.authenticate_as('prr_owner');
+select is((public.get_property_returns(pg_temp.id('ea'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 6000000::bigint,
+  'a loan taken over counts from 30 days before the closing to 75 days after it; 31 days before and 76 after do not');
+select is((public.get_property_returns(pg_temp.id('eb'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 16000000::bigint,
+  'a proceeds line under 80% of the loan (79%) does not keep the loan out of the price');
+select is((public.get_property_returns(pg_temp.id('ec'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 0::bigint,
+  'a proceeds line of exactly 80% of the loan keeps it out of the price');
+select is((public.get_property_returns(pg_temp.id('ed'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 5000000::bigint,
+  'proceeds 121 days before the first payment are outside its window: the loan counts');
+select is((public.get_property_returns(pg_temp.id('ee'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 0::bigint,
+  'proceeds 120 days before the first payment are inside its window: the loan is out');
 
 select * from finish();
 rollback;

@@ -15,6 +15,7 @@ import { formatRatePpm, rateInForce } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
 import { loanOutlook, wholeMinor } from "./loan-outlook";
 import type { InvestmentLoan } from "./project-investment-data";
+import { UNITS_DEFAULT_HINT } from "./project-returns-info";
 
 /** What the cards ask the screen to open. A viewer's cards open nothing. */
 export type InvestmentRowRefs = Record<InvestmentField | "rehab", RefObject<HTMLButtonElement | null>>;
@@ -79,7 +80,16 @@ function FigureValue({ minor, currency, readOnly }: { minor: bigint | null; curr
  * The figures only the returns read carries (FLOW-451): null while it loads. FLOW-453: the purchase
  * as the returns count it, from the acquisition lines when there are any.
  */
-export type PropertyExtras = { landMinor: bigint | null; units: number | null; purchaseMinor: bigint | null; purchaseSource: "lines" | "typed" | null };
+export type PropertyExtras = {
+  landMinor: bigint | null;
+  /** 1 until the owner sets it (`unitsDefault`, decision 0246). */
+  units: number;
+  unitsDefault: boolean;
+  purchaseMinor: bigint | null;
+  purchaseSource: "lines" | "typed" | null;
+  /** A loan taken over at closing, inside the purchase; 0 when none. */
+  takenOverMinor: bigint;
+};
 
 /** "נתוני הנכס": the figures; each opens its sheet (a viewer's open nothing). */
 export function FiguresCard({
@@ -103,6 +113,7 @@ export function FiguresCard({
   const { currency } = figures;
   const open = (field: InvestmentField) => (readOnly ? undefined : () => { onEdit(field); });
   const fromLines = extras?.purchaseSource === "lines" && extras.purchaseMinor != null;
+  const source = extras != null && extras.takenOverMinor > 0n ? "מהתנועות + הלוואה שנלקחה" : "מהתנועות";
   return (
     <section className="ui-pinv-card" aria-label="נתוני הנכס">
       <h2 className="ui-pinv-card-title">נתוני הנכס</h2>
@@ -110,7 +121,7 @@ export function FiguresCard({
         // FLOW-453: the purchase comes from the acquisition lines; it opens them, with no edit sheet.
         <FigureRow
           title={INVESTMENT_LABELS.purchase}
-          note={readOnly ? "מהתנועות" : "מהתנועות · לפירוט"}
+          note={readOnly ? source : `${source} · לפירוט`}
           value={<FigureValue minor={extras.purchaseMinor} currency={currency} readOnly={readOnly} />}
           onOpen={undefined}
           href={readOnly ? undefined : linesHref}
@@ -162,9 +173,8 @@ export function FiguresCard({
           />
           <FigureRow
             title="יחידות"
-            value={extras.units == null
-              ? <FigureValue minor={null} currency={currency} readOnly={readOnly} />
-              : <bdi dir="ltr" className="ui-pinv-value ui-num">{String(extras.units)}</bdi>}
+            note={extras.unitsDefault ? (readOnly ? "ברירת מחדל" : UNITS_DEFAULT_HINT) : undefined}
+            value={<bdi dir="ltr" className="ui-pinv-value ui-num">{String(extras.units)}</bdi>}
             onOpen={open("units")}
             buttonRef={rows.units}
           />

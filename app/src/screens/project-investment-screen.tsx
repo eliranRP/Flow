@@ -75,12 +75,15 @@ export function applyReturnsSample(returns: PropertyReturns, patch: InvestmentPa
   if ("arv_minor" in patch) inputs.arvMinor = big(patch.arv_minor);
   if ("value_minor" in patch) inputs.valueMinor = big(patch.value_minor);
   if ("land_minor" in patch) inputs.landMinor = big(patch.land_minor);
-  if ("units" in patch) inputs.units = patch.units ?? null;
+  if ("units" in patch) {
+    // Cleared, units go back to the default 1 (decision 0246).
+    inputs.units = patch.units ?? 1;
+    inputs.unitsDefault = patch.units == null;
+  }
   const missing = returns.missing.filter((input) => !(
     (input === "purchase" && inputs.purchaseMinor != null)
     || (input === "value" && inputs.valueMinor != null)
     || (input === "land" && inputs.landMinor != null)
-    || (input === "units" && inputs.units != null)
   ));
   return { ...returns, inputs, missing };
 }
@@ -91,7 +94,7 @@ function restorePatch(field: InvestmentField, before: InvestmentFigures, extras:
   if (field === "purchase") return { purchase_minor: toNumber(before.purchaseMinor) };
   if (field === "arv") return { arv_minor: toNumber(before.arvMinor) };
   if (field === "land") return { land_minor: toNumber(extras?.landMinor ?? null) };
-  if (field === "units") return { units: extras?.units ?? null };
+  if (field === "units") return { units: extras == null || extras.unitsDefault ? null : extras.units };
   return { value_minor: toNumber(before.valueMinor), value_date: before.valueMinor == null ? null : before.valueDate };
 }
 
@@ -297,8 +300,10 @@ export function ProjectInvestmentScreen({
   const extras: PropertyExtras | null = returns == null ? null : {
     landMinor: returns.inputs.landMinor,
     units: returns.inputs.units,
+    unitsDefault: returns.inputs.unitsDefault,
     purchaseMinor: returns.inputs.purchaseMinor,
     purchaseSource: returns.inputs.purchaseSource,
+    takenOverMinor: returns.inputs.takenOverMinor,
   };
   figuresRef.current = hasFigures ? figures : null;
   extrasRef.current = extras;
@@ -308,7 +313,7 @@ export function ProjectInvestmentScreen({
     : editField === "arv" ? figures.arvMinor
     : editField === "value" ? figures.valueMinor
     : editField === "land" ? (extras?.landMinor ?? null)
-    : (extras?.units == null ? null : BigInt(extras.units));
+    : (extras == null ? null : BigInt(extras.units));
   const rehabCosts = sampled ? (sampleData?.categories ?? []) : (costs.data ?? []);
   const rehabCategories = sampled ? (sampleCategories ?? []) : (categories.data ?? null);
   const openEdit = (field: EditField) => {

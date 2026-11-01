@@ -41,7 +41,7 @@ export function pageResolver(base: string, search: string): Resolve {
     if (target.kind === "line") return { href: `${base}/returns/${target.line}${search}` };
     if (target.kind === "statement") return { href: `${base}/returns${search}` };
     if (target.kind === "part") return { href: `${base}/part/${target.part}${search}` };
-    if (target.kind === "loans") return { href: `/loans${search}` };
+    if (target.kind === "loans") return { href: target.loanId == null ? `/loans${search}` : `/loans/${target.loanId}${search}` };
     return { href: `${base}${withParam(search, "edit", target.field)}` };
   };
 }
@@ -62,6 +62,7 @@ export function MissingFigure({ note, onAdd, addLabel }: { note?: string; onAdd?
 export function FigureText({ value, currency, loss = false, addText = false }: { value: FigureValue; currency: string; loss?: boolean; addText?: boolean }) {
   if (value.kind === "money") return <Amount agorot={value.minor} currency={currency} income={value.income === true} loss={loss && value.minor < 0n} />;
   if (value.kind === "text") return <bdi dir="ltr" className="ui-num">{value.text}</bdi>;
+  if (value.kind === "note") return <span className="ui-ret-note">{value.text}</span>;
   return (
     <span className="ui-ret-missing">
       <span>{value.note ?? "חסר"}</span>

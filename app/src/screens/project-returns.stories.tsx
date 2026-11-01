@@ -1,6 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Route, Routes } from "react-router-dom";
-import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsCashOut, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../dev/returns-sample";
+import {
+  birchLaneReturnLines,
+  birchLaneReturns,
+  birchLaneReturnsBeforeRent,
+  birchLaneReturnsCashOut,
+  birchLaneReturnsMissing,
+  birchLaneReturnsNegative,
+  mapleCourtSub2Returns,
+} from "../dev/returns-sample";
 import { StoryRoute } from "../ui/story-route";
 import type { LinesSource } from "./project-returns-data";
 import { PropertyMetricScreen, PropertyPartScreen } from "./project-returns-detail-screen";
@@ -9,8 +17,16 @@ import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-ret
 /**
  * FLOW-451: the pages behind the investment page's figures, on the invented Birch Lane fixture.
  * FLOW-453: the holding costs before the first rent, the money in by part, and all the cash out.
+ * FLOW-454: the units by default, a Sub2 purchase split in two, and the per-cents before the first rent.
  */
-const RETURNS = { complete: birchLaneReturns, missing: birchLaneReturnsMissing, negative: birchLaneReturnsNegative, cashOut: birchLaneReturnsCashOut };
+const RETURNS = {
+  complete: birchLaneReturns,
+  missing: birchLaneReturnsMissing,
+  negative: birchLaneReturnsNegative,
+  cashOut: birchLaneReturnsCashOut,
+  sub2: mapleCourtSub2Returns,
+  beforeRent: birchLaneReturnsBeforeRent,
+};
 
 type Args = { entry: string; lines?: LinesSource; returns?: keyof typeof RETURNS };
 
@@ -42,7 +58,7 @@ export const StatementNegative: Story = { args: { entry: "/projects/p1/investmen
 export const OperatingLine: Story = { args: { entry: "/projects/p1/investment/returns/opex" } };
 export const OperatingLineOneCategory: Story = { args: { entry: "/projects/p1/investment/returns/opex?category=cat-other" } };
 export const CashOnCash: Story = { args: { entry: "/projects/p1/investment/metric/coc" } };
-export const UnitsMissing: Story = { args: { entry: "/projects/p1/investment/metric/per-unit", returns: "missing" } };
+export const PerUnitDefault: Story = { args: { entry: "/projects/p1/investment/metric/per-unit", returns: "missing" } };
 export const BuildingCost: Story = { args: { entry: "/projects/p1/investment/part/building", lines: "rehab" } };
 export const BuildingCostLandMissing: Story = { args: { entry: "/projects/p1/investment/part/building", lines: "rehab", returns: "missing" } };
 export const StatementCashOut: Story = { args: { entry: "/projects/p1/investment/returns", returns: "cashOut" } };
@@ -50,3 +66,5 @@ export const BeforeRentLine: Story = { args: { entry: "/projects/p1/investment/r
 export const HoldingLine: Story = { args: { entry: "/projects/p1/investment/returns/holding", lines: "holding" } };
 export const MoneyInPart: Story = { args: { entry: "/projects/p1/investment/part/money-in", lines: "money_in" } };
 export const CashOnCashAllCashOut: Story = { args: { entry: "/projects/p1/investment/metric/coc", returns: "cashOut" } };
+export const BuildingCostSub2: Story = { args: { entry: "/projects/p1/investment/part/building", lines: "rehab", returns: "sub2" } };
+export const CashOnCashBeforeFirstRent: Story = { args: { entry: "/projects/p1/investment/metric/coc", returns: "beforeRent" } };

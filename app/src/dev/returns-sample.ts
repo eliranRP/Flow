@@ -32,6 +32,9 @@ export const birchLaneReturns: PropertyReturns = {
     valueMinor: usd(240_000),
     valueDate: "2026-10-01",
     units: 2,
+    unitsDefault: false,
+    takenOverMinor: 0n,
+    takenOverLoans: [],
     landMinor: usd(46_300),
     taxBracketBp: 2400,
     rehabMinor: usd(61_300),
@@ -92,11 +95,14 @@ export const birchLaneReturns: PropertyReturns = {
   metrics: { cashOnCashBp: 1157, capRateBp: 650, dscrMilli: 1625, perUnitMonthMinor: usd(175) },
 };
 
-/** No land, no tax bracket, no units, and no value a year back: those figures read "חסר". */
+/**
+ * No land, no tax bracket, and no value a year back: those figures read "חסר". Units are the default
+ * 1 (decision 0246), so the cash flow per unit is $4,200 ÷ 12 = $350.
+ */
 export const birchLaneReturnsMissing: PropertyReturns = {
   ...birchLaneReturns,
-  missing: ["value_history", "land", "tax_bracket", "units"],
-  inputs: { ...birchLaneReturns.inputs, landMinor: null, taxBracketBp: null, units: null, valueStart: null },
+  missing: ["value_history", "land", "tax_bracket"],
+  inputs: { ...birchLaneReturns.inputs, landMinor: null, taxBracketBp: null, units: 1, unitsDefault: true, valueStart: null },
   sources: {
     ...birchLaneReturns.sources,
     appreciationMinor: null,
@@ -106,7 +112,7 @@ export const birchLaneReturnsMissing: PropertyReturns = {
     totalMinor: usd(6_000),
     totalBp: 1653,
   },
-  metrics: { ...birchLaneReturns.metrics, perUnitMonthMinor: null },
+  metrics: { ...birchLaneReturns.metrics, perUnitMonthMinor: usd(350) },
 };
 
 /** Operating costs of $16,000: NOI $8,000 and a cash flow of −$3,400, the one signal on the page. */
@@ -169,6 +175,106 @@ export const birchLaneReturnsCashOut: PropertyReturns = {
     allCashOut: true,
   },
   metrics: { ...birchLaneReturns.metrics, cashOnCashBp: null, capRateBp: 503 },
+};
+
+/**
+ * FLOW-454: before the first rent. The rehab is done and nothing is rented yet: no income, an empty
+ * statement, and the period's $61,300 before the rent. The amounts stay ($600 principal, $12,000
+ * appreciation, $1,745.45 tax savings: $14,345.45); the per-cent figures read "לפני השכר הראשון".
+ */
+export const birchLaneReturnsBeforeRent: PropertyReturns = {
+  ...birchLaneReturns,
+  firstRent: null,
+  statement: {
+    ...birchLaneReturns.statement,
+    incomeMinor: 0n,
+    opexMinor: 0n,
+    noiMinor: 0n,
+    debtServiceMinor: 0n,
+    capexMinor: 0n,
+    cashFlowMinor: 0n,
+    counts: { income: 0, opex: 0, debt_service: 0, capex: 0, before_rent: 23, not_counted: 4 },
+    byCategory: { ...birchLaneReturns.statement.byCategory, income: [], opex: [], debt_service: [], capex: [] },
+  },
+  sources: { ...birchLaneReturns.sources, cashFlowMinor: 0n, principalMinor: usd(600), totalMinor: 1_434_545n, totalBp: 3952 },
+  metrics: { cashOnCashBp: 0, capRateBp: 0, dscrMilli: null, perUnitMonthMinor: 0n },
+};
+
+/**
+ * FLOW-454 (decision 0246): "Maple Court", a Sub2 deal. The bank shows $41,600 of purchase lines
+ * (the cash to close); the $290,000 mortgage taken over never passed through it, so the purchase is
+ * $331,600. The first rent on 01/03/2026, inside the period; one unit, the default. Rent $20,000 −
+ * operating $6,000 = NOI $14,000; − loan payments $12,000 = cash flow $2,000. Money in $63,000 (cash
+ * only: $41,600 + renovation $18,400 + holding $3,000). Building $331,600 + $18,400 − land $66,600 =
+ * $283,400 ÷ 27.5 × 24% = $2,473.31 a year.
+ */
+export const mapleCourtSub2Returns: PropertyReturns = {
+  currency: "USD",
+  from: "2025-11-02",
+  to: "2026-11-01",
+  days: 365,
+  firstRent: "2026-03-01",
+  otherCurrencies: [],
+  missing: [],
+  inputs: {
+    purchaseMinor: usd(331_600),
+    purchaseSource: "lines",
+    purchaseTypedMinor: null,
+    arvMinor: usd(380_000),
+    valueMinor: usd(360_000),
+    valueDate: "2026-10-01",
+    units: 1,
+    unitsDefault: true,
+    takenOverMinor: usd(290_000),
+    takenOverLoans: [{ id: "loan-maple", name: "Maple Street Mortgage", minor: usd(290_000) }],
+    landMinor: usd(66_600),
+    taxBracketBp: 2400,
+    rehabMinor: usd(18_400),
+    loanBalanceMinor: usd(286_000),
+    valueStart: { minor: usd(340_000), date: "2025-11-01" },
+    valueEnd: { minor: usd(360_000), date: "2026-10-01" },
+  },
+  statement: {
+    incomeMinor: usd(20_000),
+    opexMinor: usd(-6_000),
+    noiMinor: usd(14_000),
+    debtServiceMinor: usd(-12_000),
+    capexMinor: 0n,
+    cashFlowMinor: usd(2_000),
+    beforeRentMinor: usd(-21_400),
+    notCountedMinor: usd(-41_600),
+    counts: { income: 8, opex: 10, debt_service: 8, capex: 0, before_rent: 12, not_counted: 3 },
+    byCategory: {
+      income: [cat("cat-rent", "שכר דירה", 20_000, 8)],
+      opex: [cat("cat-tax", "מסים וביטוח", -3_600, 2), cat("cat-other", "אחר", -2_400, 8)],
+      debt_service: [cat("cat-interest", "ריבית", -8_800, 8), cat("cat-principal", "קרן הלוואה", -3_200, 8)],
+      capex: [],
+      before_rent: [
+        cat("cat-contractors", "קבלני משנה", -12_000, 4),
+        cat("cat-materials", "חומרים", -6_400, 5),
+        cat("cat-interest", "ריבית", -3_000, 3),
+      ],
+      not_counted: [cat("cat-purchase", "רכישה", -38_000, 1), cat("cat-closing", "עלויות סגירה", -3_600, 2)],
+    },
+  },
+  sources: {
+    cashFlowMinor: usd(2_000),
+    principalMinor: usd(3_200),
+    appreciationMinor: usd(20_000),
+    taxSavingsMinor: 247_331n,
+    depreciationYearMinor: 1_030_545n,
+    buildingMinor: usd(283_400),
+    totalMinor: 2_767_331n,
+    totalBp: 4393,
+  },
+  equity: {
+    todayMinor: usd(74_000),
+    forcedMinor: usd(30_000),
+    moneyInMinor: usd(63_000),
+    moneyInParts: { acquisitionMinor: usd(-41_600), renovationMinor: usd(-18_400), holdingMinor: usd(-3_000), financingMinor: 0n },
+    allCashOut: false,
+  },
+  metrics: { cashOnCashBp: 317, capRateBp: 389, dscrMilli: 1167, perUnitMonthMinor: 16_667n },
 };
 
 function row(id: string, supplier: string, date: string, dollars: number, categoryId: string, categoryName: string, source = "mercury"): ReturnLineRow {
