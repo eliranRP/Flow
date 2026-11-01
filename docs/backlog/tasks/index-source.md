@@ -408,6 +408,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1004
 - FLOW-1005
 - FLOW-1006
+- FLOW-1007
 
 ## Projects and reports
 

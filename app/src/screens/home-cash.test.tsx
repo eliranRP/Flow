@@ -107,6 +107,46 @@ function bandOf(): HTMLElement {
   return band;
 }
 
+describe("Home's forecast row (FLOW-1007)", () => {
+  it("shows the תזרים צפוי screen's own number: still to come, the owner's edits, a supplier bill as money out", async () => {
+    rpc.impl = (name) => {
+      const data: Record<string, unknown> = {
+        cash_months: cash,
+        get_dashboard: dashboard(0),
+        list_missing_bills: [],
+        mcp_company_loan_currency: "ILS",
+        expected_months: {
+          today: israelToday(),
+          project_id: null,
+          months: [{ month: current, open: true, by_currency: [{ currency: "ILS", income_minor: 0, expense_minor: -999_999 }] }],
+          recurring: [
+            { direction: "expense", party_id: "p-power", name: "Example Power", currency: "ILS", typical_amount_minor: -25_000, typical_day: 28, months_seen: 6, seen_this_month: false, project_id: "pj-1" },
+            { direction: "expense", party_id: "p-water", name: "Example Water", currency: "ILS", typical_amount_minor: -40_000, typical_day: 28, months_seen: 6, seen_this_month: false, project_id: "pj-1" },
+          ],
+        },
+        list_unpaid: [
+          { id: "inv-1", description: "Invoice 1", doc_date: `${current}-01`, project_name: null, customer_name: "Example Client", open_gross_agorot: 50_000, open_net_agorot: 50_000, currency: "ILS", direction: "income" },
+          { id: "bill-1", description: "Bill 1", doc_date: `${current}-01`, project_name: null, customer_name: "Example Supplier", open_gross_agorot: 20_000, open_net_agorot: 20_000, currency: "ILS", direction: "expense" },
+        ],
+        forecast_overrides_for: [],
+        company_forecast_edits_for: {
+          month: current,
+          overhead_project_id: null,
+          edits: [
+            { id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c-refund", category_name: "Utility refund", direction: "income", amount_minor: 10_000, pace: "month", start_month: current, matched_transaction_id: null },
+            { id: "e-2", project_id: "pj-1", kind: "remove", row_key: "rec:expense:p-water", category_id: null, category_name: null, direction: null, amount_minor: null, pace: "month", start_month: current },
+          ],
+        },
+      };
+      return Promise.resolve({ data: data[name] ?? null, error: null });
+    };
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    // ₪3,200 today + ₪500 invoice + ₪100 added line − ₪250 power − ₪200 supplier bill; the removed water bill is out.
+    const row = await screen.findByRole("link", { name: "תזרים צפוי לסוף החודש" });
+    await waitFor(() => { expect(within(row).getByText("₪3,350")).toBeInTheDocument(); });
+  });
+});
+
 describe("Home's cash (FLOW-364: the redesigned Home)", () => {
   it("shows the month in the band with its net, נכנס, יצא and the split card", async () => {
     wrap();

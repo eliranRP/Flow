@@ -1,28 +1,14 @@
-import { buildMonthForecast, type ForecastBuild, type ForecastOverrideRow, parseMonthEdits } from "@flow/shared";
-import { useQuery } from "@tanstack/react-query";
-import { readStoredCurrency } from "./company-currency";
+import type { ForecastOverrideRow } from "@flow/shared";
 import { getSupabase } from "./lib/supabase";
-import { loadReadSchemas } from "./load-read-schemas";
-import { useHomePreview } from "./preview";
 import { forecastScope } from "./forecast-scope";
 import { assertNoError, useWrite } from "./use-write";
-import { waitForAccessToken } from "./wait-for-session";
 
 /**
- * FLOW-141: the month-end forecast's data. Three reads (expected months, open invoices, the
- * month's overrides) go through the shared builder, so the screen and Home's number agree. Writes
- * are the app's RPCs (set_forecast_item, reset_forecast_month); their undo is the previous state,
- * sent back the same way. FLOW-1005: a fourth read, the projects' forecast edits of the month
- * (company_forecast_edits_for), counts the lines the owner added and drops the charges they removed.
+ * FLOW-141: the month-end forecast's writes and its date helpers; its read is month-forecast-query.ts. Writes
+ * are the app's RPCs (set_forecast_item, reset_forecast_month); their undo is the previous state, sent back the
+ * same way.
  */
 
-export type MonthForecast = {
-  month: string;
-  /** The company's currency (0147): the forecast counts its items and its cash. */
-  base: string;
-  build: ForecastBuild;
-  overrides: ForecastOverrideRow[];
-};
 
 /** The last day of a YYYY-MM month (yyyy-mm-dd): the "עד סוף החודש" choice. */
 export function monthEndDay(month: string): string {
@@ -50,48 +36,6 @@ export function daysLeftInMonth(today: string, month: string): number {
   const end = monthEndDay(month);
   const ms = Date.parse(`${end}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`);
   return Math.max(0, Math.round(ms / 86_400_000));
-}
-
-export function useMonthForecastQuery(month: string, active = true) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["month-forecast", preview, month],
-    enabled: active && preview === "off",
-    queryFn: async (): Promise<MonthForecast> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const [expected, unpaid, overrides, edits, base] = await Promise.all([
-        supabase.rpc("expected_months", { p_months: 1 }),
-        supabase.rpc("list_unpaid", {}),
-        supabase.rpc("forecast_overrides_for", { p_month: month }),
-        supabase.rpc("company_forecast_edits_for", { p_month: month }),
-        // A failed read fails the forecast: counting a dollar company in shekels would show nothing due.
-        readStoredCurrency(),
-      ]);
-      if (expected.error) throw expected.error;
-      if (unpaid.error) throw unpaid.error;
-      if (overrides.error) throw overrides.error;
-      if (edits.error) throw edits.error;
-      const projectEdits = parseMonthEdits(edits.data);
-      const schemas = await loadReadSchemas();
-      const rows = schemas.unpaidRowSchema.array().parse(unpaid.data ?? []);
-      const current = (overrides.data ?? []) as ForecastOverrideRow[];
-      return {
-        month,
-        base,
-        overrides: current,
-        build: buildMonthForecast({
-          base,
-          expected: schemas.expectedMonthsSchema.parse(expected.data),
-          unpaid: rows,
-          overrides: current,
-          edits: projectEdits.edits,
-          overheadProjectId: projectEdits.overheadProjectId,
-        }),
-      };
-    },
-  });
 }
 
 /** One item's change: an amount, a day, "not this month" (moved_out), or reset (Flow's number). */

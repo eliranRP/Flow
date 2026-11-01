@@ -1,6 +1,6 @@
 // FLOW-364: Home's month logic. Invented figures only; amounts are agorot.
 import { describe, expect, it } from "vitest";
-import { canStepYear, changeTone, drawerCells, forecastMinor, homeMonthKey, homeMonthPath, splitParts } from "./home-month";
+import { canStepYear, changeTone, drawerCells, homeMonthKey, homeMonthPath, splitParts } from "./home-month";
 
 const TODAY = "2026-10-11";
 
@@ -68,16 +68,6 @@ describe("splitParts", () => {
 
   it("hides the card when both parts are 0", () => {
     expect(splitParts(0n, 0n).visible).toBe(false);
-  });
-});
-
-describe("forecastMinor", () => {
-  it("adds the recurring money in and the open invoices, and takes off the recurring money out", () => {
-    expect(forecastMinor(-94_600n, 12_000n, 31_500n, 46_000n)).toEqual({ minor: -68_100n, show: true });
-  });
-
-  it("hides the row when no addend besides the net is set", () => {
-    expect(forecastMinor(-94_600n, 0n, 0n, 0n).show).toBe(false);
   });
 });
 

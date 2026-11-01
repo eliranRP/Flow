@@ -13,7 +13,8 @@ import { useSheetHistory } from "../ui/back";
 import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
-import { homeMonthKey, homeMonthPath, forecastMinor } from "../home-month";
+import { homeMonthKey, homeMonthPath } from "../home-month";
+import { useMonthForecastQuery } from "../month-forecast-query";
 import { HomeReportsCard } from "./home-reports-card";
 import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { MonthDrawer } from "./month-drawer";
@@ -30,7 +31,7 @@ import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useDashboardQuery, useOptionalBooks, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
-import { chargeChangeViews, lateCounts, openMonthDue, useCompanyExpectedQuery, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
 import { reviewWaiting, useJevBookingCountQuery } from "../jev-booking-count";
@@ -159,10 +160,10 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const isCurrent = monthKey === currentKey;
   const older = useCashMonthData(monthKey);
   const base = cash.data?.base_currency ?? "ILS";
-  // FLOW-364: the previous month up to the same day (the current month), and the open month's
-  // recurring money still due for the forecast row. Both are read only on the current month.
+  // FLOW-364: the previous month up to the same day (the current month), and the month-end forecast for the
+  // forecast row (FLOW-1007: the תזרים צפוי screen's own read, so both show one number). Both on the current month only.
   const sameDay = useCashToDayQuery(shiftMonthKey(monthKey, -1), Number(today.slice(8, 10)), isCurrent);
-  const expected = useCompanyExpectedQuery(isCurrent);
+  const monthForecast = useMonthForecastQuery(currentKey, isCurrent);
 
   const cashPhase = screenPhase(preview, cash);
   const dashboardPhase = screenPhase(preview, dashboard);
@@ -233,8 +234,12 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const unpaidGross = unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? [], base) : 0n;
   const currentRow = cash.data.months.find((month) => cashMonthKey(month.month) === currentKey);
   const net = cashRows(currentRow, base).find((row) => row.currency === base)?.net_minor ?? 0n;
-  const due = openMonthDue(expected.data, base);
-  const forecast = isCurrent ? forecastMinor(net, due.income, due.expense, unpaidGross) : null;
+  const build = isCurrent ? monthForecast.data?.build ?? null : null;
+  // The screen's big number: the cash net today, plus what is still to come in, less what is still to go out.
+  // The row shows once the forecast is read, and only when something is still expected.
+  const forecast = build == null || build.income.length + build.expense.length + build.small.length === 0
+    ? null
+    : net + build.incomeTotal - build.expenseTotal;
   const navigateTo = (key: string) => {
     void navigate(homeMonthPath(key, location.search, currentKey), { replace: true });
   };
@@ -267,7 +272,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         if (dashboardPhase.kind === "error") void dashboard.refetch();
       }}
       sameDay={isCurrent ? sameDay.data ?? null : null}
-      forecast={forecast != null && forecast.show ? forecast.minor : null}
+      forecast={forecast}
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
