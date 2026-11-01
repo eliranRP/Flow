@@ -48,7 +48,8 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("undo_project_forecast", { p_project_id: projectId, p_undo: body }));
     },
-    keys: [FORECAST_EDITS_KEY],
+    // FLOW-1005: the month-end forecast counts the edits too.
+    keys: [FORECAST_EDITS_KEY, "month-forecast"],
     failure: "לא הצלחנו לבטל את השינוי בצפי",
   });
   const write = useWrite<Call>({
@@ -69,7 +70,8 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       assertNoError(result);
       lastUndo.current = undoOf(result.data);
     },
-    keys: [FORECAST_EDITS_KEY],
+    // FLOW-1005: the month-end forecast counts the edits too.
+    keys: [FORECAST_EDITS_KEY, "month-forecast"],
     // A removal leaves the list at once; a failure puts the row back (useWrite's rollback) and says so.
     optimistic: (call) => {
       if (call.fn !== "remove_project_forecast_row") return [];

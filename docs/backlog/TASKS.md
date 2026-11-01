@@ -413,6 +413,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1002"></a>[FLOW-1002](tasks/FLOW-1002.md) | A general-cost row is edited like any project's row | SMALL UI |
 | <a id="flow-1003"></a>[FLOW-1003](tasks/FLOW-1003.md) | A removed forecast row stays out the next months | SMALL DB |
 | <a id="flow-1004"></a>[FLOW-1004](tasks/FLOW-1004.md) | The month-end forecast by project | SMALL UI |
+| <a id="flow-1005"></a>[FLOW-1005](tasks/FLOW-1005.md) | The month-end forecast counts the projects' forecast edits | DB + UI |
+| <a id="flow-1006"></a>[FLOW-1006](tasks/FLOW-1006.md) | הוספה לצפי on the תזרים צפוי screen | SMALL UI |
 
 ## Projects and reports
 
