@@ -1,5 +1,6 @@
 import { formatAmountText, type ForecastItem } from "@flow/shared";
 import { weekEndDay } from "../forecast-month";
+import { Amount } from "../ui/amount";
 import { cx } from "../ui/cx";
 
 /** The screen's name: its header, the compact bar and the item page's back link (canvas note spec-cash2). */
@@ -71,4 +72,23 @@ export function itemWhen(item: ForecastItem, today: string): string {
   if (item.expected_on != null) return `עד ${dayMonth(item.expected_on)}`;
   if (item.kind === "invoice") return item.direction === "income" ? "לגבייה" : "לתשלום";
   return item.day != null ? `ב־${String(item.day)}` : "השבוע";
+}
+
+/** One item's row: its name, what and when, and its amount; a tap opens its page. */
+export function ForecastRowButton({ item, today, onOpen, leaving }: { item: ForecastItem; today: string; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
+  const name = item.name === "" ? "ללא שם" : item.name;
+  const amount = item.direction === "income" ? signed(item.minor, "+", item.currency) : signed(item.minor, "−", item.currency);
+  const figure = <Amount agorot={item.minor} size="list" currency={item.currency} direction={item.direction} income={item.direction === "income"} />;
+  return (
+    <li className={cx("ui-forecast-li", leaving && "ui-forecast-leaving")}>
+      <button type="button" className="ui-forecast-row" data-forecast-key={item.key} onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
+        <span className="ui-forecast-initial" aria-hidden="true">{name.slice(0, 1)}</span>
+        <span className="ui-forecast-text">
+          <span className="ui-forecast-name">{name}</span>
+          <span className="ui-forecast-meta">{`${itemWhat(item)} · ${itemWhen(item, today)}`}</span>
+        </span>
+        <span className={cx("ui-forecast-amount", item.overridden && "ui-forecast-edited")}>{figure}</span>
+      </button>
+    </li>
+  );
 }
