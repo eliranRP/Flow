@@ -20,6 +20,9 @@ import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { KEPT_OUT } from "./screen-shared";
+import { reviewCountText } from "../ui/review-count";
+import type { ReviewPaging } from "../use-review";
+import { ReviewListEnd } from "./review-shared";
 
 /** FLOW-971: a list's failed read or its offline moment, drawn under the page's head. */
 export type ReviewListState = {
@@ -120,9 +123,9 @@ function ListBody({ state, failTitle, children }: { state: ReviewListState; fail
 }
 
 /** "6 פריטים · 1 בלי פרויקט": the count and what is missing (board M5). */
-export function reviewAllSubtitle(count: number, missing: number): string {
-  const items = count === 1 ? "פריט אחד" : `${String(count)} פריטים`;
-  return missing === 0 ? items : `${items} · ${String(missing)} בלי פרויקט`;
+export function reviewAllSubtitle(count: number, missing: number | null): string {
+  const items = count === 1 ? "פריט אחד" : `${reviewCountText(count)} פריטים`;
+  return missing == null || missing === 0 ? items : `${items} · ${String(missing)} בלי פרויקט`;
 }
 
 type AllEntry =
@@ -146,6 +149,7 @@ export function ReviewAllList({
   backTo,
   state = {},
   now,
+  paging,
 }: {
   rows: ReviewRow[];
   /** FLOW-955: Jev's bookings waiting for review, listed first (they come first in the queue). */
@@ -155,6 +159,8 @@ export function ReviewAllList({
   state?: ReviewListState;
   /** Stories pin the day heads. */
   now?: Date;
+  /** FLOW-984: the queue loads in pages. The counts are the server's; the end of the list loads the next page. */
+  paging?: ReviewPaging;
 }) {
   useEffect(() => {
     const id = reviewListReturn.current;
@@ -168,8 +174,9 @@ export function ReviewAllList({
     return () => { window.clearTimeout(timer); };
   }, [search, rows]);
   const ordered = useHeldOrder(rows, (row) => row.id);
-  const count = rows.length + bookings.length;
-  const missing = rows.filter((row) => row.project_id == null).length;
+  const count = (paging?.total ?? rows.length) + bookings.length;
+  // The missing count reads the loaded rows only; with pages left it would under-count, so it waits for the last page.
+  const missing = paging?.more === true ? null : rows.filter((row) => row.project_id == null).length;
   const today = israelToday(now);
   // Jev's bookings take their date's place; under one day they come first, as in the queue.
   const rowEntries: AllEntry[] = ordered.map((row) => ({ kind: "row" as const, key: row.id, date: row.doc_date, row }));
@@ -217,6 +224,7 @@ export function ReviewAllList({
                 </ul>
               </section>
             ))}
+            {paging != null ? <ReviewListEnd paging={paging} /> : null}
           </>
         )}
       </ListBody>

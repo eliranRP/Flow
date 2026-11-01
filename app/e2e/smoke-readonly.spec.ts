@@ -230,10 +230,12 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   await expect(page.getByText("ואפשר גם לפתוח אחד כאן")).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון.")).toHaveCount(0);
 
-  const reviewResponses = await openList(page, "/review", ["list_review"], watched.inflight);
+  const reviewResponses = await openList(page, "/review", ["list_review_page"], watched.inflight);
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);
-  const reviewRows = await responseAt(reviewResponses, 0).json() as unknown;
-  expect(isUnknownArray(reviewRows)).toBe(true);
+  // FLOW-984: the queue is read in pages: {items, total, next}.
+  const reviewPage = await responseAt(reviewResponses, 0).json() as unknown;
+  expect(isRecord(reviewPage) && isUnknownArray(reviewPage.items) && typeof reviewPage.total === "number").toBe(true);
+  const reviewRows = isRecord(reviewPage) ? reviewPage.items : null;
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
   if (!isUnknownArray(reviewRows) || reviewRows.length === 0) {
     await expect(page.getByText("הכל מאושר", { exact: true })).toBeVisible();

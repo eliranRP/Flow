@@ -13,7 +13,7 @@ A viewer gets these reads:
 | `get_home` | The demo company name and cash net. The smoke does not open `/auth/callback`, so it does not call this. |
 | `get_dashboard` | The demo P&L for the signed-in period, through `company_pnl` (which a client cannot call directly, [0193](../decisions/0193-client-privileges.md)). |
 | `list_unpaid` | Open invoices for the demo company. |
-| `list_review` | The open review list. `auto_approved_today` and `assistant_filed_today` stay empty, because they call `private.filed_today_rows()`. |
+| `list_review_page` | The first page of the open review list (`items`, `total`, `next`). `auto_approved_today` and `assistant_filed_today` stay empty, because they call `private.filed_today_rows()`. |
 | `sumit_status` | Whether the demo SUMIT connection is up, and its company number. No secret. |
 | `company_integrations` | The Jev row: enabled, mode, and threshold. This is a select, not an RPC. |
 | `get_pnl_statement` | The demo P&L as a statement (FLOW-160): Home's reports card reads it, and so does the report file. |
@@ -33,7 +33,7 @@ These stay on `private.current_company_id()` and return empty for a viewer. The 
 - `list_auto_assigned_today` and `private.filed_today_rows`
 - `search_transactions`
 
-The product has no `/reports` route. The check opens only `/`, `/projects`, `/review`, and `/settings`. It does not open a project, a transaction, or a category. Home calls `get_dashboard` and `list_unpaid`. Projects calls `get_dashboard`. Review calls `list_review`. Settings calls `get_dashboard` and `sumit_status`, selects `company_integrations`, and POSTs `flow-mcp/status`. That status call is allowed. Any other request is aborted before it leaves the browser. Each listed RPC has to return 200 before the next screen. The home lines are נכנס and יצא when the demo has income, expenses, or a project. A demo with none of those still passes on the empty heading. The check does not require a project row, and it does not assert filed-today, category, project-detail, or search rows.
+The product has no `/reports` route. The check opens only `/`, `/projects`, `/review`, and `/settings`. It does not open a project, a transaction, or a category. Home calls `get_dashboard` and `list_unpaid`. Projects calls `get_dashboard`. Review calls `list_review_page`. Settings calls `get_dashboard` and `sumit_status`, selects `company_integrations`, and POSTs `flow-mcp/status`. That status call is allowed. Any other request is aborted before it leaves the browser. Each listed RPC has to return 200 before the next screen. The home lines are נכנס and יצא when the demo has income, expenses, or a project. A demo with none of those still passes on the empty heading. The check does not require a project row, and it does not assert filed-today, category, project-detail, or search rows.
 
 ## Provision once
 

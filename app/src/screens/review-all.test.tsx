@@ -9,6 +9,7 @@ import { renderWithProviders } from "../test-render";
 import { ChangeForm, queueAfterFocus, resetReviewListFocus, ReviewAllList, reviewFocusPath, reviewListPath, ReviewScreen, rotateReview } from "./flow-screens";
 import { LineSplitScreen } from "./line-split";
 import { ViewerPreview } from "../use-is-viewer";
+import { reviewPage } from "./review-page-test-support";
 
 // --- review-all.test.tsx
 
@@ -181,9 +182,9 @@ describe("review list paths", () => {
 describe("review queue list", () => {
   it("puts הצגת הכול in the header and the auto count on the counter line (FLOW-365)", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{ ...reviewRow("r1", "מחסן הנמל", "p1"), auto_approved_today: 2 }],
+          data: reviewPage([{ ...reviewRow("r1", "מחסן הנמל", "p1"), auto_approved_today: 2 }]),
           error: null,
         });
       }
@@ -204,9 +205,9 @@ describe("review queue list", () => {
 
   it("lists every open item, opens that card, and returns to the list", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")],
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")]),
           error: null,
         });
       }
@@ -237,9 +238,9 @@ describe("review queue list", () => {
 
   it("opens the same card when the address is refreshed", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")],
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")]),
           error: null,
         });
       }
@@ -259,9 +260,9 @@ describe("review queue list", () => {
 
   it("does not list another project's items from a filtered queue", async () => {
     rpc.impl = (name, args) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")],
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")]),
           error: null,
         });
       }
@@ -298,14 +299,14 @@ describe("review queue list", () => {
   it("opens the project picker from the card and saves only the project", async () => {
     let savedProject = false;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", savedProject ? "p1" : null, {
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", savedProject ? "p1" : null, {
             category_id: null,
             category_name: null,
             project_name: savedProject ? "הרצל" : null,
             project_suggested: false,
-          })],
+          })]),
           error: null,
         });
       }
@@ -343,11 +344,11 @@ describe("review queue list", () => {
   it("saves a category on a card with no project and stays there", async () => {
     let savedCategory = false;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", null, savedCategory
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", null, savedCategory
             ? { category_id: "c1", category_name: "חומרים", category_suggested: false, project_name: null }
-            : { category_id: null, category_name: null, project_name: null })],
+            : { category_id: null, category_name: null, project_name: null })]),
           error: null,
         });
       }
@@ -380,9 +381,9 @@ describe("review queue list", () => {
   it("saves a complete category tap and returns to the same card", async () => {
     let savedCategory = false;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", "p1", savedCategory ? { category_id: "c2", category_name: "הובלה", category_suggested: false } : {})],
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1", savedCategory ? { category_id: "c2", category_name: "הובלה", category_suggested: false } : {})]),
           error: null,
         });
       }
@@ -415,7 +416,7 @@ describe("review queue list", () => {
 
   it("closes a card-line picker back to the card", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1")]), error: null });
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
       return Promise.resolve({ data: null, error: null });
@@ -436,16 +437,16 @@ describe("review queue list", () => {
 
   it("opens the split from the project row and keeps the middle dot", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "עגורני החוף", null, {
+          data: reviewPage([reviewRow("r1", "עגורני החוף", null, {
             reason: "missing_category",
             pnl_role: "shared",
             share_count: 2,
             category_id: null,
             category_name: null,
             project_name: null,
-          })],
+          })]),
           error: null,
         });
       }
@@ -461,16 +462,16 @@ describe("review queue list", () => {
 
   it("saves a split category from the card row", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "עגורני החוף", null, {
+          data: reviewPage([reviewRow("r1", "עגורני החוף", null, {
             reason: "missing_category",
             pnl_role: "shared",
             share_count: 2,
             category_id: null,
             category_name: null,
             project_name: null,
-          })],
+          })]),
           error: null,
         });
       }
@@ -496,13 +497,13 @@ describe("review queue list", () => {
   it("advances to the following list item after אישור", async () => {
     let open = true;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         const rows = [
           reviewRow("r1", "מחסן הנמל", "p1"),
           reviewRow("r2", "עגורני החוף", "p2"),
           reviewRow("r3", "ברזל לדוגמה", "p1"),
         ];
-        return Promise.resolve({ data: open ? rows : rows.filter((row) => row.id !== "r2"), error: null });
+        return Promise.resolve({ data: reviewPage(open ? rows : rows.filter((row) => row.id !== "r2")), error: null });
       }
       if (name === "approve_review_item") {
         open = false;
@@ -522,9 +523,9 @@ describe("review queue list", () => {
     const names = ["מחסן הנמל", "עגורני החוף", "ברזל לדוגמה", "צבע לדוגמה", "חשמלאות לדוגמה"];
     const removed = new Set<string>();
     rpc.impl = (name, args) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         const rows = names.map((supplier, index) => reviewRow(`r${String(index + 1)}`, supplier, "p1"));
-        return Promise.resolve({ data: rows.filter((row) => !removed.has(row.id)), error: null });
+        return Promise.resolve({ data: reviewPage(rows.filter((row) => !removed.has(row.id))), error: null });
       }
       if (name === "approve_review_item") {
         const id = (args as { p_id?: string } | undefined)?.p_id;
@@ -550,8 +551,8 @@ describe("review queue list", () => {
   it("leaves the queue at /review after the last list item", async () => {
     let open = true;
     rpc.impl = (name) => {
-      if (name === "list_review") {
-        return Promise.resolve({ data: open ? [reviewRow("r1", "מחסן הנמל", "p1")] : [], error: null });
+      if (name === "list_review_page") {
+        return Promise.resolve({ data: reviewPage(open ? [reviewRow("r1", "מחסן הנמל", "p1")] : []), error: null });
       }
       if (name === "approve_review_item") {
         open = false;
@@ -584,8 +585,8 @@ describe("review queue list", () => {
 
   it("does not replace the change sheet when the open item leaves", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
-        return Promise.resolve({ data: [reviewRow("r2", "עגורני החוף", "p1")], error: null });
+      if (name === "list_review_page") {
+        return Promise.resolve({ data: reviewPage([reviewRow("r2", "עגורני החוף", "p1")]), error: null });
       }
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
@@ -619,8 +620,8 @@ describe("review queue list", () => {
 
   it("still advances on /review when the focused item has left", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
-        return Promise.resolve({ data: [reviewRow("r2", "עגורני החוף", "p1")], error: null });
+      if (name === "list_review_page") {
+        return Promise.resolve({ data: reviewPage([reviewRow("r2", "עגורני החוף", "p1")]), error: null });
       }
       return Promise.resolve({ data: null, error: null });
     };
@@ -651,9 +652,9 @@ describe("review queue list", () => {
 
   it("sends a refreshed change picker back to the summary", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null, project_name: null })],
+          data: reviewPage([reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null, project_name: null })]),
           error: null,
         });
       }
@@ -674,7 +675,7 @@ describe("review queue list", () => {
 
   it("returns focus to the line that opened the picker", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1")]), error: null });
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
       return Promise.resolve({ data: null, error: null });
@@ -708,9 +709,9 @@ describe("review queue list", () => {
 
   it("returns focus to the line on a list-opened card", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r2", "עגורני החוף", "p2"), reviewRow("r1", "מחסן הנמל", "p1")],
+          data: reviewPage([reviewRow("r2", "עגורני החוף", "p2"), reviewRow("r1", "מחסן הנמל", "p1")]),
           error: null,
         });
       }
@@ -750,9 +751,9 @@ describe("review queue list", () => {
 
   it("returns focus to the line after back on a list-opened card", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [reviewRow("r2", "עגורני החוף", "p2"), reviewRow("r1", "מחסן הנמל", "p1")],
+          data: reviewPage([reviewRow("r2", "עגורני החוף", "p2"), reviewRow("r1", "מחסן הנמל", "p1")]),
           error: null,
         });
       }
@@ -788,7 +789,7 @@ describe("review queue list", () => {
 
   it("returns a complete picker to the summary, and the next step brings it back", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1")]), error: null });
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
       return Promise.resolve({ data: null, error: null });
@@ -820,7 +821,7 @@ describe("review queue list", () => {
       releaseApprove = resolve;
     });
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1")]), error: null });
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
       if (name === "approve_review_item") return approveGate.then(() => ({ data: null, error: null }));
@@ -917,7 +918,7 @@ function renderWithLine(path: string, options?: { viewer?: boolean }) {
 describe("the pinned review bar (FLOW-327)", () => {
   it("puts אישור, שינוי and דלג in one bar above the tab bar, and דלג sends the card to the end", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
@@ -938,9 +939,9 @@ describe("the pinned review bar (FLOW-327)", () => {
   it("keeps focus on the bar's first button when the next card is a split_mismatch (FLOW-327 r1)", async () => {
     let skipped = false;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         const mismatch = reviewRow("r2", "עגורני החוף", "p2", { reason: "split_mismatch" });
-        return Promise.resolve({ data: skipped ? [mismatch] : [reviewRow("r1", "מחסן הנמל", "p1"), mismatch], error: null });
+        return Promise.resolve({ data: reviewPage(skipped ? [mismatch] : [reviewRow("r1", "מחסן הנמל", "p1"), mismatch]), error: null });
       }
       if (name === "approve_review_item") skipped = true;
       return Promise.resolve({ data: null, error: null });
@@ -958,9 +959,9 @@ describe("the pinned review bar (FLOW-327)", () => {
   it("moves focus to אישור when the next card is a normal card (FLOW-327 r2)", async () => {
     let skipped = false;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         const next = reviewRow("r2", "עגורני החוף", "p2");
-        return Promise.resolve({ data: skipped ? [next] : [reviewRow("r1", "מחסן הנמל", "p1"), next], error: null });
+        return Promise.resolve({ data: reviewPage(skipped ? [next] : [reviewRow("r1", "מחסן הנמל", "p1"), next]), error: null });
       }
       if (name === "resolve_review") skipped = true;
       return Promise.resolve({ data: null, error: null });
@@ -979,7 +980,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 
   it("disables דלג while אישור is writing (FLOW-327 r1)", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")]), error: null });
       if (name === "approve_review_item") return new Promise(() => undefined);
       return Promise.resolve({ data: null, error: null });
     };
@@ -1000,7 +1001,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 
   it("says why when both fields are missing, and points the button at it", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null })], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null })]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
@@ -1014,7 +1015,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 
   it("does not say it when only one field is missing", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", null)]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
@@ -1026,7 +1027,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 
   it("a split_mismatch card leads with עדכון הפיצול; להשאיר כך approves the line as it stands (FLOW-333 C2, C8)", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })]), error: null });
       if (name === "get_line_split") {
         return Promise.resolve({
           data: { parts: [
@@ -1061,7 +1062,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 
   it("עדכון הפיצול opens the parts editor", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
@@ -1071,7 +1072,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 
   it("shows no flag and no error when the anomaly read fails", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", "p1")]), error: null });
       if (name === "review_anomalies") return Promise.resolve({ data: null, error: { message: "forbidden" } });
       return Promise.resolve({ data: null, error: null });
     };
@@ -1088,7 +1089,7 @@ describe("the pinned review bar (FLOW-327)", () => {
 describe("the review queue acceptance (FLOW-365)", () => {
   it("keeps the thread sheet's לאשר alive without a project, and it opens the picker (FLOW-960)", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", null)]), error: null });
       if (name === "get_transaction_thread") return Promise.resolve({ data: { transaction_id: "t1", company_id: "c1", notes: [], files: [] }, error: null });
       return Promise.resolve({ data: null, error: null });
     };
@@ -1110,7 +1111,7 @@ describe("the review queue acceptance (FLOW-365)", () => {
 
   it("אישור without a project opens the picker, says why, and approves nothing (FLOW-960)", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([reviewRow("r1", "מחסן הנמל", null)]), error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
@@ -1125,8 +1126,8 @@ describe("the review queue acceptance (FLOW-365)", () => {
 
   it("approving a split card saves every part through one call, and creates no vendor rule", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
-        return Promise.resolve({ data: [reviewRow("r1", "ציוד משותף לדוגמה", null, { pnl_role: "shared", share_count: 3, reason: null, category_id: "c1", project_name: null })], error: null });
+      if (name === "list_review_page") {
+        return Promise.resolve({ data: reviewPage([reviewRow("r1", "ציוד משותף לדוגמה", null, { pnl_role: "shared", share_count: 3, reason: null, category_id: "c1", project_name: null })]), error: null });
       }
       return Promise.resolve({ data: null, error: null });
     };
@@ -1148,7 +1149,7 @@ describe("the review queue acceptance (FLOW-365)", () => {
     const rows = [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")];
     rpc.impl = (name, args) => {
       const id = (args as { p_id?: string } | undefined)?.p_id ?? "";
-      if (name === "list_review") return Promise.resolve({ data: rows.filter((row) => open.has(row.id)), error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage(rows.filter((row) => open.has(row.id))), error: null });
       if (name === "approve_review_item") { open.delete(id); return Promise.resolve({ data: { ok: true }, error: null }); }
       if (name === "reopen_review") { open.add(id); return Promise.resolve({ data: { ok: true }, error: null }); }
       return Promise.resolve({ data: null, error: null });

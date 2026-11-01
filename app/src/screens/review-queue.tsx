@@ -12,6 +12,7 @@ import { useHeldOrder } from "../list-hold";
 import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, useWrite } from "../use-write";
+import { REVIEW_AHEAD, reviewCacheUpdates, type ReviewPaging } from "../use-review";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { useJevQueue, useReviewFlags } from "./jev-review-card";
 import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-review";
@@ -33,7 +34,8 @@ import { useLineSplitQuery } from "./line-split";
 import { ReviewThreadEntry } from "./review-thread";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
 import { ProjectPickSheet } from "./review-pick-sheet";
-import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, reviewListPath, reviewSuggestion } from "./review-shared";
+import { ScreenState } from "../ui/screen-state";
+import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, ReviewMoreFailed, reviewListPath, reviewSuggestion } from "./review-shared";
 
 export type ReviewPreviewWrite = {
   run: () => Promise<void>;
@@ -57,6 +59,7 @@ export function ReviewQueue({
   sampleJev,
   openPicker = false,
   handledBefore,
+  paging,
 }: {
   rows: ReviewRow[];
   search: string;
@@ -83,6 +86,8 @@ export function ReviewQueue({
   openPicker?: boolean;
   /** FLOW-365b dev board state: this many cards of the visit were handled before the first one shown. */
   handledBefore?: number;
+  /** FLOW-984: the queue loads in pages. `rows` are the loaded cards; the counts are the server's. */
+  paging?: ReviewPaging;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -106,7 +111,21 @@ export function ReviewQueue({
   const skippedNow = useRef(false);
   const ordered = useMemo(() => deferOrder(held, deferred), [held, deferred]);
   const rows = fromList ? ordered : pinReviewHead(ordered, reviewPin());
-  const { shown, motion } = useReviewSwap(rows[0] ?? null);
+  // FLOW-984: a skipped card goes behind the cards still to read, and the queue wraps back to it only once
+  // the last page is in. With cards of a page still on the server and none left ahead, the queue waits for it.
+  const more = paging?.more === true;
+  const late = new Set(deferred);
+  const ahead = rows.reduce((count, row) => (late.has(row.id) ? count : count + 1), 0);
+  const waitForMore = more && ahead === 0;
+  const loadMore = paging?.loadMore;
+  const loadingMore = paging?.loading === true;
+  const loadFailed = paging?.failed === true;
+  useEffect(() => {
+    // The next page starts when REVIEW_AHEAD cards are left, so it is in before the owner reaches the end.
+    if (!more || loadingMore || loadFailed || ahead > REVIEW_AHEAD) return;
+    loadMore?.();
+  }, [more, loadingMore, loadFailed, ahead, loadMore]);
+  const { shown, motion } = useReviewSwap(waitForMore ? null : (rows[0] ?? null));
   useEffect(() => {
     // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
     if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
@@ -136,7 +155,7 @@ export function ReviewQueue({
     }, REVIEW_HOLD_SETTLE_MS);
   }, [fromList]);
   const jevQueue = useJevQueue(
-    rows.map((item) => item.transaction_id),
+    rows.slice(0, META_AHEAD).map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
   );
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
@@ -157,7 +176,7 @@ export function ReviewQueue({
     : null;
   const jev = jevUndo.stateFor(shownId, seededJev ?? jevQueue.stateFor(shownId));
   const flagsFor = useReviewFlags(
-    rows.map((item) => item.transaction_id),
+    rows.slice(0, META_AHEAD).map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
   );
   const visit = useRef(seededVisit(handledBefore));
@@ -204,10 +223,11 @@ export function ReviewQueue({
     place: "top",
     persistFailure: true,
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
-    optimistic: (target) => (previewWrite ? [] : [{
-      key: ["review", preview],
-      update: (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((row) => row.id !== target.id) : old),
-    }]),
+    optimistic: (target) => (previewWrite ? [] : reviewCacheUpdates(
+      preview,
+      queueParams.get("project"),
+      (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((row) => row.id !== target.id) : old),
+    )),
     retryFocus: () => {
       approveSlot.current?.querySelector("button")?.focus();
     },
@@ -379,6 +399,17 @@ export function ReviewQueue({
     ? splitRead.data.parts.length
     : splitRead.isPending && splitRead.fetchStatus === "fetching" ? "loading" : undefined;
   const card = shown;
+  if (!card && paging != null && more) {
+    // FLOW-984: the cards loaded are used up and a page is still on its way (or failed): not "all done".
+    return paging.failed ? (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} />
+        <ReviewMoreFailed onRetry={paging.retry} />
+      </div>
+    ) : (
+      <ScreenState title="לאישור" phase={{ kind: "loading" }} onRetry={paging.retry} backTo={backTo ?? "/"} />
+    );
+  }
   if (!card) {
     // FLOW-365b: the queue emptied after this visit's cards: the done copy counts what this visit approved.
     const approved = visit.current.handled.size;
@@ -424,7 +455,7 @@ export function ReviewQueue({
     && view.reason !== "unallocated_shared" && view.reason !== "split_mismatch"
     ? { ...(suggestion ?? {}), projectNoneJev: true }
     : suggestion;
-  const place = visitPlace(visit.current, openIds);
+  const place = visitPlace(visit.current, openIds, paging?.total);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
   const splitCard = reviewIsSplit(view);
@@ -608,7 +639,9 @@ export function ReviewQueue({
         />
       ) : null}
       {/* FLOW-365: the card after this one, dashed, so the owner sees what comes next. */}
-      {!holdWrites && rows[1] != null ? (
+      {!holdWrites && paging != null && more && loadFailed && (rows[1] == null || late.has(rows[1].id)) ? (
+        <ReviewMoreFailed onRetry={paging.retry} />
+      ) : !holdWrites && rows[1] != null ? (
         <div className="ui-review-next t-caption t-muted">
           <span>{`הבא בתור: ${rows[1].supplier_name ?? rows[1].description}`}</span>
           <bdi className="ui-num" dir="ltr">{formatMoney(rows[1].amount_net < 0n ? -rows[1].amount_net : rows[1].amount_net, rows[1].currency ?? "ILS")}</bdi>

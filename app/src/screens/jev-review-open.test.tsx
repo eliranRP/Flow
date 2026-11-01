@@ -18,6 +18,7 @@ import {
   writeJevConnectorFlag,
 } from "./jev-review";
 import { myCompaniesFor } from "../team-test-support";
+import { reviewPage } from "./review-page-test-support";
 
 const scope = { userId: "user-1", companyId: "company-1" };
 
@@ -112,9 +113,9 @@ const supabase = {
         : { data: db.omitCompany ? null : myCompaniesFor(user, user, { companyId: db.companyId }), error: null };
       return db.holdCompany == null ? Promise.resolve(result) : db.holdCompany.then(() => result);
     }
-    if (name === "list_review") {
+    if (name === "list_review_page") {
       db.reviewReads += 1;
-      return Promise.resolve({ data: db.review, error: null });
+      return Promise.resolve({ data: reviewPage(db.review), error: null });
     }
     if (name === "approve_review_item") {
       db.writes.push({ name, args });

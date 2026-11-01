@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(36);
+select plan(40);
 
 do $users$
 begin
@@ -153,6 +153,15 @@ select is(public.list_review()->0, public.list_review_page(1)->'items'->0, 'the 
 select ok(public.list_review()->0 ? 'forecast_match' and public.list_review()->0 ? 'receipts' and public.list_review()->0 ? 'kept_out',
   'the per-row parts are in the items');
 select is(public.list_review_page(5, '2026-06-03', null, null), public.list_review_page(5), 'a cursor with only a date reads from the start');
+-- One item by its review id.
+select is(public.list_review_page(1, null, null, null, null, (select q.id from public.review_queue q where q.transaction_id = pg_temp.id('l5')))->'items'->0->>'transaction_id',
+  pg_temp.id('l5')::text, 'p_item reads that one open item');
+select is(jsonb_array_length(public.list_review_page(50, null, null, null, null, (select q.id from public.review_queue q where q.transaction_id = pg_temp.id('l5')))->'items'), 1,
+  'and only that item');
+select is(public.list_review_page(1, null, null, null, null, (select q.id from public.review_queue q where q.transaction_id = pg_temp.id('l5')))->'items'->0,
+  (select e from jsonb_array_elements(public.list_review()) e where e->>'transaction_id' = pg_temp.id('l5')::text), 'it is the same row list_review() holds');
+select is(public.list_review_page(1, null, null, null, null, (select q.id from public.review_queue q where q.transaction_id = pg_temp.id('done')))->'items', '[]'::jsonb,
+  'an item that is no longer open gives nothing');
 
 -- Another company, and a user with no company.
 select tests.authenticate_as('rp_b');
@@ -171,8 +180,8 @@ select is(public.list_review(), pg_temp.walk(50)->'items', 'list_review() equals
 
 -- Grants.
 select tests.clear_authentication();
-select ok(has_function_privilege('authenticated', 'public.list_review_page(integer, date, timestamptz, uuid, uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.list_review_page(integer, date, timestamptz, uuid, uuid)', 'execute'),
+select ok(has_function_privilege('authenticated', 'public.list_review_page(integer, date, timestamptz, uuid, uuid, uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.list_review_page(integer, date, timestamptz, uuid, uuid, uuid)', 'execute'),
   'signed-in users can read a page; anon cannot');
 
 select * from finish();

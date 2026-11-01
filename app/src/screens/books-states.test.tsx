@@ -11,6 +11,7 @@ import { BusinessScreen } from "./business-screen";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { LineSplitScreen } from "./line-split";
 import { HomeScreen } from "./HomeScreen";
+import { reviewPage } from "./review-page-test-support";
 
 const rpc = vi.hoisted(() => ({
   handlers: [] as Array<(event: string, session: Session | null) => void>,
@@ -272,9 +273,9 @@ describe("rejected writes", () => {
     const calls: string[] = [];
     rpc.impl = (name) => {
       calls.push(name);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r1",
               transaction_id: "t1",
@@ -287,7 +288,7 @@ describe("rejected writes", () => {
               category_id: "c1",
               supplier_name: "מחסן",
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -305,9 +306,9 @@ describe("rejected writes", () => {
     rpc.impl = (name, input) => {
       calls.push(name);
       args.push(input);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [
+          data: reviewPage([
             {
               id: "r1",
               transaction_id: "t1",
@@ -328,7 +329,7 @@ describe("rejected writes", () => {
               category_suggested: true,
               auto_approved_today: 0,
             },
-          ],
+          ]),
           error: null,
         });
       }
@@ -366,9 +367,9 @@ describe("rejected writes", () => {
 
   it("shows an info toast when the shown assignment is stale", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -381,7 +382,7 @@ describe("rejected writes", () => {
             project_name: "ביתא",
             category_name: "חומרים",
             supplier_name: "מחסן",
-          }],
+          }]),
           error: null,
         });
       }
@@ -401,9 +402,9 @@ describe("rejected writes", () => {
   it("shows an info toast when the item is already closed", async () => {
     let open = true;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: open ? [{
+          data: reviewPage(open ? [{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -416,7 +417,7 @@ describe("rejected writes", () => {
             supplier_name: "מחסן",
             project_name: "הרצל",
             category_name: "חומרים",
-          }] : [],
+          }] : []),
           error: null,
         });
       }
@@ -435,9 +436,9 @@ describe("rejected writes", () => {
 
   it("offers a retry when approve hits a deadlock", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -450,7 +451,7 @@ describe("rejected writes", () => {
             supplier_name: "מחסן",
             project_name: "הרצל",
             category_name: "חומרים",
-          }],
+          }]),
           error: null,
         });
       }
@@ -473,9 +474,9 @@ describe("rejected writes", () => {
     let attempts = 0;
     let focusedAtRetry: string | null = null;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -488,7 +489,7 @@ describe("rejected writes", () => {
             supplier_name: "מחסן",
             project_name: "הרצל",
             category_name: "חומרים",
-          }],
+          }]),
           error: null,
         });
       }
@@ -525,9 +526,9 @@ describe("rejected writes", () => {
   it("refreshes the queue when the item is gone", async () => {
     let open = true;
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: open ? [{
+          data: reviewPage(open ? [{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -540,7 +541,7 @@ describe("rejected writes", () => {
             supplier_name: "מחסן",
             project_name: "הרצל",
             category_name: "חומרים",
-          }] : [],
+          }] : []),
           error: null,
         });
       }
@@ -560,9 +561,9 @@ describe("rejected writes", () => {
 
   it("does not treat a malformed approve body as success", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -575,7 +576,7 @@ describe("rejected writes", () => {
             supplier_name: "מחסן",
             project_name: "הרצל",
             category_name: "חומרים",
-          }],
+          }]),
           error: null,
         });
       }
@@ -595,9 +596,9 @@ describe("an unchanged complete review", () => {
     const calls: string[] = [];
     rpc.impl = (name) => {
       calls.push(name);
-      if (name === "list_review") {
+      if (name === "list_review_page") {
         return Promise.resolve({
-          data: [{
+          data: reviewPage([{
             id: "r1",
             transaction_id: "t1",
             description: "מלט",
@@ -613,7 +614,7 @@ describe("an unchanged complete review", () => {
             category_name: "חומרים",
             supplier_name: "מחסן",
             category_suggested: true,
-          }],
+          }]),
           error: null,
         });
       }

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import type { ReviewCase } from "../dev/review-e2e-fixture";
 import { type JevShown } from "./jev-review";
+import type { ReviewPaging } from "../use-review";
 import { focusReviewEmptyAction, takeReviewFocus } from "./review-focus";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
@@ -103,13 +104,50 @@ export function assignmentPath(
   return `${String(path)}?${params.toString()}`;
 }
 
-export function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boolean): { index: number; total: number } | undefined {
+/** `total` is every open item when only some pages are loaded (FLOW-984); `rows` is the loaded ones. */
+export function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boolean, total = rows.length): { index: number; total: number } | undefined {
   if (!fromList) return undefined;
   const head = ordered[0];
   if (!head) return undefined;
   const index = rows.findIndex((row) => row.id === head.id);
   if (index < 0) return undefined;
-  return { index: index + 1, total: rows.length };
+  return { index: index + 1, total: Math.max(total, rows.length) };
+}
+
+/** FLOW-984: a page of the queue did not load. A quiet row where the next card would be, with the retry. */
+export function ReviewMoreFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="ui-review-next t-caption t-muted" role="status">
+      <span>לא הצלחנו לטעון עוד פריטים</span>
+      <Button variant="link" onClick={onRetry}>ניסיון חוזר</Button>
+    </div>
+  );
+}
+
+/**
+ * FLOW-984: the end of a list that loads in pages. One screen before this mark scrolls into view the next
+ * page starts loading; a failed page leaves the quiet row with its retry.
+ */
+export function ReviewListEnd({ paging }: { paging: ReviewPaging }) {
+  const mark = useRef<HTMLDivElement>(null);
+  const { more, failed, loading, loadMore, retry } = paging;
+  useEffect(() => {
+    const node = mark.current;
+    if (node == null || !more || failed) return;
+    // Without the observer (an old browser) the pages come one after another.
+    if (typeof IntersectionObserver === "undefined") {
+      loadMore();
+      return;
+    }
+    const watch = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMore();
+    }, { rootMargin: "0px 0px 100% 0px" });
+    watch.observe(node);
+    return () => { watch.disconnect(); };
+  }, [more, failed, loading, loadMore]);
+  if (!more) return null;
+  if (failed) return <ReviewMoreFailed onRetry={retry} />;
+  return <div ref={mark} aria-hidden="true" data-review-more="" />;
 }
 
 /** `jev` marks the fields whose shown value is Jev's fill, so the card says הצעת Jev there. */

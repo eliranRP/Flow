@@ -42,4 +42,14 @@ describe("visit meter", () => {
     const once = noteHandled(emptyVisit(), "a");
     expect(noteHandled(once, "a")).toBe(once);
   });
+
+  it("counts the server's open items when only some pages are loaded (FLOW-984)", () => {
+    expect(visitPlace(emptyVisit(), ["a", "b"], 1287)).toEqual({ index: 1, total: 1287 });
+    const handled = noteHandled(emptyVisit(), "a");
+    const left = notePresence(handled, ["b"]);
+    // One card is done and 1,286 are open: the visit has 1,287.
+    expect(visitPlace(left, ["b"], 1286)).toEqual({ index: 2, total: 1287 });
+    // A skipped card is still open: it is not counted twice.
+    expect(visitPlace(handled, ["a", "b"], 1287)).toEqual({ index: 2, total: 1287 });
+  });
 });

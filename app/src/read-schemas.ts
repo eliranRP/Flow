@@ -25,6 +25,7 @@ export {
   projectDetailSchema,
   projectsCashMonthSchema,
   projectWaitingSchema,
+  reviewPageSchema,
   reviewRowSchema,
   searchPageSchema,
   sumitStatusSchema,

@@ -34,16 +34,17 @@ export function notePresence(meter: VisitMeter, openIds: readonly string[]): Vis
 /**
  * i is h + 1 and never exceeds n. n is h plus the open cards, except a card
  * handled in this render that has not left yet is not counted twice.
- * An empty queue has no counter.
+ * An empty queue has no counter. `openCount` is how many items are open in all, when the screen holds only
+ * the pages loaded so far (FLOW-984); it defaults to the cards on screen.
  */
-export function visitPlace(meter: VisitMeter, openIds: readonly string[]): { index: number; total: number } {
+export function visitPlace(meter: VisitMeter, openIds: readonly string[], openCount = openIds.length): { index: number; total: number } {
   if (openIds.length === 0) return { index: 0, total: 0 };
   const open = new Set(openIds);
   let inFlight = 0;
   for (const id of meter.handled) {
     if (open.has(id) && !meter.left.has(id)) inFlight += 1;
   }
-  const openEffective = openIds.length - inFlight;
+  const openEffective = Math.max(openCount, openIds.length) - inFlight;
   const handled = meter.handled.size;
   if (openEffective <= 0) {
     const total = Math.max(handled, 1);

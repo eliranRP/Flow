@@ -7,6 +7,7 @@ import { AuthProvider } from "../auth";
 import { BooksProvider, useFiledTodayQuery, useTransactionQuery } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ReviewScreen } from "./flow-screens";
+import { reviewPage } from "./review-page-test-support";
 
 // FLOW-309: approving a card, and ביטול on its toast, refresh the open filed-today list and the
 // transaction's own card live, without a reload.
@@ -49,7 +50,7 @@ vi.mock("../lib/supabase", () => ({
     },
     rpc: (name: string) => {
       rpc.calls.push(name);
-      if (name === "list_review") return Promise.resolve({ data: [item], error: null });
+      if (name === "list_review_page") return Promise.resolve({ data: reviewPage([item]), error: null });
       if (name === "list_auto_assigned_today") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     },

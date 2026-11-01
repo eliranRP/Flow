@@ -14,14 +14,14 @@ describe("smoke write guard", () => {
     expect(isReadRequest("POST", `${supabase}/auth/v1/token?grant_type=refresh_token`, supabase)).toBe(true);
     expect(isReadRequest("GET", `${supabase}/auth/v1/user`, supabase)).toBe(true);
     expect(isReadRequest("POST", `${supabase}/functions/v1/flow-mcp/status`, supabase)).toBe(true);
-    expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/list_review`, supabase)).toBe(true);
+    expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/list_review_page`, supabase)).toBe(true);
     expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/missing_bills`, supabase)).toBe(true);
     expect(isReadRequest("POST", `${supabase}/rest/v1/rpc/expected_months`, supabase)).toBe(true);
     const other = "https://evil.example";
     expect(isReadRequest("POST", `${other}/auth/v1/token`, supabase)).toBe(false);
     expect(isReadRequest("GET", `${other}/auth/v1/user`, supabase)).toBe(false);
     expect(isReadRequest("POST", `${other}/functions/v1/flow-mcp/status`, supabase)).toBe(false);
-    expect(isReadRequest("POST", `${other}/rest/v1/rpc/list_review`, supabase)).toBe(false);
+    expect(isReadRequest("POST", `${other}/rest/v1/rpc/list_review_page`, supabase)).toBe(false);
     expect(isReadRequest("POST", `https://example-ref.supabase.co.evil.example/auth/v1/token`, supabase)).toBe(false);
   });
 

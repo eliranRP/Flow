@@ -6,6 +6,7 @@ import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
 import { reviewHold, reviewPin, pinReviewLine } from "../review-pin";
 import { ChangeForm } from "./flow-screens";
+import { reviewPage } from "./review-page-test-support";
 
 // FLOW-325 §10 (option A): פיצול לפי קטגוריות on the change sheet's project list approves the
 // line, then opens the parts editor.
@@ -55,7 +56,7 @@ const dashboard = {
 const supabase = {
   rpc: (name: string, args: unknown) => {
     state.calls.push({ name, args });
-    if (name === "list_review") return Promise.resolve({ data: state.listEmpty ? state.others : [state.row], error: null });
+    if (name === "list_review_page") return Promise.resolve({ data: reviewPage(state.listEmpty ? state.others : [state.row]), error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "list_categories") {
       return Promise.resolve({ data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false }], error: null });

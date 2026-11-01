@@ -486,7 +486,10 @@ test("the homepage and /settings retry like build.txt, list reads wait for the s
   const guardedFrom = (books.match(/await waitForAccessToken\(supabase\);\s+const \{ data, error \} = await supabase\s+\.from\(/g) ?? []).length;
   assert.equal(waits, rpcs + guardedFrom);
   assert.ok(waits >= 10);
-  assert.match(books, /await waitForAccessToken\(supabase\);\n\s+dropLegacyJevConnectorKey\(\);\n\s+const listed = supabase\.rpc\("list_review"\)/);
+  // FLOW-984: the review queue's read lives in use-review.ts; it waits for the token, then reads page by page.
+  const review = readFileSync(new URL("../app/src/use-review.ts", import.meta.url), "utf8");
+  assert.match(review, /await waitForAccessToken\(supabase\);\n\s+dropLegacyJevConnectorKey\(\);/);
+  assert.match(review, /supabase\.rpc\("list_review_page", args\)/);
 
   const smokeSpec = readFileSync(new URL("../app/e2e/smoke-readonly.spec.ts", import.meta.url), "utf8");
   assert.match(smokeSpec, /waitForStoredSession/);

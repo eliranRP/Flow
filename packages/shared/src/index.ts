@@ -44,6 +44,8 @@ export {
   transactionDetailSchema,
   unpaidRowSchema,
 } from "./dashboard.ts";
+export { reviewCursorSchema, reviewPageSchema } from "./review-page.ts";
+export type { ReviewCursor } from "./review-page.ts";
 export type {
   Basis,
   Breakdown,

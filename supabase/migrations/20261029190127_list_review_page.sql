@@ -2,7 +2,8 @@
 --   public.list_review_page(p_limit, p_after_date, p_after_created, p_after_id, p_project) returns
 --   {items, total, next}: the next page of open review items after a cursor (doc date, created at, id),
 --   the total open count (of the project when p_project is given) and the cursor of the page after, or
---   null on the last page. A cursor missing any of its three parts reads from the start. The page is chosen
+--   null on the last page. A cursor missing any of its three parts reads from the start. p_item reads that one
+--   open item (a link to a card the app has not loaded yet) and nothing else. The page is chosen
 --   first, from the queue and its lines alone; the per-row parts
 --   (the share count, the receipts, the kept-out state, the forecast match) then run for those rows only.
 --   private.review_row_items(p_ids) is the row body, taken out of list_review() unchanged so the two reads
@@ -187,7 +188,8 @@ create or replace function public.list_review_page(
   p_after_date date default null,
   p_after_created timestamptz default null,
   p_after_id uuid default null,
-  p_project uuid default null
+  p_project uuid default null,
+  p_item uuid default null
 )
  returns jsonb
  language plpgsql
@@ -217,8 +219,12 @@ begin
     select e.id, e.created_at, e.doc_date,
       row_number() over (order by e.doc_date, e.created_at, e.id) as rn
     from eligible e
-    where num_nulls(p_after_date, p_after_created, p_after_id) > 0
-      or (e.doc_date, e.created_at, e.id) > (p_after_date, p_after_created, p_after_id)
+    where case
+      -- One open item by its review id (a link to a card the app has not loaded): just that row.
+      when p_item is not null then e.id = p_item
+      else num_nulls(p_after_date, p_after_created, p_after_id) > 0
+        or (e.doc_date, e.created_at, e.id) > (p_after_date, p_after_created, p_after_id)
+    end
     order by e.doc_date, e.created_at, e.id
     limit lim + 1
   )
@@ -240,7 +246,7 @@ begin
 end;
 $function$;
 
-revoke all on function public.list_review_page(integer, date, timestamptz, uuid, uuid) from public, anon, authenticated;
-grant execute on function public.list_review_page(integer, date, timestamptz, uuid, uuid) to authenticated, service_role;
+revoke all on function public.list_review_page(integer, date, timestamptz, uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.list_review_page(integer, date, timestamptz, uuid, uuid, uuid) to authenticated, service_role;
 
 commit;
