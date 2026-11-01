@@ -420,6 +420,12 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1009"></a>[FLOW-1009](tasks/FLOW-1009.md) | The forecast item page's back link sits under the notch | SMALL UI |
 | <a id="flow-1010"></a>[FLOW-1010](tasks/FLOW-1010.md) | כל כמה זמן on a forecast item's page | DB + UI |
 | <a id="flow-1011"></a>[FLOW-1011](tasks/FLOW-1011.md) | הוספת קבוע לצפי on קבועים | SMALL UI |
+| <a id="flow-1012"></a>[FLOW-1012](tasks/FLOW-1012.md) | A forecast item's כל כמה זמן saves with the page's save, or says it changes the project's line | SMALL UI |
+| <a id="flow-1013"></a>[FLOW-1013](tasks/FLOW-1013.md) | Forecast rows: a noun for added lines, the date before the number, one צפי per screen | SMALL UI |
+| <a id="flow-1014"></a>[FLOW-1014](tasks/FLOW-1014.md) | קבועים: the add action on the empty screen, and a plain label | SMALL UI |
+| <a id="flow-1015"></a>[FLOW-1015](tasks/FLOW-1015.md) | Home's קבועים tip: only for owners who had the tab, never over the band's controls | SMALL UI |
+| <a id="flow-1016"></a>[FLOW-1016](tasks/FLOW-1016.md) | Review lists: the בלי פרויקט count with pages left, and a loading line at the end | SMALL UI |
+| <a id="flow-1017"></a>[FLOW-1017](tasks/FLOW-1017.md) | Recheck: קבועים behind an unlabeled icon, and a second figure on every Projects row | PLAN FIRST |
 
 ## Projects and reports
 
@@ -467,6 +473,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-452"></a>[FLOW-452](tasks/FLOW-452.md) | Investment page v3: review nits | BACKLOG NIT |
 | <a id="flow-453"></a>[FLOW-453](tasks/FLOW-453.md) | A property's returns from the real lines: rent start, holding costs, net loan proceeds | MCP + UI |
 | <a id="flow-454"></a>[FLOW-454](tasks/FLOW-454.md) | Property returns on real deals: Sub2 purchase price, one unit by default, aligned rows, before the first rent | MCP + UI |
+| <a id="flow-455"></a>[FLOW-455](tasks/FLOW-455.md) | An account's page keeps its content while the period changes, and its year counts are whole | SMALL UI |
+| <a id="flow-456"></a>[FLOW-456](tasks/FLOW-456.md) | The report share sheet says why its button is off next to it, and picking projects starts from one | SMALL UI |
+| <a id="flow-457"></a>[FLOW-457](tasks/FLOW-457.md) | A property's returns: one minus per expense, true counts, a name for ∞, one label per figure | SMALL UI |
+| <a id="flow-458"></a>[FLOW-458](tasks/FLOW-458.md) | Total return: marked partial when a source is missing, rows that hold at 320, bar shades that can be told apart | SMALL UI |
+| <a id="flow-459"></a>[FLOW-459](tasks/FLOW-459.md) | השקעה והלוואות: shorter, with the inputs before the metrics | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
@@ -532,6 +543,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-839"></a>[FLOW-839](tasks/FLOW-839.md) | A daily and weekly security scan agent | SMALL CYCLE (docs) |
 | <a id="flow-840"></a>[FLOW-840](tasks/FLOW-840.md) | The edge functions use zod 4.6.7, as the app does | SMALL CYCLE |
 | <a id="flow-841"></a>[FLOW-841](tasks/FLOW-841.md) | The Content-Security-Policy is enforced | SMALL CYCLE |
+| <a id="flow-842"></a>[FLOW-842](tasks/FLOW-842.md) | A UX rules review of the UI changes every 3 days | SMALL CYCLE (docs) |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
