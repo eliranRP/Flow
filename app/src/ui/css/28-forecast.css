@@ -259,7 +259,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-top: var(--space-3);
+  /* The page hides the screen's header, which held the status bar's room: the back row starts below the notch. */
+  padding-top: calc(var(--safe-top) + var(--space-3));
 }
 
 .ui-forecast-page-back { display: flex; min-block-size: var(--touch-min); align-items: center; }
