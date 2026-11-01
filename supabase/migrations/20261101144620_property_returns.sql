@@ -367,6 +367,12 @@ set search_path = ''
 as $$
 begin
   if new.value_minor is null or new.value_date is null then
+    -- The value was cleared (the owner, or an undo of the first value): the values on or after the
+    -- one it had go too, so appreciation never reads a value the project no longer has.
+    if tg_op = 'UPDATE' and old.value_date is not null then
+      delete from public.project_values v
+      where v.project_id = new.id and v.value_date >= old.value_date;
+    end if;
     return new;
   end if;
   -- A value for a date replaces what was recorded on or after that date: an older date (an undo
@@ -384,7 +390,6 @@ revoke all on function private.project_values_keep() from public, anon, authenti
 create trigger projects_values_keep
   after insert or update of value_minor, value_date on public.projects
   for each row
-  when (new.value_minor is not null and new.value_date is not null)
   execute function private.project_values_keep();
 
 insert into public.project_values (company_id, project_id, value_date, value_minor)
@@ -590,7 +595,7 @@ begin
   select v.value_minor, v.value_date into v_start from public.project_values v
   where v.company_id = cid and v.project_id = p_project_id and v.value_date <= d_from
   order by v.value_date desc limit 1;
-  if v_end.value_minor is null then
+  if v_end.value_minor is null or p.value_minor is null then
     missing := array_append(missing, 'value');
   elsif v_start.value_minor is null then
     missing := array_append(missing, 'value_history');
@@ -749,7 +754,7 @@ begin
     join public.transactions t on t.id = r.transaction_id and t.company_id = cid
     left join public.suppliers sup on sup.id = t.supplier_id
     left join public.categories c on c.id = r.category_id and c.company_id = cid
-    order by r.line_date desc, r.transaction_id
+    order by r.line_date desc, r.transaction_id, r.category_id
     limit p_limit + 1 offset p_offset
   )
   select jsonb_build_object(
@@ -771,8 +776,8 @@ begin
         'amount_minor', g.amount_minor,
         'parts', g.parts,
         'shared', g.shared
-      ) order by g.line_date desc, g.transaction_id)
-      from (select * from page order by line_date desc, transaction_id limit p_limit) g
+      ) order by g.line_date desc, g.transaction_id, g.category_id)
+      from (select * from page order by line_date desc, transaction_id, category_id limit p_limit) g
     ), '[]'::jsonb)
   ) into result;
   return result;

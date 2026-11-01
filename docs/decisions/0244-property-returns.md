@@ -10,7 +10,7 @@ The owner analyses rentals, BRRRR and Subject-To deals the way *Real Estate by t
 
 ## Decision
 
-**One read, nothing guessed.** `get_property_returns(project, from, to)` (default the last 12 months) returns the statement, the four sources and their total, the three equity figures and the metrics. A figure whose input is missing is null and `missing` names the input; the screen shows "חסר · הוספה" for it, like a missing ARV.
+**One read, nothing guessed.** `get_property_returns(project, from, to)` (default the last 12 months) returns the statement, the four sources and their total, the three equity figures and the metrics. A figure whose input is missing is null and `missing` names the input; the screen shows "חסר · הוספה" for it, like a missing ARV. The total return adds the sources it has: a source whose input is missing (appreciation, tax savings) is left out of it, not counted as zero, and the screen shows that source as "חסר" (the owner, 2026-11-01: "the total return leaves it out").
 
 **Which line a category feeds comes from what Flow stores**, so there is no new mapping to keep:
 - income categories → income (kept-out income → not counted);
@@ -23,7 +23,7 @@ CapEx is real spending: Flow keeps no reserve, so none is invented. A category o
 **The figures.**
 - Cash flow = NOI + debt service + CapEx (the book puts CapEx below NOI).
 - Money in the deal = purchase + rehab so far − the principal of the project's loans; a refinanced loan counts once, through the loan that replaced it.
-- Appreciation = the value on or before the period's end − the value on or before its start, from a new value history (`project_values`), kept by a trigger: every value set is kept by its date, and a value for an earlier date drops the later ones, so an undo leaves no value behind. Until there is a value at the start, appreciation is missing.
+- Appreciation = the value on or before the period's end − the value on or before its start, from a new value history (`project_values`), kept by a trigger: every value set is kept by its date, a value for an earlier date drops the later ones, and clearing the value drops its entry and the later ones, so an undo leaves no value behind. Until there is a value at the start, appreciation is missing.
 - Tax savings = (purchase + rehab − land) ÷ 27.5 years × the owner's tax bracket, for the days of the period. Land is a new figure on the project (`land_minor`), the bracket a new one on the company (`tax_bracket_bp`). An estimate: depreciation is recaptured at a sale, and the accountant has the real figure.
 - Cash flow per unit needs a new `units` figure on the project.
 - Ratios are per year: cash-on-cash and the total on the money in the deal, cap rate on today's value; DSCR = NOI ÷ debt service.

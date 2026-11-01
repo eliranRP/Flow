@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(50);
+select plan(52);
 
 do $users$
 begin
@@ -170,6 +170,12 @@ select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint,
 select public.set_project_investment(pg_temp.id('flat'), '{"value_minor": 17000000, "value_date": "2025-12-31"}');
 select is((select count(*)::integer from public.project_values v where v.project_id = pg_temp.id('flat')), 1,
   'an earlier value date drops the values after it');
+select public.set_project_investment(pg_temp.id('flat'), '{"value_minor": 18000000, "value_date": "2026-10-01"}');
+-- Clearing the value (an undo of the first value too) drops its entry, and appreciation waits.
+select public.set_project_investment(pg_temp.id('flat'), '{"value_minor": null, "value_date": null}');
+select is((select count(*)::integer from public.project_values v where v.project_id = pg_temp.id('flat')), 1,
+  'clearing the value drops its entry and the ones after it');
+select is(pg_temp.ret()->'sources'->>'appreciation_minor', null, 'and appreciation waits for a value again');
 select public.set_project_investment(pg_temp.id('flat'), '{"value_minor": 18000000, "value_date": "2026-10-01"}');
 
 -- The lines behind a figure.
