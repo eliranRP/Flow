@@ -43,8 +43,7 @@ import { scopeAllows } from "./tools_specs.ts";
 import { getStartedPayload } from "./tools_guide.ts";
 import { companyNextMonthInputsRead, projectForecastRead } from "./tools_project_forecast.ts";
 import { bankRead } from "./tools_bank.ts";
-import { weeklySummaryTool } from "./tools_weekly.ts";
-import { threadRead } from "./tools_thread.ts";
+import { moreRead } from "./tools_reads_more.ts";
 import { LEDGER_READS, ledgerRead } from "./tools_ledger.ts";
 import { dashboard, filterReviews, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
@@ -467,9 +466,9 @@ export async function callTool(
     return ok({ ...report, previous_to_day: { month: previous, day: toDay, by_currency: same.json } } as Review);
   }
 
-  // FLOW-517: one week for the weekly summary sheet.
-  if (name === "get_weekly_summary") return weeklySummaryTool(args, rpc);
-  if (name === "get_transaction_thread") return threadRead(args, rpc);
+  // FLOW-517 the weekly summary, FLOW-957 a line's thread, FLOW-450 a property's returns.
+  const more = moreRead(name, args, rpc);
+  if (more) return more;
 
   // FLOW-417 (decision 0174): the net, in and out since the first cash month and per year.
   if (name === "get_cash_years") {

@@ -14,6 +14,10 @@ const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().t
 const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
 const ProjectNextEditScreen = lazy(() => screenLoaders.projectNextEdit().then((m) => ({ default: m.ProjectNextEditScreen })));
 const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
+const PropertyStatementScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyStatementScreen })));
+const PropertyReturnLineScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyReturnLineScreen })));
+const PropertyMetricScreen = lazy(() => screenLoaders.propertyReturnsDetail().then((m) => ({ default: m.PropertyMetricScreen })));
+const PropertyPartScreen = lazy(() => screenLoaders.propertyReturnsDetail().then((m) => ({ default: m.PropertyPartScreen })));
 
 /**
  * A month's profit page (FLOW-140): the period comes from the month in the path. A link or an address that
@@ -48,7 +52,26 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/profit/next/add" element={<ProjectNextEditScreen add />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
+      {/* FLOW-451: what the investment page's figures are made of: the statement, a line, a metric, a part. */}
+      {/* Two paths, not four: Cloudflare Pages takes at most 100 dynamic _redirects rules. */}
+      <Route path="projects/:projectId/investment/:section" element={<PropertyReturnsSection />} />
+      <Route path="projects/:projectId/investment/:section/:key" element={<PropertyReturnsItem />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
     </>
   );
+}
+
+/** /investment/returns is the statement; any other section goes back to the investment page. */
+function PropertyReturnsSection() {
+  const { section } = useParams();
+  return section === "returns" ? <PropertyStatementScreen /> : <Navigate to=".." relative="path" replace />;
+}
+
+/** /investment/returns/<line>, /investment/metric/<metric> and /investment/part/<part>. */
+function PropertyReturnsItem() {
+  const { section } = useParams();
+  if (section === "returns") return <PropertyReturnLineScreen />;
+  if (section === "metric") return <PropertyMetricScreen />;
+  if (section === "part") return <PropertyPartScreen />;
+  return <Navigate to="../.." relative="path" replace />;
 }

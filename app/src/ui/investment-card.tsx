@@ -2,8 +2,8 @@ import { formatAmount } from "./amount";
 import { Card } from "./card";
 import { Button } from "./button";
 
-/** The three figures the owner types in. Each row opens its own sheet (FLOW-404). */
-export type InvestmentField = "purchase" | "arv" | "value";
+/** The figures the owner types in. Each row opens its own sheet (FLOW-404); land and units feed the returns (FLOW-451). */
+export type InvestmentField = "purchase" | "arv" | "value" | "land" | "units";
 
 /** An amount in a currency other than the project's. Listed apart, never added in (0143). */
 export type MinorInCurrency = { currency: string; minor: bigint };
@@ -30,13 +30,8 @@ export const INVESTMENT_LABELS: Record<InvestmentField, string> = {
   purchase: "מחיר רכישה",
   arv: "שווי אחרי שיפוץ (ARV)",
   value: "שווי היום",
-};
-
-/** The figure's name inside a sentence ("חסר שווי אחרי שיפוץ"). */
-const FIGURE_NAMES: Record<InvestmentField, string> = {
-  purchase: "מחיר רכישה",
-  arv: "שווי אחרי שיפוץ",
-  value: "שווי היום",
+  land: "שווי הקרקע",
+  units: "מספר יחידות",
 };
 
 const CURRENCY_WORDS: Record<string, string> = {
@@ -48,37 +43,6 @@ const CURRENCY_WORDS: Record<string, string> = {
 /** "בדולר", "בשקלים"; any other code is written as it is. */
 export function currencyWord(currency: string): string {
   return CURRENCY_WORDS[currency] ?? `ב־${currency}`;
-}
-
-function wordsOf(list: readonly MinorInCurrency[]): string {
-  const words = list.map((item) => currencyWord(item.currency));
-  if (words.length <= 1) return words[0] ?? "";
-  return `${words.slice(0, -1).join(", ")} ו${words[words.length - 1] ?? ""}`;
-}
-
-export type EquityNote = { text: string; kind: "missing" | "currency" };
-
-/**
- * Why an equity has no figure. A missing figure is named; another currency is said; never 0
- * (FLOW-404). Null when the server sent a figure.
- */
-export function forcedEquityNote(figures: InvestmentFigures): EquityNote | null {
-  if (figures.forcedEquityMinor != null) return null;
-  const missing = [
-    figures.arvMinor == null ? FIGURE_NAMES.arv : null,
-    figures.purchaseMinor == null ? FIGURE_NAMES.purchase : null,
-  ].filter((label): label is string => label != null);
-  if (missing.length === 2) return { kind: "missing", text: `חסרים ${missing[0] ?? ""} ו${missing[1] ?? ""}` };
-  if (missing.length === 1) return { kind: "missing", text: `חסר ${missing[0] ?? ""}` };
-  if (figures.rehabOther.length > 0) return { kind: "currency", text: `לא מחושב, יש שיפוץ ${wordsOf(figures.rehabOther)}` };
-  return { kind: "currency", text: "לא מחושב" };
-}
-
-export function currentEquityNote(figures: InvestmentFigures): EquityNote | null {
-  if (figures.currentEquityMinor != null) return null;
-  if (figures.valueMinor == null) return { kind: "missing", text: `חסר ${FIGURE_NAMES.value}` };
-  if (figures.loanOther.length > 0) return { kind: "currency", text: `לא מחושב, יש הלוואה ${wordsOf(figures.loanOther)}` };
-  return { kind: "currency", text: "לא מחושב" };
 }
 
 /** FLOW-445: a count of minor units rounded to whole thousands and written with a K, for the summary's grid ("₪185K"). */

@@ -97,6 +97,10 @@
 /projects/:projectId/categories/:categoryId/ /projects/:projectId/categories/:categoryId 301
 /projects/:projectId/investment /app-shell 200
 /projects/:projectId/investment/ /projects/:projectId/investment 301
+/projects/:projectId/investment/:section /app-shell 200
+/projects/:projectId/investment/:section/ /projects/:projectId/investment/:section 301
+/projects/:projectId/investment/:section/:key /app-shell 200
+/projects/:projectId/investment/:section/:key/ /projects/:projectId/investment/:section/:key 301
 /projects/:projectId/profit /app-shell 200
 /projects/:projectId/profit/ /projects/:projectId/profit 301
 /projects/:projectId/profit/next /app-shell 200

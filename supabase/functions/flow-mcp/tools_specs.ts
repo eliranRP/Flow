@@ -4,6 +4,7 @@
 import { READ_TOOL_NAMES, SYNC_STATUS_TOOL, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
 import { LEDGER_READ_SPECS, LEDGER_WRITE_SPECS } from "./tools_ledger_specs.ts";
 import { THREAD_READ_SPECS, THREAD_UNDO_KINDS, THREAD_WRITE_SPECS } from "./tools_thread.ts";
+import { PROPERTY_READ_SPECS, PROPERTY_WRITE_SPECS } from "./tools_property.ts";
 
 function toolSpec(
   name: string,
@@ -101,6 +102,7 @@ function readTools() {
       year: { type: "integer" },
     }),
     syncStatusSpec(),
+    ...PROPERTY_READ_SPECS,
     toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is invoiced or cash (default the company's date choice, like get_totals); the output echoes basis. Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default the company currency): that group's lines, newest first, in rows[] with has_more, and total_minor and count for the whole group; a line's parts on different projects are separate rows. With group_by category, projects[] ({key, project_id, name, total_minor}, largest first) is the whole group by project as get_pnl_statement by_project counts it (a split line by its parts, a shared cost by its allocations); key is a project id, overhead, unassigned or null (no project); [] with project_id or excluded (FLOW-989). excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part. level parent (with group_by category, FLOW-406) folds each sub-category into its parent: key is the parent's id and its lines are its own and its sub-categories'; the default level category keeps one group per category. project_id (with group or excluded, group_by category only, FLOW-165) gives one project's lines: its own and its allocation of a shared cost, as get_pnl_statement reads a project; another company's project is not_found.", {
       direction: { type: "string", enum: ["income", "expense"] },
       from: { type: "string" },
@@ -636,7 +638,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       loan_ids: { type: "array", items: { type: "string" } },
     }, true),
-    toolSpec("set_project_investment", "Set a project's investment figures: currency (ISO code like USD or ILS, default ILS: the currency of the figures, rehab and equity; it cannot be cleared), purchase_minor (what it cost to buy), arv_minor (the after-repair value), value_minor (what it is worth today), all in minor units of that currency (cents for USD), and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole minor units, 0 or more. Changing the currency does not convert the figures. get_project returns them in investment with rehab and equity. Returns the currency and figures after. Undo is kind project_investment with the project id: it puts back the currency and figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
+    toolSpec("set_project_investment", "Set a project's investment figures: currency (ISO code like USD or ILS, default ILS: the currency of the figures, rehab and equity; it cannot be cleared), purchase_minor (what it cost to buy), arv_minor (the after-repair value), value_minor (what it is worth today), all in minor units of that currency (cents for USD), and value_date (YYYY-MM-DD, when that value was estimated; every value is kept by its date for get_property_returns appreciation, and a value for an earlier date drops the later ones), units (how many units the property has, 1 to 9999) and land_minor (the land's part of the purchase, for the depreciation in get_property_returns). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole minor units, 0 or more. Changing the currency does not convert the figures. get_project returns them in investment with rehab and equity. Returns the currency and figures after. Undo is kind project_investment with the project id: it puts back the currency and figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
       currency: { type: "string", pattern: "^[A-Z]{3}$" },
@@ -644,6 +646,8 @@ function writeTools() {
       arv_minor: { type: ["integer", "null"] },
       value_minor: { type: ["integer", "null"] },
       value_date: { type: ["string", "null"] },
+      units: { type: ["integer", "null"], minimum: 1, maximum: 9999 },
+      land_minor: { type: ["integer", "null"] },
     }, true),
     toolSpec("set_category_rehab", "Count a category as rehab on projects (rehab true), leave it out (false), or follow the default (null). By default every category counts but those kept out of the P&L and the loan parts (interest, escrow, principal, and a payment's fees part in any category unless that category is switched on). Switching on the principal category counts repayments, while the loan is already in current equity. rehab is get_project's investment.rehab_minor. Returns rehab and in_rehab (what the category comes to). Undo is kind category_rehab with the category id: it puts back the setting before, and is a conflict when it changed since.", {
       idempotency_key: { type: "string" },
@@ -664,6 +668,7 @@ function writeTools() {
       from_category_id: { type: "string" },
       into_category_id: { type: "string" },
     }, true),
+    ...PROPERTY_WRITE_SPECS,
     toolSpec("set_company_currency", "Set the company's base currency (owner only), a three-letter code such as ILS or USD. Nothing is converted: the base currency's row leads every by_currency list, it is the default for a new loan, a new project's investment and get_breakdown, and the *_minor twins of the ILS-only figures (get_home net_profit_minor, prev_* per currency, overhead_share_minor) are in it. Returns id, base_currency and prior. Undo is kind company_currency with the company id, a conflict once the currency was changed again.", {
       idempotency_key: { type: "string" },
       currency: { type: "string" },
@@ -767,7 +772,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects, create_categories or reassign_recurring_charge batch.", {

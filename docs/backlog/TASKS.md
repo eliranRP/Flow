@@ -462,6 +462,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-447"></a>[FLOW-447](tasks/FLOW-447.md) | Redesign: the קבועים tab, the charge page and ignoring an alert | UI (design approved) |
 | <a id="flow-448"></a>[FLOW-448](tasks/FLOW-448.md) | Mark a payment as recurring from the לאישור card | PLAN FIRST |
 | <a id="flow-449"></a>[FLOW-449](tasks/FLOW-449.md) | Next month's forecast card and month chart on the project screens (PR A) | UI (design approved) |
+| <a id="flow-450"></a>[FLOW-450](tasks/FLOW-450.md) | A property's returns: one read, with the transactions behind every figure | MCP |
+| <a id="flow-451"></a>[FLOW-451](tasks/FLOW-451.md) | השקעה והלוואות v3: total return, equity, metrics, and every calculation opened | UI (design approved) |
+| <a id="flow-452"></a>[FLOW-452](tasks/FLOW-452.md) | Investment page v3: review nits | BACKLOG NIT |
 
 ## Onboarding, Settings and connectors
 

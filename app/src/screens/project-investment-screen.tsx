@@ -17,7 +17,7 @@ import { useToast } from "../ui/toast";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 import { projectStateLine } from "./project-detail-screen";
-import { EquityCard, FiguresCard, LoansCard, type InvestmentRowRefs } from "./project-investment-cards";
+import { FiguresCard, LoansCard, type InvestmentRowRefs, type PropertyExtras } from "./project-investment-cards";
 import {
   toProjectInvestment,
   useRehabCategoriesQuery,
@@ -26,6 +26,11 @@ import {
   type RehabCategory,
 } from "./project-investment-data";
 import { InvestmentEditSheet, RehabSheet, type InvestmentPatch } from "./project-investment-sheets";
+import { EquityInPropertyCard, MetricsCard, ReturnsCardsFailed, ReturnsCardsSkeleton, TotalReturnCard } from "./project-returns-cards";
+import { usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
+import type { EditField, InfoKey } from "./project-returns-info";
+import { editFieldOf, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
+import { ReturnInfoSheet, TaxBracketSheet } from "./project-returns-sheets";
 
 export type { InvestmentPatch } from "./project-investment-sheets";
 
@@ -55,17 +60,51 @@ export function applySample(figures: InvestmentFigures, patch: InvestmentPatch):
   return next;
 }
 
+/** Sample mode keeps the returns' inputs in step with a save (the figures they work out stay as they were). */
+export function applyReturnsSample(returns: PropertyReturns, patch: InvestmentPatch): PropertyReturns {
+  const inputs = { ...returns.inputs };
+  const big = (value: number | null | undefined) => (value == null ? null : BigInt(value));
+  if ("purchase_minor" in patch) inputs.purchaseMinor = big(patch.purchase_minor);
+  if ("arv_minor" in patch) inputs.arvMinor = big(patch.arv_minor);
+  if ("value_minor" in patch) inputs.valueMinor = big(patch.value_minor);
+  if ("land_minor" in patch) inputs.landMinor = big(patch.land_minor);
+  if ("units" in patch) inputs.units = patch.units ?? null;
+  const missing = returns.missing.filter((input) => !(
+    (input === "purchase" && inputs.purchaseMinor != null)
+    || (input === "value" && inputs.valueMinor != null)
+    || (input === "land" && inputs.landMinor != null)
+    || (input === "units" && inputs.units != null)
+  ));
+  return { ...returns, inputs, missing };
+}
+
 /** The patch that puts a figure back as it was (a missing figure goes back to null). */
-function restorePatch(field: InvestmentField, before: InvestmentFigures): InvestmentPatch {
+function restorePatch(field: InvestmentField, before: InvestmentFigures, extras: PropertyExtras | null): InvestmentPatch {
   const toNumber = (value: bigint | null) => (value == null ? null : Number(value));
   if (field === "purchase") return { purchase_minor: toNumber(before.purchaseMinor) };
   if (field === "arv") return { arv_minor: toNumber(before.arvMinor) };
+  if (field === "land") return { land_minor: toNumber(extras?.landMinor ?? null) };
+  if (field === "units") return { units: extras?.units ?? null };
   return { value_minor: toNumber(before.valueMinor), value_date: before.valueMinor == null ? null : before.valueDate };
 }
 
-type OpenSheet = InvestmentField | "rehab" | null;
+type OpenSheet = InvestmentField | "rehab" | "tax" | null;
 
 const REHAB_LAYER = "investment-rehab";
+const INFO_LAYER = "investment-info-";
+const INVESTMENT_FIELDS: readonly string[] = ["purchase", "arv", "value", "land", "units"];
+
+function isInvestmentField(value: unknown): value is InvestmentField {
+  return typeof value === "string" && INVESTMENT_FIELDS.includes(value);
+}
+
+/** The ⓘ sheet that was open under a page it opened, from the history entry Back lands on. */
+function infoFromHistory(state: unknown): InfoKey | null {
+  const layer = sheetStack(state).find((name) => name.startsWith(INFO_LAYER));
+  return layer == null ? null : (layer.slice(INFO_LAYER.length) as InfoKey);
+}
+
+export const TAX_REFUSED = "רק בעל העסק יכול לשנות את מדרגת המס.";
 
 /** The figures of a project with no investment read: its loans only (an overhead project, an older payload). */
 function loansOnly(currency: string, data: ProjectInvestment): InvestmentFigures {
@@ -86,25 +125,34 @@ function loansOnly(currency: string, data: ProjectInvestment): InvestmentFigures
 }
 
 /**
- * FLOW-446 (board Invest): a project's investment and loans, its own page under the project. The
- * equity card, the property's figures (each opens its edit sheet, rehab opens its breakdown) and the
- * loans. A viewer reads it; nothing opens. `sample` draws it with no network (stories, dev route).
+ * FLOW-446 (board Invest), FLOW-451 (board ConceptATotalReturn): a project's investment and loans, its
+ * own page under the project. The year's total return and its sources, the equity in the property, the
+ * metrics (each figure's ⓘ opens its sheet), the property's figures (each opens its edit sheet, rehab
+ * opens its breakdown) and the loans. A viewer reads it; nothing opens for a write. `sample` draws it
+ * with no network (stories, dev route).
  */
 export function ProjectInvestmentScreen({
   sample,
   sampleInvestment,
   sampleCategories,
+  sampleReturns,
   initialSheet = null,
+  initialInfo = null,
   backTo,
+  base: baseProp,
   today = israelToday(),
 }: {
   sample?: NonNullable<ProjectDetail>;
   sampleInvestment?: ProjectInvestment;
   sampleCategories?: RehabCategory[];
+  sampleReturns?: PropertyReturns;
   /** Stories open a sheet on first draw. */
   initialSheet?: OpenSheet;
+  initialInfo?: InfoKey | null;
   /** Dev fixtures send Back here. Production goes to the project page. */
   backTo?: string;
+  /** Dev fixtures' path for the returns pages. Production: /projects/:id/investment. */
+  base?: string;
   /** Stories pin the day the next payment is worked out from. */
   today?: string;
 }) {
@@ -120,29 +168,43 @@ export function ProjectInvestmentScreen({
   const detail = useProjectQuery(sample ? "" : routeId, period);
   const project = sample ?? detail.data ?? null;
   const projectId = project?.id ?? routeId;
+  const base = baseProp ?? investmentBase(projectId);
   const sampled = sampleInvestment != null;
   const [sampleData, setSampleData] = useState(sampleInvestment);
+  const [sampleRet, setSampleRet] = useState(sampleReturns);
   const data = sampleData ?? (project == null ? null : toProjectInvestment(project));
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
+  const hasFigures = data != null && !data.isOverhead && data.figures != null;
+  const returnsRead = usePropertyReturnsQuery(projectId, !sampled && hasFigures);
+  const returns = sampled ? (sampleRet ?? null) : (returnsRead.data ?? null);
 
+  // `?edit=land` (a part's or a metric's page) opens that figure's sheet on arrival.
+  const linked = editFieldOf(new URLSearchParams(location.search).get("edit"));
   // Back from a category's lines lands on the rehab sheet's own history entry: open it again there.
   const [sheet, setSheet] = useState<OpenSheet>(() => {
     if (readOnly) return null;
-    return initialSheet ?? (sheetStack(location.state).includes(REHAB_LAYER) ? "rehab" : null);
+    if (initialSheet != null) return initialSheet;
+    if (linked != null) return linked === "tax_bracket" ? "tax" : linked;
+    return sheetStack(location.state).includes(REHAB_LAYER) ? "rehab" : null;
   });
-  const [editField, setEditField] = useState<InvestmentField>(
-    initialSheet === "purchase" || initialSheet === "arv" || initialSheet === "value" ? initialSheet : "purchase",
-  );
+  const [editField, setEditField] = useState<InvestmentField>(isInvestmentField(sheet) ? sheet : "purchase");
+  // Back from a page an ⓘ sheet opened lands on the sheet's entry: open it again there.
+  const [info, setInfo] = useState<InfoKey | null>(() => initialInfo ?? infoFromHistory(location.state));
+  const [infoKey, setInfoKey] = useState<InfoKey>(info ?? "cash_flow");
+  const infoOpener = useRef<HTMLElement | null>(null);
   const rows: InvestmentRowRefs = {
     purchase: useRef<HTMLButtonElement>(null),
     arv: useRef<HTMLButtonElement>(null),
     value: useRef<HTMLButtonElement>(null),
+    land: useRef<HTMLButtonElement>(null),
+    units: useRef<HTMLButtonElement>(null),
     rehab: useRef<HTMLButtonElement>(null),
   };
   const rehabOpen = sheet === "rehab";
   const costs = useRehabCostsQuery(projectId, rehabOpen && !sampled);
   const categories = useRehabCategoriesQuery(rehabOpen && !sampled);
   const setRehabSheet = useSheetHistory(REHAB_LAYER, rehabOpen, (next) => { setSheet(next ? "rehab" : null); });
+  const setInfoSheet = useSheetHistory(`${INFO_LAYER}${infoKey}`, info != null, (next) => { setInfo(next ? infoKey : null); });
 
   const save = useWrite<SaveRequest>({
     failure: investmentFailure,
@@ -157,10 +219,22 @@ export function ProjectInvestmentScreen({
       }
     },
   });
+  const saveBracket = useWrite<number | null>({
+    failure: (error) => ((error as { code?: string }).code === "42501" ? { message: TAX_REFUSED, retry: false } : "לא הצלחנו לשמור את מדרגת המס."),
+    keys: ["project"],
+    run: async (bp) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_tax_bracket", { p_bp: bp as number }));
+    },
+  });
   const figuresRef = useRef<InvestmentFigures | null>(null);
+  const extrasRef = useRef<PropertyExtras | null>(null);
+  const bracketRef = useRef<number | null>(null);
   const commit = useCallback(async (patch: InvestmentPatch, field: InvestmentField): Promise<boolean> => {
     if (sampled) {
       setSampleData((current) => current == null || current.figures == null ? current : { ...current, figures: applySample(current.figures, patch) });
+      setSampleRet((current) => (current == null ? current : applyReturnsSample(current, patch)));
       return true;
     }
     try {
@@ -172,29 +246,75 @@ export function ProjectInvestmentScreen({
   }, [sampled, save]);
   const onSave = useCallback(async (patch: InvestmentPatch, kind: "save" | "clear", field: InvestmentField): Promise<boolean> => {
     const before = figuresRef.current;
+    const extras = extrasRef.current;
     if (!(await commit(patch, field))) return false;
     // The undo puts the figure back as it was; it is a second save, so nothing in the database changes shape.
     if (before != null) {
       toast.show({
         message: `${INVESTMENT_LABELS[field]} ${kind === "clear" ? "נמחק" : "עודכן"}`,
         action: "ביטול",
-        onAction: () => { void commit(restorePatch(field, before), field); },
+        onAction: () => { void commit(restorePatch(field, before, extras), field); },
       });
     }
     return true;
   }, [commit, toast]);
+  const commitBracket = useCallback(async (bp: number | null): Promise<boolean> => {
+    if (sampled) {
+      setSampleRet((current) => (current == null ? current : {
+        ...current,
+        inputs: { ...current.inputs, taxBracketBp: bp },
+        missing: bp == null ? current.missing : current.missing.filter((input) => input !== "tax_bracket"),
+      }));
+      return true;
+    }
+    try {
+      await saveBracket.mutateAsync(bp);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [sampled, saveBracket]);
+  const onSaveBracket = useCallback(async (bp: number | null): Promise<boolean> => {
+    const before = bracketRef.current;
+    if (!(await commitBracket(bp))) return false;
+    toast.show({
+      message: bp == null ? "מדרגת המס נמחקה" : "מדרגת המס עודכנה",
+      action: "ביטול",
+      onAction: () => { void commitBracket(before); },
+    });
+    return true;
+  }, [commitBracket, toast]);
 
   const currency = data?.figures?.currency ?? data?.loans[0]?.currency ?? companyCurrency;
-  const hasFigures = data != null && !data.isOverhead && data.figures != null;
   const figures = data == null ? null : (hasFigures ? data.figures : loansOnly(currency, data));
+  const extras: PropertyExtras | null = returns == null ? null : { landMinor: returns.inputs.landMinor, units: returns.inputs.units };
   figuresRef.current = hasFigures ? figures : null;
-  const editMinor = figures == null ? null : editField === "purchase" ? figures.purchaseMinor : editField === "arv" ? figures.arvMinor : figures.valueMinor;
+  extrasRef.current = extras;
+  bracketRef.current = returns?.inputs.taxBracketBp ?? null;
+  const editMinor = figures == null ? null
+    : editField === "purchase" ? figures.purchaseMinor
+    : editField === "arv" ? figures.arvMinor
+    : editField === "value" ? figures.valueMinor
+    : editField === "land" ? (extras?.landMinor ?? null)
+    : (extras?.units == null ? null : BigInt(extras.units));
   const rehabCosts = sampled ? (sampleData?.categories ?? []) : (costs.data ?? []);
   const rehabCategories = sampled ? (sampleCategories ?? []) : (categories.data ?? null);
-  const openEdit = (field: InvestmentField) => {
+  const openEdit = (field: EditField) => {
+    if (field === "tax_bracket") {
+      setSheet("tax");
+      return;
+    }
     setEditField(field);
     setSheet(field);
   };
+  const links = pageResolver(base, search);
+  const resolve: Resolve = (target) => (target.kind === "edit" ? { onClick: () => { openEdit(target.field); } } : links(target));
+  const onInfo = (key: InfoKey, opener: HTMLElement) => {
+    infoOpener.current = opener;
+    setInfoKey(key);
+    setInfo(key);
+  };
+  const onAdd = readOnly ? undefined : openEdit;
   const name = project?.name;
   const stateLine = project == null ? null : projectStateLine(project);
 
@@ -212,9 +332,18 @@ export function ProjectInvestmentScreen({
         <div className="ui-pinv-stack">
           {hasFigures ? (
             <>
-              <EquityCard figures={figures} rows={rows} onAdd={readOnly ? undefined : openEdit} />
+              {returns != null ? (
+                <>
+                  <TotalReturnCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
+                  <EquityInPropertyCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
+                  <MetricsCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
+                </>
+              ) : returnsRead.isError ? (
+                <ReturnsCardsFailed offline={returnsRead.isPaused} onRetry={() => { void returnsRead.refetch(); }} />
+              ) : <ReturnsCardsSkeleton />}
               <FiguresCard
                 figures={figures}
+                extras={extras}
                 readOnly={readOnly}
                 rows={rows}
                 onEdit={openEdit}
@@ -232,6 +361,17 @@ export function ProjectInvestmentScreen({
               void navigate(quickNewPath("/loans", search, "loan"), { state: { newLoanProject: projectId } });
             }}
           />
+          {returns == null || !hasFigures ? null : (
+            <ReturnInfoSheet
+              infoKey={infoKey}
+              open={info != null}
+              onOpenChange={setInfoSheet}
+              returns={returns}
+              resolve={resolve}
+              readOnly={readOnly}
+              returnFocusRef={infoOpener}
+            />
+          )}
           {readOnly || !hasFigures ? null : (
             <>
               <InvestmentEditSheet
@@ -243,6 +383,12 @@ export function ProjectInvestmentScreen({
                 date={figures.valueDate}
                 returnFocusRef={rows[editField]}
                 onSave={onSave}
+              />
+              <TaxBracketSheet
+                open={sheet === "tax"}
+                onOpenChange={(next) => { setSheet(next ? "tax" : null); }}
+                bp={returns?.inputs.taxBracketBp ?? null}
+                onSave={onSaveBracket}
               />
               <RehabSheet
                 projectId={projectId}

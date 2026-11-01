@@ -1,0 +1,237 @@
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { lineInitials } from "../cash-lines-groups";
+import { Amount } from "../ui/amount";
+import { Button } from "../ui/button";
+import { FailureLine } from "../ui/empty-state";
+import { ChevronIcon } from "../ui/icons";
+import { rowSource } from "../ui/line-marks";
+import { List, ListRow } from "../ui/list-row";
+import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton } from "../ui/skeleton";
+import { linesByMonth } from "./report-lines-screen";
+import { ReportSection, type Collapse } from "./reports-parts";
+import { usePropertyReturnLinesQuery, type LinesSource, type ReturnLineRow, type ReturnLinesPage } from "./project-returns-data";
+import type { EditField, FigureValue, Formula, FormulaRow, Op, Target } from "./project-returns-info";
+
+/* ------------------------------------------------------------------------------------------------
+ * FLOW-451: the parts the returns pages and the ⓘ sheet share: a figure (or "חסר · הוספה"), a
+ * formula's rows with their operators, and a figure's transactions by month.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Where the investment page lives: the project's, or a dev fixture's. */
+export function investmentBase(projectId: string): string {
+  return `/projects/${projectId}/investment`;
+}
+
+/** `search` with one more key, for an edit link (`?edit=land`). */
+export function withParam(search: string, key: string, value: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set(key, value);
+  return `?${params.toString()}`;
+}
+
+/** What a row does: a link, or (on the investment page) a sheet. */
+export type RowAction = { href: string } | { onClick: () => void };
+export type Resolve = (target: Target) => RowAction | null;
+
+/** The pages' links: an input opens its edit sheet on the investment page. */
+export function pageResolver(base: string, search: string): Resolve {
+  return (target) => {
+    if (target.kind === "line") return { href: `${base}/returns/${target.line}${search}` };
+    if (target.kind === "statement") return { href: `${base}/returns${search}` };
+    if (target.kind === "part") return { href: `${base}/part/${target.part}${search}` };
+    if (target.kind === "loans") return { href: `/loans${search}` };
+    return { href: `${base}${withParam(search, "edit", target.field)}` };
+  };
+}
+
+/** "חסר", then the accent הוספה (a button when the figure's row is not one already). */
+export function MissingFigure({ note, onAdd, addLabel }: { note?: string; onAdd?: () => void; addLabel?: string }) {
+  return (
+    <span className="ui-ret-missing">
+      <span>{note ?? "חסר"}</span>
+      {onAdd == null ? null : (
+        <button type="button" className="ui-ret-add" aria-label={addLabel} onClick={onAdd}>הוספה</button>
+      )}
+    </span>
+  );
+}
+
+/** A figure as text. `addText` draws a plain הוספה (inside a row that is itself the button). */
+export function FigureText({ value, currency, loss = false, addText = false }: { value: FigureValue; currency: string; loss?: boolean; addText?: boolean }) {
+  if (value.kind === "money") return <Amount agorot={value.minor} currency={currency} income={value.income === true} loss={loss && value.minor < 0n} />;
+  if (value.kind === "text") return <bdi dir="ltr" className="ui-num">{value.text}</bdi>;
+  return (
+    <span className="ui-ret-missing">
+      <span>{value.note ?? "חסר"}</span>
+      {addText && value.add != null ? <span className="ui-ret-add">הוספה</span> : null}
+    </span>
+  );
+}
+
+const OP_WORDS: Record<Op, string> = { "": "", "+": "ועוד", "−": "פחות", "÷": "חלקי", "×": "כפול", "=": "שווה" };
+
+function rowAction(row: FormulaRow, resolve: Resolve, readOnly: boolean): RowAction | null {
+  // A missing input opens its own sheet; a viewer adds nothing.
+  if (row.value.kind === "missing") {
+    if (readOnly || row.value.add == null) return null;
+    return resolve({ kind: "edit", field: row.value.add });
+  }
+  if (row.target == null) return null;
+  if (readOnly && row.target.kind === "edit") return null;
+  return resolve(row.target);
+}
+
+function FormulaLine({ row, currency, action, result }: { row: FormulaRow; currency: string; action: RowAction | null; result: boolean }) {
+  const body: ReactNode = (
+    <>
+      <span className="ui-ret-op" aria-hidden="true">{row.op}</span>
+      {row.op === "" || row.op === "=" ? null : <span className="sr-only">{OP_WORDS[row.op]} </span>}
+      <span className="ui-ret-text">
+        <span className="ui-ret-label">{row.label}</span>
+        {row.hint == null ? null : <span className="ui-ret-hint">{row.hint}</span>}
+      </span>
+      <span className="ui-ret-value">
+        <FigureText value={row.value} currency={currency} addText={action != null} />
+      </span>
+      {action == null ? null : <span className="ui-ret-go" aria-hidden="true"><ChevronIcon size={18} /></span>}
+    </>
+  );
+  const className = result ? "ui-ret-row ui-ret-result" : "ui-ret-row";
+  if (action == null) return <div className={className}>{body}</div>;
+  if ("href" in action) return <Link to={action.href} className={`${className} m-press`}>{body}</Link>;
+  return <button type="button" className={`${className} m-press`} onClick={action.onClick}>{body}</button>;
+}
+
+/** A formula: each part with its operator, each opening where it comes from, then "=". */
+export function FormulaList({ formula, currency, resolve, readOnly = false, label }: {
+  formula: Formula;
+  currency: string;
+  resolve: Resolve;
+  readOnly?: boolean;
+  label?: string;
+}) {
+  return (
+    <ul className="ui-ret-formula" aria-label={label}>
+      {formula.rows.map((row) => (
+        <li key={row.key}>
+          <FormulaLine row={row} currency={currency} action={rowAction(row, resolve, readOnly)} result={false} />
+        </li>
+      ))}
+      {formula.result == null ? null : (
+        <li>
+          <FormulaLine row={formula.result} currency={currency} action={null} result />
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/** The figure a page leads with, 40/400, and its meta line. */
+export function ReturnsHero({ figure, meta }: { figure: ReactNode; meta: string }) {
+  return (
+    <div className="ui-ret-hero">
+      <span className="ui-ret-hero-figure t-detail">{figure}</span>
+      <span className="ui-ret-hero-meta">{meta}</span>
+    </div>
+  );
+}
+
+/** Money in is green with "+" on the income line only; a refund elsewhere is "+" in the text colour. */
+function rowSign(line: LinesSource, minor: bigint): "in" | "out" | "moved-in" {
+  if (minor < 0n) return "out";
+  return line === "income" ? "in" : "moved-in";
+}
+
+function rowHint(row: ReturnLineRow): string {
+  const date = `${row.date.slice(8, 10)}/${row.date.slice(5, 7)}`;
+  return row.categoryName == null ? date : `${date} · ${row.categoryName}`;
+}
+
+function TransactionGroups({ rows, line, currency, search }: { rows: readonly ReturnLineRow[]; line: LinesSource; currency: string; search: string }) {
+  const groups = linesByMonth(rows.map((row) => ({ ...row, doc_date: row.date })));
+  return groups.map((group) => (
+    <section key={group.key} className="ui-lines-group" aria-label={group.title}>
+      <div className="ui-lines-group-head">
+        <h3 className="t-section ui-lines-group-title">{group.title}</h3>
+      </div>
+      <List layout="flat">
+        {group.rows.map((row) => (
+          <ListRow
+            key={`${row.transactionId}:${row.categoryId ?? ""}`}
+            layout="flat"
+            variant="transaction"
+            title={row.supplierName ?? row.description}
+            hint={rowHint(row)}
+            agorot={row.minor}
+            currency={currency}
+            sign={rowSign(line, row.minor)}
+            source={rowSource(row.source)}
+            initials={lineInitials(row.supplierName ?? row.description)}
+            href={`/transactions/${row.transactionId}${search}`}
+          />
+        ))}
+      </List>
+    </section>
+  ));
+}
+
+/**
+ * A figure's transactions, newest first by month, 50 at a time ("עוד N תנועות"). A transaction opens its
+ * own page, where its category or project changes with the pickers there. `sample` draws one page.
+ */
+export function ReturnLinesSection({ projectId, line, categoryId, currency, search, collapse, sample }: {
+  projectId: string;
+  line: LinesSource;
+  categoryId: string | null;
+  currency: string;
+  search: string;
+  collapse: Collapse;
+  sample?: ReturnLinesPage;
+}) {
+  const read = usePropertyReturnLinesQuery(projectId, line, categoryId, sample == null);
+  const pages = sample == null ? read.data?.pages : [sample];
+  const rows = pages?.flatMap((page) => page.rows) ?? null;
+  const filtered = sample != null && categoryId != null && rows != null ? rows.filter((row) => row.categoryId === categoryId) : rows;
+  const count = sample != null && categoryId != null ? (filtered?.length ?? 0) : (pages?.[0]?.count ?? 0);
+  const left = Math.max(0, count - (filtered?.length ?? 0));
+  const more = sample == null ? read.hasNextPage : left > 0;
+  let body: ReactNode;
+  if (filtered == null) {
+    body = read.isError
+      ? <FailureLine offline={read.isPaused} onRetry={() => { void read.refetch(); }} />
+      : <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>;
+  } else if (filtered.length === 0) {
+    body = <p className="ui-ret-empty">אין תנועות בתקופה.</p>;
+  } else {
+    body = (
+      <>
+        <TransactionGroups rows={filtered} line={line} currency={currency} search={search} />
+        {more ? (
+          <div className="ui-rep-more-wrap">
+            <Button
+              variant="secondary"
+              busy={read.isFetchingNextPage}
+              onClick={() => { if (sample == null) void read.fetchNextPage(); }}
+            >
+              {left === 1 ? "עוד תנועה אחת" : `עוד ${String(left)} תנועות`}
+            </Button>
+          </div>
+        ) : null}
+        {read.isFetchNextPageError ? <FailureLine offline={read.isPaused} onRetry={() => { void read.fetchNextPage(); }} /> : null}
+      </>
+    );
+  }
+  return (
+    <ReportSection id="lines" title="תנועות" total={filtered == null ? null : <bdi dir="ltr" className="t-muted">{String(count)}</bdi>} collapse={collapse}>
+      {body}
+    </ReportSection>
+  );
+}
+
+/** Which input an edit link names, from `?edit=`; null for anything else. */
+export function editFieldOf(value: string | null): EditField | null {
+  if (value === "purchase" || value === "arv" || value === "value" || value === "land" || value === "units" || value === "tax_bracket") return value;
+  return null;
+}
