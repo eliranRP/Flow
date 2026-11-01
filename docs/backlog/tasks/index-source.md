@@ -412,6 +412,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1009
 - FLOW-1010
 - FLOW-1011
+- FLOW-1012
+- FLOW-1013
+- FLOW-1014
+- FLOW-1015
+- FLOW-1016
+- FLOW-1017
 
 ## Projects and reports
 
@@ -456,6 +462,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-451
 - FLOW-452
 - FLOW-453
+- FLOW-455
+- FLOW-456
+- FLOW-457
+- FLOW-458
+- FLOW-459
 
 ## Onboarding, Settings and connectors
 
