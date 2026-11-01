@@ -79,7 +79,8 @@ function rowAction(row: FormulaRow, resolve: Resolve, readOnly: boolean): RowAct
     return resolve({ kind: "edit", field: row.value.add });
   }
   if (row.target == null) return null;
-  if (readOnly && row.target.kind === "edit") return null;
+  // A viewer opens no input, and not the purchase's acquisition lines (the investment card's row is static for them).
+  if (readOnly && (row.target.kind === "edit" || (row.target.kind === "line" && row.target.line === "acquisition"))) return null;
   return resolve(row.target);
 }
 
@@ -128,8 +129,13 @@ export function FormulaList({ formula, currency, resolve, readOnly = false, labe
   );
 }
 
+/** "כל הכסף חזר · יצא $30,000 יותר משנכנס": the meta under ∞. */
+export function AllCashOutMeta({ minor, currency }: { minor: bigint; currency: string }) {
+  return <>{"כל הכסף חזר · יצא "}<Amount agorot={minor} currency={currency} />{" יותר משנכנס"}</>;
+}
+
 /** The figure a page leads with, 40/400, and its meta line. */
-export function ReturnsHero({ figure, meta }: { figure: ReactNode; meta: string }) {
+export function ReturnsHero({ figure, meta }: { figure: ReactNode; meta: ReactNode }) {
   return (
     <div className="ui-ret-hero">
       <span className="ui-ret-hero-figure t-detail">{figure}</span>

@@ -8,9 +8,12 @@ import { ListRow } from "../ui/list-row";
 import { percentText, shareOfMoneyIn, type PropertyReturns } from "./project-returns-data";
 import {
   HISTORY_HINT,
+  INFINITY,
   MISSING_HISTORY,
+  MONEY_IN_CAPTION,
   METRIC_KEYS,
   METRIC_TITLES,
+  cashOutMinor,
   firstMissing,
   metricCaption,
   metricValue,
@@ -19,7 +22,7 @@ import {
   type InfoKey,
   type MetricKey,
 } from "./project-returns-info";
-import { FigureText, MissingFigure } from "./project-returns-parts";
+import { AllCashOutMeta, FigureText, MissingFigure } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451 (board ConceptATotalReturn): the page's three returns cards. The year's total return on
@@ -100,6 +103,7 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
   const moneyIn = r.equity.moneyInMinor;
   const totalBp = r.sources.totalBp;
   const totalMissing = firstMissing(r, ["purchase"]);
+  const cashOut = cashOutMinor(r);
   return (
     <section className="ui-pinv-card ui-ret-card" aria-labelledby={titleId}>
       <div className="ui-ret-card-head">
@@ -107,14 +111,19 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
         <Link to={`${base}/returns${search}`} className="ui-ret-link">איך מחושב</Link>
       </div>
       <div className="ui-ret-total">
-        {totalBp != null ? (
+        {cashOut != null ? (
+          // All the cash came out: no per-cent figure, and no signal colour, a good state.
+          <bdi dir="ltr" className="ui-num t-detail">{INFINITY}</bdi>
+        ) : totalBp != null ? (
           <bdi dir="ltr" className={totalBp < 0 ? "ui-num t-detail ui-loss" : "ui-num t-detail"}>{percentText(totalBp)}</bdi>
         ) : totalMissing != null ? (
           <MissingFigure onAdd={onAdd == null ? undefined : () => { onAdd(totalMissing); }} />
         ) : (
           <span className="ui-ret-missing">לא מחושב</span>
         )}
-        {moneyIn == null ? null : (
+        {cashOut != null ? (
+          <span className="ui-ret-total-on"><AllCashOutMeta minor={cashOut} currency={r.currency} /></span>
+        ) : moneyIn == null ? null : (
           <span className="ui-ret-total-on">{"על "}<Amount agorot={moneyIn} currency={r.currency} />{" בעסקה"}</span>
         )}
       </div>
@@ -182,7 +191,7 @@ export function EquityInPropertyCard({ returns: r, onInfo, onAdd }: CardProps) {
       <h2 className="ui-pinv-card-title">הון בנכס</h2>
       <EquityRow label="הון עצמי היום" caption="שווי היום פחות הלוואות" infoKey="equity_today" value={equityValue(r.equity.todayMinor, r, ["value"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
       <EquityRow label="השבחה צפויה" caption="ARV פחות קנייה ושיפוץ" infoKey="forced" value={equityValue(r.equity.forcedMinor, r, ["arv", "purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
-      <EquityRow label="כסף בעסקה" caption="קנייה ושיפוץ פחות הלוואות" infoKey="money_in" value={equityValue(r.equity.moneyInMinor, r, ["purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
+      <EquityRow label="כסף בעסקה" caption={MONEY_IN_CAPTION} infoKey="money_in" value={equityValue(r.equity.moneyInMinor, r, ["purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
     </section>
   );
 }

@@ -193,12 +193,10 @@
 }
 
 .ui-rep-row-meta {
-  overflow: hidden;
+  overflow-wrap: break-word;
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
   line-height: var(--type-cents-line);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 /* The amounts form one column: each ends at the same point (its ones digit), up to −$999,999, so a

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(52);
+select plan(66);
 
 do $users$
 begin
@@ -33,7 +33,10 @@ insert into prr (label, id) values
   ('repairs', tests.fixture_category(pg_temp.id('co'), 'Repairs')),
   ('roof', tests.fixture_category(pg_temp.id('co'), 'Roof')),
   ('purchase', tests.fixture_category(pg_temp.id('co'), 'Purchase', 'expense', true)),
-  ('rent', tests.fixture_category(pg_temp.id('co'), 'Rent', 'income'));
+  ('rent', tests.fixture_category(pg_temp.id('co'), 'Rent', 'income')),
+  ('proceeds', tests.fixture_category(pg_temp.id('co'), 'Loan proceeds', 'income', true)),
+  ('dep', tests.fixture_category(pg_temp.id('co'), 'Depreciation'));
+update public.categories set rehab = false where id = pg_temp.id('dep');
 update public.categories set rehab = true where id = pg_temp.id('roof');
 insert into prr (label, id)
 select 'interest', c.id from public.categories c
@@ -54,7 +57,14 @@ insert into prr (label, id) values
   ('unpaid', tests.fixture_line(pg_temp.id('co'), 'prr:unpaid', 7000, p_project => pg_temp.id('flat'), p_category => pg_temp.id('repairs'), p_doc_kind => 'invoice')),
   ('pend', tests.fixture_line(pg_temp.id('co'), 'prr:pend', 3000, p_project => pg_temp.id('flat'), p_category => pg_temp.id('repairs'), p_line_status => 'pending')),
   ('shared', tests.fixture_line(pg_temp.id('co'), 'prr:shared', 40000, p_category => pg_temp.id('repairs'), p_pnl_role => 'shared', p_doc_date => '2026-07-01')),
-  ('other_rent', tests.fixture_line(pg_temp.id('other_co'), 'prr:other', 999900, 'income', pg_temp.id('other_flat')));
+  ('other_rent', tests.fixture_line(pg_temp.id('other_co'), 'prr:other', 999900, 'income', pg_temp.id('other_flat'))),
+  -- FLOW-453: the loan's net proceeds (kept-out income) with the purchase, insurance paid before the
+  -- first rent (a holding cost, in the period but not in the statement), and a non-cash journal
+  -- entry (depreciation), which counts nowhere.
+  ('proc', tests.fixture_line(pg_temp.id('co'), 'prr:proc', 11000000, 'income', pg_temp.id('flat'), pg_temp.id('proceeds'), '2026-01-05')),
+  ('hold', tests.fixture_line(pg_temp.id('co'), 'prr:hold', 100000, p_project => pg_temp.id('flat'), p_category => pg_temp.id('repairs'), p_doc_date => '2026-02-01')),
+  ('depr', tests.fixture_line(pg_temp.id('co'), 'prr:depr', 500000, p_project => pg_temp.id('flat'), p_category => pg_temp.id('dep'), p_doc_date => '2026-08-01'));
+update public.transactions set in_cash_override = false where id = pg_temp.id('depr');
 update public.transactions set cash_date = null where id = pg_temp.id('unpaid');
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net) values
   (pg_temp.id('co'), pg_temp.id('shared'), pg_temp.id('flat'), 2500, -10000),
@@ -122,7 +132,7 @@ select is((pg_temp.ret()->'statement'->>'noi_minor')::bigint, 2080000::bigint, '
 select is((pg_temp.ret()->'statement'->>'debt_service_minor')::bigint, -90000::bigint,
   'loan payments: the interest, principal and fees parts');
 select is((pg_temp.ret()->'statement'->>'capex_minor')::bigint, -180000::bigint, 'CapEx: a category switched into rehab');
-select is((pg_temp.ret()->'statement'->>'not_counted_minor')::bigint, -15000000::bigint, 'the purchase is not counted');
+select is((pg_temp.ret()->'statement'->>'not_counted_minor')::bigint, -4000000::bigint, 'the purchase and the loan proceeds are not counted');
 select is((pg_temp.ret()->'statement'->>'cash_flow_minor')::bigint, 1810000::bigint,
   'cash flow = NOI + loan payments + CapEx (CapEx below NOI)');
 select is((pg_temp.ret()->'sources'->>'principal_minor')::bigint, 20000::bigint, 'principal paid');
@@ -130,12 +140,19 @@ select is(pg_temp.ret()->'statement'->'lines'->'opex'->>'lines', '3', 'three lin
 select is(
   (select sum((e->>'amount_minor')::bigint) from jsonb_array_elements(pg_temp.ret()->'statement'->'by_category'->'opex') e),
   -320000::numeric, 'the categories of a line add up to it');
-select is(pg_temp.ret()->'missing', '["purchase", "value", "land", "tax_bracket", "units"]'::jsonb,
+select is(pg_temp.ret()->>'first_rent', '2026-03-01', 'the first rent payment splits investing from earning');
+select is((pg_temp.ret()->'statement'->>'before_rent_minor')::bigint, -100000::bigint,
+  'a cost in the period but before the first rent is listed apart, not in the cash flow');
+select is(pg_temp.ret()->'equity'->'money_in_parts',
+  '{"acquisition_minor": -15000000, "renovation_minor": 0, "holding_minor": -150000, "financing_minor": 11000000}'::jsonb,
+  'money in, by part: the purchase line, holding costs before the rent (the 2025 repair and the insurance), the net loan proceeds; the depreciation journal counts nowhere');
+select is(pg_temp.ret()->'inputs'->>'purchase_source', 'lines', 'the purchase price comes from the lines');
+select is(pg_temp.ret()->'missing', '["value", "land", "tax_bracket", "units"]'::jsonb,
   'every missing input is named');
-select is(pg_temp.ret()->'equity'->>'money_in_minor', null, 'money in the deal waits for the purchase price');
+select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 4150000::bigint, 'money in the deal needs no typed input');
 select is(pg_temp.ret()->'sources'->>'appreciation_minor', null, 'appreciation waits for values');
 select is(pg_temp.ret()->'sources'->>'tax_savings_minor', null, 'tax savings wait for land and bracket');
-select is(pg_temp.ret()->'metrics'->>'cash_on_cash_bp', null, 'and so does cash-on-cash');
+select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 4361, 'and so does cash-on-cash');
 select is((pg_temp.ret()->'metrics'->>'dscr_milli')::integer, 23111, 'DSCR needs no input: NOI / loan payments');
 
 -- The inputs.
@@ -149,19 +166,19 @@ select is(public.set_tax_bracket(2400), jsonb_build_object('id', pg_temp.id('co'
   'set_tax_bracket returns the bracket before and after');
 
 select is(pg_temp.ret()->'missing', '[]'::jsonb, 'nothing is missing now');
-select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 3540000::bigint,
-  'money in the deal = purchase + rehab so far (all time, paid) - what was borrowed');
+select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 4150000::bigint,
+  'money in the deal = the purchase and the costs before the rent, less the net loan proceeds');
 select is((pg_temp.ret()->'equity'->>'equity_today_minor')::bigint, 6020000::bigint, 'equity today = value - loan balance');
-select is((pg_temp.ret()->'equity'->>'forced_equity_minor')::bigint, 3460000::bigint, 'forced equity = ARV - purchase - rehab');
+select is((pg_temp.ret()->'equity'->>'forced_equity_minor')::bigint, 3360000::bigint, 'forced equity = ARV - purchase - rehab');
 select is((pg_temp.ret()->'sources'->>'appreciation_minor')::bigint, 1000000::bigint,
   'appreciation = the value at the end of the period - the value at its start');
-select is((pg_temp.ret()->'sources'->>'building_minor')::bigint, 13540000::bigint, 'building = purchase + rehab - land');
-select is((pg_temp.ret()->'sources'->>'depreciation_year_minor')::bigint, 492364::bigint, 'depreciation = building / 27.5');
-select is((pg_temp.ret()->'sources'->>'tax_savings_minor')::bigint, 118167::bigint, 'tax savings = depreciation x bracket');
-select is((pg_temp.ret()->'sources'->>'total_minor')::bigint, 2948167::bigint,
+select is((pg_temp.ret()->'sources'->>'building_minor')::bigint, 13640000::bigint, 'building = purchase + rehab - land');
+select is((pg_temp.ret()->'sources'->>'depreciation_year_minor')::bigint, 496000::bigint, 'depreciation = building / 27.5');
+select is((pg_temp.ret()->'sources'->>'tax_savings_minor')::bigint, 119040::bigint, 'tax savings = depreciation x bracket');
+select is((pg_temp.ret()->'sources'->>'total_minor')::bigint, 2949040::bigint,
   'total = cash flow + principal + appreciation + tax savings');
-select is((pg_temp.ret()->'sources'->>'total_bp')::integer, 8328, 'total return on the money in the deal');
-select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 5113, 'cash-on-cash = cash flow / money in the deal');
+select is((pg_temp.ret()->'sources'->>'total_bp')::integer, 7106, 'total return on the money in the deal');
+select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 4361, 'cash-on-cash = cash flow / money in the deal');
 select is((pg_temp.ret()->'metrics'->>'cap_rate_bp')::integer, 1156, 'cap rate = NOI / value today');
 select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 75417::bigint,
   'cash flow per unit per month');
@@ -183,7 +200,7 @@ select is((pg_temp.lines('opex')->>'count')::integer, 3, 'the lines behind opera
 select is((pg_temp.lines('opex')->>'total_minor')::bigint, -320000::bigint, 'add up to it');
 select is((pg_temp.lines('opex', pg_temp.id('repairs'))->>'count')::integer, 2, 'one category: repairs and the shared share');
 select is((pg_temp.lines('principal')->>'total_minor')::bigint, -20000::bigint, 'the principal part alone');
-select is((public.get_property_return_lines(pg_temp.id('flat'), 'rehab')->>'total_minor')::bigint, -540000::bigint,
+select is((public.get_property_return_lines(pg_temp.id('flat'), 'rehab')->>'total_minor')::bigint, -640000::bigint,
   'rehab: all time, the building cost''s lines');
 select is((pg_temp.lines('income')->'rows'->0->>'description'), 'prr:rent1', 'a row carries the line''s description');
 select throws_ok($$select public.get_property_return_lines(pg_temp.id('flat'), 'profit')$$,
@@ -209,6 +226,49 @@ select is((select array[units::bigint, land_minor] from public.projects where id
   'and puts both back');
 select pg_temp.as_mcp('read');
 select is(public.mcp_set_tax_bracket('prr-tax-3', 1000)->'error'->>'code', 'forbidden', 'a read token cannot write');
+
+-- A cash-out refinance after the rent: more came out than went in.
+reset role;
+insert into prr (label, id) values
+  ('refi', tests.fixture_line(pg_temp.id('co'), 'prr:refi', 10000000, 'income', pg_temp.id('flat'), pg_temp.id('proceeds'), '2026-09-01'));
+select tests.authenticate_as('prr_owner');
+select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, -5850000::bigint, 'a cash-out refinance lowers the money in below zero');
+select is((pg_temp.ret()->'equity'->>'all_cash_out')::boolean, true, 'all the cash came out');
+select is(pg_temp.ret()->'metrics'->>'cash_on_cash_bp', null, 'so there is no cash-on-cash per cent');
+select is((public.get_property_return_lines(pg_temp.id('flat'), 'holding')->>'total_minor')::bigint, -150000::bigint,
+  'the holding costs line lists its lines');
+select is((public.get_property_return_lines(pg_temp.id('flat'), 'money_in')->>'count')::integer, 5,
+  'money in lists the purchase, the two holding costs and the two loan proceeds');
+
+-- FLOW-453 review: a line in another currency before the first rent does not move the rent start,
+-- and a rehab cost and a loan payment before the rent land in renovation and holding, not CapEx.
+reset role;
+insert into prr (label, id) values ('curr', tests.fixture_project(pg_temp.id('co'), 'Example Currency Duplex'));
+insert into prr (label, id) values
+  ('curr_rent', tests.fixture_line(pg_temp.id('co'), 'prr:curr-rent', 100000, 'income', pg_temp.id('curr'), pg_temp.id('rent'), '2026-03-01')),
+  ('curr_roof', tests.fixture_line(pg_temp.id('co'), 'prr:curr-roof', 50000, p_project => pg_temp.id('curr'), p_category => pg_temp.id('roof'), p_doc_date => '2026-02-10')),
+  ('curr_usd', tests.fixture_line(pg_temp.id('co'), 'prr:curr-usd', 500000, 'income', pg_temp.id('curr'), pg_temp.id('rent'), '2026-01-15', p_currency => 'USD')),
+  ('curr_pay', tests.fixture_line(pg_temp.id('co'), 'prr:curr-pay', 100000, p_project => pg_temp.id('curr'), p_category => pg_temp.id('interest'), p_doc_date => '2026-02-15'));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values (pg_temp.id('co'), 'Currency mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 0, 'ILS', pg_temp.id('curr'));
+select tests.loan_split(pg_temp.id('curr_pay'), (select id from public.loans where name = 'Currency mortgage'), (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', coalesce(
+      (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+      pg_temp.id('interest')),
+    'needs_review', false) order by v.n)
+  from (values (1, 'interest', 50000), (2, 'escrow', 10000), (3, 'principal', 40000)) as v(n, part, amount)));
+select tests.authenticate_as('prr_owner');
+select is(public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->>'first_rent', '2026-03-01',
+  'the first rent is the rent in the investment currency, not the USD line before it');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'equity'->'money_in_parts'->>'renovation_minor')::bigint, -50000::bigint,
+  'a rehab cost before the first rent is renovation');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'equity'->'money_in_parts'->>'holding_minor')::bigint, -100000::bigint,
+  'a loan payment before the first rent is holding');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'capex_minor')::bigint, 0::bigint,
+  'the rehab cost before the rent is not CapEx');
+select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'before_rent_minor')::bigint, -150000::bigint,
+  'the period costs before the rent are listed apart');
 
 select * from finish();
 rollback;

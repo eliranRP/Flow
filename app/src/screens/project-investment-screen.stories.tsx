@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment, birchLaneRehabCategories } from "../dev/investment-sample";
 import { project as sampleProject } from "../dev/project-cash-sample";
-import { birchLaneReturns, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../dev/returns-sample";
+import { birchLaneReturns, birchLaneReturnsCashOut, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../dev/returns-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ProjectInvestmentScreen } from "./project-investment-screen";
 import type { ProjectInvestment } from "./project-investment-data";
@@ -10,6 +10,7 @@ import type { InfoKey } from "./project-returns-info";
 /**
  * FLOW-446. Invented flip, the board's figures; value only (no ARV), under water, and the two sheets.
  * FLOW-451: the returns cards on top (complete, missing inputs, a negative cash flow) and the ⓘ sheet.
+ * FLOW-453: a cash-out refinance (all the cash out, ∞), and the money in the deal's sheet by part.
  */
 const VALUE_ONLY: ProjectInvestment = {
   ...birchLaneInvestment,
@@ -18,7 +19,7 @@ const VALUE_ONLY: ProjectInvestment = {
 };
 
 const DATA = { flip: birchLaneInvestment, valueOnly: VALUE_ONLY, noArv: birchLaneNoArvInvestment, negative: birchLaneNegativeInvestment };
-const RETURNS = { complete: birchLaneReturns, missing: birchLaneReturnsMissing, negative: birchLaneReturnsNegative };
+const RETURNS = { complete: birchLaneReturns, missing: birchLaneReturnsMissing, negative: birchLaneReturnsNegative, cashOut: birchLaneReturnsCashOut };
 
 type Args = {
   data?: keyof typeof DATA;
@@ -66,3 +67,5 @@ export const TaxInfoSheet: Story = { args: { info: "tax" } };
 export const CashFlowInfoSheet: Story = { args: { info: "cash_flow" } };
 export const EditUnits: Story = { args: { sheet: "units" } };
 export const TaxBracketSheet: Story = { args: { sheet: "tax", returns: "missing" } };
+export const AllCashOut: Story = { args: { returns: "cashOut" } };
+export const MoneyInSheet: Story = { args: { info: "money_in" } };

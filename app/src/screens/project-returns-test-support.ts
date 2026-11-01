@@ -7,11 +7,13 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
   const lines: Record<string, unknown> = {};
   const byCategory: Record<string, unknown> = {};
   const st = r.statement;
-  const sums = { income: st.incomeMinor, opex: st.opexMinor, debt_service: st.debtServiceMinor, capex: st.capexMinor, not_counted: st.notCountedMinor };
+  const sums = { income: st.incomeMinor, opex: st.opexMinor, debt_service: st.debtServiceMinor, capex: st.capexMinor, before_rent: st.beforeRentMinor, not_counted: st.notCountedMinor };
+  // The two lines shown apart go back under one of their server lines each (0245).
+  const server = { income: "income", opex: "opex", debt_service: "debt_service", capex: "capex", before_rent: "holding", not_counted: "acquisition" } as const;
   for (const line of STATEMENT_LINES) {
-    if (st.counts[line] > 0) lines[line] = { amount_minor: Number(sums[line]), lines: st.counts[line] };
+    if (st.counts[line] > 0) lines[server[line]] = { amount_minor: Number(sums[line]), lines: st.counts[line] };
     if (st.byCategory[line].length > 0) {
-      byCategory[line] = st.byCategory[line].map((item) => ({ category_id: item.id, name: item.name, amount_minor: Number(item.minor), lines: item.count }));
+      byCategory[server[line]] = st.byCategory[line].map((item) => ({ category_id: item.id, name: item.name, amount_minor: Number(item.minor), lines: item.count }));
     }
   }
   return {
@@ -19,10 +21,13 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
     from: r.from,
     to: r.to,
     days: r.days,
+    first_rent: r.firstRent,
     other_currencies: r.otherCurrencies,
     missing: r.missing,
     inputs: {
       purchase_minor: n(r.inputs.purchaseMinor),
+      purchase_source: r.inputs.purchaseSource,
+      purchase_typed_minor: n(r.inputs.purchaseTypedMinor),
       arv_minor: n(r.inputs.arvMinor),
       value_minor: n(r.inputs.valueMinor),
       value_date: r.inputs.valueDate,
@@ -30,7 +35,6 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       land_minor: n(r.inputs.landMinor),
       tax_bracket_bp: r.inputs.taxBracketBp,
       rehab_minor: n(r.inputs.rehabMinor),
-      borrowed_minor: n(r.inputs.borrowedMinor),
       loan_balance_minor: n(r.inputs.loanBalanceMinor),
       value_start: at(r.inputs.valueStart),
       value_end: at(r.inputs.valueEnd),
@@ -42,6 +46,7 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       debt_service_minor: Number(st.debtServiceMinor),
       capex_minor: Number(st.capexMinor),
       cash_flow_minor: Number(st.cashFlowMinor),
+      before_rent_minor: Number(st.beforeRentMinor),
       not_counted_minor: Number(st.notCountedMinor),
       lines,
       by_category: byCategory,
@@ -56,7 +61,18 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       total_minor: Number(r.sources.totalMinor),
       total_bp: r.sources.totalBp,
     },
-    equity: { equity_today_minor: n(r.equity.todayMinor), forced_equity_minor: n(r.equity.forcedMinor), money_in_minor: n(r.equity.moneyInMinor) },
+    equity: {
+      equity_today_minor: n(r.equity.todayMinor),
+      forced_equity_minor: n(r.equity.forcedMinor),
+      money_in_minor: n(r.equity.moneyInMinor),
+      money_in_parts: {
+        acquisition_minor: n(r.equity.moneyInParts.acquisitionMinor),
+        renovation_minor: Number(r.equity.moneyInParts.renovationMinor),
+        holding_minor: Number(r.equity.moneyInParts.holdingMinor),
+        financing_minor: Number(r.equity.moneyInParts.financingMinor),
+      },
+      all_cash_out: r.equity.allCashOut,
+    },
     metrics: {
       cash_on_cash_bp: r.metrics.cashOnCashBp,
       cap_rate_bp: r.metrics.capRateBp,
