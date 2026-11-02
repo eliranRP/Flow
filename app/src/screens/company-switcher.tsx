@@ -1,12 +1,12 @@
 import { lazy, Suspense, useRef, useState } from "react";
-import { screenLoaders } from "../screen-loaders";
 import type { MyCompanies } from "../team-api";
 import { useMyCompaniesQuery } from "../team-queries";
 import { useSheetHistory } from "../ui/back";
 import { BandCompany } from "../ui/top-band";
 
 // The sheet (its invites and leave actions) loads on the first tap, or with the idle preload, not with Home.
-const CompanySheet = lazy(() => screenLoaders.companySheet().then((m) => ({ default: m.CompanySheet })));
+// Its own import(), not screenLoaders: Home must not reach every screen through it (scripts/e2e-specs.mjs).
+const CompanySheet = lazy(() => import("./company-sheet").then((m) => ({ default: m.CompanySheet })));
 
 function shownName(data: MyCompanies | undefined, fallback: string | null | undefined): string {
   const active = data?.companies.find((company) => company.id === data.active_id);
