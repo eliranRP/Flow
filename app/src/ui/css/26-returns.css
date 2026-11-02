@@ -86,17 +86,20 @@
 /* FLOW-454: each source is a grid of fixed tracks, dot | label | ⓘ and a flexible gap | amount | the
    equity rows' chevron track, so the amounts keep one column whatever a row holds, at its edge
    (left in RTL), in tabular figures. */
+/* FLOW-1022: the rows share the card's tracks (subgrid), so the label track is as wide as the longest
+   label and every ⓘ sits in one column, not right after its own label. */
 .ui-ret-sources {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: var(--space-2) max-content minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
+  column-gap: var(--space-2);
 }
 
 .ui-ret-source {
   display: grid;
-  grid-template-columns: var(--space-2) auto minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   grid-template-rows: minmax(var(--touch-min), auto);
   align-items: center;
-  column-gap: var(--space-2);
   font-size: var(--type-line2-size);
 }
 
@@ -119,8 +122,15 @@
   grid-column: 4;
   min-inline-size: 0;
   font-variant-numeric: var(--font-numerals);
-  text-align: end;
+  text-align: start;
   white-space: nowrap;
+}
+
+/* FLOW-1022: an amount lines up on its last digit (the column's start in RTL), so the "$" of every row
+   meets in one column and a minus stands outside it; הוספה keeps the column's far edge. */
+.ui-ret-source-value:has(.ui-ret-add),
+.ui-ret-equity-value:has(.ui-ret-add) {
+  text-align: end;
 }
 
 /* A hint under a row (what is missing): its own row of the grid, from the label's track to the end. */
@@ -199,7 +209,7 @@
 
 .ui-ret-equity-value {
   font-variant-numeric: var(--font-numerals);
-  text-align: end;
+  text-align: start;
   white-space: nowrap;
 }
 
