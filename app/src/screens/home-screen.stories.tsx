@@ -7,6 +7,7 @@ import { HomeNextMonth } from "./home-next-month";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
+import { BandCompany } from "../ui/top-band";
 import { exampleOnBand } from "../ui/screen-stories-support";
 
 const meta = {
@@ -63,7 +64,7 @@ export const HomeAttentionSingular: Story = {
 };
 
 /** FLOW-364: Home's band with the month, its figures, the split card and the attention box. Invented figures. */
-function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null }) {
+function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null, recurringTip = false }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null; recurringTip?: boolean }) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
   return (
@@ -79,6 +80,9 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
         offlineSince={offlineSince}
+        recurringTip={recurringTip}
+        lateRecurring={recurringTip ? 1 : 0}
+        company={recurringTip ? <BandCompany name="Acme Test Co" onOpen={() => undefined} /> : undefined}
       />
     </StoryRoute>
   );
@@ -111,8 +115,11 @@ export const HomeNextMonthBlock: Story = {
   },
 };
 
-/** The current month, with the attention box and the split card. */
+/** The current month, with the attention box and the split card. A first-time owner: no קבועים tip (FLOW-1015). */
 export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
+
+/** FLOW-1015: a returning owner (one with recurring rows) sees the קבועים tip once, the dot's sentence while a bill is late. Live Home has the company on the band, so the bubble opens over it. */
+export const HomeRecurringTip: Story = { render: () => <CashHomeStory recurringTip /> };
 
 /** FLOW-958: offline, the last figures stay, and a line in the band says when they were read. */
 export const HomeOffline: Story = { render: () => <CashHomeStory offlineSince={Date.UTC(2026, 9, 26, 7, 41)} /> };

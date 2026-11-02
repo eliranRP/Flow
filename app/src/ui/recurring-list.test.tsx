@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { RecurringScreen } from "../screens/recurring-screen";
+import { RecurringScreen, recurringView } from "../screens/recurring-screen";
+import { RecurringList, RecurringListEmpty } from "./recurring-list";
 import { RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../recurring-sample";
 import { ToastProvider } from "./toast";
 
@@ -167,5 +168,30 @@ describe("the month card and the sides (the board's two columns)", () => {
     expect(within(card).getByText("יוצא החודש")).toBeTruthy();
     expect(screen.getByText("הכנסות קבועות")).toBeTruthy();
     expect(screen.getByText("הוצאות קבועות")).toBeTruthy();
+  });
+});
+
+describe("the add row (FLOW-1014)", () => {
+  const add = <button type="button">הוספת קבוע</button>;
+
+  it("sits under the month card, before the late bills and the groups", () => {
+    render(
+      <MemoryRouter>
+        <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11")} addLine={add} />
+      </MemoryRouter>,
+    );
+    const card = screen.getByRole("region", { name: "החודש" });
+    const button = screen.getByRole("button", { name: "הוספת קבוע" });
+    expect(card.nextElementSibling).toBe(button);
+  });
+
+  it("is the empty screen's one action", () => {
+    render(
+      <MemoryRouter>
+        <RecurringListEmpty addLine={add} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("עוד Flow לומד")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "הוספת קבוע" }).closest(".ui-empty-action")).not.toBeNull();
   });
 });

@@ -10,6 +10,12 @@
   padding: var(--space-3) var(--space-side) var(--space-6);
 }
 
+/* FLOW-1016: the list's end while the next page loads, "טוענים עוד…" centred under the last group. */
+.ui-review-more {
+  padding-block: var(--space-2);
+  text-align: center;
+}
+
 .ui-review-list-body > .ui-page-offline,
 .ui-review-list-body > .ui-page-failed,
 .ui-review-list-body > .ui-review-list-empty {

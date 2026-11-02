@@ -122,10 +122,14 @@ function ListBody({ state, failTitle, children }: { state: ReviewListState; fail
   );
 }
 
-/** "6 פריטים · 1 בלי פרויקט": the count and what is missing (board M5). */
-export function reviewAllSubtitle(count: number, missing: number | null): string {
+/**
+ * "6 פריטים · 1 בלי פרויקט": the count and what is missing (board M5). FLOW-1016: with pages still to load the
+ * loaded rows give only a floor, "לפחות 12 בלי פרויקט", so the count never goes missing on a long queue.
+ */
+export function reviewAllSubtitle(count: number, missing: number, more = false): string {
   const items = count === 1 ? "פריט אחד" : `${reviewCountText(count)} פריטים`;
-  return missing == null || missing === 0 ? items : `${items} · ${String(missing)} בלי פרויקט`;
+  if (missing === 0) return items;
+  return `${items} · ${more ? "לפחות " : ""}${String(missing)} בלי פרויקט`;
 }
 
 type AllEntry =
@@ -175,8 +179,8 @@ export function ReviewAllList({
   }, [search, rows]);
   const ordered = useHeldOrder(rows, (row) => row.id);
   const count = (paging?.total ?? rows.length) + bookings.length;
-  // The missing count reads the loaded rows only; with pages left it would under-count, so it waits for the last page.
-  const missing = paging?.more === true ? null : rows.filter((row) => row.project_id == null).length;
+  // The missing count reads the loaded rows only: with pages left it is a floor (FLOW-1016).
+  const missing = rows.filter((row) => row.project_id == null).length;
   const today = israelToday(now);
   // Jev's bookings take their date's place; under one day they come first, as in the queue.
   const rowEntries: AllEntry[] = ordered.map((row) => ({ kind: "row" as const, key: row.id, date: row.doc_date, row }));
@@ -200,7 +204,7 @@ export function ReviewAllList({
       <ScreenHeader
         layout="stacked"
         title="כל הפריטים לאישור"
-        subtitle={failed || count === 0 ? undefined : reviewAllSubtitle(count, missing)}
+        subtitle={failed || count === 0 ? undefined : reviewAllSubtitle(count, missing, paging?.more === true)}
         backTo={backTo}
         backText="בית"
       />

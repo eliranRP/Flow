@@ -125,6 +125,16 @@ describe("FLOW-984: the queue loads its next page ahead of the owner", () => {
   });
 });
 
+describe("FLOW-1016: the cards loaded are used up while a page loads", () => {
+  it("keeps the queue's frame with the card's place as a skeleton, not the whole-screen loader", () => {
+    render(queue([], pagingOf({ loading: true })));
+    expect(screen.getByRole("heading", { name: "לאישור" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-review-card-loading")).not.toBeNull();
+    expect(screen.getByText("טוענים עוד…")).toHaveAttribute("role", "status");
+    expect(screen.queryByText("הכל מאושר")).not.toBeInTheDocument();
+  });
+});
+
 describe("FLOW-984: a page that fails to load", () => {
   it("shows a quiet row where the next card would be, and its retry loads the page again", () => {
     const paging = pagingOf({ failed: true });

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RecurringList } from "../ui/recurring-list";
+import { RecurringList, RecurringListEmpty } from "../ui/recurring-list";
 import { RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../recurring-sample";
 import { StoryRoute } from "../ui/story-route";
 import { RecurringScreen, recurringView } from "./recurring-screen";
@@ -7,6 +7,8 @@ import { ForecastAddLine } from "./forecast-add-line";
 
 /** FLOW-447: the list on the rule-25 fixture. The viewport toolbar sets the width. */
 const view = recurringView(RECURRING_FIXTURE, "2026-10-11");
+
+const addLine = <ForecastAddLine month="2026-10" projects={[{ id: "p-elm", name: "Elm St" }, { id: "office", name: "כללי" }]} search="" back="recurring" pace="month" label="הוספת קבוע" />;
 
 const meta = {
   title: "Screens/Recurring",
@@ -18,15 +20,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** FLOW-1011: הוספת קבוע לצפי under the groups: a project, then its add page at כל חודש. */
+/** FLOW-1011: הוספת קבוע, under the month card (FLOW-1014): a project, then its add page at כל חודש. */
 export const AddLine: Story = {
-  render: () => (
-    <RecurringList
-      {...view}
-      addLine={<ForecastAddLine month="2026-10" projects={[{ id: "p-elm", name: "Elm St" }, { id: "office", name: "כללי" }]} search="" back="recurring" pace="month" label="הוספת קבוע לצפי" />}
-    />
-  ),
+  render: () => <RecurringList {...view} addLine={addLine} />,
 };
+
+/** FLOW-1014: no recurring charge yet: the empty screen's one action is the same add row. */
+export const EmptyAddLine: Story = { render: () => <RecurringListEmpty addLine={addLine} /> };
 
 /** FLOW-963: offline with the rows on screen, the line under the head says which moment they are from. */
 export const Offline: Story = { render: () => <RecurringList {...view} offlineSince={Date.parse("2026-10-11T06:41:00Z")} /> };

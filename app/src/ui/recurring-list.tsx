@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { Avatar } from "./avatar";
 import { BackButton } from "./back";
-import { ClockIcon } from "./icons";
+import { ClockIcon, RepeatIcon } from "./icons";
+import { EmptyState } from "./empty-state";
 import { cx } from "./cx";
 import { SectionHead } from "./layout";
 import { BandOfflineLine } from "./band-states";
@@ -76,7 +77,7 @@ export type RecurringListProps = {
   openId?: string;
   /** FLOW-963: offline, the moment the rows on screen are from; undefined when online. */
   offlineSince?: number;
-  /** FLOW-1011: under the groups, the row that adds a recurring line to a project's forecast. */
+  /** FLOW-1011: the row that adds a recurring line to a project's forecast; FLOW-1014: under the month card, in reach. */
   addLine?: ReactNode;
 };
 
@@ -84,6 +85,22 @@ export type RecurringListProps = {
 export function RecurringBack() {
   const search = usePreviewSearch();
   return <BackButton fallback={`/${search}`} text="בית" />;
+}
+
+/**
+ * No recurring charge yet: the title and the one line of what will show here (FLOW-447c, StatesRecurringEmpty).
+ * FLOW-1014: the add row is the screen's one action, so the first recurring line can be added here too.
+ */
+export function RecurringListEmpty({ addLine }: { addLine?: ReactNode }) {
+  return (
+    <div className="ui-recurring">
+      <header className="ui-recurring-head">
+        <RecurringBack />
+        <h1 className="t-title">קבועים</h1>
+      </header>
+      <EmptyState icon={<RepeatIcon />} title="עוד Flow לומד" body="חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה." action={addLine} />
+    </div>
+  );
 }
 
 /**
@@ -112,6 +129,7 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
         <MonthSum label="נכנס החודש" total={`+${money(inflow.total)}`} income done={inflow.got} whole={inflow.total} doneText={`התקבל ${money(inflow.got)}`} leftText={`עוד ${money(inflow.toCome)}`} />
         <MonthSum label="יוצא החודש" total={money(outflow.total)} done={outflow.paid} whole={outflow.total} doneText={`שולם ${money(outflow.paid)}`} leftText={`עוד ${money(outflow.toCome)}`} />
       </section>
+      {addLine}
       {late.length > 0 && (
         <section className="ui-recurring-late" aria-labelledby={lateHead}>
           <div className="ui-recurring-late-head">
@@ -141,7 +159,6 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
           <ul className="ui-recurring-rows">{group.rows.map(rowView)}</ul>
         </section>
       ))}
-      {addLine}
     </div>
   );
 }

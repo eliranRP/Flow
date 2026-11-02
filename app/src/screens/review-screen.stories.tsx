@@ -119,6 +119,30 @@ export const ReviewCardPageFailed: Story = {
   ),
 };
 
+/** FLOW-1016: the loaded cards are used up and the next page is on its way: the frame stays, the card is a skeleton. */
+export const ReviewCardPageLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs>
+      <ExampleBar />
+      <ReviewQueue rows={[]} search="" sample paging={{ ...pagedLoaded, loading: true }} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-1016: with pages left the missing count is a floor ("לפחות 1 בלי פרויקט"), and the end says the next page loads. */
+export const ReviewAllPageLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/review/all" tabs>
+      <ReviewAllList
+        backTo="/review"
+        search=""
+        rows={[sampleReview, { ...sampleReview, id: "r2", transaction_id: "t2", project_id: null, project_name: null, project_suggested: false }]}
+        paging={{ ...pagedLoaded, loading: true }}
+      />
+    </StoryRoute>
+  ),
+};
+
 /** FLOW-984: the full list counts every open item and ends with the quiet row when a page failed. */
 export const ReviewAllPageFailed: Story = {
   render: () => (
