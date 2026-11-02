@@ -15,7 +15,7 @@ import { LOAN_SOURCE, type NextMonthRow } from "../project-next-month";
 import { useCompanyRole, useHoldWrites } from "../use-is-viewer";
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
-import { israelToday } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
 import { forecastWords } from "../ui/forecast-words";
 import { ChevronIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
@@ -37,6 +37,11 @@ type PartRow = { kind: "row"; row: NextMonthRow } | { kind: "kept"; minor: bigin
 function partRows(part: CompanyForecastPart): PartRow[] {
   const rows: PartRow[] = part.forecast.rows.map((row) => ({ kind: "row", row }));
   return part.forecast.cashOnlyMinor === 0n ? rows : [...rows, { kind: "kept", minor: part.forecast.cashOnlyMinor }];
+}
+
+/** FLOW-1013: the title says צפי once, so a dated row's hint is its day, not "צפוי 05/11". */
+function partHint(row: NextMonthRow, months: number, month: string): string {
+  return row.kind !== "loan" && row.kind !== "added" && row.date != null ? `${formatDayMonth(row.date)} · קבוע` : rowSource(row, months, month);
 }
 
 /** The parts in the Projects tab's order (unknown ones after them), the general costs last. */
@@ -147,13 +152,12 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
             const head = (
               <>
                 <h2 className="ui-cn-name" data-clip-ok>{name}</h2>
-                <span className="ui-fc-tag">צפי</span>
                 <Amount agorot={net} currency={currency} income={net > 0n} />
                 {projectId == null ? null : <ChevronIcon size={16} />}
               </>
             );
             return (
-              <section key={part.projectId ?? "general"} className="ui-cn-group" aria-label={`${name}, צפי`}>
+              <section key={part.projectId ?? "general"} className="ui-cn-group" aria-label={name}>
                 {projectId == null ? <div className="ui-cn-head ui-page-pad">{head}</div> : (
                   <Link to={`/projects/${projectId}${search}`} className="ui-cn-head ui-page-pad ui-hit m-press">{head}</Link>
                 )}
@@ -165,6 +169,8 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
                       variant="transaction"
                       title={NOT_IN_PROFIT_LABEL}
                       hint={LOAN_SOURCE}
+                      // FLOW-1013: no link, so it fades like a line kept out of profit, not like its tappable siblings.
+                      setAside
                       agorot={item.minor}
                       currency={currency}
                       sign="out"
@@ -177,7 +183,7 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
                       layout="flat"
                       variant="transaction"
                       title={item.row.name}
-                      hint={rowSource(item.row, part.forecast.averageMonths, part.forecast.month)}
+                      hint={partHint(item.row, part.forecast.averageMonths, part.forecast.month)}
                       agorot={item.row.minor < 0n ? -item.row.minor : item.row.minor}
                       currency={currency}
                       sign={item.row.minor < 0n ? "out" : "in"}

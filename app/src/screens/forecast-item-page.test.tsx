@@ -278,9 +278,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     return { ...sample, data: { ...sample.data, build } };
   }
 
-  it("makes a line added this month repeat: the project forecast's pace sheet writes the line itself", async () => {
-    rpc.mockClear();
-    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+  async function pickMonthly() {
     fireEvent.click(await screen.findByRole("button", { name: "כל כמה זמן: פעם אחת" }));
     const sheet = await screen.findByRole("dialog", { name: "כל כמה זמן" });
     // The radios: פעם אחת, כל חודש, כל חודשיים, כל רבעון, כל שנה.
@@ -290,6 +288,20 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     });
     if (month == null) throw new Error("no monthly radio");
     fireEvent.click(month);
+    await sheetGone();
+  }
+
+  it("makes a line added this month repeat: the pace pick is a draft, and שמירת השינוי בצפי writes the line (FLOW-1012)", async () => {
+    rpc.mockClear();
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    expect(await screen.findByText("משנה רק את הצפי של אוקטובר. השורה בצפי של הפרויקט לא משתנה.")).toBeInTheDocument();
+    await pickMonthly();
+    // Nothing is written yet, and the page no longer says the project's line stays as it is.
+    expect(rpc).not.toHaveBeenCalledWith("set_project_forecast_edit", expect.anything());
+    expect(screen.getByRole("button", { name: "כל כמה זמן: כל חודש" })).toBeInTheDocument();
+    expect(screen.queryByText(/השורה בצפי של הפרויקט לא משתנה/)).toBeNull();
+    expect(screen.getByText("משנה את הצפי של אוקטובר, ואת השורה בצפי של הפרויקט מאוקטובר והלאה.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
     await waitFor(() => {
       expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", {
         p_project_id: "p-green",
@@ -297,6 +309,22 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
         p_edit: { row_key: "add:e-1", amount_minor: 72_900, pace: "month" },
       });
     });
+    // A pace pick alone leaves this month's amount and date as they were.
+    expect(rpc).not.toHaveBeenCalledWith("set_forecast_item", expect.anything());
+  });
+
+  it("writes nothing for a pace pick the page leaves without saving (FLOW-1012)", async () => {
+    rpc.mockClear();
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    await pickMonthly();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה לתזרים צפוי" }));
+    await waitFor(() => { expect(screen.getByTestId("where")).toHaveTextContent(/^\/forecast$/); });
+    expect(rpc).not.toHaveBeenCalledWith("set_project_forecast_edit", expect.anything());
+  });
+
+  it("names an added line as a thing: שורה בצפי (FLOW-1013)", async () => {
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    expect(await screen.findByText("אוקטובר · הכנסה · שורה בצפי")).toBeInTheDocument();
   });
 
   it("shows the pace of a line added in an earlier month, and opens the project's forecast to change it", async () => {

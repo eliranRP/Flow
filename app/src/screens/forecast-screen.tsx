@@ -164,6 +164,9 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const overheadId = overhead.project?.id ?? null;
   const projectList: ForecastProject[] = sample?.projects?.slice()
     ?? (projects.data?.projects ?? []).map(({ id, name, status }) => ({ id, name, status, is_overhead: id === overheadId }));
+  const addTo = lineProjects(projectList, overheadId);
+  // FLOW-1013: with one place to add to, the button names it (there is no sheet to ask).
+  const onlyTo = addTo.length === 1 ? addTo[0] : undefined;
   // A sample with no month by category draws its categories with nothing so far, never a skeleton that stays.
   const soFar = live ? soFarQuery.data ?? null : sample.soFar ?? NO_SO_FAR;
   // The row that opened the page takes the focus back when it closes.
@@ -447,7 +450,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             ) : null}
             </>
           )}
-          {!addLineReady(live, projects.data != null, overhead) ? null : <ForecastAddLine month={month} projects={lineProjects(projectList, overheadId)} search={search} />}
+          {!addLineReady(live, projects.data != null, overhead) ? null : <ForecastAddLine month={month} projects={addTo} search={search} {...(onlyTo == null ? {} : { label: `הוספת קטגוריה לצפי של ${onlyTo.name}` })} />}
           <ForecastFootnote />
         </>
       )}

@@ -56,10 +56,12 @@ export function itemLate(item: ForecastItem, today: string): boolean {
   return item.late_days > 0 && (item.due_on == null || item.due_on === weekEndDay(today));
 }
 
-/** The row's first words: "חשבונית #1043", "חשבון ספק #VD-118" or "קבוע". */
+/** FLOW-1013: a line the owner added to a project's forecast, named as a thing, like "קבוע" and "חשבונית". */
+export const ADDED_LINE = "שורה בצפי";
+
+/** What the item is: "חשבונית #1043", "חשבון ספק #VD-118", "קבוע" or "שורה בצפי". */
 export function itemWhat(item: ForecastItem): string {
-  // FLOW-1005: a line the owner added to a project's forecast, as the project page names it.
-  if (item.kind === "added") return "הוספת";
+  if (item.kind === "added") return ADDED_LINE;
   if (item.kind !== "invoice") return "קבוע";
   const label = item.direction === "income" ? "חשבונית" : "חשבון ספק";
   const number = item.description?.replace(/^(Invoice|Bill)\s*/i, "") ?? "";
@@ -76,7 +78,7 @@ export function itemWhen(item: ForecastItem, today: string): string {
   return item.day != null ? `ב־${String(item.day)}` : "השבוע";
 }
 
-/** One item's row: its name, what and when, and its amount; a tap opens its page. */
+/** One item's row: its name, when and what (FLOW-1013: the date first, so 320 never cuts it), and its amount; a tap opens its page. */
 export function ForecastRowButton({ item, today, onOpen, leaving }: { item: ForecastItem; today: string; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
   const name = item.name === "" ? "ללא שם" : item.name;
   const amount = item.direction === "income" ? signed(item.minor, "+", item.currency) : signed(item.minor, "−", item.currency);
@@ -87,7 +89,7 @@ export function ForecastRowButton({ item, today, onOpen, leaving }: { item: Fore
         <span className="ui-forecast-initial" aria-hidden="true">{name.slice(0, 1)}</span>
         <span className="ui-forecast-text">
           <span className="ui-forecast-name">{name}</span>
-          <span className="ui-forecast-meta">{`${itemWhat(item)} · ${itemWhen(item, today)}`}</span>
+          <span className="ui-forecast-meta">{`${itemWhen(item, today)} · ${itemWhat(item)}`}</span>
         </span>
         <span className={cx("ui-forecast-amount", item.overridden && "ui-forecast-edited")}>{figure}</span>
       </button>
