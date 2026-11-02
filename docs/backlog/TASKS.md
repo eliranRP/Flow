@@ -427,7 +427,6 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1016"></a>[FLOW-1016](tasks/FLOW-1016.md) | Review lists: the בלי פרויקט count with pages left, and a loading line at the end | SMALL UI |
 | <a id="flow-1017"></a>[FLOW-1017](tasks/FLOW-1017.md) | Recheck: קבועים behind an unlabeled icon, and a second figure on every Projects row | SMALL UI |
 | <a id="flow-1018"></a>[FLOW-1018](tasks/FLOW-1018.md) | One ביטול for a forecast item's save that changes both the pace and the amount or date | BACKLOG NIT |
-| <a id="flow-1019"></a>[FLOW-1019](tasks/FLOW-1019.md) | Home's קבועים tip loads its code after Home paints | SMALL CYCLE |
 
 ## Projects and reports
 

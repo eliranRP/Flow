@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROLE_LABEL, SWITCH_FAILED, type MyInvite } from "../team-api";
