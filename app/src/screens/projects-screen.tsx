@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import { type Dashboard, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
+import { formatAmountText, type Dashboard, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
@@ -18,7 +18,8 @@ import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { CompactBar } from "../ui/compact-bar";
 import { useScrolledPast } from "../ui/screen-header";
-import { Amount, formatAmount } from "../ui/amount";
+import { formatAmount } from "../ui/amount";
+import { cx } from "../ui/cx";
 import { CheckIcon, HomeIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { Avatar } from "../ui/avatar";
 import { List, ListRow } from "../ui/list-row";
@@ -173,7 +174,8 @@ function ProjectsBody({
           </Button>
         </div>
       ) : null}
-      <div className="ui-page-pad ui-projects-next">
+      {/* FLOW-1017: the card's height is held while its reads are out, so the rows under it never jump. */}
+      <div className={cx("ui-page-pad ui-projects-next", next.loading && "ui-projects-next-loading")}>
         <CompanyCashCard next={next} currency={base} today={today} thisMonthOut={thisMonthOut} href={`/forecast/next${search}`} />
       </div>
       <div className="ui-page-pad ui-projects-head">
@@ -235,16 +237,18 @@ function ProjectsBody({
 }
 
 /**
- * FLOW-990: a row's next month under its figure, the צפי tag and the cash net (a project's part, or the general
- * costs' on the overhead row). Undefined while the forecast is out or the part expects nothing.
+ * FLOW-990: a row's next month under its figure, the cash net (a project's part, or the general costs' on the
+ * overhead row). FLOW-1017: plain secondary text that names the month, "צפי לחודש הבא ₪X", not a tag and a second
+ * coloured figure. Undefined while the forecast is out or the part expects nothing.
  */
 function nextFigure(forecast: CompanyNextMonth | null, projectId: string | null, currency: string) {
   const net = forecast == null ? null : companyPartNet(forecast, projectId);
   if (net == null) return undefined;
+  const amount = formatAmountText(net, currency, { plus: net > 0n, direction: net > 0n ? "income" : undefined });
+  // Two lines, the words then the amount: on one line the figure would take the title's room at 320.
   return (
     <span className="ui-proj-next">
-      <span className="ui-fc-tag">צפי</span>
-      <Amount agorot={net} currency={currency} income={net > 0n} />
+      <span>צפי לחודש הבא</span> <bdi dir="ltr">{amount}</bdi>
     </span>
   );
 }

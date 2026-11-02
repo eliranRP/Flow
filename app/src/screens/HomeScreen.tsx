@@ -350,9 +350,9 @@ export function CashHome({
   nextMonth?: ReactNode;
   /** FLOW-161: the reports card, the last card on the page. */
   reports?: ReactNode;
-  /** FLOW-986: late recurring bills and income, the dot on the band's קבועים icon. */
+  /** FLOW-986: late recurring bills and income, the count on the band's קבועים icon (FLOW-1017). */
   lateRecurring?: number;
-  /** FLOW-986: where the קבועים icon goes (the dev fixtures' own path). */
+  /** FLOW-986: where the קבועים icon and the attention box's link go (the dev fixtures' own path). */
   recurringTo?: string;
   /** FLOW-987: may show the one-time tip under the band's קבועים icon. */
   recurringTip?: boolean;
@@ -472,7 +472,7 @@ export function CashHome({
       {/* Design lead: Home shows money that needs a hand whatever its main figure; an empty box hides.
           FLOW-958: it comes right after the band, so its button is above the fold. */}
       <div className="m-page-enter" style={pageEnterStyle(1)}>
-        {isPast ? null : <AttentionBox rows={attention} />}
+        {isPast ? null : <AttentionBox rows={attention} recurringHref={`${recurringTo ?? "/recurring"}${search}`} />}
         {checklist}
       </div>
 

@@ -56,21 +56,28 @@ describe("ProjectsScreen (FLOW-445b)", () => {
     for (const part of forecast.parts) {
       const row = NEXT_MONTH_PROJECTS.projects.find((item) => (part.projectId == null ? item.is_overhead : item.id === part.projectId));
       expect(row).toBeDefined();
-      const figure = within(screen.getByRole("link", { name: new RegExp(`^${row?.name.replace("/", "\\/") ?? ""}`, "u") })).getByText("צפי").parentElement;
-      expect(figure?.textContent).toBe(`צפי${formatAmountText(part.forecast.netMinor, "USD", { plus: part.forecast.netMinor > 0n, direction: part.forecast.netMinor > 0n ? "income" : undefined })}`);
+      // FLOW-1017: plain text that names the month, in the row's accessible name too; no tag, no coloured figure.
+      const link = screen.getByRole("link", { name: new RegExp(`^${row?.name.replace("/", "\\/") ?? ""}`, "u") });
+      const figure = link.querySelector(".ui-row-end-sub");
+      const amount = formatAmountText(part.forecast.netMinor, "USD", { plus: part.forecast.netMinor > 0n, direction: part.forecast.netMinor > 0n ? "income" : undefined });
+      expect(figure?.textContent).toBe(`צפי לחודש הבא ${amount}`);
+      expect(figure?.querySelector(".ui-fc-tag, .ui-amount")).toBeNull();
+      expect(link).toHaveAccessibleName(expect.stringContaining(`צפי לחודש הבא ${amount}`) as string);
       shown.push(part.forecast.netMinor);
     }
     expect(shown.reduce((sum, net) => sum + net, 0n)).toBe(forecast.netMinor);
     // The overhead row carries the general costs' part.
-    expect(within(screen.getByRole("link", { name: /^משרד החברה \/ תקורה/u })).getByText("צפי")).toBeInTheDocument();
+    expect(within(screen.getByRole("link", { name: /^משרד החברה \/ תקורה/u })).getByText(/^צפי לחודש הבא/u)).toBeInTheDocument();
     // A project that expects nothing next month has no צפי figure.
     const quiet = NEXT_MONTH_PROJECTS.projects.filter((item) => !item.is_overhead && !forecast.parts.some((part) => part.projectId === item.id));
-    for (const row of quiet) expect(within(screen.getByRole("link", { name: new RegExp(`^${row.name}`, "u") })).queryByText("צפי")).toBeNull();
+    for (const row of quiet) expect(within(screen.getByRole("link", { name: new RegExp(`^${row.name}`, "u") })).queryByText(/צפי/u)).toBeNull();
   });
 
   it("FLOW-990: no forecast sample, no card and no צפי figures", () => {
     renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} />);
     expect(screen.queryByText("צפוי להיכנס")).toBeNull();
-    expect(screen.queryByText("צפי")).toBeNull();
+    expect(screen.queryByText(/צפי לחודש הבא/u)).toBeNull();
+    // FLOW-1017: nothing read, nothing held: the empty slot takes no room.
+    expect(document.querySelector(".ui-projects-next-loading")).toBeNull();
   });
 });

@@ -176,6 +176,13 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* FLOW-1017: the box's foot, a link to קבועים by name, under the last row's line. */
+.ui-home-attention-foot {
+  display: flex;
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  border-block-start: 1px solid var(--color-line);
+}
+
 .ui-home-attention-title {
   margin: 0 var(--space-4) var(--space-3);
   font-size: var(--type-section-size);
