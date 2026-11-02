@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import type { RecurringChange } from "@flow/shared";
 import { useSearchParams } from "react-router-dom";
 import { chargeChangeViews, useProjectRecurringChangesQuery, useRecurringChangesQuery } from "../forecast";
