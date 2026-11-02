@@ -18,14 +18,8 @@ import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 import { projectStateLine } from "./project-detail-screen";
 import { FiguresCard, LoansCard, type InvestmentRowRefs, type PropertyExtras } from "./project-investment-cards";
-import {
-  toProjectInvestment,
-  useRehabCategoriesQuery,
-  useRehabCostsQuery,
-  type ProjectInvestment,
-  type RehabCategory,
-} from "./project-investment-data";
-import { InvestmentEditSheet, RehabSheet, type InvestmentPatch } from "./project-investment-sheets";
+import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
+import { InvestmentEditSheet, type InvestmentPatch } from "./project-investment-sheets";
 import { MetricsCard, ReturnsCardsFailed, ReturnsCardsSkeleton, TotalReturnCard } from "./project-returns-cards";
 import { usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
 import type { EditField, InfoKey } from "./project-returns-info";
@@ -98,9 +92,8 @@ function restorePatch(field: InvestmentField, before: InvestmentFigures, extras:
   return { value_minor: toNumber(before.valueMinor), value_date: before.valueMinor == null ? null : before.valueDate };
 }
 
-type OpenSheet = InvestmentField | "rehab" | "tax" | null;
+type OpenSheet = InvestmentField | "tax" | null;
 
-const REHAB_LAYER = "investment-rehab";
 const INFO_LAYER = "investment-info-";
 const INVESTMENT_FIELDS: readonly string[] = ["purchase", "arv", "value", "land", "units"];
 
@@ -115,6 +108,18 @@ function infoFromHistory(state: unknown): InfoKey | null {
 }
 
 export const TAX_REFUSED = "רק בעל העסק יכול לשנות את מדרגת המס.";
+export const LAND_ACCOUNT_REFUSED = "רק בעל העסק יכול לבחור את חשבון הקרקע.";
+
+/** Sample mode names the suggested land account the way the server reads it (0248). */
+function landFromSuggestion(r: PropertyReturns): PropertyReturns {
+  const s = r.inputs.landSuggestion;
+  if (s == null) return r;
+  return {
+    ...r,
+    inputs: { ...r.inputs, landMinor: s.minor, landSource: "books", landAccount: { id: s.accountId, name: s.name }, landSuggestion: null },
+    missing: r.missing.filter((input) => input !== "land"),
+  };
+}
 
 /** The figures of a project with no investment read: its loans only (an overhead project, an older payload). */
 function loansOnly(currency: string, data: ProjectInvestment): InvestmentFigures {
@@ -138,13 +143,12 @@ function loansOnly(currency: string, data: ProjectInvestment): InvestmentFigures
  * FLOW-446 (board Invest), FLOW-451 (board ConceptATotalReturn): a project's investment and loans, its
  * own page under the project. The year's total return and its sources, the equity in the property, the
  * metrics (each figure's ⓘ opens its sheet), the property's figures (each opens its edit sheet, rehab
- * opens its breakdown) and the loans. A viewer reads it; nothing opens for a write. `sample` draws it
+ * its own page) and the loans. A viewer reads it; nothing opens for a write. `sample` draws it
  * with no network (stories, dev route).
  */
 export function ProjectInvestmentScreen({
   sample,
   sampleInvestment,
-  sampleCategories,
   sampleReturns,
   initialSheet = null,
   initialInfo = null,
@@ -154,7 +158,6 @@ export function ProjectInvestmentScreen({
 }: {
   sample?: NonNullable<ProjectDetail>;
   sampleInvestment?: ProjectInvestment;
-  sampleCategories?: RehabCategory[];
   sampleReturns?: PropertyReturns;
   /** Stories open a sheet on first draw. */
   initialSheet?: OpenSheet;
@@ -190,12 +193,11 @@ export function ProjectInvestmentScreen({
 
   // `?edit=land` (a part's or a metric's page) opens that figure's sheet on arrival.
   const linked = editFieldOf(new URLSearchParams(location.search).get("edit"));
-  // Back from a category's lines lands on the rehab sheet's own history entry: open it again there.
   const [sheet, setSheet] = useState<OpenSheet>(() => {
     if (readOnly) return null;
     if (initialSheet != null) return initialSheet;
     if (linked != null) return linked === "tax_bracket" ? "tax" : linked;
-    return sheetStack(location.state).includes(REHAB_LAYER) ? "rehab" : null;
+    return null;
   });
   const [editField, setEditField] = useState<InvestmentField>(isInvestmentField(sheet) ? sheet : "purchase");
   // Back from a page an ⓘ sheet opened lands on the sheet's entry: open it again there.
@@ -208,12 +210,7 @@ export function ProjectInvestmentScreen({
     value: useRef<HTMLButtonElement>(null),
     land: useRef<HTMLButtonElement>(null),
     units: useRef<HTMLButtonElement>(null),
-    rehab: useRef<HTMLButtonElement>(null),
   };
-  const rehabOpen = sheet === "rehab";
-  const costs = useRehabCostsQuery(projectId, rehabOpen && !sampled);
-  const categories = useRehabCategoriesQuery(rehabOpen && !sampled);
-  const setRehabSheet = useSheetHistory(REHAB_LAYER, rehabOpen, (next) => { setSheet(next ? "rehab" : null); });
   const setInfoSheet = useSheetHistory(`${INFO_LAYER}${infoKey}`, info != null, (next) => { setInfo(next ? infoKey : null); });
 
   const save = useWrite<SaveRequest>({
@@ -238,6 +235,23 @@ export function ProjectInvestmentScreen({
       assertNoError(await supabase.rpc("set_tax_bracket", { p_bp: bp as number }));
     },
   });
+  const saveLand = useWrite<string>({
+    failure: (error) => ((error as { code?: string }).code === "42501" ? { message: LAND_ACCOUNT_REFUSED, retry: false } : "לא הצלחנו לקחת את שווי הקרקע מהספרים."),
+    success: "שווי הקרקע נלקח מהספרים",
+    keys: ["project"],
+    run: async (accountId) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_land_account", { p_account_id: accountId }));
+    },
+  });
+  const onUseLand = (accountId: string) => {
+    if (sampled) {
+      setSampleRet((current) => (current == null ? current : landFromSuggestion(current)));
+      return;
+    }
+    saveLand.mutate(accountId);
+  };
   const figuresRef = useRef<InvestmentFigures | null>(null);
   const extrasRef = useRef<PropertyExtras | null>(null);
   const bracketRef = useRef<number | null>(null);
@@ -304,6 +318,9 @@ export function ProjectInvestmentScreen({
     purchaseMinor: returns.inputs.purchaseMinor,
     purchaseSource: returns.inputs.purchaseSource,
     takenOverMinor: returns.inputs.takenOverMinor,
+    landSource: returns.inputs.landSource,
+    landAccount: returns.inputs.landAccount,
+    landSuggestion: returns.inputs.landSuggestion,
   };
   figuresRef.current = hasFigures ? figures : null;
   extrasRef.current = extras;
@@ -314,8 +331,6 @@ export function ProjectInvestmentScreen({
     : editField === "value" ? figures.valueMinor
     : editField === "land" ? (extras?.landMinor ?? null)
     : (extras == null ? null : BigInt(extras.units));
-  const rehabCosts = sampled ? (sampleData?.categories ?? []) : (costs.data ?? []);
-  const rehabCategories = sampled ? (sampleCategories ?? []) : (categories.data ?? null);
   const openEdit = (field: EditField) => {
     if (field === "tax_bracket") {
       setSheet("tax");
@@ -361,8 +376,10 @@ export function ProjectInvestmentScreen({
                 readOnly={readOnly}
                 rows={rows}
                 linesHref={`${base}/returns/acquisition${search}`}
+                rehabHref={`${base}/part/rehab${search}`}
                 onEdit={openEdit}
-                onRehab={() => { setRehabSheet(true); }}
+                onUseLand={readOnly ? undefined : onUseLand}
+                landBusy={saveLand.isPending}
               />
               {returns == null ? null : <MetricsCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />}
             </>
@@ -405,21 +422,6 @@ export function ProjectInvestmentScreen({
                 onOpenChange={(next) => { setSheet(next ? "tax" : null); }}
                 bp={returns?.inputs.taxBracketBp ?? null}
                 onSave={onSaveBracket}
-              />
-              <RehabSheet
-                projectId={projectId}
-                open={rehabOpen}
-                onOpenChange={setRehabSheet}
-                figures={figures}
-                costs={rehabCosts}
-                categories={rehabCategories}
-                loading={!sampled && (costs.isPending || categories.isPending)}
-                failed={!sampled && (costs.isError || categories.isError)}
-                onRetry={() => {
-                  if (costs.isError) void costs.refetch();
-                  if (categories.isError) void categories.refetch();
-                }}
-                returnFocusRef={rows.rehab}
               />
             </>
           )}

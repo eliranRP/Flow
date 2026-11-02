@@ -1,16 +1,15 @@
 import { projectDetailSchema } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { birchLaneInvestment, birchLaneRehabCategories, birchLaneRehabCosts } from "../dev/investment-sample";
+import { birchLaneInvestment } from "../dev/investment-sample";
 import { FILLED } from "../ui/investment-card.stories-support";
 import { shiftDays, israelToday } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
-import { categoryBack } from "./project-category-screen";
 import { loanNote } from "./project-investment-cards";
-import { REHAB_TOTAL_ONLY, rehabBreakdown, toProjectInvestment } from "./project-investment-data";
+import { toProjectInvestment } from "./project-investment-data";
 import { ProjectInvestmentScreen, INVESTMENT_REFUSED, applySample } from "./project-investment-screen";
 import { EMPTY_HOLD, editVerdict, rawToMinor } from "./project-investment-sheets";
 import { birchLaneReturns } from "../dev/returns-sample";
@@ -211,7 +210,7 @@ describe("the page", () => {
     expect(screen.getByRole("link", { name: /הלוואה בדולר/ })).toHaveTextContent("$120,000");
   });
 
-  it("is read-only for a viewer: no chevrons, no הוספה, nothing opens", async () => {
+  it("is read-only for a viewer: no הוספה, nothing opens but the renovation's page", async () => {
     serve(payload({ arv_minor: null, forced_equity_minor: null }));
     const { container } = renderPage({ viewer: true });
     await ready();
@@ -220,7 +219,24 @@ describe("the page", () => {
     expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => button.getAttribute("aria-label")?.startsWith("איך מחושב") === true || button.classList.contains("ui-ret-equity-row"))).toBe(true);
     expect(screen.queryByText("הוספה")).not.toBeInTheDocument();
     expect(screen.queryByText("+ הוספת הלוואה")).not.toBeInTheDocument();
-    expect(container.querySelector('[aria-label="נתוני הנכס"] .ui-pinv-chevron')).toBeNull();
+    // FLOW-460: the renovation's page only reads, so it opens for a viewer too.
+    const chevrons = [...container.querySelectorAll('[aria-label="נתוני הנכס"] .ui-pinv-chevron')];
+    expect(chevrons).toHaveLength(1);
+    expect(chevrons[0]?.closest("a")).toHaveAttribute("href", "/projects/p1/investment/part/rehab");
+  });
+
+  it("opens the renovation's own page from its row, not a sheet (FLOW-460)", async () => {
+    serve();
+    renderPage({ entry: "/projects/p1/investment?period=month&at=2026-09" });
+    await ready();
+    const card = within(screen.getByRole("region", { name: "נתוני הנכס" }));
+    const rehab = card.getByRole("link", { name: /שיפוץ עד היום/ });
+    expect(rehab).toHaveAttribute("href", "/projects/p1/investment/part/rehab");
+    expect(rehab).toHaveTextContent("₪312,400");
+    fireEvent.click(rehab);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // The old sheet read the costs again on the cash basis; nothing does now.
+    expect(rpc.calls.some((call) => call.name === "list_categories" || basisOf(call) === "cash")).toBe(false);
   });
 
   it("lists no loan rows when there is no loan at all", async () => {
@@ -473,146 +489,31 @@ describe("the edit sheet", () => {
   });
 });
 
-const costs = {
-  categories_by_currency: [
-    { currency: "ILS", id: "c-mat", name: "חומרים", amount_minor: 20_000_000 },
-    { currency: "ILS", id: null, name: null, amount_minor: 11_240_000 },
-    { currency: "ILS", id: "c-int", name: "ריבית משכנתא", amount_minor: 2_160_000 },
-  ],
-  excluded_categories_by_currency: [{ currency: "ILS", id: "c-buy", name: "רכישת נכס", amount_minor: 125_000_000 }],
-};
-
-const rehabCategories = [
-  { id: "c-mat", name: "חומרים", in_rehab: true, rehab: null },
-  { id: "c-int", name: "ריבית משכנתא", in_rehab: false, rehab: null, loan_part: "interest" },
-  { id: "c-buy", name: "רכישת נכס", in_rehab: false, rehab: null, excluded_from_pnl: true },
-];
-
-function serveRehab(options: { costs?: unknown; fail?: boolean; hold?: boolean } = {}) {
-  rpc.impl = (name, args) => {
-    if (name === "get_project" && basisOf({ name, args }) !== "cash") return Promise.resolve({ data: payload(), error: null });
-    if (options.hold === true) return new Promise(() => undefined);
-    if (options.fail === true) return Promise.resolve({ data: null, error: { message: "boom" } });
-    if (name === "get_project") return Promise.resolve({ data: { ...base, ...(options.costs ?? costs) }, error: null });
-    if (name === "list_categories") return Promise.resolve({ data: rehabCategories, error: null });
-    return Promise.resolve({ data: null, error: null });
-  };
-}
-
-async function openRehab(): Promise<void> {
-  renderPage();
-  await ready();
-  fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
-}
-
-describe("the rehab sheet", () => {
-  it("reads the costs only while it is open", async () => {
-    serveRehab();
+describe("the land from the books (FLOW-461)", () => {
+  it("names the account under a land the books give", async () => {
+    serve(payload(), null, returnsOf({}, { landMinor: 30_000_000n, landSource: "books", landTypedMinor: null, landAccount: { id: "acc-land", name: "קרקע לדוגמה" } }));
     renderPage();
     await ready();
-    expect(rpc.calls.some((call) => call.name === "list_categories" || basisOf(call) === "cash")).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
-    expect(await screen.findByText("חומרים")).toBeInTheDocument();
-    expect(rpc.calls.find((call) => basisOf(call) === "cash")?.args).toEqual({ p_id: "p1", p_basis: "cash" });
+    const card = within(screen.getByRole("region", { name: "נתוני הנכס" }));
+    expect(await card.findByRole("button", { name: /שווי הקרקע/ })).toHaveTextContent("מהספרים · קרקע לדוגמה");
   });
 
-  it("lists the counted categories, then the left-out ones with why", async () => {
-    serveRehab();
-    await openRehab();
-    expect(await screen.findByText("ריבית משכנתא · לא נספרים בשיפוץ")).toBeInTheDocument();
-    expect(screen.getByText("בלי קטגוריה")).toBeInTheDocument();
-    expect(screen.getByText("רכישת נכס · לא נספר ברווח")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "מה נספר בשיפוץ? בהגדרות הקטגוריות" })).toHaveAttribute("href", "/settings/categories");
+  it("suggests a land account, and השתמש names it", async () => {
+    serve(payload(), null, returnsOf({}, { landMinor: null, landSource: null, landTypedMinor: null, landSuggestion: { accountId: "acc-land", name: "קרקע לדוגמה", minor: 30_000_000n } }));
+    renderPage();
+    await ready();
+    expect(await screen.findByText(/מהספרים: /)).toHaveTextContent("מהספרים: קרקע לדוגמה · ₪300,000");
+    fireEvent.click(screen.getByRole("button", { name: /^השתמש/ }));
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "set_land_account")).toBe(true); });
+    expect(rpc.calls.find((call) => call.name === "set_land_account")?.args).toEqual({ p_account_id: "acc-land" });
   });
 
-  it("opens a counted category's lines all time on the cash basis (FLOW-404)", async () => {
-    serveRehab();
-    await openRehab();
-    const materials = await screen.findByRole("link", { name: /חומרים/ });
-    expect(materials).toHaveAttribute("href", "/projects/p1/categories/c-mat?period=all&basis=cash");
-    // A line with no category opens nothing, and keeps the chevron's space so the amounts line up.
-    expect(screen.getByText("בלי קטגוריה").closest("a")).toBeNull();
-  });
-
-  it("opens a left-out category's lines the same way", async () => {
-    serveRehab();
-    await openRehab();
-    const interest = await screen.findByRole("link", { name: /ריבית משכנתא/ });
-    expect(interest).toHaveAttribute("href", "/projects/p1/categories/c-int?period=all&basis=cash");
-    expect(screen.getByRole("link", { name: /רכישת נכס/ })).toHaveAttribute("href", "/projects/p1/categories/c-buy?period=all&basis=cash");
-  });
-
-  it("brings Back from the lines to the investment screen on its period", async () => {
-    serveRehab();
-    function BackProbe() {
-      const location = useLocation();
-      return <p data-testid="back">{categoryBack("p1", "", location.state)}</p>;
-    }
-    wrap(
-      <Routes>
-        <Route path="/projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
-        <Route path="/projects/:projectId/categories/:categoryId" element={<BackProbe />} />
-      </Routes>,
-      "/projects/p1/investment?period=month&at=2026-09",
-    );
-    await screen.findByText("נתוני הנכס");
-    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
-    fireEvent.click(await screen.findByRole("link", { name: /חומרים/ }));
-    expect(await screen.findByTestId("back")).toHaveTextContent("/projects/p1/investment?period=month&at=2026-09");
-  });
-
-  it("reopens the rehab sheet on Back from a category's lines", async () => {
-    serveRehab();
-    function BackProbe() {
-      const navigate = useNavigate();
-      return <button type="button" onClick={() => { void navigate(-1); }}>חזרה</button>;
-    }
-    wrap(
-      <Routes>
-        <Route path="/projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
-        <Route path="/projects/:projectId/categories/:categoryId" element={<BackProbe />} />
-      </Routes>,
-      "/projects/p1/investment",
-    );
-    await screen.findByText("נתוני הנכס");
-    fireEvent.click(screen.getByRole("button", { name: /שיפוץ עד היום/ }));
-    fireEvent.click(await screen.findByRole("link", { name: /ריבית משכנתא/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "חזרה" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("שיפוץ עד היום")).toBeInTheDocument();
-    expect(await within(dialog).findByText("חומרים")).toBeInTheDocument();
-  });
-
-  it("says loading while it reads", async () => {
-    serveRehab({ hold: true });
-    await openRehab();
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("status")).toHaveTextContent("טוען…");
-  });
-
-  it("offers a retry when the read fails", async () => {
-    serveRehab({ fail: true });
-    await openRehab();
-    expect(await screen.findByText("לא הצלחנו לטעון את הפירוט.")).toBeInTheDocument();
-    serveRehab();
-    fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר: פירוט השיפוץ" }));
-    expect(await screen.findByText("חומרים")).toBeInTheDocument();
-  });
-
-  it("shows only the total when the categories do not make it, as with loan fees in an ordinary category", async () => {
-    // A fees part filed in חומרים (0130) is a loan part: the server leaves it out of rehab, the category list keeps it.
-    serveRehab({
-      costs: {
-        categories_by_currency: [
-          { currency: "ILS", id: "c-mat", name: "חומרים", amount_minor: 20_150_000 },
-          { currency: "ILS", id: null, name: null, amount_minor: 11_240_000 },
-        ],
-        excluded_categories_by_currency: [],
-      },
-    });
-    await openRehab();
-    expect(await screen.findByText(REHAB_TOTAL_ONLY)).toBeInTheDocument();
-    expect(screen.queryByText("חומרים")).not.toBeInTheDocument();
+  it("offers no suggestion to a viewer", async () => {
+    serve(payload(), null, returnsOf({}, { landMinor: null, landSource: null, landTypedMinor: null, landSuggestion: { accountId: "acc-land", name: "קרקע לדוגמה", minor: 30_000_000n } }));
+    renderPage({ viewer: true });
+    await ready();
+    await screen.findByText("הון בנכס");
+    expect(screen.queryByRole("button", { name: /^השתמש/ })).toBeNull();
   });
 });
 
@@ -662,33 +563,10 @@ describe("investment helpers", () => {
     expect(editVerdict("purchase", { minor: null, date: null }, { raw: "", date: "2026-10-08", dateTouched: false })).toEqual({ kind: "clean" });
   });
 
-  it("lists rehab by category and the left-out ones apart, and checks the sum", () => {
-    const rows = [
-      { id: "a", name: "חומרים", currency: "ILS", minor: 700n },
-      { id: null, name: null, currency: "ILS", minor: 100n },
-      { id: "b", name: "רכישת נכס", currency: "ILS", minor: 5_000n },
-      { id: "a", name: "חומרים", currency: "ILS", minor: 200n },
-      { id: "c", name: "חומרים", currency: "USD", minor: 300n },
-    ];
-    const categories = [
-      { id: "a", name: "חומרים", in_rehab: true },
-      { id: "b", name: "רכישת נכס", in_rehab: false, excluded_from_pnl: true },
-    ];
-    const result = rehabBreakdown(rows, categories, "ILS", 1_000n);
-    expect(result.counted.map((line) => [line.name, line.minor])).toEqual([["חומרים", 900n], ["בלי קטגוריה", 100n]]);
-    expect(result.left).toEqual([expect.objectContaining({ name: "רכישת נכס", reason: "לא נספר ברווח" })]);
-    expect(result.addsUp).toBe(true);
-    expect(rehabBreakdown(rows, categories, "ILS", 999n).addsUp).toBe(false);
-  });
-
   it("keeps the sample figures consistent", () => {
     expect(FILLED.forcedEquityMinor).toBe((FILLED.arvMinor ?? 0n) - (FILLED.purchaseMinor ?? 0n) - FILLED.rehabMinor);
     const figures = birchLaneInvestment.figures;
     if (figures == null) throw new Error("sample figures");
-    // The flip's counted categories add up to its rehab total; the loan payments are not counted.
-    const breakdown = rehabBreakdown(birchLaneRehabCosts, birchLaneRehabCategories, "USD", figures.rehabMinor);
-    expect(breakdown.addsUp).toBe(true);
-    expect(breakdown.counted.reduce((sum, line) => sum + line.minor, 0n)).toBe(figures.rehabMinor);
     expect(figures.forcedEquityMinor).toBe((figures.arvMinor ?? 0n) - (figures.purchaseMinor ?? 0n) - figures.rehabMinor);
     expect(figures.currentEquityMinor).toBe((figures.valueMinor ?? 0n) - figures.loanMinor);
   });

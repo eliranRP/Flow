@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from "react";
 import { Link } from "react-router-dom";
+import { Button } from "../ui/button";
 import { Amount } from "../ui/amount";
 import { formatDisplay } from "../ui/date-math";
 import { ChevronIcon } from "../ui/icons";
@@ -18,7 +19,7 @@ import type { InvestmentLoan } from "./project-investment-data";
 import { UNITS_DEFAULT_HINT } from "./project-returns-info";
 
 /** What the cards ask the screen to open. A viewer's cards open nothing. */
-export type InvestmentRowRefs = Record<InvestmentField | "rehab", RefObject<HTMLButtonElement | null>>;
+export type InvestmentRowRefs = Record<InvestmentField, RefObject<HTMLButtonElement | null>>;
 
 function OtherNote({ list, note }: { list: readonly MinorInCurrency[]; note?: string }) {
   if (list.length === 0) return null;
@@ -89,26 +90,56 @@ export type PropertyExtras = {
   purchaseSource: "lines" | "typed" | null;
   /** A loan taken over at closing, inside the purchase; 0 when none. */
   takenOverMinor: bigint;
+  /** FLOW-461 (decision 0248): where the land comes from, its account, and a suggested one. */
+  landSource: "typed" | "books" | null;
+  landAccount: { id: string; name: string } | null;
+  landSuggestion: { accountId: string; name: string; minor: bigint } | null;
 };
 
-/** "נתוני הנכס": the figures; each opens its sheet (a viewer's open nothing). */
+/** "מהספרים: Land · $46,300" and השתמש: the land account the books suggest, before one is named. */
+function LandSuggestion({ suggestion, currency, busy, onUse }: {
+  suggestion: NonNullable<PropertyExtras["landSuggestion"]>;
+  currency: string;
+  busy: boolean;
+  onUse: (accountId: string) => void;
+}) {
+  return (
+    <div className="ui-pinv-suggest">
+      <span className="ui-pinv-hint">
+        {"מהספרים: "}
+        <bdi>{suggestion.name}</bdi>
+        {" · "}
+        <bdi dir="ltr" className="ui-num"><Amount agorot={suggestion.minor} currency={currency} /></bdi>
+      </span>
+      <Button variant="link" busy={busy} aria-label={`השתמש בשווי הקרקע מהספרים: ${suggestion.name}`} onClick={() => { onUse(suggestion.accountId); }}>השתמש</Button>
+    </div>
+  );
+}
+
+/** "נתוני הנכס": the figures; each opens its sheet (a viewer's open nothing but the rehab page, which only reads). */
 export function FiguresCard({
   figures,
   extras,
   readOnly,
   onEdit,
-  onRehab,
   rows,
   linesHref,
+  rehabHref,
+  onUseLand,
+  landBusy = false,
 }: {
   figures: InvestmentFigures;
   extras: PropertyExtras | null;
   /** Where the purchase from the lines opens: its line page. */
   linesHref: string;
+  /** FLOW-460: the renovation so far opens its own page. */
+  rehabHref: string;
   readOnly: boolean;
   onEdit: (field: InvestmentField) => void;
-  onRehab: () => void;
   rows: InvestmentRowRefs;
+  /** FLOW-461: names the suggested land account (set_land_account); absent for a viewer. */
+  onUseLand?: (accountId: string) => void;
+  landBusy?: boolean;
 }) {
   const { currency } = figures;
   const open = (field: InvestmentField) => (readOnly ? undefined : () => { onEdit(field); });
@@ -143,8 +174,8 @@ export function FiguresCard({
           </>
         )}
         value={<FigureValue minor={figures.rehabMinor} currency={currency} readOnly={readOnly} />}
-        onOpen={readOnly ? undefined : onRehab}
-        buttonRef={rows.rehab}
+        onOpen={undefined}
+        href={rehabHref}
       />
       <FigureRow
         title={INVESTMENT_LABELS.arv}
@@ -166,11 +197,16 @@ export function FiguresCard({
         <>
           <FigureRow
             title={INVESTMENT_LABELS.land}
-            note="בלי פחת · לחישוב חיסכון המס"
+            note={extras.landSource === "books" && extras.landAccount != null
+              ? <>{"מהספרים · "}<bdi>{extras.landAccount.name}</bdi></>
+              : "בלי פחת · לחישוב חיסכון המס"}
             value={<FigureValue minor={extras.landMinor} currency={currency} readOnly={readOnly} />}
             onOpen={open("land")}
             buttonRef={rows.land}
           />
+          {extras.landMinor == null && extras.landSuggestion != null && onUseLand != null ? (
+            <LandSuggestion suggestion={extras.landSuggestion} currency={currency} busy={landBusy} onUse={onUseLand} />
+          ) : null}
           <FigureRow
             title={INVESTMENT_LABELS.units}
             note={extras.unitsDefault ? (readOnly ? "ברירת מחדל" : UNITS_DEFAULT_HINT) : undefined}

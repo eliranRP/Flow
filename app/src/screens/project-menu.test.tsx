@@ -60,7 +60,6 @@ const investment: ProjectInvestment = {
     forcedEquityMinor: null,
     currentEquityMinor: null,
   },
-  categories: [],
   loans: [],
 };
 

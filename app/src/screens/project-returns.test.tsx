@@ -11,21 +11,27 @@ import {
   birchLaneReturnsCashOut,
   birchLaneReturnsMissing,
   birchLaneReturnsNegative,
+  birchLaneRehab,
+  birchLaneRehabMany,
+  birchLaneReturnsNoRehab,
   mapleCourtSub2Returns,
 } from "../dev/returns-sample";
 import { ToastProvider } from "../ui/toast";
+import { ViewerPreview } from "../use-is-viewer";
 import { ProjectInvestmentScreen } from "./project-investment-screen";
 import { UNITS_HOLD, editVerdict } from "./project-investment-sheets";
 import { barShares, partialLine } from "./project-returns-cards";
 import { bracketText, dscrText, percentText, toPropertyReturns, toReturnLinesPage } from "./project-returns-data";
-import { PropertyMetricScreen, PropertyPartScreen } from "./project-returns-detail-screen";
+import { PropertyMetricScreen, PropertyPartScreen, REHAB_EMPTY } from "./project-returns-detail-screen";
 import {
   BEFORE_FIRST_RENT,
   CASH_FLOW_CAPTION,
   HISTORY_HINT,
   INFINITY_NAME,
+  METRIC_KEYS,
   MISSING_HISTORY,
   MONEY_IN_BODY,
+  PART_KEYS,
   TAKEN_OVER_LABEL,
   TAX_CAPTION,
   UNITS_DEFAULT_HINT,
@@ -39,6 +45,7 @@ import {
   type FormulaRow,
   type InfoKey,
 } from "./project-returns-info";
+import { LEARN, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
 import { signedRow } from "./project-returns-parts";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
 import { BRACKET_RANGE, bracketVerdict, rawToBp } from "./project-returns-sheets";
@@ -103,20 +110,21 @@ function Where() {
   return <p data-testid="where">{`${location.pathname}${location.search}`}</p>;
 }
 
-function renderAt(entry: string) {
+function renderAt(entry: string, viewer = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={[entry]}>
-          <Routes>
+  const routes = (
+    <Routes>
             <Route path="/projects/:projectId/investment/returns" element={<PropertyStatementScreen />} />
             <Route path="/projects/:projectId/investment/returns/:line" element={<PropertyReturnLineScreen />} />
             <Route path="/projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen />} />
             <Route path="/projects/:projectId/investment/part/:part" element={<PropertyPartScreen />} />
             <Route path="/projects/:projectId/investment" element={<Where />} />
-          </Routes>
-        </MemoryRouter>
+    </Routes>
+  );
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[entry]}>{viewer ? <ViewerPreview>{routes}</ViewerPreview> : routes}</MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -355,8 +363,8 @@ describe("the sheet contents", () => {
     expect(page.value).toEqual({ kind: "money", minor: 35_000n, income: false });
     expect(page.caption).toBe("בחודש · תזרים ÷ 1 יחידה ÷ 12 · 12 חודשים");
     expect(page.sections[1]?.formula.rows[0]).toMatchObject({ hint: UNITS_DEFAULT_HINT, value: { kind: "text", text: "1" } });
-    expect(page.result?.text).toBe("$4,200 ÷ 1 ÷ 12");
-    expect(metricPage("coc", birchLaneReturns).result?.text).toBe("$4,200 ÷ $36,300");
+    expect(page.result?.text).toBe("\u2066$4,200 ÷ 1 ÷ 12\u2069");
+    expect(metricPage("coc", birchLaneReturns).result?.text).toBe("\u2066$4,200 ÷ $36,300\u2069");
   });
 });
 
@@ -535,7 +543,7 @@ describe("the returns pages", () => {
   it("draws a metric's parts and its result", async () => {
     serve();
     renderAt("/projects/p1/investment/metric/coc");
-    expect(await screen.findByText("$4,200 ÷ $36,300")).toBeInTheDocument();
+    expect(await screen.findByText("\u2066$4,200 ÷ $36,300\u2069")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /תקבולי הלוואות והחזרים/ })).toHaveAttribute("href", "/projects/p1/investment/returns/financing");
     expect(screen.getByRole("link", { name: /רכישה וסגירה/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
   });
@@ -624,5 +632,123 @@ describe("the returns pages", () => {
     rpc.impl = () => Promise.resolve({ data: null, error: { message: "boom" } });
     renderAt("/projects/p1/investment/returns");
     expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+  });
+});
+
+/** get_project with the renovation's categories, as the server sends them (FLOW-460). */
+function projectJson(rehab: typeof birchLaneRehab, returns = birchLaneReturns) {
+  return {
+    id: "p1", name: "Birch Lane", status: "active", state_label: "rental", budget_agorot: null, income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_agorot: 0,
+    categories: [], transactions: [], is_overhead: false, loans: [],
+    investment: {
+      currency: "USD", purchase_minor: null, arv_minor: null, value_minor: null, value_date: null,
+      rehab_minor: Number(returns.inputs.rehabMinor ?? 0n),
+      rehab_other_currencies: [],
+      rehab_by_category: rehab.map((row) => ({ category_id: row.id, name: row.name, hidden: false, amount_minor: Number(row.minor) })),
+      loan_balance_minor: 0, loan_balance_other_currencies: [], forced_equity_minor: null, current_equity_minor: null,
+    },
+  };
+}
+
+function serveRehab(rehab: typeof birchLaneRehab, returns = birchLaneReturns) {
+  serve(returns);
+  const lines = rpc.impl;
+  rpc.impl = (name, args) => (name === "get_project" ? Promise.resolve({ data: projectJson(rehab, returns), error: null }) : lines(name, args));
+}
+
+describe("the renovation's page (FLOW-460)", () => {
+  it("adds its categories up to the figure, each opening its lines, then its transactions", async () => {
+    serveRehab(birchLaneRehab);
+    renderAt("/projects/p1/investment/part/rehab");
+    const calc = within(await screen.findByRole("list", { name: "שיפוץ עד היום" }));
+    const links = calc.getAllByRole("link");
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(birchLaneRehab.map((row) => `/projects/p1/investment/returns/rehab?category=${String(row.id)}`));
+    expect(links[0]).toHaveTextContent("שיפוץ והשבחה$56,000");
+    const sum = birchLaneRehab.reduce((total, row) => total + row.minor, 0n);
+    expect(sum).toBe(birchLaneReturns.inputs.rehabMinor);
+    const result = calc.getAllByRole("listitem").at(-1);
+    expect(result?.querySelector(".ui-ret-result")).toHaveTextContent("=שיפוץ עד היום$61,300");
+    expect(document.querySelector(".ui-ret-hero")).toHaveTextContent("$61,300");
+    expect(screen.getByText("כל הוצאות הנכס שנספרות בשיפוץ, מאז הקנייה.")).toBeInTheDocument();
+    expect(screen.getByText(/מאז הקנייה · Birch Lane/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "מה לא נספר? לפי קטגוריה" })).toHaveAttribute("href", "/settings/categories");
+    expect(await screen.findByRole("link", { name: /Lone Star Roofing/ })).toHaveAttribute("href", "/transactions/t-roof");
+    expect(rpc.calls.find((call) => call.name === "get_property_return_lines")?.args).toMatchObject({ p_line: "rehab" });
+  });
+
+  it("shows five categories, then עוד N קטגוריות with the rest's sum, which opens them in place", async () => {
+    serveRehab(birchLaneRehabMany);
+    renderAt("/projects/p1/investment/part/rehab");
+    const more = await screen.findByRole("button", { name: /עוד 2 קטגוריות/ });
+    expect(more).toHaveTextContent("$2,000");
+    const calc = within(screen.getByRole("list", { name: "שיפוץ עד היום" }));
+    expect(calc.getAllByRole("link")).toHaveLength(5);
+    fireEvent.click(more);
+    expect(screen.queryByRole("button", { name: /עוד 2 קטגוריות/ })).toBeNull();
+    expect(calc.getAllByRole("link")).toHaveLength(6);
+    // The last has no category, so no page of its own: its lines are in the transactions below.
+    expect(calc.getByText("בלי קטגוריה").closest("a")).toBeNull();
+    expect(document.activeElement).toHaveTextContent("היתרים");
+  });
+
+  it("opens a category's lines with its own name and figure, and Back to the renovation", async () => {
+    serveRehab(birchLaneRehab);
+    renderAt("/projects/p1/investment/returns/rehab?category=cat-furniture");
+    expect(await screen.findByRole("heading", { name: "ריהוט וציוד" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-ret-hero")).toHaveTextContent("−$4,300");
+    // Back reads the renovation's name: it returns to its page.
+    expect(screen.getByRole("button", { name: /שיפוץ עד היום/ })).toBeInTheDocument();
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "get_property_return_lines")).toBe(true); });
+    expect(rpc.calls.find((call) => call.name === "get_property_return_lines")?.args).toMatchObject({ p_line: "rehab", p_category_id: "cat-furniture" });
+  });
+
+  it("opens the same for a viewer, who only reads", async () => {
+    serveRehab(birchLaneRehab);
+    renderAt("/projects/p1/investment/part/rehab", true);
+    const calc = within(await screen.findByRole("list", { name: "שיפוץ עד היום" }));
+    expect(calc.getAllByRole("link")).toHaveLength(3);
+  });
+
+  it("says there is no renovation yet", async () => {
+    serveRehab([], birchLaneReturnsNoRehab);
+    renderAt("/projects/p1/investment/part/rehab");
+    expect(await screen.findByText(REHAB_EMPTY)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "החישוב" })).toBeNull();
+    expect(screen.getByRole("link", { name: "מה לא נספר? לפי קטגוריה" })).toBeInTheDocument();
+  });
+
+  it("points the building cost's renovation row at its page", () => {
+    expect(buildingFormula(birchLaneReturns).rows.find((row) => row.key === "rehab")?.target).toEqual({ kind: "part", part: "rehab" });
+    expect(forcedFormula(birchLaneReturns).rows.find((row) => row.key === "rehab")?.target).toEqual({ kind: "part", part: "rehab" });
+  });
+});
+
+describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
+  it("has a reading guide for every page key", () => {
+    const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...METRIC_KEYS.map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key])];
+    for (const key of keys) {
+      expect(LEARN[key].what.length).toBeGreaterThan(0);
+      expect(LEARN[key].read.length).toBeGreaterThan(0);
+      expect(LEARN[key].goal.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("opens how to read the cap rate, and gives the focus back on close", async () => {
+    serve();
+    renderAt("/projects/p1/investment/metric/cap-rate");
+    const button = await screen.findByRole("button", { name: "איך לקרוא את Cap rate" });
+    fireEvent.click(button);
+    const dialog = await screen.findByRole("dialog", { name: "Cap rate" });
+    for (const title of Object.values(LEARN_TITLES)) expect(within(dialog).getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(within(dialog).getByText(LEARN["cap-rate"].goal)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(document.activeElement).toBe(button); });
+  });
+
+  it("puts none on a line without a guide", async () => {
+    serve();
+    renderAt("/projects/p1/investment/returns/opex");
+    await screen.findByRole("heading", { name: "הוצאות תפעול" });
+    expect(screen.queryByRole("button", { name: /^איך לקרוא את/ })).toBeNull();
   });
 });

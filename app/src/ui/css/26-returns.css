@@ -372,3 +372,19 @@
 .ui-ret-info .ui-ret-caption {
   margin-block-start: calc(var(--space-1) * -1);
 }
+
+/* FLOW-460: "עוד N קטגוריות" in a formula, the rest of the rows on a tap. */
+.ui-ret-more .ui-ret-label {
+  color: var(--color-accent-text);
+}
+
+/* FLOW-462: the ⓘ sits beside a returns page's title, and its sheet reads in three short parts. */
+.ui-page-title-line:has(> .ui-ret-learn-btn) {
+  justify-content: flex-start;
+}
+
+.ui-ret-learn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

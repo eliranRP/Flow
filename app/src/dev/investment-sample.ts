@@ -1,4 +1,4 @@
-import type { CategoryAmount, ProjectInvestment, RehabCategory } from "../screens/project-investment-data";
+import type { ProjectInvestment } from "../screens/project-investment-data";
 
 /**
  * FLOW-446 board fixture (rule 25: invented names, round amounts). A USD flip, "Birch Lane",
@@ -6,24 +6,6 @@ import type { CategoryAmount, ProjectInvestment, RehabCategory } from "../screen
  * board frame's: ARV $310,000, value today $240,000, rehab $61,300, loan balance $210,000.
  */
 const usd = (dollars: number) => BigInt(dollars) * 100n;
-
-/** The rehab categories as the sheet reads them (the four counted rows add up to $61,300). */
-export const birchLaneRehabCategories: RehabCategory[] = [
-  { id: "cat-contractors", name: "קבלני משנה", rehab: true, in_rehab: true },
-  { id: "cat-materials", name: "חומרים", rehab: true, in_rehab: true },
-  { id: "cat-equipment", name: "ציוד והשכרה", rehab: true, in_rehab: true },
-  { id: "cat-tax", name: "מסים וביטוח", rehab: true, in_rehab: true },
-  { id: "cat-loan", name: "תשלומי הלוואה", loan_part: "חלק מתשלום הלוואה", in_rehab: false },
-];
-
-/** Costs by category for the rehab sheet's rows; loan payments are not counted (their own line). */
-export const birchLaneRehabCosts: CategoryAmount[] = [
-  { id: "cat-contractors", name: "קבלני משנה", currency: "USD", minor: usd(31_400) },
-  { id: "cat-materials", name: "חומרים", currency: "USD", minor: usd(19_700) },
-  { id: "cat-equipment", name: "ציוד והשכרה", currency: "USD", minor: usd(6_450) },
-  { id: "cat-tax", name: "מסים וביטוח", currency: "USD", minor: usd(3_750) },
-  { id: "cat-loan", name: "תשלומי הלוואה", currency: "USD", minor: usd(7_350) },
-];
 
 /** The flip with its open loan; expected: השבחה צפויה $63,700, הון עצמי היום $30,000. */
 export const birchLaneInvestment: ProjectInvestment = {
@@ -73,7 +55,6 @@ export const birchLaneInvestment: ProjectInvestment = {
       terms: null,
     },
   ],
-  categories: birchLaneRehabCosts,
 };
 
 /** NoArv frame: the ARV is missing, so the figure reads "הוספה" and the השבחה is not computed. */
@@ -113,8 +94,4 @@ export const mapleCourtSub2Investment: ProjectInvestment = {
     currentEquityMinor: usd(74_000),
   },
   loans: [{ id: "loan-maple", name: "Maple Street Mortgage", currency: "USD", balance_minor: usd(286_000), status: "open", closedOn: null, terms: null }],
-  categories: [
-    { id: "cat-contractors", name: "קבלני משנה", currency: "USD", minor: usd(12_000) },
-    { id: "cat-materials", name: "חומרים", currency: "USD", minor: usd(6_400) },
-  ],
 };

@@ -7,9 +7,7 @@ const agorotInput = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
 
 export const agorotSchema = agorotInput.transform((value) => BigInt(value));
 
-const agorotOrNull = z
-  .union([agorotInput, z.null()])
-  .transform((value) => (value == null ? null : BigInt(value)));
+const agorotOrNull = z.union([agorotInput, z.null()]).transform((value) => (value == null ? null : BigInt(value)));
 
 const projectByCurrencyRowSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
@@ -337,6 +335,8 @@ const projectInvestmentSchema = z.object({
   value_date: z.string().nullable(),
   rehab_minor: agorotSchema,
   rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: agorotSchema })).catch([]),
+  /** FLOW-460: rehab_minor by category, largest first, from the same lines (0247); a null id is no category. */
+  rehab_by_category: z.array(z.object({ category_id: z.string().nullable(), name: z.string().nullable(), amount_minor: agorotSchema })).catch([]).optional(),
   loan_balance_minor: agorotSchema,
   loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: agorotSchema })).catch([]),
   forced_equity_minor: agorotOrNull,

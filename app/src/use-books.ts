@@ -268,18 +268,16 @@ const CATEGORY_PAGE = 40;
  * `currency` is the bucket the project page row was in; empty lets the server pick (ILS first).
  * `period` is the project's period, so the lines match the row that opened them (FLOW-411).
  */
-/** FLOW-404: `basis` "cash" matches the rehab list, which reads the cash basis; null is the company's basis. */
 export function useProjectCategoryQuery(
   projectId: string,
   categoryId: string,
   currency = "",
   period: PeriodChoice | null = null,
-  basis: "cash" | null = COMPANY_BASIS,
 ) {
   const preview = useHomePreview();
   const range = period ? rangeOf(period) : null;
   return useInfiniteQuery({
-    queryKey: ["project-category", preview, projectId, categoryId, currency, range?.p_from ?? null, range?.p_to ?? null, basis],
+    queryKey: ["project-category", preview, projectId, categoryId, currency, range?.p_from ?? null, range?.p_to ?? null],
     enabled: preview === "off" && projectId !== "" && categoryId !== "",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
@@ -291,7 +289,6 @@ export function useProjectCategoryQuery(
         p_category: categoryId,
         p_offset: pageParam,
         p_limit: CATEGORY_PAGE,
-        ...(basis == null ? {} : { p_basis: basis }),
         ...(currency === "" ? {} : { p_currency: currency }),
         ...(range ?? {}),
       });

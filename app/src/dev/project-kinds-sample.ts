@@ -14,7 +14,7 @@ import { kindNextSample } from "./project-kinds-next-sample";
 type Project = NonNullable<ProjectDetail>;
 export type ProjectKind = "flip" | "rental" | "client" | "new";
 
-const noInvestment: ProjectInvestment = { isOverhead: false, figures: null, categories: [], loans: [] };
+const noInvestment: ProjectInvestment = { isOverhead: false, figures: null, loans: [] };
 
 const rentalProject: Project = {
   ...flipProject,
@@ -89,7 +89,7 @@ const newCash = months([[cashRow(0n, 0n, 0n)]]);
 type Kind = { project: Project; cash: typeof flipCash; investment: ProjectInvestment; first: string | null };
 
 const kinds: Record<Exclude<ProjectKind, "flip">, Kind> = {
-  rental: { project: rentalProject, cash: rentalCash, investment: { isOverhead: false, figures: rentalFigures, categories: [], loans: [] }, first: "2025-03-01" },
+  rental: { project: rentalProject, cash: rentalCash, investment: { isOverhead: false, figures: rentalFigures, loans: [] }, first: "2025-03-01" },
   // The client job began with its oldest cash month, two before this one.
   client: { project: clientProject, cash: clientCash, investment: noInvestment, first: `${shiftMonthKey(thisMonth, -2)}-01` },
   new: { project: newProject, cash: newCash, investment: noInvestment, first: null },
