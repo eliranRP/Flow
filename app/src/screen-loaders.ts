@@ -70,11 +70,6 @@ export const PRELOAD_AT_ONCE = 3;
  * renders on the next tick.
  */
 export async function preloadScreens(atOnce = PRELOAD_AT_ONCE): Promise<void> {
-  // FLOW-910: with them, the watch that reloads an open tab onto a new deploy's bundle; a new
-  // worker takes over long after Home is up, and this keeps it out of Home's entry.
-  void import("./sw-reload").then(({ watchServiceWorker }) => {
-    watchServiceWorker();
-  }, () => undefined);
   const queue = Object.values(screenLoaders);
   async function worker(): Promise<void> {
     for (let load = queue.shift(); load != null; load = queue.shift()) await load().catch(() => undefined);

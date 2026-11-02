@@ -549,6 +549,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-840"></a>[FLOW-840](tasks/FLOW-840.md) | The edge functions use zod 4.6.7, as the app does | SMALL CYCLE |
 | <a id="flow-841"></a>[FLOW-841](tasks/FLOW-841.md) | The Content-Security-Policy is enforced | SMALL CYCLE |
 | <a id="flow-842"></a>[FLOW-842](tasks/FLOW-842.md) | A UX rules review of the UI changes every 3 days | SMALL CYCLE (docs) |
+| <a id="flow-843"></a>[FLOW-843](tasks/FLOW-843.md) | Every launch opens the newest deploy, without closing the app again | BUG |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |

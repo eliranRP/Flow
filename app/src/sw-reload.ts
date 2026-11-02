@@ -16,14 +16,20 @@
  * it again, so it kept the old bundle for days. On start and each return to the front the watch
  * also compares the page's build with the live /build.txt; when the page is behind and no new
  * worker is still on its way, it reloads at the same safe moments as above.
+ *
+ * FLOW-843: those moments came too late on a launch. iOS freezes the page before a reload on the
+ * way to the background runs, so the owner closed and opened the app several times per deploy.
+ * Until the first tap or key press nothing the user did can be lost, so a page that learns it is
+ * behind before then reloads at once. The watch starts at launch (main.tsx), not after the idle
+ * preload.
  */
 
 /** sessionStorage key: when this tab last reloaded for a new worker. */
 export const RELOADED_KEY = "flow-sw-reloaded";
 /**
- * localStorage key: the live build this device last reloaded for. A deploy that changes no app code
- * keeps the same worker and bundle, so the page's build stays behind: reload for it once, not on
- * every check or launch.
+ * sessionStorage key: the live build this launch last reloaded for. A page the reload still served
+ * behind (the network missed the 3 s timeout, so the stored shell came back) reloads for that build
+ * once, not on every check. FLOW-843: per launch, not per device, so the next launch tries again.
  */
 export const BEHIND_KEY = "flow-sw-behind";
 /** A second reload this soon after one is a loop: skip it. */
@@ -49,14 +55,28 @@ async function liveBuild(fetcher: Window["fetch"]): Promise<string | null> {
   return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
 }
 
-type Win = Pick<Window, "navigator" | "document" | "location" | "sessionStorage" | "localStorage" | "history" | "addEventListener" | "fetch">;
+type Win = Pick<Window, "navigator" | "document" | "location" | "sessionStorage" | "history" | "addEventListener" | "fetch">;
 
-export function watchServiceWorker(win: Win = window, now: () => number = Date.now): void {
+/**
+ * `touchedBefore` says whether the user tapped or typed before the watch started: main.tsx listens
+ * from the first line, while this module's chunk is still loading.
+ */
+export function watchServiceWorker(win: Win = window, now: () => number = Date.now, touchedBefore: () => boolean = () => false): void {
   const sw = win.navigator.serviceWorker as ServiceWorkerContainer | undefined;
   if (sw == null) return;
   let hadController = sw.controller != null;
   // A new worker took control and the page still runs the old bundle.
   let pending = false;
+  // No tap or key press yet: a reload loses nothing.
+  let untouched = !touchedBefore();
+  const touched = () => {
+    untouched = false;
+  };
+  win.addEventListener("pointerdown", touched, { capture: true, once: true });
+  win.addEventListener("keydown", touched, { capture: true, once: true });
+  const reloadNowOrLater = () => {
+    if (untouched || win.document.visibilityState === "hidden") tryReload();
+  };
 
   const tryReload = () => {
     if (!pending || busy(win.document)) return;
@@ -73,7 +93,7 @@ export function watchServiceWorker(win: Win = window, now: () => number = Date.n
   sw.addEventListener("controllerchange", () => {
     pending = hadController;
     hadController = true;
-    if (win.document.visibilityState === "hidden") tryReload();
+    reloadNowOrLater();
   });
   // The router moves between screens with pushState, and Back with popstate: the URL is already the
   // new screen's, so the reload lands there. Only a new path counts: a push that opens a sheet or
@@ -100,13 +120,13 @@ export function watchServiceWorker(win: Win = window, now: () => number = Date.n
     const live = await liveBuild(win.fetch.bind(win));
     if (live == null || live === mine) return;
     try {
-      if (win.localStorage.getItem(BEHIND_KEY) === live) return;
-      win.localStorage.setItem(BEHIND_KEY, live);
+      if (win.sessionStorage.getItem(BEHIND_KEY) === live) return;
+      win.sessionStorage.setItem(BEHIND_KEY, live);
     } catch {
       return;
     }
     pending = true;
-    if (win.document.visibilityState === "hidden") tryReload();
+    reloadNowOrLater();
   };
   const checkSoon = () => void check().catch(() => undefined);
   win.document.addEventListener("visibilitychange", () => {

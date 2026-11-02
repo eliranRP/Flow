@@ -42,7 +42,6 @@ function fakeWindow({ controller = true, live = null as string | null, liveStatu
     document: doc,
     location,
     sessionStorage: window.sessionStorage,
-    localStorage: window.localStorage,
     history,
     fetch,
     addEventListener: target.addEventListener.bind(target),
@@ -58,6 +57,9 @@ function fakeWindow({ controller = true, live = null as string | null, liveStatu
     registration,
     pushed,
     takeControl: () => sw.dispatchEvent(new Event("controllerchange")),
+    /** The user's first tap: from here on a reload waits for a safe moment. */
+    touch: () => target.dispatchEvent(new Event("pointerdown")),
+    type: () => target.dispatchEvent(new Event("keydown")),
     navigate: (url: string) => {
       win.history.pushState(null, "", url);
     },
@@ -86,13 +88,13 @@ afterEach(() => {
   document.head.innerHTML = "";
   document.body.innerHTML = "";
   window.sessionStorage.clear();
-  window.localStorage.clear();
 });
 
 describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, never under the user", () => {
   it("keeps an idle page in front, then reloads on the next move to another screen", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     expect(tab.reload).not.toHaveBeenCalled();
     tab.navigate("/projects");
@@ -106,6 +108,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
   it("keeps the page when a push stays on the same screen: a sheet or a query", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     tab.navigate("/?sheet=add");
     tab.navigate("/?period=2026-09");
@@ -118,6 +121,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
   it("reloads on Back", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     tab.back("/projects");
     expect(tab.reload).toHaveBeenCalledTimes(1);
@@ -126,6 +130,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
   it("reloads when the app goes to the background", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     tab.setVisibility("hidden");
     expect(tab.reload).toHaveBeenCalledTimes(1);
@@ -134,6 +139,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
   it("reloads at once when the new worker arrives while the app is in the background", () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.setVisibility("hidden");
     tab.takeControl();
     expect(tab.reload).toHaveBeenCalledTimes(1);
@@ -142,6 +148,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
   it("keeps the page on a first install: it already runs the new bundle", () => {
     const tab = fakeWindow({ controller: false });
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     tab.navigate("/projects");
     expect(tab.reload).not.toHaveBeenCalled();
@@ -155,6 +162,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
     const tab = fakeWindow();
     window.sessionStorage.setItem(RELOADED_KEY, String(tab.now() - LOOP_MS + 1));
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     tab.navigate("/projects");
     expect(tab.reload).not.toHaveBeenCalled();
@@ -164,6 +172,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
     const tab = fakeWindow();
     document.body.innerHTML = '<div role="dialog"></div>';
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     tab.takeControl();
     tab.navigate("/projects");
     tab.setVisibility("hidden");
@@ -181,6 +190,7 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
   it("asks for an update when it starts and each time the app comes back to the front", async () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     await settle();
     expect(tab.update).toHaveBeenCalledTimes(1);
     tab.setVisibility("hidden");
@@ -202,18 +212,20 @@ describe("iPhone app: a page behind the live build reloads even when it missed t
     stampPage(OLD);
     const tab = fakeWindow({ live: `${NEW}\n` });
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     await settle();
     expect(tab.fetch).toHaveBeenCalledWith("/build.txt", { cache: "no-store" });
     expect(tab.reload).not.toHaveBeenCalled();
     tab.navigate("/projects");
     expect(tab.reload).toHaveBeenCalledTimes(1);
-    expect(window.localStorage.getItem(BEHIND_KEY)).toBe(NEW);
+    expect(window.sessionStorage.getItem(BEHIND_KEY)).toBe(NEW);
   });
 
   it("checks again when the app comes back to the front, and reloads when it goes to the background", async () => {
     stampPage(OLD);
     const tab = fakeWindow({ live: OLD });
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     await settle();
     tab.setVisibility("hidden");
     expect(tab.reload).not.toHaveBeenCalled();
@@ -231,6 +243,7 @@ describe("iPhone app: a page behind the live build reloads even when it missed t
     const tab = fakeWindow({ live: NEW });
     tab.registration.installing = {};
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     await settle();
     expect(tab.fetch).not.toHaveBeenCalled();
     tab.navigate("/projects");
@@ -242,9 +255,10 @@ describe("iPhone app: a page behind the live build reloads even when it missed t
 
   it("reloads once per live build, so a deploy with no app change can't reload it again", async () => {
     stampPage(OLD);
-    window.localStorage.setItem(BEHIND_KEY, NEW);
+    window.sessionStorage.setItem(BEHIND_KEY, NEW);
     const tab = fakeWindow({ live: NEW });
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     await settle();
     tab.navigate("/projects");
     expect(tab.reload).not.toHaveBeenCalled();
@@ -255,6 +269,7 @@ describe("iPhone app: a page behind the live build reloads even when it missed t
       stampPage(page);
       const tab = fakeWindow({ live, liveStatus });
       watchServiceWorker(tab.win, tab.now);
+      tab.touch();
       await settle();
       tab.navigate(`/projects/${page}`);
       expect(tab.reload).not.toHaveBeenCalled();
@@ -263,8 +278,85 @@ describe("iPhone app: a page behind the live build reloads even when it missed t
     document.head.innerHTML = "";
     const tab = fakeWindow({ live: NEW });
     watchServiceWorker(tab.win, tab.now);
+    tab.touch();
     await settle();
     expect(tab.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("FLOW-843: a launch that finds a new deploy before the first tap reloads at once", () => {
+  it("reloads when the page is behind the live build and nothing was touched yet", async () => {
+    stampPage(OLD);
+    const tab = fakeWindow({ live: NEW });
+    watchServiceWorker(tab.win, tab.now);
+    await settle();
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+    expect(window.sessionStorage.getItem(BEHIND_KEY)).toBe(NEW);
+  });
+
+  it("reloads when a new worker takes control before the first tap", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.takeControl();
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a page the user has started using until a safe moment", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.touch();
+    tab.takeControl();
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.navigate("/projects");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts a key press as a first touch", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.type();
+    tab.takeControl();
+    expect(tab.reload).not.toHaveBeenCalled();
+  });
+
+  it("counts a tap from before the watch started", () => {
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now, () => true);
+    tab.takeControl();
+    expect(tab.reload).not.toHaveBeenCalled();
+  });
+
+  it("still waits under an open sheet or a focused field", () => {
+    for (const html of ['<div role="dialog"></div>', "<input />"]) {
+      document.body.innerHTML = html;
+      document.querySelector("input")?.focus();
+      const tab = fakeWindow();
+      watchServiceWorker(tab.win, tab.now);
+      tab.takeControl();
+      expect(tab.reload).not.toHaveBeenCalled();
+    }
+  });
+
+  it("never reloads twice within the loop window, even before a tap", () => {
+    window.sessionStorage.setItem(RELOADED_KEY, String(100_000 - LOOP_MS + 1));
+    const tab = fakeWindow();
+    watchServiceWorker(tab.win, tab.now);
+    tab.takeControl();
+    expect(tab.reload).not.toHaveBeenCalled();
+  });
+
+  it("tries the same live build again on the next launch when a reload still landed behind", async () => {
+    stampPage(OLD);
+    const first = fakeWindow({ live: NEW });
+    watchServiceWorker(first.win, first.now);
+    await settle();
+    expect(first.reload).toHaveBeenCalledTimes(1);
+    // A new launch starts a new session.
+    window.sessionStorage.clear();
+    const next = fakeWindow({ live: NEW });
+    watchServiceWorker(next.win, next.now);
+    await settle();
+    expect(next.reload).toHaveBeenCalledTimes(1);
   });
 });
 
