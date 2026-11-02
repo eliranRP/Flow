@@ -572,6 +572,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-985"></a>[FLOW-985](tasks/FLOW-985.md) | The recurring reads' first step reads split lines without a nested loop over every line | SMALL CYCLE (perf) |
 | <a id="flow-998"></a>[FLOW-998](tasks/FLOW-998.md) | The recurring reads pick each charge's category in one grouped pass | SMALL CYCLE (perf) |
 | <a id="flow-1007"></a>[FLOW-1007](tasks/FLOW-1007.md) | Review's first visit waits for no other screen's code, and reads its page once | SMALL CYCLE (perf) |
+| <a id="flow-1019"></a>[FLOW-1019](tasks/FLOW-1019.md) | Home's cold load reads each list once, and next month's numbers without a second wave | PLAN FIRST (perf) |
+| <a id="flow-1020"></a>[FLOW-1020](tasks/FLOW-1020.md) | Review's first page is read on the tap, not after its code loads | SMALL CYCLE (perf) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
 | <a id="flow-819"></a>[FLOW-819](tasks/FLOW-819.md) | Remove the stories and components the app no longer uses | SMALL CYCLE |
 | <a id="flow-820"></a>[FLOW-820](tasks/FLOW-820.md) | Rule: a change removes what it leaves unused | SMALL CYCLE |
