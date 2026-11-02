@@ -425,7 +425,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1014"></a>[FLOW-1014](tasks/FLOW-1014.md) | קבועים: the add action on the empty screen, and a plain label | SMALL UI |
 | <a id="flow-1015"></a>[FLOW-1015](tasks/FLOW-1015.md) | Home's קבועים tip: only for owners who had the tab, never over the band's controls | SMALL UI |
 | <a id="flow-1016"></a>[FLOW-1016](tasks/FLOW-1016.md) | Review lists: the בלי פרויקט count with pages left, and a loading line at the end | SMALL UI |
-| <a id="flow-1017"></a>[FLOW-1017](tasks/FLOW-1017.md) | Recheck: קבועים behind an unlabeled icon, and a second figure on every Projects row | PLAN FIRST |
+| <a id="flow-1017"></a>[FLOW-1017](tasks/FLOW-1017.md) | Recheck: קבועים behind an unlabeled icon, and a second figure on every Projects row | SMALL UI |
 | <a id="flow-1018"></a>[FLOW-1018](tasks/FLOW-1018.md) | One ביטול for a forecast item's save that changes both the pace and the amount or date | BACKLOG NIT |
 
 ## Projects and reports
@@ -478,7 +478,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-456"></a>[FLOW-456](tasks/FLOW-456.md) | The report share sheet says why its button is off next to it, and picking projects starts from one | SMALL UI |
 | <a id="flow-457"></a>[FLOW-457](tasks/FLOW-457.md) | A property's returns: one minus per expense, true counts, a name for ∞, one label per figure | SMALL UI |
 | <a id="flow-458"></a>[FLOW-458](tasks/FLOW-458.md) | Total return: marked partial when a source is missing, rows that hold at 320, bar shades that can be told apart | SMALL UI |
-| <a id="flow-459"></a>[FLOW-459](tasks/FLOW-459.md) | השקעה והלוואות: shorter, with the inputs before the metrics | PLAN FIRST |
+| <a id="flow-459"></a>[FLOW-459](tasks/FLOW-459.md) | השקעה והלוואות: shorter, with the inputs before the metrics | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
