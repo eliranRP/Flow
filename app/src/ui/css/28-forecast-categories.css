@@ -1,4 +1,4 @@
-/* The forecast's view chips and לפי קטגוריה (the MonthForecast board, category preset): one row per
+/* The forecast's view chips and קטגוריות (the MonthForecast board, category preset): one row per
    category with its month so far and still to come, a two-part bar, and its items when opened. */
 .ui-forecast-views {
   display: flex;

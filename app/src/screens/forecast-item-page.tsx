@@ -15,7 +15,7 @@ import type { ForecastPace } from "../project-next-month";
 import { useProjectForecastWrites } from "../project-forecast-writes";
 import { List } from "../ui/list-row";
 import { itemCharge } from "./forecast-categories";
-import { dayMonth, FORECAST_TITLE, itemLate, itemWhat } from "./forecast-parts";
+import { ADDED_LINE, dayMonth, FORECAST_TITLE, itemLate, itemWhat } from "./forecast-parts";
 import { monthName } from "./home-parts";
 
 const WHEN_LAYER = "forecast-when";
@@ -26,26 +26,25 @@ function paceWord(pace: string | null): string {
 
 /**
  * FLOW-1010 (owner, 2026-11-01: "I want to be able to add it as a recurring income"): כל כמה זמן on an item's
- * page. A line the owner added, in the month it starts, picks its pace in the project forecast's own sheet (the
- * line itself changes, so it repeats from this month on). A line added in an earlier month, and a recurring
+ * page. A line the owner added, in the month it starts, picks its pace in the project forecast's own sheet;
+ * FLOW-1012: the pick is a draft, like the amount and the date, and שמירת השינוי בצפי writes it (the line
+ * itself changes, so it repeats from this month on). A line added in an earlier month, and a recurring
  * charge, show their pace and open where it is set: the project's צפי page, or the charge's page.
  */
-function PaceRow({ item, month, search }: { item: ForecastItem; month: string; search: string }) {
+function PaceRow({ item, month, search, pace, onPick }: { item: ForecastItem; month: string; search: string; pace: string | null; onPick: (pace: ForecastPace) => void }) {
   const [open, setOpen] = useState(false);
   const row = useRef<HTMLButtonElement>(null);
-  const writes = useProjectForecastWrites(item.project_id ?? "", month);
   if (item.kind === "invoice" || item.pace == null) return null;
-  const word = paceWord(item.pace);
+  const word = paceWord(pace);
   if (item.kind === "recurring") {
     const charge = itemCharge(item);
     const to = charge == null ? `/recurring${search}` : chargeHref(charge.direction, charge.partyId, search, charge.projectId);
     return <IconRow className="ui-forecast-page-row" titled icon={<RepeatIcon size={22} />} label="כל כמה זמן" value="נקבע בחיוב הקבוע" endTag={<span className="ui-forecast-page-when">{word}</span>} to={to} name={`כל כמה זמן: ${word}`} />;
   }
   if (item.project_id == null) return null;
-  if (item.line_start !== month) {
+  if (!paceEditable(item, month)) {
     return <IconRow className="ui-forecast-page-row" titled icon={<RepeatIcon size={22} />} label="כל כמה זמן" value="נקבע בצפי של הפרויקט" endTag={<span className="ui-forecast-page-when">{word}</span>} to={`/projects/${item.project_id}/profit/next${search}`} name={`כל כמה זמן: ${word}`} />;
   }
-  const id = item.key.replace(/^added:/, "");
   const income = item.direction === "income";
   return (
     <>
@@ -54,7 +53,7 @@ function PaceRow({ item, month, search }: { item: ForecastItem; month: string; s
         titled
         icon={<RepeatIcon size={22} />}
         label="כל כמה זמן"
-        value={item.pace === "once" ? `רק ב${monthName(month)}` : income ? "הכנסה קבועה בצפי" : "הוצאה קבועה בצפי"}
+        value={pace === "once" ? `רק ב${monthName(month)}` : income ? "הכנסה קבועה בצפי" : "הוצאה קבועה בצפי"}
         endTag={<span className="ui-forecast-page-when">{word}</span>}
         name={`כל כמה זמן: ${word}`}
         buttonRef={row}
@@ -64,22 +63,22 @@ function PaceRow({ item, month, search }: { item: ForecastItem; month: string; s
         copy={{ historyKey: "forecast-pace", title: "כל כמה זמן", subtitle: `${item.name} · בצפי של הפרויקט`, choices: paceChoices(month) }}
         open={open}
         onOpenChange={setOpen}
-        value={item.pace as ForecastPace}
+        value={pace as ForecastPace}
         saving={null}
         returnFocusRef={row}
         panelClassName="ui-pace-sheet"
-        onPick={(pace, close) => {
+        onPick={(picked, close) => {
           close();
-          if (pace === item.pace) return;
-          writes.mutate({
-            fn: "set_project_forecast_edit",
-            edit: { row_key: `add:${id}`, amount_minor: Number(item.usual), pace },
-            message: pace === "once" ? `${item.name}: רק ב${monthName(month)}` : `${item.name}: ${PACE_WORDS[pace]}`,
-          });
+          onPick(picked);
         }}
       />
     </>
   );
+}
+
+/** A line the owner added, in the month it starts: its pace is picked on this page. */
+function paceEditable(item: ForecastItem, month: string): boolean {
+  return item.kind === "added" && item.pace != null && item.project_id != null && item.line_start === month;
 }
 
 /** The board's three choices: this week, to the month's end (or the item's own date), or not this month. */
@@ -167,6 +166,7 @@ export function ForecastItemPage({
   const [amount, setAmount] = useState(String(Number(item.minor) / 100));
   const [when, setWhen] = useState<ForecastWhen>(startWhen(item, today));
   const [whenOpen, setWhenOpen] = useState(openWhen);
+  const [pace, setPace] = useState(item.pace);
   const whenRow = useRef<HTMLButtonElement>(null);
   const whenOpenRef = useRef(whenOpen);
   whenOpenRef.current = whenOpen;
@@ -193,6 +193,8 @@ export function ForecastItemPage({
     onCloseRef.current();
   }, [sheetEntry, location.key]);
   const month = today.slice(0, 7);
+  const paceWrites = useProjectForecastWrites(item.project_id ?? "", month);
+  const paceChanged = pace !== item.pace && paceEditable(item, month);
   const monthLabel = monthName(month);
   const income = item.direction === "income";
   const late = item.late_days > 0;
@@ -203,7 +205,7 @@ export function ForecastItemPage({
   const shownAmount = amount === "" ? "" : `${income ? "+" : "−"}${symbol}${groupThousands(amount)}`;
   const whenText = when === "week" ? "השבוע" : when === "moved" ? "לא החודש" : `עד ${dayMonth(monthEndChoice)}`;
   const whenHint = when === "moved" ? `יוצא מהצפי של ${monthLabel}` : late ? "עבר המועד הרגיל" : `בצפי של ${monthLabel}`;
-  const kindText = item.kind === "added" ? "הוספת" : item.kind !== "invoice" ? "קבוע" : income ? "חשבונית פתוחה" : "חשבון ספק פתוח";
+  const kindText = item.kind === "added" ? ADDED_LINE : item.kind !== "invoice" ? "קבוע" : income ? "חשבונית פתוחה" : "חשבון ספק פתוח";
 
   // Escape closes the When sheet first (the sheet's own), then the page.
   useEffect(() => {
@@ -216,6 +218,20 @@ export function ForecastItemPage({
   }, [close]);
 
   function save() {
+    if (paceChanged && pace != null) {
+      const picked = pace as ForecastPace;
+      paceWrites.mutate({
+        fn: "set_project_forecast_edit",
+        edit: { row_key: `add:${item.key.replace(/^added:/, "")}`, amount_minor: Number(item.usual), pace: picked },
+        message: picked === "once" ? `${item.name}: רק ב${monthLabel}` : `${item.name}: ${PACE_WORDS[picked]}`,
+      });
+      // FLOW-1012: a pace pick alone writes the line only, not this month's amount and date.
+      const sameAmount = amount.trim() === "" || Math.round(Number(amount) * 100) === Number(item.minor);
+      if (sameAmount && when === startWhen(item, today)) {
+        close();
+        return;
+      }
+    }
     if (when === "moved") {
       onSave(item, { moved_out: true });
     } else {
@@ -267,11 +283,13 @@ export function ForecastItemPage({
           buttonRef={whenRow}
           onClick={() => { setWhenOpen(true); }}
         />
-        <PaceRow item={item} month={month} search={location.search} />
+        <PaceRow item={item} month={month} search={location.search} pace={pace} onPick={setPace} />
         <IconRow className="ui-forecast-page-row" titled icon={<DocumentIcon size={22} />} label={source.title} value={source.hint} to={source.to} name={`${source.title}, ${source.hint}`} />
       </List>
       <p className="ui-forecast-page-hint">
-        {item.kind === "added"
+        {paceChanged
+          ? `משנה את הצפי של ${monthLabel}, ואת השורה בצפי של הפרויקט מ${monthLabel} והלאה.`
+          : item.kind === "added"
           ? `משנה רק את הצפי של ${monthLabel}. השורה בצפי של הפרויקט לא משתנה.`
           : item.kind !== "invoice" ? `משנה רק את הצפי של ${monthLabel}. החיוב הקבוע לא משתנה.` : "משנה רק את הצפי. החשבונית עצמה לא משתנה."}
       </p>

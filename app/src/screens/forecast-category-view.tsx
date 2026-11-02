@@ -10,10 +10,11 @@ import { itemLate, itemWhen, signed } from "./forecast-parts";
 /** The views of the forecast (the board's chips): one row per item, items by project (FLOW-1004), or one row per category. */
 export type ForecastView = "items" | "projects" | "categories";
 
+// FLOW-1013: one word each, so the three chips keep one line at 320; the group's name says "לפי".
 const VIEWS: readonly (readonly [ForecastView, string])[] = [
-  ["items", "לפי פריט"],
-  ["projects", "לפי פרויקט"],
-  ["categories", "לפי קטגוריה"],
+  ["items", "פריטים"],
+  ["projects", "פרויקטים"],
+  ["categories", "קטגוריות"],
 ];
 
 /**
@@ -22,7 +23,7 @@ const VIEWS: readonly (readonly [ForecastView, string])[] = [
  */
 export function ForecastViewSwitch({ view, onPick }: { view: ForecastView; onPick: (view: ForecastView) => void }) {
   return (
-    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה" onKeyDown={onRadioArrow}>
+    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה לפי" onKeyDown={onRadioArrow}>
       {VIEWS.map(([value, label]) => (
         <button
           key={value}
