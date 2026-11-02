@@ -18,6 +18,7 @@ import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-ret
  * FLOW-451: the pages behind the investment page's figures, on the invented Birch Lane fixture.
  * FLOW-453: the holding costs before the first rent, the money in by part, and all the cash out.
  * FLOW-454: the units by default, a Sub2 purchase split in two, and the per-cents before the first rent.
+ * FLOW-457: a statement with nothing before the first rent: one row left out, a section that does not fold.
  */
 const RETURNS = {
   complete: birchLaneReturns,
@@ -26,6 +27,7 @@ const RETURNS = {
   cashOut: birchLaneReturnsCashOut,
   sub2: mapleCourtSub2Returns,
   beforeRent: birchLaneReturnsBeforeRent,
+  nothingBeforeRent: { ...birchLaneReturns, statement: { ...birchLaneReturns.statement, beforeRentMinor: 0n } },
 };
 
 type Args = { entry: string; lines?: LinesSource; returns?: keyof typeof RETURNS };
@@ -68,3 +70,4 @@ export const MoneyInPart: Story = { args: { entry: "/projects/p1/investment/part
 export const CashOnCashAllCashOut: Story = { args: { entry: "/projects/p1/investment/metric/coc", returns: "cashOut" } };
 export const BuildingCostSub2: Story = { args: { entry: "/projects/p1/investment/part/building", lines: "rehab", returns: "sub2" } };
 export const CashOnCashBeforeFirstRent: Story = { args: { entry: "/projects/p1/investment/metric/coc", returns: "beforeRent" } };
+export const StatementOneRowOut: Story = { args: { entry: "/projects/p1/investment/returns", returns: "nothingBeforeRent" } };

@@ -169,7 +169,10 @@ describe("the page", () => {
     const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
     if (card == null) throw new Error("no card");
     expect(within(card).getByText("54.4%")).toBeInTheDocument();
-    expect(card).toHaveTextContent("על ₪762,400 בעסקה");
+    // FLOW-459: the money in the deal is named once, in its equity row, inside this card.
+    expect(card).toHaveTextContent("על הכסף בעסקה");
+    expect(within(card).getByRole("button", { name: /^כסף בעסקה/ })).toHaveTextContent("₪762,400");
+    expect(within(card).getByRole("group", { name: "הון בנכס" })).toBeInTheDocument();
     for (const source of ["תזרים", "החזר קרן", "עליית ערך", "חיסכון מס"]) {
       expect(within(card).getByRole("button", { name: `איך מחושב: ${source}` })).toBeInTheDocument();
     }
@@ -180,12 +183,13 @@ describe("the page", () => {
     serve(payload({ arv_minor: null, forced_equity_minor: null }), null, returnsOf({ forcedMinor: null }, { arvMinor: null }));
     renderPage();
     await ready();
-    const card = await screen.findByRole("region", { name: "הון בנכס" });
-    expect(within(card).getByText("חסר")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /שווי אחרי שיפוץ.*הוספה/ })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "הוספה" })).toHaveLength(1);
+    const card = await screen.findByRole("group", { name: "הון בנכס" });
+    // FLOW-459: the row shows only הוספה; its hint says what is missing.
+    const forced = within(card).getByRole("button", { name: /^השבחה צפויה/ });
+    expect(forced).toHaveTextContent("השבחה צפויהחסר · שווי אחרי שיפוץ (ARV)הוספה");
+    expect(within(screen.getByRole("region", { name: "נתוני הנכס" })).getByRole("button", { name: /שווי אחרי שיפוץ.*הוספה/ })).toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
-    fireEvent.click(within(card).getByRole("button", { name: "הוספה" }));
+    fireEvent.click(forced);
     expect(await screen.findByRole("dialog", { name: "שווי אחרי שיפוץ (ARV)" })).toBeInTheDocument();
   });
 
@@ -201,7 +205,7 @@ describe("the page", () => {
     ), null, returnsOf({ todayMinor: null }));
     renderPage();
     await ready();
-    const card = await screen.findByRole("region", { name: "הון בנכס" });
+    const card = await screen.findByRole("group", { name: "הון בנכס" });
     expect(within(card).getByText("לא מחושב")).toBeInTheDocument();
     expect(screen.getByText(/במטבע אחר/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /הלוואה בדולר/ })).toHaveTextContent("$120,000");
@@ -212,8 +216,8 @@ describe("the page", () => {
     const { container } = renderPage({ viewer: true });
     await ready();
     await screen.findByText("הון בנכס");
-    // A viewer still opens an ⓘ: it reads, it writes nothing.
-    expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => button.getAttribute("aria-label")?.startsWith("איך מחושב"))).toBe(true);
+    // A viewer still opens an ⓘ, or an equity row's sheet: it reads, it writes nothing.
+    expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => button.getAttribute("aria-label")?.startsWith("איך מחושב") === true || button.classList.contains("ui-ret-equity-row"))).toBe(true);
     expect(screen.queryByText("הוספה")).not.toBeInTheDocument();
     expect(screen.queryByText("+ הוספת הלוואה")).not.toBeInTheDocument();
     expect(container.querySelector('[aria-label="נתוני הנכס"] .ui-pinv-chevron')).toBeNull();

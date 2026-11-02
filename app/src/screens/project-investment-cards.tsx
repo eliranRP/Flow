@@ -63,9 +63,9 @@ function FigureRow({
       {onOpen == null && href == null ? null : <span className="ui-pinv-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>}
     </>
   );
-  if (href != null) return <Link to={href} className="ui-pinv-row">{body}</Link>;
+  if (href != null) return <Link to={href} className="ui-pinv-row m-press">{body}</Link>;
   return onOpen == null ? <div className="ui-pinv-row">{body}</div> : (
-    <button type="button" ref={buttonRef} className="ui-pinv-row" onClick={onOpen}>{body}</button>
+    <button type="button" ref={buttonRef} className="ui-pinv-row m-press" onClick={onOpen}>{body}</button>
   );
 }
 
@@ -121,7 +121,7 @@ export function FiguresCard({
         // FLOW-453: the purchase comes from the acquisition lines; it opens them, with no edit sheet.
         <FigureRow
           title={INVESTMENT_LABELS.purchase}
-          note={readOnly ? source : `${source} · לפירוט`}
+          note={readOnly ? source : `${source} · לפירוט ולתיקון`}
           value={<FigureValue minor={extras.purchaseMinor} currency={currency} readOnly={readOnly} />}
           onOpen={undefined}
           href={readOnly ? undefined : linesHref}
@@ -165,14 +165,14 @@ export function FiguresCard({
       {extras == null ? null : (
         <>
           <FigureRow
-            title="קרקע"
+            title={INVESTMENT_LABELS.land}
             note="בלי פחת · לחישוב חיסכון המס"
             value={<FigureValue minor={extras.landMinor} currency={currency} readOnly={readOnly} />}
             onOpen={open("land")}
             buttonRef={rows.land}
           />
           <FigureRow
-            title="יחידות"
+            title={INVESTMENT_LABELS.units}
             note={extras.unitsDefault ? (readOnly ? "ברירת מחדל" : UNITS_DEFAULT_HINT) : undefined}
             value={<bdi dir="ltr" className="ui-pinv-value ui-num">{String(extras.units)}</bdi>}
             onOpen={open("units")}
