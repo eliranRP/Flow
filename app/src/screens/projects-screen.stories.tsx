@@ -100,7 +100,8 @@ export const ProjectsNextMonth: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("צפוי להיכנס")).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /פירוט ועריכה$/u })).toHaveAttribute("href", "/forecast/next");
-    await expect(canvas.getAllByText("צפי").length).toBeGreaterThan(1);
+    // FLOW-1017: each row's figure is plain text that names the month.
+    await expect(canvas.getAllByText(/^צפי לחודש הבא/u).length).toBeGreaterThan(1);
   },
 };
 

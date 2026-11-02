@@ -17,7 +17,7 @@ const late: BannerRow = { id: "missing", to: "/recurring", title: "חשבון א
 function hintStyle(rows: readonly BannerRow[]) {
   const { container, unmount } = render(
     <MemoryRouter>
-      <AttentionBox rows={rows} />
+      <AttentionBox rows={rows} recurringHref="/recurring" />
     </MemoryRouter>,
   );
   const hint = container.querySelector(".ui-home-attention .ui-row-hint");

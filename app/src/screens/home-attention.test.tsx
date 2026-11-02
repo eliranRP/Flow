@@ -65,7 +65,9 @@ describe("Home attention card (FLOW-321)", () => {
     expect(unpaid).toHaveAttribute("href", "/unpaid");
     expect(review.compareDocumentPosition(unpaid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(unpaid.querySelector('.ui-row-hint bdi[dir="ltr"]')).toHaveTextContent("₪23,400");
-    expect(document.querySelectorAll(".ui-btn")).toHaveLength(1);
+    // FLOW-1017: the box's foot adds the quiet "כל הקבועים" link; the review stays its one filled button.
+    expect(document.querySelectorAll(".ui-btn:not(.ui-btn-link)")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "כל הקבועים" })).toHaveClass("ui-btn-link");
   });
 
   it("puts the attention box right after the band, before the split card (FLOW-958)", () => {

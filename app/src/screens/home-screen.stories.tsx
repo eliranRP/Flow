@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
 import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
@@ -64,7 +64,7 @@ export const HomeAttentionSingular: Story = {
 };
 
 /** FLOW-364: Home's band with the month, its figures, the split card and the attention box. Invented figures. */
-function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null, recurringTip = false }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null; recurringTip?: boolean }) {
+function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null, recurringTip = false, late = recurringTip ? 1 : 0 }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null; recurringTip?: boolean; late?: number }) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
   return (
@@ -75,13 +75,13 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
         currentKey={currentKey}
         previewing={false}
         search=""
-        attention={attention ? attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, search: "" }) : []}
+        attention={attention ? attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, missingCount: late, search: "" }) : []}
         example={exampleOnBand}
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
         offlineSince={offlineSince}
         recurringTip={recurringTip}
-        lateRecurring={recurringTip ? 1 : 0}
+        lateRecurring={late}
         company={recurringTip ? <BandCompany name="Acme Test Co" onOpen={() => undefined} /> : undefined}
       />
     </StoryRoute>
@@ -118,8 +118,18 @@ export const HomeNextMonthBlock: Story = {
 /** The current month, with the attention box and the split card. A first-time owner: no קבועים tip (FLOW-1015). */
 export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
 
-/** FLOW-1015: a returning owner (one with recurring rows) sees the קבועים tip once, the dot's sentence while a bill is late. Live Home has the company on the band, so the bubble opens over it. */
+/** FLOW-1015: a returning owner (one with recurring rows) sees the קבועים tip once, the count's sentence while a bill is late. Live Home has the company on the band, so the bubble opens over it. */
 export const HomeRecurringTip: Story = { render: () => <CashHomeStory recurringTip /> };
+
+/** FLOW-1017: three recurring bills late: their count on the band's קבועים icon, their row, and כל הקבועים at the box's foot. */
+export const HomeLateRecurring: Story = {
+  render: () => <CashHomeStory late={3} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect((await canvas.findByRole("link", { name: "קבועים, 3 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("3");
+    await expect(canvas.getByRole("link", { name: "כל הקבועים" })).toHaveAttribute("href", "/recurring");
+  },
+};
 
 /** FLOW-958: offline, the last figures stay, and a line in the band says when they were read. */
 export const HomeOffline: Story = { render: () => <CashHomeStory offlineSince={Date.UTC(2026, 9, 26, 7, 41)} /> };

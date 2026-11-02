@@ -11,6 +11,7 @@ import { anchorOf, monthPeriod } from "../period";
 import { useAllowAdd } from "../use-allow-add";
 import { Amount } from "../ui/amount";
 import { BannerRows, type BannerRow } from "../ui/banner";
+import { Button } from "../ui/button";
 import { ReviewButton } from "../ui/band-states";
 import { ChangePill } from "../ui/change-pill";
 import { CompactBar } from "../ui/compact-bar";
@@ -48,14 +49,15 @@ export type HomeMonthNav = {
 
 /**
  * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
- * FLOW-986 (board concept B): קבועים left the tab bar for this icon; a dot marks late recurring bills.
+ * FLOW-986 (board concept B): קבועים left the tab bar for this icon. FLOW-1017: a red count on it says how many
+ * recurring bills and income are late (a number, not colour alone).
  */
 export function HomeBandActions({ isPast, currentName, search, avatarInitial, lateRecurring = 0, recurringTo = "/recurring", recurringTip = false }: {
   isPast: boolean;
   currentName: string;
   search: string;
   avatarInitial?: string;
-  /** Recurring bills and income late for this month: a dot on the קבועים icon when more than 0. */
+  /** Recurring bills and income late for this month: their count on the קבועים icon when more than 0. */
   lateRecurring?: number;
   /** Where the icon goes (the dev fixtures' own path). */
   recurringTo?: string;
@@ -111,15 +113,16 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
           className="ui-band-action"
         >
           <RepeatIcon size={22} />
-          {lateRecurring > 0 ? <span className="ui-band-dot" aria-hidden="true" /> : null}
+          {/* The name already says the count; the badge shows it, 9+ past nine so it keeps its size. */}
+          {lateRecurring > 0 ? <span className="ui-band-count" aria-hidden="true">{lateRecurring > 9 ? "9+" : String(lateRecurring)}</span> : null}
         </IconButton>
       </span>
       {tipOpen ? (
         <div ref={tip} className="ui-band-tip" role="status" aria-label="קבועים עברו לכאן">
           <p className="ui-band-tip-text">
             <strong>קבועים עברו לכאן</strong>
-            {/* The dot's sentence only while the dot is on. */}
-            {lateRecurring > 0 ? <span>נקודה אדומה: חשבון קבוע לא הגיע.</span> : null}
+            {/* The count's sentence only while the count is on. */}
+            {lateRecurring > 0 ? <span>המספר האדום: קבועים שלא הגיעו.</span> : null}
           </p>
           <IconButton label="סגירה" onClick={closeTip} className="ui-band-tip-close">
             <CloseIcon size={18} />
@@ -310,9 +313,10 @@ export function splitTakeaway(lead: "out" | "in" | null, netMinor: bigint, profi
 
 /**
  * The דורש טיפול box: review, open invoices, late bills and changed charges. Hidden with no rows.
- * FLOW-958: the review row is Home's one filled button; the other rows follow it as lines.
+ * FLOW-958: the review row is Home's one filled button; the other rows follow it as lines. FLOW-1017: its foot
+ * links to קבועים by name, so the band's icon is not the screen's only way there.
  */
-export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
+export function AttentionBox({ rows, recurringHref }: { rows: readonly BannerRow[]; recurringHref: string }) {
   if (rows.length === 0) return null;
   const [first, ...others] = rows;
   const lines = first?.button == null ? rows : others;
@@ -321,6 +325,11 @@ export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
       <h2 id="home-attention-title" className="ui-home-attention-title">דורש טיפול</h2>
       <ReviewButton row={first} />
       <BannerRows rows={lines} />
+      <div className="ui-home-attention-foot">
+        <Button variant="link" to={recurringHref} chevron>
+          כל הקבועים
+        </Button>
+      </div>
     </section>
   );
 }

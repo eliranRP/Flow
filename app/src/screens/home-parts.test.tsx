@@ -104,8 +104,17 @@ describe("Home's band parts (FLOW-364)", () => {
   });
 
   it("hides the attention box with no rows", () => {
-    const { container } = render(<AttentionBox rows={[]} />);
+    const { container } = render(<AttentionBox rows={[]} recurringHref="/recurring" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("ends the attention box with a link to קבועים by name (FLOW-1017)", () => {
+    render(
+      <MemoryRouter>
+        <AttentionBox rows={[{ id: "unpaid", to: "/unpaid", title: "חשבונית פתוחה אחת" }]} recurringHref="/recurring?preview=1" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "כל הקבועים" })).toHaveAttribute("href", "/recurring?preview=1");
   });
 
   it("names the forecast by the month's name", () => {
@@ -116,21 +125,24 @@ describe("Home's band parts (FLOW-364)", () => {
 // --- home-skeleton.test.tsx
 
 describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
-  it("sits after search and opens קבועים, with no dot when nothing is late", () => {
+  it("sits after search and opens קבועים, with no count when nothing is late", () => {
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="?preview=1" />);
     const icon = screen.getByRole("link", { name: "קבועים" });
     expect(icon).toHaveAttribute("href", "/recurring?preview=1");
-    expect(icon.querySelector(".ui-band-dot")).toBeNull();
+    expect(icon.querySelector(".ui-band-count")).toBeNull();
     const search = screen.getByRole("link", { name: "חיפוש" });
     expect(search.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("marks late bills with a dot and says how many in its name", () => {
+  it("shows how many are late on the icon, not a bare dot, and says it in its name (FLOW-1017)", () => {
     const { unmount } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={2} />);
-    expect(screen.getByRole("link", { name: "קבועים, 2 לא הגיעו" }).querySelector(".ui-band-dot")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "קבועים, 2 לא הגיעו" }).querySelector(".ui-band-count")?.textContent).toBe("2");
     unmount();
-    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={1} />);
-    expect(screen.getByRole("link", { name: "קבועים, אחד לא הגיע" })).toBeInTheDocument();
+    const again = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={1} />);
+    expect(screen.getByRole("link", { name: "קבועים, אחד לא הגיע" }).querySelector(".ui-band-count")?.textContent).toBe("1");
+    again.unmount();
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={12} />);
+    expect(screen.getByRole("link", { name: "קבועים, 12 לא הגיעו" }).querySelector(".ui-band-count")?.textContent).toBe("9+");
   });
 
   it("is not on a past month's band", () => {
@@ -147,7 +159,7 @@ describe("the one-time קבועים tip (FLOW-987)", () => {
   it("shows under the icon until its ✕, then never again on this phone", () => {
     const { unmount } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={1} recurringTip />);
     const tip = screen.getByRole("status", { name: "קבועים עברו לכאן" });
-    expect(tip).toHaveTextContent("נקודה אדומה: חשבון קבוע לא הגיע.");
+    expect(tip).toHaveTextContent("המספר האדום: קבועים שלא הגיעו.");
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
     unmount();
@@ -155,11 +167,11 @@ describe("the one-time קבועים tip (FLOW-987)", () => {
     expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
   });
 
-  it("says the dot's sentence only while the dot is on (FLOW-1015)", () => {
+  it("says the count's sentence only while the count is on (FLOW-1015, FLOW-1017)", () => {
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
     const tip = screen.getByRole("status", { name: "קבועים עברו לכאן" });
     expect(tip).toHaveTextContent("קבועים עברו לכאן");
-    expect(tip).not.toHaveTextContent("נקודה אדומה");
+    expect(tip).not.toHaveTextContent("המספר האדום");
   });
 
   it("opens once the owner's recurring rows are known, not only at first draw (FLOW-1015)", () => {
