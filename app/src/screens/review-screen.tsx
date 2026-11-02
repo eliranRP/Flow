@@ -13,7 +13,6 @@ import { useOnline } from "../ui/band-states";
 import { ScreenState, usePreviewRetry } from "../ui/screen-state";
 import { ProjectWaitingList, ReviewAllList, reviewListReturn, type ReviewListState } from "./review-lists";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
-import { E2E_DONE_COUNTS } from "../dev/review-e2e-fixture";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 import { useJevBookingsQuery } from "../jev-bookings";
 import { JevBookingReview } from "./jev-booking-review";
@@ -203,7 +202,7 @@ export function ReviewScreen() {
         search={search}
         backTo={fromList ? `/review${search}` : undefined}
         pushPrompt={e2eBoard == null}
-        done={e2eBoard === "done" ? E2E_DONE_COUNTS : undefined}
+        done={e2eBoard === "done" ? reviewE2e?.E2E_DONE_COUNTS : undefined}
       />
     );
   }

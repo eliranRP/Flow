@@ -116,7 +116,14 @@ export default defineConfig(({ mode }) => {
       ],
     },
     envDir: path.resolve(__dirname, ".."),
-    ...(e2eBuild ? { build: { cssMinify: false } } : {}),
+    build: {
+      ...(e2eBuild ? { cssMinify: false } : {}),
+      rolldownOptions: {
+        // Vite 8: rolldown splits what Home loads up front into one file per shared module, and
+        // each file gzips on its own. One chunk for the up-front graph keeps Home one download, as on Vite 7.
+        output: { codeSplitting: { groups: [{ name: "index", tags: ["$initial"] }] } },
+      },
+    },
     server: {
       host: "0.0.0.0",
       // Storybook and the story tests must not take the app's port.
