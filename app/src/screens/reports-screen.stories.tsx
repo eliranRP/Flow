@@ -163,6 +163,41 @@ export const ShareSheetProjects320: Story = {
   },
 };
 
+/** The four sample projects and four more, invented names. */
+const EIGHT_PROJECTS = [
+  ...REPORTS_BY_PROJECT.projects,
+  ...["Birch Lane", "Elm Court", "Pine Hill", "Willow Row"].map((name, index) => {
+    const id = `a0000000-0000-4000-8000-00000000017${String(index)}`;
+    return { key: id, project_id: id, name, currencies: REPORTS_BY_PROJECT.projects[0]?.currencies ?? [] };
+  }),
+];
+
+/**
+ * FLOW-456: eight projects at 320. Turning off "כל הפרויקטים" starts with every project on, so the sheet can
+ * still share; with none picked, the reason stands in the foot above the button, in view, not at the body's end.
+ */
+export const ShareSheetNoProject320: Story = {
+  name: "Sheet · share · 8 projects, none picked at 320",
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => <Reports sample={{ projects: { ...REPORTS_BY_PROJECT, projects: EIGHT_PROJECTS } }} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "שיתוף PDF" });
+    await userEvent.click(within(sheet).getByRole("switch", { name: "כל הפרויקטים" }));
+    const button = within(sheet).getByRole("button", { name: "שיתוף PDF" });
+    await expect(button).toBeEnabled();
+    const group = within(sheet).getByRole("group", { name: "פרויקטים" });
+    for (const item of within(group).getAllByRole("switch")) await userEvent.click(item);
+    await expect(button).toBeDisabled();
+    const why = within(sheet).getByRole("status");
+    await expect(why).toHaveTextContent("בחרו לפחות פרויקט אחד.");
+    // In view: the foot stays pinned, so the reason sits right above the button inside the screen.
+    const box = why.getBoundingClientRect();
+    await expect(box.bottom).toBeLessThanOrEqual(button.getBoundingClientRect().top + 1);
+    await expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
+  },
+};
+
 /**
  * FLOW-170: the balance sheet's date sheet says every date counts from the start, one caption under
  * the dates and under the calendar for another date (the owner asked for "from the start"). At 320,
