@@ -121,6 +121,16 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-457: a one-row section does not fold; its title keeps the column of the others. */
+.ui-rep-head-fixed {
+  cursor: default;
+}
+
+.ui-rep-chevron-space {
+  flex: none;
+  inline-size: var(--space-4);
+}
+
 /* A name wraps rather than cutting its start: a project's name is how the reader finds it (rule tables § 25). */
 .ui-rep-head-title {
   flex: 1;

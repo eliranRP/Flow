@@ -16,18 +16,21 @@ import {
 import { ToastProvider } from "../ui/toast";
 import { ProjectInvestmentScreen } from "./project-investment-screen";
 import { UNITS_HOLD, editVerdict } from "./project-investment-sheets";
-import { barShares } from "./project-returns-cards";
-import { bracketText, dscrText, percentText, shareOfMoneyIn, toPropertyReturns, toReturnLinesPage } from "./project-returns-data";
+import { barShares, partialLine } from "./project-returns-cards";
+import { bracketText, dscrText, percentText, toPropertyReturns, toReturnLinesPage } from "./project-returns-data";
 import { PropertyMetricScreen, PropertyPartScreen } from "./project-returns-detail-screen";
 import {
   BEFORE_FIRST_RENT,
   CASH_FLOW_CAPTION,
+  HISTORY_HINT,
+  INFINITY_NAME,
   MISSING_HISTORY,
   MONEY_IN_BODY,
   TAKEN_OVER_LABEL,
   TAX_CAPTION,
   UNITS_DEFAULT_HINT,
   buildingFormula,
+  cashFlowFormula,
   forcedFormula,
   metricPage,
   metricValue,
@@ -36,6 +39,7 @@ import {
   type FormulaRow,
   type InfoKey,
 } from "./project-returns-info";
+import { signedRow } from "./project-returns-parts";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
 import { BRACKET_RANGE, bracketVerdict, rawToBp } from "./project-returns-sheets";
 import { toReturnsJson } from "./project-returns-test-support";
@@ -205,8 +209,6 @@ describe("the returns read", () => {
     expect(dscrText(1625)).toBe("1.63");
     expect(bracketText(2400)).toBe("24%");
     expect(bracketText(2450)).toBe("24.5%");
-    expect(shareOfMoneyIn(420_000n, 3_630_000n, 365)).toBe(1157);
-    expect(shareOfMoneyIn(420_000n, null, 365)).toBeNull();
   });
 });
 
@@ -259,6 +261,16 @@ describe("the sheet contents", () => {
     expect(info.formula.rows[0]?.target).toEqual({ kind: "part", part: "building" });
     expect(info.formula.rows[2]?.target).toEqual({ kind: "edit", field: "tax_bracket" });
     expect(info.caption).toBe(TAX_CAPTION);
+  });
+
+  it("shows one sign per figure: a cost taken away reads − and its size", () => {
+    const signed = cashFlowFormula(birchLaneReturns).rows.map(signedRow);
+    expect(signed.map((row) => row.op)).toEqual(["", "−", "−", "−"]);
+    for (const row of signed.slice(1)) expect(row.value.kind === "money" && row.value.minor > 0n).toBe(true);
+    // A refund that adds back reads +, and the first row keeps its own sign.
+    expect(signedRow({ key: "x", op: "−", label: "x", value: { kind: "money", minor: 500n } })).toEqual({ op: "+", value: { kind: "money", minor: 500n } });
+    expect(signedRow({ key: "x", op: "", label: "x", value: { kind: "money", minor: -500n } })).toEqual({ op: "", value: { kind: "money", minor: -500n } });
+    expect(signedRow({ key: "x", op: "÷", label: "x", value: { kind: "money", minor: -500n } }).op).toBe("÷");
   });
 
   it("asks for the missing input, and says a value a year back is missing with no button", () => {
@@ -380,9 +392,12 @@ describe("the investment page's returns cards", () => {
     renderInvestment(birchLaneReturnsMissing);
     const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
     if (card == null) throw new Error("no card");
-    expect(within(card).getByText(MISSING_HISTORY)).toBeInTheDocument();
-    expect(within(card).getAllByRole("button", { name: "הוספה" })).toHaveLength(1);
-    fireEvent.click(within(card).getByRole("button", { name: "הוספה" }));
+    // FLOW-458: what is missing is on the hint line, and the total says it is partial.
+    expect(within(card).getByText(`${MISSING_HISTORY}. ${HISTORY_HINT}`)).toBeInTheDocument();
+    expect(within(card).getByText("חסר · שווי הקרקע")).toBeInTheDocument();
+    expect(card.querySelector(".ui-ret-total")).toHaveTextContent("חלקי · חסרים עליית ערך וחיסכון מס");
+    expect(within(card).getAllByRole("button", { name: /^הוספה/ })).toHaveLength(1);
+    fireEvent.click(within(card).getByRole("button", { name: "הוספה: שווי הקרקע" }));
     // The tax savings need the land first.
     expect(await screen.findByRole("dialog", { name: "שווי הקרקע" })).toBeInTheDocument();
   });
@@ -390,9 +405,10 @@ describe("the investment page's returns cards", () => {
   it("adds land to the property's figures, and shows the default one unit, still editable", async () => {
     renderInvestment(birchLaneReturnsMissing);
     const card = await screen.findByRole("region", { name: "נתוני הנכס" });
-    const units = within(card).getByRole("button", { name: /^יחידות/ });
-    expect(units).toHaveTextContent(`יחידות${UNITS_DEFAULT_HINT}1`);
-    fireEvent.click(within(card).getByRole("button", { name: /^קרקע/ }));
+    // FLOW-457: a row and its sheet use one name.
+    const units = within(card).getByRole("button", { name: /^מספר יחידות/ });
+    expect(units).toHaveTextContent(`מספר יחידות${UNITS_DEFAULT_HINT}1`);
+    fireEvent.click(within(card).getByRole("button", { name: /^שווי הקרקע/ }));
     expect(await screen.findByRole("dialog", { name: "שווי הקרקע" })).toBeInTheDocument();
   });
 
@@ -405,7 +421,7 @@ describe("the investment page's returns cards", () => {
     renderInvestment(birchLaneReturnsCashOut);
     const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
     if (card == null) throw new Error("no card");
-    expect(within(card).getByText("∞")).toBeInTheDocument();
+    expect(within(card).getByRole("img", { name: INFINITY_NAME })).toHaveTextContent("∞");
     expect(within(card).getByText(/כל הכסף חזר/)).toHaveTextContent("כל הכסף חזר · יצא $30,000 יותר משנכנס");
     expect(within(card).getByText("$82,000")).toBeInTheDocument();
     expect(within(card).queryByText(/%$/)).toBeNull();
@@ -418,11 +434,12 @@ describe("the investment page's returns cards", () => {
     const card = await screen.findByRole("region", { name: "נתוני הנכס" });
     const row = within(card).getByRole("link", { name: /מחיר רכישה/ });
     expect(row).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
-    expect(row).toHaveTextContent("מהתנועות · לפירוט");
+    expect(row).toHaveTextContent("מהתנועות · לפירוט ולתיקון");
+    expect(row).toHaveClass("m-press");
     expect(within(card).queryByRole("button", { name: /מחיר רכישה/ })).toBeNull();
   });
 
-  it("keeps each source's amount and per-cent in fixed tracks, a missing note spanning both from the amount's edge", async () => {
+  it("keeps each source's amount in one track, and what is missing on the hint line", async () => {
     renderInvestment(birchLaneReturnsMissing);
     const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
     if (card == null) throw new Error("no card");
@@ -432,16 +449,20 @@ describe("the investment page's returns cards", () => {
       const row = rows.find((item) => item.querySelector(".ui-ret-source-label")?.textContent === label);
       return row?.querySelector(selector) ?? null;
     };
-    // An amount: the amount track, then the per-cent track.
-    expect(cell("תזרים", ".ui-ret-source-value")).not.toHaveClass("ui-ret-source-wide");
-    expect(cell("תזרים", ".ui-ret-source-share")).toHaveTextContent("11.6%");
-    // A missing note (with or without הוספה): one cell across both tracks, and no per-cent cell.
-    expect(cell("עליית ערך", ".ui-ret-source-value")).toHaveClass("ui-ret-source-wide");
-    expect(cell("עליית ערך", ".ui-ret-source-value")).toHaveTextContent(MISSING_HISTORY);
-    expect(cell("עליית ערך", ".ui-ret-source-share")).toBeNull();
-    expect(cell("חיסכון מס", ".ui-ret-source-value")).toHaveClass("ui-ret-source-wide");
-    // The hint is a child of the row's grid, its own line.
-    expect(cell("עליית ערך", ":scope > .ui-ret-source-hint")).not.toBeNull();
+    // FLOW-458: an amount and nothing beside it (the per-cent of the money in is gone).
+    expect(cell("תזרים", ".ui-ret-source-value")).toHaveTextContent("$4,200");
+    expect(card.querySelector(".ui-ret-source-share")).toBeNull();
+    // A missing source: הוספה (when an input adds it) in the amount track, the reason on its own line.
+    expect(cell("עליית ערך", ".ui-ret-source-value")).toBeEmptyDOMElement();
+    expect(cell("עליית ערך", ":scope > .ui-ret-source-hint")).toHaveTextContent(MISSING_HISTORY);
+    expect(cell("חיסכון מס", ".ui-ret-source-value")).toHaveTextContent("הוספה");
+    expect(cell("חיסכון מס", ":scope > .ui-ret-source-hint")).toHaveTextContent("חסר · שווי הקרקע");
+  });
+
+  it("says a total that leaves a source out is partial", () => {
+    expect(partialLine([])).toBeNull();
+    expect(partialLine(["חיסכון מס"])).toBe("חלקי · חסר חיסכון מס");
+    expect(partialLine(["עליית ערך", "חיסכון מס"])).toBe("חלקי · חסרים עליית ערך וחיסכון מס");
   });
 
   it("reads לפני השכר הראשון in place of the per-cents before the first rent, and keeps the amounts", async () => {
@@ -463,9 +484,11 @@ describe("the investment page's returns cards", () => {
     renderInvestment(mapleCourtSub2Returns);
     const card = await screen.findByRole("region", { name: "נתוני הנכס" });
     const purchase = within(card).getByRole("link", { name: /מחיר רכישה/ });
-    expect(purchase).toHaveTextContent("מהתנועות + הלוואה שנלקחה · לפירוט");
+    expect(purchase).toHaveTextContent("מהתנועות + הלוואה שנלקחה · לפירוט ולתיקון");
     expect(purchase).toHaveTextContent("$331,600");
-    fireEvent.click(screen.getByRole("button", { name: "איך מחושב: השבחה צפויה" }));
+    // FLOW-459: the equity row opens its sheet itself, with no ⓘ of its own.
+    expect(screen.queryByRole("button", { name: "איך מחושב: השבחה צפויה" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^השבחה צפויה/ }));
     const dialog = await screen.findByRole("dialog", { name: "השבחה צפויה" });
     expect(within(dialog).getByRole("link", { name: /רכישה וסגירה \(מהתנועות\)/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
     const loan = within(dialog).getByRole("link", { name: new RegExp(TAKEN_OVER_LABEL) });
@@ -537,6 +560,19 @@ describe("the returns pages", () => {
     renderAt("/projects/p1/investment/returns");
     await screen.findByRole("link", { name: /לא נספר בתזרים/ });
     expect(screen.queryByRole("link", { name: /לפני השכרה/ })).toBeNull();
+    // FLOW-457: a section of one row says so, and does not fold.
+    const out = screen.getByRole("region", { name: "מחוץ לחישוב" });
+    expect(out).toHaveTextContent("שורה אחת");
+    expect(within(out).queryByRole("button")).toBeNull();
+  });
+
+  it("counts the calculation's rows as drawn, with their unit", async () => {
+    serve();
+    renderAt("/projects/p1/investment/returns");
+    const calc = await screen.findByRole("region", { name: "החישוב" });
+    expect(within(calc).getByRole("button", { name: /החישוב/ })).toHaveTextContent("6 שורות");
+    expect(within(calc).getAllByRole("link")).toHaveLength(4);
+    expect(within(screen.getByRole("region", { name: "מחוץ לחישוב" })).getByRole("button", { name: /מחוץ לחישוב/ })).toHaveTextContent("2 שורות");
   });
 
   it("reads a part of the money in since the purchase", async () => {

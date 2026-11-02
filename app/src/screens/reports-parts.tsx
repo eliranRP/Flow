@@ -27,7 +27,7 @@ import {
 export type Collapse = { isOpen: (id: string) => boolean; onToggle: (id: string) => void };
 
 /** A section's head: the chevron turns, the title, and the total that stays in view when it is closed. */
-export function ReportSection({ id, title, total, collapse, children, tone = "section" }: {
+export function ReportSection({ id, title, total, collapse, children, tone = "section", fixed = false }: {
   id: string;
   title: string;
   total: ReactNode;
@@ -35,9 +35,23 @@ export function ReportSection({ id, title, total, collapse, children, tone = "se
   children: ReactNode;
   /** A parent category inside a section is a step smaller. */
   tone?: "section" | "group";
+  /** A section of one row does not fold: its head is a plain line (FLOW-457). */
+  fixed?: boolean;
 }) {
   const bodyId = useId();
   const open = collapse.isOpen(id);
+  if (fixed) {
+    return (
+      <section className={tone === "section" ? "ui-rep-section" : "ui-rep-group"} aria-label={title}>
+        <div className="ui-rep-head ui-rep-head-fixed">
+          <span className="ui-rep-chevron-space" aria-hidden="true" />
+          <span className="ui-rep-head-title" dir="auto">{title}</span>
+          <span className="ui-rep-head-total">{total}</span>
+        </div>
+        <div className="ui-rep-body">{children}</div>
+      </section>
+    );
+  }
   return (
     <section className={tone === "section" ? "ui-rep-section" : "ui-rep-group"} aria-label={title}>
       <button type="button" className="ui-rep-head" aria-expanded={open} aria-controls={open ? bodyId : undefined} onClick={() => { collapse.onToggle(id); }}>
