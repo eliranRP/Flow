@@ -84,10 +84,10 @@
 }
 
 /* FLOW-454: each source is a grid of fixed tracks, dot | label | ⓘ and a flexible gap | amount | the
-   equity rows' chevron track, so the amounts keep one column whatever a row holds, at its edge
-   (left in RTL), in tabular figures. */
-/* FLOW-1022: the rows share the card's tracks (subgrid), so the label track is as wide as the longest
-   label and every ⓘ sits in one column, not right after its own label. */
+   equity rows' chevron track, so the amounts keep one column whatever a row holds, in tabular figures.
+   FLOW-1022: the rows share the card's tracks (subgrid), so the label track is as wide as the longest
+   label and every ⓘ sits in one column, not right after its own label; the amounts sit at the column's
+   start (right in RTL), so their last digits line up. */
 .ui-ret-sources {
   display: grid;
   grid-template-columns: var(--space-2) max-content minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
@@ -126,8 +126,8 @@
   white-space: nowrap;
 }
 
-/* FLOW-1022: an amount lines up on its last digit (the column's start in RTL), so the "$" of every row
-   meets in one column and a minus stands outside it; הוספה keeps the column's far edge. */
+/* FLOW-1022: an amount lines up on its last digit (the column's start, right in RTL), so a minus stands
+   outside the digits and amounts of one length share their "$"; הוספה keeps the column's far edge. */
 .ui-ret-source-value:has(.ui-ret-add),
 .ui-ret-equity-value:has(.ui-ret-add) {
   text-align: end;
