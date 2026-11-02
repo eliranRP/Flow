@@ -119,13 +119,13 @@ export function attentionRows({
  * One changed recurring charge: its arrow, "חשמל עלה", and "₪2,550 במקום ₪1,850"; it opens the payment.
  * Home says "· חיוב קבוע" after it; the changed-charges list (FLOW-1021) is all recurring, so it leaves that out.
  */
-export function changeRow(change: ChargeChangeView, kind = true): BannerRow {
+export function changeRow(change: ChargeChangeView, { saysRecurring = true }: { saysRecurring?: boolean } = {}): BannerRow {
   return {
     id: `change:${change.id}`,
     to: change.href,
     icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
     title: change.title,
     // One line, cut at its end only when it does not fit (43-home.css).
-    hint: <><bdi dir="ltr">{change.now}</bdi> במקום <bdi dir="ltr">{change.usual}</bdi>{kind ? " · חיוב קבוע" : null}</>,
+    hint: <><bdi dir="ltr">{change.now}</bdi> במקום <bdi dir="ltr">{change.usual}</bdi>{saysRecurring ? " · חיוב קבוע" : null}</>,
   };
 }

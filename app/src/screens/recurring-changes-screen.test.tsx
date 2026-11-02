@@ -1,9 +1,10 @@
 import type { RecurringChange } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as forecast from "../forecast";
 import { SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
 import { projectAttentionRows } from "./project-attention";
 import { RecurringChangesScreen } from "./recurring-changes-screen";
@@ -56,5 +57,67 @@ describe("חיובים שהשתנו (FLOW-1021)", () => {
     const changes = TWO.map((row) => ({ ...row, project_id: "p1" }));
     const [row] = projectAttentionRows({ projectId: "p1", pending: 0, late: [], changes, search: "" });
     expect(row?.to).toBe("/recurring/changes?project=p1");
+  });
+});
+
+// The live reads: the screen's own hooks, mocked so the test drives what the server returns.
+describe("חיובים שהשתנו, live (FLOW-1021 r1)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function live(path: string) {
+    return render(withQuery(
+      <MemoryRouter initialEntries={[path]}>
+        <RecurringChangesScreen />
+      </MemoryRouter>,
+    ));
+  }
+
+  function result(over: Partial<{ data: RecurringChange[] | undefined; isError: boolean; refetch: () => Promise<unknown> }>) {
+    return { data: undefined, isError: false, refetch: vi.fn(() => Promise.resolve()), ...over } as unknown as ReturnType<typeof forecast.useRecurringChangesQuery>;
+  }
+
+  it("reads the company's changes, not the project's, without ?project=", () => {
+    const company = vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({ data: TWO }));
+    const own = vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({}));
+    live("/recurring/changes");
+    expect(company).toHaveBeenCalledWith(true);
+    expect(own).toHaveBeenCalledWith("", false);
+    expect(screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/transactions/"))).toHaveLength(2);
+  });
+
+  it("reads the project's own changes with ?project=", () => {
+    const company = vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({}));
+    const own = vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({ data: [{ ...power, project_id: "p9" }] }));
+    live("/recurring/changes?project=p9");
+    expect(company).toHaveBeenCalledWith(false);
+    expect(own).toHaveBeenCalledWith("p9", true);
+    expect(screen.getByText("חשמל עלה")).toBeTruthy();
+  });
+
+  it("treats an empty ?project= as the company's list", () => {
+    const company = vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({ data: TWO }));
+    vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({}));
+    live("/recurring/changes?project=");
+    expect(company).toHaveBeenCalledWith(true);
+  });
+
+  it("shows the skeleton while the read is on its way", () => {
+    vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({}));
+    vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({}));
+    const { container } = live("/recurring/changes");
+    expect(screen.queryByRole("heading", { name: "חיובים שהשתנו" })).toBeNull();
+    expect(container.firstElementChild).not.toBeNull();
+  });
+
+  it("says the read failed and reads again on נסו שוב", () => {
+    const refetch = vi.fn(() => Promise.resolve());
+    vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({ isError: true, refetch }));
+    vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({}));
+    live("/recurring/changes");
+    expect(screen.getByText("החיובים לא נטענו")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -22,7 +22,8 @@ const NO_CHANGES: readonly RecurringChange[] = [];
  */
 export function RecurringChangesScreen({ sample }: { sample?: readonly RecurringChange[] } = {}) {
   const [params] = useSearchParams();
-  const project = params.get("project");
+  // An empty ?project= is no project: the company's list, not a read that never runs.
+  const project = params.get("project") || null;
   const preview = useHomePreview();
   const live = sample == null && preview === "off";
   const company = useRecurringChangesQuery(live && project == null);
@@ -48,7 +49,7 @@ export function RecurringChangesScreen({ sample }: { sample?: readonly Recurring
   }
   const data = sample ?? (live ? query.data : preview === "loading" ? undefined : NO_CHANGES);
   if (data == null) return <RecurringSkeleton />;
-  const rows = chargeChangeViews(project == null ? data : data.filter((row) => row.project_id === project), search).map((change) => changeRow(change, false));
+  const rows = chargeChangeViews(project == null ? data : data.filter((row) => row.project_id === project), search).map((change) => changeRow(change, { saysRecurring: false }));
   return (
     <div className="ui-recurring">
       {head}
