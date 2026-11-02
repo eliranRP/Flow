@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(78);
+select plan(89);
 
 do $users$
 begin
@@ -273,6 +273,41 @@ select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-1
   'the rehab cost before the rent is not CapEx');
 select is((public.get_property_returns(pg_temp.id('curr'), '2026-01-01', '2026-12-31')->'statement'->>'before_rent_minor')::bigint, -150000::bigint,
   'the period costs before the rent are listed apart');
+
+-- FLOW-461: the land from the books. The books split the purchase into land and building on asset
+-- accounts; the company names its land account once and each property reads its postings to it.
+reset role;
+insert into public.accounts (company_id, name, type) values
+  (pg_temp.id('co'), '1 Property - land', 'asset'),
+  (pg_temp.id('co'), '1A Property - land improvements', 'asset'),
+  (pg_temp.id('co'), '2 Property - building', 'asset');
+insert into prr (label, id)
+select 'land_acc', a.id from public.accounts a where a.company_id = pg_temp.id('co') and a.name = '1 Property - land';
+insert into prr (label, id)
+select 'other_acc', a.id from public.accounts a where a.company_id = pg_temp.id('other_co') limit 1;
+insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind)
+select pg_temp.id('co'), pg_temp.id('buy'), a.id, v.amount, v.ord, 'journal'
+from (values ('1 Property - land', 2500000, 90), ('1A Property - land improvements', 400000, 91), ('2 Property - building', -2900000, 92)) v(name, amount, ord)
+join public.accounts a on a.company_id = pg_temp.id('co') and a.name = v.name;
+select tests.authenticate_as('prr_owner');
+select is(pg_temp.ret()->'inputs'->>'land_source', 'typed', 'a typed land value wins');
+select public.set_project_investment(pg_temp.id('flat'), '{"land_minor": null}');
+select is(pg_temp.ret()->'inputs'->'land_suggestion',
+  jsonb_build_object('account_id', pg_temp.id('land_acc'), 'name', '1 Property - land', 'amount_minor', 2500000),
+  'with no land account named, the land account with a balance on the property is suggested, not land improvements');
+select ok(pg_temp.ret()->'missing' ? 'land', 'and the land is still missing until it is chosen');
+select is(public.set_land_account(pg_temp.id('land_acc'))->>'land_account_id', pg_temp.id('land_acc')::text,
+  'set_land_account names the company''s land account');
+select is((pg_temp.ret()->'inputs'->>'land_minor')::bigint, 2500000::bigint, 'the land is the property''s postings to it');
+select is(pg_temp.ret()->'inputs'->>'land_source', 'books', 'and comes from the books');
+select is(pg_temp.ret()->'inputs'->'land_suggestion', 'null'::jsonb, 'no suggestion once an account is named');
+select throws_ok(format('select public.set_land_account(%L)', pg_temp.id('other_acc')), 'P0001', 'account not found',
+  'another company''s account is not found');
+select pg_temp.as_mcp('write');
+select is(public.mcp_set_land_account('prr-land-1', null)->'data'->>'undo_kind', 'land_account', 'MCP set_land_account returns its undo kind');
+select is(public.mcp_undo('prr-land-undo', 'land_account', pg_temp.id('co'))->>'ok', 'true', 'undo works');
+select is((select land_account_id from public.companies where id = pg_temp.id('co')), pg_temp.id('land_acc'), 'and puts the account back');
+select tests.authenticate_as('prr_owner');
 
 -- FLOW-454: a Sub2 deal. The bank shows only the cash brought to closing; the mortgage taken
 -- over (no proceeds line) is part of the price, a later refinance is not, and the money in stays cash.

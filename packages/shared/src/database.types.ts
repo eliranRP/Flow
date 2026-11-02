@@ -132,16 +132,22 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "after_overhead": boolean,"base_currency": string,"books_closed_through": string | null,"cash_basis": string,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_bracket_bp": number | null,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
+                    "after_overhead": boolean,"base_currency": string,"books_closed_through": string | null,"cash_basis": string,"created_at": string,"id": string,"is_demo": boolean,"land_account_id": string | null,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_bracket_bp": number | null,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_bracket_bp"?: number | null,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"land_account_id"?: string | null,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_bracket_bp"?: number | null,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_bracket_bp"?: number | null,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"land_account_id"?: string | null,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_bracket_bp"?: number | null,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
                     {
+      foreignKeyName: "companies_land_account_fkey"
+      columns: ["id","land_account_id"]
+isOneToOne: false
+      referencedRelation: "accounts"
+      referencedColumns: ["company_id","id"]
+    },{
       foreignKeyName: "companies_overhead_project_fk"
       columns: ["id","overhead_project_id"]
 isOneToOne: false
@@ -2118,6 +2124,9 @@ isOneToOne: false
 "mcp_set_journal_entry_leg_project":
 { Args: { "p_expected_version": string,"p_idempotency_key": string,"p_journal_entry_id": string,"p_leg_ordinal": number,"p_project_id": string,"p_reason": string }; Returns: Json
                            },
+"mcp_set_land_account":
+{ Args: { "p_account_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_set_line_cash":
 { Args: { "p_idempotency_key": string,"p_in_cash": boolean,"p_transaction_id": string }; Returns: Json
                            },
@@ -2440,6 +2449,9 @@ isOneToOne: false
                            },
 "set_invoice_paid":
 { Args: { "p_id": string,"p_paid": boolean }; Returns: Json
+                           },
+"set_land_account":
+{ Args: { "p_account_id": string }; Returns: Json
                            },
 "set_member_role":
 { Args: { "p_role": string,"p_user_id": string }; Returns: Json

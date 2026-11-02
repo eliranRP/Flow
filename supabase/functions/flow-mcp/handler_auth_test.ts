@@ -234,6 +234,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "delete_category",
     "move_category_lines",
     "set_tax_bracket",
+    "set_land_account",
     "set_company_currency",
     "rename_category",
     "set_category_parent",
