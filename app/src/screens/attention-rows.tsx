@@ -12,8 +12,8 @@ import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from 
  * total, each only when it has something. A count of 1 reads singular. FLOW-403 adds a
  * third row, the late recurring bills, as a count only. FLOW-415 (b-2): late income gets its own
  * count row, and a recurring payment 20% or more off its usual amount gets a row with an up or down
- * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו". The count rows open the
- * קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
+ * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו", that opens the list of
+ * those charges (FLOW-1021). The late count rows open the קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
  * count row under the review row, opening העברות לבדיקה.
  */
 export function attentionRows({
@@ -98,25 +98,34 @@ export function attentionRows({
   if (missingIncome > 0) {
     rows.push({ id: "missing-income", to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true) });
   }
-  // FLOW-415: one changed charge opens its payment; two or more share a row that opens הגיעו החודש.
+  // FLOW-415: one changed charge opens its payment. FLOW-1021: two or more share a row that opens
+  // חיובים שהשתנו, the list of just those charges, each with its amount and its usual one.
   const [only] = changes;
   if (changes.length === 1 && only != null) {
-    rows.push({
-      id: `change:${only.id}`,
-      to: only.href,
-      icon: only.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
-      title: only.title,
-      // One line, cut at its end only when it does not fit (43-home.css).
-      hint: <><bdi dir="ltr">{only.now}</bdi> במקום <bdi dir="ltr">{only.usual}</bdi> · חיוב קבוע</>,
-    });
+    rows.push(changeRow(only));
   } else if (changes.length > 1) {
     rows.push({
       id: "changes",
-      to: `${missingTo}${search}#arrived`,
+      to: `/recurring/changes${search}`,
       // All drops draw the down arrow; any rise draws the up one.
       icon: changes.every((change) => change.down) ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: <><bdi dir="ltr">{String(changes.length)}</bdi> חיובים קבועים השתנו</>,
     });
   }
   return rows;
+}
+
+/**
+ * One changed recurring charge: its arrow, "חשמל עלה", and "₪2,550 במקום ₪1,850"; it opens the payment.
+ * Home says "· חיוב קבוע" after it; the changed-charges list (FLOW-1021) is all recurring, so it leaves that out.
+ */
+export function changeRow(change: ChargeChangeView, kind = true): BannerRow {
+  return {
+    id: `change:${change.id}`,
+    to: change.href,
+    icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
+    title: change.title,
+    // One line, cut at its end only when it does not fit (43-home.css).
+    hint: <><bdi dir="ltr">{change.now}</bdi> במקום <bdi dir="ltr">{change.usual}</bdi>{kind ? " · חיוב קבוע" : null}</>,
+  };
 }
