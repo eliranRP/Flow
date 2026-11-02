@@ -285,8 +285,9 @@ insert into prr (label, id)
 select 'land_acc', a.id from public.accounts a where a.company_id = pg_temp.id('co') and a.name = '1 Property - land';
 insert into prr (label, id)
 select 'other_acc', a.id from public.accounts a where a.company_id = pg_temp.id('other_co') limit 1;
-insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind)
-select pg_temp.id('co'), pg_temp.id('buy'), a.id, v.amount, v.ord, 'journal'
+-- FLOW-463: each leg is filed to the property, without the by-hand flag, as a journal entry does.
+insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind, project_id, project_explicit)
+select pg_temp.id('co'), pg_temp.id('buy'), a.id, v.amount, v.ord, 'journal', pg_temp.id('flat'), false
 from (values ('1 Property - land', 2500000, 90), ('1A Property - land improvements', 400000, 91), ('2 Property - building', -2900000, 92)) v(name, amount, ord)
 join public.accounts a on a.company_id = pg_temp.id('co') and a.name = v.name;
 select tests.authenticate_as('prr_owner');
