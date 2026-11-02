@@ -92,7 +92,7 @@ export function ScreenState({
       ) : stacked ? (
         <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} titleAside={titleAside} kicker={kicker} below={below} className={headerClassName} headEnd={headEnd} />
       ) : (
-        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} headEnd={headEnd} />
+        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} titleAside={titleAside} kicker={kicker} className={headerClassName} headEnd={headEnd} />
       )}
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

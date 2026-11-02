@@ -16,6 +16,12 @@
   padding: var(--space-2) 0 0;
 }
 
+/* FLOW-1021: חיובים שהשתנו: the changed charges' card spans the page's own padding, as the month card does. */
+.ui-recurring .ui-banner-rows,
+.ui-recurring > .ui-banner {
+  margin: var(--space-6) 0 0;
+}
+
 /* FLOW-1014: the empty screen's line is read in full at 320, not clipped after three lines. */
 .ui-recurring .ui-empty-line {
   display: block;

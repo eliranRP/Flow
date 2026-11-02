@@ -1,7 +1,7 @@
 import { formatAmount } from "../ui/amount";
 import { formatDisplay } from "../ui/date-math";
 import { INVESTMENT_LABELS, type InvestmentField } from "../ui/investment-card";
-import { bracketText, dscrText, percentText, type PropertyReturns, type ReturnLine } from "./project-returns-data";
+import { bracketText, dscrText, percentText, type PropertyReturns, type RehabRow, type ReturnLine } from "./project-returns-data";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451: what every ⓘ, part and metric shows, as data. A row is an operator, a name, a figure and
@@ -11,13 +11,14 @@ import { bracketText, dscrText, percentText, type PropertyReturns, type ReturnLi
 
 /** The figures the owner types: the project's own, and the company's tax bracket. */
 export type EditField = InvestmentField | "tax_bracket";
-export type PartKey = "building" | "money-in" | "forced";
-export const PART_KEYS: readonly PartKey[] = ["building", "money-in", "forced"];
+export type PartKey = "building" | "money-in" | "forced" | "rehab";
+export const PART_KEYS: readonly PartKey[] = ["building", "money-in", "forced", "rehab"];
 export type MetricKey = "coc" | "cap-rate" | "dscr" | "per-unit";
 export const METRIC_KEYS: readonly MetricKey[] = ["coc", "cap-rate", "dscr", "per-unit"];
 
 export type Target =
-  | { kind: "line"; line: ReturnLine }
+  /** A line's page; `categoryId` narrows it to one category (`?category=`). */
+  | { kind: "line"; line: ReturnLine; categoryId?: string }
   | { kind: "statement" }
   | { kind: "part"; part: PartKey }
   | { kind: "edit"; field: EditField }
@@ -205,7 +206,8 @@ export function purchaseRows(r: PropertyReturns, op: Op, negate: boolean): Formu
   return [{ key: "purchase", op, label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase", negate), target: { kind: "edit", field: "purchase" } }];
 }
 
-function rehabRow(r: PropertyReturns, op: Op, part: PartKey, negate: boolean): FormulaRow {
+/** The renovation so far, opening its own page (FLOW-460). */
+function rehabRow(r: PropertyReturns, op: Op, negate: boolean): FormulaRow {
   const rehab = r.inputs.rehabMinor;
   return {
     key: "rehab",
@@ -213,7 +215,7 @@ function rehabRow(r: PropertyReturns, op: Op, part: PartKey, negate: boolean): F
     label: "שיפוץ עד היום",
     hint: "מחושב מההוצאות",
     value: rehab == null ? { kind: "text", text: "לא מחושב" } : money(negate ? -rehab : rehab),
-    target: { kind: "part", part },
+    target: { kind: "part", part: "rehab" },
   };
 }
 
@@ -222,7 +224,7 @@ export function forcedFormula(r: PropertyReturns): Formula {
     rows: [
       { key: "arv", op: "", label: "שווי אחרי שיפוץ (ARV)", hint: "הערכה שלך", value: typed(r.inputs.arvMinor, "arv"), target: { kind: "edit", field: "arv" } },
       ...purchaseRows(r, "−", true),
-      rehabRow(r, "−", "forced", true),
+      rehabRow(r, "−", true),
     ],
     result: { key: "forced", op: "=", label: "השבחה צפויה", value: computed(r.equity.forcedMinor, r, ["arv", "purchase"]) },
   };
@@ -255,7 +257,7 @@ export function buildingFormula(r: PropertyReturns): Formula {
   return {
     rows: [
       ...purchaseRows(r, "", false),
-      rehabRow(r, "+", "building", false),
+      rehabRow(r, "+", false),
       { key: "land", op: "−", label: FIELD_NAMES.land, hint: "שלך · עריכה", value: typed(r.inputs.landMinor, "land", true), target: { kind: "edit", field: "land" } },
     ],
     result: { key: "building", op: "=", label: "עלות הבניין", value: computed(r.sources.buildingMinor, r, ["purchase", "land"]) },
@@ -297,25 +299,46 @@ export function infoFigure(info: ReturnInfo): FigureValue | null {
 
 export type PartPage = { title: string; meta: string; body: string; back: string; formula: Formula };
 
-/** The part's own rows, without the row that opens this same page. */
-function withoutSelf(formula: Formula, part: PartKey): Formula {
-  return { ...formula, rows: formula.rows.map((row) => (row.target?.kind === "part" && row.target.part === part ? { ...row, target: undefined, hint: "לפי התנועות למטה" } : row)) };
+export const REHAB_BODY = "כל הוצאות הנכס שנספרות בשיפוץ, מאז הקנייה.";
+export const NO_CATEGORY = "בלי קטגוריה";
+
+/**
+ * The renovation so far by category (FLOW-460, decision 0247): each category that counts, largest
+ * first, opening its lines; the rows add up to the figure, as the server sums them from the same lines.
+ */
+export function rehabFormula(r: PropertyReturns, rows: readonly RehabRow[]): Formula {
+  const rehab = r.inputs.rehabMinor;
+  return {
+    rows: rows.map((row, index) => ({
+      key: row.id ?? "none",
+      op: index === 0 ? "" : "+",
+      label: row.name ?? NO_CATEGORY,
+      value: money(row.minor),
+      // A line with no category has no page of its own: the transactions below list it.
+      target: row.id == null ? undefined : { kind: "line", line: "rehab", categoryId: row.id },
+    })),
+    result: { key: "rehab", op: "=", label: "שיפוץ עד היום", value: rehab == null ? { kind: "text", text: "לא מחושב" } : money(rehab) },
+  };
 }
 
-export function partPage(part: PartKey, r: PropertyReturns): PartPage {
+/** A part's page; `rehab` is the renovation's categories, for its own page. */
+export function partPage(part: PartKey, r: PropertyReturns, rehab: readonly RehabRow[] = []): PartPage {
+  if (part === "rehab") {
+    return { title: "שיפוץ עד היום", meta: "", body: REHAB_BODY, back: "השקעה", formula: rehabFormula(r, rehab) };
+  }
   if (part === "building") {
     return {
       title: "עלות הבניין",
       meta: "קנייה ושיפוץ, בלי הקרקע",
       body: "מה שהנכס עלה, בלי הקרקע: קרקע לא מתבלה, ולכן אין עליה פחת. מחלקים ב־27.5 שנה, תקופת הפחת של בניין מגורים.",
       back: "חיסכון",
-      formula: withoutSelf(buildingFormula(r), part),
+      formula: buildingFormula(r),
     };
   }
   if (part === "money-in") {
     return { title: "כסף בעסקה", meta: MONEY_IN_CAPTION, body: MONEY_IN_BODY, back: "השקעה", formula: moneyInFormula(r) };
   }
-  return { title: "השבחה צפויה", meta: "ARV פחות קנייה ושיפוץ", body: INFO.forced.body, back: "השקעה", formula: withoutSelf(forcedFormula(r), part) };
+  return { title: "השבחה צפויה", meta: "ARV פחות קנייה ושיפוץ", body: INFO.forced.body, back: "השקעה", formula: forcedFormula(r) };
 }
 
 /* -- the metrics ---------------------------------------------------------------------------------- */
@@ -388,7 +411,8 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
   const title = METRIC_TITLES[metric];
   const caption = `${metricCaption(metric, r)} · ${PERIOD}`;
   // No result row for a figure that is missing, or that reads "לפני השכר הראשון".
-  const result = (text: string | null) => (text == null || value.kind === "missing" || value.kind === "note" ? null : { text, value });
+  // The division reads left to right inside the Hebrew row (an LTR isolate), as numbers are written.
+  const result = (text: string | null) => (text == null || value.kind === "missing" || value.kind === "note" ? null : { text: `\u2066${text}\u2069`, value });
   if (metric === "coc") {
     const moneyIn = r.equity.moneyInMinor;
     const cashOut = cashOutMinor(r);
@@ -457,6 +481,7 @@ export const LINE_TITLES: Record<ReturnLine, string> = {
   holding: "עלויות החזקה",
   financing: "תקבולי הלוואות והחזרים",
   money_in: "כסף בעסקה",
+  rehab: "שיפוץ עד היום",
 };
 
 /**
@@ -477,6 +502,7 @@ export function lineMinor(line: ReturnLine, r: PropertyReturns): bigint | null {
   if (line === "holding") return parts.holdingMinor;
   if (line === "financing") return parts.financingMinor;
   if (line === "money_in") return r.equity.moneyInMinor == null ? null : -r.equity.moneyInMinor;
+  if (line === "rehab") return r.inputs.rehabMinor == null ? null : -r.inputs.rehabMinor;
   return r.sources.principalMinor;
 }
 

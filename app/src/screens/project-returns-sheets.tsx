@@ -8,6 +8,8 @@ import { Sheet } from "../ui/sheet";
 import { FigureText, FormulaList, type Resolve } from "./project-returns-parts";
 import { infoFigure, returnInfo, type InfoKey } from "./project-returns-info";
 import type { PropertyReturns } from "./project-returns-data";
+import { INFO_LEARN } from "./project-returns-learn";
+import { LearnSections } from "./project-returns-learn-sheet";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451 (board ConceptATaxInfo): the ⓘ sheet. One sheet for every figure: its title and amount,
@@ -48,6 +50,8 @@ export function ReturnInfoSheet({
       <p className="ui-pinv-help">{info.body}</p>
       <FormulaList formula={info.formula} currency={returns.currency} resolve={resolve} readOnly={readOnly} label={info.title} />
       {info.caption == null ? null : <p className="ui-ret-caption">{info.caption}</p>}
+      {/* FLOW-462: after how it is made, how an investor reads it. */}
+      <LearnSections learnKey={INFO_LEARN[infoKey]} />
     </Sheet>
   );
 }

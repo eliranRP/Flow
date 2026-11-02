@@ -1,16 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Route, Routes } from "react-router-dom";
 import {
+  birchLaneRehab,
+  birchLaneRehabMany,
   birchLaneReturnLines,
   birchLaneReturns,
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
   birchLaneReturnsMissing,
   birchLaneReturnsNegative,
+  birchLaneReturnsNoRehab,
   mapleCourtSub2Returns,
 } from "../dev/returns-sample";
 import { StoryRoute } from "../ui/story-route";
-import type { LinesSource } from "./project-returns-data";
+import type { ReturnLine } from "./project-returns-data";
 import { PropertyMetricScreen, PropertyPartScreen } from "./project-returns-detail-screen";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
 
@@ -19,6 +22,8 @@ import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-ret
  * FLOW-453: the holding costs before the first rent, the money in by part, and all the cash out.
  * FLOW-454: the units by default, a Sub2 purchase split in two, and the per-cents before the first rent.
  * FLOW-457: a statement with nothing before the first rent: one row left out, a section that does not fold.
+ * FLOW-460: the renovation so far by category (three, seven with "עוד 2 קטגוריות", none yet).
+ * FLOW-462: the ⓘ beside a page's title, open on the cap rate: מה זה, איך לקרוא, בשביל מה.
  */
 const RETURNS = {
   complete: birchLaneReturns,
@@ -28,18 +33,21 @@ const RETURNS = {
   sub2: mapleCourtSub2Returns,
   beforeRent: birchLaneReturnsBeforeRent,
   nothingBeforeRent: { ...birchLaneReturns, statement: { ...birchLaneReturns.statement, beforeRentMinor: 0n } },
+  noRehab: birchLaneReturnsNoRehab,
 };
 
-type Args = { entry: string; lines?: LinesSource; returns?: keyof typeof RETURNS };
+const REHAB = { three: birchLaneRehab, many: birchLaneRehabMany, none: [] };
 
-function Screen({ entry, lines = "opex", returns = "complete" }: Args) {
-  const sample = { returns: RETURNS[returns], projectName: "Birch Lane", lines: birchLaneReturnLines(lines) };
+type Args = { entry: string; lines?: ReturnLine; returns?: keyof typeof RETURNS; rehab?: keyof typeof REHAB; learn?: boolean };
+
+function Screen({ entry, lines = "opex", returns = "complete", rehab = "three", learn = false }: Args) {
+  const sample = { returns: RETURNS[returns], projectName: "Birch Lane", lines: birchLaneReturnLines(lines), rehab: REHAB[rehab] };
   return (
     <StoryRoute entry={entry}>
       <Routes>
         <Route path="/projects/:projectId/investment/returns" element={<PropertyStatementScreen sample={sample} />} />
         <Route path="/projects/:projectId/investment/returns/:line" element={<PropertyReturnLineScreen sample={sample} />} />
-        <Route path="/projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen sample={sample} />} />
+        <Route path="/projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen sample={sample} learnOpen={learn} />} />
         <Route path="/projects/:projectId/investment/part/:part" element={<PropertyPartScreen sample={sample} />} />
       </Routes>
     </StoryRoute>
@@ -71,3 +79,9 @@ export const CashOnCashAllCashOut: Story = { args: { entry: "/projects/p1/invest
 export const BuildingCostSub2: Story = { args: { entry: "/projects/p1/investment/part/building", lines: "rehab", returns: "sub2" } };
 export const CashOnCashBeforeFirstRent: Story = { args: { entry: "/projects/p1/investment/metric/coc", returns: "beforeRent" } };
 export const StatementOneRowOut: Story = { args: { entry: "/projects/p1/investment/returns", returns: "nothingBeforeRent" } };
+export const RehabPart: Story = { name: "Rehab part", args: { entry: "/projects/p1/investment/part/rehab", lines: "rehab" } };
+export const RehabPartManyCategories: Story = { name: "Rehab part, many categories", args: { entry: "/projects/p1/investment/part/rehab", lines: "rehab", rehab: "many" } };
+export const RehabPartEmpty: Story = { name: "Rehab part, empty", args: { entry: "/projects/p1/investment/part/rehab", lines: "rehab", returns: "noRehab", rehab: "none" } };
+export const RehabCategoryLines: Story = { args: { entry: "/projects/p1/investment/returns/rehab?category=cat-renovation", lines: "rehab" } };
+export const CapRate: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate" } };
+export const CapRateLearn: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", learn: true } };

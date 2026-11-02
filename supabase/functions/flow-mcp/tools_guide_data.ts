@@ -24,7 +24,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
   { id: "start", title: "Start", summary: "The map of the tools.", tools: ["get_started"] },
   {
     id: "company", title: "Company and team", summary: "The company, its currency and who can use it.",
-    tools: ["rename_company", "set_company_currency", "set_tax_bracket", "get_setup_suggestions", "list_team", "remove_member"],
+    tools: ["rename_company", "set_company_currency", "set_tax_bracket", "set_land_account", "get_setup_suggestions", "list_team", "remove_member"],
   },
   {
     id: "projects", title: "Projects and groups", summary: "Properties or jobs that income and costs belong to, and groups of them.",

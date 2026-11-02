@@ -48,6 +48,7 @@ const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ defa
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
 const CompanyNextMonthScreen = lazy(() => screenLoaders.companyNextMonth().then((m) => ({ default: m.CompanyNextMonthScreen })));
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
+const RecurringChangesScreen = lazy(() => screenLoaders.recurringChanges().then((m) => ({ default: m.RecurringChangesScreen })));
 const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const JournalComposerScreen = lazy(() => screenLoaders.journalComposer().then((m) => ({ default: m.JournalComposerScreen })));
@@ -189,6 +190,7 @@ function AppRoutes() {
                 {TransfersRoute()}
                 <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
+                <Route path="recurring/changes" element={<RecurringChangesScreen />} />
                 <Route path="recurring/:direction/:partyId" element={<RecurringChargeScreen />} />
                 {UnpaidInvoiceRoute()}
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />

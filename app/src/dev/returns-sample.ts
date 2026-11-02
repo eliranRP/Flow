@@ -1,4 +1,4 @@
-import type { LinesSource, PropertyReturns, ReturnLineRow, ReturnLinesPage } from "../screens/project-returns-data";
+import type { PropertyReturns, RehabRow, ReturnLine, ReturnLineRow, ReturnLinesPage } from "../screens/project-returns-data";
 
 /**
  * FLOW-451 board fixture (rule 25: invented names, round amounts). Birch Lane's last 12 months as a
@@ -35,6 +35,10 @@ export const birchLaneReturns: PropertyReturns = {
     takenOverMinor: 0n,
     takenOverLoans: [],
     landMinor: usd(46_300),
+    landSource: "typed",
+    landTypedMinor: usd(46_300),
+    landAccount: null,
+    landSuggestion: null,
     taxBracketBp: 2400,
     rehabMinor: usd(61_300),
     loanBalanceMinor: usd(210_000),
@@ -101,7 +105,7 @@ export const birchLaneReturns: PropertyReturns = {
 export const birchLaneReturnsMissing: PropertyReturns = {
   ...birchLaneReturns,
   missing: ["value_history", "land", "tax_bracket"],
-  inputs: { ...birchLaneReturns.inputs, landMinor: null, taxBracketBp: null, units: 1, unitsDefault: true, valueStart: null },
+  inputs: { ...birchLaneReturns.inputs, landMinor: null, landSource: null, landTypedMinor: null, taxBracketBp: null, units: 1, unitsDefault: true, valueStart: null },
   sources: {
     ...birchLaneReturns.sources,
     appreciationMinor: null,
@@ -226,6 +230,10 @@ export const mapleCourtSub2Returns: PropertyReturns = {
     takenOverMinor: usd(290_000),
     takenOverLoans: [{ id: "loan-maple", name: "Maple Street Mortgage", minor: usd(290_000) }],
     landMinor: usd(66_600),
+    landSource: "typed",
+    landTypedMinor: usd(66_600),
+    landAccount: null,
+    landSuggestion: null,
     taxBracketBp: 2400,
     rehabMinor: usd(18_400),
     loanBalanceMinor: usd(286_000),
@@ -279,7 +287,7 @@ function row(id: string, supplier: string, date: string, dollars: number, catego
   return { transactionId: id, description: supplier, supplierName: supplier, categoryId, categoryName, date, minor: usd(dollars), parts: null, shared: false, source };
 }
 
-const rows: Record<LinesSource, ReturnLineRow[]> = {
+const rows: Record<ReturnLine, ReturnLineRow[]> = {
   income: [
     row("t-rent-2", "Unit B tenant", "2026-10-01", 1_000, "cat-rent", "שכר דירה"),
     row("t-rent-1", "Unit A tenant", "2026-10-01", 1_000, "cat-rent", "שכר דירה"),
@@ -331,13 +339,14 @@ const rows: Record<LinesSource, ReturnLineRow[]> = {
     row("t-loan-09", "Northfield Lending", "2026-09-01", -150, "cat-principal", "קרן הלוואה"),
   ],
   rehab: [
-    row("t-roof", "Lone Star Roofing", "2026-03-14", -9_800, "cat-contractors", "קבלני משנה"),
-    row("t-supply", "Ferguson Supply", "2026-03-06", -2_100, "cat-materials", "חומרים"),
-    row("t-drywall", "Garcia Drywall", "2026-02-21", -6_500, "cat-contractors", "קבלני משנה"),
+    row("t-clean", "Bright Cleaning Co", "2026-03-28", -1_000, "cat-cleaning", "ניקיון ותחזוקה"),
+    row("t-furniture", "Oak Furniture Supply", "2026-03-20", -4_300, "cat-furniture", "ריהוט וציוד"),
+    row("t-roof", "Lone Star Roofing", "2026-03-14", -9_800, "cat-renovation", "שיפוץ והשבחה"),
+    row("t-drywall", "Garcia Drywall", "2026-02-21", -6_500, "cat-renovation", "שיפוץ והשבחה"),
   ],
 };
 
-const counts: Record<LinesSource, number> = {
+const counts: Record<ReturnLine, number> = {
   income: 22,
   opex: 23,
   debt_service: 12,
@@ -354,8 +363,47 @@ const counts: Record<LinesSource, number> = {
 };
 
 /** One page of a figure's lines (the first few), with the figure's whole count. */
-export function birchLaneReturnLines(line: LinesSource): ReturnLinesPage {
+export function birchLaneReturnLines(line: ReturnLine): ReturnLinesPage {
   const list = rows[line];
   const total = list.reduce((sum, item) => sum + item.minor, 0n);
   return { currency: "USD", totalMinor: total, count: counts[line], hasMore: counts[line] > list.length, rows: list };
 }
+
+/**
+ * FLOW-460: Birch Lane's renovation so far by category, largest first, as get_project sends it. The
+ * three add up to the returns' rehab, $61,300.
+ */
+export const birchLaneRehab: RehabRow[] = [
+  { id: "cat-renovation", name: "שיפוץ והשבחה", minor: usd(56_000) },
+  { id: "cat-furniture", name: "ריהוט וציוד", minor: usd(4_300) },
+  { id: "cat-cleaning", name: "ניקיון ותחזוקה", minor: usd(1_000) },
+];
+
+/** Seven categories, the last with none, adding up to the same $61,300: five show, then "עוד 2 קטגוריות". */
+export const birchLaneRehabMany: RehabRow[] = [
+  { id: "cat-renovation", name: "שיפוץ והשבחה", minor: usd(38_000) },
+  { id: "cat-materials", name: "חומרים", minor: usd(9_500) },
+  { id: "cat-contractors", name: "קבלני משנה", minor: usd(6_000) },
+  { id: "cat-furniture", name: "ריהוט וציוד", minor: usd(4_300) },
+  { id: "cat-cleaning", name: "ניקיון ותחזוקה", minor: usd(1_500) },
+  { id: "cat-permits", name: "היתרים", minor: usd(1_200) },
+  { id: null, name: null, minor: usd(800) },
+];
+
+/** No renovation yet: the rehab is $0 and no category counts. */
+export const birchLaneReturnsNoRehab: PropertyReturns = { ...birchLaneReturns, inputs: { ...birchLaneReturns.inputs, rehabMinor: 0n } };
+
+/**
+ * FLOW-461 (decision 0248): the land from the books. `Books`: the company named its land account and
+ * the property's postings to it are the land, $46,300 as typed before. `Suggestion`: no account named
+ * and none typed, with one land account holding $46,300 on the property.
+ */
+export const birchLaneReturnsLandBooks: PropertyReturns = {
+  ...birchLaneReturns,
+  inputs: { ...birchLaneReturns.inputs, landSource: "books", landTypedMinor: null, landAccount: { id: "acc-land", name: "Land - Birch Lane" } },
+};
+
+export const birchLaneReturnsLandSuggestion: PropertyReturns = {
+  ...birchLaneReturnsMissing,
+  inputs: { ...birchLaneReturnsMissing.inputs, landSuggestion: { accountId: "acc-land", name: "Land - Birch Lane", minor: usd(46_300) } },
+};

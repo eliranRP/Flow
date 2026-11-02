@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(73);
+select plan(74);
 
 do $users$
 begin
@@ -52,6 +52,10 @@ insert into pin (label, id) values
   ('pend', tests.fixture_line(pg_temp.id('co'), 'pin:pend', 3000, p_project => pg_temp.id('house'), p_category => pg_temp.id('materials'), p_line_status => 'pending')),
   ('s1', tests.fixture_line(pg_temp.id('co'), 'pin:s1', 40000, p_category => pg_temp.id('materials'), p_pnl_role => 'shared'));
 update public.transactions set cash_date = null where id = pg_temp.id('u1');
+-- FLOW-460: a journal entry out of cash (depreciation) in a counted category is not renovation.
+insert into pin (label, id) values
+  ('jrn', tests.fixture_line(pg_temp.id('co'), 'pin:jrn', 9000, p_project => pg_temp.id('house'), p_category => pg_temp.id('materials')));
+update public.transactions set in_cash_override = false where id = pg_temp.id('jrn');
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net) values
   (pg_temp.id('co'), pg_temp.id('s1'), pg_temp.id('house'), 2500, -10000),
   (pg_temp.id('co'), pg_temp.id('s1'), pg_temp.id('barn'), 7500, -30000);
@@ -119,6 +123,8 @@ select tests.authenticate_as('pin_owner');
 
 -- Nothing set yet.
 select is(pg_temp.inv()->>'purchase_minor', null, 'no purchase price until one is set');
+select is((select count(*)::integer from public.transactions where id = pg_temp.id('jrn') and in_cash_override is false), 1,
+  'FLOW-460: the depreciation line exists, and the rehab total below leaves it out');
 select is((pg_temp.inv()->>'rehab_minor')::bigint, 130000::bigint,
   'rehab: posted paid shekel costs, direct and shared, but not kept-out, loan-part, unpaid, pending or income lines');
 select is((pg_temp.inv()->>'loan_balance_minor')::bigint, 11980000::bigint,
