@@ -434,6 +434,15 @@
   margin: 0;
 }
 
+/* FLOW-456: in the sheet's foot, why the button is off, above it; empty, it takes no room. */
+.ui-rep-share-why {
+  margin: 0;
+}
+
+.ui-rep-share-why:not(:empty) {
+  margin-block-end: var(--space-2);
+}
+
 /* FLOW-993: the projects picked for the file, a switch each, set in under "כל הפרויקטים". */
 .ui-rep-share-projects {
   display: flex;

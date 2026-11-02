@@ -1,6 +1,6 @@
 <a id="flow-458"></a>
 # FLOW-458 · Total return: marked partial when a source is missing, rows that hold at 320, bar shades that can be told apart
-- **Type:** SMALL UI · **Status:** in-progress (#TBD) · **Source:** UX rules review 2026-11-01 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-450.
+- **Type:** SMALL UI · **Status:** in-progress (#931) · **Source:** UX rules review 2026-11-01 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-450.
 - **Files:** `app/src/screens/project-returns-cards.tsx` (`TotalReturnCard`), `app/src/ui/css/26-returns.css` (`.ui-ret-source-*`, `.ui-ret-shade-*`).
 
 - [x] With עליית ערך and חיסכון מס missing, the hero reads 16.5% under "תשואה כוללת · שנה", not marked partial (54.4% once filled). Add "חלקי · חסרים …" under the figure. Rule: feedback-and-states (a partial number never passes as final).

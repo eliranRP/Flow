@@ -210,7 +210,7 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
 /**
  * `board` is the MonthForecast frame; `changed` moves its largest invoice to next month (the
  * MonthForecastChanged frame); `empty` has nothing left to arrive (StatesForecastEmpty); `category` opens
- * לפי קטגוריה with the rent category open (MonthForecastCategory); `failed` is the forecast's failed read and
+ * קטגוריות with the rent category open (MonthForecastCategory); `failed` is the forecast's failed read and
  * `offline` the board's figures from 09:41 with no connection (FLOW-970); `project` opens לפי פרויקט, with Elm St's
  * rent and two small charges filed to Elm St and the Northgate invoice to Northgate Co (FLOW-1004).
  */

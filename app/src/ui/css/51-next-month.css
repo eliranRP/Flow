@@ -397,14 +397,10 @@
   text-overflow: ellipsis;
 }
 
-/* A long name takes the shrink; the tag and the net keep their width at 320. */
+/* A long name takes the shrink; the net keeps its width at 320. */
 .ui-cn-head > .ui-num {
   flex: none;
   font-weight: var(--type-section-weight);
-}
-
-.ui-cn-head > .ui-fc-tag {
-  flex: none;
 }
 
 .ui-cn-more {

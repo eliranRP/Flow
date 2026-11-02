@@ -118,7 +118,22 @@ describe("CompanyNextMonthScreen phases and holds (FLOW-1000 r1)", () => {
     expect((part?.forecast.rows.length ?? 0) + 1).toBeLessThanOrEqual(3);
     const titles = Array.from(section?.querySelectorAll(".ui-row-title") ?? []).map((title) => title.textContent);
     expect(titles.at(-1)).toBe(NOT_IN_PROFIT_LABEL);
+    // FLOW-1013: it opens nothing, so it fades as a line kept out of profit instead of looking like the rows that open.
+    const kept = Array.from(section?.querySelectorAll<HTMLElement>(".ui-pn-rows .ui-row") ?? []).at(-1);
+    expect(kept?.classList.contains("ui-row-set-aside")).toBe(true);
+    expect(kept?.closest("a")).toBeNull();
     expect(within(section as HTMLElement).queryByRole("link", { name: /^עוד /u })).toBeNull();
+  });
+});
+
+describe("CompanyNextMonthScreen says צפי once (FLOW-1013)", () => {
+  it("keeps צפי on the title only: no section tag, and a dated row's hint is its day", () => {
+    const { container } = renderPage();
+    expect(container.querySelectorAll(".ui-cn-group .ui-fc-tag")).toHaveLength(0);
+    const hints = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row-hint")).map((hint) => hint.textContent);
+    expect(hints.length).toBeGreaterThan(0);
+    for (const hint of hints) expect(hint).not.toMatch(/צפ(וי|י)/u);
+    expect(hints.some((hint) => /^\d\d\/\d\d · קבוע$/u.test(hint))).toBe(true);
   });
 });
 
