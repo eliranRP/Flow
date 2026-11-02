@@ -144,7 +144,23 @@ export default defineConfig(({ mode }) => {
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png"],
       workbox: {
-        navigateFallback: "/index.html",
+        // FLOW-843: launches came from a precached index.html, so the first one after a deploy
+        // ran the old bundle every time. The page now comes from the network (all routes serve
+        // the same shell) and the last one fetched is the offline copy, under one key.
+        navigateFallback: null,
+        globIgnores: ["**/*.html"],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "flow-shell",
+              networkTimeoutSeconds: 3,
+              cacheableResponse: { statuses: [200] },
+              plugins: [{ cacheKeyWillBeUsed: () => Promise.resolve("/app-shell") }],
+            },
+          },
+        ],
         // FLOW-502: the push and notification-click handlers live beside the generated worker.
         importScripts: ["push-sw.js"],
       },

@@ -9,6 +9,12 @@ import "./styles/app.css";
 
 applyThemeChoice(readThemeChoice());
 
+// FLOW-843: the deploy watch starts at launch, so a page found behind reloads before the first tap.
+// Its own chunk keeps it out of Home's entry.
+void import("./sw-reload").then(({ watchServiceWorker }) => {
+  watchServiceWorker();
+}, () => undefined);
+
 const queryClient = createQueryClient();
 
 const root = document.getElementById("root");

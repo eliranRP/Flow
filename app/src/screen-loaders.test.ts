@@ -5,7 +5,6 @@ import { preloadScreens, screenLoaders } from "./screen-loaders";
 const loaders = screenLoaders as unknown as Record<string, () => Promise<unknown>>;
 
 vi.mock("./ui/sheet", () => ({ loadSheetDrawer: () => Promise.resolve() }));
-vi.mock("./sw-reload", () => ({ watchServiceWorker: () => undefined }));
 
 afterEach(() => {
   vi.restoreAllMocks();
