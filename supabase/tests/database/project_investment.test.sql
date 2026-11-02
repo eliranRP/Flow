@@ -54,7 +54,7 @@ insert into pin (label, id) values
 update public.transactions set cash_date = null where id = pg_temp.id('u1');
 -- FLOW-460: a journal entry out of cash (depreciation) in a counted category is not renovation.
 insert into pin (label, id) values
-  ('jrn', tests.fixture_line(pg_temp.id('co'), 'pin:jrn', 9000, p_project => pg_temp.id('house'), p_category => pg_temp.id('materials'))));
+  ('jrn', tests.fixture_line(pg_temp.id('co'), 'pin:jrn', 9000, p_project => pg_temp.id('house'), p_category => pg_temp.id('materials')));
 update public.transactions set in_cash_override = false where id = pg_temp.id('jrn');
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net) values
   (pg_temp.id('co'), pg_temp.id('s1'), pg_temp.id('house'), 2500, -10000),
