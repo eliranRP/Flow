@@ -27,9 +27,9 @@
 /** sessionStorage key: when this tab last reloaded for a new worker. */
 export const RELOADED_KEY = "flow-sw-reloaded";
 /**
- * localStorage key: the live build this device last reloaded for. A deploy that changes no app code
- * keeps the same worker and bundle, so the page's build stays behind: reload for it once, not on
- * every check or launch.
+ * sessionStorage key: the live build this launch last reloaded for. A page the reload still served
+ * behind (the network missed the 3 s timeout, so the stored shell came back) reloads for that build
+ * once, not on every check. FLOW-843: per launch, not per device, so the next launch tries again.
  */
 export const BEHIND_KEY = "flow-sw-behind";
 /** A second reload this soon after one is a loop: skip it. */
@@ -55,16 +55,20 @@ async function liveBuild(fetcher: Window["fetch"]): Promise<string | null> {
   return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
 }
 
-type Win = Pick<Window, "navigator" | "document" | "location" | "sessionStorage" | "localStorage" | "history" | "addEventListener" | "fetch">;
+type Win = Pick<Window, "navigator" | "document" | "location" | "sessionStorage" | "history" | "addEventListener" | "fetch">;
 
-export function watchServiceWorker(win: Win = window, now: () => number = Date.now): void {
+/**
+ * `touchedBefore` says whether the user tapped or typed before the watch started: main.tsx listens
+ * from the first line, while this module's chunk is still loading.
+ */
+export function watchServiceWorker(win: Win = window, now: () => number = Date.now, touchedBefore: () => boolean = () => false): void {
   const sw = win.navigator.serviceWorker as ServiceWorkerContainer | undefined;
   if (sw == null) return;
   let hadController = sw.controller != null;
   // A new worker took control and the page still runs the old bundle.
   let pending = false;
   // No tap or key press yet: a reload loses nothing.
-  let untouched = true;
+  let untouched = !touchedBefore();
   const touched = () => {
     untouched = false;
   };
@@ -116,8 +120,8 @@ export function watchServiceWorker(win: Win = window, now: () => number = Date.n
     const live = await liveBuild(win.fetch.bind(win));
     if (live == null || live === mine) return;
     try {
-      if (win.localStorage.getItem(BEHIND_KEY) === live) return;
-      win.localStorage.setItem(BEHIND_KEY, live);
+      if (win.sessionStorage.getItem(BEHIND_KEY) === live) return;
+      win.sessionStorage.setItem(BEHIND_KEY, live);
     } catch {
       return;
     }
