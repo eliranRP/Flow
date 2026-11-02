@@ -11,7 +11,7 @@ The land is what depreciation leaves out: the building is the purchase plus the 
 ## Decision
 
 - The company names the land account once: `companies.land_account_id`, an asset account of the company (`set_land_account`, owner only; null unlinks; deleting the account unlinks it). MCP `set_land_account`, undo kind `land_account` with the company id, a conflict once it was changed again.
-- `get_property_returns` takes the land in this order: the value typed on the property (`inputs.land_source: "typed"`), else the property's postings to the land account in the investment currency (`"books"`: posted, not removed, not draft, by the leg's own project when it names one, else the line's; `private.project_account_balance`). `inputs.land_account` names the account; `inputs.land_typed_minor` keeps the typed figure.
+- `get_property_returns` takes the land in this order: the value typed on the property (`inputs.land_source: "typed"`), else the property's postings to the land account in the investment currency (`"books"`: posted, not removed, not draft, the legs filed to the property, as the account's lines in the books show them (FLOW-463); `private.project_account_balance`). `inputs.land_account` names the account; `inputs.land_typed_minor` keeps the typed figure.
 - With no account named, `inputs.land_suggestion` offers the asset account whose name says land (קרקע or land, and not improvements: שיפור, improve) with the largest positive balance on the property. Nothing is used until the owner taps it. The app shows it on the land row as one tap; a land from the books says "מהספרים" and opens the account's lines for the property.
 - Nothing is guessed: with no typed value, no account and no suggestion, `land` stays missing as before.
 

@@ -477,6 +477,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-460"></a>[FLOW-460](tasks/FLOW-460.md) | שיפוץ עד היום: a lean page that adds up, cash lines only | UI + SQL |
 | <a id="flow-461"></a>[FLOW-461](tasks/FLOW-461.md) | שווי הקרקע from the books | SQL + MCP + UI |
 | <a id="flow-462"></a>[FLOW-462](tasks/FLOW-462.md) | ⓘ on every returns page: how to read the figure and what it is for | UI |
+| <a id="flow-463"></a>[FLOW-463](tasks/FLOW-463.md) | The land from the books: count the legs filed to the property | SQL |
 | <a id="flow-455"></a>[FLOW-455](tasks/FLOW-455.md) | An account's page keeps its content while the period changes, and its year counts are whole | SMALL UI |
 | <a id="flow-456"></a>[FLOW-456](tasks/FLOW-456.md) | The report share sheet says why its button is off next to it, and picking projects starts from one | SMALL UI |
 | <a id="flow-457"></a>[FLOW-457](tasks/FLOW-457.md) | A property's returns: one minus per expense, true counts, a name for ∞, one label per figure | SMALL UI |

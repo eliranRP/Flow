@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(89);
+select plan(90);
 
 do $users$
 begin
@@ -285,8 +285,9 @@ insert into prr (label, id)
 select 'land_acc', a.id from public.accounts a where a.company_id = pg_temp.id('co') and a.name = '1 Property - land';
 insert into prr (label, id)
 select 'other_acc', a.id from public.accounts a where a.company_id = pg_temp.id('other_co') limit 1;
-insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind)
-select pg_temp.id('co'), pg_temp.id('buy'), a.id, v.amount, v.ord, 'journal'
+-- FLOW-463: each leg is filed to the property, without the by-hand flag, as a journal entry does.
+insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind, project_id, project_explicit)
+select pg_temp.id('co'), pg_temp.id('buy'), a.id, v.amount, v.ord, 'journal', pg_temp.id('flat'), false
 from (values ('1 Property - land', 2500000, 90), ('1A Property - land improvements', 400000, 91), ('2 Property - building', -2900000, 92)) v(name, amount, ord)
 join public.accounts a on a.company_id = pg_temp.id('co') and a.name = v.name;
 select tests.authenticate_as('prr_owner');
@@ -300,6 +301,19 @@ select is(public.set_land_account(pg_temp.id('land_acc'))->>'land_account_id', p
   'set_land_account names the company''s land account');
 select is((pg_temp.ret()->'inputs'->>'land_minor')::bigint, 2500000::bigint, 'the land is the property''s postings to it');
 select is(pg_temp.ret()->'inputs'->>'land_source', 'books', 'and comes from the books');
+-- FLOW-463: a journal entry with no project on the line files each leg to its property; the leg's
+-- project counts, flagged by hand or not. A leg filed elsewhere does not count here, whatever the line's.
+reset role;
+insert into prr (label, id) values
+  ('land_je', tests.fixture_line(pg_temp.id('co'), 'prr:land-je', 300000, p_doc_date => '2026-01-06')),
+  ('land_elsewhere', tests.fixture_project(pg_temp.id('co'), 'Example other property'));
+insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind, project_id, project_explicit)
+values
+  (pg_temp.id('co'), pg_temp.id('land_je'), pg_temp.id('land_acc'), 300000, 90, 'journal', pg_temp.id('flat'), false),
+  (pg_temp.id('co'), pg_temp.id('buy'), pg_temp.id('land_acc'), 700000, 93, 'journal', pg_temp.id('land_elsewhere'), false);
+select tests.authenticate_as('prr_owner');
+select is((pg_temp.ret()->'inputs'->>'land_minor')::bigint, 2800000::bigint,
+  'a leg filed to the property counts though its line has no project, and a leg filed to another property does not');
 select is(pg_temp.ret()->'inputs'->'land_suggestion', 'null'::jsonb, 'no suggestion once an account is named');
 select throws_ok(format('select public.set_land_account(%L)', pg_temp.id('other_acc')), 'P0001', 'account not found',
   'another company''s account is not found');
