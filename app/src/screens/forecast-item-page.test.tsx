@@ -313,6 +313,27 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     expect(rpc).not.toHaveBeenCalledWith("set_forecast_item", expect.anything());
   });
 
+  it("saves a pace pick and a new amount together: the line's pace and this month's amount, then closes (FLOW-1012)", async () => {
+    rpc.mockClear();
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    await pickMonthly();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום צפוי" }), { target: { value: "+$800" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", {
+        p_project_id: "p-green",
+        p_month: "2026-10",
+        p_edit: { row_key: "add:e-1", amount_minor: 72_900, pace: "month" },
+      });
+    });
+    await waitFor(() => {
+      const patches = rpc.mock.calls.filter(([name]) => name === "set_forecast_item").map(([, args]) => args as { p_item_key: string; p_patch: { amount_minor: number | null; moved_out: boolean } });
+      expect(patches.map((args) => [args.p_item_key, args.p_patch.amount_minor, args.p_patch.moved_out])).toEqual([["added:e-1", 80_000, false]]);
+    });
+    await waitFor(() => { expect(screen.getByTestId("where")).toHaveTextContent(/^\/forecast$/); });
+    expect(screen.queryByRole("button", { name: "שמירת השינוי בצפי" })).toBeNull();
+  });
+
   it("writes nothing for a pace pick the page leaves without saving (FLOW-1012)", async () => {
     rpc.mockClear();
     renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);

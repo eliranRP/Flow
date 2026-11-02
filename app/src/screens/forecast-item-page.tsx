@@ -226,7 +226,8 @@ export function ForecastItemPage({
         message: picked === "once" ? `${item.name}: רק ב${monthLabel}` : `${item.name}: ${PACE_WORDS[picked]}`,
       });
       // FLOW-1012: a pace pick alone writes the line only, not this month's amount and date.
-      if (amount === String(Number(item.minor) / 100) && when === startWhen(item, today)) {
+      const sameAmount = amount.trim() === "" || Math.round(Number(amount) * 100) === Number(item.minor);
+      if (sameAmount && when === startWhen(item, today)) {
         close();
         return;
       }
