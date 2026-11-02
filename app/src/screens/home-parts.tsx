@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
 import { addTriggerRef } from "../add-trigger";
-import { markRecurringTipSeen, recurringTipSeen } from "../recurring-tip";
+import { markRecurringTipSeen, recurringTipSeen, useTipDismiss } from "../recurring-tip";
 import { Link } from "react-router-dom";
 import { cashLinesPath, notInProfitHint } from "../cash";
 import { changeTone, splitParts } from "../home-month";
@@ -59,15 +59,22 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
   lateRecurring?: number;
   /** Where the icon goes (the dev fixtures' own path). */
   recurringTo?: string;
-  /** FLOW-987: may show the one-time "קבועים עברו לכאן" tip under the icon (live Home only). */
+  /**
+   * FLOW-987: may show the one-time "קבועים עברו לכאן" tip under the icon (live Home only). FLOW-1015: only for an
+   * owner who had the tab, so Home passes it once the owner's recurring rows are read (useReturningRecurringOwner).
+   */
   recurringTip?: boolean;
 }) {
   const allowAdd = useAllowAdd();
-  const [tipOpen, setTipOpen] = useState(() => recurringTip && !recurringTipSeen());
-  const closeTip = () => {
+  const [tipClosed, setTipClosed] = useState(recurringTipSeen);
+  const tipOpen = recurringTip && !tipClosed;
+  const tip = useRef<HTMLDivElement>(null);
+  const closeTip = useCallback(() => {
     markRecurringTipSeen();
-    setTipOpen(false);
-  };
+    setTipClosed(true);
+  }, []);
+  // FLOW-1015: a hint never blocks what is under it: a tap outside the bubble, or a scroll, closes it.
+  useTipDismiss(tipOpen, tip, closeTip);
   if (isPast) {
     return (
       <Link to={`/${search}`} replace className="ui-band-back m-press">
@@ -108,10 +115,11 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
         </IconButton>
       </span>
       {tipOpen ? (
-        <div className="ui-band-tip" role="note" aria-label="קבועים עברו לכאן">
+        <div ref={tip} className="ui-band-tip" role="status" aria-label="קבועים עברו לכאן">
           <p className="ui-band-tip-text">
             <strong>קבועים עברו לכאן</strong>
-            <span>נקודה אדומה: חשבון קבוע לא הגיע.</span>
+            {/* The dot's sentence only while the dot is on. */}
+            {lateRecurring > 0 ? <span>נקודה אדומה: חשבון קבוע לא הגיע.</span> : null}
           </p>
           <IconButton label="סגירה" onClick={closeTip} className="ui-band-tip-close">
             <CloseIcon size={18} />

@@ -36,6 +36,7 @@ import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
 import { reviewWaiting, useJevBookingCountQuery } from "../jev-booking-count";
 import { cardWeek, weeklyCardHidden } from "../weekly-card";
+import { useReturningRecurringOwner } from "../recurring-tip";
 
 // FLOW-517: the weekly summary sheet loads only when the push's `?week=` link opens Home.
 const WeeklySummaryRoute = /* @__PURE__ */ lazy(() => import("./weekly-summary-sheet").then((m) => ({ default: m.WeeklySummaryRoute })));
@@ -152,6 +153,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const transfers = useTransferMatchCountQuery();
   // FLOW-955 (owner): Jev's bookings waiting for review count in לאישור too.
   const jevBookings = useJevBookingCountQuery();
+  // FLOW-1015: the קבועים tip is for an owner who had the tab: one with recurring rows.
+  const recurringOwner = useReturningRecurringOwner(!previewing);
 
   const today = israelToday();
   const currentKey = today.slice(0, 7);
@@ -283,7 +286,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       )}
       reports={previewing ? null : <HomeReportsCard today={today} search={search} />}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
-      recurringTip={!previewing}
+      recurringTip={recurringOwner}
       weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
         <Suspense fallback={null}>
           <WeeklySummaryCardSlot weekStart={weekly} />

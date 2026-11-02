@@ -10,12 +10,10 @@ import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions"
 import { chargeHref, comparable, dayMonth, endedText } from "../recurring-charge";
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
-import { EmptyState } from "../ui/empty-state";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
-import { type RecurringListGroup, type RecurringListRow, RecurringBack, RecurringList } from "../ui/recurring-list";
+import { type RecurringListGroup, type RecurringListRow, RecurringBack, RecurringList, RecurringListEmpty } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
-import { RepeatIcon } from "../ui/icons";
 import { useDashboardQuery } from "../use-books";
 import { useOverheadProject } from "../overhead-project";
 import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
@@ -37,19 +35,6 @@ const NO_WRITES: RecurringWrites = {
 
 /** The alert state a screen computes from the schedule and the late bills. */
 type AlertState = ReturnType<typeof alertState>;
-
-/** No recurring charge yet: the title and the one line of what will show here (FLOW-447c, StatesRecurringEmpty). */
-function RecurringEmpty() {
-  return (
-    <div className="ui-recurring">
-      <header className="ui-recurring-head">
-        <RecurringBack />
-        <h1 className="t-title">קבועים</h1>
-      </header>
-      <EmptyState icon={<RepeatIcon />} title="עוד Flow לומד" body="חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה." />
-    </div>
-  );
-}
 
 /**
  * FLOW-447: the קבועים list. Late bills lead; the rest group by category, in the server's order.
@@ -113,7 +98,9 @@ export function RecurringScreen({
     );
   }
   if (view == null) return sample == null ? <RecurringSkeleton /> : null;
-  if (rows != null && rows.length === 0 && project == null) return <RecurringEmpty />;
+  // FLOW-1014: the empty screen keeps the add row, so the first recurring line can start here.
+  const addLine = live ? <RecurringAddLine month={today.slice(0, 7)} search={search} /> : null;
+  if (rows != null && rows.length === 0 && project == null) return <RecurringListEmpty addLine={addLine} />;
 
   /** Changes the late bills on screen at once: the cache when live, the fixture's state otherwise. */
   const editBills = (update: (list: readonly MissingBill[]) => MissingBill[]) => {
@@ -194,7 +181,7 @@ export function RecurringScreen({
         if (row.alertKey != null) void ignore(row.alertKey, "נמשיך לצפות לו");
       }}
       onEnded={(row) => void end(row)}
-      addLine={live ? <RecurringAddLine month={today.slice(0, 7)} search={search} /> : null}
+      addLine={addLine}
     />
   );
 }
@@ -287,8 +274,8 @@ function suggestionRow(suggestion: NonNullable<RecurringAlert["suggestion"]>): N
 }
 
 /**
- * FLOW-1011 (owner, 2026-11-01: "add the ability to add it from the recurring screen"): הוספת קבוע לצפי under the
- * groups. It asks which project (כללי is the overhead project), as the תזרים צפוי screen does, then opens that
+ * FLOW-1011 (owner, 2026-11-01: "add the ability to add it from the recurring screen"): הוספת קבוע, under the month
+ * card (FLOW-1014: in reach, and on the empty screen too). It asks which project (כללי is the overhead project), as the תזרים צפוי screen does, then opens that
  * project's add page for this month at כל חודש, which comes back here. Its reads are its own, so a sample list
  * (stories, tests) reads nothing.
  */
@@ -303,7 +290,7 @@ function RecurringAddLine({ month, search }: { month: string; search: string }) 
       search={search}
       back="recurring"
       pace="month"
-      label="הוספת קבוע לצפי"
+      label="הוספת קבוע"
     />
   );
 }

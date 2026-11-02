@@ -44,6 +44,24 @@ describe("Review lists v2 (FLOW-971)", () => {
     expect(reviewAllSubtitle(1, 0)).toBe("פריט אחד");
   });
 
+  it("with pages still to load, says the missing count is a floor (FLOW-1016)", () => {
+    expect(reviewAllSubtitle(1287, 12, true)).toBe("1,287 פריטים · לפחות 12 בלי פרויקט");
+    expect(reviewAllSubtitle(1287, 0, true)).toBe("1,287 פריטים");
+  });
+
+  it("with a page loading, keeps the missing floor in the head and says so at the end (FLOW-1016)", () => {
+    const paging = { total: 120, more: true, loading: true, failed: false, loadMore: vi.fn(), retry: vi.fn() };
+    const { rerender } = renderWithProviders(
+      <ReviewAllList rows={[row("a"), row("b", { project_id: null, project_name: null })]} search="" backTo="/review" paging={paging} />,
+    );
+    expect(screen.getByText("120 פריטים · לפחות 1 בלי פרויקט")).toBeInTheDocument();
+    const end = document.querySelector("[data-review-more]");
+    expect(end).toHaveAttribute("role", "status");
+    expect(end).toHaveTextContent("טוענים עוד…");
+    rerender(<ReviewAllList rows={[row("a"), row("b", { project_id: null, project_name: null })]} search="" backTo="/review" paging={{ ...paging, loading: false }} />);
+    expect(document.querySelector("[data-review-more]")?.textContent).toBe("");
+  });
+
   it("puts the items under day heads with each day's signed total, and marks a line with no project", () => {
     renderWithProviders(
       <ReviewAllList

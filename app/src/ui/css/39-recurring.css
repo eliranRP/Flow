@@ -11,6 +11,18 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-1014: הוספת קבוע under the month card (or as the empty state's action): the page already pads its sides. */
+.ui-recurring .ui-pn-edits {
+  padding: var(--space-2) 0 0;
+}
+
+/* FLOW-1014: the empty screen's line is read in full at 320, not clipped after three lines. */
+.ui-recurring .ui-empty-line {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
 .ui-recurring-head {
   display: flex;
   flex-direction: column;

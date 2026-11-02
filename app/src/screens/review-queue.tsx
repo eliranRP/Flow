@@ -34,8 +34,7 @@ import { useLineSplitQuery } from "./line-split";
 import { ReviewThreadEntry } from "./review-thread";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
 import { ProjectPickSheet } from "./review-pick-sheet";
-import { ScreenState } from "../ui/screen-state";
-import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, ReviewMoreFailed, reviewListPath, reviewSuggestion } from "./review-shared";
+import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, ReviewCardLoading, ReviewMoreFailed, reviewListPath, reviewSuggestion } from "./review-shared";
 
 export type ReviewPreviewWrite = {
   run: () => Promise<void>;
@@ -401,13 +400,12 @@ export function ReviewQueue({
   const card = shown;
   if (!card && paging != null && more) {
     // FLOW-984: the cards loaded are used up and a page is still on its way (or failed): not "all done".
-    return paging.failed ? (
+    // FLOW-1016: on its way, the frame stays and the card's place is a skeleton, not the whole-screen loader.
+    return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} />
-        <ReviewMoreFailed onRetry={paging.retry} />
+        {paging.failed ? <ReviewMoreFailed onRetry={paging.retry} /> : <ReviewCardLoading />}
       </div>
-    ) : (
-      <ScreenState title="לאישור" phase={{ kind: "loading" }} onRetry={paging.retry} backTo={backTo ?? "/"} />
     );
   }
   if (!card) {

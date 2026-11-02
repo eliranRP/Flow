@@ -412,16 +412,16 @@ describe("addLineReady (FLOW-1006)", () => {
   });
 });
 
-describe("הוספת קבוע לצפי on קבועים (FLOW-1011)", () => {
+describe("הוספת קבוע on קבועים (FLOW-1011)", () => {
   it("asks which project, then opens its add page for this month at כל חודש, back to קבועים", async () => {
     renderWithProviders(
       <Routes>
-        <Route path="/recurring" element={<ForecastAddLine month="2026-11" projects={[{ id: "p1", name: "Green 510 Gables" }, { id: "office", name: "כללי" }]} search="" back="recurring" pace="month" label="הוספת קבוע לצפי" />} />
+        <Route path="/recurring" element={<ForecastAddLine month="2026-11" projects={[{ id: "p1", name: "Green 510 Gables" }, { id: "office", name: "כללי" }]} search="" back="recurring" pace="month" label="הוספת קבוע" />} />
         <Route path="/projects/:projectId/profit/next/add" element={<LocationProbe />} />
       </Routes>,
       { route: "/recurring" },
     );
-    fireEvent.click(screen.getByRole("button", { name: "הוספת קבוע לצפי" }));
+    fireEvent.click(screen.getByRole("button", { name: "הוספת קבוע" }));
     const sheet = await screen.findByRole("dialog", { name: "לאיזה פרויקט" });
     fireEvent.click(within(sheet).getByRole("radio", { name: "Green 510 Gables" }));
     expect(await screen.findByText("/projects/p1/profit/next/add?month=2026-11&back=recurring&pace=month")).toBeTruthy();

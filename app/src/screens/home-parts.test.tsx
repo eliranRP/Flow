@@ -1,9 +1,11 @@
 import { type CashCurrencyRow } from "@flow/shared";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AttentionBox, ForecastRow, HomeBandActions, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
 import { CashHomeSkeleton } from "./home-skeleton";
+import { useReturningRecurringOwner } from "../recurring-tip";
 import { renderWithProviders } from "../test-render";
 import { SKELETON_DELAY_MS } from "../ui/skeleton";
 import { expectRtl } from "../ui/test-support";
@@ -143,14 +145,53 @@ describe("the one-time קבועים tip (FLOW-987)", () => {
   });
 
   it("shows under the icon until its ✕, then never again on this phone", () => {
-    const { unmount } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
-    const tip = screen.getByRole("note", { name: "קבועים עברו לכאן" });
+    const { unmount } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={1} recurringTip />);
+    const tip = screen.getByRole("status", { name: "קבועים עברו לכאן" });
     expect(tip).toHaveTextContent("נקודה אדומה: חשבון קבוע לא הגיע.");
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
     unmount();
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
+  });
+
+  it("says the dot's sentence only while the dot is on (FLOW-1015)", () => {
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
+    const tip = screen.getByRole("status", { name: "קבועים עברו לכאן" });
+    expect(tip).toHaveTextContent("קבועים עברו לכאן");
+    expect(tip).not.toHaveTextContent("נקודה אדומה");
+  });
+
+  it("opens once the owner's recurring rows are known, not only at first draw (FLOW-1015)", () => {
+    const { rerender } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip={false} />);
+    expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
+    rerender(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
+    expect(screen.getByRole("status", { name: "קבועים עברו לכאן" })).toBeInTheDocument();
+  });
+
+  it("closes on a press outside it, and the press still reaches the control under it (FLOW-1015)", () => {
+    const pressed = vi.fn();
+    renderWithProviders(
+      <>
+        <HomeBandActions isPast={false} currentName="" search="" recurringTip />
+        <button type="button" onClick={pressed}>חודש קודם</button>
+      </>,
+    );
+    const under = screen.getByRole("button", { name: "חודש קודם" });
+    fireEvent.pointerDown(under);
+    fireEvent.click(under);
+    expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
+    expect(pressed).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem("flow.recurring-tip-seen")).toBe("1");
+  });
+
+  it("stays open on a press inside it, and closes on a scroll (FLOW-1015)", () => {
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
+    const tip = screen.getByRole("status", { name: "קבועים עברו לכאן" });
+    fireEvent.pointerDown(tip);
+    expect(screen.getByRole("status", { name: "קבועים עברו לכאן" })).toBeInTheDocument();
+    fireEvent.scroll(window);
+    expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
   });
 
   it("is seen once the icon is tapped", () => {
@@ -159,9 +200,45 @@ describe("the one-time קבועים tip (FLOW-987)", () => {
     expect(window.localStorage.getItem("flow.recurring-tip-seen")).toBe("1");
   });
 
-  it("is not shown where Home does not ask for it (previews, stories)", () => {
+  it("is not shown where Home does not ask for it (previews, stories, a first-time owner)", () => {
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" />);
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.queryByRole("status", { name: "קבועים עברו לכאן" })).toBeNull();
+  });
+});
+
+describe("useReturningRecurringOwner (FLOW-1015)", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("flow.recurring-tip-seen");
+  });
+
+  function Probe({ active }: { active: boolean }) {
+    return <p>{useReturningRecurringOwner(active) ? "returning" : "new"}</p>;
+  }
+
+  it("is a returning owner with recurring rows; an owner with none is marked seen and never read again", async () => {
+    const client = new QueryClient();
+    client.setQueryData(["recurring-schedule"], [{ party_id: "x" }]);
+    const { unmount } = renderWithProviders(<Probe active />, { client });
+    expect(screen.getByText("returning")).toBeInTheDocument();
+    unmount();
+    const empty = new QueryClient();
+    empty.setQueryData(["recurring-schedule"], []);
+    renderWithProviders(<Probe active />, { client: empty });
+    expect(screen.getByText("new")).toBeInTheDocument();
+    await waitFor(() => { expect(window.localStorage.getItem("flow.recurring-tip-seen")).toBe("1"); });
+  });
+
+  it("reads nothing off live Home (previews): no schedule read starts", () => {
+    const client = new QueryClient();
+    renderWithProviders(<Probe active={false} />, { client });
+    expect(screen.getByText("new")).toBeInTheDocument();
+    expect(client.getQueryState(["recurring-schedule"])?.fetchStatus ?? "idle").toBe("idle");
+  });
+
+  it("starts the schedule read on live Home while the tip is unseen (the positive control)", () => {
+    const client = new QueryClient();
+    renderWithProviders(<Probe active />, { client });
+    expect(client.getQueryState(["recurring-schedule"])?.fetchStatus).toBe("fetching");
   });
 });
 

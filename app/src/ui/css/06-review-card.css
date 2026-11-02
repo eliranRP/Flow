@@ -663,6 +663,11 @@
   white-space: nowrap;
 }
 
+/* FLOW-1016: the card's place while the next page of the queue loads, inside the queue's side margins. */
+.ui-review-card-loading {
+  margin-inline: var(--space-side);
+}
+
 /* The dashed peek of the next card, under the card (the board's "הבא בתור"). */
 .ui-review-next {
   display: flex;

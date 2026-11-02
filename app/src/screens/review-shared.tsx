@@ -147,8 +147,31 @@ export function ReviewListEnd({ paging }: { paging: ReviewPaging }) {
   }, [more, failed, loading, loadMore]);
   if (!more) return null;
   if (failed) return <ReviewMoreFailed onRetry={retry} />;
-  return <div ref={mark} aria-hidden="true" data-review-more="" />;
+  // FLOW-1016: while the next page loads the list's end says so, not an empty gap.
+  return (
+    <div ref={mark} data-review-more="" role="status" className="t-caption t-muted ui-review-more">
+      {loading ? "טוענים עוד…" : null}
+    </div>
+  );
 }
+
+/**
+ * FLOW-1016: the cards loaded are used up and the next page is on its way. The queue keeps its frame, with the
+ * card's place drawn as a skeleton, rather than the whole-screen loader.
+ */
+export function ReviewCardLoading() {
+  return (
+    <div className="ui-skel-card ui-review-card-loading" aria-busy="true">
+      <p className="sr-only" role="status">טוענים עוד…</p>
+      {SKELETON_LINES.map(([width, height]) => (
+        <span key={width} aria-hidden="true" className="ui-skeleton-bar" style={{ inlineSize: width, blockSize: height, flex: "none" }} />
+      ))}
+    </div>
+  );
+}
+
+/** The card's lines as the skeleton draws them: the source pill, the payee, the amount, then the two fields. */
+const SKELETON_LINES = [["30%", 12], ["60%", 18], ["45%", 32], ["85%", 44], ["80%", 44]] as const;
 
 /** `jev` marks the fields whose shown value is Jev's fill, so the card says הצעת Jev there. */
 export function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShown) {
