@@ -67,7 +67,6 @@ const returnsSchema = z.object({
   currency: z.string(),
   from: z.string(),
   to: z.string(),
-  days: z.number().int(),
   first_rent: dateOrNull,
   other_currencies: z.array(z.string()).optional().default([]),
   missing: z.array(z.string()).optional().default([]),
@@ -138,7 +137,6 @@ export type PropertyReturns = {
   currency: string;
   from: string;
   to: string;
-  days: number;
   /** YYYY-MM-DD: the first rent payment; null before it. */
   firstRent: string | null;
   otherCurrencies: string[];
@@ -237,7 +235,6 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
     currency: raw.currency,
     from: raw.from,
     to: raw.to,
-    days: raw.days,
     firstRent: raw.first_rent,
     otherCurrencies: raw.other_currencies,
     missing: raw.missing.filter(isMissingInput),
@@ -440,10 +437,4 @@ export function dscrText(milli: number): string {
 export function bracketText(bp: number): string {
   const whole = bp % 100 === 0;
   return `${whole ? String(bp / 100) : String(Number((bp / 100).toFixed(2)))}%`;
-}
-
-/** A part's share of the money in the deal, per year, in basis points; null when there is no money in. */
-export function shareOfMoneyIn(part: bigint, moneyIn: bigint | null, days: number): number | null {
-  if (moneyIn == null || moneyIn <= 0n || days <= 0) return null;
-  return Math.round((Number(part) * 365 * 10_000) / (days * Number(moneyIn)));
 }

@@ -240,11 +240,17 @@ describe("useReturningRecurringOwner (FLOW-1015)", () => {
     await waitFor(() => { expect(window.localStorage.getItem("flow.recurring-tip-seen")).toBe("1"); });
   });
 
-  it("reads nothing off live Home (previews)", () => {
+  it("reads nothing off live Home (previews): no schedule read starts", () => {
     const client = new QueryClient();
-    client.setQueryData(["recurring-schedule"], [{ party_id: "x" }]);
     renderWithProviders(<Probe active={false} />, { client });
     expect(screen.getByText("new")).toBeInTheDocument();
+    expect(client.getQueryState(["recurring-schedule"])?.fetchStatus ?? "idle").toBe("idle");
+  });
+
+  it("starts the schedule read on live Home while the tip is unseen (the positive control)", () => {
+    const client = new QueryClient();
+    renderWithProviders(<Probe active />, { client });
+    expect(client.getQueryState(["recurring-schedule"])?.fetchStatus).toBe("fetching");
   });
 });
 

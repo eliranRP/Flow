@@ -26,7 +26,7 @@ import {
   type RehabCategory,
 } from "./project-investment-data";
 import { InvestmentEditSheet, RehabSheet, type InvestmentPatch } from "./project-investment-sheets";
-import { EquityInPropertyCard, MetricsCard, ReturnsCardsFailed, ReturnsCardsSkeleton, TotalReturnCard } from "./project-returns-cards";
+import { MetricsCard, ReturnsCardsFailed, ReturnsCardsSkeleton, TotalReturnCard } from "./project-returns-cards";
 import { usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
 import type { EditField, InfoKey } from "./project-returns-info";
 import { editFieldOf, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
@@ -349,12 +349,9 @@ export function ProjectInvestmentScreen({
         <div className="ui-pinv-stack">
           {hasFigures ? (
             <>
+              {/* FLOW-459 (the owner's pick, 2026-11-02): the total with the equity, the inputs, then the metrics. */}
               {returns != null ? (
-                <>
-                  <TotalReturnCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
-                  <EquityInPropertyCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
-                  <MetricsCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
-                </>
+                <TotalReturnCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
               ) : returnsRead.isError ? (
                 <ReturnsCardsFailed offline={returnsRead.isPaused} onRetry={() => { void returnsRead.refetch(); }} />
               ) : <ReturnsCardsSkeleton />}
@@ -367,6 +364,7 @@ export function ProjectInvestmentScreen({
                 onEdit={openEdit}
                 onRehab={() => { setRehabSheet(true); }}
               />
+              {returns == null ? null : <MetricsCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />}
             </>
           ) : null}
           <LoansCard

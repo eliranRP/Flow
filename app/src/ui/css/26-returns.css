@@ -2,8 +2,11 @@
    ConceptAReturnMath, ConceptAOpex). The investment page's returns cards, the ⓘ sheet, and the
    statement, line, metric and part pages. */
 
-/* The total return card: title and "איך מחושב", the 40px figure, the 8px bar, the four sources. */
+/* The total return card: title and "איך מחושב", the 40px figure, the 8px bar, the four sources, then
+   the equity rows (FLOW-459). Sources and equity rows share the amount and chevron tracks. */
 .ui-ret-card {
+  --ret-col-amount: calc(var(--space-10) + var(--space-8));
+  --ret-col-go: calc(var(--space-4) + var(--space-1) / 2);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -62,36 +65,35 @@
   transition: flex-grow var(--motion-width) var(--ease-standard);
 }
 
-/* Four shades of the one accent, strongest first. */
+/* Four shades of the one accent, strongest first, in the legend's order. FLOW-458: the lightest is
+   3:1 against the card in both themes (62%: 3.16:1 light, 3.54:1 dark). */
 .ui-ret-shade-1 {
   background: var(--color-accent);
 }
 
 .ui-ret-shade-2 {
-  background: color-mix(in srgb, var(--color-accent) 75%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 86%, var(--color-surface));
 }
 
 .ui-ret-shade-3 {
-  background: color-mix(in srgb, var(--color-accent) 52%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 73%, var(--color-surface));
 }
 
 .ui-ret-shade-4 {
-  background: color-mix(in srgb, var(--color-accent) 32%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 62%, var(--color-surface));
 }
 
-/* FLOW-454: each source is a grid of fixed tracks, dot | label | ⓘ and a flexible gap | amount |
-   per-cent, so the amounts and per-cents keep their columns whatever a row holds. The amount and
-   per-cent tracks are fixed; the amount sits at their shared edge (left in RTL), in tabular figures. */
+/* FLOW-454: each source is a grid of fixed tracks, dot | label | ⓘ and a flexible gap | amount | the
+   equity rows' chevron track, so the amounts keep one column whatever a row holds, at its edge
+   (left in RTL), in tabular figures. */
 .ui-ret-sources {
-  --ret-col-amount: calc(var(--space-10) + var(--space-8));
-  --ret-col-share: calc(var(--space-10) + var(--space-2));
   display: flex;
   flex-direction: column;
 }
 
 .ui-ret-source {
   display: grid;
-  grid-template-columns: var(--space-2) auto minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-share);
+  grid-template-columns: var(--space-2) auto minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
   grid-template-rows: minmax(var(--touch-min), auto);
   align-items: center;
   column-gap: var(--space-2);
@@ -121,20 +123,7 @@
   white-space: nowrap;
 }
 
-/* A missing note, ∞ or "לא מחושב": across the amount and per-cent tracks, from the amount's edge. */
-.ui-ret-source-value.ui-ret-source-wide {
-  grid-column: 4 / -1;
-  text-align: start;
-}
-
-.ui-ret-source-share {
-  grid-column: 5;
-  color: var(--color-text-muted);
-  font-variant-numeric: var(--font-numerals);
-  text-align: end;
-}
-
-/* A hint under a row: its own row of the grid, from the label's track to the end. */
+/* A hint under a row (what is missing): its own row of the grid, from the label's track to the end. */
 .ui-ret-source-hint {
   grid-column: 2 / -1;
   margin: calc(var(--space-1) * -1) 0 var(--space-1);
@@ -151,16 +140,75 @@
   line-height: var(--type-caption-line);
 }
 
-/* הון בנכס and מדדים: the value in a fixed column too, at its edge (left in RTL). The metrics are
-   short (a per-cent, a ratio), so their column is narrower and the titles keep their line at 320. */
-.ui-pinv-value.ui-ret-fixed-value {
-  min-inline-size: calc(var(--space-10) * 2);
-  font-variant-numeric: var(--font-numerals);
-  text-align: end;
+/* "חלקי · חסרים …" under the total: the figure leaves out a source (FLOW-458). Its own line. */
+.ui-ret-partial {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
+/* הון בנכס, inside the total card (FLOW-459): a sub-title, then rows that open their sheet. */
+.ui-ret-equity {
+  display: flex;
+  flex-direction: column;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-ret-sub {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-ret-equity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
+  align-items: center;
+  column-gap: var(--space-2);
+  inline-size: 100%;
+  min-block-size: var(--touch-min);
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  text-align: start;
+}
+
+.ui-ret-equity-text {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+}
+
+.ui-ret-equity-label {
+  color: var(--color-text-secondary);
+}
+
+.ui-ret-equity-hint {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-ret-equity-value {
+  font-variant-numeric: var(--font-numerals);
+  text-align: end;
+  white-space: nowrap;
+}
+
+/* מדדים: the value in a fixed column, at its edge (left in RTL). The metrics are short (a per-cent,
+   a ratio), so the column is narrow and the titles keep their line at 320. */
 .ui-pinv-value.ui-ret-fixed-metric {
   min-inline-size: calc(var(--space-10) + var(--space-4));
+  font-variant-numeric: var(--font-numerals);
+  text-align: end;
 }
 
 /* The ⓘ: a 44px target around an 18px icon, pulled in so the row keeps its height. */
@@ -171,16 +219,6 @@
   margin-block: calc(var(--space-3) * -1);
   margin-inline: calc(var(--space-2) * -1);
   color: var(--color-text-muted);
-}
-
-.ui-ret-row-static {
-  cursor: default;
-}
-
-.ui-ret-row-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
 }
 
 /* "חסר" and the accent הוספה, in a figure's place. */

@@ -86,7 +86,12 @@ function categoriesHint(count: number, categories: number): string {
   return `${countHint(count)} · ${String(categories)} קטגוריות`;
 }
 
-export const NOT_COUNTED_HINT = "רכישה, סגירה ותקבולי הלוואות";
+/** "6 שורות", "שורה אחת": a section's count, with its unit. */
+export function rowsCount(count: number): string {
+  return count === 1 ? "שורה אחת" : `${String(count)} שורות`;
+}
+
+export const NOT_COUNTED_HINT ="רכישה, סגירה ותקבולי הלוואות";
 
 /** "תזרים · משכר ראשון ב־01/04/2026 · 59 תנועות": the statement starts at the first rent when it falls in the period. */
 function statementMeta(r: PropertyReturns, lines: number): string {
@@ -105,28 +110,32 @@ function Statement({ r, base, search }: { r: PropertyReturns; base: string; sear
   const href = (line: ReturnLine) => `${base}/returns/${line}${search}`;
   const lines = st.counts.income + st.counts.opex + st.counts.debt_service + st.counts.capex;
   const beforeRent = st.beforeRentMinor !== 0n;
+  // Each block of the calculation: its rows, then its total line. The count is of what is drawn (FLOW-457).
+  const operating = [
+    <ReportRow key="income" name={LINE_TITLES.income} meta={countHint(st.counts.income)} amount={income(st.incomeMinor, cur)} href={href("income")} />,
+    <ReportRow key="opex" name={LINE_TITLES.opex} meta={categoriesHint(st.counts.opex, st.byCategory.opex.length)} amount={money(st.opexMinor, cur)} href={href("opex")} />,
+  ];
+  const below = [
+    <ReportRow key="debt" name={LINE_TITLES.debt_service} meta={`${countHint(st.counts.debt_service)} · חלקי הלוואה`} amount={money(st.debtServiceMinor, cur)} href={href("debt_service")} />,
+    <ReportRow key="capex" name={LINE_TITLES.capex} meta={`${countHint(st.counts.capex)} · קטגוריות שנספרות בשיפוץ`} amount={money(st.capexMinor, cur)} href={href("capex")} />,
+  ];
+  const out = [
+    beforeRent ? (
+      <ReportRow key="before" name="עלויות החזקה ושיפוץ לפני השכרה" meta={`${countHint(st.counts.before_rent)} · נכנס לכסף בעסקה`} amount={money(st.beforeRentMinor, cur)} href={href("before_rent")} />
+    ) : null,
+    <ReportRow key="not-counted" name={LINE_TITLES.not_counted} meta={`${countHint(st.counts.not_counted)} · ${NOT_COUNTED_HINT}`} amount={money(st.notCountedMinor, cur)} href={href("not_counted")} />,
+  ].filter((row) => row != null);
   return (
     <div className="ui-rep-content">
       <ReturnsHero figure={<Amount agorot={st.cashFlowMinor} currency={cur} loss={st.cashFlowMinor < 0n} />} meta={statementMeta(r, lines)} />
-      <ReportSection id="calc" title="החישוב" total={<span className="t-muted">5 שורות</span>} collapse={collapse}>
-        <ul className="ui-rep-rows">
-          <ReportRow name={LINE_TITLES.income} meta={countHint(st.counts.income)} amount={income(st.incomeMinor, cur)} href={href("income")} />
-          <ReportRow name={LINE_TITLES.opex} meta={categoriesHint(st.counts.opex, st.byCategory.opex.length)} amount={money(st.opexMinor, cur)} href={href("opex")} />
-        </ul>
+      <ReportSection id="calc" title="החישוב" total={<span className="t-muted">{rowsCount(operating.length + 1 + below.length + 1)}</span>} collapse={collapse}>
+        <ul className="ui-rep-rows">{operating}</ul>
         <ReportTotal label="רווח תפעולי (NOI)" amount={money(st.noiMinor, cur)} />
-        <ul className="ui-rep-rows">
-          <ReportRow name={LINE_TITLES.debt_service} meta={`${countHint(st.counts.debt_service)} · חלקי הלוואה`} amount={money(st.debtServiceMinor, cur)} href={href("debt_service")} />
-          <ReportRow name={LINE_TITLES.capex} meta={`${countHint(st.counts.capex)} · קטגוריות שנספרות בשיפוץ`} amount={money(st.capexMinor, cur)} href={href("capex")} />
-        </ul>
+        <ul className="ui-rep-rows">{below}</ul>
         <ReportTotal label="תזרים" amount={money(st.cashFlowMinor, cur)} strong />
       </ReportSection>
-      <ReportSection id="out" title="מחוץ לחישוב" total={<span className="t-muted">{beforeRent ? "2" : "1"}</span>} collapse={collapse}>
-        <ul className="ui-rep-rows">
-          {beforeRent ? (
-            <ReportRow name="עלויות החזקה ושיפוץ לפני השכרה" meta={`${countHint(st.counts.before_rent)} · נכנס לכסף בעסקה`} amount={money(st.beforeRentMinor, cur)} href={href("before_rent")} />
-          ) : null}
-          <ReportRow name={LINE_TITLES.not_counted} meta={`${countHint(st.counts.not_counted)} · ${NOT_COUNTED_HINT}`} amount={money(st.notCountedMinor, cur)} href={href("not_counted")} />
-        </ul>
+      <ReportSection id="out" title="מחוץ לחישוב" total={<span className="t-muted">{rowsCount(out.length)}</span>} collapse={collapse} fixed={out.length === 1}>
+        <ul className="ui-rep-rows">{out}</ul>
       </ReportSection>
       {r.otherCurrencies.length > 0 ? (
         <p className="ui-ret-caption">{`תנועות ${r.otherCurrencies.map(currencyWord).join(", ")} לא נספרות כאן.`}</p>

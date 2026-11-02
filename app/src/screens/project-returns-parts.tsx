@@ -12,7 +12,7 @@ import { DelayedSkeleton } from "../ui/skeleton";
 import { linesByMonth } from "./report-lines-screen";
 import { ReportSection, type Collapse } from "./reports-parts";
 import { usePropertyReturnLinesQuery, type LinesSource, type ReturnLineRow, type ReturnLinesPage } from "./project-returns-data";
-import type { EditField, FigureValue, Formula, FormulaRow, Op, Target } from "./project-returns-info";
+import { INFINITY, INFINITY_NAME, type EditField, type FigureValue, type Formula, type FormulaRow, type Op, type Target } from "./project-returns-info";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451: the parts the returns pages and the ⓘ sheet share: a figure (or "חסר · הוספה"), a
@@ -47,10 +47,10 @@ export function pageResolver(base: string, search: string): Resolve {
 }
 
 /** "חסר", then the accent הוספה (a button when the figure's row is not one already). */
-export function MissingFigure({ note, onAdd, addLabel }: { note?: string; onAdd?: () => void; addLabel?: string }) {
+export function MissingFigure({ onAdd, addLabel }: { onAdd?: () => void; addLabel?: string }) {
   return (
     <span className="ui-ret-missing">
-      <span>{note ?? "חסר"}</span>
+      <span>חסר</span>
       {onAdd == null ? null : (
         <button type="button" className="ui-ret-add" aria-label={addLabel} onClick={onAdd}>הוספה</button>
       )}
@@ -58,10 +58,15 @@ export function MissingFigure({ note, onAdd, addLabel }: { note?: string; onAdd?
   );
 }
 
+/** ∞ in a per-cent figure's place, named for a screen reader (FLOW-457). */
+export function InfinityFigure({ className }: { className: string }) {
+  return <bdi dir="ltr" className={className} role="img" aria-label={INFINITY_NAME}>{INFINITY}</bdi>;
+}
+
 /** A figure as text. `addText` draws a plain הוספה (inside a row that is itself the button). */
 export function FigureText({ value, currency, loss = false, addText = false }: { value: FigureValue; currency: string; loss?: boolean; addText?: boolean }) {
   if (value.kind === "money") return <Amount agorot={value.minor} currency={currency} income={value.income === true} loss={loss && value.minor < 0n} />;
-  if (value.kind === "text") return <bdi dir="ltr" className="ui-num">{value.text}</bdi>;
+  if (value.kind === "text") return value.text === INFINITY ? <InfinityFigure className="ui-num" /> : <bdi dir="ltr" className="ui-num">{value.text}</bdi>;
   if (value.kind === "note") return <span className="ui-ret-note">{value.text}</span>;
   return (
     <span className="ui-ret-missing">
@@ -85,17 +90,28 @@ function rowAction(row: FormulaRow, resolve: Resolve, readOnly: boolean): RowAct
   return resolve(row.target);
 }
 
+/**
+ * One sign per figure (FLOW-457): a row that adds or takes away shows its operator by the figure's
+ * sign, and the figure without one, so a cost reads "− $8,400", not "− −$8,400".
+ */
+export function signedRow(row: FormulaRow): { op: Op; value: FigureValue } {
+  if ((row.op !== "+" && row.op !== "−") || row.value.kind !== "money" || row.value.minor === 0n) return { op: row.op, value: row.value };
+  const minor = row.value.minor;
+  return { op: minor < 0n ? "−" : "+", value: { ...row.value, minor: minor < 0n ? -minor : minor } };
+}
+
 function FormulaLine({ row, currency, action, result }: { row: FormulaRow; currency: string; action: RowAction | null; result: boolean }) {
+  const { op, value } = signedRow(row);
   const body: ReactNode = (
     <>
-      <span className="ui-ret-op" aria-hidden="true">{row.op}</span>
-      {row.op === "" || row.op === "=" ? null : <span className="sr-only">{OP_WORDS[row.op]} </span>}
+      <span className="ui-ret-op" aria-hidden="true">{op}</span>
+      {op === "" || op === "=" ? null : <span className="sr-only">{OP_WORDS[op]} </span>}
       <span className="ui-ret-text">
         <span className="ui-ret-label">{row.label}</span>
         {row.hint == null ? null : <span className="ui-ret-hint">{row.hint}</span>}
       </span>
       <span className="ui-ret-value">
-        <FigureText value={row.value} currency={currency} addText={action != null} />
+        <FigureText value={value} currency={currency} addText={action != null} />
       </span>
       {action == null ? null : <span className="ui-ret-go" aria-hidden="true"><ChevronIcon size={18} /></span>}
     </>

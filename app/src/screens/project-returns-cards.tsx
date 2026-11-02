@@ -1,17 +1,15 @@
 import { useId, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Amount } from "../ui/amount";
 import { FailureLine } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { ChevronIcon, InfoIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
-import { percentText, shareOfMoneyIn, type PropertyReturns } from "./project-returns-data";
+import { percentText, type PropertyReturns } from "./project-returns-data";
 import {
   BEFORE_FIRST_RENT,
+  FIELD_NAMES,
   HISTORY_HINT,
-  INFINITY,
   MISSING_HISTORY,
-  MONEY_IN_CAPTION,
   METRIC_KEYS,
   METRIC_TITLES,
   beforeFirstRent,
@@ -19,17 +17,19 @@ import {
   firstMissing,
   metricCaption,
   metricValue,
+  missingHint,
   type EditField,
   type FigureValue,
   type InfoKey,
   type MetricKey,
 } from "./project-returns-info";
-import { AllCashOutMeta, FigureText, MissingFigure } from "./project-returns-parts";
+import { AllCashOutMeta, FigureText, InfinityFigure, MissingFigure } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
- * FLOW-451 (board ConceptATotalReturn): the page's three returns cards. The year's total return on
- * the money in the deal and its four sources; the equity in the property; today's metrics. Each
- * figure's ⓘ opens its sheet; a figure whose input is missing reads "חסר" and offers הוספה.
+ * FLOW-451 (board ConceptATotalReturn): the page's returns cards. The year's total return on the
+ * money in the deal, its four sources and, below them, the equity in the property (FLOW-459: one
+ * card); then today's metrics. Only a source has an ⓘ; an equity row opens its sheet itself. A figure
+ * whose input is missing offers הוספה, and the hint line says what is missing.
  * ---------------------------------------------------------------------------------------------- */
 
 type CardProps = {
@@ -55,13 +55,6 @@ function InfoButton({ label, infoKey, onInfo }: { label: string; infoKey: InfoKe
   );
 }
 
-/** A figure on a card: the amount, or "חסר" with הוספה for its first missing input. */
-function CardFigure({ value, currency, onAdd, loss = false }: { value: FigureValue; currency: string; onAdd: CardProps["onAdd"]; loss?: boolean }) {
-  if (value.kind !== "missing") return <FigureText value={value} currency={currency} loss={loss} />;
-  const add = value.add;
-  return <MissingFigure note={value.note} onAdd={onAdd == null || add == null ? undefined : () => { onAdd(add); }} />;
-}
-
 /** A source of return that is missing: appreciation waits for a value a year back, which no button adds. */
 function sourceValue(minor: bigint | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
   if (minor != null) return { kind: "money", minor };
@@ -72,20 +65,13 @@ function sourceValue(minor: bigint | null, r: PropertyReturns, needs: readonly E
   return add == null ? { kind: "text", text: "לא מחושב" } : { kind: "missing", add };
 }
 
-type Source = { key: InfoKey; label: string; value: FigureValue; shade: number; hint?: string };
+type Source = { key: InfoKey; label: string; value: FigureValue; shade: number };
 
 function sourcesOf(r: PropertyReturns): Source[] {
-  const appreciation = sourceValue(r.sources.appreciationMinor, r, ["value"]);
   return [
     { key: "cash_flow", label: "תזרים", value: { kind: "money", minor: r.sources.cashFlowMinor }, shade: 1 },
     { key: "principal", label: "החזר קרן", value: { kind: "money", minor: r.sources.principalMinor }, shade: 2 },
-    {
-      key: "appreciation",
-      label: "עליית ערך",
-      value: appreciation,
-      shade: 3,
-      hint: appreciation.kind === "missing" && appreciation.add == null ? HISTORY_HINT : undefined,
-    },
+    { key: "appreciation", label: "עליית ערך", value: sourceValue(r.sources.appreciationMinor, r, ["value"]), shade: 3 },
     { key: "tax", label: "חיסכון מס", value: sourceValue(r.sources.taxSavingsMinor, r, ["purchase", "land", "tax_bracket"]), shade: 4 },
   ];
 }
@@ -97,9 +83,73 @@ export function barShares(sources: readonly { value: FigureValue }[]): number[] 
   return parts.map((part) => (sum === 0 ? 0 : Math.round((part / sum) * 100)));
 }
 
-/** "תשואה כוללת · שנה": the total on the money in the deal, its four sources and their bar. */
+/** "חלקי · חסרים עליית ערך וחיסכון מס": a total that leaves out a source never passes as final (FLOW-458). */
+export function partialLine(labels: readonly string[]): string | null {
+  const last = labels.at(-1);
+  if (last == null) return null;
+  if (labels.length === 1) return `חלקי · חסר ${last}`;
+  return `חלקי · חסרים ${labels.slice(0, -1).join(", ")} ו${last}`;
+}
+
+/** A missing figure's hint: what is missing (FLOW-458: on the hint line, so the label keeps its line). */
+function missingNote(value: FigureValue): string | null {
+  if (value.kind !== "missing") return null;
+  if (value.add != null) return missingHint(value.add);
+  return value.note === MISSING_HISTORY ? `${MISSING_HISTORY}. ${HISTORY_HINT}` : (value.note ?? "חסר");
+}
+
+/** A figure in a card's amount column: the amount, or הוספה when an input is missing (the hint says which). */
+function SourceFigure({ value, currency, onAdd }: { value: FigureValue; currency: string; onAdd: CardProps["onAdd"] }) {
+  if (value.kind !== "missing") return <FigureText value={value} currency={currency} />;
+  const add = value.add;
+  if (add == null || onAdd == null) return null;
+  return <button type="button" className="ui-ret-add" aria-label={`הוספה: ${FIELD_NAMES[add]}`} onClick={() => { onAdd(add); }}>הוספה</button>;
+}
+
+function equityValue(minor: bigint | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
+  if (minor != null) return { kind: "money", minor };
+  const add = firstMissing(r, needs);
+  return add == null ? { kind: "text", text: "לא מחושב" } : { kind: "missing", add };
+}
+
+/** An equity row: the row opens its sheet; with an input missing (and an owner), it opens that input's. */
+function EquityRow({ label, infoKey, value, currency, onInfo, onAdd }: {
+  label: string;
+  infoKey: InfoKey;
+  value: FigureValue;
+  currency: string;
+  onInfo: CardProps["onInfo"];
+  onAdd: CardProps["onAdd"];
+}) {
+  const add = value.kind === "missing" && onAdd != null ? value.add : null;
+  return (
+    <button
+      type="button"
+      className="ui-ret-equity-row m-press"
+      onClick={(event: MouseEvent<HTMLButtonElement>) => {
+        if (add != null && onAdd != null) onAdd(add);
+        else onInfo(infoKey, event.currentTarget);
+      }}
+    >
+      <span className="ui-ret-equity-text">
+        <span className="ui-ret-equity-label">{label}</span>
+        {add == null ? null : <span className="ui-ret-equity-hint">{missingHint(add)}</span>}
+      </span>
+      <span className="ui-ret-equity-value">
+        {add == null ? <FigureText value={value} currency={currency} /> : <span className="ui-ret-add">הוספה</span>}
+      </span>
+      <span className="ui-ret-go" aria-hidden="true"><ChevronIcon size={18} /></span>
+    </button>
+  );
+}
+
+/**
+ * "תשואה כוללת · שנה": the total on the money in the deal, its four sources and their bar, then the
+ * equity in the property (FLOW-459: one card, the money in the deal named once, in its row).
+ */
 export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: CardProps) {
   const titleId = useId();
+  const equityId = useId();
   const sources = sourcesOf(r);
   const shares = barShares(sources);
   const moneyIn = r.equity.moneyInMinor;
@@ -107,6 +157,9 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
   const totalMissing = firstMissing(r, ["purchase"]);
   const cashOut = cashOutMinor(r);
   const before = beforeFirstRent(r);
+  const partial = cashOut == null && !before && totalBp != null
+    ? partialLine(sources.filter((source) => source.value.kind !== "money").map((source) => source.label))
+    : null;
   return (
     <section className="ui-pinv-card ui-ret-card" aria-labelledby={titleId}>
       <div className="ui-ret-card-head">
@@ -116,22 +169,23 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
       <div className="ui-ret-total">
         {cashOut != null ? (
           // All the cash came out: no per-cent figure, and no signal colour, a good state.
-          <bdi dir="ltr" className="ui-num t-detail">{INFINITY}</bdi>
+          <InfinityFigure className="ui-num t-detail" />
         ) : before ? (
           // No rent yet: a per-cent of the money in says nothing (FLOW-454). The amounts stay.
           <span className="ui-ret-note">{BEFORE_FIRST_RENT}</span>
         ) : totalBp != null ? (
           <bdi dir="ltr" className={totalBp < 0 ? "ui-num t-detail ui-loss" : "ui-num t-detail"}>{percentText(totalBp)}</bdi>
         ) : totalMissing != null ? (
-          <MissingFigure onAdd={onAdd == null ? undefined : () => { onAdd(totalMissing); }} />
+          <MissingFigure addLabel={`הוספה: ${FIELD_NAMES[totalMissing]}`} onAdd={onAdd == null ? undefined : () => { onAdd(totalMissing); }} />
         ) : (
           <span className="ui-ret-missing">לא מחושב</span>
         )}
         {cashOut != null ? (
           <span className="ui-ret-total-on"><AllCashOutMeta minor={cashOut} currency={r.currency} /></span>
         ) : moneyIn == null ? null : (
-          <span className="ui-ret-total-on">{"על "}<Amount agorot={moneyIn} currency={r.currency} />{" בעסקה"}</span>
+          <span className="ui-ret-total-on">על הכסף בעסקה</span>
         )}
+        {partial == null ? null : <p className="ui-ret-partial">{partial}</p>}
       </div>
       {shares.some((share) => share > 0) ? (
         <div className="ui-ret-bar" role="img" aria-label={sources.map((source, index) => `${source.label} ${String(shares[index] ?? 0)}%`).join(", ")}>
@@ -142,88 +196,50 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
       ) : null}
       <div className="ui-ret-sources">
         {sources.map((source) => {
-          // FLOW-454: fixed tracks (dot | label | ⓘ and the gap | amount | per-cent), so every row's amount
-          // and per-cent sit in the same columns. A figure that is not an amount spans both from the amount's edge.
-          const amount = source.value.kind === "money";
-          const share = source.value.kind === "money" ? shareOfMoneyIn(source.value.minor, moneyIn, r.days) : null;
+          // FLOW-454: fixed tracks (dot | label | ⓘ and the gap | amount), so every row's amount sits in
+          // the same column. FLOW-458: what is missing goes on the hint line, so the label keeps one line.
+          const note = missingNote(source.value);
           return (
             <div key={source.key} className="ui-ret-source">
               <span className={`ui-ret-swatch ui-ret-shade-${String(source.shade)}`} aria-hidden="true" />
               <span className="ui-ret-source-label">{source.label}</span>
               <InfoButton label={source.label} infoKey={source.key} onInfo={onInfo} />
-              <span className={amount ? "ui-ret-source-value" : "ui-ret-source-value ui-ret-source-wide"}>
-                <CardFigure value={source.value} currency={r.currency} onAdd={onAdd} />
+              <span className="ui-ret-source-value">
+                <SourceFigure value={source.value} currency={r.currency} onAdd={onAdd} />
               </span>
-              {amount ? (
-                <span className="ui-ret-source-share">
-                  {before || share == null ? null : <bdi dir="ltr" className="ui-num">{percentText(share)}</bdi>}
-                </span>
-              ) : null}
-              {source.hint == null ? null : <p className="ui-ret-source-hint">{source.hint}</p>}
+              {note == null ? null : <p className="ui-ret-source-hint">{note}</p>}
             </div>
           );
         })}
       </div>
-    </section>
-  );
-}
-
-function EquityRow({ label, caption, infoKey, value, currency, onInfo, onAdd }: {
-  label: string;
-  caption: string;
-  infoKey: InfoKey;
-  value: FigureValue;
-  currency: string;
-  onInfo: CardProps["onInfo"];
-  onAdd: CardProps["onAdd"];
-}) {
-  return (
-    <div className="ui-pinv-row ui-ret-row-static">
-      <span className="ui-pinv-row-text">
-        <span className="ui-ret-row-title">
-          <span className="ui-pinv-row-title">{label}</span>
-          <InfoButton label={label} infoKey={infoKey} onInfo={onInfo} />
-        </span>
-        <span className="ui-pinv-hint">{caption}</span>
-      </span>
-      <span className="ui-pinv-value ui-ret-fixed-value"><CardFigure value={value} currency={currency} onAdd={onAdd} /></span>
-    </div>
-  );
-}
-
-function equityValue(minor: bigint | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
-  if (minor != null) return { kind: "money", minor };
-  const add = firstMissing(r, needs);
-  return add == null ? { kind: "text", text: "לא מחושב" } : { kind: "missing", add };
-}
-
-/** "הון בנכס": equity today, the forced equity, and the money in the deal. */
-export function EquityInPropertyCard({ returns: r, onInfo, onAdd }: CardProps) {
-  return (
-    <section className="ui-pinv-card" aria-label="הון בנכס">
-      <h2 className="ui-pinv-card-title">הון בנכס</h2>
-      <EquityRow label="הון עצמי היום" caption="שווי היום פחות הלוואות" infoKey="equity_today" value={equityValue(r.equity.todayMinor, r, ["value"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
-      <EquityRow label="השבחה צפויה" caption="ARV פחות קנייה ושיפוץ" infoKey="forced" value={equityValue(r.equity.forcedMinor, r, ["arv", "purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
-      <EquityRow label="כסף בעסקה" caption={MONEY_IN_CAPTION} infoKey="money_in" value={equityValue(r.equity.moneyInMinor, r, ["purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
+      <div className="ui-ret-equity" role="group" aria-labelledby={equityId}>
+        <h3 id={equityId} className="ui-ret-sub">הון בנכס</h3>
+        <EquityRow label="הון עצמי היום" infoKey="equity_today" value={equityValue(r.equity.todayMinor, r, ["value"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
+        <EquityRow label="השבחה צפויה" infoKey="forced" value={equityValue(r.equity.forcedMinor, r, ["arv", "purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
+        <EquityRow label="כסף בעסקה" infoKey="money_in" value={equityValue(moneyIn, r, ["purchase"])} currency={r.currency} onInfo={onInfo} onAdd={onAdd} />
+      </div>
     </section>
   );
 }
 
 function MetricRow({ metric, r, href, onAdd }: { metric: MetricKey; r: PropertyReturns; href: string; onAdd: CardProps["onAdd"] }) {
   const value = metricValue(metric, r);
+  // FLOW-459: a missing input shows only הוספה; the hint says what is missing.
+  const add = value.kind === "missing" && onAdd != null ? value.add : null;
   const body: ReactNode = (
     <>
       <span className="ui-pinv-row-text">
         <span className="ui-pinv-row-title">{METRIC_TITLES[metric]}</span>
-        <span className="ui-pinv-hint">{metricCaption(metric, r)}</span>
+        <span className="ui-pinv-hint">{add == null ? metricCaption(metric, r) : missingHint(add)}</span>
       </span>
-      <span className="ui-pinv-value ui-ret-fixed-value ui-ret-fixed-metric"><FigureText value={value} currency={r.currency} addText={value.kind === "missing" && onAdd != null} /></span>
+      <span className="ui-pinv-value ui-ret-fixed-metric">
+        {add == null ? <FigureText value={value} currency={r.currency} /> : <span className="ui-ret-add">הוספה</span>}
+      </span>
       <span className="ui-pinv-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
     </>
   );
   // A missing input opens its sheet from the row; otherwise the row opens the metric's page.
-  if (value.kind === "missing" && value.add != null && onAdd != null) {
-    const add = value.add;
+  if (add != null && onAdd != null) {
     return <button type="button" className="ui-pinv-row m-press" onClick={() => { onAdd(add); }}>{body}</button>;
   }
   return <Link to={href} className="ui-pinv-row m-press">{body}</Link>;

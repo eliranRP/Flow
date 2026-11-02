@@ -1,6 +1,6 @@
 import { formatAmount } from "../ui/amount";
 import { formatDisplay } from "../ui/date-math";
-import type { InvestmentField } from "../ui/investment-card";
+import { INVESTMENT_LABELS, type InvestmentField } from "../ui/investment-card";
 import { bracketText, dscrText, percentText, type PropertyReturns, type ReturnLine } from "./project-returns-data";
 
 /* ------------------------------------------------------------------------------------------------
@@ -44,12 +44,21 @@ export const CASH_FLOW_CAPTION = "מהשכר הראשון בלבד. מה שלפ�
 export const MONEY_IN_BODY = "מה שהנכס לקח ממך עד שהתחיל להכניס שכירות, פחות מה שחזר מההלוואה.";
 export const MONEY_IN_CAPTION = "רכישה, שיפוץ והחזקה פחות הלוואות";
 export const ALL_TIME = "מאז הקנייה";
-/** In place of a per-cent figure when all the cash came out. */
+/** In place of a per-cent figure when all the cash came out, and its accessible name (FLOW-457). */
 export const INFINITY = "∞";
+export const INFINITY_NAME = "כל ההון חזר";
 /** In place of a per-cent figure before the first rent: with no rent yet, the per-cents say nothing. */
 export const BEFORE_FIRST_RENT = "לפני השכר הראשון";
 export const UNITS_DEFAULT_HINT = "ברירת מחדל · עריכה";
 export const TAKEN_OVER_LABEL = "הלוואה שנלקחה בסגירה";
+
+/** Each input's one name, on its row, its sheet and a "חסר · …" hint (FLOW-457). */
+export const FIELD_NAMES: Record<EditField, string> = { ...INVESTMENT_LABELS, tax_bracket: "מדרגת המס" };
+
+/** "חסר · שווי היום": why a figure is missing, on its hint line. */
+export function missingHint(field: EditField): string {
+  return `חסר · ${FIELD_NAMES[field]}`;
+}
 
 const money = (minor: bigint, income = false): FigureValue => ({ kind: "money", minor, income });
 const missing = (add: EditField | null, note?: string): FigureValue => ({ kind: "missing", add, note });
@@ -247,7 +256,7 @@ export function buildingFormula(r: PropertyReturns): Formula {
     rows: [
       ...purchaseRows(r, "", false),
       rehabRow(r, "+", "building", false),
-      { key: "land", op: "−", label: "קרקע", hint: "שלך · עריכה", value: typed(r.inputs.landMinor, "land", true), target: { kind: "edit", field: "land" } },
+      { key: "land", op: "−", label: FIELD_NAMES.land, hint: "שלך · עריכה", value: typed(r.inputs.landMinor, "land", true), target: { kind: "edit", field: "land" } },
     ],
     result: { key: "building", op: "=", label: "עלות הבניין", value: computed(r.sources.buildingMinor, r, ["purchase", "land"]) },
   };
@@ -427,7 +436,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
     value,
     sections: [
       cashSection(r),
-      { key: "units", title: "יחידות", formula: { rows: [{ key: "units", op: "", label: "יחידות בנכס", hint: r.inputs.unitsDefault ? UNITS_DEFAULT_HINT : "מנתוני הנכס · עריכה", value: { kind: "text", text: String(units) }, target: { kind: "edit", field: "units" } }], result: null } },
+      { key: "units", title: FIELD_NAMES.units, formula: { rows: [{ key: "units", op: "", label: FIELD_NAMES.units, hint: r.inputs.unitsDefault ? UNITS_DEFAULT_HINT : "מנתוני הנכס · עריכה", value: { kind: "text", text: String(units) }, target: { kind: "edit", field: "units" } }], result: null } },
     ],
     result: result(`${cents(st.cashFlowMinor, cur)} ÷ ${String(units)} ÷ 12`),
   };
