@@ -53,6 +53,7 @@ export const screenLoaders = {
   setupRoutes: () => import("./setup/route-screens"),
   team: () => import("./screens/team-screen"),
   invites: () => import("./screens/invites-screen"),
+  companySheet: () => import("./screens/company-sheet"),
 };
 
 /**

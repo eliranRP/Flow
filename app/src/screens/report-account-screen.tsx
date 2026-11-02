@@ -149,6 +149,11 @@ function MonthMoves({ group, search, inYear }: { group: MonthGroup; search: stri
   );
 }
 
+/** The account's movements, any period: a new period of the same account keeps its page (FLOW-455). */
+function accountLinesKey(preview: string, args: ReturnType<typeof accountArgs>) {
+  return ["balance-sheet", "account-lines", preview, args.accountId, args.asOf, args.projectId ?? "", args.currency ?? ""];
+}
+
 /**
  * FLOW-165 (board ReportAccountDrill): one balance-sheet account from the reports screen: its balance on the
  * report's date, the opening balance on 1 January, the year's movement and its movements by month, each
@@ -165,9 +170,9 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   const params = new URLSearchParams(location.search);
   const args = accountArgs(params, today);
   const [open, setOpen] = useState(true);
-  const account = ["balance-sheet", "account-lines", preview, args.accountId, args.asOf, args.projectId ?? "", args.currency ?? ""];
+  const account = accountLinesKey(preview, args);
   const read = useInfiniteQuery({
-    queryKey: [...account, args.span],
+    queryKey: [...accountLinesKey(preview, args), args.span],
     enabled: sample == null && preview === "off",
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchPage(args, pageParam),
