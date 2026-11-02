@@ -334,7 +334,7 @@ html[data-kb="open"] .ui-sheet-body {
 
 /*
  * FLOW-986, FLOW-1017: late recurring bills and income, their count in a red badge on the קבועים icon's top
- * corner, ringed in the band's colour. Text in the page's background colour reads on the signal red in both themes.
+ * corner, ringed in the page's background colour so its edge shows on the band (5.2:1 light, about 3.3:1 dark). Text in the surface colour reads on the signal red in both themes (4.8:1 light, 7.5:1 dark).
  */
 .ui-band-count {
   position: absolute;
@@ -348,8 +348,8 @@ html[data-kb="open"] .ui-sheet-body {
   padding-inline: var(--space-1);
   border-radius: var(--radius-chip);
   background: var(--color-signal);
-  box-shadow: 0 0 0 2px var(--color-band);
-  color: var(--color-bg);
+  box-shadow: 0 0 0 2px var(--color-bg);
+  color: var(--color-surface);
   font-size: var(--type-cents-size);
   line-height: 1;
   font-weight: var(--type-name-weight);
