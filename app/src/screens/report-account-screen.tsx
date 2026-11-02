@@ -167,7 +167,7 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   const [open, setOpen] = useState(true);
   const account = ["balance-sheet", "account-lines", preview, args.accountId, args.asOf, args.projectId ?? "", args.currency ?? ""];
   const read = useInfiniteQuery({
-    queryKey: [...account, args.span],
+    queryKey: ["balance-sheet", "account-lines", ...account.slice(2), args.span],
     enabled: sample == null && preview === "off",
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchPage(args, pageParam),

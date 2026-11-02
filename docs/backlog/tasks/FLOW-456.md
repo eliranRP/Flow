@@ -1,6 +1,6 @@
 <a id="flow-456"></a>
 # FLOW-456 · The report share sheet says why its button is off next to it, and picking projects starts from one
-- **Type:** SMALL UI · **Status:** in-progress (#TBD) · **Source:** UX rules review 2026-11-01 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-991 to FLOW-993.
+- **Type:** SMALL UI · **Status:** done (#929) · **Source:** UX rules review 2026-11-01 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-991 to FLOW-993.
 - **Files:** `app/src/screens/report-share-sheet.tsx`, `app/src/ui/css/61-reports.css`.
 
 - [x] The reason the share button is disabled ("בחרו לפחות פרויקט אחד", the column limit, the date range) is only at the end of the scrolling body, off screen with several projects. Put it in the sheet foot above the button, `role="status"`. Rule: feedback-and-states § 16 (don't disable without saying why).
