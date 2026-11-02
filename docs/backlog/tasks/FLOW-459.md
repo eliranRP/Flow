@@ -1,6 +1,6 @@
 <a id="flow-459"></a>
 # FLOW-459 · השקעה והלוואות: shorter, with the inputs before the metrics
-- **Type:** SMALL UI · **Status:** in-progress (#931) · **Source:** UX rules review 2026-11-01 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-450 and FLOW-451 (v3 of the page, owner-approved); this proposes changing the approved order.
+- **Type:** SMALL UI · **Status:** done (#931) · **Source:** UX rules review 2026-11-01 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-450 and FLOW-451 (v3 of the page, owner-approved); this proposes changing the approved order.
 - **Owner's pick (2026-11-02):** shorten it: merge הון בנכס into the total-return card, ⓘ only on the sources and the metrics, and נתוני הנכס above מדדים.
 - **Files:** `app/src/screens/project-investment-screen.tsx`, `project-investment-cards.tsx`, `project-returns-cards.tsx`.
 
