@@ -37,11 +37,11 @@ The base is the `main` sha recorded at the end of the last run. With none, use `
 
 Every `SMALL UI` task the run filed, and any still open from earlier runs, is fixed in the same run (the owner's ask, 2026-11-01).
 
-1. **Batches by area.** One builder subagent per area batch, each in its own worktree and branch, so no two batches change the same file. Skip a task whose files an open PR is changing (read the `Claim` blocks); it waits for that PR and is picked up next run.
-2. **Each batch** follows the [cycle](../backlog/README.md#the-cycle): the smallest fix, the stories and tests of each fixed state, a [design log](../design/log/README.md) entry, a changelog fragment, the task files set to `in-progress (#PR)`, the gates, then a PR with a `Claim` block (`Lane: UI/UX review`).
-3. **Review.** One Haiku 5.5 reviewer per PR with the reviewer charter (code and pixels, the story shots at 320 and 393 px, dark and light), plus "check each fix against the rule its task cites". One fix round.
+1. **Batches by area.** One builder subagent per area batch, each in its own worktree and branch, so no two batches change the same file. The batch's first commit sets each of its tasks to `claimed (UI/UX review, YYYY-MM-DD, <branch>)`, so no UI lane takes them. Skip a task whose files an open PR is changing (read the `Claim` blocks); it waits for that PR and is picked up next run.
+2. **Each batch** follows the [cycle](../backlog/README.md#the-cycle): the smallest fix, the stories and tests of each fixed state, a [design log](../design/log/README.md) entry, a changelog fragment, the gates, then a PR with a `Claim` block (`Lane: UI/UX review`); once the PR is open, its tasks go to `in-progress (#PR)`.
+3. **Review.** One Haiku 5.5 reviewer per PR with the reviewer charter (code and pixels, the story shots at 320 and 393 px, dark and light), plus "check each fix against the rule its task cites". Its verdict comment names the head's full 40-character sha. One fix round.
 4. **Merge** each PR once its reviewer approved the current head and its `pr` check is green (the owner's standing approval), then mark its tasks `done (#PR)`.
-5. **Deploy.** After the run's last merge, run the `ci` workflow by hand on `main` (Actions, ci, Run workflow), which deploys without waiting for the batch of five. Watch it to the end; if it fails, fix `main` first.
+5. **Deploy.** After the run's last merge, run the `ci` workflow by hand with branch `main` selected (Actions, ci, Run workflow; on any other branch the deploy job is skipped), which deploys without waiting for the batch of five. Watch it to the end; if it fails, fix `main` first. Then the [deploy check](../backlog/README.md#the-cycle): the last line of `build.txt` on the Pages site is the run's last merge sha, and any migration is recorded.
 6. **Not fixed in the run:** `PLAN FIRST` tasks wait for the owner's pick on a card; ask in the report.
 
 ## Report
