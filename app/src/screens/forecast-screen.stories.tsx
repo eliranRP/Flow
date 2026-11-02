@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type BoardForecastVariant, monthForecastBoardSample, monthForecastSample, type ForecastSampleKind } from "../forecast-sample";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { ForecastScreen } from "./forecast-screen";
@@ -64,3 +65,35 @@ function ItemPage({ when }: { when: boolean }) {
 export const ChangeItem: Story = { name: "Forecast · change an item", render: () => <ItemPage when={false} /> };
 /** The page's מתי צפוי sheet (MonthForecastWhen): the three choices, this week picked. */
 export const ChangeItemWhen: Story = { name: "Forecast · change an item, when", render: () => <ItemPage when /> };
+
+/** The board (by project) with a line the owner added to Elm St this month, as a project's צפי page adds it (FLOW-1010). */
+function withAddedLine() {
+  const sample = monthForecastBoardSample("project");
+  const base = sample.data.build.income[0];
+  if (base == null) return sample;
+  const added = { ...base, key: "added:e-1", kind: "added" as const, name: "Parking spots", usual: 50_000n, minor: 50_000n, project_id: "p-elm", project_name: "Elm St", pace: "once", line_start: "2026-10", overridden: false, moved_out: false, late_days: 0, expected_on: null, due_on: null };
+  const build = { ...sample.data.build, items: [...sample.data.build.items, added], income: [added, ...sample.data.build.income] };
+  return { ...sample, data: { ...sample.data, build } };
+}
+
+/**
+ * FLOW-1012: on an added line's page, כל כמה זמן is a draft like the amount and the date: after a pick the
+ * hint says the project's line changes from this month on, and שמירת השינוי בצפי writes it.
+ */
+export const ChangeItemPace: Story = {
+  name: "Forecast · change an added line, pace picked",
+  render: () => (
+    <StoryRoute entry="/forecast/item/added%3Ae-1" tabs>
+      <ForecastScreen sample={withAddedLine()} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("button", { name: "כל כמה זמן: פעם אחת" }));
+    const sheet = await body.findByRole("dialog", { name: "כל כמה זמן" });
+    await waitFor(async () => { await expect(getComputedStyle(sheet).pointerEvents).not.toBe("none"); });
+    await userEvent.click(within(sheet).getByRole("radio", { name: /^כל חודש(?!יים)/u }));
+    await expect(await body.findByRole("button", { name: "כל כמה זמן: כל חודש" })).toBeInTheDocument();
+    await expect(body.getByText("משנה את הצפי של אוקטובר, ואת השורה בצפי של הפרויקט מאוקטובר והלאה.")).toBeInTheDocument();
+  },
+};

@@ -23,9 +23,9 @@ vi.mock("../lib/supabase", () => ({
 describe("ForecastScreen", () => {
   it("switches to לפי קטגוריה: each side's categories, their sums, and an open category's items", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
-    expect(screen.getByRole("radio", { name: "לפי פריט" })).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
-    expect(screen.getByRole("radio", { name: "לפי קטגוריה" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "פריטים" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "קטגוריות" }));
+    expect(screen.getByRole("radio", { name: "קטגוריות" })).toHaveAttribute("aria-checked", "true");
     const out = screen.getByRole("region", { name: "יוצא" });
     expect(within(out).getByText("$50,369")).toBeTruthy();
     expect(within(out).getByText("Streaming באיחור · עוד $962")).toBeTruthy();
@@ -46,7 +46,7 @@ describe("ForecastScreen", () => {
 
   it("switches to לפי פרויקט: a section per project with its net, the general costs last, and a row opens its page (FLOW-1004)", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("project")} />, { route: "/forecast" });
-    expect(screen.getByRole("radio", { name: "לפי פרויקט" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "פרויקטים" })).toHaveAttribute("aria-checked", "true");
     const names = Array.from(document.querySelectorAll(".ui-forecast-section-head > span:first-child")).map((node) => node.textContent);
     expect(names).toEqual(["Northgate Co", "Elm St", "כללי"]);
     const elm = screen.getByRole("region", { name: "Elm St" });
@@ -56,8 +56,26 @@ describe("ForecastScreen", () => {
       expect.stringMatching(/^(Streaming|Cloud storage), −\$87$/),
       expect.stringMatching(/^(Streaming|Cloud storage), −\$87$/),
     ]);
+    // FLOW-1013: the date leads the row's second line, so 320 cuts the document's name, never the day.
+    const metas = Array.from(elm.querySelectorAll(".ui-forecast-meta")).map((node) => node.textContent);
+    expect(metas.length).toBeGreaterThan(0);
+    for (const meta of metas) expect(meta).toMatch(/ · (קבוע|שורה בצפי|חשבונית.*|חשבון ספק.*)$/u);
     fireEvent.click(within(elm).getByRole("button", { name: "Elm St, unit 2, +$1,650" }));
     expect(screen.getByRole("heading", { name: /Elm St, unit 2/ })).toBeTruthy();
+  });
+
+  it("names the one project the add button adds to (FLOW-1013)", async () => {
+    const sample = monthForecastBoardSample("project");
+    const one = { ...sample, projects: (sample.projects ?? []).filter((project) => project.id === "p-elm") };
+    renderWithProviders(
+      <Routes>
+        <Route path="/forecast" element={<ForecastScreen sample={one} />} />
+        <Route path="/projects/:projectId/profit/next/add" element={<LocationProbe />} />
+      </Routes>,
+      { route: "/forecast" },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הוספת קטגוריה לצפי של Elm St" }));
+    expect(await screen.findByText("/projects/p-elm/profit/next/add?month=2026-10&back=forecast")).toBeTruthy();
   });
 
   it("adds a line: הוספת קטגוריה לצפי asks which project, then opens its add page for this month (FLOW-1006)", async () => {
@@ -77,9 +95,9 @@ describe("ForecastScreen", () => {
 
   it("moves between the views with the arrow keys, focus following the checked chip (roving tabindex)", () => {
     renderWithProviders(<div dir="rtl"><ForecastScreen sample={monthForecastBoardSample("board")} /></div>, { route: "/forecast" });
-    const items = screen.getByRole("radio", { name: "לפי פריט" });
-    const projects = screen.getByRole("radio", { name: "לפי פרויקט" });
-    const categories = screen.getByRole("radio", { name: "לפי קטגוריה" });
+    const items = screen.getByRole("radio", { name: "פריטים" });
+    const projects = screen.getByRole("radio", { name: "פרויקטים" });
+    const categories = screen.getByRole("radio", { name: "קטגוריות" });
     expect(items).toHaveAttribute("tabindex", "0");
     expect(projects).toHaveAttribute("tabindex", "-1");
     expect(categories).toHaveAttribute("tabindex", "-1");
@@ -102,14 +120,14 @@ describe("ForecastScreen", () => {
 
   it("keeps the page's query on the ask's link", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast?from=home" });
-    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    fireEvent.click(screen.getByRole("radio", { name: "קטגוריות" }));
     fireEvent.click(within(screen.getByRole("region", { name: "נכנס" })).getByRole("button", { name: /^שכירות/ }));
     expect(screen.getByRole("link", { name: "עדיין קבוע? לאישור ←" })).toHaveAttribute("href", "/recurring/income/elm?from=home");
   });
 
   it("draws a sample with no month by category with nothing so far, not a skeleton", () => {
     renderWithProviders(<ForecastScreen sample={{ ...monthForecastBoardSample("board"), soFar: undefined }} />, { route: "/forecast" });
-    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    fireEvent.click(screen.getByRole("radio", { name: "קטגוריות" }));
     expect(screen.getByRole("region", { name: "יוצא" })).toBeTruthy();
   });
 
@@ -343,7 +361,7 @@ describe("ForecastScreen", () => {
     expect(screen.getByRole("button", { name: "נסו שוב" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
     expect(document.querySelector(".ui-forecast-big")).toBeNull();
-    expect(screen.queryByRole("radiogroup", { name: "תצוגה" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "תצוגה לפי" })).toBeNull();
   });
 
   it("offline, keeps the figures and says which moment they are from", () => {

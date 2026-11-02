@@ -126,20 +126,43 @@ describe("ReportShareSheet", () => {
     expect(invoke.calls[0]?.body).toMatchObject({ kind: "pnl", columns: "project" });
   });
 
-  it("picks some projects: none picked holds the file back, one picked sends its id", async () => {
+  it("picks some projects: turning off every project starts from all of them, none picked holds the file back with the reason in the foot (FLOW-456)", async () => {
     renderReports();
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     fireEvent.click(within(sheet).getByRole("switch", { name: "כל הפרויקטים" }));
-    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeDisabled();
-    expect(within(sheet).getByText("בחרו לפחות פרויקט אחד.")).toBeInTheDocument();
+    const button = within(sheet).getByRole("button", { name: "שיתוף PDF" });
+    expect(button).toBeEnabled();
     const group = within(sheet).getByRole("group", { name: "פרויקטים" });
-    const [first] = within(group).getAllByRole("switch");
+    const switches = within(group).getAllByRole("switch");
+    expect(switches.map((item) => (item as HTMLInputElement).checked)).toEqual([true, true, true, true]);
+    for (const item of switches) fireEvent.click(item);
+    expect(button).toBeDisabled();
+    // The reason sits in the sheet's foot, above the button, as a status: not at the end of the scrolling body.
+    const why = within(sheet).getByRole("status");
+    expect(why.textContent).toBe("בחרו לפחות פרויקט אחד.");
+    expect(why.closest(".ui-sheet-foot")).toBe(button.closest(".ui-sheet-foot"));
+    expect(why.closest(".ui-sheet-body")).toBeNull();
+    const [first] = switches;
     if (first == null) throw new Error("no project switch");
     fireEvent.click(first);
-    fireEvent.click(within(sheet).getByRole("button", { name: "שיתוף PDF" }));
+    expect(why.textContent).toBe("");
+    fireEvent.click(button);
     await waitFor(() => { expect(invoke.calls).toHaveLength(1); });
     expect((invoke.calls[0]?.body as { project_ids?: string[] }).project_ids).toHaveLength(1);
+  });
+
+  it("on a project's report, turning every project back off starts from that project (FLOW-456)", () => {
+    renderReports("/reports?scope=project&project=a0000000-0000-4000-8000-000000000162");
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    const all = within(sheet).getByRole("switch", { name: "כל הפרויקטים" });
+    fireEvent.click(all);
+    fireEvent.click(all);
+    const group = within(sheet).getByRole("group", { name: "פרויקטים" });
+    expect(within(group).getAllByRole("switch").filter((item) => (item as HTMLInputElement).checked)).toHaveLength(1);
+    expect(within(group).getByRole("switch", { name: "Maple Ave" })).toBeChecked();
+    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
   });
 
   it("by month over all time needs a range, and a wide PDF suggests quarters or Excel", () => {

@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { lineInitials } from "../cash-lines-groups";
@@ -165,12 +165,16 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   const params = new URLSearchParams(location.search);
   const args = accountArgs(params, today);
   const [open, setOpen] = useState(true);
+  const account = ["balance-sheet", "account-lines", preview, args.accountId, args.asOf, args.projectId ?? "", args.currency ?? ""];
   const read = useInfiniteQuery({
-    queryKey: ["balance-sheet", "account-lines", preview, args.accountId, args.asOf, args.projectId ?? "", args.currency ?? "", args.span],
+    queryKey: [...account, args.span],
     enabled: sample == null && preview === "off",
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchPage(args, pageParam),
     getNextPageParam: (last, pages) => (last?.has_more === true ? pages.length * PAGE : undefined),
+    // FLOW-455: a new period of the same account keeps the page (its header and the control just tapped) until
+    // the new movements are in; another account starts from its skeleton.
+    placeholderData: (previous, query) => (query?.queryKey.slice(0, account.length).every((part, index) => part === account[index]) === true ? keepPreviousData(previous) : undefined),
   });
   const pages = sample != null ? (sample.page === undefined ? undefined : [sample.page]) : read.data?.pages;
   const first = pages?.[0];
@@ -203,7 +207,10 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   const currency = summary?.currency ?? args.currency ?? "ILS";
   const balance = summary?.balance_minor ?? 0n;
   const count = summary?.count ?? rows.length;
-  const hasMore = sample != null ? sample.page?.has_more === true : read.hasNextPage;
+  // The movements of the period before, kept while the new one loads: no "more" for them.
+  const stale = sample == null && read.isPlaceholderData;
+  const more = sample != null ? sample.page?.has_more === true : read.hasNextPage;
+  const hasMore = more && !stale;
   const loan = loanLink(first, search);
   const principal = first.is_system && first.name === "Loan principal";
   const all = first.from_start;
@@ -226,7 +233,7 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   return (
     <div className="ui-rep-screen">
       {header}
-      <div className="ui-rep-content">
+      <div className="ui-rep-content" aria-busy={stale || undefined}>
         <ReportSummary label={when} amount={balance} currency={currency} loss={false} sub={[TYPE_LABEL[first.type], first.project_name].filter(Boolean).join(" · ")} />
         {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         <div className="ui-rep-account-span">
@@ -250,11 +257,12 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
         <ReportSection id="moves" title="תנועות" total={count > 0 ? <span className="t-muted">{String(count)}</span> : null} collapse={{ isOpen: () => open, onToggle: () => { setOpen((value) => !value); } }}>
           {rows.length === 0 ? <p className="ui-rep-note">{all ? "אין תנועות בחשבון." : `אין תנועות מתחילת ${year}.`}</p> : null}
           {all
-            ? groupsByYear(months).map((item) => (
+            ? groupsByYear(months).map((item, index, years) => (
                 <section key={item.year} className="ui-rep-account-year" aria-label={item.year}>
                   <div className="ui-rep-account-year-head">
                     <h2 className="t-section ui-rep-account-year-title"><bdi dir="ltr">{item.year}</bdi></h2>
-                    <span className="ui-rep-account-year-count">{movesLabel(item.count, false)}</span>
+                    {/* FLOW-455: rows come newest first, so only the oldest year shown can be partial while more remain: no count for it. */}
+                    {more && index === years.length - 1 ? null : <span className="ui-rep-account-year-count">{movesLabel(item.count, false)}</span>}
                   </div>
                   {item.months.map((group) => <MonthMoves key={group.key} group={group} search={search} inYear />)}
                 </section>

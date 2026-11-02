@@ -117,6 +117,18 @@ export const EquityFromStart: Story = {
   },
 };
 
+/** FLOW-455: from the start with more to load: the oldest year shown has no count, since it may be partial. */
+export const EquityFromStartMore: Story = {
+  name: "Account · from the start, more to load",
+  render: () => <Account entry={`${EQUITY_ENTRY}&span=all`} sample={{ page: { ...REPORT_ACCOUNT_EQUITY_ALL, has_more: true } }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(within(canvas.getByRole("region", { name: "2026" })).getByText("תנועה אחת")).toBeInTheDocument();
+    await expect(canvas.getByRole("region", { name: "2025" }).querySelector(".ui-rep-account-year-count")).toBeNull();
+    await expect(canvas.getByRole("button", { name: "עוד תנועות" })).toBeInTheDocument();
+  },
+};
+
 /** The balance sheet dated in 2025: that year's opening and movements; the choice names the year. */
 export const EquityLastYear: Story = {
   name: "Account · an earlier year (2025)",

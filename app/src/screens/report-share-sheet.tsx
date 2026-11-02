@@ -84,6 +84,11 @@ export function ReportShareSheet({ open, onOpenChange, state, today, projects }:
       setBusy(false);
     }
   };
+  // FLOW-456: turning off "every project" starts from the screen's project, else every one, so the sheet stays shareable.
+  const someProjects = (): string[] => {
+    const ids = real.map((project) => project.project_id ?? "");
+    return projectId != null && ids.includes(projectId) ? [projectId] : ids;
+  };
   const pickProject = (id: string, on: boolean) => {
     const current = choice.projectIds ?? [];
     setChoice({ ...choice, projectIds: on ? [...current.filter((item) => item !== id), id] : current.filter((item) => item !== id) });
@@ -95,9 +100,13 @@ export function ReportShareSheet({ open, onOpenChange, state, today, projects }:
       title={`שיתוף ${word}`}
       panelClassName="ui-rep-sheet"
       action={(
-        <Button full disabled={blocked != null} busy={busy} onClick={() => { void share(); }}>
-          {ready != null ? "שליחת הקובץ" : `שיתוף ${word}`}
-        </Button>
+        <>
+          {/* FLOW-456: why the button is off, beside it (the body scrolls); a live region that stays mounted. */}
+          <p className="ui-rep-share-why t-caption t-muted" role="status">{blocked}</p>
+          <Button full disabled={blocked != null} busy={busy} onClick={() => { void share(); }}>
+            {ready != null ? "שליחת הקובץ" : `שיתוף ${word}`}
+          </Button>
+        </>
       )}
     >
       <div className="ui-rep-share">
@@ -124,7 +133,7 @@ export function ReportShareSheet({ open, onOpenChange, state, today, projects }:
             label="כל הפרויקטים"
             hint={choice.columns === "project" ? "עמודה לכל פרויקט ועמודת כללי" : "כל הפרויקטים יחד"}
             checked={choice.projectIds == null}
-            onChange={(all) => { setChoice({ ...choice, projectIds: all ? null : [] }); }}
+            onChange={(all) => { setChoice({ ...choice, projectIds: all ? null : someProjects() }); }}
           />
         ) : null}
         {choice.projectIds != null ? (
@@ -136,13 +145,13 @@ export function ReportShareSheet({ open, onOpenChange, state, today, projects }:
           </div>
         ) : null}
         <p className="t-caption t-muted">
-          {blocked ?? (ready != null
+          {ready != null
             ? "הקובץ מוכן. הקישו על שליחת הקובץ."
-            : wide
+            : wide && blocked == null
             ? `${String(amountColumns)} עמודות לא נכנסות ברוחב הדף ויתחלקו לכמה טבלאות. לפי רבעון או ב־Excel ייראה טוב יותר.`
             : choice.format === "pdf"
             ? "קובץ PDF בעברית, עמוד לכל דוח, עם התאריכים שעל המסך."
-            : "קובץ Excel עם גיליון לכל דוח, נוסחאות לסיכומים ואותם המספרים שעל המסך.")}
+            : "קובץ Excel עם גיליון לכל דוח, נוסחאות לסיכומים ואותם המספרים שעל המסך."}
         </p>
       </div>
     </Sheet>

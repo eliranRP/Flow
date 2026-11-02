@@ -155,6 +155,37 @@ describe("ReportAccountScreen: the period (FLOW-171)", () => {
     expect(screen.getByRole("region", { name: "דצמבר 2025" })).toBeInTheDocument();
   });
 
+  it("while more movements remain, the oldest year shown has no count, since it may be partial (FLOW-455)", () => {
+    renderWithProviders(<ReportAccountScreen sample={{ today: "2026-10-31", page: { ...REPORT_ACCOUNT_EQUITY_ALL, has_more: true } }} />, { route: `${EQUITY_ROUTE}&span=all` });
+    const years = screen.getAllByRole("region").filter((region) => /^\d{4}$/.test(region.getAttribute("aria-label") ?? ""));
+    expect(years.map((region) => region.getAttribute("aria-label"))).toEqual(["2026", "2025"]);
+    expect(years[0]?.querySelector(".ui-rep-account-year-count")?.textContent).toBe("תנועה אחת");
+    expect(years[1]?.querySelector(".ui-rep-account-year-count")).toBeNull();
+  });
+
+  it("keeps the header and the period control on screen while the new period loads (FLOW-455)", async () => {
+    let release: (() => void) | undefined;
+    rpc.impl = (name, args) => {
+      if (name !== "get_account_lines") return Promise.resolve({ data: null, error: { message: "down" } });
+      if ((args as { p_from_start?: boolean }).p_from_start !== true) return Promise.resolve({ data: wire(REPORT_ACCOUNT_EQUITY), error: null });
+      return new Promise((resolve) => { release = () => { resolve({ data: wire(REPORT_ACCOUNT_EQUITY_ALL), error: null }); }; });
+    };
+    renderWithProviders(<ReportAccountScreen />, { route: EQUITY_ROUTE });
+    await waitFor(() => { expect(screen.getByText("שינוי השנה")).toBeInTheDocument(); });
+    const control = screen.getByRole("radio", { name: "מההתחלה" });
+    control.focus();
+    fireEvent.click(control);
+    await waitFor(() => { expect(release).toBeDefined(); });
+    // Loading: the page stays, the title is the account's, and the tapped control is the same element, focused.
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Partner A – Contributions/Distributions");
+    expect(screen.getByRole("radio", { name: "מההתחלה" })).toBe(control);
+    expect(document.activeElement).toBe(control);
+    expect(document.querySelector(".ui-rep-content")?.getAttribute("aria-busy")).toBe("true");
+    release?.();
+    await waitFor(() => { expect(screen.getByText("שינוי מההתחלה")).toBeInTheDocument(); });
+    expect(document.querySelector(".ui-rep-content")?.hasAttribute("aria-busy")).toBe(false);
+  });
+
   it("says when the account has no movement at all", () => {
     renderWithProviders(<ReportAccountScreen sample={{ today: "2026-10-31", page: { ...REPORT_ACCOUNT_EQUITY_ALL, rows: [], currencies: [] } }} />, { route: `${EQUITY_ROUTE}&span=all` });
     expect(screen.getByText("אין תנועות בחשבון.")).toBeInTheDocument();
