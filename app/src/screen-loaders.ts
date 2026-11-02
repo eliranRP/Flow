@@ -19,6 +19,7 @@ export const screenLoaders = {
   transfers: () => import("./screens/transfers-screen"),
   recurring: () => import("./screens/recurring-screen"),
   recurringCharge: () => import("./screens/recurring-charge-screen"),
+  recurringChanges: () => import("./screens/recurring-changes-screen"),
   invoice: () => import("./screens/invoice-screen"),
   transaction: () => import("./screens/transaction-screen"),
   settings: () => import("./screens/settings-screen"),

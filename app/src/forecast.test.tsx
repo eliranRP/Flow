@@ -9,13 +9,13 @@ import { nextMonth } from "./forecast-month";
 // --- forecast.test.tsx
 
 describe("the קבועים screen (FLOW-415, b-2)", () => {
-  it("opens one change's payment, and shares one row for two or more that opens הגיעו החודש", () => {
+  it("opens one change's payment, and shares one row for two or more that opens the list of those changes", () => {
     const one = chargeChangeViews(SAMPLE_RECURRING_CHANGES, "");
     expect(attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: one, search: "" }).map((row) => row.to)).toEqual(["/transactions/t-power-oct"]);
     const two = chargeChangeViews(SAMPLE_RECURRING_THIS_MONTH.slice(0, 2), "?preview=1");
     const [row] = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: two, search: "?preview=1" });
     expect(row?.id).toBe("changes");
-    expect(row?.to).toBe("/missing-bills?preview=1#arrived");
+    expect(row?.to).toBe("/recurring/changes?preview=1");
     const { container } = render(<MemoryRouter><span>{row?.title}</span></MemoryRouter>);
     expect(container.textContent).toBe("2 חיובים קבועים השתנו");
     // All drops: the down arrow; an empty party name falls back to the supplier's.
