@@ -23,6 +23,7 @@ import {
   type InfoKey,
   type MetricKey,
 } from "./project-returns-info";
+import { LearnButton } from "./project-returns-learn-sheet";
 import { AllCashOutMeta, FigureText, InfinityFigure, MissingFigure } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
@@ -164,6 +165,8 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
     <section className="ui-pinv-card ui-ret-card" aria-labelledby={titleId}>
       <div className="ui-ret-card-head">
         <h2 id={titleId} className="ui-ret-card-title">תשואה כוללת · שנה</h2>
+        {/* FLOW-462: how to read the total, beside its title. */}
+        <LearnButton learnKey="total" title="תשואה כוללת" />
         <Link to={`${base}/returns${search}`} className="ui-ret-link">איך מחושב</Link>
       </div>
       <div className="ui-ret-total">

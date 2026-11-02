@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { Link } from "react-router-dom";
 import { lineInitials } from "../cash-lines-groups";
 import { Amount } from "../ui/amount";
@@ -11,7 +11,7 @@ import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { linesByMonth } from "./report-lines-screen";
 import { ReportSection, type Collapse } from "./reports-parts";
-import { usePropertyReturnLinesQuery, type LinesSource, type ReturnLineRow, type ReturnLinesPage } from "./project-returns-data";
+import { usePropertyReturnLinesQuery, type ReturnLine, type ReturnLineRow, type ReturnLinesPage } from "./project-returns-data";
 import { INFINITY, INFINITY_NAME, type EditField, type FigureValue, type Formula, type FormulaRow, type Op, type Target } from "./project-returns-info";
 
 /* ------------------------------------------------------------------------------------------------
@@ -38,7 +38,9 @@ export type Resolve = (target: Target) => RowAction | null;
 /** The pages' links: an input opens its edit sheet on the investment page. */
 export function pageResolver(base: string, search: string): Resolve {
   return (target) => {
-    if (target.kind === "line") return { href: `${base}/returns/${target.line}${search}` };
+    if (target.kind === "line") {
+      return { href: `${base}/returns/${target.line}${target.categoryId == null ? search : withParam(search, "category", target.categoryId)}` };
+    }
     if (target.kind === "statement") return { href: `${base}/returns${search}` };
     if (target.kind === "part") return { href: `${base}/part/${target.part}${search}` };
     if (target.kind === "loans") return { href: target.loanId == null ? `/loans${search}` : `/loans/${target.loanId}${search}` };
@@ -123,20 +125,24 @@ function FormulaLine({ row, currency, action, result }: { row: FormulaRow; curre
 }
 
 /** A formula: each part with its operator, each opening where it comes from, then "=". */
-export function FormulaList({ formula, currency, resolve, readOnly = false, label }: {
+export function FormulaList({ formula, currency, resolve, readOnly = false, label, more, listRef }: {
   formula: Formula;
   currency: string;
   resolve: Resolve;
   readOnly?: boolean;
   label?: string;
+  /** A row before "=" that shows the rest of the rows (FLOW-460: "עוד N קטגוריות"). */
+  more?: ReactNode;
+  listRef?: Ref<HTMLUListElement>;
 }) {
   return (
-    <ul className="ui-ret-formula" aria-label={label}>
+    <ul className="ui-ret-formula" aria-label={label} ref={listRef}>
       {formula.rows.map((row) => (
         <li key={row.key}>
           <FormulaLine row={row} currency={currency} action={rowAction(row, resolve, readOnly)} result={false} />
         </li>
       ))}
+      {more == null ? null : <li>{more}</li>}
       {formula.result == null ? null : (
         <li>
           <FormulaLine row={formula.result} currency={currency} action={null} result />
@@ -162,7 +168,7 @@ export function ReturnsHero({ figure, meta }: { figure: ReactNode; meta: ReactNo
 }
 
 /** Money in is green with "+" on the income line only; a refund elsewhere is "+" in the text colour. */
-function rowSign(line: LinesSource, minor: bigint): "in" | "out" | "moved-in" {
+function rowSign(line: ReturnLine, minor: bigint): "in" | "out" | "moved-in" {
   if (minor < 0n) return "out";
   return line === "income" ? "in" : "moved-in";
 }
@@ -172,7 +178,7 @@ function rowHint(row: ReturnLineRow): string {
   return row.categoryName == null ? date : `${date} · ${row.categoryName}`;
 }
 
-function TransactionGroups({ rows, line, currency, search }: { rows: readonly ReturnLineRow[]; line: LinesSource; currency: string; search: string }) {
+function TransactionGroups({ rows, line, currency, search }: { rows: readonly ReturnLineRow[]; line: ReturnLine; currency: string; search: string }) {
   const groups = linesByMonth(rows.map((row) => ({ ...row, doc_date: row.date })));
   return groups.map((group) => (
     <section key={group.key} className="ui-lines-group" aria-label={group.title}>
@@ -206,7 +212,7 @@ function TransactionGroups({ rows, line, currency, search }: { rows: readonly Re
  */
 export function ReturnLinesSection({ projectId, line, categoryId, currency, search, collapse, sample }: {
   projectId: string;
-  line: LinesSource;
+  line: ReturnLine;
   categoryId: string | null;
   currency: string;
   search: string;

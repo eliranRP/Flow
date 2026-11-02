@@ -474,6 +474,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-452"></a>[FLOW-452](tasks/FLOW-452.md) | Investment page v3: review nits | BACKLOG NIT |
 | <a id="flow-453"></a>[FLOW-453](tasks/FLOW-453.md) | A property's returns from the real lines: rent start, holding costs, net loan proceeds | MCP + UI |
 | <a id="flow-454"></a>[FLOW-454](tasks/FLOW-454.md) | Property returns on real deals: Sub2 purchase price, one unit by default, aligned rows, before the first rent | MCP + UI |
+| <a id="flow-460"></a>[FLOW-460](tasks/FLOW-460.md) | שיפוץ עד היום: a lean page that adds up, cash lines only | UI + SQL |
+| <a id="flow-461"></a>[FLOW-461](tasks/FLOW-461.md) | שווי הקרקע from the books | SQL + MCP + UI |
+| <a id="flow-462"></a>[FLOW-462](tasks/FLOW-462.md) | ⓘ on every returns page: how to read the figure and what it is for | UI |
 | <a id="flow-455"></a>[FLOW-455](tasks/FLOW-455.md) | An account's page keeps its content while the period changes, and its year counts are whole | SMALL UI |
 | <a id="flow-456"></a>[FLOW-456](tasks/FLOW-456.md) | The report share sheet says why its button is off next to it, and picking projects starts from one | SMALL UI |
 | <a id="flow-457"></a>[FLOW-457](tasks/FLOW-457.md) | A property's returns: one minus per expense, true counts, a name for ∞, one label per figure | SMALL UI |

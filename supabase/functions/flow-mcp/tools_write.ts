@@ -89,7 +89,7 @@ import { bookLineSchema, createJournalEntrySchema, setCategoryAccountSchema, set
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
 import { BANK_WRITES, bankWrite } from "./tools_bank.ts";
 import { THREAD_WRITES, threadWrite } from "./tools_thread.ts";
-import { propertyWrite } from "./tools_property.ts";
+import { PROPERTY_WRITES, propertyWrite } from "./tools_property.ts";
 
 /** The largest usual amount a charge takes, in minor units (decision 0189; the database checks it too). */
 const USUAL_AMOUNT_MAX_MINOR = 999_999_999_999n;
@@ -112,7 +112,7 @@ export async function callWrite(
   if ((PREPAID_WRITES as readonly string[]).includes(name)) return prepaidWrite(name as typeof PREPAID_WRITES[number], args, rpc);
   if ((BANK_WRITES as readonly string[]).includes(name)) return bankWrite(name as typeof BANK_WRITES[number], args, rpc);
   if ((THREAD_WRITES as readonly string[]).includes(name)) return threadWrite(name as typeof THREAD_WRITES[number], args, rpc);
-  if (name === "set_tax_bracket") return propertyWrite(args, rpc);
+  if ((PROPERTY_WRITES as readonly string[]).includes(name)) return propertyWrite(name as typeof PROPERTY_WRITES[number], args, rpc);
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");

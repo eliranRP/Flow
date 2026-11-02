@@ -37,8 +37,8 @@ const lineCategorySchema = z.object({
  */
 export const STATEMENT_LINES = ["income", "opex", "debt_service", "capex", "before_rent", "not_counted"] as const;
 export type StatementLine = (typeof STATEMENT_LINES)[number];
-/** The money in the deal by part, and the four together: all time, no period. */
-export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in"] as const;
+/** The money in the deal by part, the four together, and the renovation so far (FLOW-460): all time, no period. */
+export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in", "rehab"] as const;
 export type AllTimeLine = (typeof ALL_TIME_LINES)[number];
 /** The lines a line page opens: the statement's, the principal parts alone, and the money in's. */
 export type ReturnLine = StatementLine | "principal" | AllTimeLine;
@@ -82,6 +82,10 @@ const returnsSchema = z.object({
     taken_over_minor: minor.nullable().optional().transform((value) => value ?? 0n),
     taken_over_loans: z.array(takenOverSchema).optional().default([]),
     land_minor: minorOrNull,
+    land_source: z.enum(["typed", "books"]).nullable().optional().transform((value) => value ?? null),
+    land_typed_minor: minorOrNull,
+    land_account: z.object({ account_id: z.string(), name: z.string() }).nullable().optional().transform((value) => value ?? null),
+    land_suggestion: z.object({ account_id: z.string(), name: z.string(), amount_minor: minor }).nullable().optional().transform((value) => value ?? null),
     tax_bracket_bp: intOrNull,
     rehab_minor: minorOrNull,
     loan_balance_minor: minorOrNull,
@@ -155,7 +159,14 @@ export type PropertyReturns = {
     /** A loan paid out at closing without passing through the bank (Sub2), inside the purchase; 0 when none. */
     takenOverMinor: bigint;
     takenOverLoans: TakenOverLoan[];
+    /** The effective land (decision 0248): the typed value, else the property's postings to the company's land account. */
     landMinor: bigint | null;
+    landSource: "typed" | "books" | null;
+    landTypedMinor: bigint | null;
+    /** The company's land account, once named (set_land_account). */
+    landAccount: { id: string; name: string } | null;
+    /** Before an account is named: an asset account that looks like land and holds a balance on the property. */
+    landSuggestion: { accountId: string; name: string; minor: bigint } | null;
     taxBracketBp: number | null;
     /** Null while rehab has a cost in another currency. */
     rehabMinor: bigint | null;
@@ -250,6 +261,10 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       takenOverMinor: inp.taken_over_minor,
       takenOverLoans: inp.taken_over_loans.map((loan) => ({ id: loan.loan_id, name: loan.name, minor: loan.principal_minor })),
       landMinor: inp.land_minor,
+      landSource: inp.land_source,
+      landTypedMinor: inp.land_typed_minor,
+      landAccount: inp.land_account == null ? null : { id: inp.land_account.account_id, name: inp.land_account.name },
+      landSuggestion: inp.land_suggestion == null ? null : { accountId: inp.land_suggestion.account_id, name: inp.land_suggestion.name, minor: inp.land_suggestion.amount_minor },
       taxBracketBp: inp.tax_bracket_bp,
       rehabMinor: inp.rehab_minor,
       loanBalanceMinor: inp.loan_balance_minor,
@@ -387,11 +402,11 @@ export function usePropertyReturnsQuery(projectId: string, enabled = true) {
 
 export const LINES_PAGE = 50;
 
-/** The lines behind one figure: a line of the period, or one for all time (the money in's, `rehab` the building cost). */
-export type LinesSource = ReturnLine | "rehab";
+/** One category of the renovation so far (get_project's rehab_by_category); a null id is no category. */
+export type RehabRow = { id: string | null; name: string | null; minor: bigint };
 
 /** get_property_return_lines, 50 at a time, newest first; `categoryId` narrows to one category. */
-export function usePropertyReturnLinesQuery(projectId: string, line: LinesSource, categoryId: string | null, enabled = true) {
+export function usePropertyReturnLinesQuery(projectId: string, line: ReturnLine, categoryId: string | null, enabled = true) {
   const preview = useHomePreview();
   return useInfiniteQuery({
     queryKey: ["project", preview, projectId, "return-lines", line, categoryId ?? ""],

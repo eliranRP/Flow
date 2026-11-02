@@ -7,15 +7,15 @@ import { ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens"
 import { ProjectInvestmentScreen } from "../../screens/project-investment-screen";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "../../screens/project-returns-screen";
 import { PropertyMetricScreen, PropertyPartScreen } from "../../screens/project-returns-detail-screen";
-import { RETURN_LINES, type LinesSource } from "../../screens/project-returns-data";
-import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../returns-sample";
+import { RETURN_LINES, type ReturnLine } from "../../screens/project-returns-data";
+import { birchLaneRehab, birchLaneRehabMany, birchLaneReturnLines, birchLaneReturns, birchLaneReturnsMissing, birchLaneReturnsNegative, birchLaneReturnsNoRehab } from "../returns-sample";
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject, thisMonth } from "../project-cash-sample";
 import { kindNextSample } from "../project-kinds-next-sample";
 import { shiftMonthKey } from "../../period";
 import { devProjectsCash } from "../projects-sample";
 import { kindOf, kindSample } from "../project-kinds-sample";
-import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment, birchLaneRehabCategories } from "../investment-sample";
+import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment } from "../investment-sample";
 import { devDashboard } from "./home";
 import { AddForm } from "../../screens/add-sheet";
 import type { DevRoute } from "./types";
@@ -118,8 +118,8 @@ export function DevProjectDetail() {
 /** Proof: taps the row that opens a sheet once the page has drawn (the real trigger, not a state flag). */
 function OpenInvestmentSheet({ sheet, field }: { sheet: string | null; field: string | null }) {
   useEffect(() => {
-    if (sheet !== "edit" && sheet !== "rehab") return;
-    const label = sheet === "rehab" ? "שיפוץ עד היום" : field === "purchase" ? "מחיר רכישה" : field === "value" ? "שווי היום" : "שווי אחרי שיפוץ (ARV)";
+    if (sheet !== "edit") return;
+    const label = field === "purchase" ? "מחיר רכישה" : field === "value" ? "שווי היום" : "שווי אחרי שיפוץ (ARV)";
     const started = Date.now();
     const timer = window.setInterval(() => {
       const target = [...document.querySelectorAll<HTMLButtonElement>("main button, #root button")].find((button) => button.textContent.startsWith(label));
@@ -135,10 +135,19 @@ function OpenInvestmentSheet({ sheet, field }: { sheet: string | null; field: st
   return null;
 }
 
-/** FLOW-451: the returns fixture: `?returns=missing` (no land, bracket or value a year back; units the default 1), `?returns=negative`. */
+/**
+ * FLOW-451: the returns fixture: `?returns=missing` (no land, bracket or value a year back; units the default 1), `?returns=negative`.
+ * FLOW-460: `?rehab=many` seven renovation categories, `?rehab=none` no renovation yet.
+ */
 function devReturns(params: URLSearchParams) {
   const kind = params.get("returns");
+  if (params.get("rehab") === "none") return birchLaneReturnsNoRehab;
   return kind === "missing" ? birchLaneReturnsMissing : kind === "negative" ? birchLaneReturnsNegative : birchLaneReturns;
+}
+
+function devRehab(params: URLSearchParams) {
+  const kind = params.get("rehab");
+  return kind === "none" ? [] : kind === "many" ? birchLaneRehabMany : birchLaneRehab;
 }
 
 /** Where the fixtures' returns pages live, under the investment fixture. */
@@ -146,7 +155,7 @@ const DEV_INVESTMENT = "/e2e/project-investment";
 
 /**
  * FLOW-446 (board Invest): `?arv=none` the missing ARV, `?negative=1` today's value under the loans,
- * `?sheet=edit&field=arv|purchase|value` and `?sheet=rehab` open a sheet through its row. FLOW-451:
+ * `?sheet=edit&field=arv|purchase|value` opens a sheet through its row. FLOW-451:
  * `?returns=` picks the returns fixture, and its figures open the pages under /e2e/project-investment/.
  */
 export function DevProjectInvestment() {
@@ -161,7 +170,6 @@ export function DevProjectInvestment() {
       <ProjectInvestmentScreen
         sample={devProject}
         sampleInvestment={data}
-        sampleCategories={birchLaneRehabCategories}
         sampleReturns={devReturns(params)}
         base={DEV_INVESTMENT}
         backTo="/e2e/project-detail?preview=1"
@@ -172,9 +180,9 @@ export function DevProjectInvestment() {
 }
 
 /** FLOW-451: the statement, a line (`:line`), a metric (`:metric`) and a part (`:part`), on the returns fixture. */
-function useDevReturnsSample(lines: LinesSource) {
+function useDevReturnsSample(lines: ReturnLine) {
   const [params] = useSearchParams();
-  return { returns: devReturns(params), projectName: devProject.name, lines: birchLaneReturnLines(lines) };
+  return { returns: devReturns(params), projectName: devProject.name, lines: birchLaneReturnLines(lines), rehab: devRehab(params) };
 }
 
 export function DevPropertyStatement() {
@@ -184,7 +192,7 @@ export function DevPropertyStatement() {
 export function DevPropertyLine() {
   const { line = "opex" } = useParams();
   const known: readonly string[] = RETURN_LINES;
-  return <PropertyReturnLineScreen sample={useDevReturnsSample(known.includes(line) ? (line as LinesSource) : "opex")} base={DEV_INVESTMENT} />;
+  return <PropertyReturnLineScreen sample={useDevReturnsSample(known.includes(line) ? (line as ReturnLine) : "opex")} base={DEV_INVESTMENT} />;
 }
 
 export function DevPropertyMetric() {

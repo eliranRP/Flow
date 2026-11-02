@@ -20,6 +20,12 @@
   gap: var(--space-2);
 }
 
+/* FLOW-462: the total's ⓘ sits by its title; the link keeps the far end. */
+.ui-ret-card-head .ui-ret-learn-btn {
+  align-self: center;
+  margin-inline-end: auto;
+}
+
 .ui-ret-card-title {
   margin: 0;
   font-size: var(--type-section-size);
@@ -371,4 +377,20 @@
 
 .ui-ret-info .ui-ret-caption {
   margin-block-start: calc(var(--space-1) * -1);
+}
+
+/* FLOW-460: "עוד N קטגוריות" in a formula, the rest of the rows on a tap. */
+.ui-ret-more .ui-ret-label {
+  color: var(--color-accent-text);
+}
+
+/* FLOW-462: the ⓘ sits beside a returns page's title, and its sheet reads in three short parts. */
+.ui-page-title-line:has(> .ui-ret-learn-btn) {
+  justify-content: flex-start;
+}
+
+.ui-ret-learn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }

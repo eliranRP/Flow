@@ -17,10 +17,13 @@ import {
   isAllTimeLine,
   usePropertyReturnsQuery,
   type PropertyReturns,
+  type RehabRow,
   type ReturnLine,
   type ReturnLinesPage,
 } from "./project-returns-data";
 import { ALL_TIME, LINE_TITLES, countHint, firstRentInPeriod, lineMinor } from "./project-returns-info";
+import { PAGE_LEARN } from "./project-returns-learn";
+import { LearnButton } from "./project-returns-learn-sheet";
 import { ReturnLinesSection, ReturnsHero, investmentBase, withParam } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
@@ -46,7 +49,11 @@ export function useCollapse(): Collapse {
   };
 }
 
-export type ReturnsSample = { returns: PropertyReturns; projectName: string; lines?: ReturnLinesPage };
+/** `rehab`: the renovation's categories (FLOW-460); none when left out. */
+export type ReturnsSample = { returns: PropertyReturns; projectName: string; lines?: ReturnLinesPage; rehab?: readonly RehabRow[] };
+
+/** The renovation's categories from the project's own read: null while it loads. */
+export type RehabRead = { rows: readonly RehabRow[] | null; failed: boolean; offline: boolean; retry: () => void };
 
 /** The returns read behind every returns page, and the project's name for the period line. */
 export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: string | undefined, allTime = false) {
@@ -59,6 +66,17 @@ export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: stri
   const project = useProjectQuery(sample == null ? projectId : "", period);
   const name = sample?.projectName ?? project.data?.name ?? null;
   const phase = sample != null ? ({ kind: "ready" } as const) : screenPhase(preview, read);
+  const investment = project.data?.investment;
+  const rehab: RehabRead = {
+    rows: sample != null
+      ? (sample.rehab ?? [])
+      : investment == null
+        ? (project.data === undefined ? null : [])
+        : (investment.rehab_by_category ?? []).map((row) => ({ id: row.category_id, name: row.name, minor: row.amount_minor })),
+    failed: sample == null && project.isError,
+    offline: project.isPaused,
+    retry: () => { void project.refetch(); },
+  };
   return {
     projectId,
     search,
@@ -68,6 +86,7 @@ export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: stri
     retry: () => { void read.refetch(); },
     subtitle: name == null ? (allTime ? ALL_TIME : PERIOD_LINE) : `${allTime ? ALL_TIME : PERIOD_LINE} · ${name}`,
     name,
+    rehab,
   };
 }
 
@@ -150,6 +169,7 @@ export function PropertyStatementScreen({ sample, base: baseProp }: { sample?: R
   return (
     <ScreenState
       title="איך מחושב התזרים"
+      titleAside={<LearnButton learnKey={PAGE_LEARN.statement} title="תזרים" />}
       kicker="השקעה"
       subtitle={page.subtitle}
       backTo={`${page.base}${page.search}`}
@@ -181,9 +201,23 @@ function periodCategories(line: ReturnLine, r: PropertyReturns) {
   return line === "principal" || isAllTimeLine(line) ? [] : r.statement.byCategory[line];
 }
 
-function LineBody({ line, categoryId, r, base, search, projectId, name, lines }: {
+type LineCategory = { name: string | null; minor: bigint; count: number | null };
+
+/** The category a line page narrows to: the period's, or the renovation's since the purchase (FLOW-460). */
+function lineCategory(line: ReturnLine, r: PropertyReturns, rehab: readonly RehabRow[] | null, categoryId: string | null): LineCategory | null {
+  if (categoryId == null) return null;
+  if (line === "rehab") {
+    const row = rehab?.find((item) => item.id === categoryId);
+    // A cost, as the line's own figure and its transactions read.
+    return row == null ? null : { name: row.name, minor: -row.minor, count: null };
+  }
+  return periodCategories(line, r).find((item) => item.id === categoryId) ?? null;
+}
+
+function LineBody({ line, categoryId, category, r, base, search, projectId, name, lines }: {
   line: ReturnLine;
   categoryId: string | null;
+  category: LineCategory | null;
   r: PropertyReturns;
   base: string;
   search: string;
@@ -195,7 +229,6 @@ function LineBody({ line, categoryId, r, base, search, projectId, name, lines }:
   const cur = r.currency;
   // The returns read has the period's categories only: a line since the purchase lists its transactions.
   const categories = periodCategories(line, r);
-  const category = categoryId == null ? null : categories.find((item) => item.id === categoryId) ?? null;
   const minor = category?.minor ?? lineMinor(line, r);
   const count = category?.count ?? (line === "principal" || isAllTimeLine(line) ? null : r.statement.counts[line]);
   const own = (value: bigint) => (line === "income" ? income(value, cur) : money(value, cur));
@@ -230,22 +263,29 @@ export function PropertyReturnLineScreen({ sample, base: baseProp }: { sample?: 
   const location = useLocation();
   const categoryId = new URLSearchParams(location.search).get("category");
   if (!isReturnLine(line)) return <Navigate replace to={`${page.base}/returns${page.search}`} />;
-  const category = categoryId == null || page.returns == null ? null : periodCategories(line, page.returns).find((item) => item.id === categoryId) ?? null;
+  const category = page.returns == null ? null : lineCategory(line, page.returns, page.rehab.rows, categoryId);
   const title = category?.name ?? LINE_TITLES[line];
   // The principal and the money in's lines open from the investment page; the rest from the statement.
   const principal = line === "principal" || isAllTimeLine(line);
+  // FLOW-462: a line with its own reading guide (the principal), not narrowed to a category.
+  const learnKey = categoryId == null && line in PAGE_LEARN.line ? PAGE_LEARN.line[line as keyof typeof PAGE_LEARN.line] : null;
+  // The renovation's lines open from its own page (FLOW-460).
+  const back = line === "rehab"
+    ? `${page.base}/part/rehab${page.search}`
+    : categoryId != null ? `${page.base}/returns/${line}${page.search}` : principal ? `${page.base}${page.search}` : `${page.base}/returns${page.search}`;
   return (
     <ScreenState
       title={title}
-      kicker={categoryId != null ? LINE_TITLES[line] : principal ? "השקעה" : "התזרים"}
+      titleAside={learnKey == null ? undefined : <LearnButton learnKey={learnKey} title={title} />}
+      kicker={categoryId != null || line === "rehab" ? LINE_TITLES[line] : principal ? "השקעה" : "התזרים"}
       subtitle={page.subtitle}
-      backTo={categoryId != null ? `${page.base}/returns/${line}${page.search}` : principal ? `${page.base}${page.search}` : `${page.base}/returns${page.search}`}
+      backTo={back}
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
     >
       {page.returns == null ? null : (
-        <LineBody line={line} categoryId={categoryId} r={page.returns} base={page.base} search={page.search} projectId={page.projectId} name={page.name} lines={sample?.lines} />
+        <LineBody line={line} categoryId={categoryId} category={category} r={page.returns} base={page.base} search={page.search} projectId={page.projectId} name={page.name} lines={sample?.lines} />
       )}
     </ScreenState>
   );

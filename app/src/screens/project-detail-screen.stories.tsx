@@ -107,7 +107,7 @@ export const ProjectInvestment: Story = {
     <StoryRoute entry="/projects/a" tabs>
       <ProjectDetailScreen
         example={exampleOnBand}
-        sampleInvestment={{ isOverhead: false, figures: FILLED, categories: [], loans: [] }}
+        sampleInvestment={{ isOverhead: false, figures: FILLED, loans: [] }}
         sample={{
           id: "a",
           name: "וילה רעננה",
@@ -141,7 +141,7 @@ const overviewProject: NonNullable<ProjectDetailData> = {
   ],
 };
 const sectionTo = (target: string) => (target === "overview" ? `/projects/${PROJECT_ID}` : `/projects/${PROJECT_ID}/${target}`);
-const filledInvestment = { isOverhead: false, figures: FILLED, categories: [], loans: [] };
+const filledInvestment = { isOverhead: false, figures: FILLED, loans: [] };
 
 export const ProjectOverview: Story = {
   name: "Project, short page (FLOW-340 C)",

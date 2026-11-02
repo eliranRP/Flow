@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -93,6 +93,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category_move"` | `id` | the source category id `move_category_lines` used |
 | `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
 | `undo` `kind: "tax_bracket"` | `id` | the company id `set_tax_bracket` returned |
+| `undo` `kind: "land_account"` | `id` | the company id `set_land_account` returned |
 | `get_property_returns`, `get_property_return_lines` | `project_id` | `list_projects` id |
 | `rename_category` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_name"` | `id` | the category id `rename_category` used |
@@ -1213,6 +1214,14 @@ The lines behind one figure, newest first. For the period (`from`, `to` as above
 ```
 
 Sets the owner's marginal income tax bracket (owner only), a percent from 0 to 100 with at most two decimals; `null` clears it. `get_property_returns` uses it for the tax savings of depreciation. Output `data`: `id` (the company), `tax_bracket_bp` (2400 = 24%), `prior`, `undo_kind: "tax_bracket"`. Undo, with the company id, puts the prior bracket back; it is `conflict` once the bracket was changed again.
+
+### set_land_account
+
+```json
+{ "idempotency_key": "land-1", "account_id": "<asset account id from list_accounts>" }
+```
+
+Names the balance-sheet account that holds each property's land (owner only; an asset account that is not archived, else `account not found`; `null` unlinks), [0248](../decisions/0248-land-from-books.md). `get_property_returns` then reads a property's land from its postings to that account (posted, not removed, the leg's project when it names one, else the line's), `inputs.land_source: "books"`, unless a land value was typed with `set_project_investment` (`land_source: "typed"`, which wins). `inputs.land_account` names the account. Until one is named, `inputs.land_suggestion` (`account_id`, `name`, `amount_minor`) offers an asset account whose name says land (קרקע or land, not improvements) with a balance on the property. Output `data`: `id` (the company), `land_account_id`, `prior`, `undo_kind: "land_account"`. Undo, with the company id, puts the prior account back; it is `conflict` once it was changed again.
 
 ## Loans · cycle 5
 

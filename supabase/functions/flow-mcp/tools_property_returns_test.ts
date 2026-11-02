@@ -1,4 +1,4 @@
-// FLOW-450: get_property_returns, get_property_return_lines, set_tax_bracket, and units and land on
+// FLOW-450: get_property_returns, get_property_return_lines, set_tax_bracket, set_land_account (FLOW-461), and units and land on
 // set_project_investment. Fixtures: tools_test_support.ts. Invented ids only.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
@@ -105,4 +105,24 @@ Deno.test("set_project_investment takes units and land", async () => {
   });
   const zero = await callTool("set_project_investment", { idempotency_key: "pi-2", project_id: PROJECT, units: 0 }, ["write"], rpc);
   assertEquals(zero.isError, true);
+});
+
+Deno.test("set_land_account sends the account, null unlinks, undo takes land_account", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "land_account" } } }));
+  const set = await callTool("set_land_account", { idempotency_key: "la-1", account_id: CATEGORY }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_set_land_account", body: { p_idempotency_key: "la-1", p_account_id: CATEGORY } });
+  await callTool("set_land_account", { idempotency_key: "la-2", account_id: null }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_set_land_account", body: { p_idempotency_key: "la-2", p_account_id: null } });
+  await callTool("undo", { idempotency_key: "u-la", kind: "land_account", id: CATEGORY }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.name, "mcp_undo");
+
+  const denied = await callTool("set_land_account", { idempotency_key: "k", account_id: CATEGORY }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  const before = calls.length;
+  for (const input of [{ idempotency_key: "k" }, { idempotency_key: "k", account_id: "nope" }, { account_id: CATEGORY }]) {
+    const result = await callTool("set_land_account", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+  }
+  assertEquals(calls.length, before);
 });

@@ -38,23 +38,6 @@ type CategorySample = {
   usual?: { expected: bigint; up: UpKind };
 };
 
-/** The drill-down for one category row; a row in another currency names it (`?currency=`). */
-export function categoryHref(projectId: string, categoryId: string, currency: string, search: string): string {
-  const path = `/projects/${projectId}/categories/${categoryId}`;
-  if (currency === "ILS") return `${path}${search}`;
-  return `${path}${search}${search === "" ? "?" : "&"}currency=${encodeURIComponent(currency)}`;
-}
-
-/**
- * Back from the lines. The rehab sheet passes its own screen in the link state (FLOW-404), so Back
- * returns to the investment screen on its period; otherwise the project page. `search` is the preview flag only.
- */
-export function categoryBack(projectId: string, search: string, state: unknown): string {
-  const back = (state as { back?: unknown } | null)?.back;
-  if (typeof back === "string" && back.startsWith(`/projects/${projectId}/`)) return back;
-  return `/projects/${projectId}${search}`;
-}
-
 export function ProjectCategoryScreen({
   sample,
   backTo: backOverride,
@@ -71,16 +54,14 @@ export function ProjectCategoryScreen({
   const location = useLocation();
   // The project's period travels in the URL, so the lines match the category row that opened them.
   const period = periodFromSearch(new URLSearchParams(location.search));
-  // FLOW-404: the rehab list opens a category on the cash basis (`?basis=cash`), so its lines add up to the row.
-  const basis = params.get("basis") === "cash" ? "cash" : null;
-  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period, basis);
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const months = useProjectCategoryMonthsQuery(sample ? "" : projectId, period);
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   const heldRows = useHeldOrder(loadedRows, (row) => row.id);
   const liveMarks = useLoanMarks(heldRows.map((row) => row.id), sample == null);
-  const back = categoryBack(projectId, search, location.state);
+  const back = `/projects/${projectId}${search}`;
   // FLOW-314: a card at the last loaded row loads the next page through here, even with this screen gone.
   const fetchNext = category.fetchNextPage;
   const loadMore = useCallback(async () => {
@@ -119,10 +100,7 @@ export function ProjectCategoryScreen({
     <div>
       {/* FLOW-339: the project names Back ("‹ שיפוץ הרצל 12"), so the subtitle leaves it out. */}
       <ScreenHeader title={name} kicker={projectName} subtitle={subtitle} backTo={backOverride ?? back} />
-      {/* The usual month is on the books basis, so a cash-basis list from the rehab sheet leaves it out. */}
-      {basis === "cash" ? null : (
-        <UsualLine usual={sample ? sample.usual ?? null : usualFor(months.data, categoryId, rowCurrency)} currency={rowCurrency} />
-      )}
+      <UsualLine usual={sample ? sample.usual ?? null : usualFor(months.data, categoryId, rowCurrency)} currency={rowCurrency} />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
