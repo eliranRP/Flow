@@ -72,5 +72,6 @@
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.72.1",
     "wrangler": "4.155.0"
-  }
+  },
+  "workspaces": ["app", "packages/*"]
 }

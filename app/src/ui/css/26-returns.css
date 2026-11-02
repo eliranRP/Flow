@@ -20,6 +20,12 @@
   gap: var(--space-2);
 }
 
+/* FLOW-462: the total's ⓘ sits by its title; the link keeps the far end. */
+.ui-ret-card-head .ui-ret-learn-btn {
+  align-self: center;
+  margin-inline-end: auto;
+}
+
 .ui-ret-card-title {
   margin: 0;
   font-size: var(--type-section-size);

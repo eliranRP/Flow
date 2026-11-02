@@ -17,7 +17,6 @@ export function LearnButton({ learnKey, title, initialOpen = false }: { learnKey
   const [open, setOpen] = useState(initialOpen);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
   const setSheet = useSheetHistory(`returns-learn-${learnKey}`, open, setOpen);
-  const learn = LEARN[learnKey];
   return (
     <>
       <IconButton ref={opener} label={`איך לקרוא את ${title}`} className="ui-ret-info-btn ui-ret-learn-btn" onClick={() => { setSheet(true); }}>
@@ -32,13 +31,23 @@ export function LearnButton({ learnKey, title, initialOpen = false }: { learnKey
         panelClassName="ui-sheet-wide ui-sheet-g10 ui-ret-info"
         action={<Button variant="secondary" full onClick={() => { setSheet(false); }}>סגירה</Button>}
       >
-        {PARTS.map((part) => (
-          <section key={part} className="ui-ret-learn" aria-label={LEARN_TITLES[part]}>
-            <h3 className="t-section">{LEARN_TITLES[part]}</h3>
-            <p className="ui-pinv-help">{learn[part]}</p>
-          </section>
-        ))}
+        <LearnSections learnKey={learnKey} />
       </Sheet>
+    </>
+  );
+}
+
+/** What it is, how to read it, what it is for: the ⓘ sheet's body, and the end of a figure's ⓘ sheet. */
+export function LearnSections({ learnKey }: { learnKey: LearnKey }) {
+  const learn = LEARN[learnKey];
+  return (
+    <>
+      {PARTS.map((part) => (
+        <section key={part} className="ui-ret-learn" aria-label={LEARN_TITLES[part]}>
+          <h3 className="t-section">{LEARN_TITLES[part]}</h3>
+          <p className="ui-pinv-help">{learn[part]}</p>
+        </section>
+      ))}
     </>
   );
 }

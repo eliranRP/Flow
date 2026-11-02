@@ -215,8 +215,8 @@ describe("the page", () => {
     const { container } = renderPage({ viewer: true });
     await ready();
     await screen.findByText("הון בנכס");
-    // A viewer still opens an ⓘ, or an equity row's sheet: it reads, it writes nothing.
-    expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => button.getAttribute("aria-label")?.startsWith("איך מחושב") === true || button.classList.contains("ui-ret-equity-row"))).toBe(true);
+    // A viewer still opens an ⓘ (how it is made, or how to read it), or an equity row's sheet: it reads, it writes nothing.
+    expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => /^איך (מחושב|לקרוא)/.test(button.getAttribute("aria-label") ?? "") || button.classList.contains("ui-ret-equity-row"))).toBe(true);
     expect(screen.queryByText("הוספה")).not.toBeInTheDocument();
     expect(screen.queryByText("+ הוספת הלוואה")).not.toBeInTheDocument();
     // FLOW-460: the renovation's page only reads, so it opens for a viewer too.

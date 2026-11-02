@@ -256,9 +256,12 @@ $a$, $n$  -- FLOW-461: the typed land, else the property's postings to the compa
     land := p.land_minor;
     land_source := 'typed';
   elsif land_acc is not null then
-    land := nullif(private.project_account_balance(cid, p_project_id, land_acc, cur), 0);
-    if land is not null then
+    -- Only a positive balance is a land (as for the suggestion); none, or a credit, leaves it missing.
+    land := private.project_account_balance(cid, p_project_id, land_acc, cur);
+    if land > 0 then
       land_source := 'books';
+    else
+      land := null;
     end if;
   else
     select jsonb_build_object('account_id', s.id, 'name', s.name, 'amount_minor', s.balance)

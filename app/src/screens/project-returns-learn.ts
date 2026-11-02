@@ -1,5 +1,5 @@
 import type { ReturnLine } from "./project-returns-data";
-import type { MetricKey, PartKey } from "./project-returns-info";
+import type { InfoKey, MetricKey, PartKey } from "./project-returns-info";
 
 /**
  * FLOW-462: the ⓘ beside each returns page's title. For every figure an investor reads on its own
@@ -105,6 +105,17 @@ export const LEARN: Record<LearnKey, Learn> = {
     read: "נכנס לעלות הבניין ולפחת. שיפוץ לפני השכר הראשון נכנס לכסף בעסקה, ואחריו מוריד את התזרים של אותה שנה.",
     goal: "עונה על: כמה השקעתי בשיפור הנכס. בהשוואה ל־ARV מראה אם השיפוץ השתלם.",
   },
+};
+
+/** The figure ⓘ sheets on the total-return card: each ends with how to read the figure. */
+export const INFO_LEARN: Record<InfoKey, LearnKey> = {
+  cash_flow: "cash-flow",
+  principal: "principal",
+  appreciation: "appreciation",
+  tax: "tax",
+  equity_today: "equity",
+  forced: "forced",
+  money_in: "money-in",
 };
 
 /** Each returns page's ⓘ: the statement, the principal's line, every metric and every part. A page not here has none. */

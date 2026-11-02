@@ -45,7 +45,7 @@ import {
   type FormulaRow,
   type InfoKey,
 } from "./project-returns-info";
-import { LEARN, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
+import { INFO_LEARN, LEARN, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
 import { signedRow } from "./project-returns-parts";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
 import { BRACKET_RANGE, bracketVerdict, rawToBp } from "./project-returns-sheets";
@@ -392,6 +392,8 @@ describe("the investment page's returns cards", () => {
     expect(within(dialog).getByRole("link", { name: /עלות הבניין/ })).toHaveAttribute("href", "/projects/p1/investment/part/building");
     expect(within(dialog).getByText(TAX_CAPTION)).toBeInTheDocument();
     expect(within(dialog).getByText("24%")).toBeInTheDocument();
+    // FLOW-462: the sheet ends with how to read the figure.
+    expect(within(dialog).getByText(LEARN.tax.goal)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: /מדרגת המס/ }));
     expect(await screen.findByRole("dialog", { name: "מדרגת המס" })).toBeInTheDocument();
   });
@@ -725,7 +727,9 @@ describe("the renovation's page (FLOW-460)", () => {
 
 describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
   it("has a reading guide for every page key", () => {
-    const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...METRIC_KEYS.map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key])];
+    const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...METRIC_KEYS.map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key]), ...Object.values(INFO_LEARN), "total" as const];
+    // Every guide is shown somewhere: on a page, at the end of a figure's ⓘ sheet, or beside the total.
+    expect(new Set(keys)).toEqual(new Set(Object.keys(LEARN)));
     for (const key of keys) {
       expect(LEARN[key].what.length).toBeGreaterThan(0);
       expect(LEARN[key].read.length).toBeGreaterThan(0);
@@ -743,6 +747,13 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     expect(within(dialog).getByText(LEARN["cap-rate"].goal)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(document.activeElement).toBe(button); });
+  });
+
+  it("puts one beside the total return on the investment page", async () => {
+    renderInvestment();
+    fireEvent.click(await screen.findByRole("button", { name: "איך לקרוא את תשואה כוללת" }));
+    const dialog = await screen.findByRole("dialog", { name: "תשואה כוללת" });
+    expect(within(dialog).getByText(LEARN.total.goal)).toBeInTheDocument();
   });
 
   it("puts none on a line without a guide", async () => {
