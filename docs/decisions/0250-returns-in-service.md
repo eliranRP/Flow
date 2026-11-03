@@ -1,7 +1,7 @@
 # A newly let rental's total return, tax savings and appreciation; what a loan paid at closing
 
 **Date:** 2026-11-03
-**Status:** Accepted (owner, 2026-11-03: "Fix all three" and "Add a field per loan", after the Wickliff purchase price read $300,375 against a typed $251,000)
+**Status:** Accepted (owner, 2026-11-03: "Fix all three" and "Add a field per loan", after a rental's purchase price counted a whole hard-money loan against a lower typed price)
 **Amends:** [0246](0246-sub2-price-and-one-unit.md), [0249](0249-returns-from-first-rent.md)
 
 ## Context
