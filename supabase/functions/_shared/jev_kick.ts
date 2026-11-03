@@ -6,20 +6,16 @@
  * cap and the per-line retry wait. A failed call changes nothing the job would not do anyway.
  */
 
+import { edgeWaitUntil, type Defer } from "./edge_defer.ts";
+
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-/** Work that must outlive the response (EdgeRuntime.waitUntil when the runtime has it). */
-export type Defer = (work: Promise<unknown>) => void;
-
-type EdgeRuntimeLike = { waitUntil?: (work: Promise<unknown>) => void };
-
-/** EdgeRuntime.waitUntil, or a promise left to run with its failure swallowed. */
+/** EdgeRuntime.waitUntil (edge_defer.ts), or a promise left to run, with its failure swallowed. */
 export function edgeDefer(): Defer {
-  const runtime = (globalThis as { EdgeRuntime?: EdgeRuntimeLike }).EdgeRuntime;
-  const waitUntil = runtime?.waitUntil;
-  if (typeof waitUntil === "function") return (work) => waitUntil.call(runtime, work.catch(() => undefined));
+  const waitUntil = edgeWaitUntil();
   return (work) => {
-    void work.catch(() => undefined);
+    const settled = work.catch(() => undefined);
+    if (waitUntil) waitUntil(settled);
   };
 }
 

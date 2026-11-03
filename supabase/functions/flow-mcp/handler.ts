@@ -3,6 +3,7 @@
 // Decision 0080. Reads through cycle 5, single-expense writes, cycle 4–6 writes, category P&L toggle. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
 
+import { edgeWaitUntil } from "../_shared/edge_defer.ts";
 import { corsHeadersFor } from "../_shared/http.ts";
 import { companyHint } from "../_shared/owner.ts";
 import { SERVER_INSTRUCTIONS } from "./tools_guide_data.ts";
@@ -29,14 +30,6 @@ export type Deps = {
   now?: () => number;
 };
 
-type EdgeRuntimeLike = { waitUntil?: (work: Promise<unknown>) => void };
-
-function edgeWaitUntil(): ToolDefer | undefined {
-  const runtime = (globalThis as { EdgeRuntime?: EdgeRuntimeLike }).EdgeRuntime;
-  const waitUntil = runtime?.waitUntil;
-  if (typeof waitUntil !== "function") return undefined;
-  return (work) => waitUntil.call(runtime, work);
-}
 
 const defaultDeps: Deps = {
   env: (name) => Deno.env.get(name),
