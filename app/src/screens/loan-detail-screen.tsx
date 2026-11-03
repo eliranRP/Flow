@@ -48,6 +48,7 @@ import { LoanRateSheet } from "./loan-rate-sheet";
 import { LoanCloseSheet, LoanLinkPicker, type LoanLinkChoice } from "./loan-close-sheet";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { LoanKindSheet } from "./loan-kind-sheet";
+import { CLOSING_PAID_LABEL, LoanClosingPaidSheet, closingPaidRefusal, closingPaidToast, closingPaidValue } from "./loan-closing-paid-sheet";
 import {
   inversePatch,
   liveLoanWrites,
@@ -76,7 +77,7 @@ import { loanOutlook } from "./loan-outlook";
 export const LOAN_ERROR_TITLE = "ההלוואה לא נטענה";
 export const LOAN_MISSING_TITLE = "ההלוואה לא נמצאה";
 
-type SheetName = "kind" | "rate" | "close" | "link" | "part" | "project" | "delete";
+type SheetName = "kind" | "rate" | "close" | "link" | "part" | "project" | "closing" | "delete";
 
 /** FLOW-962: the loan page's toasts hang under its bar, and an undo stays 5s (decision 0214, extending 0212). */
 const LOAN_TOAST = { place: "top", durationMs: 5000 } as const;
@@ -282,12 +283,16 @@ function LoanDetailReady({
     undo?: () => Promise<void>;
     undone?: string;
     place?: LoanRefusalPlace;
+    /** A refusal the open sheet shows on its own line (FLOW-466); null sends it to a toast. */
+    inSheet?: (error: Error) => string | null;
   }): Promise<string | null> {
     try {
       busyClose.current = true;
       await run();
     } catch (raw) {
       const error = raw instanceof Error ? raw : new Error("failed");
+      const own = options.inSheet?.(error) ?? null;
+      if (own != null) return own;
       const reason = loanRefusalOf(error);
       const failure = loanFailure(error, ctx);
       const message = typeof failure === "string" ? failure : failure.message;
@@ -357,6 +362,8 @@ function LoanDetailReady({
     { key: "kind", label: "סוג", value: LOAN_KIND_LIST_LABEL[loan.kind], onOpen: holdWrites ? null : () => { open("kind"); } },
     { key: "rate", label: "ריבית", value: <RateValue loan={loan} today={today} />, onOpen: holdWrites ? null : () => { setRate(null); open("rate"); } },
     { key: "project", label: "פרויקט", value: projectName ?? NO_PROJECT, onOpen: holdWrites ? null : () => { open("project"); } },
+    // FLOW-466: a project's loan says what it paid at closing, for the purchase price.
+    ...(loan.projectId == null ? [] : [{ key: "closing", label: CLOSING_PAID_LABEL, value: closingPaidValue(loan), onOpen: holdWrites ? null : () => { open("closing"); } }]),
     // FLOW-962: the status only reads. סגירת ההלוואה and החזרה לפעילות below change it.
     { key: "status", label: "סטטוס", value: loan.status === "open" ? LOAN_STATUS_LABEL.open : loanClosedLine(loan.status, loan.closedOn), onOpen: null },
   ];
@@ -541,6 +548,21 @@ function LoanDetailReady({
                 }}
               />
             </Sheet>
+            <LoanClosingPaidSheet
+              loan={loan}
+              open={sheet === "closing"}
+              onOpenChange={setSheet}
+              returnFocusRef={returnRef}
+              onSave={(minor) => {
+                let prior = loan.closingPaidMinor;
+                return save(async () => { prior = (await writes.setClosingPaid(loan.id, minor)).prior; }, {
+                  success: closingPaidToast(minor, loan),
+                  undone: "הסכום הקודם חזר",
+                  inSheet: (error) => closingPaidRefusal(error, loan),
+                  undo: async () => { await writes.setClosingPaid(loan.id, prior); },
+                });
+              }}
+            />
             <ConfirmSheet
               open={sheet === "delete"}
               onOpenChange={(next) => {

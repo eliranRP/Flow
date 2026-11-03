@@ -23,6 +23,7 @@ const regular: LoanDetail = {
   closedOn: null,
   refinancedIntoId: null,
   projectId: null,
+  closingPaidMinor: null,
   categoryIds: { interest: null, escrow: null, principal: null, fees: null },
   rates: [],
   balanceMinor: 24_000_000n,

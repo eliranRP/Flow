@@ -232,7 +232,7 @@ export const mapleCourtSub2Returns: PropertyReturns = {
     units: 1,
     unitsDefault: true,
     takenOverMinor: usd(290_000),
-    takenOverLoans: [{ id: "loan-maple", name: "Maple Street Mortgage", minor: usd(290_000) }],
+    takenOverLoans: [{ id: "loan-maple", name: "Maple Street Mortgage", minor: usd(290_000), closingPaidMinor: null, countedMinor: usd(290_000) }],
     landMinor: usd(66_600),
     landSource: "typed",
     landTypedMinor: usd(66_600),
@@ -423,4 +423,34 @@ export const birchLaneReturnsAnnualized: PropertyReturns = {
   annualizedFrom: "2026-04-01",
   earningDays: 215,
   metrics: { cashOnCashBp: 1964, capRateBp: 1104, dscrMilli: null, perUnitMonthMinor: usd(594) },
+};
+
+/**
+ * FLOW-466 (decision 0250): Maple Court with two loans paid out at closing. The mortgage taken over
+ * counts its whole $250,000 (no closing amount set). The hard-money loan's settlement statement
+ * shows $40,000 of its $60,000 paid at closing (the rest a renovation holdback), so the price counts
+ * $40,000. Bank lines $41,600 + $250,000 + $40,000 = the same $331,600 purchase.
+ */
+export const mapleCourtClosingPaidReturns: PropertyReturns = {
+  ...mapleCourtSub2Returns,
+  inputs: {
+    ...mapleCourtSub2Returns.inputs,
+    takenOverLoans: [
+      { id: "loan-maple", name: "Maple Street Mortgage", minor: usd(250_000), closingPaidMinor: null, countedMinor: usd(250_000) },
+      { id: "loan-oak", name: "Oak Bridge Lending", minor: usd(60_000), closingPaidMinor: usd(40_000), countedMinor: usd(40_000) },
+    ],
+  },
+};
+
+/** FLOW-466: Maple Court's acquisition lines, the $41,600 the bank shows for the purchase. */
+export const mapleCourtAcquisitionLines: ReturnLinesPage = {
+  currency: "USD",
+  totalMinor: usd(-41_600),
+  count: 3,
+  hasMore: false,
+  rows: [
+    row("t-maple-close", "Lakeview Title", "2025-11-14", -38_000, "cat-purchase", "רכישה", "invoice"),
+    row("t-maple-fee", "Lakeview Title", "2025-11-14", -2_400, "cat-closing", "עלויות סגירה", "invoice"),
+    row("t-maple-rec", "County Recorder", "2025-11-14", -1_200, "cat-closing", "עלויות סגירה"),
+  ],
 };

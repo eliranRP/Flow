@@ -83,7 +83,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
     tools: [
       "list_loans", "get_loan_schedule", "get_loans_paid", "add_loan", "update_loan", "delete_loan", "reorder_loans",
       "attach_loan_payment", "detach_loan_payment", "set_loan_rate", "set_loan_index", "set_loan_refinance",
-      "set_index_rate", "set_loan_part_category", "set_loan_category_from",
+      "set_index_rate", "set_loan_part_category", "set_loan_category_from", "set_loan_closing_paid",
     ],
   },
   {

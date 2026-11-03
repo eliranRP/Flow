@@ -202,7 +202,7 @@ describe("the returns read", () => {
     const json = toReturnsJson(mapleCourtSub2Returns);
     const parsed = toPropertyReturns(json);
     expect(parsed.inputs).toMatchObject({ units: 1, unitsDefault: true, takenOverMinor: 29_000_000n });
-    expect(parsed.inputs.takenOverLoans).toEqual([{ id: "loan-maple", name: "Maple Street Mortgage", minor: 29_000_000n }]);
+    expect(parsed.inputs.takenOverLoans).toEqual([{ id: "loan-maple", name: "Maple Street Mortgage", minor: 29_000_000n, closingPaidMinor: null, countedMinor: 29_000_000n }]);
     const inputs = { ...(json.inputs as object), units: null, units_default: undefined, taken_over_minor: undefined, taken_over_loans: undefined };
     expect(toPropertyReturns({ ...json, inputs }).inputs).toMatchObject({ units: 1, unitsDefault: false, takenOverMinor: 0n, takenOverLoans: [] });
   });
@@ -284,7 +284,7 @@ describe("the sheet contents", () => {
     expect(signedRow({ key: "x", op: "÷", label: "x", value: { kind: "money", minor: -500n } }).op).toBe("÷");
   });
 
-  it("asks for the missing input, and says a value a year back is missing with no button", () => {
+  it("asks for the missing input, and says a second value is missing with no button", () => {
     const tax = returnInfo("tax", birchLaneReturnsMissing).formula;
     expect(tax.rows[0]?.value).toEqual({ kind: "missing", add: "land", note: undefined });
     expect(tax.rows[2]?.value).toEqual({ kind: "missing", add: "tax_bracket", note: undefined });
@@ -329,7 +329,10 @@ describe("the sheet contents", () => {
       ...mapleCourtSub2Returns,
       inputs: {
         ...mapleCourtSub2Returns.inputs,
-        takenOverLoans: [{ id: "l1", name: "Maple Street Mortgage", minor: 25_000_000n }, { id: "l2", name: "Oak Bridge Lending", minor: 4_000_000n }],
+        takenOverLoans: [
+          { id: "l1", name: "Maple Street Mortgage", minor: 25_000_000n, closingPaidMinor: null, countedMinor: 25_000_000n },
+          { id: "l2", name: "Oak Bridge Lending", minor: 4_000_000n, closingPaidMinor: null, countedMinor: 4_000_000n },
+        ],
       },
     };
     expect(buildingFormula(two).rows[1]).toMatchObject({ hint: "Maple Street Mortgage, Oak Bridge Lending", target: { kind: "loans" } });
@@ -402,7 +405,7 @@ describe("the investment page's returns cards", () => {
     expect(await screen.findByRole("dialog", { name: "מדרגת המס" })).toBeInTheDocument();
   });
 
-  it("reads חסר with הוספה for a missing input, and חסר · שווי לפני שנה with no button", async () => {
+  it("reads חסר with הוספה for a missing input, and חסר · עדכון שווי נוסף with no button", async () => {
     renderInvestment(birchLaneReturnsMissing);
     const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
     if (card == null) throw new Error("no card");

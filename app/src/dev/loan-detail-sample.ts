@@ -63,6 +63,7 @@ export const SAMPLE_INTEREST_ONLY: LoanDetail = {
   closedOn: null,
   refinancedIntoId: null,
   projectId: "proj-b",
+  closingPaidMinor: null,
   categoryIds: { interest: "cat-bridge", escrow: null, principal: null, fees: null },
   rates: [],
   balanceMinor: 21_000_000n,
@@ -113,6 +114,7 @@ export const SAMPLE_AMORTIZING: LoanDetail = {
   closedOn: null,
   refinancedIntoId: null,
   projectId: "proj-a",
+  closingPaidMinor: null,
   categoryIds: NO_CATEGORIES,
   rates: [],
   balanceMinor: 17_650_000n,
@@ -137,6 +139,7 @@ export const SAMPLE_BALLOON: LoanDetail = {
   closedOn: null,
   refinancedIntoId: null,
   projectId: null,
+  closingPaidMinor: null,
   categoryIds: NO_CATEGORIES,
   rates: [],
   balanceMinor: 9_612_040n,
@@ -161,6 +164,7 @@ export const SAMPLE_DEMAND: LoanDetail = {
   closedOn: null,
   refinancedIntoId: null,
   projectId: null,
+  closingPaidMinor: null,
   categoryIds: { interest: null, escrow: null, principal: "cat-partner", fees: null },
   rates: [],
   balanceMinor: 3_878_904n,
@@ -185,6 +189,7 @@ export const SAMPLE_PAID_OFF: LoanDetail = {
   closedOn: "2026-06-15",
   refinancedIntoId: null,
   projectId: null,
+  closingPaidMinor: null,
   categoryIds: NO_CATEGORIES,
   rates: [],
   balanceMinor: 124_000n,
@@ -209,6 +214,7 @@ export const SAMPLE_CLOSED: LoanDetail = {
   closedOn: "2025-11-30",
   refinancedIntoId: null,
   projectId: null,
+  closingPaidMinor: null,
   categoryIds: NO_CATEGORIES,
   rates: [],
   balanceMinor: 0n,
@@ -265,6 +271,14 @@ export function sampleLoanStore(options: Parameters<typeof memoryLoanStore>[1] =
 /** One sample loan in a store of its own, for a story. */
 export function oneLoanStore(loanId: string, options: Parameters<typeof memoryLoanStore>[1] = {}): MemoryLoanStore {
   return memoryLoanStore(sampleLoans().filter((sample) => sample.loan.id === loanId), { projects: SAMPLE_LOAN_PROJECTS, ...options });
+}
+
+/** FLOW-466: the bridge loan with $180,000 of its $210,000 paid at closing (the rest a renovation holdback). */
+export function closingPaidLoanStore(options: Parameters<typeof memoryLoanStore>[1] = {}): MemoryLoanStore {
+  const samples = sampleLoans()
+    .filter((sample) => sample.loan.id === "loan-bridge")
+    .map((sample) => ({ ...sample, loan: { ...sample.loan, closingPaidMinor: 18_000_000n } }));
+  return memoryLoanStore(samples, { projects: SAMPLE_LOAN_PROJECTS, ...options });
 }
 
 let devStore: MemoryLoanStore | null = null;

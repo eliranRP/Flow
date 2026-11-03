@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Route, Routes } from "react-router-dom";
-import { oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
+import { closingPaidLoanStore, oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
 import { LoanDetailScreen } from "./loan-detail-screen";
 import type { MemoryLoanStore } from "./loan-detail-store";
@@ -64,6 +64,17 @@ export const Payments: Story = { name: "All payments", ...loan("loan-mortgage", 
 function bodyOf(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
+
+/** FLOW-466: a project's loan says what it paid at closing; its sheet takes the settlement statement's amount. */
+export const ClosingPaid: Story = { name: "Closing paid", args: { loanId: "loan-bridge", store: () => closingPaidLoanStore() } };
+export const ClosingPaidSheet: Story = {
+  name: "Closing paid sheet",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^סכום ששולם בסגירה/ }));
+    await expect(await bodyOf(canvasElement).findByRole("dialog", { name: "סכום ששולם בסגירה" })).toBeInTheDocument();
+  },
+};
 
 export const KindSheet: Story = {
   name: "Kind sheet",
