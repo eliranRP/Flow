@@ -7,6 +7,7 @@ import { project as sampleProject } from "../dev/project-cash-sample";
 import {
   birchLaneReturnLines,
   birchLaneReturns,
+  birchLaneReturnsAnnualized,
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
   birchLaneReturnsMissing,
@@ -38,14 +39,16 @@ import {
   buildingFormula,
   cashFlowFormula,
   forcedFormula,
+  metricCaption,
   metricPage,
   metricValue,
+  NO_PAYMENTS,
   returnInfo,
   type Formula,
   type FormulaRow,
   type InfoKey,
 } from "./project-returns-info";
-import { INFO_LEARN, LEARN, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
+import { INFO_LEARN, LEARN, LEARN_ENGLISH, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
 import { signedRow } from "./project-returns-parts";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
 import { BRACKET_RANGE, bracketVerdict, rawToBp } from "./project-returns-sheets";
@@ -341,7 +344,7 @@ describe("the sheet contents", () => {
       expect(page.value).toEqual({ kind: "note", text: BEFORE_FIRST_RENT });
       expect(page.result).toBeNull();
     }
-    expect(metricValue("dscr", birchLaneReturnsBeforeRent)).toEqual({ kind: "text", text: "אין תשלומים" });
+    expect(metricValue("dscr", birchLaneReturnsBeforeRent)).toEqual({ kind: "text", text: NO_PAYMENTS });
     expect(metricValue("per-unit", birchLaneReturnsBeforeRent)).toEqual({ kind: "money", minor: 0n, income: false });
     expect(metricValue("coc", birchLaneReturns)).toEqual({ kind: "text", text: "11.6%" });
   });
@@ -394,6 +397,7 @@ describe("the investment page's returns cards", () => {
     expect(within(dialog).getByText("24%")).toBeInTheDocument();
     // FLOW-462: the sheet ends with how to read the figure.
     expect(within(dialog).getByText(LEARN.tax.goal)).toBeInTheDocument();
+    expect(within(dialog).getByText("\u2066Tax savings (depreciation)\u2069")).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: /מדרגת המס/ }));
     expect(await screen.findByRole("dialog", { name: "מדרגת המס" })).toBeInTheDocument();
   });
@@ -487,7 +491,7 @@ describe("the investment page's returns cards", () => {
     const metrics = await screen.findByRole("region", { name: "מדדים" });
     expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent(BEFORE_FIRST_RENT);
     expect(within(metrics).getByRole("link", { name: /Cap rate/ })).toHaveTextContent(BEFORE_FIRST_RENT);
-    expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent("אין תשלומים");
+    expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent(NO_PAYMENTS);
   });
 
   it("names the loan taken over in the purchase, on the figures card and in the השבחה ⓘ", async () => {
@@ -730,6 +734,7 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...METRIC_KEYS.map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key]), ...Object.values(INFO_LEARN), "total" as const];
     // Every guide is shown somewhere: on a page, at the end of a figure's ⓘ sheet, or beside the total.
     expect(new Set(keys)).toEqual(new Set(Object.keys(LEARN)));
+    expect(new Set(Object.keys(LEARN_ENGLISH))).toEqual(new Set(Object.keys(LEARN)));
     for (const key of keys) {
       expect(LEARN[key].what.length).toBeGreaterThan(0);
       expect(LEARN[key].read.length).toBeGreaterThan(0);
@@ -745,6 +750,8 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Cap rate" });
     for (const title of Object.values(LEARN_TITLES)) expect(within(dialog).getByRole("heading", { name: title })).toBeInTheDocument();
     expect(within(dialog).getByText(LEARN["cap-rate"].goal)).toBeInTheDocument();
+    // FLOW-465: Cap rate's title is already English, so no English name under it.
+    expect(within(dialog).queryByText(/Cap rate/, { selector: ".ui-sheet-subtitle" })).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(document.activeElement).toBe(button); });
   });
@@ -753,6 +760,8 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     renderInvestment();
     fireEvent.click(await screen.findByRole("button", { name: "איך לקרוא את תשואה כוללת" }));
     const dialog = await screen.findByRole("dialog", { name: "תשואה כוללת" });
+    // FLOW-465: the investor's English name under the Hebrew title.
+    expect(within(dialog).getByText("\u2066Total return\u2069")).toBeInTheDocument();
     expect(within(dialog).getByText(LEARN.total.goal)).toBeInTheDocument();
   });
 
@@ -761,5 +770,26 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     renderAt("/projects/p1/investment/returns/opex");
     await screen.findByRole("heading", { name: "הוצאות תפעול" });
     expect(screen.queryByRole("button", { name: /^איך לקרוא את/ })).toBeNull();
+  });
+});
+
+describe("the per-year metrics from a first rent inside the period (FLOW-464)", () => {
+  it("says the scaled metrics are a year's figure, and DSCR is not scaled", () => {
+    expect(metricCaption("cap-rate", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה");
+    expect(metricCaption("coc", birchLaneReturnsAnnualized)).toBe("תזרים ÷ כסף בעסקה · מחושב לשנה");
+    expect(metricCaption("dscr", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ תשלומי הלוואה");
+    expect(metricCaption("cap-rate", birchLaneReturns)).toBe("רווח תפעולי ÷ שווי היום");
+    expect(metricValue("dscr", birchLaneReturnsAnnualized)).toEqual({ kind: "text", text: NO_PAYMENTS });
+  });
+
+  it("divides a year's NOI on the cap rate page, and names the days since the first rent", () => {
+    const page = metricPage("cap-rate", birchLaneReturnsAnnualized);
+    // $15,600 × 365 / 215 = $26,483.72, shown in whole dollars.
+    expect(page.result?.text).toBe("\u2066$26,484 ÷ $240,000\u2069");
+    // The step from the days since the first rent to a year, before "=".
+    expect(page.result?.yearly).toMatchObject({ label: "רווח תפעולי לשנה", hint: "\u2066$15,600 ÷ 215 × 365\u2069", value: { kind: "money", minor: 2648372n } });
+    expect(metricPage("cap-rate", birchLaneReturns).result?.yearly).toBeUndefined();
+    expect(page.caption).toBe("רווח תפעולי ÷ שווי היום · מהשכר הראשון ב־01/04/2026 · 215 ימים, מחושב לשנה");
+    expect(metricPage("cap-rate", birchLaneReturns).caption).toBe("רווח תפעולי ÷ שווי היום · 12 חודשים");
   });
 });

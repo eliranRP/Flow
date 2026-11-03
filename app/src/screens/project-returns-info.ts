@@ -345,7 +345,15 @@ export function partPage(part: PartKey, r: PropertyReturns, rehab: readonly Reha
 
 export type MetricSection = { key: string; title: string; total?: FigureValue; formula: Formula };
 /** `cashOut`: how much more came out than went in, when all the cash came out (the caption then says so). */
-export type MetricPage = { title: string; caption: string; cashOut: bigint | null; value: FigureValue; sections: MetricSection[]; result: { text: string; value: FigureValue } | null };
+export type MetricPage = {
+  title: string;
+  caption: string;
+  cashOut: bigint | null;
+  value: FigureValue;
+  sections: MetricSection[];
+  /** FLOW-464: `yearly` is the row that scales the figure since the first rent to a year, before "=". */
+  result: { text: string; value: FigureValue; yearly?: FormulaRow } | null;
+};
 
 const PERIOD = "12 חודשים";
 
@@ -385,7 +393,7 @@ export function metricValue(metric: MetricKey, r: PropertyReturns): FigureValue 
   const m = r.metrics;
   if (metric === "coc") return r.equity.allCashOut ? { kind: "text", text: INFINITY } : bpValue(m.cashOnCashBp, r, ["purchase"]);
   if (metric === "cap-rate") return bpValue(m.capRateBp, r, ["value"]);
-  if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: "אין תשלומים" } : { kind: "text", text: dscrText(m.dscrMilli) };
+  if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: NO_PAYMENTS } : { kind: "text", text: dscrText(m.dscrMilli) };
   return money(m.perUnitMonthMinor);
 }
 
@@ -396,12 +404,38 @@ export const METRIC_TITLES: Record<MetricKey, string> = {
   "per-unit": "תזרים ליחידה",
 };
 
+/** DSCR with no loan payment since the first rent (or in the period). */
+export const NO_PAYMENTS = "אין תשלומים עדיין";
+/** FLOW-464: under a per-year metric that scales from a first rent inside the period. */
+export const ANNUALIZED = "מחושב לשנה";
+
+/** The metrics a first rent inside the period scales to a year (DSCR is a ratio, and is not). */
+const SCALED: readonly MetricKey[] = ["coc", "cap-rate", "per-unit"];
+
+export function annualized(metric: MetricKey, r: PropertyReturns): boolean {
+  return r.annualizedFrom != null && SCALED.includes(metric);
+}
+
+/** A figure since the first rent, scaled to a year (365 / the days since it), rounded half away from zero. */
+export function perYear(minor: bigint, r: PropertyReturns): bigint {
+  const days = BigInt(r.earningDays ?? 365);
+  const scaled = minor * 365n * 2n;
+  return (scaled + (scaled < 0n ? -days : days)) / (2n * days);
+}
+
 export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
-  if (metric === "coc") return "תזרים ÷ כסף בעסקה";
-  if (metric === "cap-rate") return "רווח תפעולי ÷ שווי היום";
-  if (metric === "dscr") return "רווח תפעולי ÷ תשלומי הלוואה";
-  const units = r.inputs.units;
-  return `בחודש · תזרים ÷ ${String(units)} ${units === 1 ? "יחידה" : "יחידות"} ÷ 12`;
+  const formula = metric === "coc" ? "תזרים ÷ כסף בעסקה"
+    : metric === "cap-rate" ? "רווח תפעולי ÷ שווי היום"
+    : metric === "dscr" ? "רווח תפעולי ÷ תשלומי הלוואה"
+    : `בחודש · תזרים ÷ ${String(r.inputs.units)} ${r.inputs.units === 1 ? "יחידה" : "יחידות"} ÷ 12`;
+  return annualized(metric, r) ? `${formula} · ${ANNUALIZED}` : formula;
+}
+
+/** The metric page's period: the last 12 months, or since the first rent, scaled to a year. */
+function metricPeriod(metric: MetricKey, r: PropertyReturns): string {
+  if (r.annualizedFrom == null) return PERIOD;
+  const since = `מהשכר הראשון ב־${formatDisplay(r.annualizedFrom)} · ${String(r.earningDays)} ימים`;
+  return SCALED.includes(metric) ? `${since}, ${ANNUALIZED}` : since;
 }
 
 export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
@@ -409,10 +443,15 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
   const st = r.statement;
   const value = metricValue(metric, r);
   const title = METRIC_TITLES[metric];
-  const caption = `${metricCaption(metric, r)} · ${PERIOD}`;
+  const caption = `${metricCaption(metric, r).replace(` · ${ANNUALIZED}`, "")} · ${metricPeriod(metric, r)}`;
+  // FLOW-464: scaled from the first rent, the division shows the figure for a year.
+  const yearly = (minor: bigint) => (annualized(metric, r) ? perYear(minor, r) : minor);
+  const yearRow = (label: string, minor: bigint): FormulaRow | undefined => (annualized(metric, r)
+    ? { key: "yearly", op: "", label: `${label} לשנה`, hint: `\u2066${cents(minor, cur)} ÷ ${String(r.earningDays)} × 365\u2069`, value: money(perYear(minor, r)) }
+    : undefined);
   // No result row for a figure that is missing, or that reads "לפני השכר הראשון".
   // The division reads left to right inside the Hebrew row (an LTR isolate), as numbers are written.
-  const result = (text: string | null) => (text == null || value.kind === "missing" || value.kind === "note" ? null : { text: `\u2066${text}\u2069`, value });
+  const result = (text: string | null, yearlyRow?: FormulaRow) => (text == null || value.kind === "missing" || value.kind === "note" ? null : { text: `\u2066${text}\u2069`, value, yearly: yearlyRow });
   if (metric === "coc") {
     const moneyIn = r.equity.moneyInMinor;
     const cashOut = cashOutMinor(r);
@@ -422,7 +461,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
       cashOut,
       value,
       sections: [cashSection(r), { key: "money-in", title: "כסף בעסקה", total: computed(moneyIn, r, ["purchase"]), formula: moneyInFormula(r) }],
-      result: result(moneyIn == null || cashOut != null ? null : `${cents(st.cashFlowMinor, cur)} ÷ ${cents(moneyIn, cur)}`),
+      result: result(moneyIn == null || cashOut != null ? null : `${cents(yearly(st.cashFlowMinor), cur)} ÷ ${cents(moneyIn, cur)}`, yearRow("תזרים", st.cashFlowMinor)),
     };
   }
   if (metric === "cap-rate") {
@@ -436,7 +475,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
         { key: "noi", title: "רווח תפעולי (NOI)", total: money(st.noiMinor), formula: noiFormula(r) },
         { key: "value", title: "שווי היום", formula: { rows: [{ key: "value", op: "", label: "שווי היום", hint: "מנתוני הנכס · עריכה", value: typed(v, "value"), target: { kind: "edit", field: "value" } }], result: null } },
       ],
-      result: result(v == null ? null : `${cents(st.noiMinor, cur)} ÷ ${cents(v, cur)}`),
+      result: result(v == null ? null : `${cents(yearly(st.noiMinor), cur)} ÷ ${cents(v, cur)}`, yearRow("רווח תפעולי", st.noiMinor)),
     };
   }
   if (metric === "dscr") {
@@ -462,7 +501,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
       cashSection(r),
       { key: "units", title: FIELD_NAMES.units, formula: { rows: [{ key: "units", op: "", label: FIELD_NAMES.units, hint: r.inputs.unitsDefault ? UNITS_DEFAULT_HINT : "מנתוני הנכס · עריכה", value: { kind: "text", text: String(units) }, target: { kind: "edit", field: "units" } }], result: null } },
     ],
-    result: result(`${cents(st.cashFlowMinor, cur)} ÷ ${String(units)} ÷ 12`),
+    result: result(`${cents(yearly(st.cashFlowMinor), cur)} ÷ ${String(units)} ÷ 12`, yearRow("תזרים", st.cashFlowMinor)),
   };
 }
 

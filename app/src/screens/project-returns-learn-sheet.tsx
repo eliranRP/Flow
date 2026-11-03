@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { InfoIcon } from "../ui/icons";
 import { Sheet } from "../ui/sheet";
-import { LEARN, LEARN_TITLES, type LearnKey } from "./project-returns-learn";
+import { LEARN, LEARN_TITLES, englishName, type LearnKey } from "./project-returns-learn";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-462: the ⓘ beside a returns page's title. It opens the ⓘ sheet with how an investor reads
@@ -26,6 +26,7 @@ export function LearnButton({ learnKey, title, initialOpen = false }: { learnKey
         open={open}
         onOpenChange={setSheet}
         title={title}
+        subtitle={englishName(learnKey)}
         closeButton={false}
         returnFocusRef={opener}
         panelClassName="ui-sheet-wide ui-sheet-g10 ui-ret-info"

@@ -21,6 +21,8 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
     from: r.from,
     to: r.to,
     first_rent: r.firstRent,
+    annualized_from: r.annualizedFrom,
+    earning_days: r.earningDays,
     other_currencies: r.otherCurrencies,
     missing: r.missing,
     inputs: {

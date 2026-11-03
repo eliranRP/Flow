@@ -21,6 +21,8 @@ export const birchLaneReturns: PropertyReturns = {
   from: "2025-11-02",
   to: "2026-11-01",
   firstRent: "2026-04-01",
+  annualizedFrom: null,
+  earningDays: 365,
   otherCurrencies: [],
   missing: [],
   inputs: {
@@ -216,6 +218,8 @@ export const mapleCourtSub2Returns: PropertyReturns = {
   from: "2025-11-02",
   to: "2026-11-01",
   firstRent: "2026-03-01",
+  annualizedFrom: null,
+  earningDays: 365,
   otherCurrencies: [],
   missing: [],
   inputs: {
@@ -406,4 +410,17 @@ export const birchLaneReturnsLandBooks: PropertyReturns = {
 export const birchLaneReturnsLandSuggestion: PropertyReturns = {
   ...birchLaneReturnsMissing,
   inputs: { ...birchLaneReturnsMissing.inputs, landSuggestion: { accountId: "acc-land", name: "Land - Birch Lane", minor: usd(46_300) } },
+};
+
+/**
+ * FLOW-464 (decision 0249): Birch Lane, rented from 01/04/2026, 215 days before the period's end.
+ * The per-year metrics scale over those days: NOI $15,600 × 365 / 215 = $26,484 a year ÷ $240,000 =
+ * 11.0% cap rate; cash flow $4,200 → $7,130 a year ÷ $36,300 = 19.6%; per unit $7,130 ÷ 12 = $594.
+ * No loan payment since the first rent: DSCR reads "אין תשלומים עדיין".
+ */
+export const birchLaneReturnsAnnualized: PropertyReturns = {
+  ...birchLaneReturns,
+  annualizedFrom: "2026-04-01",
+  earningDays: 215,
+  metrics: { cashOnCashBp: 1964, capRateBp: 1104, dscrMilli: null, perUnitMonthMinor: usd(594) },
 };
