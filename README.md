@@ -43,7 +43,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 
 ## Run locally
 
-Requirements: Node.js 22, pnpm 10, and the [Supabase CLI](https://supabase.com/docs/guides/cli) when you want to apply migrations. Docker is required for `supabase start`. The pgTAP suite can also run without Docker.
+Requirements: Node.js 26, pnpm 10, and the [Supabase CLI](https://supabase.com/docs/guides/cli) when you want to apply migrations. Docker is required for `supabase start`. The pgTAP suite can also run without Docker.
 
 ```bash
 pnpm install

@@ -52,7 +52,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -72,7 +72,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       # The base is this run's own first parent, not live origin/main: main can move on while the run
       # waits, and a migration added by that later merge would read as removed here.
       - name: Migration filenames are append-only
@@ -183,7 +183,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -213,7 +213,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -264,7 +264,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -314,7 +314,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -366,7 +366,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -407,7 +407,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -520,7 +520,7 @@ jobs:
           version: 10.33.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -640,7 +640,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
 
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:

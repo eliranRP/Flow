@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { embeddedSpec, mergeGetSpecs, pages } from "./mercury-openapi.mjs";
-import { escapeRegExp } from "./regexp.mjs";
 
 const api = readFileSync(
   new URL("../supabase/functions/_shared/connectors/mercury/api.d.ts", import.meta.url),
@@ -36,7 +35,7 @@ test("the allowlist is GET paths plus the observed credit and treasury paths", (
     "/transactions",
     "/transaction/{transactionId}",
   ]) {
-    assert.match(allowlist, new RegExp(escapeRegExp(path)));
+    assert.match(allowlist, new RegExp(RegExp.escape(path)));
   }
   assert.doesNotMatch(allowlist, /api\.mercury\.com/);
   assert.doesNotMatch(allowlist, /secret-token:/);

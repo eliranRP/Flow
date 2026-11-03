@@ -10,7 +10,6 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { escapeRegExp } from "./regexp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -35,7 +34,7 @@ export function unusedClasses(classes, source) {
   return classes.filter((name) => {
     if (libraryClasses.has(name)) return false;
     if (prefixes.some((prefix) => name.startsWith(prefix))) return false;
-    return !new RegExp(`(^|[^\\w-])${escapeRegExp(name)}(?![\\w-])`).test(source);
+    return !new RegExp(`(^|[^\\w-])${RegExp.escape(name)}(?![\\w-])`).test(source);
   });
 }
 
