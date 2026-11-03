@@ -11,6 +11,8 @@ import {
   birchLaneReturnsNegative,
   birchLaneReturnsAnnualized,
   birchLaneReturnsNoRehab,
+  mapleCourtAcquisitionLines,
+  mapleCourtClosingPaidReturns,
   mapleCourtSub2Returns,
 } from "../dev/returns-sample";
 import { StoryRoute } from "../ui/story-route";
@@ -25,6 +27,7 @@ import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-ret
  * FLOW-457: a statement with nothing before the first rent: one row left out, a section that does not fold.
  * FLOW-460: the renovation so far by category (three, seven with "עוד 2 קטגוריות", none yet).
  * FLOW-462: the ⓘ beside a page's title, open on the cap rate: מה זה, איך לקרוא, בשביל מה.
+ * FLOW-466: the acquisition page adds the bank lines and the loans paid out at closing up to the price.
  */
 const RETURNS = {
   complete: birchLaneReturns,
@@ -32,6 +35,7 @@ const RETURNS = {
   negative: birchLaneReturnsNegative,
   cashOut: birchLaneReturnsCashOut,
   sub2: mapleCourtSub2Returns,
+  closingPaid: mapleCourtClosingPaidReturns,
   beforeRent: birchLaneReturnsBeforeRent,
   nothingBeforeRent: { ...birchLaneReturns, statement: { ...birchLaneReturns.statement, beforeRentMinor: 0n } },
   noRehab: birchLaneReturnsNoRehab,
@@ -40,10 +44,12 @@ const RETURNS = {
 
 const REHAB = { three: birchLaneRehab, many: birchLaneRehabMany, none: [] };
 
-type Args = { entry: string; lines?: ReturnLine; returns?: keyof typeof RETURNS; rehab?: keyof typeof REHAB; learn?: boolean };
+/** `maple`: Maple Court's own acquisition lines, which add up to its bank row. */
+type Args = { entry: string; lines?: ReturnLine | "maple"; returns?: keyof typeof RETURNS; rehab?: keyof typeof REHAB; learn?: boolean };
 
 function Screen({ entry, lines = "opex", returns = "complete", rehab = "three", learn = false }: Args) {
-  const sample = { returns: RETURNS[returns], projectName: "Birch Lane", lines: birchLaneReturnLines(lines), rehab: REHAB[rehab] };
+  const page = lines === "maple" ? mapleCourtAcquisitionLines : birchLaneReturnLines(lines);
+  const sample = { returns: RETURNS[returns], projectName: lines === "maple" ? "Maple Court" : "Birch Lane", lines: page, rehab: REHAB[rehab] };
   return (
     <StoryRoute entry={entry}>
       <Routes>
@@ -89,3 +95,7 @@ export const CapRate: Story = { args: { entry: "/projects/p1/investment/metric/c
 /** FLOW-464: rented from 01/04, 215 days: a year's NOI over today's value. */
 export const CapRateAnnualized: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", returns: "annualized" } };
 export const CapRateLearn: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", learn: true } };
+export const AcquisitionLoansAtClosing: Story = {
+  name: "Acquisition, loans paid out at closing",
+  args: { entry: "/projects/p1/investment/returns/acquisition", lines: "maple", returns: "closingPaid" },
+};

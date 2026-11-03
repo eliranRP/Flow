@@ -38,8 +38,9 @@ export type Op = "" | "+" | "−" | "÷" | "×" | "=";
 export type FormulaRow = { key: string; op: Op; label: string; hint?: string; value: FigureValue; target?: Target };
 export type Formula = { rows: FormulaRow[]; result: FormulaRow | null };
 
-export const MISSING_HISTORY = "חסר · שווי לפני שנה";
-export const HISTORY_HINT = "השווי נשמר בכל פעם שמעדכנים אותו, ומכאן עליית הערך.";
+/** FLOW-466: one value alone; appreciation runs from the first value in the period to the last. */
+export const MISSING_HISTORY = "חסר · עדכון שווי נוסף";
+export const HISTORY_HINT = "עליית ערך נמדדת בין שני שווים. עדכנו את השווי שוב בעוד כמה חודשים.";
 export const TAX_CAPTION = "הערכה. במכירה הפחת חוזר כמס. החישוב המדויק אצל רואה החשבון.";
 export const CASH_FLOW_CAPTION = "מהשכר הראשון בלבד. מה שלפניו נכנס לכסף בעסקה.";
 export const MONEY_IN_BODY = "מה שהנכס לקח ממך עד שהתחיל להכניס שכירות, פחות מה שחזר מההלוואה.";
@@ -144,12 +145,13 @@ export function appreciationFormula(r: PropertyReturns): Formula {
   const end: FormulaRow = { key: "end", op: "", label: `שווי ב־${formatDisplay(valueEnd.date)}`, hint: "בסוף התקופה", value: money(valueEnd.minor), target: edit };
   if (valueStart == null) {
     return {
-      rows: [end, { key: "start", op: "−", label: "שווי לפני שנה", hint: HISTORY_HINT, value: missing(null, MISSING_HISTORY) }],
+      rows: [end, { key: "start", op: "−", label: "שווי קודם", hint: HISTORY_HINT, value: missing(null, MISSING_HISTORY) }],
       result: { key: "diff", op: "=", label: "עליית ערך", value: missing(null) },
     };
   }
   return {
-    rows: [end, { key: "start", op: "−", label: `שווי ב־${formatDisplay(valueStart.date)}`, hint: "בתחילת התקופה", value: money(-valueStart.minor), target: edit }],
+    // FLOW-466: with no value by the period's start, the first value recorded in it.
+    rows: [end, { key: "start", op: "−", label: `שווי ב־${formatDisplay(valueStart.date)}`, hint: valueStart.date > r.from ? "השווי הראשון בתקופה" : "בתחילת התקופה", value: money(-valueStart.minor), target: edit }],
     result: { key: "diff", op: "=", label: "עליית ערך", value: computed(r.sources.appreciationMinor, r, ["value"]) },
   };
 }
@@ -204,6 +206,32 @@ export function purchaseRows(r: PropertyReturns, op: Op, negate: boolean): Formu
     ];
   }
   return [{ key: "purchase", op, label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase", negate), target: { kind: "edit", field: "purchase" } }];
+}
+
+/**
+ * FLOW-466: the acquisition page's calculation, when a loan paid out at closing is in the price: the
+ * bank lines (opening the transactions below), "+ הלוואה שנלקחה בסגירה" for each loan at what the
+ * price counts (named on its hint, opening its page), then "= מחיר רכישה", the purchase row's figure.
+ * Null when no loan is in the price: the page then shows the lines alone.
+ */
+export function acquisitionFormula(r: PropertyReturns): Formula | null {
+  const purchase = r.inputs.purchaseMinor;
+  const bank = r.equity.moneyInParts.acquisitionMinor;
+  if (r.inputs.takenOverMinor <= 0n || r.inputs.purchaseSource !== "lines" || purchase == null || bank == null) return null;
+  return {
+    rows: [
+      { key: "lines", op: "", label: "רכישה וסגירה (מהתנועות)", value: money(-bank), target: { kind: "line", line: "acquisition" } },
+      ...r.inputs.takenOverLoans.map((loan): FormulaRow => ({
+        key: `loan-${loan.id}`,
+        op: "+",
+        label: TAKEN_OVER_LABEL,
+        hint: loan.name === "" ? undefined : loan.name,
+        value: money(loan.countedMinor),
+        target: { kind: "loans", loanId: loan.id },
+      })),
+    ],
+    result: { key: "purchase", op: "=", label: "מחיר רכישה", value: money(purchase) },
+  };
 }
 
 /** The renovation so far, opening its own page (FLOW-460). */

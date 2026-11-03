@@ -55,6 +55,8 @@ export type LoanWrites = {
   deleteLoan: (loanId: string) => Promise<{ payments: number }>;
   /** restore_loan: the app's undo of a delete. */
   restoreLoan: (loanId: string) => Promise<void>;
+  /** FLOW-466 set_loan_closing_paid: what the loan paid at closing (null: the whole principal). Returns the amount before. */
+  setClosingPaid: (loanId: string, minor: bigint | null) => Promise<{ prior: bigint | null }>;
 };
 
 const PART_COLUMN: Record<LoanSplitPart, "interest_category_id" | "escrow_category_id" | "principal_category_id" | "fees_category_id"> = {
@@ -182,6 +184,15 @@ export const liveLoanWrites: LoanWrites = {
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("restore_loan", { p_loan_id: loanId }));
   },
+  setClosingPaid: async (loanId, minor) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("supabase");
+    // The generated Args type the bigint as number; null clears it to the whole principal.
+    const result = await supabase.rpc("set_loan_closing_paid", { p_loan_id: loanId, p_closing_paid_minor: (minor == null ? null : Number(minor)) as number });
+    assertNoError(result);
+    const prior = (result.data as { prior?: unknown } | null)?.prior;
+    return { prior: typeof prior === "number" ? BigInt(prior) : null };
+  },
 };
 
 export type LoanRead =
@@ -278,7 +289,7 @@ export function memoryLoanStore(
   options: {
     projects?: LoanProjectChoice[];
     phase?: "loading" | "error";
-    refuse?: Partial<Record<"update" | "saveRate" | "deleteRate" | "deleteLoan" | "restoreLoan", string>>;
+    refuse?: Partial<Record<"update" | "saveRate" | "deleteRate" | "deleteLoan" | "restoreLoan" | "setClosingPaid", string>>;
     /** Milliseconds each write waits, so a busy state can be seen. */
     delayMs?: number;
   } = {},
@@ -296,7 +307,7 @@ export function memoryLoanStore(
   const wait = () => new Promise<void>((resolve) => { setTimeout(resolve, options.delayMs ?? 0); });
   const guard = (kind: keyof NonNullable<typeof options.refuse>) => {
     const reason = options.refuse?.[kind];
-    if (reason != null) throw Object.assign(new Error(reason), reason === "forbidden" ? { code: "42501" } : {});
+    if (reason != null) throw Object.assign(new Error(reason), reason === "forbidden" ? { code: "42501" } : reason === "validation" ? { code: "22023" } : {});
   };
   const find = (loanId: string) => {
     const sample = live.get(loanId);
@@ -373,6 +384,15 @@ export function memoryLoanStore(
       deleted.set(loanId, sample);
       emit();
       return { payments: sample.payments.length };
+    },
+    setClosingPaid: async (loanId, minor) => {
+      await wait();
+      guard("setClosingPaid");
+      const sample = find(loanId);
+      if (minor != null && (minor < 0n || minor > sample.loan.principalMinor)) throw Object.assign(new Error("validation"), { code: "22023" });
+      live.set(loanId, { ...sample, loan: { ...sample.loan, closingPaidMinor: minor } });
+      emit();
+      return { prior: sample.loan.closingPaidMinor };
     },
     restoreLoan: async (loanId) => {
       await wait();

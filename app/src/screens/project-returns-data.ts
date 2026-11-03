@@ -61,7 +61,14 @@ const SERVER_LINES: Record<StatementLine, readonly string[]> = {
 export const MISSING_INPUTS = ["purchase", "value", "value_history", "land", "tax_bracket"] as const;
 export type MissingInput = (typeof MISSING_INPUTS)[number];
 
-const takenOverSchema = z.object({ loan_id: z.string(), name: z.string().nullable().optional().transform((value) => value ?? ""), principal_minor: minor });
+// FLOW-466: what the settlement statement says the loan paid at closing (null: the whole principal), and what the price counts.
+const takenOverSchema = z.object({
+  loan_id: z.string(),
+  name: z.string().nullable().optional().transform((value) => value ?? ""),
+  principal_minor: minor,
+  closing_paid_minor: minorOrNull,
+  counted_minor: minor.nullable().optional(),
+});
 
 const returnsSchema = z.object({
   currency: z.string(),
@@ -136,7 +143,8 @@ const returnsSchema = z.object({
 });
 
 export type ValueAt = { minor: bigint; date: string };
-export type TakenOverLoan = { id: string; name: string; minor: bigint };
+/** `minor` is the principal; `countedMinor` what the price counts (the closing amount when set, FLOW-466). */
+export type TakenOverLoan = { id: string; name: string; minor: bigint; closingPaidMinor: bigint | null; countedMinor: bigint };
 export type LineCategory = { id: string | null; name: string | null; minor: bigint; count: number };
 
 /** get_property_returns, typed: minor units as bigint, percents in basis points, DSCR × 1000. */
@@ -268,7 +276,13 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       units: inp.units,
       unitsDefault: inp.units_default,
       takenOverMinor: inp.taken_over_minor,
-      takenOverLoans: inp.taken_over_loans.map((loan) => ({ id: loan.loan_id, name: loan.name, minor: loan.principal_minor })),
+      takenOverLoans: inp.taken_over_loans.map((loan) => ({
+        id: loan.loan_id,
+        name: loan.name,
+        minor: loan.principal_minor,
+        closingPaidMinor: loan.closing_paid_minor,
+        countedMinor: loan.counted_minor ?? loan.closing_paid_minor ?? loan.principal_minor,
+      })),
       landMinor: inp.land_minor,
       landSource: inp.land_source,
       landTypedMinor: inp.land_typed_minor,
