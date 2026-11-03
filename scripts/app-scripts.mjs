@@ -24,7 +24,6 @@ export const appScripts = [
   "scripts/app-scripts.mjs",
   "scripts/e2e-specs.mjs",
   "scripts/gate-scope.mjs",
-  "scripts/regexp.mjs",
   "scripts/storybook-stories.mjs",
 ];
 

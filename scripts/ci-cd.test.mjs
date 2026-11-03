@@ -594,7 +594,7 @@ test("every Playwright job restores the apt cache before install-deps, and only 
   assert.deepEqual(playwrightProblems(readerSaves), ["check-perf saves the apt cache"]);
   // One writer for each cache: lint saves the pnpm store, check (storybook) saves the browsers and the apt packages.
   assert.equal((ci.match(/cache: pnpm/g) ?? []).length, 1);
-  assert.match(jobIn(ci, "lint"), /node-version: 22\n {10}cache: pnpm\n/);
+  assert.match(jobIn(ci, "lint"), /node-version: 26\n {10}cache: pnpm\n/);
   assert.equal((ci.match(/uses: actions\/cache@/g) ?? []).length, 2);
   assert.equal((jobIn(ci, APT_WRITER).match(/uses: actions\/cache@/g) ?? []).length, 2);
   for (const name of ["check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "check-stories", "build-storybook", "e2e-shard", "deploy"]) {
@@ -990,7 +990,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   for (const name of ["static", "types", "db"]) {
     const body = jobIn(pr, name);
     assert.match(body, /uses: pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n {8}with:\n {10}version: 10\.33\.3\n/, name);
-    assert.match(body, /uses: actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0\n {8}with:\n {10}node-version: 22\n/, name);
+    assert.match(body, /uses: actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0\n {8}with:\n {10}node-version: 26\n/, name);
     assert.ok(body.includes("run: echo \"path=$(pnpm store path --silent)\" >> \"$GITHUB_OUTPUT\"\n"), name);
     assert.match(body, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: \$\{\{ steps\.pnpm-store\.outputs\.path \}\}\n {10}key: node-cache-Linux-x64-pnpm-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}\n {10}restore-keys: node-cache-Linux-x64-pnpm-\n/, name);
     assert.ok(body.indexOf("actions/setup-node") < body.indexOf("pnpm store path"), name);
