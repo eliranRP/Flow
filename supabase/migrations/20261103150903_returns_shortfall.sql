@@ -49,7 +49,7 @@ $n$);
       ),
       'all_cash_out', money_in <= 0,
       'cash_out_cover_months', case when money_in < 0 and cash_flow < 0
-        then floor(-money_in * 12 / (-cash_flow * earn_annual))::integer end
+        then floor(-money_in * 12 / (-cash_flow * earn_annual))::bigint end
 $n$);
   execute def;
 end
