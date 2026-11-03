@@ -380,23 +380,17 @@
 }
 
 [data-vaul-drawer].ui-sheet-panel {
-  /* Vaul writes an inline height while the keyboard is up and later restores the height
-     it first measured, which --vvh had already shrunk. Content height, capped here, wins. */
-  height: auto !important;
-  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
   /* The toast pad grows padding above the header. Scroll anchoring would
      scroll that padding away and leave ✕ under the toast. */
   overflow-anchor: none;
 }
 
 [data-vaul-drawer].ui-sheet-panel.ui-sheet-fit {
-  height: auto !important;
   padding-bottom: 0;
 }
 
 [data-vaul-drawer].ui-sheet-panel.ui-sheet-tall {
-  height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
-  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
+  height: calc(var(--vvh, 100dvh) - var(--sheet-gap));
   padding-bottom: 0;
 }
 

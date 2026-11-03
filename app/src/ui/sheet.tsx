@@ -403,6 +403,9 @@ export function Sheet({
       open={open}
       dismissible={closeOnBackdrop && !busy}
       modal={modal}
+      // FLOW-1024: Vaul lifts the sheet by the keyboard's height but ignores iOS panning the page
+      // to the field, so the sheet rose twice, off the top. The CSS lifts it by --kb instead.
+      repositionInputs={false}
       onOpenChange={(next) => {
         if (!next) void requestClose(escapeNow.current);
         else onOpenChange(true);

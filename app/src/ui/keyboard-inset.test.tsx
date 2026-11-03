@@ -159,10 +159,6 @@ describe("useKeyboardInset", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
-  function nextFrame() {
-    return act(async () => { await new Promise((resolve) => requestAnimationFrame(() => { resolve(null); })); });
-  }
-
   it("detects the keyboard when the layout viewport shrinks with it", () => {
     mountWithViewport(
       <>
@@ -209,33 +205,6 @@ describe("useKeyboardInset", () => {
     } finally {
       Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
     }
-  });
-
-  it("drops a drawer lift Vaul writes again after the keyboard has closed", async () => {
-    mountWithViewport(
-      <>
-        <KeyboardHarness />
-        <div data-vaul-drawer="" data-testid="drawer" />
-      </>,
-    );
-    const drawer = document.querySelector<HTMLElement>("[data-testid=drawer]");
-    // Vaul's listener runs after ours and lifts the drawer by the keyboard it last measured.
-    const vaul = () => { if (drawer) drawer.style.bottom = `${String(800 - viewport.height)}px`; };
-    viewport.addEventListener("resize", vaul);
-    for (const height of [700, 550, 500]) {
-      viewport.height = height;
-      act(() => { viewport.emit("resize"); });
-    }
-    expect(document.documentElement.dataset.kb).toBe("open");
-    await nextFrame();
-    expect(drawer?.style.bottom).toBe("300px");
-    // Closing in steps: at 700 the keyboard reads closed while Vaul still writes 100px.
-    viewport.height = 700;
-    act(() => { viewport.emit("resize"); });
-    expect(document.documentElement.dataset.kb).toBeUndefined();
-    await nextFrame();
-    expect(drawer?.style.bottom).toBe("0px");
-    viewport.removeEventListener("resize", vaul);
   });
 
   it("removes its listeners and resets the root on unmount", () => {
