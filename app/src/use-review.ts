@@ -206,7 +206,7 @@ function mergePage(old: ReviewRow[], page: readonly ReviewRow[]): ReviewRow[] {
 function reviewQueryOptions(preview: string, project: string | null) {
   const key = reviewListKey(preview, project);
   return {
-    queryKey: key,
+    queryKey: reviewListKey(preview, project),
     queryFn: async ({ client }: { client: QueryClient }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
