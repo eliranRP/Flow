@@ -5,6 +5,7 @@ import {
   birchLaneReturns,
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
+  birchLaneReturnsCashOutLosing,
   birchLaneReturnsLandBooks,
   birchLaneReturnsLandSuggestion,
   birchLaneReturnsMissing,
@@ -35,6 +36,7 @@ const RETURNS = {
   missing: birchLaneReturnsMissing,
   negative: birchLaneReturnsNegative,
   cashOut: birchLaneReturnsCashOut,
+  cashOutLosing: birchLaneReturnsCashOutLosing,
   sub2: mapleCourtSub2Returns,
   beforeRent: birchLaneReturnsBeforeRent,
   landBooks: birchLaneReturnsLandBooks,
@@ -86,6 +88,9 @@ export const CashFlowInfoSheet: Story = { args: { info: "cash_flow" } };
 export const EditUnits: Story = { args: { sheet: "units" } };
 export const TaxBracketSheet: Story = { args: { sheet: "tax", returns: "missing" } };
 export const AllCashOut: Story = { args: { returns: "cashOut" } };
+/** FLOW-1025: all the cash out but losing money: the loss, not ∞, and how long the cash out lasts. */
+export const AllCashOutLosing: Story = { args: { returns: "cashOutLosing" } };
+export const AllCashOutLosingMoneyIn: Story = { args: { returns: "cashOutLosing", info: "money_in" } };
 export const MoneyInSheet: Story = { args: { info: "money_in" } };
 export const Sub2: Story = { args: { data: "sub2", returns: "sub2" } };
 export const Sub2ForcedSheet: Story = { args: { data: "sub2", returns: "sub2", info: "forced" } };

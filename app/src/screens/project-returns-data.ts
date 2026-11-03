@@ -129,10 +129,17 @@ const returnsSchema = z.object({
     forced_equity_minor: minorOrNull,
     money_in_minor: minorOrNull,
     money_in_parts: z
-      .object({ acquisition_minor: minorOrNull, renovation_minor: minor, holding_minor: minor, financing_minor: minor })
+      .object({
+        acquisition_minor: minorOrNull,
+        renovation_minor: minor,
+        holding_minor: minor,
+        financing_minor: minor,
+        shortfall_minor: minorOrNull.transform((value) => value ?? 0n),
+      })
       .optional()
-      .default({ acquisition_minor: null, renovation_minor: 0n, holding_minor: 0n, financing_minor: 0n }),
+      .default({ acquisition_minor: null, renovation_minor: 0n, holding_minor: 0n, financing_minor: 0n, shortfall_minor: 0n }),
     all_cash_out: z.boolean().nullable().optional().transform((value) => value === true),
+    cash_out_cover_months: intOrNull,
   }),
   metrics: z.object({
     cash_on_cash_bp: intOrNull,
@@ -222,11 +229,14 @@ export type PropertyReturns = {
     moneyInParts: MoneyInParts;
     /** Money in at or below zero: all the cash came out, and the per-cent figures are null. */
     allCashOut: boolean;
+    /** FLOW-1025: with all the cash out and a negative cash flow, the whole months the cash still out covers. */
+    coverMonths: number | null;
   };
   metrics: { cashOnCashBp: number | null; capRateBp: number | null; dscrMilli: number | null; perUnitMonthMinor: bigint };
 };
 
-export type MoneyInParts = { acquisitionMinor: bigint | null; renovationMinor: bigint; holdingMinor: bigint; financingMinor: bigint };
+/** `shortfallMinor` (FLOW-1025): the running cash flow since the first rent when below zero, else 0. */
+export type MoneyInParts = { acquisitionMinor: bigint | null; renovationMinor: bigint; holdingMinor: bigint; financingMinor: bigint; shortfallMinor: bigint };
 
 function isMissingInput(value: string): value is MissingInput {
   return (MISSING_INPUTS as readonly string[]).includes(value);
@@ -325,8 +335,10 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
         renovationMinor: raw.equity.money_in_parts.renovation_minor,
         holdingMinor: raw.equity.money_in_parts.holding_minor,
         financingMinor: raw.equity.money_in_parts.financing_minor,
+        shortfallMinor: raw.equity.money_in_parts.shortfall_minor,
       },
       allCashOut: raw.equity.all_cash_out,
+      coverMonths: raw.equity.cash_out_cover_months,
     },
     metrics: {
       cashOnCashBp: raw.metrics.cash_on_cash_bp,

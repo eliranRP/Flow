@@ -94,8 +94,9 @@ export const birchLaneReturns: PropertyReturns = {
     todayMinor: usd(30_000),
     forcedMinor: usd(63_700),
     moneyInMinor: usd(36_300),
-    moneyInParts: { acquisitionMinor: usd(-185_000), renovationMinor: usd(-59_500), holdingMinor: usd(-1_800), financingMinor: usd(210_000) },
+    moneyInParts: { acquisitionMinor: usd(-185_000), renovationMinor: usd(-59_500), holdingMinor: usd(-1_800), financingMinor: usd(210_000), shortfallMinor: 0n },
     allCashOut: false,
+    coverMonths: null,
   },
   metrics: { cashOnCashBp: 1157, capRateBp: 650, dscrMilli: 1625, perUnitMonthMinor: usd(175) },
 };
@@ -176,10 +177,30 @@ export const birchLaneReturnsCashOut: PropertyReturns = {
     todayMinor: usd(30_000),
     forcedMinor: usd(63_700),
     moneyInMinor: usd(-30_000),
-    moneyInParts: { acquisitionMinor: usd(-185_000), renovationMinor: usd(-59_500), holdingMinor: usd(-5_800), financingMinor: usd(280_300) },
+    moneyInParts: { acquisitionMinor: usd(-185_000), renovationMinor: usd(-59_500), holdingMinor: usd(-5_800), financingMinor: usd(280_300), shortfallMinor: 0n },
     allCashOut: true,
+    coverMonths: null,
   },
   metrics: { ...birchLaneReturns.metrics, cashOnCashBp: null, capRateBp: 503 },
+};
+
+/**
+ * FLOW-1025: all the cash out, but the rental loses money. A -$6,600 cash flow and $2,000 of
+ * principal, with appreciation and tax savings missing, total -$4,600: the card shows that loss,
+ * not ∞. Money in counts the $6,600 the owner added since the first rent (-$33,000 still out), which
+ * covers 60 more months of that cash flow.
+ */
+export const birchLaneReturnsCashOutLosing: PropertyReturns = {
+  ...birchLaneReturnsCashOut,
+  missing: ["value_history", "tax_bracket"],
+  statement: { ...birchLaneReturnsCashOut.statement, cashFlowMinor: usd(-6_600) },
+  sources: { ...birchLaneReturnsCashOut.sources, cashFlowMinor: usd(-6_600), principalMinor: usd(2_000), appreciationMinor: null, taxSavingsMinor: null, totalMinor: usd(-4_600), totalBp: null },
+  equity: {
+    ...birchLaneReturnsCashOut.equity,
+    moneyInMinor: usd(-33_000),
+    moneyInParts: { acquisitionMinor: usd(-185_000), renovationMinor: usd(-59_500), holdingMinor: usd(-5_800), financingMinor: usd(289_900), shortfallMinor: usd(-6_600) },
+    coverMonths: 60,
+  },
 };
 
 /**
@@ -281,8 +302,9 @@ export const mapleCourtSub2Returns: PropertyReturns = {
     todayMinor: usd(74_000),
     forcedMinor: usd(30_000),
     moneyInMinor: usd(63_000),
-    moneyInParts: { acquisitionMinor: usd(-41_600), renovationMinor: usd(-18_400), holdingMinor: usd(-3_000), financingMinor: 0n },
+    moneyInParts: { acquisitionMinor: usd(-41_600), renovationMinor: usd(-18_400), holdingMinor: usd(-3_000), financingMinor: 0n, shortfallMinor: 0n },
     allCashOut: false,
+    coverMonths: null,
   },
   metrics: { cashOnCashBp: 317, capRateBp: 389, dscrMilli: 1167, perUnitMonthMinor: 16_667n },
 };

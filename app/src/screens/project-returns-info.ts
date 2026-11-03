@@ -114,6 +114,29 @@ export function cashOutMinor(r: PropertyReturns): bigint | null {
   return r.equity.allCashOut && r.equity.moneyInMinor != null ? -r.equity.moneyInMinor : null;
 }
 
+/**
+ * FLOW-1025: ∞ only for a gain on no money in. With all the cash out and a negative total, the
+ * total reads as the loss in money instead: losing money on nothing in is not an infinite return.
+ */
+export function infiniteTotal(r: PropertyReturns): boolean {
+  return cashOutMinor(r) != null && r.sources.totalMinor >= 0n;
+}
+
+/** "כ־5 שנים", "כשנה", "8 חודשים": how long the cash still out lasts, from whole months. */
+export function coverText(months: number): string {
+  if (months >= 18) return `כ־${String(Math.round(months / 12))} שנים`;
+  if (months >= 12) return "כשנה";
+  if (months === 1) return "חודש אחד";
+  if (months <= 0) return "פחות מחודש";
+  return `${String(months)} חודשים`;
+}
+
+/** "הכסף שיצא מכסה עוד כ־5 שנים של תזרים שלילי", with all the cash out and a negative cash flow; else null. */
+export function coverLine(r: PropertyReturns): string | null {
+  const months = r.equity.coverMonths;
+  return months == null || cashOutMinor(r) == null ? null : `הכסף שיצא מכסה עוד ${coverText(months)} של תזרים שלילי`;
+}
+
 /* -- the four sources ---------------------------------------------------------------------------- */
 
 export function cashFlowFormula(r: PropertyReturns): Formula {
@@ -276,6 +299,10 @@ export function moneyInFormula(r: PropertyReturns): Formula {
       { key: "renovation", op: "+", label: "שיפוץ לפני השכרה", value: money(-parts.renovationMinor), target: { kind: "line", line: "renovation" } },
       { key: "holding", op: "+", label: "עלויות החזקה", hint: firstRentHint(r), value: money(-parts.holdingMinor), target: { kind: "line", line: "holding" } },
       { key: "financing", op: "−", label: "תקבולי הלוואות והחזרים", hint: "נטו, אחרי עלויות ההלוואה", value: money(-parts.financingMinor), target: { kind: "line", line: "financing" } },
+      // FLOW-1025: money the owner added to cover a negative cash flow since the first rent.
+      ...(parts.shortfallMinor < 0n
+        ? [{ key: "shortfall", op: "+", label: "כיסוי תזרים שלילי", hint: "מאז השכר הראשון", value: money(-parts.shortfallMinor) } satisfies FormulaRow]
+        : []),
     ],
     result: { key: "money-in", op: "=", label: "כסף בעסקה", hint: r.equity.allCashOut ? "כל הכסף חזר" : undefined, value: computed(r.equity.moneyInMinor, r, ["purchase"]) },
   };
@@ -419,7 +446,11 @@ function bpValue(bp: number | null, r: PropertyReturns, needs: readonly EditFiel
 /** The card's row value of a metric (the same as its page's figure). */
 export function metricValue(metric: MetricKey, r: PropertyReturns): FigureValue {
   const m = r.metrics;
-  if (metric === "coc") return r.equity.allCashOut ? { kind: "text", text: INFINITY } : bpValue(m.cashOnCashBp, r, ["purchase"]);
+  if (metric === "coc") {
+    if (!r.equity.allCashOut) return bpValue(m.cashOnCashBp, r, ["purchase"]);
+    // FLOW-1025: ∞ only when the cash flow is not a loss; a loss reads as the money lost a year.
+    return r.statement.cashFlowMinor < 0n && !beforeFirstRent(r) ? money(perYear(r.statement.cashFlowMinor, r)) : { kind: "text", text: INFINITY };
+  }
   if (metric === "cap-rate") return bpValue(m.capRateBp, r, ["value"]);
   if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: NO_PAYMENTS } : { kind: "text", text: dscrText(m.dscrMilli) };
   return money(m.perUnitMonthMinor);
