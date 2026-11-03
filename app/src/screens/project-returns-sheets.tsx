@@ -8,7 +8,7 @@ import { Sheet } from "../ui/sheet";
 import { FigureText, FormulaList, type Resolve } from "./project-returns-parts";
 import { infoFigure, returnInfo, type InfoKey } from "./project-returns-info";
 import type { PropertyReturns } from "./project-returns-data";
-import { INFO_LEARN } from "./project-returns-learn";
+import { INFO_LEARN, englishName } from "./project-returns-learn";
 import { LearnSections } from "./project-returns-learn-sheet";
 
 /* ------------------------------------------------------------------------------------------------
@@ -41,6 +41,7 @@ export function ReturnInfoSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={info.title}
+      subtitle={englishName(INFO_LEARN[infoKey])}
       aside={figure == null ? undefined : <span className="ui-pinv-sheet-total"><FigureText value={figure} currency={returns.currency} /></span>}
       closeButton={false}
       returnFocusRef={returnFocusRef}

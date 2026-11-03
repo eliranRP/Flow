@@ -34,6 +34,33 @@ export type Learn = {
 
 export const LEARN_TITLES = { what: "מה זה", read: "איך לקרוא", goal: "בשביל מה" } as const;
 
+/**
+ * The investor's English name of each figure, as Real Estate by the Numbers and lenders say it, under
+ * the ⓘ sheet's Hebrew title (FLOW-465). Cap rate's title is already English, so it has none.
+ */
+export const LEARN_ENGLISH: Record<LearnKey, string | null> = {
+  "cash-flow": "Cash flow",
+  principal: "Principal paydown",
+  appreciation: "Appreciation",
+  tax: "Tax savings (depreciation)",
+  total: "Total return",
+  coc: "Cash-on-cash return (CoC)",
+  "cap-rate": null,
+  dscr: "Debt service coverage ratio",
+  "per-unit": "Cash flow per door",
+  "money-in": "Cash invested",
+  equity: "Equity",
+  forced: "Forced appreciation",
+  building: "Depreciable basis",
+  rehab: "Rehab costs",
+};
+
+/** The English name for the sheet's subtitle, in an LTR isolate so its brackets read right in a Hebrew sheet. */
+export function englishName(key: LearnKey): string | undefined {
+  const name = LEARN_ENGLISH[key];
+  return name == null ? undefined : `\u2066${name}\u2069`;
+}
+
 export const LEARN: Record<LearnKey, Learn> = {
   "cash-flow": {
     what: "הכסף שנשאר בידיים אחרי כל ההוצאות, תשלומי ההלוואה והשיפוצים, מהשכר הראשון.",

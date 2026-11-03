@@ -48,7 +48,7 @@ import {
   type FormulaRow,
   type InfoKey,
 } from "./project-returns-info";
-import { INFO_LEARN, LEARN, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
+import { INFO_LEARN, LEARN, LEARN_ENGLISH, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
 import { signedRow } from "./project-returns-parts";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
 import { BRACKET_RANGE, bracketVerdict, rawToBp } from "./project-returns-sheets";
@@ -397,6 +397,7 @@ describe("the investment page's returns cards", () => {
     expect(within(dialog).getByText("24%")).toBeInTheDocument();
     // FLOW-462: the sheet ends with how to read the figure.
     expect(within(dialog).getByText(LEARN.tax.goal)).toBeInTheDocument();
+    expect(within(dialog).getByText("\u2066Tax savings (depreciation)\u2069")).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: /מדרגת המס/ }));
     expect(await screen.findByRole("dialog", { name: "מדרגת המס" })).toBeInTheDocument();
   });
@@ -490,7 +491,7 @@ describe("the investment page's returns cards", () => {
     const metrics = await screen.findByRole("region", { name: "מדדים" });
     expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent(BEFORE_FIRST_RENT);
     expect(within(metrics).getByRole("link", { name: /Cap rate/ })).toHaveTextContent(BEFORE_FIRST_RENT);
-    expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent("אין תשלומים");
+    expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent(NO_PAYMENTS);
   });
 
   it("names the loan taken over in the purchase, on the figures card and in the השבחה ⓘ", async () => {
@@ -733,6 +734,7 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...METRIC_KEYS.map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key]), ...Object.values(INFO_LEARN), "total" as const];
     // Every guide is shown somewhere: on a page, at the end of a figure's ⓘ sheet, or beside the total.
     expect(new Set(keys)).toEqual(new Set(Object.keys(LEARN)));
+    expect(new Set(Object.keys(LEARN_ENGLISH))).toEqual(new Set(Object.keys(LEARN)));
     for (const key of keys) {
       expect(LEARN[key].what.length).toBeGreaterThan(0);
       expect(LEARN[key].read.length).toBeGreaterThan(0);
@@ -748,6 +750,8 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Cap rate" });
     for (const title of Object.values(LEARN_TITLES)) expect(within(dialog).getByRole("heading", { name: title })).toBeInTheDocument();
     expect(within(dialog).getByText(LEARN["cap-rate"].goal)).toBeInTheDocument();
+    // FLOW-465: Cap rate's title is already English, so no English name under it.
+    expect(within(dialog).queryByText(/Cap rate/, { selector: ".ui-sheet-subtitle" })).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(document.activeElement).toBe(button); });
   });
@@ -756,6 +760,8 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     renderInvestment();
     fireEvent.click(await screen.findByRole("button", { name: "איך לקרוא את תשואה כוללת" }));
     const dialog = await screen.findByRole("dialog", { name: "תשואה כוללת" });
+    // FLOW-465: the investor's English name under the Hebrew title.
+    expect(within(dialog).getByText("\u2066Total return\u2069")).toBeInTheDocument();
     expect(within(dialog).getByText(LEARN.total.goal)).toBeInTheDocument();
   });
 
