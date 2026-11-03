@@ -1,1 +1,1 @@
-The 2026-11-03 daily perf report is in `docs/qa/perf/`. FLOW-1020 is in production: Review's read starts on the tap. Review's screen still waits on its first card's follow-up reads (FLOW-1023 filed). Cold Home is 6.6–7.4 s (FLOW-1019). #946 fixed main after #945.
+The 2026-11-03 daily perf report is in `docs/qa/perf/`. FLOW-1020 is in production: Review's read starts on the tap. Review's screen likely still waits on its first card's follow-up reads (FLOW-1023 filed, to measure). Cold Home is 6.6–7.4 s (FLOW-1019). #946 fixed main after #945.
