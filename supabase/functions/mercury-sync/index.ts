@@ -30,6 +30,7 @@ import { bytesPrefix, decodeKek, openApiKey, type Envelope } from "../_shared/en
 import { empty, json } from "../_shared/http.ts";
 import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
 import { runWithClaim } from "../_shared/cron_claim.ts";
+import { edgeDefer, kickJev, syncAddedLines } from "../_shared/jev_kick.ts";
 import { confirmStored, loadStored, storedExternalIds } from "./stored.ts";
 import { THREAD_BUCKET, syncMercuryThreadsFor } from "./threads.ts";
 import { purgeThreadFiles } from "../_shared/thread_purge.ts";
@@ -105,6 +106,9 @@ Deno.serve(async (req) => {
           logFailure("mercury-sync cron", error, "");
         }
       }
+      // FLOW-1027: Jev labels the new lines now, not at its next 5-minute run. One call for every
+      // company: jev-tag runs one at a time, so a call per company would answer busy.
+      if (results.some(syncAddedLines)) edgeDefer()(kickJev(fetch, url, cronSecret, null));
       return json({ ok: true, synced: results.length });
     }
 
@@ -127,6 +131,8 @@ Deno.serve(async (req) => {
     if ("error" in owner) return json({ error: owner.error }, owner.error === "unauthorized" ? 401 : 400);
     const body = (await req.json().catch(() => ({}))) as { force?: boolean };
     const result = await syncCompany(admin, owner.companyId, decodeKek(kekSecret), body.force === true, false);
+    // FLOW-1027: a manual sync that brought lines in asks Jev to label them right away.
+    if (syncAddedLines(result)) edgeDefer()(kickJev(fetch, url, Deno.env.get("CRON_SECRET") ?? "", owner.companyId));
     return json(result);
   } catch (error) {
     if (error instanceof SyncHold) return json({ error: "rate_limited", retry_at: error.retryAt }, 429);

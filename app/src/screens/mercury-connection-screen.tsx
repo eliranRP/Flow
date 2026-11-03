@@ -6,6 +6,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useDashboardQuery, useMercuryStatusQuery } from "../use-books";
 import { invokeEdge } from "../edge";
+import { rereadJevAfterSync } from "../jev-after-sync";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
 import { accountName, connectionName } from "../mercury-connections";
@@ -152,6 +153,8 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       refreshResult.current = null;
       const data = await invokeEdge("mercury-sync", { force: true });
       refreshResult.current = data;
+      // FLOW-1027: Jev labels the new lines right after the sync; read its suggestions again soon.
+      rereadJevAfterSync(data, (queryKey) => queryClient.invalidateQueries({ queryKey }));
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
         await queryClient.refetchQueries({ queryKey: ["mercury"] });
         throw new Error("sync_held");
