@@ -585,6 +585,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1019"></a>[FLOW-1019](tasks/FLOW-1019.md) | Home's cold load reads each list once, and next month's numbers without a second wave | PLAN FIRST (perf) |
 | <a id="flow-1020"></a>[FLOW-1020](tasks/FLOW-1020.md) | Review's first page is read on the tap, not after its code loads | SMALL CYCLE (perf) |
 | <a id="flow-1023"></a>[FLOW-1023](tasks/FLOW-1023.md) | Review's first card does not wait on its follow-up reads | SMALL CYCLE (perf) |
+| <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |

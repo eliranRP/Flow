@@ -1,5 +1,6 @@
 import { useId, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { Amount } from "../ui/amount";
 import { FailureLine } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { ChevronIcon, InfoIcon } from "../ui/icons";
@@ -14,6 +15,8 @@ import {
   METRIC_TITLES,
   beforeFirstRent,
   cashOutMinor,
+  coverLine,
+  infiniteTotal,
   firstMissing,
   metricCaption,
   metricValue,
@@ -157,8 +160,10 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
   const totalBp = r.sources.totalBp;
   const totalMissing = firstMissing(r, ["purchase"]);
   const cashOut = cashOutMinor(r);
+  const infinite = infiniteTotal(r);
+  const cover = coverLine(r);
   const before = beforeFirstRent(r);
-  const partial = cashOut == null && !before && totalBp != null
+  const partial = (cashOut == null ? totalBp != null : !infinite) && !before
     ? partialLine(sources.filter((source) => source.value.kind !== "money").map((source) => source.label))
     : null;
   return (
@@ -170,9 +175,12 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
         <Link to={`${base}/returns${search}`} className="ui-ret-link">איך מחושב</Link>
       </div>
       <div className="ui-ret-total">
-        {cashOut != null ? (
-          // All the cash came out: no per-cent figure, and no signal colour, a good state.
+        {infinite ? (
+          // All the cash came out and the deal gains: no per-cent figure, and no signal colour, a good state.
           <InfinityFigure className="ui-num t-detail" />
+        ) : cashOut != null && !before ? (
+          // FLOW-1025: all the cash out but losing money: the loss, not ∞.
+          <span className="t-detail"><Amount agorot={r.sources.totalMinor} currency={r.currency} loss /></span>
         ) : before ? (
           // No rent yet: a per-cent of the money in says nothing (FLOW-454). The amounts stay.
           <span className="ui-ret-note">{BEFORE_FIRST_RENT}</span>
@@ -184,7 +192,10 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
           <span className="ui-ret-missing">לא מחושב</span>
         )}
         {cashOut != null ? (
-          <span className="ui-ret-total-on"><AllCashOutMeta minor={cashOut} currency={r.currency} /></span>
+          <span className="ui-ret-total-on">
+            <AllCashOutMeta minor={cashOut} currency={r.currency} />
+            {cover == null ? null : <>{" · "}{cover}</>}
+          </span>
         ) : moneyIn == null ? null : (
           <span className="ui-ret-total-on">על הכסף בעסקה</span>
         )}

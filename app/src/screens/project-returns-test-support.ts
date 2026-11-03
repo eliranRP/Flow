@@ -84,8 +84,10 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
         renovation_minor: Number(r.equity.moneyInParts.renovationMinor),
         holding_minor: Number(r.equity.moneyInParts.holdingMinor),
         financing_minor: Number(r.equity.moneyInParts.financingMinor),
+        shortfall_minor: Number(r.equity.moneyInParts.shortfallMinor),
       },
       all_cash_out: r.equity.allCashOut,
+      cash_out_cover_months: r.equity.coverMonths,
     },
     metrics: {
       cash_on_cash_bp: r.metrics.cashOnCashBp,
