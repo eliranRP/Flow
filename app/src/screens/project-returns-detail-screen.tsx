@@ -56,7 +56,7 @@ function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: Propert
         <ReportSection id="result" title="התוצאה" total={null} collapse={collapse}>
           {/* FLOW-462: the same row as every "=": the figure's name, the division under it, the figure. */}
           <FormulaList
-            formula={{ rows: [], result: { key: "result", op: "=", label: page.title, hint: page.result.text, value: page.result.value } }}
+            formula={{ rows: page.result.yearly == null ? [] : [page.result.yearly], result: { key: "result", op: "=", label: page.title, hint: page.result.text, value: page.result.value } }}
             currency={r.currency}
             resolve={resolve}
             label="התוצאה"

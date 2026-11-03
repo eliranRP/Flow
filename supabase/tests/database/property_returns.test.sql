@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(90);
+select plan(94);
 
 do $users$
 begin
@@ -149,14 +149,14 @@ select is(pg_temp.ret()->'equity'->'money_in_parts',
 select is(pg_temp.ret()->'inputs'->>'purchase_source', 'lines', 'the purchase price comes from the lines');
 select is((pg_temp.ret()->'inputs'->>'units')::integer, 1, 'units are 1 until the owner sets them (FLOW-454)');
 select is((pg_temp.ret()->'inputs'->>'units_default')::boolean, true, 'and the read says it is the default');
-select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 150833::bigint, 'so cash flow per unit is never missing');
+select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 179916::bigint, 'so cash flow per unit is never missing');
 select is((pg_temp.ret()->'inputs'->>'taken_over_minor')::bigint, 0::bigint, 'a loan with its proceeds line is not part of the price');
 select is(pg_temp.ret()->'missing', '["value", "land", "tax_bracket"]'::jsonb,
   'every missing input is named');
 select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 4150000::bigint, 'money in the deal needs no typed input');
 select is(pg_temp.ret()->'sources'->>'appreciation_minor', null, 'appreciation waits for values');
 select is(pg_temp.ret()->'sources'->>'tax_savings_minor', null, 'tax savings wait for land and bracket');
-select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 4361, 'and so does cash-on-cash');
+select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 5202, 'and so does cash-on-cash');
 select is((pg_temp.ret()->'metrics'->>'dscr_milli')::integer, 23111, 'DSCR needs no input: NOI / loan payments');
 
 -- The inputs.
@@ -182,10 +182,18 @@ select is((pg_temp.ret()->'sources'->>'tax_savings_minor')::bigint, 119040::bigi
 select is((pg_temp.ret()->'sources'->>'total_minor')::bigint, 2949040::bigint,
   'total = cash flow + principal + appreciation + tax savings');
 select is((pg_temp.ret()->'sources'->>'total_bp')::integer, 7106, 'total return on the money in the deal');
-select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 4361, 'cash-on-cash = cash flow / money in the deal');
-select is((pg_temp.ret()->'metrics'->>'cap_rate_bp')::integer, 1156, 'cap rate = NOI / value today');
-select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 75417::bigint,
-  'cash flow per unit per month');
+-- FLOW-464: the first rent (1 March) is inside the year, so the per-year metrics scale over the 306
+-- days since it (365 / 306), not the 365 of the period; the total keeps the period.
+select is((pg_temp.ret()->>'earning_days')::integer, 306, 'the days since the first rent, to the period''s end');
+select is(pg_temp.ret()->>'annualized_from', '2026-03-01', 'scaled to a year from the first rent');
+select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 5202, 'cash-on-cash = cash flow / money in the deal, a year from the first rent');
+select is((pg_temp.ret()->'metrics'->>'cap_rate_bp')::integer, 1378, 'cap rate = NOI / value today, a year from the first rent');
+select is((pg_temp.ret()->'metrics'->>'cash_flow_per_unit_month_minor')::bigint, 89958::bigint,
+  'cash flow per unit per month, over the months since the first rent');
+select is(public.get_property_returns(pg_temp.id('flat'), '2026-04-01', '2026-12-31')->>'annualized_from', null,
+  'a first rent before the period scales over the whole period');
+select is((public.get_property_returns(pg_temp.id('flat'), '2026-04-01', '2026-12-31')->>'earning_days')::integer, 275,
+  'and its days are the period''s');
 
 -- A value for an earlier date (as an undo leaves it) drops the later ones.
 select public.set_project_investment(pg_temp.id('flat'), '{"value_minor": 17000000, "value_date": "2025-12-31"}');

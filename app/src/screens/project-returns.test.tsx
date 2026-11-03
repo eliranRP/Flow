@@ -7,6 +7,7 @@ import { project as sampleProject } from "../dev/project-cash-sample";
 import {
   birchLaneReturnLines,
   birchLaneReturns,
+  birchLaneReturnsAnnualized,
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
   birchLaneReturnsMissing,
@@ -38,8 +39,10 @@ import {
   buildingFormula,
   cashFlowFormula,
   forcedFormula,
+  metricCaption,
   metricPage,
   metricValue,
+  NO_PAYMENTS,
   returnInfo,
   type Formula,
   type FormulaRow,
@@ -341,7 +344,7 @@ describe("the sheet contents", () => {
       expect(page.value).toEqual({ kind: "note", text: BEFORE_FIRST_RENT });
       expect(page.result).toBeNull();
     }
-    expect(metricValue("dscr", birchLaneReturnsBeforeRent)).toEqual({ kind: "text", text: "אין תשלומים" });
+    expect(metricValue("dscr", birchLaneReturnsBeforeRent)).toEqual({ kind: "text", text: NO_PAYMENTS });
     expect(metricValue("per-unit", birchLaneReturnsBeforeRent)).toEqual({ kind: "money", minor: 0n, income: false });
     expect(metricValue("coc", birchLaneReturns)).toEqual({ kind: "text", text: "11.6%" });
   });
@@ -761,5 +764,26 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     renderAt("/projects/p1/investment/returns/opex");
     await screen.findByRole("heading", { name: "הוצאות תפעול" });
     expect(screen.queryByRole("button", { name: /^איך לקרוא את/ })).toBeNull();
+  });
+});
+
+describe("the per-year metrics from a first rent inside the period (FLOW-464)", () => {
+  it("says the scaled metrics are a year's figure, and DSCR is not scaled", () => {
+    expect(metricCaption("cap-rate", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה");
+    expect(metricCaption("coc", birchLaneReturnsAnnualized)).toBe("תזרים ÷ כסף בעסקה · מחושב לשנה");
+    expect(metricCaption("dscr", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ תשלומי הלוואה");
+    expect(metricCaption("cap-rate", birchLaneReturns)).toBe("רווח תפעולי ÷ שווי היום");
+    expect(metricValue("dscr", birchLaneReturnsAnnualized)).toEqual({ kind: "text", text: NO_PAYMENTS });
+  });
+
+  it("divides a year's NOI on the cap rate page, and names the days since the first rent", () => {
+    const page = metricPage("cap-rate", birchLaneReturnsAnnualized);
+    // $15,600 × 365 / 215 = $26,483.72, shown in whole dollars.
+    expect(page.result?.text).toBe("\u2066$26,484 ÷ $240,000\u2069");
+    // The step from the days since the first rent to a year, before "=".
+    expect(page.result?.yearly).toMatchObject({ label: "רווח תפעולי לשנה", hint: "\u2066$15,600 ÷ 215 × 365\u2069", value: { kind: "money", minor: 2648372n } });
+    expect(metricPage("cap-rate", birchLaneReturns).result?.yearly).toBeUndefined();
+    expect(page.caption).toBe("רווח תפעולי ÷ שווי היום · מהשכר הראשון ב־01/04/2026 · 215 ימים, מחושב לשנה");
+    expect(metricPage("cap-rate", birchLaneReturns).caption).toBe("רווח תפעולי ÷ שווי היום · 12 חודשים");
   });
 });

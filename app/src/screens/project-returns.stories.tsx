@@ -9,6 +9,7 @@ import {
   birchLaneReturnsCashOut,
   birchLaneReturnsMissing,
   birchLaneReturnsNegative,
+  birchLaneReturnsAnnualized,
   birchLaneReturnsNoRehab,
   mapleCourtSub2Returns,
 } from "../dev/returns-sample";
@@ -34,6 +35,7 @@ const RETURNS = {
   beforeRent: birchLaneReturnsBeforeRent,
   nothingBeforeRent: { ...birchLaneReturns, statement: { ...birchLaneReturns.statement, beforeRentMinor: 0n } },
   noRehab: birchLaneReturnsNoRehab,
+  annualized: birchLaneReturnsAnnualized,
 };
 
 const REHAB = { three: birchLaneRehab, many: birchLaneRehabMany, none: [] };
@@ -84,4 +86,6 @@ export const RehabPartManyCategories: Story = { name: "Rehab part, many categori
 export const RehabPartEmpty: Story = { name: "Rehab part, empty", args: { entry: "/projects/p1/investment/part/rehab", lines: "rehab", returns: "noRehab", rehab: "none" } };
 export const RehabCategoryLines: Story = { args: { entry: "/projects/p1/investment/returns/rehab?category=cat-renovation", lines: "rehab" } };
 export const CapRate: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate" } };
+/** FLOW-464: rented from 01/04, 215 days: a year's NOI over today's value. */
+export const CapRateAnnualized: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", returns: "annualized" } };
 export const CapRateLearn: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", learn: true } };

@@ -68,6 +68,9 @@ const returnsSchema = z.object({
   from: z.string(),
   to: z.string(),
   first_rent: dateOrNull,
+  // FLOW-464: the per-year metrics scale from the first rent when it falls inside the period.
+  annualized_from: dateOrNull,
+  earning_days: z.number().int().nullable().optional().transform((value) => value ?? null),
   other_currencies: z.array(z.string()).optional().default([]),
   missing: z.array(z.string()).optional().default([]),
   inputs: z.object({
@@ -143,6 +146,10 @@ export type PropertyReturns = {
   to: string;
   /** YYYY-MM-DD: the first rent payment; null before it. */
   firstRent: string | null;
+  /** YYYY-MM-DD: the first rent when the per-year metrics scale from it (FLOW-464); null when they cover the period. */
+  annualizedFrom: string | null;
+  /** The days the per-year metrics cover: from the first rent when it is inside the period. */
+  earningDays: number | null;
   otherCurrencies: string[];
   missing: MissingInput[];
   inputs: {
@@ -247,6 +254,8 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
     from: raw.from,
     to: raw.to,
     firstRent: raw.first_rent,
+    annualizedFrom: raw.annualized_from,
+    earningDays: raw.earning_days,
     otherCurrencies: raw.other_currencies,
     missing: raw.missing.filter(isMissingInput),
     inputs: {
