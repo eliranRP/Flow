@@ -126,3 +126,33 @@ Deno.test("set_land_account sends the account, null unlinks, undo takes land_acc
   }
   assertEquals(calls.length, before);
 });
+
+Deno.test("set_loan_closing_paid sends minor units, null is the whole loan, undo takes loan_closing_paid", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "loan_closing_paid" } } }));
+  const set = await callTool("set_loan_closing_paid", { idempotency_key: "cp-1", loan_id: CATEGORY, closing_paid: 174075.5 }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_loan_closing_paid",
+    body: { p_idempotency_key: "cp-1", p_loan_id: CATEGORY, p_closing_paid_minor: 17407550 },
+  });
+  await callTool("set_loan_closing_paid", { idempotency_key: "cp-2", loan_id: CATEGORY, closing_paid: "1000.25" }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body, { p_idempotency_key: "cp-2", p_loan_id: CATEGORY, p_closing_paid_minor: 100025 });
+  await callTool("set_loan_closing_paid", { idempotency_key: "cp-3", loan_id: CATEGORY, closing_paid: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body, { p_idempotency_key: "cp-3", p_loan_id: CATEGORY, p_closing_paid_minor: null });
+  await callTool("undo", { idempotency_key: "u-cp", kind: "loan_closing_paid", id: CATEGORY }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.name, "mcp_undo");
+
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k", loan_id: "nope", closing_paid: 1 },
+    { idempotency_key: "k", loan_id: CATEGORY, closing_paid: -1 },
+    { idempotency_key: "k", loan_id: CATEGORY, closing_paid: 1.005 },
+    { idempotency_key: "k", loan_id: CATEGORY },
+  ]) {
+    const result = await callTool("set_loan_closing_paid", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+  }
+  const denied = await callTool("set_loan_closing_paid", { idempotency_key: "k", loan_id: CATEGORY, closing_paid: 1 }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  assertEquals(calls.length, before);
+});

@@ -738,13 +738,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "amortization_months": number | null,"annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"fees_category_id": string | null,"id": string,"interest_category_id": string | null,"interest_only_months": number | null,"kind": Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor": number | null,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"rate_index": string | null,"rate_margin_ppm": number | null,"refinanced_into_id": string | null,"sort_order": number | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number | null,"updated_at": string
+                    "amortization_months": number | null,"annual_rate_ppm": number,"closed_on": string | null,"closing_paid_minor": number | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"fees_category_id": string | null,"id": string,"interest_category_id": string | null,"interest_only_months": number | null,"kind": Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor": number | null,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"rate_index": string | null,"rate_margin_ppm": number | null,"refinanced_into_id": string | null,"sort_order": number | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number | null,"updated_at": string
                   }
                   Insert: {
-                    "amortization_months"?: number | null,"annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_category_id"?: string | null,"escrow_minor": number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"interest_only_months"?: number | null,"kind"?: Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor"?: number | null,"principal_category_id"?: string | null,"principal_minor": number,"project_id"?: string | null,"rate_index"?: string | null,"rate_margin_ppm"?: number | null,"refinanced_into_id"?: string | null,"sort_order"?: number | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number | null,"updated_at"?: string
+                    "amortization_months"?: number | null,"annual_rate_ppm": number,"closed_on"?: string | null,"closing_paid_minor"?: number | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_category_id"?: string | null,"escrow_minor": number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"interest_only_months"?: number | null,"kind"?: Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor"?: number | null,"principal_category_id"?: string | null,"principal_minor": number,"project_id"?: string | null,"rate_index"?: string | null,"rate_margin_ppm"?: number | null,"refinanced_into_id"?: string | null,"sort_order"?: number | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "amortization_months"?: number | null,"annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_category_id"?: string | null,"escrow_minor"?: number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"interest_only_months"?: number | null,"kind"?: Database["public"]['Enums']["loan_kind"],"name"?: string,"payment_minor"?: number | null,"principal_category_id"?: string | null,"principal_minor"?: number,"project_id"?: string | null,"rate_index"?: string | null,"rate_margin_ppm"?: number | null,"refinanced_into_id"?: string | null,"sort_order"?: number | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number | null,"updated_at"?: string
+                    "amortization_months"?: number | null,"annual_rate_ppm"?: number,"closed_on"?: string | null,"closing_paid_minor"?: number | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_category_id"?: string | null,"escrow_minor"?: number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"interest_only_months"?: number | null,"kind"?: Database["public"]['Enums']["loan_kind"],"name"?: string,"payment_minor"?: number | null,"principal_category_id"?: string | null,"principal_minor"?: number,"project_id"?: string | null,"rate_index"?: string | null,"rate_margin_ppm"?: number | null,"refinanced_into_id"?: string | null,"sort_order"?: number | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -2151,6 +2151,9 @@ isOneToOne: false
 "mcp_set_loan_category_from":
 { Args: { "p_apply_to_existing"?: boolean,"p_category_id": string,"p_effective_date": string,"p_idempotency_key": string,"p_loan_id": string,"p_part": string }; Returns: Json
                            },
+"mcp_set_loan_closing_paid":
+{ Args: { "p_closing_paid_minor": number,"p_idempotency_key": string,"p_loan_id": string }; Returns: Json
+                           },
 "mcp_set_loan_index":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_margin_ppm": number,"p_rate_index": string }; Returns: Json
                            },
@@ -2452,6 +2455,9 @@ isOneToOne: false
                            },
 "set_land_account":
 { Args: { "p_account_id": string }; Returns: Json
+                           },
+"set_loan_closing_paid":
+{ Args: { "p_closing_paid_minor": number,"p_loan_id": string }; Returns: Json
                            },
 "set_member_role":
 { Args: { "p_role": string,"p_user_id": string }; Returns: Json

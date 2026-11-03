@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(94);
+select plan(107);
 
 do $users$
 begin
@@ -178,12 +178,13 @@ select is((pg_temp.ret()->'sources'->>'appreciation_minor')::bigint, 1000000::bi
   'appreciation = the value at the end of the period - the value at its start');
 select is((pg_temp.ret()->'sources'->>'building_minor')::bigint, 13640000::bigint, 'building = purchase + rehab - land');
 select is((pg_temp.ret()->'sources'->>'depreciation_year_minor')::bigint, 496000::bigint, 'depreciation = building / 27.5');
-select is((pg_temp.ret()->'sources'->>'tax_savings_minor')::bigint, 119040::bigint, 'tax savings = depreciation x bracket');
-select is((pg_temp.ret()->'sources'->>'total_minor')::bigint, 2949040::bigint,
+-- FLOW-466: in service from the first rent (1 March): $4,960 a year x 24% x 306 / 365 days.
+select is((pg_temp.ret()->'sources'->>'tax_savings_minor')::bigint, 99798::bigint, 'tax savings = depreciation x bracket, from the first rent');
+select is((pg_temp.ret()->'sources'->>'total_minor')::bigint, 2929798::bigint,
   'total = cash flow + principal + appreciation + tax savings');
-select is((pg_temp.ret()->'sources'->>'total_bp')::integer, 7106, 'total return on the money in the deal');
+select is((pg_temp.ret()->'sources'->>'total_bp')::integer, 8421, 'total return on the money in the deal, a year from the first rent');
 -- FLOW-464: the first rent (1 March) is inside the year, so the per-year metrics scale over the 306
--- days since it (365 / 306), not the 365 of the period; the total keeps the period.
+-- days since it (365 / 306), not the 365 of the period; so does the total (FLOW-466).
 select is((pg_temp.ret()->>'earning_days')::integer, 306, 'the days since the first rent, to the period''s end');
 select is(pg_temp.ret()->>'annualized_from', '2026-03-01', 'scaled to a year from the first rent');
 select is((pg_temp.ret()->'metrics'->>'cash_on_cash_bp')::integer, 5202, 'cash-on-cash = cash flow / money in the deal, a year from the first rent');
@@ -352,6 +353,34 @@ select is((pg_temp.sub2()->'inputs'->>'taken_over_minor')::bigint, 29000000::big
   'the mortgage taken over at closing, with no proceeds line, is part of the price; the later refinance is not');
 select is((pg_temp.sub2()->'inputs'->>'purchase_minor')::bigint, 32000000::bigint, 'purchase = the cash at closing + the loan taken over');
 select is((pg_temp.sub2()->'equity'->>'money_in_minor')::bigint, 3000000::bigint, 'the money in stays the cash brought');
+
+-- FLOW-466: what the loan paid at closing, from the settlement statement, is what the price counts.
+insert into prr (label, id) select 'sub2_loan', l.id from public.loans l where l.name = 'Sub2 mortgage taken over';
+select is((public.set_loan_closing_paid(pg_temp.id('sub2_loan'), 25000000))->>'closing_paid_minor', '25000000',
+  'set_loan_closing_paid keeps what the loan paid at closing');
+select is((pg_temp.sub2()->'inputs'->>'taken_over_minor')::bigint, 25000000::bigint, 'the price counts that, not the whole loan');
+select is((pg_temp.sub2()->'inputs'->>'purchase_minor')::bigint, 28000000::bigint, 'purchase = the cash at closing + what the loan paid then');
+select is((pg_temp.sub2()->'inputs'->'taken_over_loans'->0->>'principal_minor')::bigint, 29000000::bigint, 'the loan still names its principal');
+select throws_ok(format('select public.set_loan_closing_paid(%L, 29000001)', pg_temp.id('sub2_loan')), '22023', 'validation',
+  'more than the principal is refused');
+select throws_ok(format('select public.set_loan_closing_paid(%L, 1)', gen_random_uuid()), 'P0001', 'loan not found',
+  'an unknown loan, or another company''s, is not found');
+select pg_temp.as_mcp('write');
+select is(public.mcp_set_loan_closing_paid('prr-close-1', pg_temp.id('sub2_loan'), null)->'data'->>'undo_kind', 'loan_closing_paid',
+  'MCP set_loan_closing_paid returns its undo kind');
+select is((select closing_paid_minor from public.loans where id = pg_temp.id('sub2_loan')), null::bigint, 'null is the whole loan again');
+select is(public.mcp_undo('prr-close-undo', 'loan_closing_paid', pg_temp.id('sub2_loan'))->>'ok', 'true', 'undo works');
+select is((select closing_paid_minor from public.loans where id = pg_temp.id('sub2_loan')), 25000000::bigint, 'and puts the amount back');
+select tests.authenticate_as('prr_owner');
+
+-- FLOW-466: with no value by the period's start, appreciation runs from the first value in it; one
+-- value alone waits for a second. Tax savings run from the first rent (13 October), not the year.
+select public.set_project_investment(pg_temp.id('sub2'), '{"value_minor": 34000000, "value_date": "2026-09-01"}');
+select ok(pg_temp.sub2()->'missing' ? 'value_history', 'one value alone: appreciation waits for a second');
+select public.set_project_investment(pg_temp.id('sub2'), '{"value_minor": 35000000, "value_date": "2026-10-20"}');
+select is((pg_temp.sub2()->'sources'->>'appreciation_minor')::bigint, 1000000::bigint,
+  'appreciation = the last value - the first value in the period');
+select is(pg_temp.sub2()->'inputs'->'value_start'->>'value_date', '2026-09-01', 'and names where it starts');
 
 -- FLOW-454 boundaries (0246), one project each so no loan's proceeds fall in another's window: the
 -- window from 30 days before the closing (2026-08-06) to 75 days after it; a proceeds line under 80%
