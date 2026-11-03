@@ -202,13 +202,12 @@ function mergePage(old: ReviewRow[], page: readonly ReviewRow[]): ReviewRow[] {
   return [...old.filter((row) => !incoming.has(row.id)), ...page];
 }
 
-export function useReviewQuery(active = true, project: string | null = null) {
-  const preview = useHomePreview();
+/** The review list's query: Review's screens read it, and App starts it on the tap (prefetchReviewList). */
+function reviewQueryOptions(preview: string, project: string | null) {
   const key = reviewListKey(preview, project);
-  return useQuery({
-    queryKey: reviewListKey(preview, project),
-    enabled: active && preview === "off",
-    queryFn: async ({ client }): Promise<ReviewRow[]> => {
+  return {
+    queryKey: key,
+    queryFn: async ({ client }: { client: QueryClient }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
@@ -232,7 +231,20 @@ export function useReviewQuery(active = true, project: string | null = null) {
       putMeta(client, preview, project, { total, loaded: rows.length, next, failed: false, loading: false });
       return rows;
     },
-  });
+  };
+}
+
+export function useReviewQuery(active = true, project: string | null = null) {
+  const preview = useHomePreview();
+  return useQuery({ ...reviewQueryOptions(preview, project), enabled: active && preview === "off" });
+}
+
+/**
+ * FLOW-1020: App starts the first page's read on the tap, while Review's code loads, so the two no longer
+ * run one after the other. Same key and read as useReviewQuery, which then finds it in flight or done.
+ */
+export async function prefetchReviewList(client: QueryClient, preview: string, project: string | null): Promise<void> {
+  await client.query(reviewQueryOptions(preview, project));
 }
 
 /** Reads the page after the loaded ones and appends it. A failure leaves the list as it is and says so in the meta. */

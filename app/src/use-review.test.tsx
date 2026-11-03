@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jevQueueQueryKey, resetJevScopeMemory } from "./screens/jev-connector-scope";
-import { reviewCacheUpdates, reviewListKey, useReviewDeepLink, useReviewPaging, useReviewQuery } from "./use-review";
+import { prefetchReviewList, reviewCacheUpdates, reviewListKey, useReviewDeepLink, useReviewPaging, useReviewQuery } from "./use-review";
 
 type Args = { p_limit: number; p_after_id?: string; p_project?: string; p_item?: string };
 
@@ -210,6 +210,39 @@ describe("FLOW-984: the review queue in pages", () => {
     const second = view.result.current.rows.slice(50).map((row) => row.transaction_id);
     await waitFor(() => { expect(client.getQueryData(jevQueueQueryKey(second))).toBeDefined(); });
     expect(jev.loaded.map((ids) => ids.length)).toEqual([50, 50]);
+  });
+});
+
+describe("FLOW-1020: the first page read on the tap", () => {
+  it("is the read the screen uses: one request, whether the screen mounts while it is in flight or after", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+    const inFlight = prefetchReviewList(client, "off", null);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
+    const view = renderHook(() => useReviewQuery(true, null), { wrapper });
+    await inFlight;
+    await waitFor(() => { expect(view.result.current.data).toHaveLength(50); });
+    expect(reads()).toHaveLength(1);
+    const again = renderHook(() => useReviewQuery(true, null), { wrapper });
+    await waitFor(() => { expect(again.result.current.data).toHaveLength(50); });
+    expect(reads()).toHaveLength(1);
+  });
+
+  it("a failed prefetch is read again when the screen mounts", async () => {
+    server.failNext = true;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+    await expect(prefetchReviewList(client, "off", null)).rejects.toBeTruthy();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
+    const view = renderHook(() => useReviewQuery(true, null), { wrapper });
+    await waitFor(() => { expect(view.result.current.data).toHaveLength(50); });
+    expect(reads()).toHaveLength(2);
   });
 });
 

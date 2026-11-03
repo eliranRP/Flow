@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { lazy, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { useAuth } from "./auth";
 import { SessionProviders } from "./session-providers";
@@ -10,7 +10,7 @@ import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
-import { usePreviewMode } from "./preview";
+import { useHomePreview, usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { LedgerFocusRefresh } from "./books-focus";
 import { ListHoldRoot } from "./list-hold";
@@ -240,6 +240,16 @@ function HomeWithSheet() {
 }
 
 function ReviewWithSheet() {
+  // FLOW-1020: the list's first page is read on the tap, beside Review's code, not after it. use-review loads
+  // on its own here, so Home's entry does not carry it.
+  const client = useQueryClient();
+  const preview = useHomePreview();
+  const [params] = useSearchParams();
+  const project = params.get("project");
+  useEffect(() => {
+    if (preview !== "off") return;
+    void import("./use-review").then(({ prefetchReviewList }) => prefetchReviewList(client, preview, project)).catch(() => undefined);
+  }, [client, preview, project]);
   return (
     <>
       {/* No boundary of its own: while Review's code loads, the screen that opened it stays up. */}
