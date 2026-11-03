@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(107);
+select plan(109);
 
 do $users$
 begin
@@ -381,6 +381,13 @@ select public.set_project_investment(pg_temp.id('sub2'), '{"value_minor": 350000
 select is((pg_temp.sub2()->'sources'->>'appreciation_minor')::bigint, 1000000::bigint,
   'appreciation = the last value - the first value in the period');
 select is(pg_temp.sub2()->'inputs'->'value_start'->>'value_date', '2026-09-01', 'and names where it starts');
+select is((public.get_property_returns(pg_temp.id('flat'), '2026-01-01', '2026-02-28')->'sources'->>'tax_savings_minor')::bigint, 0::bigint,
+  'no tax savings before the first rent: not yet in service');
+-- A later edit that lowers the principal below the amount at closing still saves; the price counts at most the principal.
+reset role;
+update public.loans set principal_minor = 20000000 where id = pg_temp.id('sub2_loan');
+select tests.authenticate_as('prr_owner');
+select is((pg_temp.sub2()->'inputs'->>'taken_over_minor')::bigint, 20000000::bigint, 'the price counts at most the principal');
 
 -- FLOW-454 boundaries (0246), one project each so no loan's proceeds fall in another's window: the
 -- window from 30 days before the closing (2026-08-06) to 75 days after it; a proceeds line under 80%

@@ -23,8 +23,10 @@ as $$
 $$;
 
 alter table public.loans add column closing_paid_minor bigint;
-alter table public.loans add constraint loans_closing_paid_range
-  check (closing_paid_minor is null or (closing_paid_minor >= 0 and closing_paid_minor <= principal_minor));
+-- No more than zero; never above the principal when set (set_loan_closing_paid checks), and counted
+-- as at most the principal, so a later edit that lowers the principal still saves.
+alter table public.loans add constraint loans_closing_paid_nonnegative
+  check (closing_paid_minor is null or closing_paid_minor >= 0);
 comment on column public.loans.closing_paid_minor is
   'FLOW-466: what the loan paid at closing, from the settlement statement; null is the whole principal. Decision 0250.';
 
@@ -227,9 +229,10 @@ begin
   end if;
   def := replace(def, a_decl, a_decl || $n$  service_days integer;
 $n$);
-  def := replace(def, a_taken, $n$    select coalesce(sum(coalesce(lo.closing_paid_minor, lo.principal_minor)), 0)::bigint,
+  def := replace(def, a_taken, $n$    select coalesce(sum(least(coalesce(lo.closing_paid_minor, lo.principal_minor), lo.principal_minor)), 0)::bigint,
       coalesce(jsonb_agg(jsonb_build_object('loan_id', lo.id, 'name', lo.name, 'principal_minor', lo.principal_minor,
-        'closing_paid_minor', lo.closing_paid_minor, 'counted_minor', coalesce(lo.closing_paid_minor, lo.principal_minor))$n$);
+        'closing_paid_minor', lo.closing_paid_minor,
+        'counted_minor', least(coalesce(lo.closing_paid_minor, lo.principal_minor), lo.principal_minor))$n$);
   def := replace(def, a_start, $n$  -- FLOW-466: no value by the period's start, the first value recorded in it, before the last.
   if v_start.value_minor is null and v_end.value_minor is not null then
     select v.value_minor, v.value_date into v_start from public.project_values v
