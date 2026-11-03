@@ -157,7 +157,9 @@
   display: flex;
   flex-direction: column;
   inset-inline: 0;
-  bottom: 0;
+  /* FLOW-1024: sits on the visual viewport's bottom, above the keyboard. --kb counts iOS's pan
+     to a focused field, which Vaul's own lift (turned off in sheet.tsx) did not. */
+  bottom: var(--kb, 0px);
   width: 100%;
   max-width: var(--content-max);
   max-block-size: calc(var(--vvh, 100dvh) - var(--sheet-gap));

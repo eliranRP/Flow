@@ -21,8 +21,9 @@ export function useKeyboardInset() {
       } else {
         fullHeight = Math.max(fullHeight, window.innerHeight);
       }
-      // Space below the visual viewport, for insets. On iOS it drops to 0 when the
-      // visual viewport is panned down with the keyboard still up, so it can't detect the keyboard.
+      // Space below the visual viewport: the sheet's lift above the keyboard (FLOW-1024). On iOS
+      // it drops to 0 when the visual viewport is panned down with the keyboard still up, which
+      // is right for the lift (the panned view already ends at the keyboard) but can't detect it.
       const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       // Screen height the visual viewport doesn't cover. Panning (offsetTop) and
       // pinch-zoom (scale) leave it unchanged; only the keyboard takes it away.
@@ -44,13 +45,6 @@ export function useKeyboardInset() {
           active.scrollIntoView({ block: "nearest" });
         }
       }
-      // After Vaul's own listener for this event, which can write the lift again. The
-      // keyboard may be back up by then.
-      if (!open) {
-        requestAnimationFrame(() => {
-          if (root.dataset.kb !== "open") clearDrawerLift();
-        });
-      }
     };
     on();
     vv.addEventListener("resize", on);
@@ -71,17 +65,4 @@ function editableFocused(): boolean {
   if (active.isContentEditable || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement) return true;
   return active instanceof HTMLInputElement
     && !["button", "checkbox", "radio", "range", "submit", "reset", "file", "color", "image"].includes(active.type);
-}
-
-/**
- * Vaul lifts an open drawer above the keyboard with an inline `bottom`, and flips its own
- * keyboard flag on every jump over 60px. A keyboard that opens or closes in several steps
- * leaves that flag wrong, and with focus already off the field Vaul stops updating: the sheet
- * stays lifted over an empty gap (FLOW-310). While the keyboard is gone, drop the lift. Vaul
- * also shrinks the drawer's inline height; the sheet CSS overrides that with !important.
- */
-function clearDrawerLift(): void {
-  for (const drawer of document.querySelectorAll<HTMLElement>("[data-vaul-drawer]")) {
-    if (drawer.style.bottom !== "" && drawer.style.bottom !== "0px") drawer.style.bottom = "0px";
-  }
 }

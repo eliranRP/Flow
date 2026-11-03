@@ -40,13 +40,9 @@ async function expectAboveKeyboard(page: Page, field: Locator, viewport: { width
   expect(input.y + input.height, "the field ends above the keyboard").toBeLessThanOrEqual(visible);
 }
 
-/** With the keyboard gone the flag clears, Vaul's lift is dropped and the sheet sits on the bottom edge. */
+/** With the keyboard gone the flag clears and the sheet sits on the bottom edge. */
 async function expectKeyboardGone(page: Page, viewport: { width: number; height: number }) {
   await expect(page.locator("html")).not.toHaveAttribute("data-kb", "open");
-  await expect.poll(() => page.evaluate(() => {
-    const drawer = document.querySelector<HTMLElement>("[data-vaul-drawer]");
-    return drawer == null ? "none" : drawer.style.bottom || "0px";
-  })).toBe("0px");
   await expect.poll(async () => {
     const panel = await box(page.locator(".ui-sheet-panel"), "the sheet");
     return Math.round(panel.y + panel.height);
@@ -89,3 +85,48 @@ for (const viewport of viewports) {
     await expectKeyboardGone(page, viewport);
   });
 }
+
+/**
+ * FLOW-1024: iOS Safari keeps the layout viewport with the keyboard up and pans the visual
+ * viewport down to the field. Chromium does neither, so a stand-in visual viewport plays it:
+ * the keyboard takes KEYBOARD px, then the view pans by PAN px. The sheet must end where the
+ * view ends, not lifted by the whole keyboard on top of the pan (it went off the top before).
+ */
+const PAN = 200;
+
+test("the sheet ends at the panned visual viewport's bottom, as on iOS", async ({ page }) => {
+  const viewport = viewports[1];
+  await page.setViewportSize(viewport);
+  await page.addInitScript(() => {
+    const fake = Object.assign(new EventTarget(), {
+      height: window.innerHeight, width: window.innerWidth, offsetTop: 0, offsetLeft: 0, scale: 1, pageTop: 0, pageLeft: 0,
+    });
+    Object.defineProperty(window, "visualViewport", { configurable: true, get: () => fake });
+    (window as unknown as { fakeViewport: typeof fake }).fakeViewport = fake;
+  });
+  await page.goto("/reviewer/save?item=q-bolts");
+  await page.getByRole("button", { name: /פרויקט:/ }).click();
+  await page.getByRole("button", { name: "פרויקט חדש" }).click();
+  const name = page.getByRole("textbox", { name: "שם" });
+  await name.focus();
+  const move = (height: number, offsetTop: number, kind: string) => page.evaluate(({ height: h, offsetTop: top, kind: k }) => {
+    const fake = (window as unknown as { fakeViewport: EventTarget & { height: number; offsetTop: number } }).fakeViewport;
+    fake.height = h;
+    fake.offsetTop = top;
+    fake.dispatchEvent(new Event(k));
+  }, { height, offsetTop, kind });
+  const panelBottom = async () => {
+    const panel = await box(page.locator(".ui-sheet-panel"), "the sheet");
+    return Math.round(panel.y + panel.height);
+  };
+  await move(viewport.height - KEYBOARD, 0, "resize");
+  await expect(page.locator("html")).toHaveAttribute("data-kb", "open");
+  await expect.poll(panelBottom, { message: "the sheet ends at the keyboard" }).toBe(viewport.height - KEYBOARD);
+  await move(viewport.height - KEYBOARD, PAN, "scroll");
+  // The view now covers layout px PAN to PAN + its height: the keyboard starts at its bottom.
+  await expect.poll(panelBottom, { message: "the sheet ends at the panned view's bottom" }).toBe(viewport.height - KEYBOARD + PAN);
+  await move(viewport.height, 0, "resize");
+  await name.blur();
+  await move(viewport.height, 0, "resize");
+  await expectKeyboardGone(page, viewport);
+});
