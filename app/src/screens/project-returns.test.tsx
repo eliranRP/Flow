@@ -10,6 +10,7 @@ import {
   birchLaneReturnsAnnualized,
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
+  birchLaneReturnsCashOutLosing,
   birchLaneReturnsMissing,
   birchLaneReturnsNegative,
   birchLaneRehab,
@@ -38,10 +39,12 @@ import {
   UNITS_DEFAULT_HINT,
   buildingFormula,
   cashFlowFormula,
+  coverText,
   forcedFormula,
   metricCaption,
   metricPage,
   metricValue,
+  moneyInFormula,
   NO_PAYMENTS,
   returnInfo,
   type Formula,
@@ -356,6 +359,18 @@ describe("the sheet contents", () => {
     expect(returnInfo("cash_flow", birchLaneReturns).caption).toBe(CASH_FLOW_CAPTION);
   });
 
+  it("reads a losing cash flow as money lost, not ∞, with all the cash out (FLOW-1025)", () => {
+    expect(metricValue("coc", birchLaneReturnsCashOutLosing)).toEqual({ kind: "money", minor: -660_000n, income: false });
+    const rows = moneyInFormula(birchLaneReturnsCashOutLosing).rows;
+    expect(rows.at(-1)).toMatchObject({ key: "shortfall", op: "+", label: "כיסוי תזרים שלילי", value: { kind: "money", minor: 660_000n } });
+    expect(moneyInFormula(birchLaneReturnsCashOut).rows.map((row) => row.key)).not.toContain("shortfall");
+  });
+
+  it("says how long the cash still out lasts, from whole months", () => {
+    expect([coverText(60), coverText(18), coverText(14), coverText(8), coverText(1), coverText(0)])
+      .toEqual(["כ־5 שנים", "כ־2 שנים", "כשנה", "8 חודשים", "חודש אחד", "פחות מחודש"]);
+  });
+
   it("reads ∞ for cash-on-cash when all the cash came out, with no division", () => {
     expect(metricValue("coc", birchLaneReturnsCashOut)).toEqual({ kind: "text", text: "∞" });
     const page = metricPage("coc", birchLaneReturnsCashOut);
@@ -444,6 +459,20 @@ describe("the investment page's returns cards", () => {
     expect(within(card).queryByText(/%$/)).toBeNull();
     const metrics = await screen.findByRole("region", { name: "מדדים" });
     expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent("∞");
+  });
+
+  it("draws the loss, not ∞, when all the cash came out but the rental loses money (FLOW-1025)", async () => {
+    renderInvestment(birchLaneReturnsCashOutLosing);
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
+    if (card == null) throw new Error("no card");
+    expect(within(card).queryByRole("img", { name: INFINITY_NAME })).toBeNull();
+    expect(within(card).getByText(/כל הכסף חזר/)).toHaveTextContent(
+      "כל הכסף חזר · יצא $33,000 יותר משנכנס · הכסף שיצא מכסה עוד כ־5 שנים של תזרים שלילי",
+    );
+    expect(within(card).getAllByText("−$4,600").length).toBeGreaterThan(0);
+    expect(within(card).getByText(/^חלקי/)).toBeInTheDocument();
+    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).not.toHaveTextContent("∞");
   });
 
   it("opens the purchase from the lines on its line page, with no edit sheet", async () => {

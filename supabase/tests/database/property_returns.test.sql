@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(109);
+select plan(116);
 
 do $users$
 begin
@@ -144,7 +144,7 @@ select is(pg_temp.ret()->>'first_rent', '2026-03-01', 'the first rent payment sp
 select is((pg_temp.ret()->'statement'->>'before_rent_minor')::bigint, -100000::bigint,
   'a cost in the period but before the first rent is listed apart, not in the cash flow');
 select is(pg_temp.ret()->'equity'->'money_in_parts',
-  '{"acquisition_minor": -15000000, "renovation_minor": 0, "holding_minor": -150000, "financing_minor": 11000000}'::jsonb,
+  '{"acquisition_minor": -15000000, "renovation_minor": 0, "holding_minor": -150000, "financing_minor": 11000000, "shortfall_minor": 0}'::jsonb,
   'money in, by part: the purchase line, holding costs before the rent (the 2025 repair and the insurance), the net loan proceeds; the depreciation journal counts nowhere');
 select is(pg_temp.ret()->'inputs'->>'purchase_source', 'lines', 'the purchase price comes from the lines');
 select is((pg_temp.ret()->'inputs'->>'units')::integer, 1, 'units are 1 until the owner sets them (FLOW-454)');
@@ -252,6 +252,35 @@ select is((public.get_property_return_lines(pg_temp.id('flat'), 'holding')->>'to
   'the holding costs line lists its lines');
 select is((public.get_property_return_lines(pg_temp.id('flat'), 'money_in')->>'count')::integer, 5,
   'money in lists the purchase, the two holding costs and the two loan proceeds');
+
+-- FLOW-1025 (decision 0251): with all the cash out, a negative cash flow is the owner's money again.
+select is((pg_temp.ret()->'equity'->'money_in_parts'->>'shortfall_minor')::bigint, 0::bigint,
+  'a positive running cash flow adds nothing to the money in');
+select is(pg_temp.ret()->'equity'->>'cash_out_cover_months', null, 'and with a positive cash flow nothing runs out');
+reset role;
+insert into prr (label, id) values
+  ('loss1', tests.fixture_line(pg_temp.id('co'), 'prr:loss1', 2500000, p_project => pg_temp.id('flat'), p_category => pg_temp.id('repairs'), p_doc_date => '2026-10-01'));
+select tests.authenticate_as('prr_owner');
+-- The year's cash flow: 18,100.00 - 25,000.00 = -6,900.00, all of it since the first rent.
+select is((pg_temp.ret()->'equity'->'money_in_parts'->>'shortfall_minor')::bigint, -690000::bigint,
+  'the running cash flow since the first rent, below zero, is a part of the money in');
+select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, -5160000::bigint,
+  'and the money in adds it: -58,500.00 + 6,900.00');
+-- 51,600.00 still out, against 6,900.00 over the 306 days since the first rent: 75 whole months.
+select is((pg_temp.ret()->'equity'->>'cash_out_cover_months')::integer, 75,
+  'the cash still out covers 75 months of that cash flow at its yearly pace');
+reset role;
+insert into prr (label, id) values
+  ('loss2', tests.fixture_line(pg_temp.id('co'), 'prr:loss2', 5500000, p_project => pg_temp.id('flat'), p_category => pg_temp.id('repairs'), p_doc_date => '2026-11-01'));
+select tests.authenticate_as('prr_owner');
+select is((pg_temp.ret()->'equity'->>'money_in_minor')::bigint, 340000::bigint,
+  'losses past the cash taken out put money in the deal again');
+select is(pg_temp.ret()->'equity'->>'all_cash_out' || '|' || coalesce(pg_temp.ret()->'equity'->>'cash_out_cover_months', 'null'), 'false|null',
+  'so not all the cash is out, and nothing is left to cover');
+-- The rest of the file reads the duplex without the two losses (an unpaid line is not cash).
+reset role;
+update public.transactions set cash_date = null where id in (pg_temp.id('loss1'), pg_temp.id('loss2'));
+select tests.authenticate_as('prr_owner');
 
 -- FLOW-453 review: a line in another currency before the first rent does not move the rent start,
 -- and a rehab cost and a loan payment before the rent land in renovation and holding, not CapEx.

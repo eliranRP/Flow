@@ -93,8 +93,9 @@ function returnsOf(over: Partial<PropertyReturns["equity"]> = {}, inputs: Partia
       todayMinor: 85_000_000n,
       forcedMinor: 33_760_000n,
       moneyInMinor: 76_240_000n,
-      moneyInParts: { acquisitionMinor: -125_000_000n, renovationMinor: -31_240_000n, holdingMinor: 0n, financingMinor: 80_000_000n },
+      moneyInParts: { acquisitionMinor: -125_000_000n, renovationMinor: -31_240_000n, holdingMinor: 0n, financingMinor: 80_000_000n, shortfallMinor: 0n },
       allCashOut: false,
+      coverMonths: null,
       ...over,
     },
   };
