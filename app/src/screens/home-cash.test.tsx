@@ -169,6 +169,18 @@ describe("Home's cold load (FLOW-1019)", () => {
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
     expect(rpc.calls.filter((c) => c.name === "list_unpaid")).toHaveLength(1);
   });
+
+  it("reads the forecast from the first render when Home is opened again with its data cached", async () => {
+    const { client, unmount } = wrap();
+    await screen.findByText("תזרים · עד היום");
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
+    unmount();
+    rpc.calls = [];
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/", client });
+    // The figures are cached, so the forecast is read from the first render, with no idle wait.
+    expect(screen.getByText("תזרים · עד היום")).toBeInTheDocument();
+    expect(client.getQueryCache().find({ queryKey: ["month-forecast", "off", current] })?.isDisabled()).toBe(false);
+  });
 });
 
 describe("Home's cash (FLOW-364: the redesigned Home)", () => {

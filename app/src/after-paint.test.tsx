@@ -19,4 +19,9 @@ describe("useAfterFirstPaint (FLOW-1019)", () => {
     rerender({ shown: false });
     expect(result.current).toBe(true);
   });
+
+  it("is true at once when the screen mounts already drawn (a return to it, its data cached)", () => {
+    const { result } = renderHook(() => useAfterFirstPaint(true));
+    expect(result.current).toBe(true);
+  });
 });
