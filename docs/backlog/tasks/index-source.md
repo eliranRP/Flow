@@ -420,6 +420,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1017
 - FLOW-1018
 - FLOW-1024
+- FLOW-1030
+- FLOW-1031
 
 ## Projects and reports
 
@@ -477,6 +479,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-457
 - FLOW-458
 - FLOW-459
+- FLOW-467
+- FLOW-468
+- FLOW-469
+- FLOW-470
+- FLOW-471
+- FLOW-472
+- FLOW-473
 
 ## Onboarding, Settings and connectors
 
@@ -505,6 +514,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-925
 - FLOW-938
 - FLOW-941
+- FLOW-519
+- FLOW-520
 
 ## Multi-company and team
 

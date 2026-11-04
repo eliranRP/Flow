@@ -428,6 +428,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1017"></a>[FLOW-1017](tasks/FLOW-1017.md) | Recheck: קבועים behind an unlabeled icon, and a second figure on every Projects row | SMALL UI |
 | <a id="flow-1018"></a>[FLOW-1018](tasks/FLOW-1018.md) | One ביטול for a forecast item's save that changes both the pace and the amount or date | BACKLOG NIT |
 | <a id="flow-1024"></a>[FLOW-1024](tasks/FLOW-1024.md) | On iPhone a sheet with a field rises off the top of the screen when the keyboard opens | BUG |
+| <a id="flow-1030"></a>[FLOW-1030](tasks/FLOW-1030.md) | The changed-charges list loads under its own title, and Back names where it goes | SMALL UI |
+| <a id="flow-1031"></a>[FLOW-1031](tasks/FLOW-1031.md) | Home keeps the forecast row's place while it loads | SMALL UI |
 
 ## Projects and reports
 
@@ -487,6 +489,13 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-457"></a>[FLOW-457](tasks/FLOW-457.md) | A property's returns: one minus per expense, true counts, a name for ∞, one label per figure | SMALL UI |
 | <a id="flow-458"></a>[FLOW-458](tasks/FLOW-458.md) | Total return: marked partial when a source is missing, rows that hold at 320, bar shades that can be told apart | SMALL UI |
 | <a id="flow-459"></a>[FLOW-459](tasks/FLOW-459.md) | השקעה והלוואות: shorter, with the inputs before the metrics | SMALL UI |
+| <a id="flow-467"></a>[FLOW-467](tasks/FLOW-467.md) | A per-year metric says how many days it is scaled from | SMALL UI |
+| <a id="flow-468"></a>[FLOW-468](tasks/FLOW-468.md) | Before the first rent: one clear note, and "שכירות" instead of "שכר" | SMALL UI |
+| <a id="flow-469"></a>[FLOW-469](tasks/FLOW-469.md) | All the cash out but losing: the hero says it is a loss, in few words | SMALL UI |
+| <a id="flow-470"></a>[FLOW-470](tasks/FLOW-470.md) | Using the land from the books can be undone, and is the row's one action | SMALL UI |
+| <a id="flow-471"></a>[FLOW-471](tasks/FLOW-471.md) | Returns sheets and headers: one definition per figure, plain words, true counts, a header that fits 320 | SMALL UI |
+| <a id="flow-472"></a>[FLOW-472](tasks/FLOW-472.md) | The closing-paid sheet shows its default and checks as you type | SMALL UI |
+| <a id="flow-473"></a>[FLOW-473](tasks/FLOW-473.md) | Owner's calls on the returns: a minimum before a per-year figure; which loans show "סכום ששולם בסגירה" | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
@@ -519,6 +528,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-925"></a>[FLOW-925](tasks/FLOW-925.md) | First-sync progress page after connecting the bank (board StatesFirstSync) | Feature |
 | <a id="flow-938"></a>[FLOW-938](tasks/FLOW-938.md) | Mercury: several connections, the accounts each one syncs, and the date it imports from | UI (design approved) |
 | <a id="flow-941"></a>[FLOW-941](tasks/FLOW-941.md) | Mercury: suggest a transfer between two connections, and let the user decide | FEATURE |
+| <a id="flow-519"></a>[FLOW-519](tasks/FLOW-519.md) | The legal links on sign-in and Settings: rows that fit 320 and clear the tab bar | SMALL UI |
+| <a id="flow-520"></a>[FLOW-520](tasks/FLOW-520.md) | Legal pages: a tappable contact, jump links, clear sections, readable offline | SMALL UI |
 
 ## Multi-company and team
 
