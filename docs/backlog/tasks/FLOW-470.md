@@ -1,6 +1,6 @@
 <a id="flow-470"></a>
 # FLOW-470 · Using the land from the books can be undone, and is the row's one action
-- **Type:** SMALL UI · **Status:** in-progress (#TBD) · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-461 (#939).
+- **Type:** SMALL UI · **Status:** in-progress (#964) · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-461 (#939).
 - **Files:** `app/src/screens/project-investment-screen.tsx` (`saveLand`), `project-investment-cards.tsx`.
 
 - [x] "השתמש" writes the land (it drives the tax savings) with a toast and no undo, while every other figure's save has ביטול. Add the undo (set the prior land account back). Rule: feedback-and-states § 10.

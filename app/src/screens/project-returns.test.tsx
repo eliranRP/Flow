@@ -841,6 +841,8 @@ describe("the per-year metrics from a first rent inside the period (FLOW-464)", 
     expect(metricCaption("cap-rate", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה · 215 ימים");
     expect(metricCaption("coc", birchLaneReturnsAnnualized)).toBe("תזרים ÷ כסף בעסקה · מחושב לשנה · 215 ימים");
     expect(metricCaption("cap-rate", { ...birchLaneReturnsAnnualized, earningDays: 1 })).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה · יום אחד");
+    // FLOW-467: a loss in money scaled from the first rent names its days as well.
+    expect(metricCaption("coc", { ...birchLaneReturnsCashOutLosing, annualizedFrom: "2026-04-01", earningDays: 215 })).toBe("הפסד בשנה · כל הכסף חזר · מחושב לשנה · 215 ימים");
     expect(metricCaption("dscr", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ תשלומי הלוואה");
     expect(metricCaption("cap-rate", birchLaneReturns)).toBe("רווח תפעולי ÷ שווי היום");
     expect(metricValue("dscr", birchLaneReturnsAnnualized)).toEqual({ kind: "text", text: NO_PAYMENTS });

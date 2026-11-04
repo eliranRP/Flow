@@ -509,9 +509,10 @@ export function daysText(days: number): string {
  * rent a few days back reads as the estimate it is. FLOW-469: cash-on-cash as a loss in money says so.
  */
 export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
-  if (metric === "coc" && metricValue(metric, r).kind === "money") return `${LOSS_YEAR} · ${ALL_CASH_OUT}`;
-  const formula = metricFormula(metric, r);
-  return annualized(metric, r) ? `${formula} · ${ANNUALIZED} · ${daysText(r.earningDays ?? 365)}` : formula;
+  // A scaled figure says its days whatever it reads (FLOW-467), a loss in money included.
+  const scaled = annualized(metric, r) ? ` · ${ANNUALIZED} · ${daysText(r.earningDays ?? 365)}` : "";
+  if (metric === "coc" && metricValue(metric, r).kind === "money") return `${LOSS_YEAR} · ${ALL_CASH_OUT}${scaled}`;
+  return `${metricFormula(metric, r)}${scaled}`;
 }
 
 /** The metric page's period: the last 12 months, or since the first rent, scaled to a year. */
