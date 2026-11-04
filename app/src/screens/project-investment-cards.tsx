@@ -70,10 +70,11 @@ function FigureRow({
   );
 }
 
-function FigureValue({ minor, currency, readOnly }: { minor: bigint | null; currency: string; readOnly: boolean }) {
+/** `quiet`: another control is the row's one action (FLOW-470: the land the books suggest). */
+function FigureValue({ minor, currency, readOnly, quiet = false }: { minor: bigint | null; currency: string; readOnly: boolean; quiet?: boolean }) {
   if (minor != null) return <bdi dir="ltr" className="ui-pinv-value"><Amount agorot={minor} currency={currency} /></bdi>;
   // A viewer sees no הוספה: nothing on the card opens (FLOW-404).
-  if (readOnly) return <span className="ui-pinv-value ui-pinv-value-empty">לא הוזן</span>;
+  if (readOnly || quiet) return <span className="ui-pinv-value ui-pinv-value-empty">לא הוזן</span>;
   return <span className="ui-pinv-value ui-pinv-value-add">הוספה</span>;
 }
 
@@ -145,6 +146,8 @@ export function FiguresCard({
   const open = (field: InvestmentField) => (readOnly ? undefined : () => { onEdit(field); });
   const fromLines = extras?.purchaseSource === "lines" && extras.purchaseMinor != null;
   const source = extras != null && extras.takenOverMinor > 0n ? "מהתנועות + הלוואה שנלקחה" : "מהתנועות";
+  // FLOW-470: while the books suggest a land, השתמש is the land row's one action.
+  const suggestion = extras?.landMinor == null && onUseLand != null ? (extras?.landSuggestion ?? null) : null;
   return (
     <section className="ui-pinv-card" aria-label="נתוני הנכס">
       <h2 className="ui-pinv-card-title">נתוני הנכס</h2>
@@ -200,12 +203,12 @@ export function FiguresCard({
             note={extras.landSource === "books" && extras.landAccount != null
               ? <>{"מהספרים · "}<bdi>{extras.landAccount.name}</bdi></>
               : "בלי פחת · לחישוב חיסכון המס"}
-            value={<FigureValue minor={extras.landMinor} currency={currency} readOnly={readOnly} />}
+            value={<FigureValue minor={extras.landMinor} currency={currency} readOnly={readOnly} quiet={suggestion != null} />}
             onOpen={open("land")}
             buttonRef={rows.land}
           />
-          {extras.landMinor == null && extras.landSuggestion != null && onUseLand != null ? (
-            <LandSuggestion suggestion={extras.landSuggestion} currency={currency} busy={landBusy} onUse={onUseLand} />
+          {suggestion != null && onUseLand != null ? (
+            <LandSuggestion suggestion={suggestion} currency={currency} busy={landBusy} onUse={onUseLand} />
           ) : null}
           <FigureRow
             title={INVESTMENT_LABELS.units}

@@ -63,6 +63,8 @@ describe("the acquisition page's calculation (FLOW-466)", () => {
     const links = within(calc).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual(["/loans/loan-maple", "/loans/loan-oak"]);
     expect(within(calc).getByText("מחיר רכישה")).toBeInTheDocument();
+    // FLOW-471: the count is of the rows that add up (the bank lines and two loans), not the "=" row.
+    expect(screen.getByRole("button", { name: /^החישוב/ })).toHaveTextContent(/^החישוב3$/);
     // The bank lines are the transactions below: the row moves focus to their section.
     fireEvent.click(within(calc).getByRole("button", { name: /רכישה וסגירה \(מהתנועות\)/ }));
     const lines = screen.getByRole("region", { name: "תנועות" });

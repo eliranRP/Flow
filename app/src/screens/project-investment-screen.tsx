@@ -235,22 +235,45 @@ export function ProjectInvestmentScreen({
       assertNoError(await supabase.rpc("set_tax_bracket", { p_bp: bp as number }));
     },
   });
-  const saveLand = useWrite<string>({
-    failure: (error) => ((error as { code?: string }).code === "42501" ? { message: LAND_ACCOUNT_REFUSED, retry: false } : "לא הצלחנו לקחת את שווי הקרקע מהספרים."),
-    success: "שווי הקרקע נלקח מהספרים",
+  // The land account named before a save: set_land_account returns it as `prior`, and ביטול names it again.
+  const landPrior = useRef<string | null>(null);
+  const saveLand = useWrite<{ accountId: string | null; undo: boolean }>({
+    failure: (error) => {
+      if ((error as { code?: string }).code === "42501") return { message: LAND_ACCOUNT_REFUSED, retry: false };
+      return (error as { undo?: boolean }).undo === true ? "לא הצלחנו לבטל את שווי הקרקע מהספרים." : "לא הצלחנו לקחת את שווי הקרקע מהספרים.";
+    },
     keys: ["project"],
-    run: async (accountId) => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("set_land_account", { p_account_id: accountId }));
+    run: async ({ accountId, undo }) => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("supabase");
+        const result = await supabase.rpc("set_land_account", { p_account_id: accountId as string });
+        assertNoError(result);
+        landPrior.current = (result.data as { prior?: string | null } | null)?.prior ?? null;
+      } catch (error) {
+        throw Object.assign(error instanceof Error ? error : new Error("failed"), { undo });
+      }
     },
   });
+  // FLOW-470: the land drives the tax savings, so taking it from the books can be undone, as every figure's save.
   const onUseLand = (accountId: string) => {
-    if (sampled) {
-      setSampleRet((current) => (current == null ? current : landFromSuggestion(current)));
-      return;
-    }
-    saveLand.mutate(accountId);
+    void (async () => {
+      let undo: () => void;
+      if (sampled) {
+        const before = sampleRet;
+        setSampleRet((current) => (current == null ? current : landFromSuggestion(current)));
+        undo = () => { setSampleRet(before); };
+      } else {
+        try {
+          await saveLand.mutateAsync({ accountId, undo: false });
+        } catch {
+          return;
+        }
+        const prior = landPrior.current;
+        undo = () => { saveLand.mutate({ accountId: prior, undo: true }); };
+      }
+      toast.show({ message: "שווי הקרקע נלקח מהספרים", action: "ביטול", onAction: undo });
+    })();
   };
   const figuresRef = useRef<InvestmentFigures | null>(null);
   const extrasRef = useRef<PropertyExtras | null>(null);

@@ -166,7 +166,7 @@ describe("the page", () => {
   it("leads with the total return on the money in the deal and its four sources", async () => {
     serve();
     renderPage();
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
     if (card == null) throw new Error("no card");
     expect(within(card).getByText("54.4%")).toBeInTheDocument();
     // FLOW-459: the money in the deal is named once, in its equity row, inside this card.
@@ -507,6 +507,47 @@ describe("the land from the books (FLOW-461)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^השתמש/ }));
     await waitFor(() => { expect(rpc.calls.some((call) => call.name === "set_land_account")).toBe(true); });
     expect(rpc.calls.find((call) => call.name === "set_land_account")?.args).toEqual({ p_account_id: "acc-land" });
+  });
+
+  it("makes השתמש the land row's one action while the books suggest a land (FLOW-470)", async () => {
+    serve(payload(), null, returnsOf({}, { landMinor: null, landSource: null, landTypedMinor: null, taxBracketBp: 2400, landSuggestion: { accountId: "acc-land", name: "קרקע לדוגמה", minor: 30_000_000n } }));
+    renderPage();
+    await ready();
+    await screen.findByText(/מהספרים: /);
+    const figures = within(screen.getByRole("region", { name: "נתוני הנכס" }));
+    expect(figures.getByRole("button", { name: /^שווי הקרקע/ })).not.toHaveTextContent("הוספה");
+    expect(figures.getByRole("button", { name: /^שווי הקרקע/ })).toHaveTextContent("לא הוזן");
+  });
+
+  it("undoes taking the land from the books: ביטול names the prior land account again (FLOW-470)", async () => {
+    serve(payload(), null, returnsOf({}, { landMinor: null, landSource: null, landTypedMinor: null, landSuggestion: { accountId: "acc-land", name: "קרקע לדוגמה", minor: 30_000_000n } }));
+    const read = rpc.impl;
+    rpc.impl = (name, args) => (name === "set_land_account"
+      ? Promise.resolve({ data: { id: "co1", land_account_id: (args as { p_account_id: string | null }).p_account_id, prior: "acc-old" }, error: null })
+      : read(name, args));
+    renderPage();
+    await ready();
+    fireEvent.click(await screen.findByRole("button", { name: /^השתמש/ }));
+    expect(await screen.findByText("שווי הקרקע נלקח מהספרים")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    const lands = () => rpc.calls.filter((call) => call.name === "set_land_account").map((call) => call.args);
+    await waitFor(() => { expect(lands()).toHaveLength(2); });
+    expect(lands()).toEqual([{ p_account_id: "acc-land" }, { p_account_id: "acc-old" }]);
+  });
+
+  it("says when the undo of the land fails, not that taking it did (FLOW-470)", async () => {
+    serve(payload(), null, returnsOf({}, { landMinor: null, landSource: null, landTypedMinor: null, landSuggestion: { accountId: "acc-land", name: "קרקע לדוגמה", minor: 30_000_000n } }));
+    const read = rpc.impl;
+    rpc.impl = (name, args) => {
+      if (name !== "set_land_account") return read(name, args);
+      const undo = (args as { p_account_id: string | null }).p_account_id == null;
+      return Promise.resolve(undo ? { data: null, error: { message: "failed" } } : { data: { prior: null }, error: null });
+    };
+    renderPage();
+    await ready();
+    fireEvent.click(await screen.findByRole("button", { name: /^השתמש/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText("לא הצלחנו לבטל את שווי הקרקע מהספרים.")).toBeInTheDocument();
   });
 
   it("offers no suggestion to a viewer", async () => {
