@@ -454,6 +454,33 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     await waitFor(() => { expect(sent()).toEqual([["set_forecast_item", { reset: true }]]); });
   });
 
+  it("a save that moves the line out with a pace pick: one toast, whose ביטול undoes the move, then the pace (FLOW-1018)", async () => {
+    rpc.mockClear();
+    paceAnswers();
+    try {
+      renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+      await pickMonthly();
+      fireEvent.click(screen.getByRole("button", { name: /^מתי צפוי:/ }));
+      fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
+      await sheetGone();
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+      await screen.findByText("הכנסות שכירות הועבר לחודש הבא");
+      await waitFor(() => { expect(sent()).toEqual([["set_forecast_item", { moved_out: true }]]); });
+      expect(screen.queryByText("הכנסות שכירות: כל חודש")).toBeNull();
+      expect(screen.getAllByRole("button", { name: "ביטול" })).toHaveLength(1);
+      rpc.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+      await waitFor(() => {
+        expect(sent()).toEqual([
+          ["set_forecast_item", { reset: true }],
+          ["undo_project_forecast", { drop: ["e-9"], put: [] }],
+        ]);
+      });
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
   it("writes nothing for a pace pick the page leaves without saving (FLOW-1012)", async () => {
     rpc.mockClear();
     renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
