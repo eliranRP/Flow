@@ -10,6 +10,7 @@ import {
   birchLaneReturnsMissing,
   birchLaneReturnsNegative,
   birchLaneReturnsAnnualized,
+  birchLaneReturnsFewDays,
   birchLaneReturnsNoRehab,
   mapleCourtAcquisitionLines,
   mapleCourtClosingPaidReturns,
@@ -27,6 +28,7 @@ import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-ret
  * FLOW-457: a statement with nothing before the first rent: one row left out, a section that does not fold.
  * FLOW-460: the renovation so far by category (three, seven with "עוד 2 קטגוריות", none yet).
  * FLOW-462: the ⓘ beside a page's title, open on the cap rate: מה זה, איך לקרוא, בשביל מה.
+ * FLOW-473: a cap rate fewer than 60 days after the first rent reads "מעט נתונים".
  * FLOW-466: the acquisition page adds the bank lines and the loans paid out at closing up to the price.
  */
 const RETURNS = {
@@ -40,6 +42,7 @@ const RETURNS = {
   nothingBeforeRent: { ...birchLaneReturns, statement: { ...birchLaneReturns.statement, beforeRentMinor: 0n } },
   noRehab: birchLaneReturnsNoRehab,
   annualized: birchLaneReturnsAnnualized,
+  fewDays: birchLaneReturnsFewDays,
 };
 
 const REHAB = { three: birchLaneRehab, many: birchLaneRehabMany, none: [] };
@@ -94,6 +97,8 @@ export const RehabCategoryLines: Story = { args: { entry: "/projects/p1/investme
 export const CapRate: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate" } };
 /** FLOW-464: rented from 01/04, 215 days: a year's NOI over today's value. */
 export const CapRateAnnualized: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", returns: "annualized" } };
+/** FLOW-473: rented 21 days back: no figure scaled from so few days; the caption says from when. */
+export const CapRateFewDays: Story = { name: "Cap rate, fewer than 60 days", args: { entry: "/projects/p1/investment/metric/cap-rate", returns: "fewDays" } };
 export const CapRateLearn: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", learn: true } };
 export const AcquisitionLoansAtClosing: Story = {
   name: "Acquisition, loans paid out at closing",

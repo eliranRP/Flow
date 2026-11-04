@@ -7,6 +7,7 @@ import {
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
   birchLaneReturnsCashOutLosing,
+  birchLaneReturnsFewDays,
   birchLaneReturnsLandBooks,
   birchLaneReturnsLandSuggestion,
   birchLaneReturnsMissing,
@@ -25,6 +26,7 @@ import type { InfoKey } from "./project-returns-info";
  * FLOW-454: a Sub2 deal (the mortgage taken over inside the purchase) and before the first rent.
  * FLOW-461: the land from the books (its account named) and a suggested land account with השתמש.
  * FLOW-467: a first rent inside the period: the per-year metrics name the days they scale from.
+ * FLOW-473: fewer than 60 days since it: the scaled figures read "מעט נתונים".
  */
 const VALUE_ONLY: ProjectInvestment = {
   ...birchLaneInvestment,
@@ -44,6 +46,7 @@ const RETURNS = {
   landBooks: birchLaneReturnsLandBooks,
   landSuggestion: birchLaneReturnsLandSuggestion,
   annualized: birchLaneReturnsAnnualized,
+  fewDays: birchLaneReturnsFewDays,
 };
 
 type Args = {
@@ -101,3 +104,5 @@ export const BeforeFirstRent: Story = { args: { returns: "beforeRent" } };
 export const LandFromBooks: Story = { args: { returns: "landBooks" } };
 export const LandSuggestion: Story = { args: { returns: "landSuggestion" } };
 export const Annualized: Story = { args: { returns: "annualized" } };
+/** FLOW-473: first rented 21 days back: the per-year figures read "מעט נתונים" and say why. */
+export const FewDays: Story = { name: "Fewer than 60 days", args: { returns: "fewDays" } };

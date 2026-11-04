@@ -15,6 +15,7 @@ import {
 } from "./loan-detail-data";
 import type { LoanListRow } from "./loan-list";
 import type { LoanProjectChoice } from "./loan-project-picker";
+import { usePropertyReturnsQuery } from "./project-returns-data";
 
 /**
  * FLOW-106 B / FLOW-110: where the loan page reads and writes. Live reads go through react-query
@@ -27,6 +28,12 @@ export type LoanBundle = {
   loan: LoanDetail;
   payments: LoanPayment[];
   categories: LoanCategory[];
+  /**
+   * FLOW-473 (decision 0253): the loan was paid out at closing (a Sub2 mortgage taken over, a lender
+   * who paid the title company): its project's returns name it in taken_over_loans (decision 0246).
+   * Only such a loan shows סכום ששולם בסגירה. Absent is false.
+   */
+  paidAtClosing?: boolean;
 };
 
 /** What the page edits on the loan row, in the app's words. */
@@ -257,6 +264,10 @@ export function useLiveLoan(loanId: string, active: boolean): LoanRead {
       }));
     },
   });
+  // FLOW-473: the project's returns say whether the loan was paid out at closing. The page does not
+  // wait for them, nor fail with them: until they land the closing row stays hidden.
+  const projectId = loan.data?.projectId ?? "";
+  const returns = usePropertyReturnsQuery(projectId, active && projectId !== "");
   if (loan.isLoading || (loan.data != null && (payments.isLoading || categories.isLoading))) return { phase: "loading" };
   if (loan.isError || payments.isError || categories.isError) {
     return {
@@ -266,7 +277,8 @@ export function useLiveLoan(loanId: string, active: boolean): LoanRead {
     };
   }
   if (loan.data == null) return { phase: "missing" };
-  return { phase: "ready", bundle: { loan: loan.data, payments: payments.data ?? [], categories: categories.data ?? [] }, readAt: loan.dataUpdatedAt };
+  const paidAtClosing = projectId !== "" && (returns.data?.inputs.takenOverLoans.some((row) => row.id === loanId) ?? false);
+  return { phase: "ready", bundle: { loan: loan.data, payments: payments.data ?? [], categories: categories.data ?? [], paidAtClosing }, readAt: loan.dataUpdatedAt };
 }
 
 /** A sample loan page: what a memory store holds for one loan. */

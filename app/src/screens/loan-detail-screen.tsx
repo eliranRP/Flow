@@ -48,7 +48,7 @@ import { LoanRateSheet } from "./loan-rate-sheet";
 import { LoanCloseSheet, LoanLinkPicker, type LoanLinkChoice } from "./loan-close-sheet";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { LoanKindSheet } from "./loan-kind-sheet";
-import { CLOSING_PAID_LABEL, LoanClosingPaidSheet, closingPaidRefusal, closingPaidToast, closingPaidValue } from "./loan-closing-paid-sheet";
+import { CLOSING_PAID_LABEL, LoanClosingPaidSheet, closingPaidRefusal, closingPaidToast, closingPaidValue, showsClosingPaid } from "./loan-closing-paid-sheet";
 import {
   inversePatch,
   liveLoanWrites,
@@ -362,8 +362,9 @@ function LoanDetailReady({
     { key: "kind", label: "סוג", value: LOAN_KIND_LIST_LABEL[loan.kind], onOpen: holdWrites ? null : () => { open("kind"); } },
     { key: "rate", label: "ריבית", value: <RateValue loan={loan} today={today} />, onOpen: holdWrites ? null : () => { setRate(null); open("rate"); } },
     { key: "project", label: "פרויקט", value: projectName ?? NO_PROJECT, onOpen: holdWrites ? null : () => { open("project"); } },
-    // FLOW-466: a project's loan says what it paid at closing, for the purchase price.
-    ...(loan.projectId == null ? [] : [{ key: "closing", label: CLOSING_PAID_LABEL, value: closingPaidValue(loan), onOpen: holdWrites ? null : () => { open("closing"); } }]),
+    // FLOW-466: a loan paid out at closing says what it paid, for the purchase price. FLOW-473: only
+    // such a loan (Sub2), or one with an amount stored, so it can still be seen and cleared.
+    ...(showsClosingPaid(loan, bundle.paidAtClosing === true) ? [{ key: "closing", label: CLOSING_PAID_LABEL, value: closingPaidValue(loan), onOpen: holdWrites ? null : () => { open("closing"); } }] : []),
     // FLOW-962: the status only reads. סגירת ההלוואה and החזרה לפעילות below change it.
     { key: "status", label: "סטטוס", value: loan.status === "open" ? LOAN_STATUS_LABEL.open : loanClosedLine(loan.status, loan.closedOn), onOpen: null },
   ];

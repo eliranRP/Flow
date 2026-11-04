@@ -67,6 +67,15 @@ function bodyOf(canvasElement: HTMLElement) {
 
 /** FLOW-466: a project's loan says what it paid at closing; its sheet takes the settlement statement's amount. */
 export const ClosingPaid: Story = { name: "Closing paid", args: { loanId: "loan-bridge", store: () => closingPaidLoanStore() } };
+/** FLOW-473: a project's loan that was not paid out at closing (not a Sub2) has no closing row. */
+export const ProjectLoanNotAtClosing: Story = {
+  name: "Project loan, not paid out at closing",
+  ...loan("loan-mortgage"),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("button", { name: /^פרויקט/ })).toBeInTheDocument();
+    await expect(within(canvasElement).queryByText("סכום ששולם בסגירה")).toBeNull();
+  },
+};
 export const ClosingPaidSheet: Story = {
   name: "Closing paid sheet",
   ...loan("loan-bridge"),

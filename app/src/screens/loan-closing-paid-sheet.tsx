@@ -20,6 +20,14 @@ export const CLOSING_PAID_WHOLE = "כל ההלוואה";
 
 type Loan = Pick<LoanDetail, "principalMinor" | "closingPaidMinor" | "currency">;
 
+/**
+ * FLOW-473 (decision 0253): the row shows on a project's loan paid out at closing (Sub2), and on any
+ * project loan that has an amount stored, so a value set before stays visible and can be cleared.
+ */
+export function showsClosingPaid(loan: Pick<LoanDetail, "projectId" | "closingPaidMinor">, paidAtClosing: boolean): boolean {
+  return loan.projectId != null && (paidAtClosing || loan.closingPaidMinor != null);
+}
+
 /** The row's value: the amount, or "כל ההלוואה · $210,000" when none is set. */
 export function closingPaidValue(loan: Loan): string {
   if (loan.closingPaidMinor == null) return `${CLOSING_PAID_WHOLE} · ${formatLoanMoney(loan.principalMinor, loan.currency)}`;
