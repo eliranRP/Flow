@@ -38,14 +38,18 @@ export function LearnButton({ learnKey, title, initialOpen = false }: { learnKey
   );
 }
 
-/** What it is, how to read it, what it is for: the ⓘ sheet's body, and the end of a figure's ⓘ sheet. */
-export function LearnSections({ learnKey }: { learnKey: LearnKey }) {
+/**
+ * What it is, how to read it, what it is for: the ⓘ sheet's body. A figure's ⓘ sheet already says
+ * what the figure is above its calculation, so it ends with the other two (`defined`, FLOW-471).
+ * The heads are captions under the sheet's title, not a second title level.
+ */
+export function LearnSections({ learnKey, defined = false }: { learnKey: LearnKey; defined?: boolean }) {
   const learn = LEARN[learnKey];
   return (
     <>
-      {PARTS.map((part) => (
+      {PARTS.filter((part) => !(defined && part === "what")).map((part) => (
         <section key={part} className="ui-ret-learn" aria-label={LEARN_TITLES[part]}>
-          <h3 className="t-section">{LEARN_TITLES[part]}</h3>
+          <h3 className="ui-ret-learn-head">{LEARN_TITLES[part]}</h3>
           <p className="ui-pinv-help">{learn[part]}</p>
         </section>
       ))}

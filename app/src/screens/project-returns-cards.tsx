@@ -18,6 +18,7 @@ import {
   coverLine,
   infiniteTotal,
   firstMissing,
+  LOSS_YEAR,
   metricCaption,
   metricValue,
   missingHint,
@@ -66,6 +67,8 @@ function sourceValue(minor: bigint | null, r: PropertyReturns, needs: readonly E
     return { kind: "missing", add: null, note: MISSING_HISTORY };
   }
   const add = firstMissing(r, needs);
+  // FLOW-470: a land the books suggest is added by its השתמש on the figures card, the one action for it.
+  if (add === "land" && r.inputs.landSuggestion != null) return { kind: "missing", add: null, note: missingHint(add) };
   return add == null ? { kind: "text", text: "לא מחושב" } : { kind: "missing", add };
 }
 
@@ -148,7 +151,7 @@ function EquityRow({ label, infoKey, value, currency, onInfo, onAdd }: {
 }
 
 /**
- * "תשואה כוללת · שנה": the total on the money in the deal, its four sources and their bar, then the
+ * "תשואה כוללת" (לשנה): the total on the money in the deal, its four sources and their bar, then the
  * equity in the property (FLOW-459: one card, the money in the deal named once, in its row).
  */
 export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: CardProps) {
@@ -169,18 +172,23 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
   return (
     <section className="ui-pinv-card ui-ret-card" aria-labelledby={titleId}>
       <div className="ui-ret-card-head">
-        <h2 id={titleId} className="ui-ret-card-title">תשואה כוללת · שנה</h2>
+        <h2 id={titleId} className="ui-ret-card-title">תשואה כוללת</h2>
         {/* FLOW-462: how to read the total, beside its title. */}
         <LearnButton learnKey="total" title="תשואה כוללת" />
         <Link to={`${base}/returns${search}`} className="ui-ret-link">איך מחושב</Link>
       </div>
+      {/* FLOW-471: the period under the title, so the head keeps one line at 320. */}
+      <p className="ui-ret-card-period">לשנה</p>
       <div className="ui-ret-total">
         {infinite ? (
           // All the cash came out and the deal gains: no per-cent figure, and no signal colour, a good state.
           <InfinityFigure className="ui-num t-detail" />
         ) : cashOut != null && !before ? (
-          // FLOW-1025: all the cash out but losing money: the loss, not ∞.
-          <span className="t-detail"><Amount agorot={r.sources.totalMinor} currency={r.currency} loss /></span>
+          // FLOW-1025: all the cash out but losing money: the loss, not ∞. FLOW-469: labelled as one.
+          <>
+            <span className="t-detail"><Amount agorot={r.sources.totalMinor} currency={r.currency} loss /></span>
+            <span className="ui-ret-total-on">{LOSS_YEAR}</span>
+          </>
         ) : before ? (
           // No rent yet: a per-cent of the money in says nothing (FLOW-454). The amounts stay.
           <span className="ui-ret-note">{BEFORE_FIRST_RENT}</span>
@@ -191,12 +199,13 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
         ) : (
           <span className="ui-ret-missing">לא מחושב</span>
         )}
-        {cashOut != null ? (
-          <span className="ui-ret-total-on">
-            <AllCashOutMeta minor={cashOut} currency={r.currency} />
-            {cover == null ? null : <>{" · "}{cover}</>}
-          </span>
-        ) : moneyIn == null ? null : (
+        {cover != null ? (
+          // FLOW-469: with a negative cash flow, one short line on how long the cash out lasts.
+          <p className="ui-ret-partial">{cover}</p>
+        ) : cashOut != null ? (
+          <span className="ui-ret-total-on"><AllCashOutMeta minor={cashOut} currency={r.currency} /></span>
+        ) : moneyIn == null || before ? null : (
+          // FLOW-468: before the first rent the note stands alone; "on the money in" names no figure.
           <span className="ui-ret-total-on">על הכסף בעסקה</span>
         )}
         {partial == null ? null : <p className="ui-ret-partial">{partial}</p>}

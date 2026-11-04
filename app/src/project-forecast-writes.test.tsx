@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
@@ -20,8 +21,11 @@ const KEY = [FORECAST_EDITS_KEY, "off", "juniper-ct", "2026-11"];
 
 function Probe() {
   const writes = useProjectForecastWrites("juniper-ct", "2026-11");
+  const under = useRef<(() => void) | null>(null);
   return (
     <>
+      <button type="button" onClick={() => { under.current = writes.mutateUnder({ fn: "set_project_forecast_edit", edit: { row_key: "add:e-1", pace: "month" } }); }}>pace</button>
+      <button type="button" onClick={() => { under.current?.(); }}>undo pace</button>
       <button type="button" onClick={() => { writes.mutate({ fn: "remove_project_forecast_row", rowKey: "avg:power", message: "הוסר מהצפי: חשמל ומים" }); }}>remove</button>
       <button type="button" onClick={() => { writes.mutate({ fn: "reset_project_forecast", message: "הצפי חזר לחישוב" }); }}>reset</button>
     </>
@@ -71,5 +75,18 @@ describe("useProjectForecastWrites (decision 0219)", () => {
     expect(screen.queryByText("הצפי חזר לחישוב")).toBeTruthy();
     act(() => { vi.advanceTimersByTime(1500); });
     await waitFor(() => { expect(screen.queryByText("הצפי חזר לחישוב")).toBeNull(); });
+  });
+
+  it("hands a write's undo to another toast: none of its own, and the undo is sent once (FLOW-1018)", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { undo: { drop: ["e-9"], put: [] } } : null, error: null }));
+    renderProbe();
+    fireEvent.click(screen.getByRole("button", { name: "pace" }));
+    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.anything()); });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "undo pace" }));
+    fireEvent.click(screen.getByRole("button", { name: "undo pace" }));
+    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: { drop: ["e-9"], put: [] } }); });
+    expect(rpc.mock.calls.filter(([name]) => name === "undo_project_forecast")).toHaveLength(1);
   });
 });

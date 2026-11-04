@@ -183,6 +183,28 @@ describe("Home's cold load (FLOW-1019)", () => {
   });
 });
 
+describe("Home's forecast row while it loads (FLOW-1031)", () => {
+  it("keeps the row's place until the read answers, and lets it go when the read fails", async () => {
+    let failForecast: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => { failForecast = resolve; });
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
+      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      if (name === "expected_months") return held.then(() => ({ data: null, error: { message: "boom" } }));
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    await screen.findByText("תזרים · עד היום");
+    const band = bandOf();
+    // Drawn before the forecast is read: the row's box, a bar for its figure, and no link yet.
+    expect(band.querySelector(".ui-home-forecast .ui-skel-forecast-value")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: "תזרים צפוי לסוף החודש" })).toBeNull();
+    failForecast();
+    await waitFor(() => { expect(band.querySelector(".ui-home-forecast")).toBeNull(); }, { timeout: 5000 });
+  });
+});
+
 describe("Home's cash (FLOW-364: the redesigned Home)", () => {
   it("shows the month in the band with its net, נכנס, יצא and the split card", async () => {
     wrap();

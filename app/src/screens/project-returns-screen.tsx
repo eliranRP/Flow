@@ -112,10 +112,10 @@ export function rowsCount(count: number): string {
 
 export const NOT_COUNTED_HINT ="רכישה, סגירה ותקבולי הלוואות";
 
-/** "תזרים · משכר ראשון ב־01/04/2026 · 59 תנועות": the statement starts at the first rent when it falls in the period. */
+/** "תזרים · מהשכירות הראשונה ב־01/04/2026 · 59 תנועות": the statement starts at the first rent when it falls in the period. */
 function statementMeta(r: PropertyReturns, lines: number): string {
   const first = firstRentInPeriod(r);
-  return `תזרים · ${first == null ? "12 חודשים" : `משכר ראשון ב־${formatDisplay(first)}`} · ${countHint(lines)}`;
+  return `תזרים · ${first == null ? "12 חודשים" : `מהשכירות הראשונה ב־${formatDisplay(first)}`} · ${countHint(lines)}`;
 }
 
 /**
@@ -248,7 +248,7 @@ function LineBody({ line, categoryId, category, r, base, search, projectId, name
     <div className="ui-rep-content" ref={content}>
       <ReturnsHero figure={heroMinor == null ? <span className="ui-ret-missing">חסר</span> : own(heroMinor)} meta={lineMeta(line, r, minor ?? 0n, count, name)} />
       {calc == null ? null : (
-        <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(calc.rows.length + 1)}</bdi>} collapse={collapse}>
+        <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(calc.rows.length)}</bdi>} collapse={collapse}>
           <FormulaList formula={calc} currency={cur} resolve={resolve} label={LINE_TITLES[line]} />
         </ReportSection>
       )}

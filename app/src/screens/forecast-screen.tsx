@@ -235,7 +235,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     }, FOLD_MS);
   }
 
-  function save(item: ForecastItem, patch: ForecastPatch) {
+  /** `alsoUndo` (FLOW-1018): another write of the same save (the line's pace), undone by this toast's ביטול after the month's change. */
+  function save(item: ForecastItem, patch: ForecastPatch, alsoUndo?: () => void) {
     const prior = data?.overrides.find((row) => row.item_key === item.key) ?? null;
     if (patch.moved_out) {
       const move: PendingMove = { sent: false, cancelled: false, timer: null };
@@ -248,13 +249,14 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
         onAction: () => {
           if (move.sent) {
             write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior });
-            return;
+          } else {
+            // A ביטול inside the fold, or before the page has closed: the move was never sent, so nothing is.
+            move.cancelled = true;
+            if (move.timer != null) window.clearTimeout(move.timer);
+            if (pendingLeave.current === fold) pendingLeave.current = null;
+            setLeavingKey((key) => (key === item.key ? null : key));
           }
-          // A ביטול inside the fold, or before the page has closed: the move was never sent, so nothing is.
-          move.cancelled = true;
-          if (move.timer != null) window.clearTimeout(move.timer);
-          if (pendingLeave.current === fold) pendingLeave.current = null;
-          setLeavingKey((key) => (key === item.key ? null : key));
+          alsoUndo?.();
         },
       }));
       return;
@@ -263,7 +265,10 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     toast.show(topToast({
       message: "הצפי עודכן",
       action: "ביטול",
-      onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
+      onAction: () => {
+        write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior });
+        alsoUndo?.();
+      },
     }));
   }
 

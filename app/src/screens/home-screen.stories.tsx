@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useEffect, useState } from "react";
 import { expect, waitFor, within } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
@@ -64,7 +65,7 @@ export const HomeAttentionSingular: Story = {
 };
 
 /** FLOW-364: Home's band with the month, its figures, the split card and the attention box. Invented figures. */
-function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null, recurringTip = false, late = recurringTip ? 1 : 0 }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null; recurringTip?: boolean; late?: number }) {
+function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null, recurringTip = false, late = recurringTip ? 1 : 0, forecast = null, forecastPending = false }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null; recurringTip?: boolean; late?: number; forecast?: bigint | null; forecastPending?: boolean }) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
   return (
@@ -82,6 +83,8 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
         offlineSince={offlineSince}
         recurringTip={recurringTip}
         lateRecurring={late}
+        forecast={forecast}
+        forecastPending={forecastPending}
         company={recurringTip ? <BandCompany name="Acme Test Co" onOpen={() => undefined} /> : undefined}
       />
     </StoryRoute>
@@ -128,6 +131,59 @@ export const HomeLateRecurring: Story = {
     const canvas = within(canvasElement);
     await expect((await canvas.findByRole("link", { name: "קבועים, 3 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("3");
     await expect(canvas.getByRole("link", { name: "כל הקבועים" })).toHaveAttribute("href", "/recurring");
+  },
+};
+
+/** The story's signal that the forecast's read answered (true) or is on its way again (false). */
+const FORECAST_EVENT = "story-forecast";
+
+/** The forecast row while its read is on its way, and once it answers on FORECAST_EVENT. Invented figure. */
+function ForecastArrivesStory() {
+  const [arrived, setArrived] = useState(false);
+  useEffect(() => {
+    const on = (event: Event) => {
+      setArrived(event instanceof CustomEvent && event.detail === true);
+    };
+    window.addEventListener(FORECAST_EVENT, on);
+    return () => {
+      window.removeEventListener(FORECAST_EVENT, on);
+    };
+  }, []);
+  return <CashHomeStory forecast={arrived ? 1_250_000n : null} forecastPending={!arrived} />;
+}
+
+/**
+ * FLOW-1031: Home reads the forecast after it paints (FLOW-1019), so until the read answers the forecast row
+ * keeps its place, a bar for its figure. The attention box sits where it will stay when the figure lands.
+ */
+export const HomeForecastPending: Story = {
+  name: "Home, forecast row kept while it loads",
+  render: () => <ForecastArrivesStory />,
+  play: async ({ canvasElement }) => {
+    // The layout's own offsets: the page's enter motion moves the box for a moment, the layout does not.
+    const attentionTop = () => {
+      const box = canvasElement.querySelector(".ui-home-attention");
+      if (!(box instanceof HTMLElement)) throw new Error("the attention box is not drawn");
+      let top = 0;
+      for (let node: Element | null = box; node instanceof HTMLElement; node = node.offsetParent) top += node.offsetTop;
+      return top;
+    };
+    await waitFor(async () => {
+      await expect(canvasElement.querySelector(".ui-skel-forecast-value")).not.toBeNull();
+    });
+    // Measured once the type has loaded: a font swap moves the page on its own.
+    await document.fonts.ready;
+    const before = attentionTop();
+    window.dispatchEvent(new CustomEvent(FORECAST_EVENT, { detail: true }));
+    const canvas = within(canvasElement);
+    await canvas.findByRole("link", { name: "תזרים צפוי לסוף החודש" });
+    await expect(attentionTop()).toBe(before);
+    // Back to the read on its way, the state this story shows.
+    window.dispatchEvent(new CustomEvent(FORECAST_EVENT, { detail: false }));
+    await waitFor(async () => {
+      await expect(canvasElement.querySelector(".ui-skel-forecast-value")).not.toBeNull();
+    });
+    await expect(attentionTop()).toBe(before);
   },
 };
 

@@ -2,7 +2,7 @@ import type { RecurringChange } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as forecast from "../forecast";
 import { SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
@@ -103,12 +103,55 @@ describe("חיובים שהשתנו, live (FLOW-1021 r1)", () => {
     expect(company).toHaveBeenCalledWith(true);
   });
 
-  it("shows the skeleton while the read is on its way", () => {
+  // FLOW-1030: the screen's own head over its rows' skeleton, not the קבועים list's.
+  it("loads under its own title and Back, over two skeleton rows", () => {
     vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({}));
     vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({}));
     const { container } = live("/recurring/changes");
-    expect(screen.queryByRole("heading", { name: "חיובים שהשתנו" })).toBeNull();
-    expect(container.firstElementChild).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "חיובים שהשתנו" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "קבועים" })).toBeNull();
+    expect(screen.getByRole("button", { name: "חזרה לבית" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("טוען…");
+    expect(container.querySelectorAll(".ui-changes-skel .ui-skel-list-row")).toHaveLength(2);
+  });
+
+  // FLOW-1030: opened from a project, Back names it and goes back to its page.
+  it("names the project on Back, from its changes or the project page's read", () => {
+    vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({}));
+    vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({ data: [{ ...power, project_id: "p9", project_name: "בית הכרם 4" }] }));
+    live("/recurring/changes?project=p9");
+    expect(screen.getByRole("button", { name: "חזרה לבית הכרם 4" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "חזרה לבית" })).toBeNull();
+  });
+
+  it("names the project on Back while its changes load, from the project page's read", () => {
+    vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({}));
+    vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({}));
+    const client = new QueryClient();
+    client.setQueryData(["project", "off", "p9", "2026-10-01", "2026-10-31"], { id: "p9", name: "מגדלי הים" });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/recurring/changes?project=p9"]}>
+          <RecurringChangesScreen />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: "חזרה למגדלי הים" })).toBeTruthy();
+  });
+
+  it("goes back to the project's page on a deep link", () => {
+    vi.spyOn(forecast, "useRecurringChangesQuery").mockReturnValue(result({}));
+    vi.spyOn(forecast, "useProjectRecurringChangesQuery").mockReturnValue(result({ data: [] }));
+    render(withQuery(
+      <MemoryRouter initialEntries={["/recurring/changes?project=p9"]}>
+        <Routes>
+          <Route path="/recurring/changes" element={<RecurringChangesScreen />} />
+          <Route path="/projects/:id" element={<p>project page</p>} />
+        </Routes>
+      </MemoryRouter>,
+    ));
+    fireEvent.click(screen.getByRole("button", { name: "חזרה לפרויקט" }));
+    expect(screen.getByText("project page")).toBeTruthy();
   });
 
   it("says the read failed and reads again on נסו שוב", () => {

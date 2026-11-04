@@ -160,7 +160,8 @@ export function ForecastItemPage({
   categoryName: string;
   /** The dev route's When frame opens the sheet with the page. */
   openWhen?: boolean;
-  onSave: (item: ForecastItem, patch: ForecastPatch) => void;
+  /** `alsoUndo` (FLOW-1018): the pace write's undo, which the save's one ביטול sends after the month's own. */
+  onSave: (item: ForecastItem, patch: ForecastPatch, alsoUndo?: () => void) => void;
   onClose: () => void;
 }) {
   const [amount, setAmount] = useState(String(Number(item.minor) / 100));
@@ -218,28 +219,26 @@ export function ForecastItemPage({
   }, [close]);
 
   function save() {
+    let paceUndo: (() => void) | null = null;
     if (paceChanged && pace != null) {
       const picked = pace as ForecastPace;
-      paceWrites.mutate({
-        fn: "set_project_forecast_edit",
-        edit: { row_key: `add:${item.key.replace(/^added:/, "")}`, amount_minor: Number(item.usual), pace: picked },
-        message: picked === "once" ? `${item.name}: רק ב${monthLabel}` : `${item.name}: ${PACE_WORDS[picked]}`,
-      });
+      const call = { fn: "set_project_forecast_edit" as const, edit: { row_key: `add:${item.key.replace(/^added:/, "")}`, amount_minor: Number(item.usual), pace: picked } };
       // FLOW-1012: a pace pick alone writes the line only, not this month's amount and date.
       const sameAmount = amount.trim() === "" || Math.round(Number(amount) * 100) === Number(item.minor);
       if (sameAmount && when === startWhen(item, today)) {
+        paceWrites.mutate({ ...call, message: picked === "once" ? `${item.name}: רק ב${monthLabel}` : `${item.name}: ${PACE_WORDS[picked]}` });
         close();
         return;
       }
+      // FLOW-1018: with the amount or the date, the save shows one toast, whose ביטול undoes the month's change and then the pace.
+      paceUndo = paceWrites.mutateUnder(call);
     }
-    if (when === "moved") {
-      onSave(item, { moved_out: true });
-    } else {
-      const minor = amount.trim() === "" ? null : Math.round(Number(amount) * 100);
-      const amountMinor = minor == null || BigInt(minor) === item.usual ? null : minor;
-      const due = when === "week" ? weekEndDay(today) : monthEndChoice;
-      onSave(item, { amount_minor: amountMinor, due_on: due, moved_out: false });
-    }
+    const minor = amount.trim() === "" ? null : Math.round(Number(amount) * 100);
+    const patch: ForecastPatch = when === "moved"
+      ? { moved_out: true }
+      : { amount_minor: minor == null || BigInt(minor) === item.usual ? null : minor, due_on: when === "week" ? weekEndDay(today) : monthEndChoice, moved_out: false };
+    if (paceUndo == null) onSave(item, patch);
+    else onSave(item, patch, paceUndo);
     close();
   }
 
