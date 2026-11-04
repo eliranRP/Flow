@@ -247,7 +247,7 @@ export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; m
       <span className="ui-home-forecast-value">
         {minor == null ? <Skeleton tone="band" className="ui-skel-forecast-value" /> : <Amount agorot={minor} currency={currency} size="list" />}
       </span>
-      <span className="ui-home-forecast-chevron" aria-hidden="true">
+      <span className="ui-home-forecast-chevron" aria-hidden="true" data-pending={minor == null ? "" : undefined}>
         <OutwardChevron side="end" />
       </span>
     </div>

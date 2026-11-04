@@ -87,7 +87,7 @@ export type RecurringListProps = {
  */
 export function RecurringBack({ project }: { project?: { id: string; name: string } }) {
   const search = usePreviewSearch();
-  if (project != null) return <BackButton fallback={`/projects/${project.id}${search}`} text={project.name} />;
+  if (project != null) return <BackButton fallback={`/projects/${encodeURIComponent(project.id)}${search}`} text={project.name} />;
   return <BackButton fallback={`/${search}`} text="בית" />;
 }
 

@@ -585,3 +585,8 @@ html[data-kb="open"] .ui-sheet-body {
   flex: none;
   color: var(--color-on-band);
 }
+
+/* FLOW-1031: the row is not a link while its read is on its way; its chevron keeps its place, unseen. */
+.ui-home-forecast-chevron[data-pending] {
+  visibility: hidden;
+}
