@@ -86,7 +86,47 @@ describe("the legal pages (decision 0252)", () => {
     expect(screen.getByText(LEGAL_UPDATED)).toBeInTheDocument();
     for (const section of text.sections) expect(screen.getByRole("heading", { level: 2, name: section.heading })).toBeInTheDocument();
     const lines = [...text.intro, ...text.sections.flatMap((section) => section.body.flatMap((block) => (typeof block === "string" ? [block] : block.list)))];
-    for (const line of lines) expect(screen.getByText(line)).toHaveClass("t-body");
+    // A line with the contact address is split around its link, so it is matched by its whole text.
+    const bodies = [...document.querySelectorAll(".t-body")].map((node) => node.textContent);
+    for (const line of lines) expect(bodies).toContain(line);
+  });
+
+  it.each(["terms", "privacy", "accessibility"] as const)("%s: the contact address is a mailto link, isolated, with the period outside (FLOW-520)", (kind) => {
+    openFresh(`/${kind}`, <LegalScreen kind={kind} />);
+    const links = screen.getAllByRole("link", { name: HELP_EMAIL });
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
+      const bdi = link.closest("bdi");
+      expect(bdi).toHaveAttribute("dir", "ltr");
+      expect(bdi?.textContent).toBe(HELP_EMAIL);
+    }
+  });
+
+  it.each(["terms", "privacy"] as const)("%s: בעמוד הזה lists every section, and a jump focuses its heading (FLOW-520)", (kind) => {
+    openFresh(`/${kind}`, <LegalScreen kind={kind} />);
+    const toc = screen.getByRole("navigation", { name: "בעמוד הזה" });
+    const jumps = [...toc.querySelectorAll("a")];
+    expect(jumps.map((a) => a.textContent)).toEqual(LEGAL[kind].sections.map((section) => section.heading));
+    const last = jumps.at(-1);
+    if (last == null) throw new Error("no jump links");
+    const target = document.getElementById(last.getAttribute("href")?.slice(1) ?? "");
+    expect(target).toHaveRole("heading");
+    expect(target).toHaveTextContent(last.textContent);
+    // jsdom has no scrollIntoView; the stub stands in for it for this one click.
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      fireEvent.click(last);
+    } finally {
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+    }
+    expect(scroll).toHaveBeenCalledWith({ block: "start" });
+    expect(target).toHaveFocus();
+  });
+
+  it.each(["cookies", "accessibility"] as const)("%s: a short page has no jump list", (kind) => {
+    openFresh(`/${kind}`, <LegalScreen kind={kind} />);
+    expect(screen.queryByRole("navigation", { name: "בעמוד הזה" })).not.toBeInTheDocument();
   });
 
   it.each(kinds)("%s: no placeholder, no draft mark, and the contact address", (kind) => {

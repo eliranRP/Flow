@@ -144,6 +144,16 @@ export function sweepControls(spec: string): void {
       for (const control of found) {
         if (control.name.includes("המשך עם Google")) continue;
         if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
+        // FLOW-520: an in-page jump link (#section) is a real control when its target is on the page.
+        const fragment = control.tag === "a" && sameUrl(control.href, here) ? new URL(control.href, here).hash.slice(1) : "";
+        if (fragment !== "") {
+          // Every check starts from the fresh page: an earlier control (Back, a link) may have left it.
+          await gotoSettled(page, url);
+          // The legal screen is a lazy chunk: wait for the target to mount rather than reading it at once.
+          const found = await page.locator(`[id="${fragment}"]`).first().waitFor({ state: "attached", timeout: 5_000 }).then(() => true, () => false);
+          if (!found) failures.push(`${control.name || control.tag} jumps to #${fragment}, which is not on the page`);
+          continue;
+        }
         if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
           // A sheet-on-load route draws Home's band under its scrim, so the band's + links here (FLOW-364).
           if (sheetOnLoad.has(url)) {

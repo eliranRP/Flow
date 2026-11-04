@@ -16,12 +16,52 @@
   line-height: var(--type-reading-line);
 }
 
-/* Decision 0252: the full legal texts. A section heading per part, lists in the body's reading style. */
+/* Decision 0252: the full legal texts. A section heading per part, lists in the body's reading style.
+   FLOW-520: a hairline and 24px each side of it set the sections apart; a jump lands the heading
+   clear of the compact bar. */
+.ui-legal-section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-line);
+}
+
 .ui-legal-heading {
-  margin: var(--space-6) 0 0;
+  margin: 0;
   font-size: var(--type-sheet-size);
   line-height: var(--type-sheet-line);
   font-weight: var(--type-sheet-weight);
+  scroll-margin-top: calc(var(--safe-top) + var(--compact-bar-detail) + var(--space-4));
+}
+
+.ui-legal-heading:focus {
+  outline: none;
+}
+
+/* FLOW-520: "בעמוד הזה", the jump links under the date, each a 44px target. */
+.ui-legal-toc {
+  margin-top: var(--space-4);
+}
+
+.ui-legal-toc h2 {
+  margin: 0;
+}
+
+.ui-legal-toc ul {
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-legal-toc a {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  color: var(--color-accent-text);
+}
+
+/* FLOW-520: the contact address is an inline mailto link; the sentence keeps its own spacing. */
+.ui-legal-mail {
+  padding-inline: 0;
 }
 
 .ui-legal-list {

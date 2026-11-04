@@ -278,8 +278,15 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "עוגיות ואחסון" })).toHaveAttribute("href", "/cookies");
     expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
-    expect(screen.getByText(/בכניסה אתם מסכימים לתנאי השימוש ולמדיניות הפרטיות/)).toBeInTheDocument();
+    const consent = screen.getByText(/בכניסה אתם מסכימים לתנאי השימוש ולמדיניות הפרטיות/);
     const google = screen.getByRole("button", { name: "המשך עם Google" });
+    // FLOW-519: the consent reads at body size in the secondary colour, right above the button;
+    // the four links are a list with no "·" between them.
+    expect(consent).toHaveClass("t-body", "text-text-secondary");
+    expect(consent.nextElementSibling).toBe(google);
+    const legal = screen.getByRole("navigation", { name: "מידע משפטי" });
+    expect(within(legal).getAllByRole("listitem")).toHaveLength(4);
+    expect(legal.textContent).not.toContain("·");
     if (getSupabase()) expect(google).toBeEnabled();
     else expect(google).toBeDisabled();
   });

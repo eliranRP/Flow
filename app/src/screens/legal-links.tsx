@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import type { LegalKind } from "../legal-copy";
 import { Button } from "../ui/button";
 
@@ -13,18 +12,22 @@ export const LEGAL_LINKS: readonly { to: `/${LegalKind}`; label: string }[] = [
   { to: "/accessibility", label: "הצהרת נגישות" },
 ];
 
-/** Decision 0252: the four legal pages, as hint links with 44px targets (sign-in and settings). */
-export function LegalLinks() {
+/**
+ * Decision 0252: the four legal pages, as hint links (sign-in and settings). FLOW-519: a 2×2 grid
+ * of 44px targets with no separators, so no "·" is left at a line end at 320.
+ */
+export function LegalLinks({ className }: { className: string }) {
   return (
-    <>
-      {LEGAL_LINKS.map((link, i) => (
-        <Fragment key={link.to}>
-          {i > 0 ? " · " : null}
-          <Button variant="link" to={link.to} className="ui-btn-link-hint">
-            {link.label}
-          </Button>
-        </Fragment>
-      ))}
-    </>
+    <nav aria-label="מידע משפטי" className={className}>
+      <ul className="ui-legal-links">
+        {LEGAL_LINKS.map((link) => (
+          <li key={link.to}>
+            <Button variant="link" to={link.to} className="ui-btn-link-hint">
+              {link.label}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
