@@ -149,8 +149,9 @@ export function sweepControls(spec: string): void {
         if (fragment !== "") {
           // Every check starts from the fresh page: an earlier control (Back, a link) may have left it.
           await gotoSettled(page, url);
-          const target = await page.locator(`[id="${fragment}"]`).count();
-          if (target === 0) failures.push(`${control.name || control.tag} jumps to #${fragment}, which is not on the page`);
+          // The legal screen is a lazy chunk: wait for the target to mount rather than reading it at once.
+          const found = await page.locator(`[id="${fragment}"]`).first().waitFor({ state: "attached", timeout: 5_000 }).then(() => true, () => false);
+          if (!found) failures.push(`${control.name || control.tag} jumps to #${fragment}, which is not on the page`);
           continue;
         }
         if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
