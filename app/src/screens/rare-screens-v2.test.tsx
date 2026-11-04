@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HELP_EMAIL, OPERATOR_NAME } from "../config";
-import { LEGAL, LEGAL_LINKS, LEGAL_UPDATED, PRIVACY } from "../legal-copy";
+import { LEGAL, LEGAL_UPDATED, PRIVACY } from "../legal-copy";
+import { LEGAL_LINKS } from "./legal-links";
 import type { NotificationPrefs, SubscribeOutcome } from "../push";
 import { renderWithProviders } from "../test-render";
 
