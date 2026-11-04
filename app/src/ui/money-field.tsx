@@ -27,7 +27,7 @@ type MoneyFieldProps = {
   trailing?: ReactNode;
   /** Under the field, in the message line, while there is no error (FLOW-139d). */
   hint?: ReactNode;
-  /** Shown in an empty field (the composer's "0", board LedgerComposer). */
+  /** Shown in an empty field (the composer's "0", board LedgerComposer; the loan's principal, FLOW-472). */
   placeholder?: string;
 };
 
@@ -95,10 +95,11 @@ export function MoneyField({
         onMouseDown={holdFieldMouse}
       >
         {/* The prefix sits beside a hidden copy of the digits, so its gap stays the same whatever
-            the commas and dot measure (FLOW-310). */}
+            the commas and dot measure (FLOW-310). An empty field mirrors its placeholder, so the
+            prefix sits beside that instead of over it (FLOW-472). */}
         <span className="ui-money-lead" aria-hidden="true">
           <span className="ui-money-prefix">{prefix}</span>
-          <span className="ui-money-mirror">{shown}</span>
+          <span className="ui-money-mirror">{shown === "" ? (placeholder ?? "") : shown}</span>
         </span>
         <input
           id={fieldId}
