@@ -334,6 +334,126 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     expect(screen.queryByRole("button", { name: "שמירת השינוי בצפי" })).toBeNull();
   });
 
+  /** The pace write answers with its undo; the rest answer with nothing. */
+  function paceAnswers(pace: () => Promise<{ data: unknown; error: unknown }> = () => Promise.resolve({ data: { undo: { drop: ["e-9"], put: [] } }, error: null })) {
+    rpc.mockImplementation((name: string) => (name === "set_project_forecast_edit" ? pace() : Promise.resolve({ data: null, error: null })) as Promise<{ data: null; error: null }>);
+  }
+
+  /** The forecast's writes, in the order sent, each with its patch or its undo (the reads that refresh are left out). */
+  const sent = () => rpc.mock.calls.filter(([name]) => name === "set_forecast_item" || name === "undo_project_forecast").map(([name, args]) => [name, (args as { p_patch?: unknown; p_undo?: unknown } | undefined)?.p_patch ?? (args as { p_undo?: unknown } | undefined)?.p_undo ?? null]);
+
+  it("gives a save of the pace and the amount one toast, whose ביטול undoes the amount, then the pace (FLOW-1018)", async () => {
+    rpc.mockClear();
+    paceAnswers();
+    try {
+      renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+      await pickMonthly();
+      fireEvent.change(screen.getByRole("textbox", { name: "סכום צפוי" }), { target: { value: "+$800" } });
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+      await screen.findByText("הצפי עודכן");
+      await waitFor(() => { expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.anything()); });
+      // The pace write's answer adds no toast of its own: "הצפי עודכן" and its ביטול stay.
+      await new Promise((resolve) => { setTimeout(resolve, 20); });
+      expect(screen.queryByText("הכנסות שכירות: כל חודש")).toBeNull();
+      expect(screen.getAllByRole("button", { name: "ביטול" })).toHaveLength(1);
+      rpc.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+      await waitFor(() => {
+        expect(sent()).toEqual([
+          ["set_forecast_item", { reset: true }],
+          ["undo_project_forecast", { drop: ["e-9"], put: [] }],
+        ]);
+      });
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
+  it("sends the pace's undo once its write is back, when ביטול comes first (FLOW-1018)", async () => {
+    rpc.mockClear();
+    let answer: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    paceAnswers(() => new Promise((resolve) => { answer = resolve; }));
+    try {
+      renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+      await pickMonthly();
+      fireEvent.change(screen.getByRole("textbox", { name: "סכום צפוי" }), { target: { value: "+$800" } });
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+      fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+      await waitFor(() => { expect(sent()).toContainEqual(["set_forecast_item", { reset: true }]); });
+      expect(rpc).not.toHaveBeenCalledWith("undo_project_forecast", expect.anything());
+      answer({ data: { undo: { drop: ["e-9"], put: [] } }, error: null });
+      await waitFor(() => { expect(sent().at(-1)).toEqual(["undo_project_forecast", { drop: ["e-9"], put: [] }]); });
+      expect(sent().filter(([name]) => name === "undo_project_forecast")).toHaveLength(1);
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
+  it("says a failed pace write failed, and sends no undo for it: the ביטול undid the amount only (FLOW-1018)", async () => {
+    rpc.mockClear();
+    let answer: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    paceAnswers(() => new Promise((resolve) => { answer = resolve; }));
+    try {
+      renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+      await pickMonthly();
+      fireEvent.change(screen.getByRole("textbox", { name: "סכום צפוי" }), { target: { value: "+$800" } });
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+      fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+      await waitFor(() => { expect(sent()).toContainEqual(["set_forecast_item", { reset: true }]); });
+      answer({ data: null, error: { message: "boom" } });
+      expect(await screen.findByText("לא הצלחנו לעדכן את הצפי")).toBeInTheDocument();
+      await new Promise((resolve) => { setTimeout(resolve, 20); });
+      expect(rpc).not.toHaveBeenCalledWith("undo_project_forecast", expect.anything());
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
+  it("says so when the pace write fails after the save: the failure replaces הצפי עודכן (FLOW-1018)", async () => {
+    rpc.mockClear();
+    paceAnswers(() => Promise.resolve({ data: null, error: { message: "boom" } }));
+    try {
+      renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+      await pickMonthly();
+      fireEvent.change(screen.getByRole("textbox", { name: "סכום צפוי" }), { target: { value: "+$800" } });
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+      expect(await screen.findByText("לא הצלחנו לעדכן את הצפי")).toBeInTheDocument();
+      expect(sent()).toEqual([["set_forecast_item", { amount_minor: 80_000, due_on: "2026-10-31", moved_out: false }]]);
+      expect(rpc).not.toHaveBeenCalledWith("undo_project_forecast", expect.anything());
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
+  it("keeps a pace pick alone on its own toast, whose ביטול undoes the pace (FLOW-1018)", async () => {
+    rpc.mockClear();
+    paceAnswers();
+    try {
+      renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+      await pickMonthly();
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+      await screen.findByText("הכנסות שכירות: כל חודש");
+      expect(screen.queryByText("הצפי עודכן")).toBeNull();
+      rpc.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+      await waitFor(() => { expect(sent()).toEqual([["undo_project_forecast", { drop: ["e-9"], put: [] }]]); });
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
+  it("keeps an amount change alone on הצפי עודכן, whose ביטול undoes only the amount (FLOW-1018)", async () => {
+    rpc.mockClear();
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    fireEvent.change(await screen.findByRole("textbox", { name: "סכום צפוי" }), { target: { value: "+$800" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+    await screen.findByText("הצפי עודכן");
+    await waitFor(() => { expect(sent()).toEqual([["set_forecast_item", { amount_minor: 80_000, due_on: "2026-10-31", moved_out: false }]]); });
+    rpc.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(sent()).toEqual([["set_forecast_item", { reset: true }]]); });
+  });
+
   it("writes nothing for a pace pick the page leaves without saving (FLOW-1012)", async () => {
     rpc.mockClear();
     renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
