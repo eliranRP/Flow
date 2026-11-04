@@ -147,6 +147,30 @@ describe("Home's forecast row (FLOW-1008)", () => {
   });
 });
 
+describe("Home's cold load (FLOW-1019)", () => {
+  it("reads list_unpaid once, and starts the forecast's reads only after the figures are drawn", async () => {
+    let releaseCash: () => void = () => undefined;
+    const cashHeld = new Promise<void>((resolve) => { releaseCash = resolve; });
+    rpc.impl = (name) => {
+      if (name === "cash_months") return cashHeld.then(() => ({ data: cash, error: null }));
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
+      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "list_unpaid")).toBe(true); });
+    // Home's figures are not drawn yet: nothing of the forecast's has gone out.
+    for (const name of ["expected_months", "forecast_overrides_for", "company_forecast_edits_for", "company_next_month_inputs"]) {
+      expect(rpc.calls.some((c) => c.name === name)).toBe(false);
+    }
+    releaseCash();
+    await screen.findByText("תזרים · עד היום");
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
+    expect(rpc.calls.filter((c) => c.name === "list_unpaid")).toHaveLength(1);
+  });
+});
+
 describe("Home's cash (FLOW-364: the redesigned Home)", () => {
   it("shows the month in the band with its net, נכנס, יצא and the split card", async () => {
     wrap();

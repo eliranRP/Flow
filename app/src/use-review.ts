@@ -206,6 +206,7 @@ function mergePage(old: ReviewRow[], page: readonly ReviewRow[]): ReviewRow[] {
 function reviewQueryOptions(preview: string, project: string | null) {
   const key = reviewListKey(preview, project);
   return {
+    // A reviewListKey(...) call, not `key`: ledger-keys.test.ts reads each queryKey's text.
     queryKey: reviewListKey(preview, project),
     queryFn: async ({ client }: { client: QueryClient }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();

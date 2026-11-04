@@ -14,6 +14,7 @@ import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath } from "../home-month";
+import { useAfterFirstPaint } from "../after-paint";
 import { useMonthForecastQuery } from "../month-forecast-query";
 import { HomeReportsCard } from "./home-reports-card";
 import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
@@ -166,7 +167,6 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   // FLOW-364: the previous month up to the same day (the current month), and the month-end forecast for the
   // forecast row (FLOW-1008: the תזרים צפוי screen's own read, so both show one number). Both on the current month only.
   const sameDay = useCashToDayQuery(shiftMonthKey(monthKey, -1), Number(today.slice(8, 10)), isCurrent);
-  const monthForecast = useMonthForecastQuery(currentKey, isCurrent);
 
   const cashPhase = screenPhase(preview, cash);
   const dashboardPhase = screenPhase(preview, dashboard);
@@ -182,6 +182,9 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const offline = errorPhase != null ? errorPhase.offline : preview === "error";
   useBandMark(failed || showBooks);
   const online = useOnline();
+  // FLOW-1019 (owner, 2026-11-03): the forecast row and החודש הבא read once Home has drawn its figures.
+  const afterPaint = useAfterFirstPaint(showBooks);
+  const monthForecast = useMonthForecastQuery(currentKey, isCurrent && afterPaint);
 
   function retry() {
     if (previewing) {
@@ -279,7 +282,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
-      nextMonth={previewing || !isCurrent ? null : (
+      nextMonth={previewing || !isCurrent || !afterPaint ? null : (
         <Suspense fallback={null}>
           <HomeNextMonth today={today} currency={base} />
         </Suspense>
