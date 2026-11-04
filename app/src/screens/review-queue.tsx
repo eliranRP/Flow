@@ -125,7 +125,10 @@ export function ReviewQueue({
     loadMore?.();
   }, [more, loadingMore, loadFailed, ahead, loadMore]);
   const { shown, motion } = useReviewSwap(waitForMore ? null : (rows[0] ?? null));
-  useEffect(() => {
+  // A layout effect: the pin is set in the commit that puts the card on screen. A passive effect could still be
+  // pending when the owner taps דלג on that card, and would then pin the card the skip just sent away, putting it
+  // back ahead of the next page's first card.
+  useLayoutEffect(() => {
     // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
     if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
   }, [fromList, shown]);

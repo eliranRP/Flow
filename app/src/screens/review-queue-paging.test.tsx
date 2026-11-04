@@ -115,6 +115,24 @@ describe("FLOW-984: the queue loads its next page ahead of the owner", () => {
     expect(await screen.findByRole("heading", { name: "ספק r003" })).toBeInTheDocument();
   });
 
+  it("a skip tapped the moment the card lands still sends it behind the next page's first card", async () => {
+    const { rerender } = render(queue(rowsOf(2), pagingOf({ loading: true })));
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    // The tap lands as r002 paints, before React has run that commit's passive effects (a busy device, or CI).
+    await new Promise<void>((resolve) => {
+      const observer = new MutationObserver(() => {
+        if (screen.queryByRole("heading", { name: "ספק r002" }) == null) return;
+        observer.disconnect();
+        fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+        resolve();
+      });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+    await waitFor(() => { expect(screen.queryByRole("heading", { name: /ספק r00/ })).not.toBeInTheDocument(); });
+    rerender(queue([...rowsOf(2), row(3)], pagingOf()));
+    expect(await screen.findByRole("heading", { name: "ספק r003" })).toBeInTheDocument();
+  });
+
   it("wraps to the first skipped card once every page is loaded", async () => {
     const paging = pagingOf({ more: false, total: 2 });
     render(queue(rowsOf(2), paging));
