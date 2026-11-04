@@ -1,6 +1,6 @@
 <a id="flow-520"></a>
 # FLOW-520 · Legal pages: a tappable contact, jump links, clear sections, readable offline
-- **Type:** SMALL UI · **Status:** ready · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-1028 (#958, #960).
+- **Type:** SMALL UI · **Status:** claimed (UI/UX review, 2026-11-04, claude/flow-519-legal-ux) · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-1028 (#958, #960).
 - **Files:** `app/src/screens/LegalScreen.tsx`, `app/src/legal-copy.ts`, `app/src/ui/css/60-help-legal.css`, the service worker's precache list if needed.
 
 - [ ] The contact address is plain text inside RTL sentences: make it a mailto link in `<bdi dir="ltr">`, with the period outside. Rule: DESIGN-RULES RTL; hierarchy-and-actions § 4.

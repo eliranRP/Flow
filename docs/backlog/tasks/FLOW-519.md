@@ -1,6 +1,6 @@
 <a id="flow-519"></a>
 # FLOW-519 · The legal links on sign-in and Settings: rows that fit 320 and clear the tab bar
-- **Type:** SMALL UI · **Status:** ready · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-1028 (#958).
+- **Type:** SMALL UI · **Status:** claimed (UI/UX review, 2026-11-04, claude/flow-519-legal-ux) · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-1028 (#958).
 - **Files:** `app/src/screens/SignInScreen.tsx`, `app/src/screens/legal-links.tsx`, `app/src/screens/settings-screen.tsx`, `app/src/ui/css/10-settings-onboarding.css` (`.ui-settings-legal`).
 
 - [ ] On Settings at 320 the fourth link (הצהרת נגישות) and the version line sit under the tab bar (settings-main story). The page's end clears the tab bar. Rule: tables-and-responsive § 21.
