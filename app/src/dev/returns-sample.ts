@@ -448,6 +448,18 @@ export const birchLaneReturnsAnnualized: PropertyReturns = {
 };
 
 /**
+ * FLOW-473 (decision 0253): Birch Lane first rented on 12/10/2026, 21 days before the period's end.
+ * Fewer than 60 days: the scaled figures (cash on cash, cap rate, per unit, the total) read
+ * "מעט נתונים" with the day count; DSCR, a ratio, and the amounts stay.
+ */
+export const birchLaneReturnsFewDays: PropertyReturns = {
+  ...birchLaneReturnsAnnualized,
+  firstRent: "2026-10-12",
+  annualizedFrom: "2026-10-12",
+  earningDays: 21,
+};
+
+/**
  * FLOW-466 (decision 0250): Maple Court with two loans paid out at closing. The mortgage taken over
  * counts its whole $250,000 (no closing amount set). The hard-money loan's settlement statement
  * shows $40,000 of its $60,000 paid at closing (the rest a renovation holdback), so the price counts

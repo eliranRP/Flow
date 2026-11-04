@@ -11,6 +11,7 @@ import {
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
   birchLaneReturnsCashOutLosing,
+  birchLaneReturnsFewDays,
   birchLaneReturnsMissing,
   birchLaneReturnsLandSuggestion,
   birchLaneReturnsNegative,
@@ -29,6 +30,8 @@ import { PropertyMetricScreen, PropertyPartScreen, REHAB_EMPTY } from "./project
 import {
   BEFORE_FIRST_RENT,
   CASH_FLOW_CAPTION,
+  FEW_DAYS,
+  MIN_EARNING_DAYS,
   HISTORY_HINT,
   INFINITY_NAME,
   METRIC_KEYS,
@@ -840,7 +843,7 @@ describe("the per-year metrics from a first rent inside the period (FLOW-464)", 
     // FLOW-467: and from how many days.
     expect(metricCaption("cap-rate", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה · 215 ימים");
     expect(metricCaption("coc", birchLaneReturnsAnnualized)).toBe("תזרים ÷ כסף בעסקה · מחושב לשנה · 215 ימים");
-    expect(metricCaption("cap-rate", { ...birchLaneReturnsAnnualized, earningDays: 1 })).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה · יום אחד");
+    expect(metricCaption("cap-rate", { ...birchLaneReturnsAnnualized, earningDays: 60 })).toBe("רווח תפעולי ÷ שווי היום · מחושב לשנה · 60 ימים");
     // FLOW-467: a loss in money scaled from the first rent names its days as well.
     expect(metricCaption("coc", { ...birchLaneReturnsCashOutLosing, annualizedFrom: "2026-04-01", earningDays: 215 })).toBe("הפסד בשנה · כל הכסף חזר · מחושב לשנה · 215 ימים");
     expect(metricCaption("dscr", birchLaneReturnsAnnualized)).toBe("רווח תפעולי ÷ תשלומי הלוואה");
@@ -857,5 +860,65 @@ describe("the per-year metrics from a first rent inside the period (FLOW-464)", 
     expect(metricPage("cap-rate", birchLaneReturns).result?.yearly).toBeUndefined();
     expect(page.caption).toBe("רווח תפעולי ÷ שווי היום · מהשכירות הראשונה ב־01/04/2026 · 215 ימים, מחושב לשנה");
     expect(metricPage("cap-rate", birchLaneReturns).caption).toBe("רווח תפעולי ÷ שווי היום · 12 חודשים");
+  });
+});
+
+describe("fewer than 60 days since a first rent inside the period (FLOW-473)", () => {
+  const at = (days: number) => ({ ...birchLaneReturnsAnnualized, earningDays: days });
+  const few = { kind: "note", text: FEW_DAYS };
+
+  it("reads מעט נתונים in place of each scaled figure below 60 days, and the figure from 60 on", () => {
+    expect(MIN_EARNING_DAYS).toBe(60);
+    for (const metric of ["coc", "cap-rate", "per-unit"] as const) {
+      expect(metricValue(metric, at(59))).toEqual(few);
+      expect(metricValue(metric, at(60))).not.toEqual(few);
+    }
+    expect(metricValue("cap-rate", at(60))).toEqual({ kind: "text", text: "11.0%" });
+    expect(metricValue("per-unit", at(60))).toEqual({ kind: "money", minor: 59_400n, income: false });
+    // DSCR is a ratio, not scaled: it keeps its figure.
+    expect(metricValue("dscr", at(21))).toEqual({ kind: "text", text: NO_PAYMENTS });
+    // Over the whole period (no first rent inside it) nothing changes, however few the days.
+    expect(metricValue("cap-rate", { ...birchLaneReturns, earningDays: 21 })).toEqual({ kind: "text", text: "6.5%" });
+  });
+
+  it("says why on the row's hint and the page's caption, with no division", () => {
+    expect(metricCaption("cap-rate", birchLaneReturnsFewDays)).toBe("מהשכירות הראשונה · 21\u00a0ימים · מחושב לשנה מ־60\u00a0ימים");
+    expect(metricCaption("per-unit", at(59))).toBe("מהשכירות הראשונה · 59\u00a0ימים · מחושב לשנה מ־60\u00a0ימים");
+    expect(metricCaption("dscr", birchLaneReturnsFewDays)).toBe("רווח תפעולי ÷ תשלומי הלוואה");
+    const page = metricPage("cap-rate", birchLaneReturnsFewDays);
+    expect(page.value).toEqual(few);
+    expect(page.result).toBeNull();
+    expect(page.caption).toBe("רווח תפעולי ÷ שווי היום · מהשכירות הראשונה ב־12/10/2026 · 21 ימים · מחושב לשנה מ־60\u00a0ימים");
+  });
+
+  it("waits for 60 days for a loss a year too, and keeps ∞ (not scaled)", () => {
+    const losing = { ...birchLaneReturnsCashOutLosing, annualizedFrom: "2026-10-12", earningDays: 59 };
+    expect(metricValue("coc", losing)).toEqual(few);
+    expect(metricCaption("coc", losing)).toBe("מהשכירות הראשונה · 59\u00a0ימים · מחושב לשנה מ־60\u00a0ימים");
+    expect(metricValue("coc", { ...losing, earningDays: 60 }).kind).toBe("money");
+    expect(metricValue("coc", { ...birchLaneReturnsCashOut, annualizedFrom: "2026-10-12", earningDays: 21 })).toEqual({ kind: "text", text: "∞" });
+  });
+
+  it("shows מעט נתונים on the investment page's total and metrics, and keeps the amounts", async () => {
+    renderInvestment(birchLaneReturnsFewDays);
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
+    if (card == null) throw new Error("no card");
+    const total = card.querySelector(".ui-ret-total");
+    expect(total).toHaveTextContent(FEW_DAYS);
+    expect(total).toHaveTextContent("מהשכירות הראשונה · 21 ימים · מחושב לשנה מ־60 ימים");
+    expect(total).not.toHaveTextContent("%");
+    expect(within(card).getByText("$12,000")).toBeInTheDocument();
+    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    for (const name of [/תשואה על המזומן/, /Cap rate/, /תזרים ליחידה/]) {
+      expect(within(metrics).getByRole("link", { name })).toHaveTextContent(FEW_DAYS);
+    }
+    expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent(NO_PAYMENTS);
+  });
+
+  it("shows the total's per-cent again at 60 days", async () => {
+    renderInvestment({ ...birchLaneReturnsFewDays, earningDays: 60 });
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
+    expect(card?.querySelector(".ui-ret-total")).not.toHaveTextContent(FEW_DAYS);
+    expect(card?.querySelector(".ui-ret-total")).toHaveTextContent("%");
   });
 });
