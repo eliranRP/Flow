@@ -147,6 +147,8 @@ export function sweepControls(spec: string): void {
         // FLOW-520: an in-page jump link (#section) is a real control when its target is on the page.
         const fragment = control.tag === "a" && sameUrl(control.href, here) ? new URL(control.href, here).hash.slice(1) : "";
         if (fragment !== "") {
+          // Every check starts from the fresh page: an earlier control (Back, a link) may have left it.
+          await gotoSettled(page, url);
           const target = await page.locator(`[id="${fragment}"]`).count();
           if (target === 0) failures.push(`${control.name || control.tag} jumps to #${fragment}, which is not on the page`);
           continue;
