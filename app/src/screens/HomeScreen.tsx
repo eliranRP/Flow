@@ -279,6 +279,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       }}
       sameDay={isCurrent ? sameDay.data ?? null : null}
       forecast={forecast}
+      // FLOW-1031: until the forecast's read answers, the row keeps its place, so the attention box does not move.
+      forecastPending={isCurrent && !previewing && monthForecast.data == null && !monthForecast.isError}
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
@@ -320,6 +322,7 @@ export function CashHome({
   company,
   sameDay = null,
   forecast = null,
+  forecastPending = false,
   onStepMonth,
   initialDrawerOpen = false,
   drawerYearMonths,
@@ -365,6 +368,8 @@ export function CashHome({
   sameDay?: CashToDay | null;
   /** FLOW-364: the forecast for the month's end, in the base currency, or null to hide the row. */
   forecast?: bigint | null;
+  /** FLOW-1031: the forecast is still being read: its row's place is kept, with a bar for the figure. */
+  forecastPending?: boolean;
   /** Steps Home to another month (the arrows, a swipe, the drawer). */
   onStepMonth: (key: string) => void;
   /** Stories open the drawer at once. */
@@ -451,11 +456,15 @@ export function CashHome({
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
             <HomeMonthPill monthKey={monthKey} nav={nav} />
             <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
-            {isPast || forecast == null ? null : (
+            {isPast ? null : forecast != null ? (
               <Link to="/forecast" className="ui-home-forecast-link" aria-label="תזרים צפוי לסוף החודש">
                 <ForecastRow monthKey={monthKey} minor={forecast} currency={base} />
               </Link>
-            )}
+            ) : forecastPending ? (
+              <div className="ui-home-forecast-link" aria-hidden="true">
+                <ForecastRow monthKey={monthKey} minor={null} currency={base} />
+              </div>
+            ) : null}
           </div>
         </TopBand>
       </div>
