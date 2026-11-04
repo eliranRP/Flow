@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { goldenValues, hostedClientMarkers, hostedPresenceViolations, parseHostedClient, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
+import { goldenValues, hostedClientMarkers, hostedPresenceViolations, parseHostedClient, precacheViolations, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "./hosted-env.mjs";
 
 test("flags a fixture module, a story, and a golden value", () => {
@@ -292,4 +292,11 @@ test("flags the Flow Test 2 folder, the open net, a draft id, and the fixture se
   for (const marker of ["2379562633", "114000", "draft:", "Flow Test 2 fixture"]) {
     assert.ok(sources.some((line) => line.includes(marker)), marker);
   }
+});
+
+test("FLOW-520: the service worker precaches the legal pages' chunk", () => {
+  assert.deepEqual(precacheViolations('self.__WB_MANIFEST=[{url:"assets/LegalScreen-CFKTho45.js",revision:null}]'), []);
+  assert.deepEqual(precacheViolations('[{"url":"assets/LegalScreen-a_b-1.js","revision":null}]'), []);
+  assert.match(precacheViolations('[{url:"assets/HelpScreen-x1.js",revision:null}]')[0] ?? "", /does not precache the legal pages/);
+  assert.match(precacheViolations(null)[0] ?? "", /sw\.js is missing/);
 });

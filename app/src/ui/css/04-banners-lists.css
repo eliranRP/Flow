@@ -257,6 +257,23 @@
   text-underline-offset: 2px;
 }
 
+/* FLOW-519: the four legal links (sign-in and settings) as a 2×2 grid of 44px targets, no separators. */
+.ui-legal-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-legal-links a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: var(--touch-min);
+  text-align: center;
+}
+
 /* FLOW-502: a link inside a sentence of hint text: the sentence's own size and line height, the
    link colour, and a 44px tap area that grows into the note's own lines (§3.7) without moving them. */
 .ui-btn-link-inline {

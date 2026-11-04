@@ -326,6 +326,19 @@ export function hostedPresenceViolations(files, client) {
   return problems;
 }
 
+/**
+ * FLOW-520: sign-in's consent links to the legal pages, and those pages load on a tap (#960), so the
+ * service worker precaches their chunk: they open offline once the worker is installed.
+ * @param {string | null} sw the body of dist/sw.js, or null when there is none
+ * @returns {string[]}
+ */
+export function precacheViolations(sw) {
+  if (sw == null) return ["app/dist/sw.js is missing: the hosted build must ship the service worker"];
+  return /["']?url["']?\s*:\s*["']assets\/LegalScreen-[\w-]+\.js["']/.test(sw)
+    ? []
+    : ["app/dist/sw.js does not precache the legal pages' chunk (assets/LegalScreen-*.js)"];
+}
+
 export function checkReviewerBundle() {
   const dist = path.join(root, "app/dist");
   if (!existsSync(dist)) return ["app/dist is missing. Build the reviewers-only bundle first."];
@@ -355,7 +368,14 @@ export function checkProductionBundle() {
     ...violations({ modules, files: distFiles }),
     ...sourceViolations(scanTree(path.join(root, "supabase/functions"), /\.(ts|tsx|js|mjs)$/)),
     ...presence,
+    ...(existsSync(dist) ? precacheViolations(swBody(dist)) : []),
   ];
+}
+
+/** @param {string} dist @returns {string | null} */
+function swBody(dist) {
+  const file = path.join(dist, "sw.js");
+  return existsSync(file) ? readFileSync(file, "utf8") : null;
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

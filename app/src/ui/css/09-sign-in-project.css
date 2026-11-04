@@ -38,22 +38,25 @@
 }
 
 /* FLOW-976: the failed sign-in's help link sits inside the error, at its start, with a 44px target. */
-.ui-signin-help,
-.ui-signin-privacy a {
+.ui-signin-help {
   display: inline-flex;
   align-items: center;
   min-height: var(--touch-min);
 }
 
-/* The 44px target stays; the negative margin keeps the privacy lines on their rhythm. */
-.ui-signin-privacy a {
-  margin-block: calc((1lh - var(--touch-min)) / 2);
+/* FLOW-519: the consent sits right above the button, in the secondary colour at body size. */
+.ui-signin-consent {
+  margin-bottom: var(--space-3);
 }
 
 .ui-signin-privacy {
   margin-top: var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
+}
+
+.ui-signin-legal {
+  margin-top: var(--space-2);
 }
 
 .ui-gsi-button {

@@ -630,16 +630,9 @@
   padding-inline: var(--space-side);
 }
 
-/* Decision 0252: the legal pages' links, centred under sign-out, each a 44px target. */
+/* Decision 0252: the legal pages' links under sign-out (FLOW-519: the shared 2×2 grid). */
 .ui-settings-legal {
   padding: var(--space-4) var(--space-side) 0;
-  text-align: center;
-}
-
-.ui-settings-legal a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--touch-min);
 }
 
 .ui-settings-page .ui-poc {

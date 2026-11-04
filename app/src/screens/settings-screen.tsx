@@ -414,9 +414,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </Button>
         </div>
       ) : null}
-      <nav aria-label="מידע משפטי" className="ui-settings-legal t-caption t-muted">
-        <LegalLinks />
-      </nav>
+      <LegalLinks className="ui-settings-legal" />
       <p className="ui-poc t-caption t-muted"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
     </ViewerScope>

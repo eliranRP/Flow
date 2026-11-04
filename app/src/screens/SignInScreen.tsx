@@ -128,6 +128,8 @@ export function SignInScreen() {
         <p className="t-line2 text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
 
         <SignInActions>
+          {/* FLOW-519: the consent is read before the tap, in the secondary colour at body size. */}
+          <p className="ui-signin-consent t-body text-text-secondary">{SIGN_IN_CONSENT}</p>
           <GoogleButton
             pending={pending}
             disabled={!ready}
@@ -138,11 +140,8 @@ export function SignInScreen() {
 
         <SignInPrivacy>
           נקבל מ־Google רק את פרטי הפרופיל: שם, אימייל ותמונה. אין לנו גישה לתיבת הדואר.
-          <br />
-          {SIGN_IN_CONSENT}
-          <br />
-          <LegalLinks />
         </SignInPrivacy>
+        <LegalLinks className="ui-signin-legal" />
       </SignInPanel>
     </SignInFrame>
   );
