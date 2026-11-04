@@ -160,6 +160,28 @@ export function RecurringSkeleton() {
   );
 }
 
+/**
+ * FLOW-1030: חיובים שהשתנו while it loads, under the screen's own head: the tinted card of changed charges
+ * (.ui-banner-rows), two rows of the 24px icon, the name over the amounts, and the chevron's place.
+ */
+export function ChangedChargesSkeleton() {
+  return (
+    <div className="ui-banner-rows ui-changes-skel" aria-busy="true">
+      <Loading />
+      {[0, 1].map((key) => (
+        <div className="ui-skel-list-row" key={key}>
+          <Bar w="24px" h={24} />
+          <div className="ui-skel-list-lines">
+            <Bar w="40%" h={14} />
+            <Bar w="56%" h={12} />
+          </div>
+          <Bar w="12px" h={12} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProfitFigureRow() {
   return (
     <div className="ui-skel-figure-row">

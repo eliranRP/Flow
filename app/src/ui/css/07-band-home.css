@@ -574,6 +574,12 @@ html[data-kb="open"] .ui-sheet-body {
   white-space: nowrap;
 }
 
+/* FLOW-1031: the figure's place while the forecast is read: a band bar about as wide as a figure. */
+.ui-skel-forecast-value {
+  inline-size: calc(var(--space-10) * 2);
+  block-size: var(--space-4);
+}
+
 .ui-home-forecast-chevron {
   display: inline-flex;
   flex: none;

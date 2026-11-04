@@ -81,9 +81,13 @@ export type RecurringListProps = {
   addLine?: ReactNode;
 };
 
-/** FLOW-986: קבועים is no longer a tab; it opens from Home, so Back goes there ("‹ בית"). */
-export function RecurringBack() {
+/**
+ * FLOW-986: קבועים is no longer a tab; it opens from Home, so Back goes there ("‹ בית"). FLOW-1030: a list
+ * opened from a project page (`project`) goes back to it and names it.
+ */
+export function RecurringBack({ project }: { project?: { id: string; name: string } }) {
   const search = usePreviewSearch();
+  if (project != null) return <BackButton fallback={`/projects/${project.id}${search}`} text={project.name} />;
   return <BackButton fallback={`/${search}`} text="בית" />;
 }
 
