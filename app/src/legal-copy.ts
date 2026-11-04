@@ -357,11 +357,3 @@ export const ACCESSIBILITY: LegalText = {
 };
 
 export const LEGAL: Record<LegalKind, LegalText> = { terms: TERMS, privacy: PRIVACY, cookies: COOKIES, accessibility: ACCESSIBILITY };
-
-/** The links every legal footer shows, in this order (sign-in and settings). */
-export const LEGAL_LINKS: readonly { to: `/${LegalKind}`; label: string }[] = [
-  { to: "/terms", label: "תנאי שימוש" },
-  { to: "/privacy", label: "מדיניות פרטיות" },
-  { to: "/cookies", label: "עוגיות ואחסון" },
-  { to: "/accessibility", label: "הצהרת נגישות" },
-];
