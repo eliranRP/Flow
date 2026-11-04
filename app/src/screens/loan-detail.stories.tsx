@@ -76,6 +76,21 @@ export const ClosingPaidSheet: Story = {
   },
 };
 
+/** FLOW-472: an amount above the loan says so when the field is left, before שמירה. */
+export const ClosingPaidSheetError: Story = {
+  name: "Closing paid sheet, error on blur",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^סכום ששולם בסגירה/ }));
+    const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: "סכום ששולם בסגירה" });
+    const field = within(sheet).getByLabelText("סכום");
+    await userEvent.type(field, "250000");
+    await userEvent.tab();
+    await expect(within(sheet).getByText("הסכום צריך להיות בין 0 ל־$210,000.")).toBeInTheDocument();
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+  },
+};
+
 export const KindSheet: Story = {
   name: "Kind sheet",
   ...loan("loan-mortgage"),
