@@ -17,10 +17,16 @@ import { topToast } from "./ui/top-toast";
 /** What a write hands back for its undo: the edits it made go, the ones it replaced or deleted come back. */
 export type ForecastUndo = { drop: string[]; put: Json[] };
 
-type Call =
-  | { fn: "set_project_forecast_edit"; edit: Record<string, unknown>; message: string }
-  | { fn: "remove_project_forecast_row" | "restore_project_forecast_row"; rowKey: string; message: string }
-  | { fn: "reset_project_forecast"; message: string };
+type Write =
+  | { fn: "set_project_forecast_edit"; edit: Record<string, unknown> }
+  | { fn: "remove_project_forecast_row" | "restore_project_forecast_row"; rowKey: string }
+  | { fn: "reset_project_forecast" };
+
+type Call = Write & (
+  | { message: string }
+  /** FLOW-1018: no toast of its own; the write hands its undo to the toast that shows instead. */
+  | { handOff: (undo: ForecastUndo | null) => void }
+);
 
 function undoOf(data: unknown): ForecastUndo | null {
   const undo = (data as { undo?: unknown } | null)?.undo as { drop?: unknown; put?: unknown } | undefined;
@@ -82,6 +88,10 @@ export function useProjectForecastWrites(projectId: string, month: string) {
     failure: "לא הצלחנו לעדכן את הצפי",
     onSuccess: (call) => {
       const back = lastUndo.current;
+      if ("handOff" in call) {
+        call.handOff(back);
+        return;
+      }
       // Decision 0219: under the header, the ביטול 5s and a note 4s.
       toast.show(topToast({
         message: call.message,
@@ -89,5 +99,26 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       }));
     },
   });
-  return { mutate: write.mutate, pending: write.isPending };
+  /**
+   * FLOW-1018: a write whose ביטול sits on another write's toast (a forecast item's save that changes the pace and
+   * the amount or the date shows one toast). It shows none of its own; the function it returns sends its undo, at
+   * once when the write is back, or as soon as it is. A write that fails has nothing to undo.
+   */
+  function mutateUnder(call: Write): () => void {
+    let back: ForecastUndo | null = null;
+    let wanted = false;
+    write.mutate({
+      ...call,
+      handOff: (got) => {
+        back = got;
+        if (wanted && got != null) undo.mutate(got);
+      },
+    });
+    return () => {
+      if (wanted) return;
+      wanted = true;
+      if (back != null) undo.mutate(back);
+    };
+  }
+  return { mutate: write.mutate, mutateUnder, pending: write.isPending };
 }
