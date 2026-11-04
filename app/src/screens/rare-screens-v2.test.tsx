@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { HELP_EMAIL } from "../config";
+import { HELP_EMAIL, OPERATOR_NAME } from "../config";
 import { LEGAL, LEGAL_LINKS, LEGAL_UPDATED, PRIVACY } from "../legal-copy";
 import type { NotificationPrefs, SubscribeOutcome } from "../push";
 import { renderWithProviders } from "../test-render";
@@ -94,6 +94,12 @@ describe("the legal pages (decision 0252)", () => {
     expect(page).not.toMatch(/\[[^\]]*\]/);
     expect(page).not.toContain("טיוטה");
     if (kind !== "cookies") expect(page).toContain(HELP_EMAIL);
+  });
+
+  it.each(["terms", "privacy", "accessibility"] as const)("%s names who runs Flow", (kind) => {
+    openFresh(`/${kind}`, <LegalScreen kind={kind} />);
+    expect(OPERATOR_NAME).not.toBe("");
+    expect(document.body.textContent).toContain(OPERATOR_NAME);
   });
 
   it("the privacy policy names every service the server sends data to", () => {

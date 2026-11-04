@@ -14,7 +14,7 @@ The owner asked for every legal text an Israeli app needs, complete and live, wi
 
 1. **Four live pages, full text, no placeholders.** `/terms`, `/privacy`, `/cookies` (new) and `/accessibility` (new) render the texts in `app/src/legal-copy.ts`: a title, "עודכן לאחרונה" with `LEGAL_UPDATED`, an introduction, then sections with level-2 headings, in the 17px reading style.
 2. **What they say.** They follow what the code does, checked on 2026-11-04. The privacy policy covers each item of section 11 of the Privacy Protection Law as amended by Amendment 13: the controller and how to reach them, that giving data is voluntary and what happens without it, the purposes, every recipient and why, transfers abroad, retention, security, the rights to review and correct (sections 13 and 14), and a complaint to the Privacy Protection Authority. The cookies page says Flow sets no cookies and lists what it keeps in browser storage. The accessibility statement follows regulation 35 of the 2013 service accessibility regulations: the standard (IS 5568, WCAG AA), what was done, the known gaps, and a contact with a 14-day answer.
-3. **Who runs Flow.** `OPERATOR_NAME` in `app/src/config.ts` is the name the pages give. Empty, they say "מפעיל Flow" and give `HELP_EMAIL`. The owner sets it to their full name or business name; no company is needed.
+3. **Who runs Flow.** `OPERATOR_NAME` in `app/src/config.ts` is the name the pages give: Idan Hazan, a private person (owner, 2026-11-04; no company and no business number). The contact for help, privacy, deletion and accessibility is `HELP_EMAIL`, now flowsupport@gmail.com (was ops@nromomentum.com), with no phone or postal address. Empty, the name falls back to "מפעיל Flow".
 4. **Acceptance at sign-in.** Under the Google button: "בכניסה אתם מסכימים לתנאי השימוש ולמדיניות הפרטיות.", then the four links.
 5. **Settings links.** Under התנתקות, a `מידע משפטי` navigation with the four links, each a 44px target. `LegalLinks` (`app/src/screens/legal-links.tsx`) is shared by sign-in and Settings.
 6. **The drafts are gone.** `docs/legal/terms-draft.md` and `privacy-draft.md` are deleted. The no-draft test is replaced by tests that every page renders every section, has no placeholder or draft mark, gives the contact address, and that the privacy policy names every service the server sends data to.
@@ -28,4 +28,4 @@ The owner asked for every legal text an Israeli app needs, complete and live, wi
 
 ## Consequences
 
-The pages are live with the next deploy. `OPERATOR_NAME` should be set before Flow is offered to businesses beyond the owner's own. A new service, cookie or stored item updates the texts.
+The pages are live with the next deploy. A new service, cookie or stored item updates the texts.

@@ -30,7 +30,7 @@ Israeli business-finance services publish the same set. Morning (Green Invoice) 
 4. **Incident reporting:** a severe security incident is reported to the Privacy Protection Authority right away, and the affected users when the Authority says so. `docs/runbooks/` has no runbook yet.
 5. **Personal account deletion** is by email today (`/privacy` and `/terms` promise 30 days). An in-app deletion would close this.
 6. **A data processing annex (DPA)** for business customers, like Morning's, once Flow serves businesses other than the owner's.
-7. **Operator name:** set `OPERATOR_NAME` in `app/src/config.ts` to the full name of the person or business behind Flow. A private person can run Flow without a company; a business that charges must be registered as an עוסק.
+7. **Operator:** Idan Hazan, a private person (`OPERATOR_NAME` in `app/src/config.ts`), reached at flowsupport@gmail.com (`HELP_EMAIL`). No company is needed; before charging, register as an עוסק and add the number to the pages.
 8. **Accessibility check:** once a year, or after a large UI change, check the main screens with VoiceOver and TalkBack and update `/accessibility`.
 
 ## When the texts must change
