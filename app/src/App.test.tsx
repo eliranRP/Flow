@@ -276,6 +276,9 @@ describe("App", () => {
     expect(screen.getByText("הרווח וההפסד של העסק, בלי אקסלים")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "תנאי שימוש" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "עוגיות ואחסון" })).toHaveAttribute("href", "/cookies");
+    expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
+    expect(screen.getByText(/בכניסה אתם מסכימים לתנאי השימוש ולמדיניות הפרטיות/)).toBeInTheDocument();
     const google = screen.getByRole("button", { name: "המשך עם Google" });
     if (getSupabase()) expect(google).toBeEnabled();
     else expect(google).toBeDisabled();

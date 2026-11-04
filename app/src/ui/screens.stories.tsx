@@ -51,7 +51,7 @@ export const Help: Story = {
   ),
 };
 
-/** FLOW-979 (decision 0225): the live legal pages in the reading style; the lawyer's draft is never shown. */
+/** Decision 0252: the four legal pages in the reading style. */
 export const Terms: Story = {
   render: () => (
     <StoryRoute entry="/terms">
@@ -64,6 +64,22 @@ export const Privacy: Story = {
   render: () => (
     <StoryRoute entry="/privacy">
       <LegalScreen kind="privacy" />
+    </StoryRoute>
+  ),
+};
+
+export const Cookies: Story = {
+  render: () => (
+    <StoryRoute entry="/cookies">
+      <LegalScreen kind="cookies" />
+    </StoryRoute>
+  ),
+};
+
+export const Accessibility: Story = {
+  render: () => (
+    <StoryRoute entry="/accessibility">
+      <LegalScreen kind="accessibility" />
     </StoryRoute>
   ),
 };

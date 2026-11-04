@@ -25,6 +25,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Button } from "../ui/button";
+import { LegalLinks } from "./legal-links";
 import { Skeleton } from "../ui/skeleton";
 import { forgetThisDevice, NO_PREFS, pushConfigured, type NotificationPrefs, useNotificationPrefsQuery, within } from "../push";
 import { notificationsHint } from "./notifications-screen";
@@ -413,6 +414,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </Button>
         </div>
       ) : null}
+      <nav aria-label="מידע משפטי" className="ui-settings-legal t-caption t-muted">
+        <LegalLinks />
+      </nav>
       <p className="ui-poc t-caption t-muted"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
     </ViewerScope>

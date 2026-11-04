@@ -588,6 +588,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
 | <a id="flow-1027"></a>[FLOW-1027](tasks/FLOW-1027.md) | Jev labels the lines a manual Mercury sync brings in right away | SMALL CYCLE |
+| <a id="flow-1028"></a>[FLOW-1028](tasks/FLOW-1028.md) | The legal pages go live: terms, privacy, cookies and storage, accessibility | SMALL UI |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |

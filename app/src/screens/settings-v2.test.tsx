@@ -103,6 +103,15 @@ describe("the new-category sheet", () => {
   });
 });
 
+describe("legal links (decision 0252)", () => {
+  it("lists the four legal pages under the settings", () => {
+    render(providers(<SettingsScreen sample={{ name: "אלפא בנייה", connected: false, companyId: 1, lastError: null }} />));
+    const nav = screen.getByRole("navigation", { name: "מידע משפטי" });
+    const hrefs = [...nav.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual(["/terms", "/privacy", "/cookies", "/accessibility"]);
+  });
+});
+
 describe("offline", () => {
   afterEach(() => { act(() => { onlineManager.setOnline(true); }); });
 

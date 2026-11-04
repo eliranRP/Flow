@@ -7,6 +7,7 @@ import { BandOfflineLine, useOnline } from "../ui/band-states";
 import { SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInPanel, SignInPrivacy, SignInTagline } from "../ui/layout";
 import { Button } from "../ui/button";
 import { Wordmark } from "../ui/wordmark";
+import { LegalLinks } from "./legal-links";
 import { getSupabase } from "../lib/supabase";
 import { rememberSignInReturn, safeSignInReturn } from "../safe-return";
 
@@ -16,6 +17,8 @@ type Notice = "cancelled" | "failed" | null;
 export const SIGN_IN_OFFLINE = "הכניסה תעבוד כשהחיבור יחזור";
 /** After a failed sign-in the button names the retry. */
 export const SIGN_IN_RETRY = "ניסיון חוזר עם Google";
+/** Decision 0252: signing in accepts the terms and the privacy policy (shown above the links). */
+export const SIGN_IN_CONSENT = "בכניסה אתם מסכימים לתנאי השימוש ולמדיניות הפרטיות.";
 
 /**
  * The browser's own online flag, kept current. React Query's starts out online, so a page opened while
@@ -136,13 +139,9 @@ export function SignInScreen() {
         <SignInPrivacy>
           נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
           <br />
-          <Button variant="link" to="/terms" className="ui-btn-link-hint">
-            תנאי שימוש
-          </Button>
-          {" · "}
-          <Button variant="link" to="/privacy" className="ui-btn-link-hint">
-            מדיניות פרטיות
-          </Button>
+          {SIGN_IN_CONSENT}
+          <br />
+          <LegalLinks />
         </SignInPrivacy>
       </SignInPanel>
     </SignInFrame>

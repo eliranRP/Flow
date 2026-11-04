@@ -49,7 +49,7 @@ test("sign-in says it is offline before the tap, and keeps its help in the error
   expect(await help.evaluate((el) => el.closest(".ui-notice") != null)).toBe(true);
   expect((await help.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await expect(page.getByRole("button", { name: "ניסיון חוזר עם Google" })).toBeVisible();
-  for (const name of ["תנאי שימוש", "מדיניות פרטיות"]) {
+  for (const name of ["תנאי שימוש", "מדיניות פרטיות", "עוגיות ואחסון", "הצהרת נגישות"]) {
     expect((await page.getByRole("link", { name }).boundingBox())?.height).toBeGreaterThanOrEqual(44);
   }
   await page.goto("/sign-in");

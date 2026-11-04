@@ -397,6 +397,12 @@
         "/privacy": [
           "screens/LegalScreen.tsx"
         ],
+        "/cookies": [
+          "screens/LegalScreen.tsx"
+        ],
+        "/accessibility": [
+          "screens/LegalScreen.tsx"
+        ],
         "/install?preview=1": [
           "screens/SignInScreen.tsx",
           "ui/install-screen.tsx"

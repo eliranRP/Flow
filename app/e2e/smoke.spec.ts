@@ -81,11 +81,16 @@ test("add is a sheet over Home and transaction detail keeps the tab bar (the boa
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(1);
 });
 
-// FLOW-979 (decision 0225): the legal pages read at 17px on 1.5 under their own title, and never show
-// the lawyer's draft (it lives only in docs/legal). Signed out, חזרה goes to sign-in.
-test("terms and privacy have a readable body and no draft text", async ({ page }) => {
+// Decision 0252 (FLOW-979 before it): the four legal pages read at 17px on 1.5 under their own title,
+// with no placeholder or draft mark. Signed out, חזרה goes to sign-in.
+test("the legal pages have a readable body and no draft text", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const [route, title] of [["/terms", "תנאי השימוש"], ["/privacy", "מדיניות הפרטיות"]] as const) {
+  for (const [route, title] of [
+    ["/terms", "תנאי השימוש"],
+    ["/privacy", "מדיניות הפרטיות"],
+    ["/cookies", "מדיניות עוגיות ואחסון"],
+    ["/accessibility", "הצהרת נגישות"],
+  ] as const) {
     await page.goto(route);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.locator("main")).not.toContainText("טיוטה");
