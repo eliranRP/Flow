@@ -32,6 +32,12 @@ describe("MoneyField", () => {
     expect(screen.getByLabelText("סכום")).toHaveValue("1,234,567.89");
   });
 
+  it("an empty field mirrors its placeholder beside the prefix, so the prefix does not sit over it (FLOW-472)", () => {
+    const { container } = render(<MoneyField label="סכום" value="" prefix="$" placeholder="210,000" onValueChange={() => undefined} />);
+    expect(container.querySelector(".ui-money-mirror")).toHaveTextContent("210,000");
+    expect(screen.getByLabelText("סכום")).toHaveAttribute("placeholder", "210,000");
+  });
+
   it("a message outside the field describes it, next to its own error (FLOW-325)", () => {
     render(
       <>

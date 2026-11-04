@@ -10,11 +10,12 @@ import { LOAN_CURRENCY_MARK, formatLoanMoney, minorToInput } from "./loan-form";
 /**
  * FLOW-466 (decision 0250): what the loan paid at closing, from the settlement statement. A loan
  * paid out at closing adds this to the project's purchase price; empty is the whole principal (a
- * hard-money loan's renovation holdback is then counted in the price too).
+ * hard-money loan's renovation holdback is then counted in the price too). FLOW-472: the empty
+ * field shows the principal as its placeholder, and the range is checked when the field loses focus.
  */
 
 export const CLOSING_PAID_LABEL = "סכום ששולם בסגירה";
-export const CLOSING_PAID_HINT = "מהטופס של הסגירה (HUD-1) · ברירת מחדל: כל ההלוואה";
+export const CLOSING_PAID_HINT = "מהטופס של הסגירה. ריק = כל ההלוואה";
 export const CLOSING_PAID_WHOLE = "כל ההלוואה";
 
 type Loan = Pick<LoanDetail, "principalMinor" | "closingPaidMinor" | "currency">;
@@ -23,6 +24,11 @@ type Loan = Pick<LoanDetail, "principalMinor" | "closingPaidMinor" | "currency">
 export function closingPaidValue(loan: Loan): string {
   if (loan.closingPaidMinor == null) return `${CLOSING_PAID_WHOLE} · ${formatLoanMoney(loan.principalMinor, loan.currency)}`;
   return formatLoanMoney(loan.closingPaidMinor, loan.currency);
+}
+
+/** The empty field's placeholder: the principal without the currency mark, which is the field's prefix ("210,000"). */
+export function closingPaidPlaceholder(loan: Loan): string {
+  return formatLoanMoney(loan.principalMinor, loan.currency).replace(LOAN_CURRENCY_MARK[loan.currency], "");
 }
 
 /** "הסכום צריך להיות בין 0 ל־$210,000.": the field's own line, and the server's validation refusal. */
@@ -122,8 +128,14 @@ export function LoanClosingPaidSheet({
           disabled={busy}
           enterKeyHint="done"
           reserveMessage
+          placeholder={closingPaidPlaceholder(loan)}
           hint={CLOSING_PAID_HINT}
           error={error ?? undefined}
+          onBlur={() => {
+            // forms-and-requests § 4: a wrong amount says so when the field is left, not only on שמירה.
+            const draft = closingPaidDraft(raw, loan);
+            if (!draft.ok) setError(draft.message);
+          }}
           onValueChange={(next) => {
             setRaw(next);
             setError(null);

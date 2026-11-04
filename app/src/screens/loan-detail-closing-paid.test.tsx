@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { sampleLoanStore, SAMPLE_INTEREST_ONLY } from "../dev/loan-detail-sample";
 import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
-import { closingPaidDraft, closingPaidRefusal, closingPaidValue } from "./loan-closing-paid-sheet";
+import { closingPaidDraft, closingPaidPlaceholder, closingPaidRefusal, closingPaidValue } from "./loan-closing-paid-sheet";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetailDbRow } from "./loan-detail-data";
 import { LoanDetailScreen } from "./loan-detail-screen";
 import { liveLoanWrites, type MemoryLoanStore } from "./loan-detail-store";
@@ -46,7 +46,8 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     expect(closingRow()).toHaveTextContent("כל ההלוואה · $210,000");
     fireEvent.click(closingRow());
     const dialog = screen.getByRole("dialog", { name: "סכום ששולם בסגירה" });
-    expect(within(dialog).getByText("מהטופס של הסגירה (HUD-1) · ברירת מחדל: כל ההלוואה")).toBeInTheDocument();
+    expect(within(dialog).getByText("מהטופס של הסגירה. ריק = כל ההלוואה")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("סכום")).toHaveAttribute("placeholder", "210,000");
     fireEvent.change(within(dialog).getByLabelText("סכום"), { target: { value: "180000" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(toast("סכום ששולם בסגירה · $180,000")).toBeDefined(); });
@@ -78,6 +79,22 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
     expect(within(dialog).getByText("הסכום צריך להיות בין 0 ל־$210,000.")).toBeInTheDocument();
     expect(write).not.toHaveBeenCalled();
+  });
+
+  it("says a wrong amount when the field is left, and clears it as the amount is fixed (FLOW-472)", () => {
+    renderLoan(sampleLoanStore(), "loan-bridge");
+    fireEvent.click(closingRow());
+    const dialog = screen.getByRole("dialog", { name: "סכום ששולם בסגירה" });
+    const field = within(dialog).getByLabelText("סכום");
+    fireEvent.change(field, { target: { value: "250000" } });
+    expect(within(dialog).queryByText("הסכום צריך להיות בין 0 ל־$210,000.")).not.toBeInTheDocument();
+    fireEvent.blur(field);
+    expect(within(dialog).getByText("הסכום צריך להיות בין 0 ל־$210,000.")).toBeInTheDocument();
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAttribute("aria-describedby", within(dialog).getByText("הסכום צריך להיות בין 0 ל־$210,000.").id);
+    fireEvent.change(field, { target: { value: "200000" } });
+    fireEvent.blur(field);
+    expect(within(dialog).queryByText("הסכום צריך להיות בין 0 ל־$210,000.")).not.toBeInTheDocument();
   });
 
   it("shows the server's validation refusal in the sheet, and a missing loan in a toast", async () => {
@@ -120,6 +137,8 @@ describe("closing paid: the field, the read and the RPC", () => {
     expect(closingPaidDraft("0", loan)).toEqual({ ok: true, minor: 0n });
     expect(closingPaidDraft("210000.01", loan)).toEqual({ ok: false, message: "הסכום צריך להיות בין 0 ל־$210,000." });
     expect(closingPaidValue({ ...loan, closingPaidMinor: 4_000_000n })).toBe("$40,000");
+    expect(closingPaidPlaceholder(loan)).toBe("210,000");
+    expect(closingPaidPlaceholder({ ...loan, principalMinor: 12_345_650n, currency: "ILS" })).toBe("123,456.50");
     expect(closingPaidRefusal(Object.assign(new Error("validation"), { code: "22023" }), loan)).toBe("הסכום צריך להיות בין 0 ל־$210,000.");
     expect(closingPaidRefusal(new Error("loan not found"), loan)).toBeNull();
   });
