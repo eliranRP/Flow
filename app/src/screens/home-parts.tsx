@@ -23,6 +23,7 @@ import { ChevronDownIcon, ChevronIcon, CloseIcon, OutwardChevron, PersonIcon, Pl
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
+import { Skeleton } from "../ui/skeleton";
 
 /**
  * FLOW-364: Home's band, figures, split card, forecast, attention box and compact bar. The pure
@@ -231,8 +232,12 @@ export function HomeSwipeFigures({ monthKey, figures, search, nav, animate }: { 
   );
 }
 
-/** FLOW-364: the forecast row at the band's foot. CashHome wraps it in the link to the forecast (FLOW-141). */
-export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; minor: bigint; currency: string }) {
+/**
+ * FLOW-364: the forecast row at the band's foot. CashHome wraps it in the link to the forecast (FLOW-141).
+ * FLOW-1031: `minor` null is the row while its read is on its way: the same box with a bar for the figure, so
+ * the figure arrives without moving what is below it.
+ */
+export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; minor: bigint | null; currency: string }) {
   return (
     <div className="ui-home-forecast ui-band-fade">
       <div className="ui-home-forecast-text">
@@ -240,9 +245,9 @@ export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; m
         <p className="ui-home-forecast-sub">הערכה · לפי קבועים וחשבוניות פתוחות</p>
       </div>
       <span className="ui-home-forecast-value">
-        <Amount agorot={minor} currency={currency} size="list" />
+        {minor == null ? <Skeleton tone="band" className="ui-skel-forecast-value" /> : <Amount agorot={minor} currency={currency} size="list" />}
       </span>
-      <span className="ui-home-forecast-chevron" aria-hidden="true">
+      <span className="ui-home-forecast-chevron" aria-hidden="true" data-pending={minor == null ? "" : undefined}>
         <OutwardChevron side="end" />
       </span>
     </div>

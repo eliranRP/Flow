@@ -22,6 +22,24 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** FLOW-1030: while the read is on its way, the screen's own title and Back over two skeleton rows. */
+export const Loading: Story = {
+  render: () => (
+    <StoryRoute entry="/recurring/changes?preview=loading">
+      <RecurringChangesScreen />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-1030: opened from a project page, Back names the project and goes back to it. */
+export const FromProject: Story = {
+  render: () => (
+    <StoryRoute entry="/recurring/changes?project=p2">
+      <RecurringChangesScreen sample={two} />
+    </StoryRoute>
+  ),
+};
+
 /** A change hidden since the row was drawn: nothing left to show. */
 export const Empty: Story = {
   render: () => (

@@ -574,8 +574,19 @@ html[data-kb="open"] .ui-sheet-body {
   white-space: nowrap;
 }
 
+/* FLOW-1031: the figure's place while the forecast is read: a band bar about as wide as a figure. */
+.ui-skel-forecast-value {
+  inline-size: calc(var(--space-10) * 2);
+  block-size: var(--space-4);
+}
+
 .ui-home-forecast-chevron {
   display: inline-flex;
   flex: none;
   color: var(--color-on-band);
+}
+
+/* FLOW-1031: the row is not a link while its read is on its way; its chevron keeps its place, unseen. */
+.ui-home-forecast-chevron[data-pending] {
+  visibility: hidden;
 }

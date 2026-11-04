@@ -22,6 +22,12 @@
   margin: var(--space-6) 0 0;
 }
 
+/* FLOW-1030: the changed charges' rows while they load: the loaded rows' 12px inset and 70px height. */
+.ui-changes-skel .ui-skel-list-row {
+  block-size: calc(var(--space-8) * 2 + var(--space-1) + var(--space-half));
+  padding-inline: var(--space-3);
+}
+
 /* FLOW-1014: the empty screen's line is read in full at 320, not clipped after three lines. */
 .ui-recurring .ui-empty-line {
   display: block;
