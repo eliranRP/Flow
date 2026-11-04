@@ -137,7 +137,8 @@ export function coverText(months: number): string {
  */
 export function coverLine(r: PropertyReturns): string | null {
   const months = r.equity.coverMonths;
-  return months == null || cashOutMinor(r) == null ? null : `${ALL_CASH_OUT} · התזרים שלילי: מספיק לעוד ${coverText(months)}`;
+  // FLOW-473: the pace is the cash flow scaled to a year from the first rent: no estimate under MIN_EARNING_DAYS.
+  return months == null || cashOutMinor(r) == null || fewDays(r) ? null : `${ALL_CASH_OUT} · התזרים שלילי: מספיק לעוד ${coverText(months)}`;
 }
 
 const ALL_CASH_OUT = "כל הכסף חזר";

@@ -43,6 +43,7 @@ import {
   UNITS_DEFAULT_HINT,
   buildingFormula,
   cashFlowFormula,
+  coverLine,
   coverText,
   forcedFormula,
   metricCaption,
@@ -889,6 +890,12 @@ describe("fewer than 60 days since a first rent inside the period (FLOW-473)", (
     expect(page.value).toEqual(few);
     expect(page.result).toBeNull();
     expect(page.caption).toBe("רווח תפעולי ÷ שווי היום · מהשכירות הראשונה ב־12/10/2026 · 21 ימים · מחושב לשנה מ־60\u00a0ימים");
+  });
+
+  it("drops the cash-out cover line below 60 days: its pace is scaled from the first rent too", () => {
+    const losingFew = { ...birchLaneReturnsCashOutLosing, annualizedFrom: "2026-10-12", earningDays: 21 };
+    expect(coverLine(losingFew)).toBeNull();
+    expect(coverLine({ ...losingFew, earningDays: 60 })).toBe("כל הכסף חזר · התזרים שלילי: מספיק לעוד כ־5 שנים");
   });
 
   it("waits for 60 days for a loss a year too, and keeps ∞ (not scaled)", () => {
