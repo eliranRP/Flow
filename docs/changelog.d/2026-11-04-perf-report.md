@@ -1,0 +1,1 @@
+The 2026-11-04 daily perf report is in `docs/qa/perf/`. FLOW-1019 (#956) is in production: Home's forecast cards load after Home first draws its figures, and `list_unpaid` is read once. Home's figures show in about 1.6 s on a cold load; the report now times cold Home by that, not by the page's last change.
