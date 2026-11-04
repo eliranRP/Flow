@@ -566,6 +566,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-842"></a>[FLOW-842](tasks/FLOW-842.md) | A UX rules review of the UI changes every 3 days | SMALL CYCLE (docs) |
 | <a id="flow-843"></a>[FLOW-843](tasks/FLOW-843.md) | Every launch opens the newest deploy, without closing the app again | BUG |
 | <a id="flow-844"></a>[FLOW-844](tasks/FLOW-844.md) | The root package.json drops the Vite 7 peer rule | SMALL CYCLE (infra) |
+| <a id="flow-845"></a>[FLOW-845](tasks/FLOW-845.md) | jev-review-queue's "approves … and ביטול reopens it" waits on its toast with a fixed second | BUG |
+| <a id="flow-846"></a>[FLOW-846](tasks/FLOW-846.md) | jev-review-open's "binds a company row that arrives after the one-second cap" asserts wall-clock time | BUG |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
