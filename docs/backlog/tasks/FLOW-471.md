@@ -1,6 +1,6 @@
 <a id="flow-471"></a>
 # FLOW-471 · Returns sheets and headers: one definition per figure, plain words, true counts, a header that fits 320
-- **Type:** SMALL UI · **Status:** ready · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-460..462 (#939), FLOW-466 (#951).
+- **Type:** SMALL UI · **Status:** claimed (UI/UX review, 2026-11-04, claude/flow-467-returns-ux-2) · **Source:** UX rules review 2026-11-04 (`docs/runbooks/ux-rules-review.md`, rules in `.claude/skills/ux-ui-design-review-rules/`). Severity: Medium. From FLOW-460..462 (#939), FLOW-466 (#951).
 - **Files:** `app/src/screens/project-returns-sheets.tsx`, `project-returns-learn.ts`, `project-returns-info.ts`, `project-returns-cards.tsx`, `project-returns-detail-screen.tsx`, `project-returns-screen.tsx`, `app/src/ui/css/26-returns.css`.
 
 - [ ] A figure's ⓘ sheet defines it twice (the body, then "מה זה"); keep one. The sheet's last paragraph scrolls under the fixed סגירה with no cue: pad the body. Rule: DESIGN-RULES §2.1.
