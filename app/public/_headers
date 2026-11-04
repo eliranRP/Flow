@@ -23,6 +23,10 @@
   Content-Type: text/html; charset=utf-8
 /privacy
   Content-Type: text/html; charset=utf-8
+/cookies
+  Content-Type: text/html; charset=utf-8
+/accessibility
+  Content-Type: text/html; charset=utf-8
 /help
   Content-Type: text/html; charset=utf-8
 /invites

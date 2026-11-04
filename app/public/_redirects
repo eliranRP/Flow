@@ -13,6 +13,10 @@
 /terms/ /terms 301
 /privacy /app-shell 200
 /privacy/ /privacy 301
+/cookies /app-shell 200
+/cookies/ /cookies 301
+/accessibility /app-shell 200
+/accessibility/ /accessibility 301
 /help /app-shell 200
 /help/ /help 301
 /invites /app-shell 200

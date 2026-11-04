@@ -150,6 +150,8 @@ function AppRoutes() {
             <Route path="/preview" element={<Navigate to="/?preview=1" replace />} />
             <Route path="/terms" element={<LegalScreen kind="terms" />} />
             <Route path="/privacy" element={<LegalScreen kind="privacy" />} />
+            <Route path="/cookies" element={<LegalScreen kind="cookies" />} />
+            <Route path="/accessibility" element={<LegalScreen kind="accessibility" />} />
             <Route path="/help" element={<HelpScreen />} />
             {import.meta.env.DEV ? (
               <>

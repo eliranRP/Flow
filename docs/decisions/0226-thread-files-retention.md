@@ -31,4 +31,4 @@ An object's row in `storage.objects` is only its metadata. Deleting that row in 
 
 ## Consequences
 
-A deleted company's files are usually gone within the hour (each run removes at most 5,000 objects, oldest first, so a very large backlog takes a few hours), and a deleted line's within a day. Removed notes and files can be brought back for 7 days, then they are gone for good. The privacy draft (`docs/legal/privacy-draft.md`) says so. A new feature that writes to `transaction-files` records a `transaction_files` row for each object within a day, or the purge removes it.
+A deleted company's files are usually gone within the hour (each run removes at most 5,000 objects, oldest first, so a very large backlog takes a few hours), and a deleted line's within a day. Removed notes and files can be brought back for 7 days, then they are gone for good. The privacy policy (`app/src/legal-copy.ts`, decision 0252) says so. A new feature that writes to `transaction-files` records a `transaction_files` row for each object within a day, or the purge removes it.

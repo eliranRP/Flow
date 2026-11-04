@@ -1,7 +1,7 @@
 # Rare screens: help goes back where it came from; the terms and privacy draft is for the lawyer only
 
 **Date:** 2026-10-27
-**Status:** Accepted (owner, 2026-10-26, FLOW-979)
+**Status:** Accepted (owner, 2026-10-26, FLOW-979). Points 3 and 4 superseded by [0252](0252-legal-pages-live.md)
 
 ## Context
 
