@@ -95,11 +95,10 @@ export function useDashboardQuery(active = true) {
   });
 }
 
-export function useUnpaidQuery(active = true) {
-  const preview = useHomePreview();
-  return useQuery({
+/** The open invoices and bills. FLOW-1019: Home's unpaid row and the month's forecast read this one query. */
+export function unpaidQueryOptions(preview: string) {
+  return {
     queryKey: ["unpaid", preview],
-    enabled: active && preview === "off",
     queryFn: async (): Promise<UnpaidRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -108,7 +107,12 @@ export function useUnpaidQuery(active = true) {
       if (error) throw error;
       return (await loadReadSchemas()).unpaidRowSchema.array().parse(data);
     },
-  });
+  };
+}
+
+export function useUnpaidQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({ ...unpaidQueryOptions(preview), enabled: active && preview === "off" });
 }
 
 export function useFiledTodayQuery(active = true) {
