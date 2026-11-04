@@ -20,7 +20,7 @@ Israeli business-finance services publish the same set. Morning (Green Invoice) 
 | Equal Rights for Persons with Disabilities, Service Accessibility Regulations 2013, regulation 35 | Websites and apps that serve the public meet IS 5568 (WCAG AA) and publish an accessibility statement with a contact. Exemptions by turnover exist, and an exempt business still publishes the statement | `/accessibility` |
 | Standard Contracts Law 1982 | A one-sided term in standard terms (a total exclusion of liability, unlimited one-sided changes, a far-away court) can be voided | `/terms` caps liability without excluding intent or gross negligence, gives 14 days' notice of changes, Israeli law and a Tel Aviv court |
 | Consumer Protection Law 1981 (distance selling, cancelling a subscription) | Applies when a consumer pays | Flow is free and for businesses. Before charging: price, cancellation terms, and a way to cancel in the app |
-| Cookies | No Israeli cookie statute. The Authority recommends consent for tracking and third-party cookies | `/cookies`: Flow sets no cookies; browser storage is essential only |
+| Cookies | No Israeli cookie statute. The Authority recommends consent for tracking and third-party cookies | `/cookies`: Flow itself sets no cookies; Cloudflare may set a security cookie; browser storage is essential only |
 
 ## Open duties that are not pages
 

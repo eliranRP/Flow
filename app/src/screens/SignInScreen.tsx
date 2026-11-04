@@ -137,7 +137,7 @@ export function SignInScreen() {
         </SignInActions>
 
         <SignInPrivacy>
-          נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
+          נקבל מ־Google רק את פרטי הפרופיל: שם, אימייל ותמונה. אין לנו גישה לתיבת הדואר.
           <br />
           {SIGN_IN_CONSENT}
           <br />
