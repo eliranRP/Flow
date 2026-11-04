@@ -144,6 +144,13 @@ export function sweepControls(spec: string): void {
       for (const control of found) {
         if (control.name.includes("המשך עם Google")) continue;
         if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
+        // FLOW-520: an in-page jump link (#section) is a real control when its target is on the page.
+        const fragment = control.tag === "a" && sameUrl(control.href, here) ? new URL(control.href, here).hash.slice(1) : "";
+        if (fragment !== "") {
+          const target = await page.locator(`[id="${fragment}"]`).count();
+          if (target === 0) failures.push(`${control.name || control.tag} jumps to #${fragment}, which is not on the page`);
+          continue;
+        }
         if (control.tag === "a" && sameUrl(control.href, here) && control.current !== "page") {
           // A sheet-on-load route draws Home's band under its scrim, so the band's + links here (FLOW-364).
           if (sheetOnLoad.has(url)) {
