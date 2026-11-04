@@ -91,6 +91,7 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     fireEvent.blur(field);
     expect(within(dialog).getByText("הסכום צריך להיות בין 0 ל־$210,000.")).toBeInTheDocument();
     expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAttribute("aria-describedby", within(dialog).getByText("הסכום צריך להיות בין 0 ל־$210,000.").id);
     fireEvent.change(field, { target: { value: "200000" } });
     fireEvent.blur(field);
     expect(within(dialog).queryByText("הסכום צריך להיות בין 0 ל־$210,000.")).not.toBeInTheDocument();
