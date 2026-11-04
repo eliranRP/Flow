@@ -206,7 +206,7 @@ export const birchLaneReturnsCashOutLosing: PropertyReturns = {
 /**
  * FLOW-454: before the first rent. The rehab is done and nothing is rented yet: no income, an empty
  * statement, and the period's $61,300 before the rent. The amounts stay ($600 principal, $12,000
- * appreciation, $1,745.45 tax savings: $14,345.45); the per-cent figures read "לפני השכר הראשון".
+ * appreciation, $1,745.45 tax savings: $14,345.45); the per-cent figures read "לפני השכירות הראשונה".
  */
 export const birchLaneReturnsBeforeRent: PropertyReturns = {
   ...birchLaneReturns,

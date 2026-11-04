@@ -42,15 +42,15 @@ export type Formula = { rows: FormulaRow[]; result: FormulaRow | null };
 export const MISSING_HISTORY = "חסר · עדכון שווי נוסף";
 export const HISTORY_HINT = "עליית ערך נמדדת בין שני שווים. עדכנו את השווי שוב בעוד כמה חודשים.";
 export const TAX_CAPTION = "הערכה. במכירה הפחת חוזר כמס. החישוב המדויק אצל רואה החשבון.";
-export const CASH_FLOW_CAPTION = "מהשכר הראשון בלבד. מה שלפניו נכנס לכסף בעסקה.";
+export const CASH_FLOW_CAPTION = "מהשכירות הראשונה בלבד. מה שלפניה נכנס לכסף בעסקה.";
 export const MONEY_IN_BODY = "מה שהנכס לקח ממך עד שהתחיל להכניס שכירות, פחות מה שחזר מההלוואה.";
 export const MONEY_IN_CAPTION = "רכישה, שיפוץ והחזקה פחות הלוואות";
 export const ALL_TIME = "מאז הקנייה";
 /** In place of a per-cent figure when all the cash came out, and its accessible name (FLOW-457). */
 export const INFINITY = "∞";
 export const INFINITY_NAME = "כל ההון חזר";
-/** In place of a per-cent figure before the first rent: with no rent yet, the per-cents say nothing. */
-export const BEFORE_FIRST_RENT = "לפני השכר הראשון";
+/** In place of a per-cent figure before the first rent: with no rent yet, the per-cents say nothing (FLOW-468: rent, not a wage). */
+export const BEFORE_FIRST_RENT = "לפני השכירות הראשונה";
 export const UNITS_DEFAULT_HINT = "ברירת מחדל · עריכה";
 export const TAKEN_OVER_LABEL = "הלוואה שנלקחה בסגירה";
 
@@ -94,9 +94,9 @@ export function countHint(count: number): string {
   return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
 }
 
-/** "עד השכר הראשון ב־01/04/2026", or "עדיין לפני השכר הראשון". */
+/** "עד השכירות הראשונה ב־01/04/2026", or "עדיין לפני השכירות הראשונה". */
 export function firstRentHint(r: PropertyReturns): string {
-  return r.firstRent == null ? "עדיין לפני השכר הראשון" : `עד השכר הראשון ב־${formatDisplay(r.firstRent)}`;
+  return r.firstRent == null ? "עדיין לפני השכירות הראשונה" : `עד השכירות הראשונה ב־${formatDisplay(r.firstRent)}`;
 }
 
 /** The first rent when it falls inside the period, so the statement starts there; else null. */
@@ -131,11 +131,18 @@ export function coverText(months: number): string {
   return `${String(months)} חודשים`;
 }
 
-/** "הכסף שיצא מכסה עוד כ־5 שנים של תזרים שלילי", with all the cash out and a negative cash flow; else null. */
+/**
+ * "כל הכסף חזר · התזרים שלילי: מספיק לעוד כ־5 שנים", with all the cash out and a negative cash flow;
+ * else null. FLOW-469: one short line under the figure, in place of the cash-out meta.
+ */
 export function coverLine(r: PropertyReturns): string | null {
   const months = r.equity.coverMonths;
-  return months == null || cashOutMinor(r) == null ? null : `הכסף שיצא מכסה עוד ${coverText(months)} של תזרים שלילי`;
+  return months == null || cashOutMinor(r) == null ? null : `${ALL_CASH_OUT} · התזרים שלילי: מספיק לעוד ${coverText(months)}`;
 }
+
+const ALL_CASH_OUT = "כל הכסף חזר";
+/** FLOW-469: beside a loss in money in a per-cent figure's place (all the cash out, losing). */
+export const LOSS_YEAR = "הפסד בשנה";
 
 /* -- the four sources ---------------------------------------------------------------------------- */
 
@@ -301,7 +308,7 @@ export function moneyInFormula(r: PropertyReturns): Formula {
       { key: "financing", op: "−", label: "תקבולי הלוואות והחזרים", hint: "נטו, אחרי עלויות ההלוואה", value: money(-parts.financingMinor), target: { kind: "line", line: "financing" } },
       // FLOW-1025: money the owner added to cover a negative cash flow since the first rent.
       ...(parts.shortfallMinor < 0n
-        ? [{ key: "shortfall", op: "+", label: "כיסוי תזרים שלילי", hint: "מאז השכר הראשון", value: money(-parts.shortfallMinor) } satisfies FormulaRow]
+        ? [{ key: "shortfall", op: "+", label: "כיסוי תזרים שלילי", hint: "מאז השכירות הראשונה", value: money(-parts.shortfallMinor) } satisfies FormulaRow]
         : []),
     ],
     result: { key: "money-in", op: "=", label: "כסף בעסקה", hint: r.equity.allCashOut ? "כל הכסף חזר" : undefined, value: computed(r.equity.moneyInMinor, r, ["purchase"]) },
@@ -453,6 +460,8 @@ export function metricValue(metric: MetricKey, r: PropertyReturns): FigureValue 
   }
   if (metric === "cap-rate") return bpValue(m.capRateBp, r, ["value"]);
   if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: NO_PAYMENTS } : { kind: "text", text: dscrText(m.dscrMilli) };
+  // FLOW-468: before the first rent the cash flow per unit says nothing either, as its siblings.
+  if (beforeFirstRent(r)) return { kind: "note", text: BEFORE_FIRST_RENT };
   return money(m.perUnitMonthMinor);
 }
 
@@ -482,18 +491,34 @@ export function perYear(minor: bigint, r: PropertyReturns): bigint {
   return (scaled + (scaled < 0n ? -days : days)) / (2n * days);
 }
 
-export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
-  const formula = metric === "coc" ? "תזרים ÷ כסף בעסקה"
+/** How a metric is made: "רווח תפעולי ÷ שווי היום". */
+function metricFormula(metric: MetricKey, r: PropertyReturns): string {
+  return metric === "coc" ? "תזרים ÷ כסף בעסקה"
     : metric === "cap-rate" ? "רווח תפעולי ÷ שווי היום"
     : metric === "dscr" ? "רווח תפעולי ÷ תשלומי הלוואה"
     : `בחודש · תזרים ÷ ${String(r.inputs.units)} ${r.inputs.units === 1 ? "יחידה" : "יחידות"} ÷ 12`;
-  return annualized(metric, r) ? `${formula} · ${ANNUALIZED}` : formula;
+}
+
+/** "21 ימים", "יום אחד": how many days a per-year figure is scaled from. */
+export function daysText(days: number): string {
+  return days === 1 ? "יום אחד" : `${String(days)} ימים`;
+}
+
+/**
+ * A metric row's caption. FLOW-467: a figure scaled to a year says from how many days, so a first
+ * rent a few days back reads as the estimate it is. FLOW-469: cash-on-cash as a loss in money says so.
+ */
+export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
+  // A scaled figure says its days whatever it reads (FLOW-467), a loss in money included.
+  const scaled = annualized(metric, r) ? ` · ${ANNUALIZED} · ${daysText(r.earningDays ?? 365)}` : "";
+  if (metric === "coc" && metricValue(metric, r).kind === "money") return `${LOSS_YEAR} · ${ALL_CASH_OUT}${scaled}`;
+  return `${metricFormula(metric, r)}${scaled}`;
 }
 
 /** The metric page's period: the last 12 months, or since the first rent, scaled to a year. */
 function metricPeriod(metric: MetricKey, r: PropertyReturns): string {
   if (r.annualizedFrom == null) return PERIOD;
-  const since = `מהשכר הראשון ב־${formatDisplay(r.annualizedFrom)} · ${String(r.earningDays)} ימים`;
+  const since = `מהשכירות הראשונה ב־${formatDisplay(r.annualizedFrom)} · ${daysText(r.earningDays ?? 365)}`;
   return SCALED.includes(metric) ? `${since}, ${ANNUALIZED}` : since;
 }
 
@@ -502,13 +527,13 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
   const st = r.statement;
   const value = metricValue(metric, r);
   const title = METRIC_TITLES[metric];
-  const caption = `${metricCaption(metric, r).replace(` · ${ANNUALIZED}`, "")} · ${metricPeriod(metric, r)}`;
+  const caption = `${metricFormula(metric, r)} · ${metricPeriod(metric, r)}`;
   // FLOW-464: scaled from the first rent, the division shows the figure for a year.
   const yearly = (minor: bigint) => (annualized(metric, r) ? perYear(minor, r) : minor);
   const yearRow = (label: string, minor: bigint): FormulaRow | undefined => (annualized(metric, r)
     ? { key: "yearly", op: "", label: `${label} לשנה`, hint: `\u2066${cents(minor, cur)} ÷ ${String(r.earningDays)} × 365\u2069`, value: money(perYear(minor, r)) }
     : undefined);
-  // No result row for a figure that is missing, or that reads "לפני השכר הראשון".
+  // No result row for a figure that is missing, or that reads BEFORE_FIRST_RENT.
   // The division reads left to right inside the Hebrew row (an LTR isolate), as numbers are written.
   const result = (text: string | null, yearlyRow?: FormulaRow) => (text == null || value.kind === "missing" || value.kind === "note" ? null : { text: `\u2066${text}\u2069`, value, yearly: yearlyRow });
   if (metric === "coc") {

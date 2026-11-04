@@ -51,8 +51,8 @@ export function ReturnInfoSheet({
       <p className="ui-pinv-help">{info.body}</p>
       <FormulaList formula={info.formula} currency={returns.currency} resolve={resolve} readOnly={readOnly} label={info.title} />
       {info.caption == null ? null : <p className="ui-ret-caption">{info.caption}</p>}
-      {/* FLOW-462: after how it is made, how an investor reads it. */}
-      <LearnSections learnKey={INFO_LEARN[infoKey]} />
+      {/* FLOW-462: after how it is made, how an investor reads it. FLOW-471: the body says what it is. */}
+      <LearnSections learnKey={INFO_LEARN[infoKey]} defined />
     </Sheet>
   );
 }

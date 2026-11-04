@@ -100,7 +100,7 @@ function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey;
     <div className="ui-rep-content">
       <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} loss={!moneyIn} />} meta={page.meta} />
       <p className="ui-ret-body">{page.body}</p>
-      <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(page.formula.rows.length + 1)}</bdi>} collapse={collapse}>
+      <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(page.formula.rows.length)}</bdi>} collapse={collapse}>
         <FormulaList formula={page.formula} currency={r.currency} resolve={pageResolver(base, search)} label={page.title} />
       </ReportSection>
       <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
@@ -176,7 +176,7 @@ function RehabPartBody({ r, rehab, base, search, projectId, sample }: { r: Prope
       {/* The one line under the figure says what it counts; no meta repeats it. */}
       <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} />} meta={null} />
       <p className="ui-ret-body">{page.body}</p>
-      <ReportSection id="calc" title="החישוב" total={rehab.rows == null ? null : <bdi dir="ltr" className="t-muted">{String(rehab.rows.length + 1)}</bdi>} collapse={collapse}>
+      <ReportSection id="calc" title="החישוב" total={rehab.rows == null ? null : <bdi dir="ltr" className="t-muted">{String(rehab.rows.length)}</bdi>} collapse={collapse}>
         {rehab.rows != null ? (
           <RehabCalc r={r} rows={rehab.rows} base={base} search={search} />
         ) : rehab.failed ? (

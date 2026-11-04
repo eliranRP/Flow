@@ -3,6 +3,7 @@ import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestm
 import { project as sampleProject } from "../dev/project-cash-sample";
 import {
   birchLaneReturns,
+  birchLaneReturnsAnnualized,
   birchLaneReturnsBeforeRent,
   birchLaneReturnsCashOut,
   birchLaneReturnsCashOutLosing,
@@ -23,6 +24,7 @@ import type { InfoKey } from "./project-returns-info";
  * FLOW-453: a cash-out refinance (all the cash out, ∞), and the money in the deal's sheet by part.
  * FLOW-454: a Sub2 deal (the mortgage taken over inside the purchase) and before the first rent.
  * FLOW-461: the land from the books (its account named) and a suggested land account with השתמש.
+ * FLOW-467: a first rent inside the period: the per-year metrics name the days they scale from.
  */
 const VALUE_ONLY: ProjectInvestment = {
   ...birchLaneInvestment,
@@ -41,6 +43,7 @@ const RETURNS = {
   beforeRent: birchLaneReturnsBeforeRent,
   landBooks: birchLaneReturnsLandBooks,
   landSuggestion: birchLaneReturnsLandSuggestion,
+  annualized: birchLaneReturnsAnnualized,
 };
 
 type Args = {
@@ -97,3 +100,4 @@ export const Sub2ForcedSheet: Story = { args: { data: "sub2", returns: "sub2", i
 export const BeforeFirstRent: Story = { args: { returns: "beforeRent" } };
 export const LandFromBooks: Story = { args: { returns: "landBooks" } };
 export const LandSuggestion: Story = { args: { returns: "landSuggestion" } };
+export const Annualized: Story = { args: { returns: "annualized" } };
