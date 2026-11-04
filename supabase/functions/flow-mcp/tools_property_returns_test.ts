@@ -38,6 +38,24 @@ Deno.test("get_property_returns forwards the project and the period, and a null 
   assertEquals(calls.length, before);
 });
 
+Deno.test("get_property_returns flags per-year figures scaled from fewer than 60 days (FLOW-473)", async () => {
+  let answer: Record<string, unknown> = { currency: "USD", annualized_from: "2026-10-12", earning_days: 59, metrics: { cap_rate_bp: 1104 } };
+  const { rpc } = rpcOf(() => ({ status: 200, json: answer }));
+  const read = async () => {
+    const result = await callTool("get_property_returns", { project_id: PROJECT }, ["read"], rpc);
+    return result.structuredContent.ok ? result.structuredContent.data as Record<string, unknown> : null;
+  };
+  const few = await read();
+  assertEquals(few?.few_earning_days, true);
+  // The figures are still given as the server sends them.
+  assertEquals(few?.metrics, { cap_rate_bp: 1104 });
+  answer = { ...answer, earning_days: 60 };
+  assertEquals((await read())?.few_earning_days, false);
+  // Over the whole period (no first rent inside it) the figures are not scaled.
+  answer = { ...answer, annualized_from: null, earning_days: 21 };
+  assertEquals((await read())?.few_earning_days, false);
+});
+
 Deno.test("get_property_return_lines forwards the line, the category and the page", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { line: "opex", rows: [], count: 0, total_minor: 0, has_more: false } }));
   const read = await callTool("get_property_return_lines", { project_id: PROJECT, line: "opex", category_id: CATEGORY, limit: 20, offset: 40 }, ["read"], rpc);

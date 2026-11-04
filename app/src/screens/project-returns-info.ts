@@ -137,7 +137,8 @@ export function coverText(months: number): string {
  */
 export function coverLine(r: PropertyReturns): string | null {
   const months = r.equity.coverMonths;
-  return months == null || cashOutMinor(r) == null ? null : `${ALL_CASH_OUT} · התזרים שלילי: מספיק לעוד ${coverText(months)}`;
+  // FLOW-473: the pace is the cash flow scaled to a year from the first rent: no estimate under MIN_EARNING_DAYS.
+  return months == null || cashOutMinor(r) == null || fewDays(r) ? null : `${ALL_CASH_OUT} · התזרים שלילי: מספיק לעוד ${coverText(months)}`;
 }
 
 const ALL_CASH_OUT = "כל הכסף חזר";
@@ -445,9 +446,11 @@ function cashSection(r: PropertyReturns): MetricSection {
 
 function bpValue(bp: number | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
   if (beforeFirstRent(r)) return { kind: "note", text: BEFORE_FIRST_RENT };
-  if (bp != null) return { kind: "text", text: percentText(bp) };
-  const add = firstMissing(r, needs);
-  return add == null ? { kind: "text", text: "לא מחושב" } : missing(add);
+  if (bp == null) {
+    const add = firstMissing(r, needs);
+    return add == null ? { kind: "text", text: "לא מחושב" } : missing(add);
+  }
+  return fewDays(r) ? { kind: "note", text: FEW_DAYS } : { kind: "text", text: percentText(bp) };
 }
 
 /** The card's row value of a metric (the same as its page's figure). */
@@ -456,13 +459,15 @@ export function metricValue(metric: MetricKey, r: PropertyReturns): FigureValue 
   if (metric === "coc") {
     if (!r.equity.allCashOut) return bpValue(m.cashOnCashBp, r, ["purchase"]);
     // FLOW-1025: ∞ only when the cash flow is not a loss; a loss reads as the money lost a year.
-    return r.statement.cashFlowMinor < 0n && !beforeFirstRent(r) ? money(perYear(r.statement.cashFlowMinor, r)) : { kind: "text", text: INFINITY };
+    if (r.statement.cashFlowMinor >= 0n || beforeFirstRent(r)) return { kind: "text", text: INFINITY };
+    // FLOW-473: the loss a year is scaled too, so it waits for MIN_EARNING_DAYS as well.
+    return fewDays(r) ? { kind: "note", text: FEW_DAYS } : money(perYear(r.statement.cashFlowMinor, r));
   }
   if (metric === "cap-rate") return bpValue(m.capRateBp, r, ["value"]);
   if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: NO_PAYMENTS } : { kind: "text", text: dscrText(m.dscrMilli) };
   // FLOW-468: before the first rent the cash flow per unit says nothing either, as its siblings.
   if (beforeFirstRent(r)) return { kind: "note", text: BEFORE_FIRST_RENT };
-  return money(m.perUnitMonthMinor);
+  return fewDays(r) ? { kind: "note", text: FEW_DAYS } : money(m.perUnitMonthMinor);
 }
 
 export const METRIC_TITLES: Record<MetricKey, string> = {
@@ -479,6 +484,27 @@ export const ANNUALIZED = "מחושב לשנה";
 
 /** The metrics a first rent inside the period scales to a year (DSCR is a ratio, and is not). */
 const SCALED: readonly MetricKey[] = ["coc", "cap-rate", "per-unit"];
+
+/**
+ * FLOW-473 (decision 0253): the fewest days since a first rent inside the period that a per-year
+ * figure scales from. Below it, the scaled figures (SCALED and the total return) read FEW_DAYS.
+ */
+export const MIN_EARNING_DAYS = 60;
+export const FEW_DAYS = "מעט נתונים";
+
+/** A first rent inside the period fewer than MIN_EARNING_DAYS back: a per-year figure would be a guess. */
+export function fewDays(r: PropertyReturns): boolean {
+  return r.annualizedFrom != null && r.earningDays != null && r.earningDays < MIN_EARNING_DAYS;
+}
+
+/** "מחושב לשנה מ־60 ימים": when a per-year figure shows, beside FEW_DAYS. */
+export const ANNUALIZED_FROM = `${ANNUALIZED} מ־${String(MIN_EARNING_DAYS)}\u00a0ימים`;
+
+/** "מהשכירות הראשונה · 21 ימים · מחושב לשנה מ־60 ימים": why a scaled figure reads FEW_DAYS. */
+export function fewDaysText(r: PropertyReturns): string {
+  // A number keeps its word ("21 ימים") on one line at 320.
+  return `מהשכירות הראשונה · ${daysText(r.earningDays ?? 0).replace(" ", "\u00a0")} · ${ANNUALIZED_FROM}`;
+}
 
 export function annualized(metric: MetricKey, r: PropertyReturns): boolean {
   return r.annualizedFrom != null && SCALED.includes(metric);
@@ -509,9 +535,12 @@ export function daysText(days: number): string {
  * rent a few days back reads as the estimate it is. FLOW-469: cash-on-cash as a loss in money says so.
  */
 export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
+  const value = metricValue(metric, r);
+  // FLOW-473: with too few days, the caption says why there is no figure.
+  if (value.kind === "note" && value.text === FEW_DAYS) return fewDaysText(r);
   // A scaled figure says its days whatever it reads (FLOW-467), a loss in money included.
   const scaled = annualized(metric, r) ? ` · ${ANNUALIZED} · ${daysText(r.earningDays ?? 365)}` : "";
-  if (metric === "coc" && metricValue(metric, r).kind === "money") return `${LOSS_YEAR} · ${ALL_CASH_OUT}${scaled}`;
+  if (metric === "coc" && value.kind === "money") return `${LOSS_YEAR} · ${ALL_CASH_OUT}${scaled}`;
   return `${metricFormula(metric, r)}${scaled}`;
 }
 
@@ -519,7 +548,9 @@ export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
 function metricPeriod(metric: MetricKey, r: PropertyReturns): string {
   if (r.annualizedFrom == null) return PERIOD;
   const since = `מהשכירות הראשונה ב־${formatDisplay(r.annualizedFrom)} · ${daysText(r.earningDays ?? 365)}`;
-  return SCALED.includes(metric) ? `${since}, ${ANNUALIZED}` : since;
+  if (!SCALED.includes(metric)) return since;
+  // FLOW-473: below MIN_EARNING_DAYS the page says from when it will show a figure.
+  return metricValue(metric, r).kind === "note" && fewDays(r) ? `${since} · ${ANNUALIZED_FROM}` : `${since}, ${ANNUALIZED}`;
 }
 
 export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {

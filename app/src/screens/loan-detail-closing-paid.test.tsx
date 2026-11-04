@@ -1,23 +1,27 @@
 // vitest-css: these queries rely on the app's CSS hiding elements.
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, renderHook, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sampleLoanStore, SAMPLE_INTEREST_ONLY } from "../dev/loan-detail-sample";
+import { mapleCourtClosingPaidReturns } from "../dev/returns-sample";
 import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
-import { closingPaidDraft, closingPaidPlaceholder, closingPaidRefusal, closingPaidValue } from "./loan-closing-paid-sheet";
+import { closingPaidDraft, closingPaidPlaceholder, closingPaidRefusal, closingPaidValue, showsClosingPaid } from "./loan-closing-paid-sheet";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetailDbRow } from "./loan-detail-data";
 import { LoanDetailScreen } from "./loan-detail-screen";
-import { liveLoanWrites, type MemoryLoanStore } from "./loan-detail-store";
+import { liveLoanWrites, useLiveLoan, type MemoryLoanStore } from "./loan-detail-store";
+import { toReturnsJson } from "./project-returns-test-support";
 
 // FLOW-466 (decision 0250): what a project's loan paid at closing, on the loan page. The owner sets
 // it through set_loan_closing_paid; empty is the whole loan; a viewer reads it.
 
 const rpc = vi.fn();
-vi.mock("../lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
+const from = vi.fn();
+vi.mock("../lib/supabase", () => ({ getSupabase: () => ({ rpc, from }) }));
 
-afterEach(() => { rpc.mockReset(); });
+afterEach(() => { rpc.mockReset(); from.mockReset(); });
 
 function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui) {
   return renderWithProviders(
@@ -121,6 +125,33 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     expect(screen.queryByText("סכום ששולם בסגירה")).not.toBeInTheDocument();
   });
 
+  // FLOW-473 (decision 0253): the owner's pick, the row only for a loan paid out at closing (Sub2).
+  it("shows no row for a project's loan that was not paid out at closing", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage");
+    expect(screen.getByRole("button", { name: /^פרויקט/ })).toBeInTheDocument();
+    expect(screen.queryByText("סכום ששולם בסגירה")).not.toBeInTheDocument();
+  });
+
+  it("keeps the row while such a loan has an amount stored, so it can be cleared", async () => {
+    const store = sampleLoanStore();
+    await store.setClosingPaid("loan-mortgage", 4_000_000n);
+    renderLoan(store, "loan-mortgage");
+    expect(closingRow()).toHaveTextContent("$40,000");
+    fireEvent.click(closingRow());
+    const dialog = screen.getByRole("dialog", { name: "סכום ששולם בסגירה" });
+    fireEvent.change(within(dialog).getByLabelText("סכום"), { target: { value: "" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(closingOf(store, "loan-mortgage")).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole("button", { name: /^סכום ששולם בסגירה/ })).not.toBeInTheDocument(); });
+  });
+
+  it("decides the row from the project, the closing and the stored amount", () => {
+    expect(showsClosingPaid({ projectId: "p", closingPaidMinor: null }, true)).toBe(true);
+    expect(showsClosingPaid({ projectId: "p", closingPaidMinor: null }, false)).toBe(false);
+    expect(showsClosingPaid({ projectId: "p", closingPaidMinor: 0n }, false)).toBe(true);
+    expect(showsClosingPaid({ projectId: null, closingPaidMinor: 1n }, true)).toBe(false);
+  });
+
   it("reads static for a viewer", () => {
     renderLoan(sampleLoanStore(), "loan-bridge", (ui) => <ViewerPreview>{ui}</ViewerPreview>);
     expect(screen.getByText("סכום ששולם בסגירה")).toBeInTheDocument();
@@ -187,3 +218,43 @@ function toDbRow(): LoanDetailDbRow {
     fees_category_id: null,
   };
 }
+
+describe("the live loan read: paid out at closing (FLOW-473)", () => {
+  /** A chain that ends in `result` whatever is called on it (select, eq, order, maybeSingle). */
+  function chain(result: unknown): unknown {
+    const node: Record<string, unknown> = {};
+    for (const key of ["select", "eq", "order", "maybeSingle"]) node[key] = () => node;
+    node.then = (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve);
+    return node;
+  }
+
+  function readLive(takenOver: readonly string[]) {
+    const returns = {
+      ...mapleCourtClosingPaidReturns,
+      inputs: { ...mapleCourtClosingPaidReturns.inputs, takenOverLoans: mapleCourtClosingPaidReturns.inputs.takenOverLoans.map((loan, index) => ({ ...loan, id: takenOver[index] ?? loan.id })) },
+    };
+    from.mockImplementation((table: string) => chain(
+      table === "loans" ? { data: toDbRow(), error: null }
+        : table === "loan_balances" ? { data: { balance_minor: 21_000_000, flagged_parts: 0 }, error: null }
+          : { data: [], error: null },
+    ));
+    rpc.mockImplementation((name: string) => Promise.resolve(name === "get_property_returns" ? { data: toReturnsJson(returns), error: null } : { data: [], error: null }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return renderHook(() => useLiveLoan("loan-bridge", true), {
+      wrapper: ({ children }) => <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>,
+    });
+  }
+
+  it("reads the loan as paid out at closing when its project's returns name it", async () => {
+    const { result } = readLive(["loan-bridge"]);
+    await waitFor(() => { expect(result.current.phase === "ready" && result.current.bundle.paidAtClosing).toBe(true); });
+    expect(rpc).toHaveBeenCalledWith("get_property_returns", { p_project_id: "proj-b" });
+  });
+
+  it("reads it as not paid out at closing when they name other loans", async () => {
+    const { result } = readLive(["loan-other", "loan-another"]);
+    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("get_property_returns", { p_project_id: "proj-b" }); });
+    await waitFor(() => { expect(result.current.phase).toBe("ready"); });
+    expect(result.current.phase === "ready" && result.current.bundle.paidAtClosing).toBe(false);
+  });
+});

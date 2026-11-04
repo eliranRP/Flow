@@ -16,6 +16,9 @@ import {
   beforeFirstRent,
   cashOutMinor,
   coverLine,
+  FEW_DAYS,
+  fewDays,
+  fewDaysText,
   infiniteTotal,
   firstMissing,
   LOSS_YEAR,
@@ -166,7 +169,9 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
   const infinite = infiniteTotal(r);
   const cover = coverLine(r);
   const before = beforeFirstRent(r);
-  const partial = (cashOut == null ? totalBp != null : !infinite) && !before
+  // FLOW-473: the total scales from the first rent too, so below MIN_EARNING_DAYS it is no figure yet.
+  const few = cashOut == null && totalBp != null && fewDays(r);
+  const partial = (cashOut == null ? totalBp != null : !infinite) && !before && !few
     ? partialLine(sources.filter((source) => source.value.kind !== "money").map((source) => source.label))
     : null;
   return (
@@ -192,6 +197,8 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
         ) : before ? (
           // No rent yet: a per-cent of the money in says nothing (FLOW-454). The amounts stay.
           <span className="ui-ret-note">{BEFORE_FIRST_RENT}</span>
+        ) : few ? (
+          <span className="ui-ret-note">{FEW_DAYS}</span>
         ) : totalBp != null ? (
           <bdi dir="ltr" className={totalBp < 0 ? "ui-num t-detail ui-loss" : "ui-num t-detail"}>{percentText(totalBp)}</bdi>
         ) : totalMissing != null ? (
@@ -204,6 +211,9 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
           <p className="ui-ret-partial">{cover}</p>
         ) : cashOut != null ? (
           <span className="ui-ret-total-on"><AllCashOutMeta minor={cashOut} currency={r.currency} /></span>
+        ) : few ? (
+          // FLOW-473: why there is no per-cent yet, one caption line under the note.
+          <p className="ui-ret-partial">{fewDaysText(r)}</p>
         ) : moneyIn == null || before ? null : (
           // FLOW-468: before the first rent the note stands alone; "on the money in" names no figure.
           <span className="ui-ret-total-on">על הכסף בעסקה</span>

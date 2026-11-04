@@ -495,7 +495,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-470"></a>[FLOW-470](tasks/FLOW-470.md) | Using the land from the books can be undone, and is the row's one action | SMALL UI |
 | <a id="flow-471"></a>[FLOW-471](tasks/FLOW-471.md) | Returns sheets and headers: one definition per figure, plain words, true counts, a header that fits 320 | SMALL UI |
 | <a id="flow-472"></a>[FLOW-472](tasks/FLOW-472.md) | The closing-paid sheet shows its default and checks as you type | SMALL UI |
-| <a id="flow-473"></a>[FLOW-473](tasks/FLOW-473.md) | Owner's calls on the returns: a minimum before a per-year figure; which loans show "סכום ששולם בסגירה" | PLAN FIRST |
+| <a id="flow-473"></a>[FLOW-473](tasks/FLOW-473.md) | Owner's calls on the returns: a minimum before a per-year figure; which loans show "סכום ששולם בסגירה" | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

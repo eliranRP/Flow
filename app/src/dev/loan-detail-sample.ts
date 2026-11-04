@@ -225,6 +225,8 @@ export function sampleLoans(): LoanSample[] {
   return [
     {
       loan: SAMPLE_INTEREST_ONLY,
+      // FLOW-473: the bridge loan paid the title company at closing; the mortgage (also a project's) did not.
+      paidAtClosing: true,
       categories: SAMPLE_LOAN_CATEGORIES,
       payments: [
         payment("txn-b3", "2026-10-01", { interest: 183_750n, principal: 0n }),
