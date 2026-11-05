@@ -183,15 +183,21 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
         />
         <p id="project-kind-help" className="ui-muted">{KIND_HELP[kind]}</p>
       </div>
-      {fields.map((field) => (
-        <MoneyField
-          key={field}
-          label={field === "budget" && kind === "client" ? "סכום החוזה" : FIELD_LABEL[field]}
-          prefix={mark}
-          value={amounts[field]}
-          onValueChange={(value) => { setAmounts((current) => ({ ...current, [field]: value })); }}
-        />
-      ))}
+      {/* FLOW-1053 (board V3-NewProject): the kind's amounts as one outlined group of 60px rows, label then figure. */}
+      {fields.length === 0 ? null : (
+        <div className="ui-project-amounts">
+          {fields.map((field) => (
+            <MoneyField
+              key={field}
+              label={field === "budget" && kind === "client" ? "סכום החוזה" : FIELD_LABEL[field]}
+              prefix={mark}
+              placeholder="0"
+              value={amounts[field]}
+              onValueChange={(value) => { setAmounts((current) => ({ ...current, [field]: value })); }}
+            />
+          ))}
+        </div>
+      )}
       {fields.length === 0 ? null : <p className="ui-muted">אפשר להשאיר ריק ולמלא אחר כך בדף הפרויקט.</p>}
       {project ? null : <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>}
       {extras}

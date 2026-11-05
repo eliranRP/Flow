@@ -231,7 +231,7 @@ export function ProjectCashOverview({
                 {rows.map((row, index) => (
                   <p key={row.currency}>
                     {/* As on Home: the band's figure is whole, short from 100K, and steps down until it fits. */}
-                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} size={index > 0 ? "display" : "hero"} compact />
+                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} direction={row.net_minor > 0n ? "income" : undefined} size={index > 0 ? "display" : "hero"} compact />
                   </p>
                 ))}
               </div>
@@ -243,7 +243,7 @@ export function ProjectCashOverview({
                     <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : "יצא"}</span>
                     <span className="ui-band-row-amount">
                       {row.amounts.map((amount) => (
-                        <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} presentation="detail" size="list" />
+                        <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} size="list" />
                       ))}
                     </span>
                   </Link>

@@ -226,18 +226,18 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             <p className="ui-band-label t-line2">{share == null ? "רווח" : "רווח לפני הוצאות כלליות"}</p>
             <div className="ui-project-profits t-detail">
               <p>
-                <Amount agorot={profit} currency={currency} loss={profit < 0n} size="hero" compact />
+                <Amount agorot={profit} currency={currency} loss={profit < 0n} direction={profit > 0n ? "income" : undefined} size="hero" compact />
               </p>
             </div>
             {row == null ? null : (
               <div className="ui-project-band-pair">
                 <span className="ui-band-row-link">
                   <span className="ui-band-row-label">הכנסות</span>
-                  <span className="ui-band-row-amount"><Amount agorot={row.income_minor} currency={currency} presentation="detail" size="list" /></span>
+                  <span className="ui-band-row-amount"><Amount agorot={row.income_minor} currency={currency} size="list" /></span>
                 </span>
                 <span className="ui-band-row-link">
                   <span className="ui-band-row-label">הוצאות</span>
-                  <span className="ui-band-row-amount"><Amount agorot={expenses} currency={currency} presentation="detail" size="list" /></span>
+                  <span className="ui-band-row-amount"><Amount agorot={expenses} currency={currency} size="list" /></span>
                 </span>
               </div>
             )}
@@ -261,9 +261,10 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       <div className="ui-project-stack">
         {share == null || after == null ? null : (
           <Card className="ui-pp-card">
-            <SummaryRow label="רווח לפני הוצאות כלליות" value={<Amount agorot={profit} currency={currency} loss={profit < 0n} />} />
-            <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={-share} currency={currency} loss />} />
-            <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
+            {/* FLOW-1053 (board V3-ProjectProfit): a profit keeps its plus, the share its minus, all in the text colour. */}
+            <SummaryRow label="רווח לפני הוצאות כלליות" value={<Amount agorot={profit} currency={currency} loss={profit < 0n} direction={profit > 0n ? "income" : undefined} />} />
+            <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={-share} currency={currency} />} />
+            <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} direction={after > 0n ? "income" : undefined} />} />
           </Card>
         )}
         {share == null ? null : <p className="ui-pp-note t-caption t-muted">{NOTE}</p>}

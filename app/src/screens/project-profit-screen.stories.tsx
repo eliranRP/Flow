@@ -55,6 +55,15 @@ export const ProjectProfitRenovation: Story = {
   },
 };
 
+/** FLOW-1053 (board V3-ProjectProfit-Client): a client job's profit, the same page with no renovation note. */
+export const ProjectProfitClient: Story = {
+  name: "Project profit, a client job",
+  render: () => <ProfitRoute entry="/projects/juniper-ct/profit" data={{ ...sample, type: "לקוח" }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText(/השיפוץ לא נספר ברווח/u)).toBeNull();
+  },
+};
+
 /** FLOW-1044: docked, the order rides in the band bar. */
 export const ProjectProfitDocked: Story = {
   name: "Project profit, the order docked",

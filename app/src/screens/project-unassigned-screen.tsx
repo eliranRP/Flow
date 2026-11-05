@@ -11,6 +11,7 @@ import { screenPhase } from "../query-phase";
 import { EMPTY_FILTERS, searchCountWords, searchRowTitle, uniqueSearchRows, useSearchQuery } from "../search";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite } from "../use-write";
+import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { cashMonthName } from "../cash";
@@ -161,6 +162,8 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
                 <ListRow
                   variant="project"
                   title={searchRowTitle(row)}
+                  // FLOW-1053 (board V3-Unassigned): the party's initials lead the line.
+                  icon={<Avatar name={searchRowTitle(row)} fallback="person" />}
                   hint={`${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}${row.category_name == null ? "" : ` · ${row.category_name}`}`}
                   agorot={row.amount_net < 0n ? -row.amount_net : row.amount_net}
                   currency={row.currency}
