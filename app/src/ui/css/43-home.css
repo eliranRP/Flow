@@ -1,194 +1,4 @@
-/* FLOW-364: Home's split card, its attention box and the month drawer. */
-
-.ui-home-split {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--space-3) + var(--space-1) / 2);
-  margin: calc(var(--space-5) - var(--space-1) / 2) var(--space-4) var(--space-1);
-  padding: calc(var(--space-4) + var(--space-1) / 2);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-}
-
-/* FLOW-958: the metric's name is a small label; the title under it says the takeaway. */
-.ui-home-split-head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.ui-home-split-metric {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-cents-line);
-  font-weight: var(--type-caption-weight);
-}
-
-.ui-home-split-title {
-  margin: 0;
-  font-size: var(--type-section-size);
-  line-height: var(--type-cents-line);
-  font-weight: var(--type-section-weight);
-}
-
-.ui-home-split-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  inline-size: 100%;
-  min-block-size: var(--touch-min);
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  text-align: start;
-  text-decoration: none;
-}
-
-.ui-home-split-swatch {
-  flex: none;
-  inline-size: 12px;
-  block-size: 12px;
-  border-radius: var(--radius-swatch);
-  background: var(--color-accent);
-}
-
-.ui-home-split-swatch-none {
-  background: var(--color-text-muted);
-}
-
-.ui-home-split-swatch.ui-home-split-loss {
-  background: var(--color-bad);
-}
-
-.ui-home-split-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-inline-size: 0;
-}
-
-.ui-home-split-label {
-  font-size: var(--type-btn-size);
-  font-weight: var(--type-line2-weight);
-  line-height: var(--type-cents-line);
-}
-
-.ui-home-split-sub {
-  margin-block-start: calc(var(--space-1) / 2);
-  color: var(--color-text-muted);
-  line-height: var(--type-cents-line);
-  font-size: var(--type-caption-size);
-  font-weight: var(--type-caption-weight);
-}
-
-.ui-home-split-value {
-  font-size: var(--type-btn-size);
-  font-weight: var(--type-btn-2-weight);
-  white-space: nowrap;
-}
-
-/* FLOW-958: tabular figures, so the two amounts line up. */
-.ui-home-split-value .t-body {
-  font-weight: var(--type-btn-2-weight);
-  font-variant-numeric: tabular-nums lining-nums;
-}
-
-.ui-home-split-value.ui-home-split-loss {
-  color: var(--color-bad);
-}
-
-/* FLOW-958: the box is a neutral card, as the split card is; the accent is spent on its one button. */
-.ui-home-attention {
-  margin: var(--space-4) var(--space-4) var(--space-1);
-  padding: var(--space-4) 0 0;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-}
-
-.ui-home-attention .ui-review-cta {
-  margin: 0 var(--space-4) var(--space-2);
-}
-
-.ui-home-attention .ui-banner-icon {
-  color: var(--color-text-secondary);
-}
-
-/* One row left under the button draws a Banner: it sits as the list's rows do, not as a card of its own. */
-.ui-home-attention .ui-banner {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-radius: 0;
-  background: transparent;
-}
-
-.ui-home-attention .ui-banner-rows {
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-}
-
-.ui-home-attention .ui-banner-rows > li + li {
-  border-top: 1px solid var(--color-line);
-}
-
-.ui-home-attention .ui-banner-row {
-  min-height: 70px;
-  padding: var(--space-3) var(--space-4);
-  border-radius: 0;
-}
-
-/* Board: 18px chevrons, a 13px secondary hint under the 17px title. FLOW-958: grey, not accent. */
-.ui-home-attention .ui-banner-chevron {
-  color: var(--color-text-muted);
-}
-
-.ui-home-attention .ui-banner-chevron svg {
-  transform: scale(0.9);
-}
-
-.ui-home-attention .ui-row-hint {
-  color: var(--color-text-secondary);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-btn-2-line);
-}
-
-/* The hint is one line: whole when it fits, cut with an ellipsis only when it does not (owner,
-   2026-10-21). Plain inline text, so Safari measures the real width instead of the two-line box. */
-/* One row is a Banner, two or more are BannerRows: both carry the two-line clamp this replaces. */
-.ui-home-attention :is(.ui-banner, .ui-banner-row) .ui-row-hint {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  -webkit-line-clamp: unset;
-}
-
-/* A cut never falls inside an amount, so a clipped hint never shows a shorter, believable number.
-   FLOW-958: the amount is tabular, as every amount on Home is. */
-.ui-home-attention :is(.ui-banner, .ui-banner-row) .ui-row-hint bdi {
-  display: inline-block;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-
-/* FLOW-1017: the box's foot, a link to קבועים by name, under the last row's line. */
-.ui-home-attention-foot {
-  display: flex;
-  padding: var(--space-1) var(--space-4) var(--space-2);
-  border-block-start: 1px solid var(--color-line);
-}
-
-.ui-home-attention-title {
-  margin: 0 var(--space-4) var(--space-3);
-  font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
-  font-weight: var(--type-section-weight);
-}
+/* FLOW-364: Home's month drawer and its empty first run. FLOW-1036: the attention cards and the month's activity. */
 
 .ui-month-drawer {
   display: flex;
@@ -435,86 +245,56 @@
   text-decoration: none;
 }
 
-/* FLOW-161: the reports card, the last card on Home (board "Option 2 · Home, דוחות card last"). The same card
-   as the split card above it; two halves open the P&L and the balance sheet. */
-.ui-home-rep {
+/* FLOW-1036 (board V3-Home): the attention cards, 20px under the band (or the weekly card). */
+.ui-home-attn {
+  margin-block-start: var(--space-5);
+}
+
+/* The month's activity: the filter 20px under the cards, then the groups with their one-line sticky heads. */
+.ui-home-act {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  margin: calc(var(--space-5) - var(--space-1) / 2) var(--space-4) var(--space-1);
-  padding: var(--space-3) calc(var(--space-4) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
+  margin-block: var(--space-5) var(--space-6);
 }
 
-.ui-home-rep-head {
+.ui-home-act .ui-dock-slot {
+  margin-block-end: var(--space-2);
+}
+
+/* A due charge's amount is the usual one, not money that moved yet: muted, as the board draws it. */
+.ui-home-act-due .ui-num {
+  color: var(--color-text-muted);
+}
+
+.ui-home-act-failed {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--touch-min);
+  flex-direction: column;
+  padding-block: var(--space-3);
 }
 
-.ui-home-rep-icon {
-  display: inline-flex;
-  color: var(--color-accent-text);
-}
-
-.ui-home-rep-title {
+.ui-home-act-failed-title {
   margin: 0;
-  font-size: var(--type-section-size);
-  line-height: var(--type-cents-line);
-  font-weight: var(--type-section-weight);
 }
 
-.ui-home-rep-halves {
+.ui-home-act-foot {
   display: flex;
-  gap: var(--space-4);
+  justify-content: flex-start;
+  margin-block-start: var(--space-4);
 }
 
-.ui-home-rep-half {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-  min-height: var(--touch-min);
-  padding-block: var(--space-1);
-  color: var(--color-text);
-  text-decoration: none;
+/* FLOW-1036: next month's cell in the drawer opens its forecast; dashed like a month to come, but pickable. */
+.ui-month-cell-next {
+  border: 2px dashed var(--color-line);
 }
 
-.ui-home-rep-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.ui-month-cell-next[aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--color-accent);
+  background: var(--color-tint-strong);
+}
+
+.ui-month-drawer-next-none {
+  margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
-}
-
-.ui-home-rep-figure {
-  direction: ltr;
-  text-align: right;
-}
-
-.ui-home-rep-figure .ui-num {
-  white-space: nowrap;
-}
-
-.ui-home-rep-figure-empty {
-  color: var(--color-text-muted);
-}
-
-.ui-home-rep-sub,
-.ui-home-rep-foot {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-cents-line);
-}
-
-.ui-home-rep-divider {
-  flex: none;
-  inline-size: 1px;
-  background: var(--color-line);
+  text-align: center;
 }

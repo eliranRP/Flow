@@ -134,6 +134,14 @@ export function sweepControls(spec: string): void {
   for (const url of only.length > 0 ? urls.filter((route) => only.includes(route)) : urls) {
     test(`no enabled control is a no-op on ${url}`, async ({ page }) => {
       test.setTimeout(180_000);
+      // FLOW-1036: an attention card's X hides it on this device; each fresh look starts with every card shown.
+      await page.addInitScript(() => {
+        try {
+          for (const key of Object.keys(window.localStorage)) if (key.startsWith("flow.attention.")) window.localStorage.removeItem(key);
+        } catch {
+          // Storage blocked: nothing was kept.
+        }
+      });
       await gotoSettled(page, url);
       const found = await settledControls(page);
       // Every control below starts from this same fresh page, so the checks that read only the

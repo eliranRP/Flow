@@ -1,10 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
+import { homeActivityLines } from "../dev/home-activity-sample";
 import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
-import { HomeNextMonth } from "./home-next-month";
+import type { ActivityFilter, HomeActivityData } from "./home-activity";
+import { DrawerNextMonth } from "./month-drawer-next";
+import { RECURRING_FIXTURE } from "../recurring-sample";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
@@ -27,9 +30,39 @@ export const HomeLoading: Story = {
   ),
 };
 
+/** The hidden attention rows a story starts with (flow.attention.home); every story sets its own, so none leaks into the next. */
+function useHiddenRows(hidden: Record<string, string> | null) {
+  useState(() => {
+    try {
+      if (hidden == null) window.localStorage.removeItem("flow.attention.home");
+      else window.localStorage.setItem("flow.attention.home", JSON.stringify(hidden));
+    } catch {
+      // Storage blocked: the story shows every row.
+    }
+    return null;
+  });
+}
+
+/**
+ * FLOW-1036: the month's activity as Home reads it: the recurring schedule (recurring-sample.ts) and this month's
+ * lines, in the sample's base currency (ILS). Invented names and figures.
+ */
+function sampleActivity(over: Partial<HomeActivityData> = {}): HomeActivityData {
+  const currentKey = israelToday().slice(0, 7);
+  return {
+    schedule: RECURRING_FIXTURE.map((row) => ({ ...row, currency: "ILS" })),
+    scheduleFailed: false,
+    lines: homeActivityLines(currentKey, { currency: "ILS" }),
+    linesFailed: false,
+    onRetry: () => undefined,
+    ...over,
+  };
+}
+
 // FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
 function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
   const currentKey = israelToday().slice(0, 7);
+  useHiddenRows(null);
   return (
     <StoryRoute entry="/" tabs>
       <CashHome
@@ -39,6 +72,7 @@ function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number;
         previewing={false}
         search=""
         attention={attentionRows({ pending, unpaidCount, unpaidGross, search: "" })}
+        activity={sampleActivity()}
         example={exampleOnBand}
         onStepMonth={() => undefined}
       />
@@ -64,10 +98,44 @@ export const HomeAttentionSingular: Story = {
   render: () => <AttentionHome pending={1} unpaidCount={1} unpaidGross={468_000n} />,
 };
 
-/** FLOW-364: Home's band with the month, its figures, the split card and the attention box. Invented figures. */
-function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null, recurringTip = false, late = recurringTip ? 1 : 0, forecast = null, forecastPending = false }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null; recurringTip?: boolean; late?: number; forecast?: bigint | null; forecastPending?: boolean }) {
+/**
+ * FLOW-364 / FLOW-1036: Home's band with the month and its figures, the attention cards and the month's activity.
+ * Invented figures. `review` false leaves the review card out, so every card can be hidden.
+ */
+function CashHomeStory({
+  monthBack = 0,
+  attention = true,
+  review = true,
+  hidden = null,
+  activity = sampleActivity(),
+  filter = "all",
+  initialDrawerOpen = false,
+  initialDrawerNext = false,
+  quiet = false,
+  offlineSince = null,
+  recurringTip = false,
+  late = recurringTip ? 1 : 0,
+  forecast = null,
+  forecastPending = false,
+}: {
+  monthBack?: number;
+  attention?: boolean;
+  review?: boolean;
+  hidden?: Record<string, string> | null;
+  activity?: HomeActivityData | null;
+  filter?: ActivityFilter;
+  initialDrawerOpen?: boolean;
+  initialDrawerNext?: boolean;
+  quiet?: boolean;
+  offlineSince?: number | null;
+  recurringTip?: boolean;
+  late?: number;
+  forecast?: bigint | null;
+  forecastPending?: boolean;
+}) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
+  useHiddenRows(hidden);
   return (
     <StoryRoute entry="/" tabs>
       <CashHome
@@ -76,7 +144,11 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
         currentKey={currentKey}
         previewing={false}
         search=""
-        attention={attention ? attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, missingCount: late, search: "" }) : []}
+        attention={attention ? attentionRows({ pending: review ? 7 : 0, transfers: 2, unpaidCount: 3, unpaidGross: 460_000n, missingCount: late, search: "" }) : []}
+        activity={monthBack > 0 ? null : activity}
+        initialFilter={filter}
+        drawerNext={monthBack > 0 ? null : <DrawerNextMonth today={NEXT_MONTH_TODAY} currency="USD" cash={null} sample={HOME_NEXT_MONTH_SAMPLE} />}
+        initialDrawerNext={initialDrawerNext}
         example={exampleOnBand}
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
@@ -91,40 +163,151 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
   );
 }
 
-/** FLOW-990 (board HomeNextMonth): next month's card and chart after the split card. Invented dollar figures. */
-export const HomeNextMonthBlock: Story = {
-  name: "Home, next month after the split card",
-  render: () => (
-    <StoryRoute entry="/" tabs>
-      <CashHome
-        data={HOME_NEXT_MONTH_SAMPLE.cash}
-        monthKey={NEXT_MONTH_TODAY.slice(0, 7)}
-        currentKey={NEXT_MONTH_TODAY.slice(0, 7)}
-        previewing={false}
-        search=""
-        attention={attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, search: "" })}
-        example={exampleOnBand}
-        onStepMonth={() => undefined}
-        nextMonth={<HomeNextMonth today={NEXT_MONTH_TODAY} currency="USD" sample={HOME_NEXT_MONTH_SAMPLE} />}
-      />
-    </StoryRoute>
-  ),
+/** The current month: the cards to review (the review card has no X), then the month's activity. A first-time owner: no קבועים tip (FLOW-1015). */
+export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
+
+/** FLOW-1036: two cards hidden on this device; the head says so and brings them back. */
+export const HomeAttentionSomeHidden: Story = {
+  name: "Home attention, some hidden",
+  render: () => <CashHomeStory hidden={{ transfers: "transfers:2", unpaid: "unpaid:3:460000" }} />,
   play: async ({ canvasElement }) => {
-    await waitFor(async () => {
-      await expect(canvasElement.querySelector("#home-next-title")?.textContent).toBe("החודש הבא");
-    });
-    await expect(canvasElement.querySelector(".ui-fc-card")).not.toBeNull();
-    await expect(canvasElement.querySelector(".ui-fc-chart")).not.toBeNull();
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "2 הוסתרו · הצגה" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("link", { name: /חשבוניות פתוחות/ })).toBeNull();
   },
 };
 
-/** The current month, with the attention box and the split card. A first-time owner: no קבועים tip (FLOW-1015). */
-export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
+/** FLOW-1036: with no review waiting, every card can be hidden: one line remains, with ביטול. */
+export const HomeAttentionAllHidden: Story = {
+  name: "Home attention, all hidden",
+  render: () => <CashHomeStory review={false} hidden={{ transfers: "transfers:2", unpaid: "unpaid:3:460000" }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1036: an X slides its card out and folds it; the head counts the hidden card. */
+export const HomeAttentionDismiss: Story = {
+  name: "Home attention, an X hides a card",
+  render: () => <CashHomeStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" }));
+    await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "1 הוסתרו · הצגה" }));
+    await expect(await canvas.findByRole("link", { name: "3 חשבוניות פתוחות" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1036: the filter on קבועים: what is still due and the charges that arrived; the one-off lines hide. */
+export const HomeFilterFixed: Story = {
+  name: "Home activity, קבועים",
+  render: () => <CashHomeStory filter="fixed" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "קבועים ששולמו" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "חד-פעמי" })).toBeNull();
+  },
+};
+
+/** FLOW-1036: the filter on נותר לשלם: only what is still due, late first, "איחר" in words. */
+export const HomeFilterLeft: Story = {
+  name: "Home activity, נותר לשלם",
+  render: () => <CashHomeStory filter="left" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "נותר לשלם" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "קבועים ששולמו" })).toBeNull();
+    await expect(canvas.getAllByText("איחר").length).toBeGreaterThan(0);
+  },
+};
+
+/** FLOW-1036: הכול with all three groups; a pick on the in-page filter changes them. */
+export const HomeFilterAll: Story = {
+  name: "Home activity, הכול",
+  render: () => <CashHomeStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "חד-פעמי" })).toBeInTheDocument();
+    const filter = canvas.getAllByRole("radiogroup", { name: "סינון תנועות" })[0];
+    if (filter == null) throw new Error("no filter");
+    await userEvent.click(within(filter).getByRole("radio", { name: "נותר לשלם" }));
+    await waitFor(() => expect(canvas.queryByRole("heading", { name: "חד-פעמי" })).toBeNull());
+    await userEvent.click(within(filter).getByRole("radio", { name: "הכול" }));
+  },
+};
+
+/** FLOW-1036 (BUILD-PLAN §5): before the server says which lines recur, Home shows the two recurring groups only. */
+export const HomeActivityNoFlag: Story = {
+  name: "Home activity, before the recurring flag",
+  render: () => <CashHomeStory activity={sampleActivity({ lines: homeActivityLines(israelToday().slice(0, 7), { flag: false, currency: "ILS" }) })} />,
+};
+
+/**
+ * FLOW-1036: scrolled past the filter, it docks into the band's bar (the bar grows by its row) and the in-page copy
+ * fades; a pick in the bar brings the list's top under it and the filter stays docked.
+ */
+export const HomeDocked: Story = {
+  name: "Home activity, the filter docked",
+  render: () => <CashHomeStory />,
+  play: async ({ canvasElement }) => {
+    const doc = canvasElement.ownerDocument;
+    const slot = canvasElement.querySelector<HTMLElement>(".ui-dock-slot");
+    if (slot == null) throw new Error("no filter");
+    window.scrollTo({ top: slot.getBoundingClientRect().top + window.scrollY, behavior: "instant" });
+    const dock = () => doc.querySelector<HTMLElement>(".ui-compact-bar-band .ui-compact-dock");
+    await waitFor(() => expect(dock()).toHaveAttribute("data-open"));
+    await expect(slot).toHaveAttribute("data-docked");
+    await waitFor(() => expect(doc.documentElement).toHaveAttribute("data-compact-dock", "on"));
+    await userEvent.click(within(dock() as HTMLElement).getByRole("radio", { name: "קבועים" }));
+    await waitFor(() => expect(within(dock() as HTMLElement).getByRole("radio", { name: "קבועים" })).toHaveAttribute("aria-checked", "true"));
+    await waitFor(() => expect(canvasElement.querySelector("#home-act-once")).toBeNull());
+    await expect(dock()).toHaveAttribute("data-open");
+  },
+};
+
+/** FLOW-1036: a month with nothing yet: the activity says so in words; the filter stays. */
+export const HomeEmptyMonth: Story = {
+  name: "Home activity, empty month",
+  render: () => <CashHomeStory attention={false} activity={sampleActivity({ schedule: [], lines: [] })} />,
+};
+
+/** FLOW-1036: the schedule's read is on its way: rows in the shape they land in. */
+export const HomeActivityLoading: Story = {
+  name: "Home activity, loading",
+  render: () => <CashHomeStory activity={sampleActivity({ schedule: null, lines: null })} />,
+};
+
+/** FLOW-1036: the schedule's read failed: the list says so with a retry; the band and the one-off lines stay. */
+export const HomeScheduleFailed: Story = {
+  name: "Home activity, the schedule read failed",
+  render: () => <CashHomeStory activity={sampleActivity({ schedule: null, scheduleFailed: true })} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("רשימת התנועות לא נטענה")).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-band")).not.toBeNull();
+  },
+};
+
+/** FLOW-1036 (BUILD-PLAN §5): the pill's next arrow on the current month opens the drawer on next month and its forecast. */
+export const HomeDrawerNextMonth: Story = {
+  name: "Home, the drawer on next month",
+  render: () => <CashHomeStory initialDrawerNext />,
+  play: async ({ canvasElement }) => {
+    const doc = within(canvasElement.ownerDocument.body);
+    const dialog = await doc.findByRole("dialog", { name: "בחירת חודש" });
+    await waitFor(() => expect(dialog.querySelector(".ui-fc-card")).not.toBeNull());
+    await expect(dialog.querySelector('.ui-month-cell-next[aria-pressed="true"]')).not.toBeNull();
+  },
+};
 
 /** FLOW-1015: a returning owner (one with recurring rows) sees the קבועים tip once, the count's sentence while a bill is late. Live Home has the company on the band, so the bubble opens over it. */
 export const HomeRecurringTip: Story = { render: () => <CashHomeStory recurringTip /> };
 
-/** FLOW-1017: three recurring bills late: their count on the band's קבועים icon, their row, and כל הקבועים at the box's foot. */
+/** FLOW-1017: three recurring bills late: their count on the band's קבועים icon, their card, and כל הקבועים at the activity's foot. */
 export const HomeLateRecurring: Story = {
   render: () => <CashHomeStory late={3} />,
   play: async ({ canvasElement }) => {
@@ -154,7 +337,7 @@ function ForecastArrivesStory() {
 
 /**
  * FLOW-1031: Home reads the forecast after it paints (FLOW-1019), so until the read answers the forecast row
- * keeps its place, a bar for its figure. The attention box sits where it will stay when the figure lands.
+ * keeps its place, a bar for its figure. The attention cards sit where they will stay when the figure lands.
  */
 export const HomeForecastPending: Story = {
   name: "Home, forecast row kept while it loads",
@@ -162,7 +345,7 @@ export const HomeForecastPending: Story = {
   play: async ({ canvasElement }) => {
     // The layout's own offsets: the page's enter motion moves the box for a moment, the layout does not.
     const attentionTop = () => {
-      const box = canvasElement.querySelector(".ui-home-attention");
+      const box = canvasElement.querySelector(".ui-attn");
       if (!(box instanceof HTMLElement)) throw new Error("the attention box is not drawn");
       let top = 0;
       for (let node: Element | null = box; node instanceof HTMLElement; node = node.offsetParent) top += node.offsetTop;
@@ -208,7 +391,7 @@ export const HomeFailedOffline: Story = {
   ),
 };
 
-/** A past month: the darker band, "חזרה ל…" and no forecast or box. */
+/** A past month: the darker band, "חזרה ל…" and no forecast, cards or activity. */
 export const HomePast: Story = { render: () => <CashHomeStory monthBack={1} attention={false} /> };
 
 /** Scrolled past the band: the compact bar pins the month and the arrows, and the band's figures fade away (FLOW-364). */

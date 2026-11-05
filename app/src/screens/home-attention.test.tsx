@@ -1,10 +1,13 @@
-// vitest-css: these queries rely on the app's CSS hiding elements.
-import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 import { cashMonthKey } from "../cash";
 import { sampleCashMonths } from "../dev/cash-sample";
 import { renderWithProviders } from "../test-render";
+import type { ChargeChangeView } from "../forecast";
+import type { HomeActivityData } from "./home-activity";
 import { attentionRows, CashHome } from "./HomeScreen";
+
+const ACTIVITY: HomeActivityData = { schedule: [], scheduleFailed: false, lines: [], linesFailed: false, onRetry: () => undefined };
 
 /** The live Home's rows: the unpaid figures count only while unpaid is ready (HomeScreen). */
 function renderHome({
@@ -14,6 +17,7 @@ function renderHome({
   phase = "ready",
   search = "",
   syncing = null,
+  changes = [],
 }: {
   review: number;
   unpaid: number;
@@ -21,6 +25,7 @@ function renderHome({
   phase?: "loading" | "error" | "empty" | "ready";
   search?: string;
   syncing?: string | null;
+  changes?: ChargeChangeView[];
 }) {
   const data = sampleCashMonths();
   const currentKey = cashMonthKey(data.months[0]?.month ?? "");
@@ -36,8 +41,10 @@ function renderHome({
         pending: review,
         unpaidCount: ready ? unpaid : 0,
         unpaidGross: ready ? gross : 0n,
+        changes,
         search,
       })}
+      activity={ACTIVITY}
       syncing={syncing}
       onStepMonth={() => undefined}
     />,
@@ -45,78 +52,85 @@ function renderHome({
   );
 }
 
-const reviewLink = () => screen.queryByRole("link", { name: /^לאישור/ });
+const reviewLink = () => screen.queryByRole("link", { name: /לאישור/ });
 const unpaidLink = () => screen.queryByRole("link", { name: /חשבוני(ת|ות) פתוח/ });
 
-describe("Home attention card (FLOW-321)", () => {
-  it("shows no card when nothing waits and nothing is unpaid", () => {
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+describe("Home's attention cards (FLOW-321, FLOW-1036)", () => {
+  it("shows no section when nothing waits and nothing is unpaid", () => {
     renderHome({ review: 0, unpaid: 0 });
     expect(reviewLink()).toBeNull();
     expect(unpaidLink()).toBeNull();
-    expect(document.querySelector(".ui-banner, .ui-banner-rows")).toBeNull();
+    expect(document.querySelector(".ui-attn")).toBeNull();
   });
 
-  it("opens with the review as the box's one filled button, then the unpaid row (FLOW-958)", () => {
+  it("puts the review card first, with no X, then the unpaid card with its X", () => {
     renderHome({ review: 7, unpaid: 3, gross: 2_340_000n });
-    const review = screen.getByRole("link", { name: "לאישור 7 פריטים · כ־2 דקות" });
-    const unpaid = screen.getByRole("link", { name: "3 חשבוניות פתוחות ₪23,400 · לגבייה" });
+    const review = screen.getByRole("link", { name: "7 פריטים ממתינים לאישור" });
+    const unpaid = screen.getByRole("link", { name: "3 חשבוניות פתוחות" });
     expect(review).toHaveAttribute("href", "/review");
-    expect(review).toHaveClass("ui-btn");
     expect(unpaid).toHaveAttribute("href", "/unpaid");
     expect(review.compareDocumentPosition(unpaid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(unpaid.querySelector('.ui-row-hint bdi[dir="ltr"]')).toHaveTextContent("₪23,400");
-    // FLOW-1017: the box's foot adds the quiet "כל הקבועים" link; the review stays its one filled button.
-    expect(document.querySelectorAll(".ui-btn:not(.ui-btn-link)")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "כל הקבועים" })).toHaveClass("ui-btn-link");
+    expect(screen.queryByRole("button", { name: /הסתרה: .*לאישור/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" })).toBeInTheDocument();
   });
 
-  it("puts the attention box right after the band, before the split card (FLOW-958)", () => {
+  it("comes before the month's activity", () => {
     renderHome({ review: 7, unpaid: 3, gross: 2_340_000n });
-    const attention = screen.getByRole("region", { name: "דורש טיפול" });
-    const split = document.querySelector(".ui-home-split");
-    expect(split).not.toBeNull();
-    expect(attention.compareDocumentPosition(split as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const cards = document.querySelector(".ui-attn");
+    const activity = screen.getByRole("region", { name: "תנועות החודש" });
+    expect((cards as Element).compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("uses singular copy for one of each, with distinct names", () => {
-    renderHome({ review: 1, unpaid: 1, gross: 468_000n });
-    expect(screen.getByRole("link", { name: "לאישור פריט אחד · פחות מדקה" })).toHaveAttribute("href", "/review");
-    expect(screen.getByRole("link", { name: "חשבונית פתוחה אחת ₪4,680 · לגבייה" })).toHaveAttribute("href", "/unpaid");
-    expect(screen.queryByText(/פריטים/)).toBeNull();
-    expect(screen.queryByText(/חשבוניות/)).toBeNull();
-  });
-
-  it("shows only the review button when nothing is unpaid, singular and plural", () => {
-    const { unmount } = renderHome({ review: 1, unpaid: 0 });
-    expect(screen.getByRole("link", { name: "לאישור פריט אחד · פחות מדקה" })).toHaveClass("ui-btn");
-    expect(unpaidLink()).toBeNull();
-    expect(document.querySelector(".ui-home-attention :is(.ui-banner, .ui-banner-rows)")).toBeNull();
+  it("keeps a hidden card hidden until what it counts changes", async () => {
+    const { unmount } = renderHome({ review: 0, unpaid: 3, gross: 2_340_000n });
+    fireEvent.click(screen.getByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" }));
+    await waitFor(() => {
+      expect(unpaidLink()).toBeNull();
+    });
+    expect(screen.getByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("flow.attention.home") ?? "{}")).toEqual({ unpaid: "unpaid:3:2340000" });
     unmount();
-    renderHome({ review: 12, unpaid: 0 });
-    expect(screen.getByRole("link", { name: "לאישור 12 פריטים · כ־4 דקות" })).toHaveAttribute("href", "/review");
+    // The same count and total: still hidden on this device.
+    const again = renderHome({ review: 0, unpaid: 3, gross: 2_340_000n });
     expect(unpaidLink()).toBeNull();
+    again.unmount();
+    // Another invoice opened: the card shows again.
+    renderHome({ review: 0, unpaid: 4, gross: 2_840_000n });
+    expect(unpaidLink()).toBeInTheDocument();
   });
 
-  it("shows one unpaid row with its total when nothing waits, singular and plural", () => {
-    const { unmount } = renderHome({ review: 0, unpaid: 1, gross: 100_000n });
-    expect(screen.getByRole("link", { name: "חשבונית פתוחה אחת ₪1,000 · לגבייה" })).toHaveClass("ui-banner");
-    expect(reviewLink()).toBeNull();
-    unmount();
-    renderHome({ review: 0, unpaid: 4, gross: 2_340_000n });
-    expect(screen.getByRole("link", { name: "4 חשבוניות פתוחות ₪23,400 · לגבייה" })).toHaveAttribute("href", "/unpaid");
-    expect(reviewLink()).toBeNull();
+  it("brings hidden cards back from the section's head", async () => {
+    renderHome({ review: 2, unpaid: 3, gross: 2_340_000n });
+    fireEvent.click(screen.getByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" }));
+    const restore = await screen.findByRole("button", { name: "1 הוסתרו · הצגה" });
+    fireEvent.click(restore);
+    expect(unpaidLink()).toBeInTheDocument();
   });
 
-  it("keeps the preview search on both rows", () => {
+  it("keys a changed charge by its id and its amount", () => {
+    const change: ChargeChangeView = { id: "t1", title: "חשמל עלה", down: false, now: "$250", usual: "$180", href: "/transactions/t1" };
+    const [row] = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: [change], search: "" });
+    expect(row?.dismissKey).toBe("change:t1:$250");
+    const [both] = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: [change, { ...change, id: "t2" }], search: "" });
+    expect(both?.dismissKey).toBe("changes:2:t1+t2");
+    const [review] = attentionRows({ pending: 3, unpaidCount: 0, unpaidGross: 0n, search: "" });
+    expect(review?.dismissKey).toBeUndefined();
+  });
+
+  it("keeps the preview search on both cards", () => {
     renderHome({ review: 2, unpaid: 2, gross: 200_000n, search: "?preview=1" });
     expect(reviewLink()).toHaveAttribute("href", "/review?preview=1");
     expect(unpaidLink()).toHaveAttribute("href", "/unpaid?preview=1");
   });
 
-  it("drops the unpaid row while unpaid is loading or failed", () => {
+  it("drops the unpaid card while unpaid is loading or failed", () => {
     for (const phase of ["loading", "error"] as const) {
       const { unmount } = renderHome({ review: 3, unpaid: 2, gross: 200_000n, phase });
-      expect(screen.getByRole("link", { name: "לאישור 3 פריטים · כדקה" })).toBeInTheDocument();
+      expect(reviewLink()).toBeInTheDocument();
       expect(unpaidLink()).toBeNull();
       unmount();
     }

@@ -34,9 +34,23 @@ test("the drawer opens, a future month is disabled, and a pick replaces the mont
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 
-test("the later arrow is disabled on the current month", async ({ page }) => {
+test("the later arrow on the current month opens the drawer on next month's forecast (FLOW-1036)", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1");
-  await expect(page.getByRole("button", { name: "חודש הבא" })).toBeDisabled();
+  await page.getByRole("button", { name: "חודש הבא · תחזית" }).first().click();
+  const drawer = page.getByRole("dialog", { name: "בחירת חודש" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.locator('.ui-month-cell-next[aria-pressed="true"]')).toBeVisible();
+  await expect(drawer.locator(".ui-fc-card")).toBeVisible();
+});
+
+test("the month's filter docks into the bar once it reaches it (FLOW-1036)", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1");
+  await page.locator(".ui-dock-slot").evaluate((node) => {
+    window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY);
+  });
+  await expect(page.locator(".ui-compact-bar-band .ui-compact-dock")).toHaveAttribute("data-open", "true");
+  await page.locator(".ui-compact-bar-band .ui-compact-dock").getByRole("radio", { name: "נותר לשלם" }).click();
+  await expect(page.getByRole("heading", { name: "קבועים ששולמו" })).toHaveCount(0);
 });
 
 test("a past month shows the way back to the current one", async ({ page }) => {

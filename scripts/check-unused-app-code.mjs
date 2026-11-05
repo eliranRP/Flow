@@ -25,11 +25,6 @@ export const supportFiles = new Map([
   ["src/ui/reduced-motion.tsx", "a Storybook decorator"],
   ["src/lib/supabase-unused.ts", "vite.config aliases supabase-js's realtime and storage clients to it"],
   ["src/lib/zod-jitless.ts", "vite.config aliases zod to it"],
-  // FLOW-1043 ships the v3 shared parts ahead of the screens; FLOW-1036 (Home) imports them and drops these four lines.
-  ["src/ui/dock-filter.tsx", "a v3 shared part, first used by FLOW-1036"],
-  ["src/ui/attention-cards.tsx", "a v3 shared part, first used by FLOW-1036"],
-  ["src/ui/attention-dismiss.ts", "a v3 shared part, first used by FLOW-1036"],
-  ["src/ui/status-mark.tsx", "a v3 shared part, first used by FLOW-1036"],
 ]);
 
 const supportName = /(^|[/.-])(test|tests|stories|story|sample|harness)([/.-]|$)|\.d\.ts$/;

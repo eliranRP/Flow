@@ -13,7 +13,8 @@ import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from 
  * third row, the late recurring bills, as a count only. FLOW-415 (b-2): late income gets its own
  * count row, and a recurring payment 20% or more off its usual amount gets a row with an up or down
  * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו", that opens the list of
- * those charges (FLOW-1021). The late count rows open the קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
+ * those charges (FLOW-1021). FLOW-1036: every row but the review carries its `dismissKey`, `<id>:<count>[:<amount>]`,
+ * so a row hidden on Home's cards shows again once what it counts changes. The late count rows open the קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
  * count row under the review row, opening העברות לבדיקה.
  */
 export function attentionRows({
@@ -60,6 +61,7 @@ export function attentionRows({
   if (transfers > 0) {
     rows.push({
       id: "transfers",
+      dismissKey: `transfers:${String(transfers)}`,
       to: `/transfers${search}`,
       // The bank icon Home already loads (between two bank accounts), not one more icon in its first load.
       icon: <BankIcon size={24} stroke={1.9} />,
@@ -70,6 +72,7 @@ export function attentionRows({
   if (unpaidCount > 0) {
     rows.push({
       id: "unpaid",
+      dismissKey: `unpaid:${String(unpaidCount)}:${String(unpaidGross)}`,
       to: `/unpaid${search}`,
       icon: <InvoiceIcon />,
       title: unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
@@ -93,10 +96,10 @@ export function attentionRows({
   const count = (n: number, income: boolean) =>
     n === 1 ? missingBillsTitle(1, income) : <><bdi dir="ltr">{String(n)}</bdi> {income ? "תנועות קבועות לא הגיעו" : "חשבונות לא הגיעו"}</>;
   if (missingCount > 0) {
-    rows.push({ id: "missing", to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false) });
+    rows.push({ id: "missing", dismissKey: `missing:${String(missingCount)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false) });
   }
   if (missingIncome > 0) {
-    rows.push({ id: "missing-income", to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true) });
+    rows.push({ id: "missing-income", dismissKey: `missing-income:${String(missingIncome)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true) });
   }
   // FLOW-415: one changed charge opens its payment. FLOW-1021: two or more share a row that opens
   // חיובים שהשתנו, the list of just those charges, each with its amount and its usual one.
@@ -106,6 +109,8 @@ export function attentionRows({
   } else if (changes.length > 1) {
     rows.push({
       id: "changes",
+      // Which charges changed, not only how many: another change in their place shows the row again.
+      dismissKey: `changes:${String(changes.length)}:${changes.map((change) => change.id).join("+")}`,
       to: `/recurring/changes${search}`,
       // All drops draw the down arrow; any rise draws the up one.
       icon: changes.every((change) => change.down) ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
@@ -122,6 +127,7 @@ export function attentionRows({
 export function changeRow(change: ChargeChangeView, { saysRecurring = true }: { saysRecurring?: boolean } = {}): BannerRow {
   return {
     id: `change:${change.id}`,
+    dismissKey: `change:${change.id}:${change.now}`,
     to: change.href,
     icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
     title: change.title,

@@ -26,6 +26,9 @@ export type CompanyCashNextMonth = {
   categories: readonly RentCategory[];
 };
 
+/** A fixture: the forecast's reads and the cash months, as they would come back (Home's drawer, the Projects tab). */
+export type HomeNextMonthSample = { next: CompanyNextMonthSample; cash: NonNullable<CashMonths> };
+
 export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample): CompanyCashNextMonth {
   const next = useCompanyNextMonth(currency, today, enabled, sample);
   const forecast = useMemo(() => (next.forecast == null ? null : companyCashForecast(next.forecast)), [next.forecast]);
