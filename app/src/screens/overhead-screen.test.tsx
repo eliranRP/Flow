@@ -1,6 +1,6 @@
 import type { ProjectDetail } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
@@ -124,9 +124,10 @@ describe("project overhead hero", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByText("+₪200,000")).toBeInTheDocument();
+    // FLOW-1044: the income is on the band, under the profit since the start.
+    expect(screen.getByText("₪200,000", { selector: "bdi" })).toBeInTheDocument();
     // Expenses carry no minus (FLOW-328): the row's label says they are expenses.
-    expect(screen.getByText("₪100,000", { selector: "bdi" })).toBeInTheDocument();
+    expect(screen.getAllByText("₪100,000", { selector: "bdi" }).length).toBeGreaterThan(0);
     expect(screen.queryByText("−₪100,000")).not.toBeInTheDocument();
     expect(screen.getByText("חלק בהוצאות הכלליות").nextSibling).toHaveTextContent("₪40,000");
     expect(screen.getByText("רווח אחרי הוצאות כלליות").nextSibling).toHaveTextContent("₪60,000");
@@ -218,7 +219,7 @@ describe("project overhead hero", () => {
 });
 
 describe("the project's finish row (FLOW-334)", () => {
-  it("finishes the project from a row in the ⋯ menu, at once (FLOW-961, decision 0213)", async () => {
+  it("finishes the project from the ⋯ menu after the confirm inside the sheet (FLOW-961, FLOW-1044)", async () => {
     const calls: Array<{ name: string; args: unknown }> = [];
     rpc.impl = (name, args) => {
       calls.push({ name, args });
@@ -229,11 +230,12 @@ describe("the project's finish row (FLOW-334)", () => {
     const row = await screen.findByRole("button", { name: /^סיום הפרויקט/ });
     expect(row).toHaveClass("ui-row");
     fireEvent.click(row);
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "וילה רעננה" })).not.toBeInTheDocument(); });
+    const confirm = await screen.findByRole("dialog", { name: "לסיים את וילה רעננה?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "סיום הפרויקט" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: /וילה רעננה/ })).not.toBeInTheDocument(); });
     await waitFor(() => {
       expect(calls.find((call) => call.name === "upsert_project")?.args).toMatchObject({ p_id: "a", p_status: "finished" });
     });
-    expect(screen.queryByRole("dialog", { name: /^לסיים את/ })).not.toBeInTheDocument();
   });
 
   it("offers החזרה לפעיל on a finished project", async () => {

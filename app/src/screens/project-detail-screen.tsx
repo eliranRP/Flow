@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import { type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type CashLine, type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -13,7 +13,7 @@ import { useProjectPeriod, withPeriodSearch } from "../project-period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
-import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
+import { useProjectCashMonthLinesQuery, useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
 import { type NextMonthSample } from "../project-next-month-query";
 import { useProjectNextMonth } from "../next-month-for-project";
 import { cashForecast } from "../project-next-month";
@@ -36,6 +36,11 @@ import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { investmentLoansRow, ProjectCashOverview, ProjectReportsLink } from "./project-cash-screens";
+import type { ProjectLink } from "./project-page-cards";
+import { cashMonthName } from "../cash";
+import { resolveProjectKind } from "../project-list";
+import { useRecurringScheduleQuery, type ScheduleRow } from "../recurring-schedule";
+import { InvestmentSummary } from "../ui/investment-card";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
@@ -108,6 +113,8 @@ export function ProjectDetailScreen({
   sampleMenuRow,
   sampleNext,
   sampleOfflineSince,
+  sampleSchedule,
+  sampleLines,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -121,6 +128,9 @@ export function ProjectDetailScreen({
   sampleOfflineSince?: number;
   /** A sample project's next-month forecast reads; without it a sample project's chart has no forecast. */
   sampleNext?: NextMonthSample;
+  /** FLOW-1044: the company's recurring schedule and the month's lines as they would come back (stories). */
+  sampleSchedule?: ScheduleRow[];
+  sampleLines?: CashLine[];
   /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
   sampleMenuRow?: ProjectCashRow;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
@@ -163,13 +173,13 @@ export function ProjectDetailScreen({
   const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastLive);
   // Decision 0196: the page is about cash, so its card and chart take the forecast in cash terms (the loans'
   // principal due next month included), derived from the one forecast the צפי page shows.
-  const nextMonth = {
-    forecast: next.forecast == null ? null : cashForecast(next.forecast),
-    loading: currencyPending || (forecastLive && next.pending && !next.paused && !next.failed),
-    currency: next.currency,
-    categories: next.categories,
-    today: next.today,
-  };
+  const nextForecast = next.forecast == null ? null : cashForecast(next.forecast);
+  const nextLoading = currencyPending || (forecastLive && next.pending && !next.paused && !next.failed);
+  // FLOW-1044: the month's lines in groups: the project's recurring charges (Home's schedule read, usually
+  // cached) and the month's lines, for the one-off group once they say which are recurring (FLOW-1035).
+  const schedule = useRecurringScheduleQuery(sample == null && preview === "off");
+  const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? "";
+  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? "", sample == null && linesMonth !== "");
   const blocked = useBlockedPreview();
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
@@ -263,30 +273,68 @@ export function ProjectDetailScreen({
       overhead={overhead}
       investmentTo={sectionHref("investment")}
       hasInvestment={investmentLoansRow(investmentData, project) != null}
+      profitTo={`/projects/${project.id}/profit${withPeriodSearch(search, ALL_PERIOD)}`}
     />
   );
   const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
+  const fresh = monthRow != null && monthRow.first_month == null;
+  const figures = investmentData.isOverhead ? null : investmentData.figures;
+  const kind = resolveProjectKind({
+    overhead: project.is_overhead === true,
+    type: monthRow?.type ?? null,
+    budget: project.budget_agorot != null,
+    arv: figures?.arvMinor != null,
+    value: figures?.valueMinor != null,
+  });
+  const lifetimeRow = (lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency);
+  const investment = investmentLoansRow(investmentData, project);
+  // A rental's card is its returns: the investment summary, once its purchase or value is entered.
+  const summary = kind === "rental" && figures != null && (figures.purchaseMinor != null || figures.valueMinor != null) ? figures : null;
+  const budgetMinor = project.budget_agorot ?? null;
+  const kindCard = kind === "renovation" && (budgetMinor != null || (!fresh && project.status !== "finished"))
+    ? <ProjectBudget project={project} type={monthRow?.type ?? null} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
+    : kind === "client" && budgetMinor != null
+      ? <ProjectBudget project={project} type={monthRow?.type ?? null} contract spentAgorot={lifetimeRow?.[0]?.income_minor ?? 0n} />
+      : summary == null ? null : <InvestmentSummary figures={summary} href={sectionHref("investment")} />;
+  const firstMonth = monthRow?.first_month?.slice(0, 7) ?? null;
+  const links: ProjectLink[] = [
+    ...(investment == null || summary != null ? [] : [{ id: "investment", title: "השקעה והלוואות", hint: investment.hint ?? "מחיר קנייה, שווי והלוואות", text: investment.figure, href: sectionHref("investment") }]),
+    ...(lifetimeRow == null ? [] : [{
+      id: "since",
+      title: "רווח מתחילת הפרויקט",
+      hint: firstMonth == null ? "כל התקופה עד היום" : `מאז ${cashMonthName(firstMonth, new Date(0))}`,
+      figures: lifetimeRow.map((row) => ({ currency: row.currency, minor: row.profit_minor })),
+      href: `/projects/${project.id}/profit${withPeriodSearch(search, ALL_PERIOD)}`,
+    }]),
+    ...(nextForecast == null && !nextLoading ? [] : [{
+      id: "next",
+      title: "צפוי לחודש הבא",
+      hint: nextLoading ? "מחשבים…" : "תזרים צפוי, לפי החודשים הקודמים",
+      text: nextForecast == null ? undefined : formatAmountText(nextForecast.netMinor, next.currency, { plus: nextForecast.netMinor > 0n, direction: nextForecast.netMinor > 0n ? "income" : undefined }),
+      href: `/projects/${project.id}/profit/next${search}`,
+    }]),
+  ];
   return (
     <ProjectCashOverview
       project={project}
       data={cashData}
       search={search}
-      investmentData={investmentData}
-      investmentHref={sectionHref("investment")}
       stateLine={stateLine}
       menu={menu}
-      budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />}
-      firstMonth={monthRow?.first_month?.slice(0, 7) ?? null}
-      fresh={monthRow != null && monthRow.first_month == null}
-      sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
+      kindCard={kindCard}
+      links={links}
+      fresh={fresh}
+      schedule={sampleSchedule ?? schedule.data ?? []}
+      lines={sampleLines ?? (monthLines.data == null ? [] : [...monthLines.data.counted, ...monthLines.data.kept])}
+      linesRetry={schedule.isError || monthLines.isError ? () => { void schedule.refetch(); void monthLines.refetch(); } : undefined}
       attention={projectAttentionRows({
         projectId: project.id,
         pending: project.pending_count ?? 0,
         late: recurring.late,
         changes: recurring.changes,
         search,
+        budget: kind === "renovation" && budgetMinor != null ? { budget_minor: Number(budgetMinor), spent_minor: Number(absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)) } : null,
       })}
-      nextMonth={nextMonth}
       // FLOW-961: offline, the page keeps its last read and says, in the band, which moment it is from.
       offlineSince={sample ? sampleOfflineSince ?? null : offlineSinceOf(online || preview !== "off", cash.dataUpdatedAt, detail.dataUpdatedAt)}
       example={example}
@@ -367,10 +415,8 @@ function LegacyEmptyProject() {
  * FLOW-445: the budget card when a budget is set. FLOW-961: with none, a dashed card in its place whose
  * הוספת תקציב opens the edit sheet at the budget.
  */
-function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
+function ProjectBudget({ project, type, spentAgorot, contract = false }: { project: NonNullable<ProjectDetail>; type: string | null; spentAgorot: bigint; contract?: boolean }) {
   const [editing, setEditing] = useState(false);
-  // The owner's type text is on the month's row (the same cached read the menu uses).
-  const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
   const budget = project.budget_agorot ?? null;
   const currency = useCompanyCurrency();
   return (
@@ -378,7 +424,7 @@ function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectD
       {budget == null ? (
         <BudgetEmptyCard onAdd={() => { setEditing(true); }} />
       ) : (
-        <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} onEdit={() => { setEditing(true); }} />
+        <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} contract={contract} onEdit={() => { setEditing(true); }} />
       )}
       <ProjectFormSheet open={editing} onOpenChange={setEditing} focusBudget={budget == null} project={{ id: project.id, name: project.name, type, budget, status: project.status }} />
     </>

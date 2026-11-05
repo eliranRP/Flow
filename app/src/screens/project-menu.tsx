@@ -1,5 +1,6 @@
-// The project's ⋯ menu (board Projects.dc.html, "פעולות על הפרויקט"): edit, the investment page, finish
-// (at once, with ביטול) or החזרה לפעילים, and delete when the project has no lines (the one that asks).
+// The project's ⋯ menu (board V3-Project, "פעולות לפרויקט"): edit, the investment page, the profit since the
+// start, finish (FLOW-1044: a confirm inside the sheet, then at once with ביטול) or החזרה לפעילים, and delete
+// when the project has no lines (the one that asks).
 // The sheet is titled with the project's name. The overhead switch and the group live in the edit sheet;
 // adding a line is the + sheet's job.
 import { useRef, useState, type ReactNode } from "react";
@@ -13,7 +14,8 @@ import { assertNoError, useWrite } from "../use-write";
 import { useToast } from "../ui/toast";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { IconButton } from "../ui/icon-button";
-import { BinIcon, FlagIcon, InvestIcon, MoreIcon, PencilIcon } from "../ui/icons";
+import { Button } from "../ui/button";
+import { BarsIcon, BinIcon, FlagIcon, InvestIcon, MoreIcon, PencilIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ProjectFormSheet } from "./project-form-sheet";
@@ -39,6 +41,7 @@ export function ProjectMenu({
   overhead,
   investmentTo,
   hasInvestment,
+  profitTo,
 }: {
   projectId: string;
   name: string;
@@ -55,10 +58,18 @@ export function ProjectMenu({
   investmentTo: string;
   /** The board shows the menu's השקעה והלוואות row only for a project with an investment figure or a loan; the edit sheet always has the way in. */
   hasInvestment: boolean;
+  /** FLOW-1044: the profit since the start, the menu's third row. */
+  profitTo: string;
 }) {
   const blocked = useBlockedPreview();
   const navigate = useNavigate();
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenuState] = useState(false);
+  // FLOW-1044 (board): סיום הפרויקט asks inside the sheet first, since it moves the project to another list.
+  const [view, setView] = useState<"menu" | "finish">("menu");
+  const setMenu = (open: boolean) => {
+    setMenuState(open);
+    if (open) setView("menu");
+  };
   const [removing, setRemoving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
@@ -130,7 +141,7 @@ export function ProjectMenu({
       ? "יש בו פריט אחד לאישור. הוא יחכה גם אחרי הסיום"
       : pending > 1
         ? `יש בו ${String(pending)} פריטים לאישור. הם יחכו גם אחרי הסיום`
-        : "יעבור ל״הסתיימו״. אפשר לבטל מיד, ושום דבר לא נמחק";
+        : "הפרויקט יעבור ל״הסתיימו״. התנועות והרווח נשמרים, ואפשר להחזיר אותו בכל זמן.";
   return (
     <>
       <IconButton
@@ -143,8 +154,25 @@ export function ProjectMenu({
       >
         <MoreIcon />
       </IconButton>
-      <Sheet open={menu} onOpenChange={setMenu} title={name} panelClassName="ui-sheet-wide ui-sheet-pad28 ui-project-menu" closeButton={false}>
-        {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
+      <Sheet open={menu} onOpenChange={setMenu} title={view === "finish" ? `לסיים את ${name}?` : name} panelClassName="ui-sheet-wide ui-sheet-pad28 ui-project-menu" closeButton={false}>
+        {view === "finish" ? (
+          <div className="ui-project-menu-finish">
+            <p className="t-line2">{finishHint}</p>
+            <Button
+              full
+              disabled={setStatus.isPending}
+              onClick={() => {
+                setMenu(false);
+                if (blocked()) return;
+                finish();
+              }}
+            >
+              סיום הפרויקט
+            </Button>
+            <Button full variant="secondary" onClick={() => { setView("menu"); }}>חזרה</Button>
+          </div>
+        ) : (
+        /* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */
         <List className="ui-project-menu-list">
           {finished ? null : (
             <ListRow
@@ -170,16 +198,26 @@ export function ProjectMenu({
             />
           ) : null}
           <ListRow
+            variant="item"
+            title="רווח מתחילת הפרויקט"
+            hint="רווח והפסד לפי חודש וקטגוריה"
+            icon={<BarsIcon />}
+            href={profitTo}
+            chevron
+          />
+          <ListRow
             variant="button"
             title={action}
-            hint={finishHint}
+            hint={finished ? finishHint : "יעבור ל״הסתיימו״. אפשר לבטל."}
             icon={<FlagIcon />}
+            chevron={!finished}
             disabled={setStatus.isPending}
             onClick={() => {
-              setMenu(false);
-              if (blocked()) return;
-              if (finished) setStatus.mutate("active");
-              else finish();
+              if (finished) {
+                setMenu(false);
+                if (blocked()) return;
+                setStatus.mutate("active");
+              } else setView("finish");
             }}
           />
           {deletable ? (
@@ -196,11 +234,12 @@ export function ProjectMenu({
             />
           ) : null}
         </List>
+        )}
       </Sheet>
       <ProjectFormSheet
         open={editing}
         onOpenChange={setEditing}
-        project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active" }}
+        project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active", overhead: row?.is_overhead === true }}
         extras={(
           <>
             {overhead}

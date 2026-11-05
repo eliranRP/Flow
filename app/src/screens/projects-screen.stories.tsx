@@ -1,10 +1,10 @@
 import type { ProjectCashRow, ProjectsCashMonth } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
-import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
+import { restoreAll } from "../ui/attention-dismiss";
 
 /** FLOW-445: one project's row in the month's cash (the list reads projects_cash_month). Invented names only. */
 function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; group?: string | null; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
@@ -60,6 +60,20 @@ const withFinished = cashMonth([
   cashRow({ id: "ashby", name: "Ashby Rd", type: "השכרה", status: "finished", profitAll: -4_000_00 }),
 ], { count: 2, net: -1_500_00 });
 
+/** No late bills or changed charges: the cards are the lines with no project and the budgets. */
+const NO_RECURRING = { late: [], changes: [] };
+
+/** Many projects with long names and kind words (board V3-States, long content). */
+const LONG_MONTH = cashMonth([
+  ...withFinished.projects,
+  ...Array.from({ length: 14 }, (_, index) => cashRow({
+    id: `long-${String(index)}`,
+    name: `פרויקט עם שם ארוך מאוד שלא נגמר ${String(index + 1)}`,
+    type: index % 3 === 0 ? "שיפוץ · לפני מכירה ועם עוד מילים" : index % 3 === 1 ? "השכרה · שני דיירים" : "לקוח · שלב 3 מתוך 8",
+    net: (index % 2 === 0 ? -1 : 1) * (index + 1) * 1_234_00,
+  })),
+], { count: 2, net: -1_500_00 });
+
 const meta = {
   title: "Screens/Routes",
   parameters: { flowRouter: false },
@@ -77,64 +91,162 @@ export const ProjectsEmpty: Story = {
   ),
 };
 
+/** FLOW-1044 (board V3-Projects): the band, דורש טיפול, פעילים, and the rows in groups by kind. */
 export const ProjectsList: Story = {
-  name: "Projects, the list with cash per project",
+  name: "Projects, active, in groups by kind",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-990 (board ProjectsNextMonth): the company's next month above the list, and each row's צפי figure. */
-export const ProjectsNextMonth: Story = {
-  name: "Projects, next month's card and each project's צפי",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={NEXT_MONTH_PROJECTS} nextSample={HOME_NEXT_MONTH_SAMPLE} today={NEXT_MONTH_TODAY} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("צפוי להיכנס")).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /פירוט ועריכה$/u })).toHaveAttribute("href", "/forecast/next");
-    // FLOW-1017: each row's figure is plain text that names the month.
-    await expect(canvas.getAllByText(/^צפי לחודש הבא/u).length).toBeGreaterThan(1);
+    await expect(canvas.getByRole("heading", { name: "דורש טיפול" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "שיפוץ" })).toBeInTheDocument();
+    await expect(canvas.queryByText("Wren St")).toBeNull();
   },
 };
 
-/** FLOW-445: the finished projects stay closed until הצג opens them. */
+/** הסתיימו: the finished projects, each with its final result. */
 export const ProjectsFinished: Story = {
-  name: "Projects, finished shown",
+  name: "Projects, finished",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: /הסתיימו/u }));
+    await userEvent.click(within(canvas.getAllByRole("radiogroup", { name: "סינון פרויקטים" })[0] as HTMLElement).getByRole("radio", { name: "הסתיימו" }));
     await expect(await canvas.findByText("Wren St")).toBeInTheDocument();
+    await expect(canvas.queryByText("Tidewater")).toBeNull();
   },
 };
 
-/** FLOW-445: the new-project sheet, from the header's filled +. FLOW-961: יצירת פרויקט is never disabled. */
-export const ProjectsNewSheet: Story = {
-  name: "Projects, new project sheet",
+/** הכול: active and finished together, in their kinds. */
+export const ProjectsAll: Story = {
+  name: "Projects, all",
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "פרויקט חדש" }));
-    const dialog = await within(document.body).findByRole("dialog");
-    await expect(within(dialog).getByRole("button", { name: "יצירת פרויקט" })).toBeEnabled();
+    await userEvent.click(within(canvas.getAllByRole("radiogroup", { name: "סינון פרויקטים" })[0] as HTMLElement).getByRole("radio", { name: "הכול" }));
+    await expect(await canvas.findByText("Wren St")).toBeInTheDocument();
+    await expect(canvas.getByText("Tidewater")).toBeInTheDocument();
+  },
+};
+
+/** Scrolled: the band bar slides in and the filter docks into it. */
+export const ProjectsDocked: Story = {
+  name: "Projects, the filter docked",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={LONG_MONTH} recurringSample={NO_RECURRING} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 700, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
+  },
+};
+
+/** Long names and many rows (board V3-States, long content). */
+export const ProjectsLong: Story = {
+  name: "Projects, long content",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={LONG_MONTH} recurringSample={NO_RECURRING} />
+    </StoryRoute>
+  ),
+};
+
+/** One card hidden: the head offers "1 הוסתרו · הצגה". */
+export const ProjectsAttentionSomeHidden: Story = {
+  name: "Projects, attention cards, one hidden",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    restoreAll("projects");
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getAllByRole("button", { name: /^הסתרה: / })[0] as HTMLElement);
+    await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
+    restoreAll("projects");
+  },
+};
+
+/** Every card hidden: the section is one line, "אין מה לטפל · הכול נסקר", with ביטול. */
+export const ProjectsAttentionAllHidden: Story = {
+  name: "Projects, attention cards, all hidden",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    restoreAll("projects");
+    const canvas = within(canvasElement);
+    for (let left = canvas.queryAllByRole("button", { name: /^הסתרה: / }); left.length > 0; left = canvas.queryAllByRole("button", { name: /^הסתרה: / })) {
+      await userEvent.click(left[0] as HTMLElement);
+      await waitFor(() => expect(canvas.queryAllByRole("button", { name: /^הסתרה: / }).length).toBeLessThan(left.length));
+    }
+    await expect(await canvas.findByText(/אין מה לטפל/u)).toBeInTheDocument();
+    restoreAll("projects");
+  },
+};
+
+/** FLOW-1044 (board V3-NewProject): the kind comes first and the fields follow it. One story per kind. */
+function newProjectStory(kind: "שיפוץ" | "השכרה" | "לקוח" | "תקורה", fields: string[]): Story {
+  return {
+    render: () => (
+      <StoryRoute entry="/projects" tabs>
+        <ExampleBar />
+        <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} recurringSample={NO_RECURRING} />
+      </StoryRoute>
+    ),
+    play: async ({ canvasElement }) => {
+      await userEvent.click(within(canvasElement).getAllByRole("button", { name: "פרויקט חדש" })[0] as HTMLElement);
+      const dialog = await within(document.body).findByRole("dialog", { name: "פרויקט חדש" });
+      await userEvent.click(within(dialog).getByRole("radio", { name: kind }));
+      for (const field of fields) await expect(within(dialog).getByRole("textbox", { name: field })).toBeInTheDocument();
+      await expect(within(dialog).getAllByRole("textbox")).toHaveLength(fields.length + 1);
+      await expect(within(dialog).getByRole("button", { name: "יצירת פרויקט" })).toBeEnabled();
+    },
+  };
+}
+
+export const ProjectsNewRenovation: Story = { name: "Projects, new project, renovation", ...newProjectStory("שיפוץ", ["מחיר קנייה", "תקציב שיפוץ", "שווי צפוי אחרי שיפוץ"]) };
+export const ProjectsNewRental: Story = { name: "Projects, new project, rental", ...newProjectStory("השכרה", ["מחיר קנייה", "שווי הנכס היום"]) };
+export const ProjectsNewClient: Story = { name: "Projects, new project, client", ...newProjectStory("לקוח", ["סכום החוזה"]) };
+export const ProjectsNewOverhead: Story = { name: "Projects, new project, overhead", ...newProjectStory("תקורה", []) };
+
+/** FLOW-961: יצירת פרויקט is never disabled; with no name the tap says what to fill, under the field. */
+export const ProjectsNewMissingName: Story = {
+  name: "Projects, new project, the name missing",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} recurringSample={NO_RECURRING} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getAllByRole("button", { name: "פרויקט חדש" })[0] as HTMLElement);
+    const dialog = await within(document.body).findByRole("dialog", { name: "פרויקט חדש" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "יצירת פרויקט" }));
+    // The field says it under itself (TextField: aria-invalid and its live message line, plan §3.7).
+    await expect(within(dialog).getByRole("textbox", { name: "שם הפרויקט" })).toHaveAccessibleDescription("צריך שם כדי ליצור את הפרויקט");
   },
 };
 

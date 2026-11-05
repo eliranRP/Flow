@@ -334,36 +334,6 @@
   }
 }
 
-/* FLOW-990: the Projects tab's card, under the subtitle, above פעילים (board ProjectsNextMonth). */
-.ui-projects-next {
-  margin-block: var(--space-4) var(--space-1);
-}
-
-/* No card (nothing expected, or a failed read): no gap either. */
-.ui-projects-next:not(.ui-projects-next-loading):empty {
-  display: none;
-}
-
-/*
- * FLOW-1017: while the reads are out, the slot keeps the card's height (its skeleton shows only after a delay,
- * and is shorter than the card), so פעילים and the rows stay where they will be.
- */
-.ui-projects-next-loading {
-  min-block-size: calc(var(--space-4) * 13); /* the card is 199px at 393 and 211px at 320 */
-}
-
-/*
- * A project row's next month under this month's figure (FLOW-1017): plain secondary text, the words on one line
- * and the amount, never broken, on the next, so the column is no wider than the figure above it at 320.
- */
-.ui-proj-next {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-}
-
 /* FLOW-1000: the company צפי page, one section per project (board CompanyNextA). */
 .ui-cn-group {
   margin-block-start: var(--space-5);

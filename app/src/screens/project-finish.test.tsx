@@ -48,7 +48,7 @@ function renderMenu(finished: boolean) {
             <Route path="/projects" element={<ListProbe />} />
             <Route
               path="/projects/:projectId"
-              element={<ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={finished} sampleRow={{ id: "p1", pending_count: 0, deletable: false } as never} investmentTo="/projects/p1/investment" hasInvestment={false} />}
+              element={<ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={finished} sampleRow={{ id: "p1", pending_count: 0, deletable: false } as never} investmentTo="/projects/p1/investment" hasInvestment={false} profitTo="/projects/p1/profit" />}
             />
           </Routes>
         </MemoryRouter>
@@ -57,6 +57,13 @@ function renderMenu(finished: boolean) {
   );
   fireEvent.click(screen.getByRole("button", { name: "עוד" }));
   return { client, menu: screen.getByRole("dialog", { name: "Oak Ridge" }) };
+}
+
+/** FLOW-1044 (board V3-Project): the row asks inside the sheet first; its סיום הפרויקט finishes. */
+async function confirmFinish(menu: HTMLElement) {
+  fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
+  const confirm = await screen.findByRole("dialog", { name: "לסיים את Oak Ridge?" });
+  fireEvent.click(within(confirm).getByRole("button", { name: "סיום הפרויקט" }));
 }
 
 describe("finishing a project (FLOW-961, decision 0213)", () => {
@@ -73,7 +80,7 @@ describe("finishing a project (FLOW-961, decision 0213)", () => {
     let answer: (value: RpcAnswer) => void = () => undefined;
     rpc.answer = () => new Promise((resolve) => { answer = resolve; });
     const { client, menu } = renderMenu(false);
-    fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
+    await confirmFinish(menu);
     // At once: the list, the row drawn as finished, and the toast, while the write is still out.
     expect(await screen.findByText("list true finished")).toBeInTheDocument();
     expect(screen.getByText("Oak Ridge עבר ל״הסתיימו״")).toBeInTheDocument();
@@ -89,7 +96,7 @@ describe("finishing a project (FLOW-961, decision 0213)", () => {
   it("puts the row back and offers ניסיון חוזר when the finish fails", async () => {
     rpc.answer = () => Promise.resolve({ data: null, error: { message: "Failed to fetch" } });
     const { client, menu } = renderMenu(false);
-    fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
+    await confirmFinish(menu);
     expect(await screen.findByText("לא הצלחנו לעדכן את הפרויקט.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(client.getQueryData<ProjectsCashMonth>(LIST_KEY)?.projects[0]?.status).toBe("active");
@@ -101,7 +108,7 @@ describe("finishing a project (FLOW-961, decision 0213)", () => {
   it("takes the ביטול away after 5s", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { menu } = renderMenu(false);
-    fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
+    await confirmFinish(menu);
     expect(await screen.findByRole("button", { name: "ביטול" })).toBeInTheDocument();
     expect(FINISH_UNDO_MS).toBe(5000);
     await act(async () => { await vi.advanceTimersByTimeAsync(FINISH_UNDO_MS + 1000); });

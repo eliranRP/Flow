@@ -76,15 +76,18 @@ describe("ProjectProfitScreen", () => {
     expect(income - expense).toBe(total?.profit_minor);
   });
 
-  it("the category chip lists the expense categories largest first, with shares that add to 100", () => {
-    const { container } = renderScreen(JUNIPER_PROFIT, "/projects/juniper-ct/profit?by=category");
-    const rows = Array.from(container.querySelectorAll(".ui-pp-cat"));
+  it("by category: the income group, then the expense categories largest first, with shares that add to 100 (FLOW-1044)", () => {
+    renderScreen(JUNIPER_PROFIT, "/projects/juniper-ct/profit?by=category");
+    expect(screen.getByRole("heading", { name: "הכנסות" })).toBeInTheDocument();
+    const expenses = screen.getByRole("heading", { name: "הוצאות" }).closest("section") as HTMLElement;
+    const rows = Array.from(expenses.querySelectorAll(".ui-row"));
     expect(rows).toHaveLength(5);
     expect(rows[0]?.textContent).toContain("ריבית הלוואות");
-    const shares = rows.map((row) => Number.parseInt(row.querySelector(".ui-pp-cat-hint")?.textContent ?? "", 10));
+    const shares = rows.map((row) => Number.parseInt(/(\d+)% מההוצאות/u.exec(row.textContent)?.[1] ?? "", 10));
     expect(shares).toEqual([44, 23, 20, 11, 2]);
     expect(shares.reduce((sum, share) => sum + share, 0)).toBe(100);
-    expect(container.querySelector(".ui-pp-months")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "לפי חודש" })).toBeNull();
+    expect(screen.getAllByRole("radio", { name: "לפי קטגוריה" })[0]).toHaveAttribute("aria-checked", "true");
   });
 
   it("a project with no income or expense shows the empty state and a link to the lines with no project", () => {
@@ -93,7 +96,7 @@ describe("ProjectProfitScreen", () => {
     expect(screen.getByText("מתחילת הפרויקט")).toBeTruthy();
     expect(screen.getByText("עוד אין מה לחשב")).toBeTruthy();
     expect(screen.getByText("כשתשייכו ל־Linden Ct הכנסה או הוצאה, הרווח שלו יופיע כאן.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "לשורות בלי פרויקט" }).getAttribute("href")).toContain("project=none");
+    expect(screen.getByRole("link", { name: "לשורות בלי פרויקט" }).getAttribute("href")).toBe("/projects/unassigned");
     expect(screen.queryByText("הכנסות")).toBeNull();
   });
 });

@@ -95,6 +95,8 @@ const kinds: Record<Exclude<ProjectKind, "flip">, Kind> = {
   new: { project: newProject, cash: newCash, investment: noInvestment, first: null },
 };
 
+const KIND_TYPE: Record<Exclude<ProjectKind, "flip">, string | null> = { rental: "השכרה · מושכר", client: "עבודת לקוח", new: null };
+
 export function kindOf(value: string | null): Exclude<ProjectKind, "flip"> | null {
   return value === "rental" || value === "client" || value === "new" ? value : null;
 }
@@ -102,7 +104,8 @@ export function kindOf(value: string | null): Exclude<ProjectKind, "flip"> | nul
 /** The kind's page data and its row on the Projects list (the month it began, its type). */
 export function kindSample(kind: Exclude<ProjectKind, "flip">, base: ProjectCashRow | undefined) {
   const sample = kinds[kind];
-  const row = base == null ? undefined : { ...base, id: sample.project.id, first_month: sample.first, pending_count: sample.project.pending_count ?? 0, deletable: false };
+  // FLOW-1044: the row's type word names the kind, as the new-project sheet stores it (a new project has none: its budget makes it a renovation).
+  const row = base == null ? undefined : { ...base, id: sample.project.id, type: KIND_TYPE[kind], first_month: sample.first, pending_count: sample.project.pending_count ?? 0, deletable: false };
   const next = kind === "new" ? undefined : kindNextSample(kind, sample.project.id);
   return { ...sample, row, next };
 }

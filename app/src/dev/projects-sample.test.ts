@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { netIn, orderActiveProjects, overheadRow, projectMeta } from "../project-list";
+import { groupProjectRows, netIn, orderActiveProjects, projectMeta } from "../project-list";
 import { sampleBoardCashMonths } from "./cash-sample";
 import { devProjectsCash } from "./projects-sample";
 
@@ -31,6 +31,6 @@ describe("projects list sample", () => {
       "תיקון גג · חשבונית פתוחה",
       "מטבח · עבודת לקוח",
     ]);
-    expect(overheadRow(devProjectsCash)?.name).toBe("משרד החברה / תקורה");
+    expect(groupProjectRows(devProjectsCash.projects, "active", devProjectsCash.base_currency).find((group) => group.kind === "overhead")?.rows[0]?.name).toBe("משרד החברה / תקורה");
   });
 });

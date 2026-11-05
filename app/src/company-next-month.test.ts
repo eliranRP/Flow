@@ -2,7 +2,6 @@ import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import {
   companyCashForecast,
-  companyPartNet,
   companyExpenseNote,
   companyForecastCaption,
   companyIncomeNote,
@@ -191,13 +190,5 @@ describe("the company's next month in cash terms (FLOW-990)", () => {
     expect(cash.netMinor).toBe(cash.incomeMinor - cash.expenseMinor);
     expect(cash.rows).toEqual(profit.rows);
     expect(cash.parts.map((part) => part.forecast)).toEqual(profit.parts.map((part) => cashForecast(part.forecast)));
-  });
-
-  it("gives each part's net, and the parts' nets add up to the card's", () => {
-    const cash = companyCashForecast(company());
-    const nets = cash.parts.map((part) => companyPartNet(cash, part.projectId) ?? 0n);
-    expect(nets.reduce((sum, net) => sum + net, 0n)).toBe(cash.netMinor);
-    expect(companyPartNet(cash, JUNIPER)).toBe(cash.parts.find((part) => part.projectId === JUNIPER)?.forecast.netMinor);
-    expect(companyPartNet(cash, "no-such-project")).toBeNull();
   });
 });

@@ -265,28 +265,17 @@
   background: transparent;
 }
 
-/* The Projects skeleton at the board's rhythm: 14px under the title, 20px before the cards, 12px between them. */
+/* The Projects skeleton at the board's rhythm: 14px under the band, 12px between the cards. */
 .ui-projects-skel {
   display: flex;
   flex-direction: column;
   padding-block-start: calc(var(--space-3) + var(--space-1) / 2);
 }
 
-.ui-projects-skel-head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.ui-projects-skel-head .ui-skel-figure {
-  border-radius: var(--radius-block);
-}
-
 .ui-projects-skel-cards {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-block-start: var(--space-5);
 }
 
 .ui-projects-skel-card {
