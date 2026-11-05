@@ -189,6 +189,14 @@ describe("Home on next month (FLOW-1056)", () => {
     expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();
   });
 
+  it("reads a past month's own lines for its activity, and not the schedule's month", async () => {
+    wrap(0, `/?month=${month(1)}`);
+    expect(await screen.findByText("תזרים · חודש סגור")).toBeInTheDocument();
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_month: `${month(1)}-01` });
+    expect(screen.getByRole("heading", { name: `הפעילות ב${homeMonthLabel(month(1)).split(" ")[0] ?? ""}` })).toBeInTheDocument();
+  });
+
   it("goes no further than next month: a later ?month= is the current month", async () => {
     wrap(0, `/?month=${shiftMonthKey(current, 2)}`);
     expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();

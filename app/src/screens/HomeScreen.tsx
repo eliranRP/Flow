@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "rea
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
-import { cashMonthKey, cashRows, shownCashRows } from "../cash";
+import { cashLinesPath, cashMonthKey, cashRows, shownCashRows } from "../cash";
 import { useCashLinesQuery, useCashMonthData, useCashMonthsQuery, useCashYearsQuery } from "../use-cash";
 import { useCashToDayQuery } from "../use-cash-to-day";
 import { Amount } from "../ui/amount";
@@ -199,8 +199,10 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   // FLOW-1036: the month's activity: the recurring schedule, and the current month's lines for the one-off group
   // (after first paint, like the forecast). Both on the current month only.
   const schedule = useRecurringScheduleQuery(isCurrent && !previewing);
-  const linesIn = useCashLinesQuery(currentKey, "in", base, isCurrent && afterPaint);
-  const linesOut = useCashLinesQuery(currentKey, "out", base, isCurrent && afterPaint);
+  // FLOW-1056 (owner): a past month shows its own lines the same way (no schedule: that is the current month's).
+  const linesKey = isFuture ? currentKey : monthKey;
+  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint);
+  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint);
 
   function retry() {
     if (previewing) {
@@ -268,7 +270,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   };
   const weekly = previewing || !isCurrent ? null : cardWeek(today);
   const linesData = linesIn.data == null || linesOut.data == null ? null : [...(linesIn.data.pages[0]?.rows ?? []), ...(linesOut.data.pages[0]?.rows ?? [])];
-  const activity: HomeActivityData | null = previewing || !isCurrent ? null : {
+  const activity: HomeActivityData | null = previewing || isFuture ? null : isCurrent ? {
     schedule: schedule.data ?? null,
     scheduleFailed: schedule.isError,
     lines: linesData,
@@ -278,6 +280,16 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       if (linesIn.isError) void linesIn.refetch();
       if (linesOut.isError) void linesOut.refetch();
     },
+  } : {
+    schedule: null,
+    scheduleFailed: false,
+    lines: linesData,
+    linesFailed: linesIn.isError || linesOut.isError,
+    onRetry: () => {
+      if (linesIn.isError) void linesIn.refetch();
+      if (linesOut.isError) void linesOut.refetch();
+    },
+    past: { more: linesIn.hasNextPage || linesOut.hasNextPage },
   };
 
   const home = (future: HomeFuture | null) => (
@@ -562,6 +574,12 @@ export function CashHome({
             base={base}
             search={search}
             recurringHref={`${recurringTo ?? "/recurring"}${search}`}
+            close={isPast ? {
+              name: monthName(monthKey),
+              inMinor: baseRow?.in_minor ?? 0n,
+              outMinor: baseRow?.out_minor ?? 0n,
+              linesHref: cashLinesPath(monthKey, "out", base, search),
+            } : null}
           />
         </div>
       )}
@@ -573,7 +591,7 @@ export function CashHome({
         isPast={isPast}
         nav={nav}
         shown={compactShown}
-        dock={filtered ? <ActivityFilterControl value={filter} onChange={pickFilter} tone="band" /> : undefined}
+        dock={filtered ? <ActivityFilterControl value={filter} onChange={pickFilter} tone="band" past={activity?.past != null} /> : undefined}
         docked={dockFilter.docked}
       />
       <MonthDrawer

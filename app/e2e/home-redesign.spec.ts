@@ -73,6 +73,10 @@ test("the month's filter docks into the bar once it reaches it (FLOW-1036)", asy
 test("a past month shows the way back to the current one", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1&month=past");
   await expect(page.getByRole("link", { name: /^חזרה ל/ })).toBeVisible();
+  // FLOW-1056 (owner): the month's lines under it, as קבועים and חד-פעמי, with how the month finished.
+  await expect(page.getByRole("heading", { name: /^הפעילות ב/u })).toBeVisible();
+  await expect(page.locator(".ui-home-act-close")).toContainText("נכנס");
+  await expect(page.getByRole("heading", { name: "חד-פעמי" })).toBeVisible();
 });
 
 test("the compact bar shows after scrolling and its motion is off with reduced motion", async ({ page }) => {

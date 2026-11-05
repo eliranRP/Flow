@@ -9,7 +9,7 @@ import { HOME_NEXT_MONTH_SAMPLE } from "../dev/home-next-month-sample";
 import type { ActivityFilter, HomeActivityData, HomeFuture } from "./home-activity";
 import { RECURRING_FIXTURE } from "../recurring-sample";
 import { shiftMonthKey } from "../period";
-import { israelToday } from "../ui/date-math";
+import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
 import { BandCompany } from "../ui/top-band";
 import { exampleOnBand } from "../ui/screen-stories-support";
@@ -59,6 +59,19 @@ function sampleActivity(over: Partial<HomeActivityData> = {}): HomeActivityData 
   };
 }
 
+/** FLOW-1056: a past month's activity: its own lines (no schedule), past their first page. Invented names and figures. */
+function samplePastActivity(monthKey: string, over: Partial<HomeActivityData> = {}): HomeActivityData {
+  return {
+    schedule: null,
+    scheduleFailed: false,
+    lines: homeActivityLines(monthKey, { currency: "ILS" }),
+    linesFailed: false,
+    onRetry: () => undefined,
+    past: { more: true },
+    ...over,
+  };
+}
+
 // FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
 function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
   const currentKey = israelToday().slice(0, 7);
@@ -104,6 +117,7 @@ export const HomeAttentionSingular: Story = {
  */
 function CashHomeStory({
   monthBack = 0,
+  pastActivity,
   attention = true,
   review = true,
   hidden = null,
@@ -118,6 +132,8 @@ function CashHomeStory({
   forecastPending = false,
 }: {
   monthBack?: number;
+  /** A past month's activity (its lines); the sample's by default. */
+  pastActivity?: HomeActivityData;
   attention?: boolean;
   review?: boolean;
   hidden?: Record<string, string> | null;
@@ -143,7 +159,7 @@ function CashHomeStory({
         previewing={false}
         search=""
         attention={attention ? attentionRows({ pending: review ? 7 : 0, transfers: 2, unpaidCount: 3, unpaidGross: 460_000n, missingCount: late, search: "" }) : []}
-        activity={monthBack > 0 ? null : activity}
+        activity={monthBack > 0 ? pastActivity ?? samplePastActivity(shiftMonthKey(currentKey, -monthBack)) : activity}
         initialFilter={filter}
         withNext
         example={exampleOnBand}
@@ -487,8 +503,52 @@ export const HomeFailedOffline: Story = {
   ),
 };
 
-/** A past month: the darker band, "חזרה ל…" and no forecast, cards or activity. */
-export const HomePast: Story = { render: () => <CashHomeStory monthBack={1} attention={false} /> };
+/**
+ * A past month: the darker band, "חזרה ל…", no forecast or cards. FLOW-1056 (owner): its activity as the current
+ * month's: "הפעילות ב…" with the month's totals, its lines as קבועים and חד-פעמי, and the row to all its lines.
+ */
+export const HomePast: Story = {
+  render: () => <CashHomeStory monthBack={1} attention={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const name = HEBREW_MONTHS[Number(shiftMonthKey(israelToday().slice(0, 7), -1).slice(5, 7)) - 1] ?? "";
+    await expect(canvas.getByRole("heading", { name: `הפעילות ב${name}` })).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-home-act-close")?.textContent).toMatch(/^נכנס .+ · יצא .+$/u);
+    await expect(canvas.getByRole("heading", { name: "קבועים" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "חד-פעמי" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("radio", { name: "נותר לשלם" })).toBeNull();
+    await userEvent.click(canvas.getByRole("radio", { name: "חד-פעמי" }));
+    await waitFor(() => expect(canvas.queryByRole("heading", { name: "קבועים" })).toBeNull());
+    await expect(canvas.getByRole("link", { name: `כל התנועות ב${name}` })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1056: a past month while its lines are read: the band, then skeleton rows. */
+export const HomePastLoading: Story = {
+  name: "Home past, loading",
+  render: () => <CashHomeStory monthBack={1} attention={false} pastActivity={samplePastActivity(shiftMonthKey(israelToday().slice(0, 7), -1), { lines: null })} />,
+};
+
+/** FLOW-1056: a past month's lines did not load: the band stays, the list says so with a retry. */
+export const HomePastFailed: Story = {
+  name: "Home past, failed",
+  render: () => <CashHomeStory monthBack={1} attention={false} pastActivity={samplePastActivity(shiftMonthKey(israelToday().slice(0, 7), -1), { lines: null, linesFailed: true })} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("רשימת התנועות לא נטענה")).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1056: a past month with no lines: the list says so in words. */
+export const HomePastEmpty: Story = {
+  name: "Home past, no lines",
+  render: () => <CashHomeStory monthBack={1} attention={false} pastActivity={samplePastActivity(shiftMonthKey(israelToday().slice(0, 7), -1), { lines: [], past: { more: false } })} />,
+  play: async ({ canvasElement }) => {
+    const name = HEBREW_MONTHS[Number(shiftMonthKey(israelToday().slice(0, 7), -1).slice(5, 7)) - 1] ?? "";
+    await expect(within(canvasElement).getByText(`אין תנועות ב${name}`)).toBeInTheDocument();
+  },
+};
 
 /** Scrolled past the band: the compact bar pins the month and the arrows, and the band's figures fade away (FLOW-364). */
 export const HomeScrolled: Story = {

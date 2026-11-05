@@ -143,7 +143,15 @@ export function DevCash() {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}
       // FLOW-1036: the month's activity (the recurring sample and this month's lines, in the sample's currency). FLOW-1056: next month is a month to step to.
-      activity={{
+      // FLOW-1056: a past month's activity is its own lines alone.
+      activity={past ? {
+        schedule: null,
+        scheduleFailed: false,
+        lines: homeActivityLines(monthKey, { currency: data.base_currency }),
+        linesFailed: false,
+        onRetry: () => undefined,
+        past: { more: true },
+      } : {
         schedule: RECURRING_FIXTURE.map((row) => ({ ...row, currency: data.base_currency })),
         scheduleFailed: false,
         lines: homeActivityLines(currentKey, { currency: data.base_currency }),
