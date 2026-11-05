@@ -220,14 +220,16 @@ test("the project list stories, finished and many active, stay inside 320 and 39
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
         if (id.endsWith("finished")) {
-          // FLOW-445b: the finished projects show under their own הסתיימו heading, drawn as finished rows (the board's ProjectsFinished).
-          await expect(page.getByRole("heading", { name: /^הסתיימו/ })).toBeVisible();
+          // FLOW-1044 (board V3-Projects): the story's play picks הסתיימו on the docking filter, so the finished
+          // projects show in their kinds as finished rows, and the active ones leave the list.
+          await expect(page.getByRole("link", { name: /^Wren St/ })).toBeVisible();
           // FLOW-961: at full contrast, with its total profit named.
           await expect(page.getByRole("link", { name: /^Ashby Rd/ }).locator(".ui-row-done")).toBeVisible();
           await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toContainText("רווח כולל");
-          await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
+          // (Juniper Ct stays: its over-budget card is above the filter.)
+          await expect(page.getByRole("link", { name: /^Tidewater/ })).toHaveCount(0);
         } else {
-          await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^Tidewater/ })).toBeVisible();
           await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toHaveCount(0);
         }
         const problems = await layoutProblems(page);
