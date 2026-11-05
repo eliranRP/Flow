@@ -170,15 +170,16 @@
 
 .ui-search-heading {
   margin: 0;
-  padding-block: var(--space-5) calc(var(--space-1) * 1.5);
+  /* V3-Search: 20/1.3/500, 12px above and 4px under (16px above the second section). */
+  padding-block: var(--space-3) var(--space-1);
   font-size: var(--type-section-size);
   font-weight: var(--type-section-weight);
-  line-height: calc(var(--type-section-line) - 0.1);
+  line-height: var(--type-section-line);
   color: var(--color-text);
 }
 
 .ui-search-section + .ui-search-section .ui-search-heading {
-  padding-block-start: calc(var(--space-5) + var(--space-1) / 2);
+  padding-block-start: var(--space-4);
 }
 
 .ui-search-recent,
@@ -192,9 +193,9 @@
 .ui-search-check {
   display: flex;
   align-items: center;
-  gap: var(--space-inset-row);
+  gap: var(--space-3);
   inline-size: 100%;
-  min-block-size: 52px;
+  min-block-size: var(--control-height);
   padding: 0;
   border: 0;
   background: none;
@@ -221,7 +222,7 @@
 }
 
 .ui-search-check {
-  min-block-size: 56px;
+  min-block-size: var(--row-height);
 }
 
 .ui-search-check-text {
@@ -592,6 +593,16 @@
   font-size: var(--type-line2-size);
   line-height: calc(var(--type-line2-line) + 0.1);
   color: var(--color-text-muted);
+}
+
+/* FLOW-1049: zero results is never a dead end: the chips' link, סינון and the clear, wrapping on a narrow phone. */
+.ui-search-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
 }
 
 /* The field's cancel link, shown while the first read loads. */

@@ -192,6 +192,11 @@ export function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShow
   };
 }
 
+/** FLOW-1049: the done frame's count line: what was approved today, by hand on this visit and automatically. */
+export function reviewDoneLine(count: number): string {
+  return count === 1 ? "שורה אחת אושרה היום" : `${String(count)} שורות אושרו היום`;
+}
+
 export function ReviewEmpty({
   search,
   filtered = false,
@@ -217,6 +222,7 @@ export function ReviewEmpty({
   // FLOW-309: the last card left with focus in its action bar; the action takes it (after the title's).
   // A ref, so StrictMode's second run of the effect still knows (the title focuses itself again).
   const handed = useRef<boolean | null>(null);
+  const finished = done != null && !filtered;
   useEffect(() => {
     handed.current ??= takeReviewFocus();
     if (handed.current) focusReviewEmptyAction();
@@ -224,16 +230,19 @@ export function ReviewEmpty({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} />
-      <div className={done == null || filtered ? undefined : "ui-review-done"}>
+      {/* FLOW-1049 (V3-Review): the queue just emptied: a check in a tint circle, "הכול אושר", the day's count, and one way home. */}
+      <div className={finished ? "ui-review-done" : undefined}>
         <EmptyState
-          icon={done == null || filtered ? <ReviewIcon /> : <CheckIcon size={44} stroke={2.2} />}
-          title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
+          icon={finished ? <CheckIcon size={28} stroke={2.2} /> : <ReviewIcon />}
+          title={filtered ? "אין פריטים לאישור בפרויקט הזה" : finished ? "הכול אושר" : "הכל מאושר"}
           body={filtered
             ? "אין פריטים של הפרויקט הזה בתור."
             : done == null
               ? "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."
-              : `אישרת ${String(done.approved)} פריטים עכשיו.\n${String(done.auto)} נוספים אושרו אוטומטית היום.`}
-          action={(
+              : reviewDoneLine(done.approved + done.auto)}
+          action={finished ? (
+            <Button variant="link" to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
+          ) : (
             <>
               <Button full to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
               {filtered ? null : <Button variant="link" to={`/review/filed${search}`}>מה אושר היום</Button>}

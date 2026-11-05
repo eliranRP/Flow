@@ -34,18 +34,18 @@ const NOTE = "הצפי של כל פרויקט, וההוצאות הכלליות. 
 /** A part's rows as its project's צפי page lists them: its rows, then the payment the profit leaves out. */
 type PartRow = { kind: "row"; row: NextMonthRow } | { kind: "kept"; minor: bigint };
 
-function partRows(part: CompanyForecastPart): PartRow[] {
+export function partRows(part: CompanyForecastPart): PartRow[] {
   const rows: PartRow[] = part.forecast.rows.map((row) => ({ kind: "row", row }));
   return part.forecast.cashOnlyMinor === 0n ? rows : [...rows, { kind: "kept", minor: part.forecast.cashOnlyMinor }];
 }
 
 /** FLOW-1013: the title says צפי once, so a dated row's hint is its day, not "צפוי 05/11". */
-function partHint(row: NextMonthRow, months: number, month: string): string {
+export function partHint(row: NextMonthRow, months: number, month: string): string {
   return row.kind !== "loan" && row.kind !== "added" && row.date != null ? `${formatDayMonth(row.date)} · קבוע` : rowSource(row, months, month);
 }
 
 /** The parts in the Projects tab's order (unknown ones after them), the general costs last. */
-function orderParts(parts: readonly CompanyForecastPart[], projects: readonly ProjectCashRow[], currency: string): CompanyForecastPart[] {
+export function orderParts(parts: readonly CompanyForecastPart[], projects: readonly ProjectCashRow[], currency: string): CompanyForecastPart[] {
   const order = orderActiveProjects([...projects], currency).map((row) => row.id);
   const rank = (part: CompanyForecastPart) => {
     if (part.projectId == null) return Number.MAX_SAFE_INTEGER;

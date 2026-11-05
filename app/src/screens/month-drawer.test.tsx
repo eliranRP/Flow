@@ -1,7 +1,8 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
-import { israelToday } from "../ui/date-math";
+import { shiftMonthKey } from "../period";
+import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { MonthDrawer } from "./month-drawer";
 
 const rpc = vi.hoisted(() => ({
@@ -80,6 +81,28 @@ describe("MonthDrawer (FLOW-364)", () => {
     expect(screen.queryByRole("button", { name: "שנה קודמת" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /מרץ, נטו/ }));
     expect(onPick).toHaveBeenCalledWith(`${String(year)}-03`);
+  });
+
+  it("picks next month like any month, and shows it as צפי once picked (FLOW-1056)", async () => {
+    const nextKey = shiftMonthKey(currentKey, 1);
+    const nextName = HEBREW_MONTHS[Number(nextKey.slice(5, 7)) - 1] ?? "";
+    const { onPick } = renderDrawer({ withNext: true, selectedKey: currentKey, initialYear: Number(nextKey.slice(0, 4)) });
+    await screen.findByRole("dialog", { name: "בחירת חודש" });
+    const next = screen.getByRole("button", { name: `${nextName}, תחזית` });
+    expect(next).toHaveClass("ui-month-cell-next");
+    expect(next).not.toBeDisabled();
+    fireEvent.click(next);
+    expect(onPick).toHaveBeenCalledWith(nextKey);
+  });
+
+  it("marks next month selected when Home shows it, with no net", async () => {
+    const nextKey = shiftMonthKey(currentKey, 1);
+    const nextName = HEBREW_MONTHS[Number(nextKey.slice(5, 7)) - 1] ?? "";
+    renderDrawer({ withNext: true, selectedKey: nextKey });
+    await screen.findByRole("dialog", { name: "בחירת חודש" });
+    const cell = screen.getByRole("button", { name: `${nextName}, תחזית` });
+    expect(cell).toHaveAttribute("aria-current", "date");
+    expect(within(cell).getByText("צפי")).toBeInTheDocument();
   });
 
   it("disables the later year on the current year when the books start a year before", async () => {

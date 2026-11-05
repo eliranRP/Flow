@@ -307,6 +307,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1050"></a>[FLOW-1050](tasks/FLOW-1050.md) | Pull to refresh that feels native (the iOS pattern, motion and small details) | SMALL UI |
 | <a id="flow-1051"></a>[FLOW-1051](tasks/FLOW-1051.md) | v3 pixel pass: the shared parts on the boards' measurements | UI (design approved) |
 | <a id="flow-1052"></a>[FLOW-1052](tasks/FLOW-1052.md) | v3 pixel pass: Home on its boards | UI (design approved) |
+| <a id="flow-1056"></a>[FLOW-1056](tasks/FLOW-1056.md) | Home on a future month: the next month opens Home with its forecast as the month's data | UI (owner's ask) |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |
