@@ -200,7 +200,7 @@
    bar (FLOW-1043), and 60px more while a dock is open, so sticky heads land at 0, 64 or 124; 44 or 104; 56 or 116. */
 html[data-compact-bar] {
   --compact-bar-base: var(--touch-min);
-  --compact-bar-dock-h: calc(var(--compact-dock) * 0);
+  --compact-bar-dock-h: 0px;
   --compact-bar-h: calc(var(--compact-bar-base) + var(--compact-bar-dock-h));
   --month-sticky-top: calc(var(--safe-top) + var(--compact-bar-h) + 1px);
   /* A row reached by Tab stops below the bar, not under it (WCAG 2.4.11). */
