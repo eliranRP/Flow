@@ -140,7 +140,8 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("dialog", { name: "פרויקט א" }).getByRole("link", { name: /^השקעה והלוואות/ }).click();
   await expect(page).toHaveURL(new RegExp(`/projects/${projectA}/investment`));
-  // FLOW-446: the investment page lists the loan in its loans card.
+  // FLOW-1047: the investment page lists the loan under its הלוואות segment.
+  await page.getByRole("radio", { name: "הלוואות" }).click();
   await expect(page.getByRole("link", { name: new RegExp(lender) })).toBeVisible();
 
   await page.goto("/loans");
