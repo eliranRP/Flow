@@ -87,7 +87,7 @@ export const ProjectsEmpty: Story = {
   ),
 };
 
-/** FLOW-1044 (board V3-Projects): the band, דורש טיפול, פעילים, and the rows in groups by kind. */
+/** FLOW-1044 (board V3-Projects): the band, פעילים, the rows in groups by kind, and the lines with no project as one row at the end. */
 export const ProjectsList: Story = {
   name: "Projects, active, in groups by kind",
   render: () => (
@@ -98,7 +98,8 @@ export const ProjectsList: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("heading", { name: "דורש טיפול" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
+    await expect(canvas.getByRole("link", { name: /בלי פרויקט/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/unassigned/));
     await expect(canvas.getByRole("heading", { name: "שיפוץ" })).toBeInTheDocument();
     await expect(canvas.queryByText("Wren St")).toBeNull();
   },
