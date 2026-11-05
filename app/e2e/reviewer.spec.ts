@@ -149,7 +149,7 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
   await pickCategory(page, "שינוע");
   await page.getByRole("button", { name: "אישור" }).click();
-  await expect(page.getByText("הכל מאושר")).toBeVisible();
+  await expect(page.getByText("הכול אושר")).toBeVisible();
   await page.getByRole("link", { name: "לתצוגת הביקורת" }).click();
   await expect(page).toHaveURL(/\/reviewer$/);
 });

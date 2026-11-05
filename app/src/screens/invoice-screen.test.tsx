@@ -87,6 +87,18 @@ describe("Invoice page follows the board (FLOW-367b)", () => {
   });
 });
 
+// FLOW-1049: the pinned "סימון כשולם" toasts with ביטול, and ביטול puts the invoice back to open.
+describe("Invoice mark-paid toast (FLOW-1049)", () => {
+  it("ביטול on the mark's toast clears the mark and brings the pinned button back", () => {
+    renderPage("inv-1043");
+    fireEvent.click(screen.getByRole("button", { name: "סימון כשולם" }));
+    expect(screen.getByText("סומן כשולם")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(screen.getByRole("button", { name: "סימון כשולם" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ביטול הסימון" })).toBeNull();
+  });
+});
+
 describe("All paid state (FLOW-367b)", () => {
   it("keeps the all-paid block, its home button and the SUMIT refresh line", () => {
     render(

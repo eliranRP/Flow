@@ -14,6 +14,9 @@ import { useInviteActions } from "./invite-actions";
 /** Where "+ עסק חדש" goes: the setup's business step in new-company mode (FLOW-514). */
 export const NEW_COMPANY_PATH = "/setup/1?new=1";
 
+/** FLOW-1049: how long the band's figure stays faded after the switch answers (the radio dot's 280ms, then the fade back). */
+const COMPANY_FADE_MS = 280;
+
 function InviteBlock({
   invite,
   busy,
@@ -95,7 +98,13 @@ export function CompanySheet({
       toast.show({ message: `עברת ל־${company.name}` });
     },
     run: async (company) => {
-      await openCompany(company.id);
+      // FLOW-1049 (V3-Company): the band's figure fades out while the book changes, and back in on the new one.
+      document.documentElement.setAttribute("data-company-switch", "");
+      try {
+        await openCompany(company.id);
+      } finally {
+        window.setTimeout(() => { document.documentElement.removeAttribute("data-company-switch"); }, COMPANY_FADE_MS);
+      }
     },
   });
   const actions = useInviteActions({

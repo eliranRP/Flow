@@ -594,6 +594,16 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-1049: zero results is never a dead end: the chips' link, סינון and the clear, wrapping on a narrow phone. */
+.ui-search-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
 /* The field's cancel link, shown while the first read loads. */
 .ui-search-cancel {
   flex: none;

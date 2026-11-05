@@ -338,18 +338,44 @@
   font-size: calc(var(--type-caption-size) - 1px);
 }
 
+/* FLOW-1049 (V3-Company): the ring takes the accent and its dot grows in (transform, --motion-page). */
 .cs-radio {
+  display: grid;
   flex: none;
+  place-items: center;
   box-sizing: border-box;
   inline-size: 22px;
   block-size: 22px;
   border: 2px solid var(--color-control-border);
   border-radius: var(--radius-chip);
+  transition: border-color var(--motion-page) var(--ease-enter);
+}
+
+.cs-radio::after {
+  content: "";
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--radius-chip);
+  background: var(--color-accent);
+  transform: scale(0);
+  transition: transform var(--motion-page) var(--ease-enter);
 }
 
 .cs-row[data-on="true"] .cs-radio {
   border-color: var(--color-accent);
-  background: var(--color-accent);
+}
+
+.cs-row[data-on="true"] .cs-radio::after {
+  transform: scale(1);
+}
+
+/* The band's figure cross-fades while the book changes (company-sheet.tsx sets the attribute). */
+.ui-band-net {
+  transition: opacity var(--motion-toast-out) var(--ease-linear);
+}
+
+html[data-company-switch] .ui-band-net {
+  opacity: 0;
 }
 
 .cs-invites-head {
