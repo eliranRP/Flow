@@ -576,7 +576,7 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /מחסן הנמל/ }));
     fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
-    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    expect(await screen.findByText("הכול אושר")).toBeInTheDocument();
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/review");
     });

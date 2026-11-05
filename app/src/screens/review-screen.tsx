@@ -56,6 +56,9 @@ export function ReviewScreen() {
   const retryReview = usePreviewRetry(() => { void review.refetch(); });
   const retryWaiting = usePreviewRetry(() => { void waiting.refetch(); });
   const focusedOrder = useRef<ReviewRow[] | null>(null);
+  // FLOW-1049: the cards this visit has had on screen. A queue that drains after showing any ends on the done
+  // frame ("הכול אושר"); one that was empty from the start keeps its own empty copy.
+  const seenCards = useRef(new Set<string>());
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
   // FLOW-365b: `&board=` opens one board state for the proofs: sheet (the project picker open),
   // nosuggestion (three cards handled before this one), done (the queue just emptied).
@@ -159,6 +162,7 @@ export function ReviewScreen() {
   }
   const rows = source;
   const fromList = listFocusId(params) != null;
+  if (!listing && phase.kind === "ready") for (const row of rows) seenCards.current.add(row.id);
   // FLOW-955: Jev's bookings wait at the head of the queue, before its own cards (not in a dev proof).
   // The first draw waits for their read, so the queue never jumps from a card to a booking; a failed
   // read leaves the queue as it is.
@@ -202,7 +206,7 @@ export function ReviewScreen() {
         search={search}
         backTo={fromList ? `/review${search}` : undefined}
         pushPrompt={e2eBoard == null}
-        done={e2eBoard === "done" ? reviewE2e?.E2E_DONE_COUNTS : undefined}
+        done={e2eBoard === "done" ? reviewE2e?.E2E_DONE_COUNTS : seenCards.current.size > 0 ? { approved: seenCards.current.size, auto: 0 } : undefined}
       />
     );
   }
