@@ -167,6 +167,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1046"></a>[FLOW-1046](tasks/FLOW-1046.md) | Loans v3: the list, the loan page by kind, payments, the summary, the new-loan and close sheets | UI (design approved) |
 | <a id="flow-102"></a>[FLOW-102](tasks/FLOW-102.md) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE |
 | <a id="flow-109"></a>[FLOW-109](tasks/FLOW-109.md) | Income assigned to a project: confirm it counts in that project | BUG |
 | <a id="flow-111"></a>[FLOW-111](tasks/FLOW-111.md) | update_loan can store a payment below the interest | BUG |
@@ -294,6 +295,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1043"></a>[FLOW-1043](tasks/FLOW-1043.md) | v3 shared parts: the docking compact bar, the sliding segment, one-line group heads, attention row-cards, status marks | UI (design approved) |
+| <a id="flow-1035"></a>[FLOW-1035](tasks/FLOW-1035.md) | Month lines say which are recurring (Home v3 data) | SMALL CYCLE |
+| <a id="flow-1036"></a>[FLOW-1036](tasks/FLOW-1036.md) | Home v3: the month's activity on Home, dismissable attention rows | UI (design approved) |
+| <a id="flow-1048"></a>[FLOW-1048](tasks/FLOW-1048.md) | v3 lists and details under Home: קבועים, changed charges, the charge page, month lines, the transaction page, the forecast | UI (design approved) |
+| <a id="flow-1049"></a>[FLOW-1049](tasks/FLOW-1049.md) | v3 queues and sheets: open invoices and the invoice, the review queue, transfers, search, add, settings, the company switcher | UI (design approved) |
 | <a id="flow-1039"></a>[FLOW-1039](tasks/FLOW-1039.md) | Pull to refresh on every screen (ld-07) | SMALL UI |
 | <a id="flow-1040"></a>[FLOW-1040](tasks/FLOW-1040.md) | Pull to refresh follow-ups (#977 review) | BACKLOG NIT |
 | <a id="flow-1042"></a>[FLOW-1042](tasks/FLOW-1042.md) | Pull to refresh: the whole screen comes down, and a pull brings new data | SMALL UI |
@@ -438,6 +444,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1044"></a>[FLOW-1044](tasks/FLOW-1044.md) | Projects v3: the list, the project page by kind, the actions and new-project sheets, project profit, and the lines with no project | UI (design approved) |
+| <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |
+| <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
 | <a id="flow-401"></a>[FLOW-401](tasks/FLOW-401.md) | Project view by category | PLAN FIRST |
 | <a id="flow-402"></a>[FLOW-402](tasks/FLOW-402.md) | All transactions of a project, at a glance | PLAN FIRST |
 | <a id="flow-403"></a>[FLOW-403](tasks/FLOW-403.md) | Project timeline and expected months | PLAN FIRST |

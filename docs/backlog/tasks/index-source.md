@@ -163,6 +163,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## P&L and loans
 
+- FLOW-1046
 - FLOW-102
 - FLOW-109
 - FLOW-111
@@ -286,6 +287,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Transactions and app UX
 
+- FLOW-1043
+- FLOW-1035
+- FLOW-1036
+- FLOW-1048
+- FLOW-1049
 - FLOW-1039
 - FLOW-1040
 - FLOW-1042
@@ -428,6 +434,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Projects and reports
 
+- FLOW-1044
+- FLOW-1045
+- FLOW-1047
 - FLOW-401
 - FLOW-402
 - FLOW-403
