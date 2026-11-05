@@ -164,6 +164,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ## P&L and loans
 
 - FLOW-1046
+- FLOW-1055
 - FLOW-102
 - FLOW-109
 - FLOW-111
@@ -296,6 +297,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1040
 - FLOW-1042
 - FLOW-1050
+- FLOW-1051
+- FLOW-1052
 - FLOW-311
 - FLOW-133
 - FLOW-137
@@ -438,6 +441,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1044
 - FLOW-1045
 - FLOW-1047
+- FLOW-1053
+- FLOW-1054
 - FLOW-401
 - FLOW-402
 - FLOW-403
