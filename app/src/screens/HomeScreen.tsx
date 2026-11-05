@@ -21,7 +21,7 @@ import { ActivityFilterControl, HomeActivity, HomeFutureActivity, type ActivityF
 import { useRecurringScheduleQuery } from "../recurring-schedule";
 import { AttentionCards } from "../ui/attention-cards";
 import { useDockedFilter } from "../ui/dock-filter";
-import { MonthDrawer } from "./month-drawer";
+import { MonthDrawer, type DrawerFigure } from "./month-drawer";
 import { BandLoadFailed, BandOfflineLine, useOnline } from "../ui/band-states";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
@@ -596,6 +596,7 @@ export function CashHome({
       />
       <MonthDrawer
         open={drawerOpen}
+        figure={drawerFigure({ monthKey, isPast, isFuture, net: baseRow?.net_minor ?? 0n, forecast, future })}
         onOpenChange={setDrawer}
         selectedKey={monthKey}
         firstKey={firstKey}
@@ -611,6 +612,28 @@ export function CashHome({
       />
     </div>
   );
+}
+
+/**
+ * FLOW-1052 (V3-Home): the drawer's figure box for Home's month: the month-end forecast on the current month
+ * (its cash to date until the forecast is read), a past month's closed net, next month's expected net.
+ */
+function drawerFigure({ monthKey, isPast, isFuture, net, forecast, future }: {
+  monthKey: string;
+  isPast: boolean;
+  isFuture: boolean;
+  net: bigint;
+  forecast: bigint | null;
+  future: HomeFuture | null;
+}): DrawerFigure {
+  const name = monthName(monthKey);
+  if (isPast) return { label: `תזרים ${name}`, minor: net, sub: "חודש סגור · סופי" };
+  if (isFuture) {
+    const caption = future?.figures?.caption ?? "";
+    return { label: `תזרים צפוי לסוף ${name}`, minor: future?.figures?.netMinor ?? null, sub: caption === "" ? "הערכה" : `הערכה · ${caption}` };
+  }
+  if (forecast != null) return { label: `תזרים צפוי לסוף ${name}`, minor: forecast, sub: "הערכה · לפי קבועים וחשבוניות פתוחות" };
+  return { label: `תזרים ${name}`, minor: net, sub: "עד היום" };
 }
 
 /** The direction the band's figures came from, for the enter motion (earlier comes from the right in RTL). */

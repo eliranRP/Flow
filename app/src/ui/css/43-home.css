@@ -1,19 +1,32 @@
 /* FLOW-364: Home's month drawer and its empty first run. FLOW-1036: the attention cards and the month's activity. */
 
+/* FLOW-1052 (V3-Home): the drawer is the board's: the handle, the year row, Home's month in a tinted box, the
+   grid and a 52px סגירה pill, 16px apart. The board draws no title row: the sheet's title is for the screen reader. */
 .ui-month-drawer {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
+.ui-month-drawer-panel .ui-sheet-head {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  min-block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .ui-month-drawer-years {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  min-block-size: var(--touch-min);
 }
 
 .ui-month-drawer .ui-month-drawer-step {
+  flex: none;
   inline-size: var(--touch-min);
   block-size: var(--touch-min);
   border-radius: 50%;
@@ -21,10 +34,10 @@
   color: var(--color-text);
 }
 
-/* The board's year arrows draw an 18px chevron in the 44px disc. */
+/* The board's arrows draw a 22px chevron in the 44px disc. */
 .ui-month-drawer-step svg {
-  inline-size: 18px;
-  block-size: 18px;
+  inline-size: var(--glyph-band-step);
+  block-size: var(--glyph-band-step);
 }
 
 .ui-month-drawer-step-off {
@@ -32,12 +45,36 @@
   cursor: default;
 }
 
+/* The year is the sheet title's 20/1.3/600, centred between the arrows (alone when there are none). */
 .ui-month-drawer-year {
+  flex: 1 1 auto;
   min-inline-size: var(--year-label-min);
   margin: 0;
-  font-size: var(--type-btn-size);
-  font-weight: var(--type-btn-2-weight);
+  font-size: var(--type-sheet-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-sheet-weight);
   text-align: center;
+}
+
+/* Home's month: radius 20 on the tint, 16 18 in; a 15 label, the 28 figure, a 14 line, 4px apart. */
+.ui-month-drawer-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) calc(var(--space-1) * 4.5);
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+  text-align: start;
+}
+
+.ui-month-drawer-figure-label,
+.ui-month-drawer-figure-sub {
+  color: var(--color-text-secondary);
+}
+
+.ui-month-drawer-figure-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .ui-month-drawer-grid {
@@ -46,17 +83,18 @@
   gap: var(--space-2);
 }
 
-/* FLOW-364 (board): the cell's name and amount sit at the start edge, 12px in, 60px high. */
+/* The cell: 60px, radius 12, a 1.5px border; its name 14/1.3/500 over its net 13/1.4, centred, 2px apart. */
 .ui-month-cell {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: calc(var(--space-1) / 2);
   min-block-size: var(--month-cell-min);
-  padding: var(--space-2) calc(var(--space-3) - var(--space-1) / 2);
-  text-align: start;
-  border: 2px solid transparent;
+  min-inline-size: 0;
+  padding: var(--space-1);
+  text-align: center;
+  border: var(--month-cell-border) solid transparent;
   border-radius: var(--radius-month-cell);
   background: var(--color-raised);
   color: var(--color-text);
@@ -68,38 +106,29 @@
 }
 
 .ui-month-cell-name {
-  font-size: var(--type-line2-size);
-  line-height: var(--type-cents-line);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-btn-weight);
 }
 
-.ui-month-cell-amount {
-  color: var(--color-text-secondary);
-  font-size: var(--type-caption-size);
-}
-
-/* FLOW-364 (board): the cells' figures are one step under the list size. */
+.ui-month-cell-amount,
 .ui-month-cell-amount .t-body {
   font-size: var(--type-caption-size);
-  line-height: var(--type-cents-line);
+  line-height: var(--type-caption-line);
+}
+
+.ui-month-cell-amount .t-body {
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-month-cell-selected {
   border-color: var(--color-accent);
-  background: var(--color-tint-strong);
-}
-
-.ui-month-cell-selected .ui-month-cell-name {
-  font-weight: var(--type-line2-weight);
+  background: var(--color-tint);
 }
 
 /* FLOW-958: "עוד לא" is information, not a dead control: muted text, which meets 4.5:1. */
 .ui-month-cell-future {
-  border: 2px dashed var(--color-line);
-  background: transparent;
-  color: var(--color-text-muted);
-}
-
-.ui-month-cell-future .ui-month-cell-amount {
+  border: var(--month-cell-border) dashed var(--color-line);
   color: var(--color-text-muted);
 }
 
@@ -278,14 +307,29 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-1052 (V3-States): the failed line is a 52px card, radius 16, on the surface with the line's border, 16px in:
+   an 18px signal mark, the title 15px, 10px apart, נסו שוב at the end. */
 .ui-home-act-failed {
   display: flex;
-  flex-direction: column;
-  padding-block: var(--space-3);
+  align-items: center;
+  gap: calc(var(--space-1) * 2.5);
+  min-block-size: var(--control-height);
+  margin-block-end: var(--space-3);
+  padding-inline: var(--space-4) var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-home-act-failed-mark {
+  display: grid;
+  flex: none;
+  color: var(--color-signal);
 }
 
 .ui-home-act-failed-title {
-  margin: 0;
+  flex: 1 1 auto;
+  min-inline-size: 0;
 }
 
 .ui-home-act-foot {
@@ -313,12 +357,12 @@
 /* FLOW-1036: next month's cell in the drawer; dashed like a month to come, but pickable (FLOW-1056: a pick shows
    that month on Home, and the cell is then the selected one). */
 .ui-month-cell-next {
-  border: 2px dashed var(--color-line);
+  border: var(--month-cell-border) dashed var(--color-line);
 }
 
 /* FLOW-1056: next month's activity has a title of its own ("הצפוי בדצמבר") where the current month's filter sits;
    a past month's ("הפעילות באוקטובר") sits over its filter, with the month's totals as its summary line. */
-.ui-home-next-title {
+.ui-home-act-title {
   margin: 0 0 var(--space-2);
 }
 
@@ -328,7 +372,7 @@
   margin-block-end: var(--space-3);
 }
 
-.ui-home-act-head .ui-home-next-title {
+.ui-home-act-head .ui-home-act-title {
   margin: 0;
 }
 

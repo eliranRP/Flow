@@ -506,6 +506,16 @@ html[data-kb="open"] .ui-sheet-body {
   font-weight: var(--type-btn-2-weight);
 }
 
+/* FLOW-1052 (V3-Home): the change chip reads left to right, its triangle before the amount; a change that helps
+   is the board's ink on the white pill, one that hurts the red. */
+.ui-band-rows .ui-change-amount > span {
+  direction: ltr;
+}
+
+.ui-band-rows .ui-change-amount.ui-delta-good {
+  color: var(--color-pill-helps-ink);
+}
+
 .ui-band-caption {
   margin: var(--label-gap) 0 0;
   color: var(--color-on-band-secondary);

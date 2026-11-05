@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
-import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
+import { sampleCashMonths, sampleCashToDay, sampleQuietCashMonths } from "../dev/cash-sample";
 import { homeActivityLines } from "../dev/home-activity-sample";
 import { FUTURE_CURRENT_KEY, FUTURE_MONTH_KEY, sampleHomeFuture } from "../dev/home-future-sample";
 import { HOME_NEXT_MONTH_SAMPLE } from "../dev/home-next-month-sample";
@@ -130,6 +130,7 @@ function CashHomeStory({
   late = recurringTip ? 1 : 0,
   forecast = null,
   forecastPending = false,
+  example = true,
 }: {
   monthBack?: number;
   /** A past month's activity (its lines); the sample's by default. */
@@ -146,6 +147,8 @@ function CashHomeStory({
   late?: number;
   forecast?: bigint | null;
   forecastPending?: boolean;
+  /** The "Example data" strip on the band; the board comparisons draw the band without it (FLOW-1052). */
+  example?: boolean;
 }) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
@@ -162,22 +165,28 @@ function CashHomeStory({
         activity={monthBack > 0 ? pastActivity ?? samplePastActivity(shiftMonthKey(currentKey, -monthBack)) : activity}
         initialFilter={filter}
         withNext
-        example={exampleOnBand}
+        example={example ? exampleOnBand : undefined}
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
+        drawerYearMonths={initialDrawerOpen ? data : undefined}
+        sameDay={monthBack > 0 ? null : sampleCashToDay()}
         offlineSince={offlineSince}
         recurringTip={recurringTip}
         lateRecurring={late}
         forecast={forecast}
         forecastPending={forecastPending}
-        company={recurringTip ? <BandCompany name="Acme Test Co" onOpen={() => undefined} /> : undefined}
+        company={<BandCompany name="Acme Test Co" onOpen={() => undefined} />}
       />
     </StoryRoute>
   );
 }
 
-/** The current month: the cards to review (the review card has no X), then the month's activity. A first-time owner: no קבועים tip (FLOW-1015). */
-export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
+/**
+ * The current month: the company on row 1, the change chips on נכנס and יצא, the forecast row, the cards to review
+ * (the review card has no X), then the month's activity. A first-time owner: no קבועים tip (FLOW-1015). FLOW-1052:
+ * no "Example data" strip, so the band's edges compare with V3-Home's.
+ */
+export const HomeCurrent: Story = { render: () => <CashHomeStory forecast={1_250_000n} example={false} /> };
 
 /** FLOW-1036: two cards hidden on this device; the head says so and brings them back. */
 export const HomeAttentionSomeHidden: Story = {
@@ -264,7 +273,7 @@ export const HomeActivityNoFlag: Story = {
  */
 export const HomeDocked: Story = {
   name: "Home activity, the filter docked",
-  render: () => <CashHomeStory />,
+  render: () => <CashHomeStory forecast={1_250_000n} example={false} />,
   play: async ({ canvasElement }) => {
     const doc = canvasElement.ownerDocument;
     const slot = canvasElement.querySelector<HTMLElement>(".ui-dock-slot");
@@ -413,6 +422,17 @@ export const HomeDrawerNextMonth: Story = {
     await userEvent.click(next);
     await waitFor(() => expect(doc.queryByRole("dialog", { name: "בחירת חודש" })).toBeNull());
     await waitFor(() => expect(within(canvasElement).getByText("תזרים צפוי · נובמבר")).toBeInTheDocument());
+  },
+};
+
+/** FLOW-1052 (V3-Home): the month drawer open on the current month: the year, the forecast's box, the grid, סגירה. */
+export const HomeDrawer: Story = {
+  name: "Home, the month drawer",
+  render: () => <CashHomeStory forecast={1_250_000n} example={false} initialDrawerOpen />,
+  play: async ({ canvasElement }) => {
+    const dialog = await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "בחירת חודש" });
+    await expect(within(dialog).getByText("תזרים צפוי לסוף " + (HEBREW_MONTHS[Number(israelToday().slice(5, 7)) - 1] ?? ""))).toBeInTheDocument();
+    await expect(within(dialog).getByRole("button", { name: "סגירה" })).toBeInTheDocument();
   },
 };
 
