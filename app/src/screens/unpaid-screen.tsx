@@ -75,7 +75,7 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
   const overdue = useMemo(() => unpaidOverdueMinor(all, primaryCurrency, today), [all, primaryCurrency, today]);
   const shown = unpaidFiltered(rows, filter, today);
   const back = `/${search}`;
-  // FLOW-335: the SUMIT refresh shows once a mark waits for the sync, and on the all-paid page.
+  // FLOW-335: the SUMIT refresh, under the rows and on the all-paid page.
   const refresh = holdWrites ? null : (
     <button type="button" className="ui-inv-refresh" onClick={actions.startSync} disabled={syncing} aria-busy={syncing || undefined}>
       {syncing ? <span className="ui-spinner" aria-hidden="true" /> : <RefreshIcon size={14} />}
@@ -193,7 +193,7 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
               })}
             </ul>
           )}
-          {refresh == null || !actions.anyMarked ? null : <div className="ui-inv-sortrow">{refresh}</div>}
+          {refresh == null ? null : <div className="ui-inv-sortrow">{refresh}</div>}
         </>
       )}
     </div>
