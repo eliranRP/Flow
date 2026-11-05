@@ -588,7 +588,8 @@
   padding-block: calc(var(--space-1) + var(--space-half));
 }
 
-.ui-rep-v3-group .ui-row-project .ui-row-hint {
+/* The balance-by-project rows wrap their hint on purpose (ui-row-hint-wrap): the one-line cut is for the P&L line. */
+.ui-rep-v3-group .ui-row-project .ui-row-hint:not(.ui-row-hint-wrap) {
   display: block;
   overflow: hidden;
   color: var(--color-text-secondary);
