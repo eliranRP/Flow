@@ -2,6 +2,7 @@
 // Split out of jev_tag.ts (FLOW-807). Decisions 0084 and 0124.
 
 import { JEV_MODEL, type FetchLike, type JsonValue } from "./jev.ts";
+import { loanFromRow, type TagLoan } from "./jev_tag_loan.ts";
 import {
   capNewest,
   clampTagLimit,
@@ -11,6 +12,7 @@ import {
   JEV_HISTORY_PER_SUPPLIER,
   type JsonObject,
   lineDirection,
+  type LoanPrefillWrite,
   type PrefillWrite,
   StoreConflict,
   type SuggestionRow,
@@ -45,7 +47,7 @@ export function integrationsPath(companyId?: string | null): string {
 }
 
 export function categoriesPath(companyId: string, kind: TagDirection = "expense"): string {
-  return `/rest/v1/categories?company_id=eq.${companyId}&kind=eq.${kind}&hidden=eq.false&select=id,name`;
+  return `/rest/v1/categories?company_id=eq.${companyId}&kind=eq.${kind}&hidden=eq.false&select=id,name,loan_part`;
 }
 
 /**
@@ -60,7 +62,7 @@ export function transactionsPath(companyId: string, limit: number, nowIso: strin
     `/rest/v1/transactions?company_id=eq.${companyId}`,
     "removed_at=is.null",
     "review_queue.status=eq.open",
-    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,source,card_last4:provider_meta->>card_last4,account_id:provider_meta->>account_id,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
+    "select=id,company_id,direction,description,doc_date,supplier_id,customer_id,amount_gross,amount_net,vat_amount,amount_original,currency,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,source,card_last4:provider_meta->>card_last4,account_id:provider_meta->>account_id,review_queue!inner(status),allocations(id),suppliers(name),customers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
     `tagged.model_version=eq.${JEV_MODEL}`,
     "tagged=is.null",
     `failed.model_version=eq.${JEV_MODEL}`,
@@ -165,6 +167,8 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
     amountGross: asNumber(row.amount_gross),
     amountNet: asNumber(row.amount_net),
     vatAmount: asNumber(row.vat_amount),
+    amountOriginal: Number.isSafeInteger(row.amount_original) ? row.amount_original as number : null,
+    currency: asString(row.currency),
     projectId: asString(row.project_id),
     categoryId: asString(row.category_id),
     projectAssigned: asBool(row.project_assigned),
@@ -176,6 +180,26 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
     source: asString(row.source),
     accountId: asString(row.account_id),
   }];
+}
+
+/**
+ * Auto mode may split a loan payment onto its loan (FLOW-1032): the loans it may match. A failed
+ * read lists no loans, so the lines are still tagged and a loan category is simply not filled.
+ */
+async function readLoans(fetch: FetchLike, base: string, serviceKey: string, companyId: string): Promise<TagLoan[]> {
+  try {
+    const listed = await rest(fetch, `${base}/rest/v1/rpc/jev_loan_candidates`, serviceKey, {
+      method: "POST",
+      body: { p_company: companyId },
+    });
+    if (!Array.isArray(listed)) return [];
+    return listed.flatMap((row) => {
+      const loan = loanFromRow(row);
+      return loan ? [loan] : [];
+    });
+  } catch {
+    return [];
+  }
 }
 
 function cardLast4Of(value: unknown): string | null {
@@ -452,7 +476,7 @@ export function createTagStore(
         const categories = rows(await get(categoriesPath(company.companyId))).flatMap((row) => {
           const id = asString(row.id);
           const name = asString(row.name);
-          return id && name ? [{ id, name }] : [];
+          return id && name ? [{ id, name, loanPart: asString(row.loan_part) }] : [];
         });
         const transactions = rows(await get(transactionsPath(company.companyId, quota, new Date(now()).toISOString())));
         const loaded = transactions.flatMap((row) => expenseFromRow(row, company.companyId));
@@ -468,6 +492,9 @@ export function createTagStore(
             return id && name ? [{ id, name }] : [];
           })
           : [];
+        const loans = company.mode === "auto" && expenses.some((expense) => expense.direction !== "income")
+          ? await readLoans(fetch, base, serviceKey, company.companyId)
+          : [];
         work.push({
           companyId: company.companyId,
           mode: company.mode,
@@ -475,6 +502,7 @@ export function createTagStore(
           projects,
           categories,
           incomeCategories,
+          loans,
           expenses,
         });
       }
@@ -513,6 +541,27 @@ export function createTagStore(
       // An answer SQL did not give says nothing was written: never count it as pre-filled.
       if (!isObject(result)) return false;
       return result.project === true || result.category === true;
+    },
+
+    async prefillLoan(write: LoanPrefillWrite): Promise<boolean> {
+      // One SQL transaction under jev_prefill's gates and save_loan_split's checks, with an audit
+      // row (FLOW-1032). A refusal of the checks answers loan false, not an error.
+      const result = await rest(fetch, `${base}/rest/v1/rpc/jev_prefill_loan`, serviceKey, {
+        method: "POST",
+        body: {
+          p_company: write.companyId,
+          p_transaction: write.transactionId,
+          p_loan: write.loanId,
+          p_parts: write.parts.map((part) => ({
+            part: part.part,
+            amount_minor: Number(part.amountMinor),
+            scheduled_minor: Number(part.scheduledMinor),
+          })),
+          p_model: write.modelVersion,
+          p_confidence: write.confidence,
+        },
+      });
+      return isObject(result) && result.loan === true;
     },
 
     async deleteSuggestion(transactionId: string, modelVersion: string): Promise<void> {

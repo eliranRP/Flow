@@ -7,6 +7,7 @@
 
 import { JEV_MODEL, JEV_TIMEOUT_MS, JevError, callJev, type FetchLike, type JevResult, type JevTimer } from "./jev.ts";
 import { readJevApiKey } from "./jev_key.ts";
+import { planLoanFill } from "./jev_tag_loan.ts";
 import { constantTimeEqual } from "./constant-time.ts";
 import { empty, json } from "./http.ts";
 import {
@@ -60,6 +61,7 @@ export {
   JEV_HISTORY_PER_SUPPLIER,
   type TagCompanyWork,
   type SuggestionRow,
+  type LoanPrefillWrite,
   type PrefillWrite,
   type TagPlan,
   StoreConflict,
@@ -129,7 +131,7 @@ function budgetSpent(started: number, budgetMs: number, now: number, reserveMs: 
 
 export async function tagWork(
   work: readonly TagCompanyWork[],
-  store: Pick<TagStore, "saveSuggestion" | "prefill" | "deleteSuggestion"> & Partial<Pick<TagStore, "markFailed">>,
+  store: Pick<TagStore, "saveSuggestion" | "prefill" | "deleteSuggestion"> & Partial<Pick<TagStore, "markFailed" | "prefillLoan">>,
   call: TagCaller,
   apiKey: string,
   options: TagRunOptions = {},
@@ -238,17 +240,37 @@ export async function tagWork(
         await markFailed(expense);
         continue;
       }
-      if (!plan.write) {
+      // A loan payment Jev filed under a loan category: the one loan it pays, and its split.
+      const loanFill = plan.loanConfidence != null && store.prefillLoan && expense.currency
+          && expense.amountOriginal != null && expense.amountGross < 0
+        ? planLoanFill({
+          amountMinor: BigInt(Math.abs(expense.amountOriginal)),
+          currency: expense.currency,
+          docDate: expense.docDate,
+        }, company.loans ?? [])
+        : null;
+      if (!plan.write && !loanFill) {
         report.tagged += 1;
         usage.tagged += 1;
         continue;
       }
       try {
-        const wrote = await store.prefill(plan.write);
+        // False: the line closed or the owner set it meanwhile. The suggestion stays on the card.
+        let wrote = plan.write ? (await store.prefill(plan.write)) !== false : false;
+        if (loanFill && plan.loanConfidence != null && store.prefillLoan) {
+          const split = await store.prefillLoan({
+            companyId: expense.companyId,
+            transactionId: expense.id,
+            loanId: loanFill.loanId,
+            parts: loanFill.parts,
+            modelVersion: JEV_MODEL,
+            confidence: plan.loanConfidence,
+          });
+          wrote = wrote || split;
+        }
         report.tagged += 1;
         usage.tagged += 1;
-        // False: the line closed or the owner set it meanwhile. The suggestion stays on the card.
-        if (wrote !== false) report.prefilled += 1;
+        if (wrote) report.prefilled += 1;
       } catch {
         try {
           await store.deleteSuggestion(expense.id, JEV_MODEL);

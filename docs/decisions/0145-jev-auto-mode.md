@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-08
 **Status:** Accepted (FLOW-702, server side; plan approved by the owner 2026-10-08)
+**Amended by:** [0254](0254-jev-loan-split.md) (a loan category is split onto its loan, never filled on a whole line)
 
 ## Context
 

@@ -553,6 +553,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-703"></a>[FLOW-703](tasks/FLOW-703.md) | Jev corrections write-back | SMALL CYCLE |
 | <a id="flow-704"></a>[FLOW-704](tasks/FLOW-704.md) | Jev review card follow-ups | BACKLOG NIT |
 | <a id="flow-707"></a>[FLOW-707](tasks/FLOW-707.md) | The card's nickname from the bank, on the transaction and for Jev | SMALL UI |
+| <a id="flow-1032"></a>[FLOW-1032](tasks/FLOW-1032.md) | Jev splits a loan payment instead of filing it whole under one loan category | feature (owner call) |
+| <a id="flow-1033"></a>[FLOW-1033](tasks/FLOW-1033.md) | The review card says when Jev split a loan payment | SMALL UI |
+| <a id="flow-1034"></a>[FLOW-1034](tasks/FLOW-1034.md) | Jev loan split follow-ups (#972 review) | BACKLOG NIT |
 
 ## Infra and CI
 
