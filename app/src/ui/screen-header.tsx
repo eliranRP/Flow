@@ -136,6 +136,9 @@ const COMPACT_BAR = 44;
 /** The detail pages' top bar (--compact-bar-detail): the transaction-style bar. */
 export const DETAIL_BAR = 56;
 
+/** How long the page must be still before the compact mark is measured again (FLOW-1051). */
+const SCROLL_SETTLE_MS = 120;
+
 /** The safe area on top (installed app under a notch), in px. --safe-top is an env(), so a probe resolves it. */
 function safeTop(): number {
   const probe = document.createElement("div");
@@ -156,17 +159,33 @@ export function useScrolledPast(mark: HTMLElement | null, enabled: boolean, bar 
   useEffect(() => {
     const node = enabled ? mark : null;
     if (node == null || typeof IntersectionObserver === "undefined") return;
-    const top = bar + safeTop();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[entries.length - 1];
-        if (entry && node.isConnected) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
-      },
-      { rootMargin: `-${String(top)}px 0px 0px 0px` },
-    );
-    observer.observe(node);
+    let observer: IntersectionObserver | null = null;
+    // The bar's edge is read again each time: the safe area can change after mount (rotation, a PWA's first paint).
+    const watch = () => {
+      observer?.disconnect();
+      const top = bar + safeTop();
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry && node.isConnected) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
+        },
+        { rootMargin: `-${String(top)}px 0px 0px 0px` },
+      );
+      observer.observe(node);
+    };
+    watch();
+    // FLOW-1051: WebKit delivers a zero-height mark's crossings late, or not at all, after a momentum scroll; once the
+    // scroll settles the mark is observed afresh, so its first entry says where it is now.
+    let settle = 0;
+    const onScroll = () => {
+      window.clearTimeout(settle);
+      settle = window.setTimeout(watch, SCROLL_SETTLE_MS);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(settle);
+      observer?.disconnect();
     };
   }, [mark, enabled, bar]);
   return enabled && mark != null && past;

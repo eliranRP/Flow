@@ -77,8 +77,11 @@
   padding: var(--space-3) var(--space-side) 0;
 }
 
+/* FLOW-1051 (V3-Home): Home's band row is 52px under 6px of band, the company and the actions 8px apart. */
 .ui-band:has(.ui-band-body) > .ui-band-row {
-  padding-top: var(--space-4);
+  gap: var(--space-2);
+  min-block-size: calc(var(--touch-min) + var(--space-2) + var(--space-1) + var(--space-half));
+  padding-top: calc(var(--space-1) + var(--space-half));
 }
 
 .ui-band-row > .text-wordmark {
@@ -225,7 +228,7 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-band-company {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--label-gap);
   min-inline-size: 0;
   max-inline-size: 100%;
   min-block-size: var(--touch-min);
@@ -243,33 +246,37 @@ html[data-kb="open"] .ui-sheet-body {
   background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
 }
 
+/* FLOW-1051 (V3-Home): the name is 24/1.25/600, cut with an ellipsis; its chevron 16px. */
 .ui-band-company-name {
   min-inline-size: 0;
   overflow: hidden;
-  font-size: var(--type-sheet-size);
-  line-height: var(--type-sheet-line);
-  font-weight: var(--type-sheet-weight);
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
+  font-weight: var(--type-name-weight);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* BandCompany: a name that does not fit at the sheet size. */
-.ui-band-company-name-small {
-  font-size: var(--type-btn-size);
-  line-height: var(--type-btn-line);
-}
-
 .ui-band-company > svg {
   flex: none;
-  stroke-width: 2.5;
 }
 
 /* FLOW-364: Home's band. Row 1 holds the company and the actions; the month pill, the figures and the forecast follow. */
 .ui-band-actions {
   position: relative;
   display: flex;
+  flex: none;
   align-items: center;
-  gap: var(--band-label-gap);
+}
+
+/* FLOW-1051 (V3-Home): the actions' glyphs are 24px; the avatar is a 44px disc 4px past them. */
+.ui-band-action > svg {
+  inline-size: var(--icon-check);
+  block-size: var(--icon-check);
+}
+
+.ui-band-action:has(> .ui-band-avatar) {
+  margin-inline-start: var(--space-1);
 }
 
 /* FLOW-987: the one-time tip under the קבועים icon (board RecurringConceptB): an inverse bubble with a
@@ -360,10 +367,15 @@ html[data-kb="open"] .ui-sheet-body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: var(--avatar-size);
-  block-size: var(--avatar-size);
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
   border-radius: var(--radius-button);
   background: var(--band-avatar);
+}
+
+.ui-band-avatar > svg {
+  inline-size: var(--glyph-band-step);
+  block-size: var(--glyph-band-step);
 }
 
 /* A past month's way back: the pill in the band's white, the darker band's colour. */
@@ -381,33 +393,40 @@ html[data-kb="open"] .ui-sheet-body {
   text-decoration: none;
 }
 
+/* FLOW-1051 (V3-Home): the month is 20/600 with a 16px chevron 8px from it. */
 .ui-band-month-name {
   display: inline-flex;
   align-items: center;
-  gap: var(--label-gap);
+  gap: var(--space-2);
   min-block-size: var(--touch-min);
   padding-inline: var(--space-2);
   border: 0;
   background: transparent;
   color: var(--color-on-band);
   font: inherit;
-  font-size: var(--type-btn-2-size);
-  font-weight: var(--type-btn-2-weight);
+  font-size: var(--type-sheet-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-sheet-weight);
   cursor: pointer;
 }
 
+.ui-band-month-name > svg {
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+}
+
+/* FLOW-1051 (V3-Home): the label is body 17/1.45, right over the figure. */
 .ui-band-title {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-btn-2-size);
-  font-weight: var(--type-btn-2-weight);
-  line-height: var(--type-cents-line);
-  margin-block-end: var(--space-2);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
 }
 
-/* FLOW-364 (board): Home's band ends 22px under its last row, not the 28px band padding. */
+/* FLOW-1051 (V3-Home): Home's band ends 20px under its last block. */
 .ui-band:has(.ui-band-body) {
-  padding-bottom: calc(var(--space-5) + var(--space-half));
+  padding-bottom: var(--space-5);
 }
 
 /* FLOW-364 (board): the band's body sits on the page gutter, with the pill, the figures and the forecast stacked. */
@@ -430,25 +449,25 @@ html[data-kb="open"] .ui-sheet-body {
 /* FLOW-958: tabular figures, and the hero never wraps. */
 .ui-band-net .t-band {
   font-variant-numeric: tabular-nums lining-nums;
-  line-height: 1;
   white-space: nowrap;
 }
 
 .ui-band-net {
   display: flex;
   flex-direction: column;
-  padding-block-end: calc(var(--space-1) * 0.75);
 }
 
+/* FLOW-1051 (V3-Home): the figure's line is 52/1.1. */
 .ui-band-net-line {
-  line-height: 1;
+  line-height: var(--type-band-line);
 }
 
+/* FLOW-1051 (V3-Home): נכנס and יצא 16px under the figure, 6px apart, the note 6px under them. */
 .ui-band-rows {
   display: flex;
   flex-direction: column;
-  gap: var(--band-label-gap);
-  padding-top: var(--space-3);
+  gap: var(--label-gap);
+  padding-top: var(--space-4);
 }
 
 .ui-band-row-link {
@@ -471,15 +490,11 @@ html[data-kb="open"] .ui-sheet-body {
   font-weight: var(--type-btn-2-weight);
 }
 
-/* FLOW-374 (board): the band's figures sit 4px in from the band's gutter on both sides, as the board draws them. */
-.ui-home-figures {
-  padding-inline: var(--space-1);
-}
-
-/* FLOW-374 (board): Home's two rows. The amount is LTR and sits at the chip's side (the cell's left edge),
-   16/500, as the board draws it; the label keeps the row's end. Scoped here: other bands keep their rows. */
+/* FLOW-1051 (V3-Home): Home's two rows. The label is 17/1.45; the amount is LTR, 20/600, at the chip's side
+   (the cell's left edge); the label keeps the row's end. Scoped here: other bands keep their rows. */
 .ui-band-rows .ui-band-row-link {
-  font-size: var(--type-btn-2-size);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
 }
 
 .ui-band-rows .ui-band-row-amount {
@@ -488,16 +503,16 @@ html[data-kb="open"] .ui-sheet-body {
 }
 
 .ui-band-rows .ui-band-row-amount .t-body {
-  font-size: var(--type-btn-2-size);
-  font-weight: var(--type-btn-2-weight);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-sheet-weight);
 }
 
 .ui-band-caption {
-  margin: 0;
+  margin: var(--label-gap) 0 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-small-size);
-  line-height: var(--type-small-line);
-  font-weight: var(--type-small-weight);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
 }
 
 /* The figures enter from the side the month came from (RTL: an earlier month from the right). */
@@ -530,42 +545,66 @@ html[data-kb="open"] .ui-sheet-body {
   }
 }
 
+/* FLOW-1051 (V3-Home): the forecast card is 64px at least, 14% white, its title 17/500 over a 13/1.4 line, the
+   figure 24/1.25 and an 18px chevron. */
 .ui-home-forecast {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-block-size: 63px;
+  min-block-size: var(--row-height);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card);
-  background: var(--band-row);
+  background: var(--band-track);
   color: var(--color-on-band);
 }
 
 .ui-home-forecast-text {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  gap: var(--space-half);
   min-inline-size: 0;
+}
+
+.ui-home-forecast-title,
+.ui-home-forecast-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ui-home-forecast-title {
   margin: 0;
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-  font-weight: var(--type-line2-weight);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-home-forecast-sub {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-small-size);
-  line-height: var(--type-small-line);
-  font-weight: var(--type-small-weight);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-home-forecast-value {
-  font-size: var(--type-body-size);
-  font-weight: var(--type-btn-2-weight);
+  flex: none;
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-home-forecast-value .t-body {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+.ui-home-forecast-chevron > svg {
+  inline-size: var(--glyph-row-chevron);
+  block-size: var(--glyph-row-chevron);
 }
 
 /* FLOW-958: every amount on Home is tabular and stays on one line. */
