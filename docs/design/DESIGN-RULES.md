@@ -776,7 +776,7 @@ Each state has a dark artboard (`<Name>.dc.html`) and a light one (`<Name>Light.
 | ld-04 | StatesSaving | Primary button busy |
 | ld-05 | none yet | Not a build task. Bank file processing was dropped ([0065](../decisions/0065-review-round5.md) point 40) |
 | ld-06 | AddReading | Invoice photo reading |
-| ld-07 | none yet | Pull to refresh |
+| ld-07 | none yet; the component is `PullRefresh` (`app/src/ui/pull-refresh.tsx`, FLOW-1039) | Pull to refresh: a pull down from the top of any screen, in the installed app |
 | ld-08 | none yet | Offline, nothing cached |
 | ld-09 | none yet | Offline, cached data kept |
 | er-01 | none yet | Wrong or unreadable bank file |

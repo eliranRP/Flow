@@ -294,6 +294,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1039"></a>[FLOW-1039](tasks/FLOW-1039.md) | Pull to refresh on every screen (ld-07) | SMALL UI |
+| <a id="flow-1040"></a>[FLOW-1040](tasks/FLOW-1040.md) | Pull to refresh follow-ups (#977 review) | BACKLOG NIT |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |
