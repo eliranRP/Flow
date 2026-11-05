@@ -2,6 +2,8 @@
 // Split out of jev_tag.ts (FLOW-807). Decisions 0084 and 0124.
 
 import { JEV_MODEL, type JevCall, type JevQuestion, type JevResult, type JevState, type JsonValue } from "./jev.ts";
+import type { TagLoan } from "./jev_tag_loan.ts";
+import type { LoanSplitAmount } from "../../../packages/shared/src/loan-split.ts";
 
 export const JEV_TAG_DEFAULT_LIMIT = 50;
 export const JEV_TAG_MAX_LIMIT = 100;
@@ -32,7 +34,8 @@ export type TagProject = {
 
 /** The project answer for "no project": overhead, or not one project (decision 0139). Never pre-filled. */
 export const JEV_NO_PROJECT = "none";
-export type TagCategory = { id: string; name: string };
+/** `loanPart` is set on the loan categories (interest, escrow, principal): never filled on a whole line. */
+export type TagCategory = { id: string; name: string; loanPart?: string | null };
 
 export type TagExpense = {
   id: string;
@@ -53,6 +56,9 @@ export type TagExpense = {
   amountGross: number;
   amountNet: number;
   vatAmount: number;
+  /** The line's amount in its own currency, unsigned, and that currency (FLOW-1032). */
+  amountOriginal?: number | null;
+  currency?: string | null;
   projectId: string | null;
   categoryId: string | null;
   projectAssigned: boolean;
@@ -107,6 +113,8 @@ export type TagCompanyWork = {
   categories: TagCategory[];
   /** Income categories, offered on income lines. */
   incomeCategories?: TagCategory[];
+  /** Auto mode only: open loans with a schedule, to split a loan payment onto (FLOW-1032). */
+  loans?: TagLoan[];
   expenses: TagExpense[];
 };
 
@@ -128,10 +136,25 @@ export type PrefillWrite = {
   confidence: number;
 };
 
+/** A loan payment split onto its loan (FLOW-1032). */
+export type LoanPrefillWrite = {
+  companyId: string;
+  transactionId: string;
+  loanId: string;
+  parts: readonly LoanSplitAmount[];
+  modelVersion: string;
+  confidence: number;
+};
+
 export type TagPlan = {
   confidence: number;
   answers: Record<string, unknown>;
   write: PrefillWrite | null;
+  /**
+   * Set when auto mode may split this line onto a loan: Jev's category is a loan category at or
+   * above the threshold, on an expense the owner has not set. The job then looks for the loan.
+   */
+  loanConfidence: number | null;
 };
 
 export class StoreConflict extends Error {
@@ -163,6 +186,8 @@ export type TagStore = {
   saveSuggestion(row: SuggestionRow): Promise<void>;
   /** False when SQL wrote nothing because the line closed or the owner set the field. */
   prefill(write: PrefillWrite): Promise<boolean | void>;
+  /** False when SQL wrote no split: the line closed, was set, split, flagged, or the checks refused it. */
+  prefillLoan(write: LoanPrefillWrite): Promise<boolean>;
   deleteSuggestion(transactionId: string, modelVersion: string): Promise<void>;
   /** A line Jev failed on. The job does not send it again until its retry time. */
   markFailed(companyId: string, transactionId: string, modelVersion: string): Promise<void>;
@@ -437,11 +462,23 @@ export function planTag(
   if (gate && project && project.id !== JEV_NO_PROJECT && !projectBlocked(expense)) {
     write.projectId = project.id;
   }
-  if (gate && category && !expense.userAssigned && !expense.categoryAssigned) {
+  // A loan category is never filled on the whole line: the job splits the payment onto its loan
+  // instead, gated on the category answer alone (FLOW-1032, decision 0254).
+  const loanCategory = category != null && categories.some((row) => row.id === category.id && row.loanPart != null);
+  if (gate && category && !loanCategory && !expense.userAssigned && !expense.categoryAssigned) {
     write.categoryId = category.id;
   }
+  const loanConfidence = mode === "auto" && loanCategory && category.confidence >= threshold
+      && lineDirection(expense) === "expense" && !expense.userAssigned && !expense.categoryAssigned
+    ? category.confidence
+    : null;
   const hasWrite = write.projectId !== undefined || write.categoryId !== undefined;
-  return { confidence, answers: askProject ? answers : withoutProject(answers), write: hasWrite ? write : null };
+  return {
+    confidence,
+    answers: askProject ? answers : withoutProject(answers),
+    write: hasWrite ? write : null,
+    loanConfidence,
+  };
 }
 
 /** Non-finite, missing, and values below 1 use the default. Above the hard max clamps to it. */

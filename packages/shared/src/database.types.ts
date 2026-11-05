@@ -490,13 +490,13 @@ isOneToOne: false
                   ]
                 },"jev_prefills": {
                   Row: {
-                    "category_id": string | null,"company_id": string,"confidence": number | null,"created_at": string,"id": string,"model_version": string | null,"prior_allocations": NonNullable<Json>,"prior_category_id": string | null,"prior_category_suggested": boolean,"prior_project_id": string | null,"project_id": string | null,"transaction_id": string,"undone_at": string | null,"undone_by": string | null
+                    "category_id": string | null,"company_id": string,"confidence": number | null,"created_at": string,"id": string,"loan_id": string | null,"loan_parts": Json | null,"model_version": string | null,"prior_allocations": NonNullable<Json>,"prior_category_id": string | null,"prior_category_suggested": boolean,"prior_project_id": string | null,"project_id": string | null,"transaction_id": string,"undone_at": string | null,"undone_by": string | null
                   }
                   Insert: {
-                    "category_id"?: string | null,"company_id": string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id": string,"undone_at"?: string | null,"undone_by"?: string | null
+                    "category_id"?: string | null,"company_id": string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"loan_id"?: string | null,"loan_parts"?: Json | null,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id": string,"undone_at"?: string | null,"undone_by"?: string | null
                   }
                   Update: {
-                    "category_id"?: string | null,"company_id"?: string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id"?: string,"undone_at"?: string | null,"undone_by"?: string | null
+                    "category_id"?: string | null,"company_id"?: string,"confidence"?: number | null,"created_at"?: string,"id"?: string,"loan_id"?: string | null,"loan_parts"?: Json | null,"model_version"?: string | null,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_category_suggested"?: boolean,"prior_project_id"?: string | null,"project_id"?: string | null,"transaction_id"?: string,"undone_at"?: string | null,"undone_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1798,11 +1798,17 @@ isOneToOne: false
 "jev_line_flags":
 { Args: { "p_company": string,"p_ids": (string)[] }; Returns: Json
                            },
+"jev_loan_candidates":
+{ Args: { "p_company": string }; Returns: Json
+                           },
 "jev_mark_failed":
 { Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
                            },
 "jev_prefill":
 { Args: { "p_category"?: string,"p_company": string,"p_confidence"?: number,"p_model"?: string,"p_project"?: string,"p_transaction": string }; Returns: Json
+                           },
+"jev_prefill_loan":
+{ Args: { "p_company": string,"p_confidence"?: number,"p_loan": string,"p_model"?: string,"p_parts": Json,"p_transaction": string }; Returns: Json
                            },
 "jev_projects":
 { Args: { "p_company": string }; Returns: Json

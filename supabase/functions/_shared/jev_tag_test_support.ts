@@ -1,6 +1,7 @@
 // Shared ids, line and filing builders, and the in-memory store for the Jev tagging tests (split out of jev_tag_test.ts, FLOW-807).
 import {
   StoreConflict,
+  type LoanPrefillWrite,
   type PrefillWrite,
   type SuggestionRow,
   type TagCompanyWork,
@@ -94,12 +95,20 @@ export function filing(overrides: Partial<TagFiling> = {}): TagFiling {
   };
 }
 
-export function memoryStore(): TagStore & { suggestions: SuggestionRow[]; writes: PrefillWrite[]; failPrefill: boolean; failed: string[] } {
+export function memoryStore(): TagStore & {
+  suggestions: SuggestionRow[];
+  writes: PrefillWrite[];
+  loanWrites: LoanPrefillWrite[];
+  failPrefill: boolean;
+  failed: string[];
+} {
   const suggestions: SuggestionRow[] = [];
   const writes: PrefillWrite[] = [];
+  const loanWrites: LoanPrefillWrite[] = [];
   const store = {
     suggestions,
     writes,
+    loanWrites,
     failPrefill: false,
     listWork: () => Promise.resolve([]),
     saveSuggestion: (row: SuggestionRow) => {
@@ -113,6 +122,11 @@ export function memoryStore(): TagStore & { suggestions: SuggestionRow[]; writes
       if (store.failPrefill) return Promise.reject(new Error("store"));
       writes.push(write);
       return Promise.resolve();
+    },
+    prefillLoan: (write: LoanPrefillWrite) => {
+      if (store.failPrefill) return Promise.reject(new Error("store"));
+      loanWrites.push(write);
+      return Promise.resolve(true);
     },
     deleteSuggestion: (transactionId: string, modelVersion: string) => {
       const index = suggestions.findIndex((row) => row.transactionId === transactionId && row.modelVersion === modelVersion);
