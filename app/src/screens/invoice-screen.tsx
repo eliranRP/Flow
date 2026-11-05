@@ -68,7 +68,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offli
               {marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`}
             </p>
             <h2 className="ui-inv-customer t-name">{customer}</h2>
-            <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income signless />
+            <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income />
             <p className="ui-inv-meta t-meta">
               {[
                 row.doc_number ? `חשבונית #${row.doc_number}` : "חשבונית",
@@ -124,7 +124,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offli
             </div>
             <div className="ui-inv-fact">
               <span className="ui-inv-fact-label">בתזרים</span>
-              <span className="ui-inv-fact-note text-text-secondary">לא נספרת עד שהתשלום מגיע. נכללת בתזרים הצפוי לסוף החודש.</span>
+              <span className="ui-inv-fact-note">נספרת ב״עוד ייכנס״ עד שהתשלום מגיע</span>
             </div>
           </section>
 

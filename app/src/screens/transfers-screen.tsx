@@ -132,7 +132,7 @@ export function TransfersScreen({ sample }: { sample?: TransferMatch[] } = {}) {
   return (
     <ScreenState
       title="העברות לבדיקה"
-      subtitle={rows.length === 1 ? "הצעה אחת" : `${String(rows.length)} הצעות`}
+      subtitle={rows.length === 1 ? "זוג אחד לבדיקה" : `${String(rows.length)} זוגות לבדיקה`}
       kicker="בית"
       backTo={`/${search}`}
       phase={phase}

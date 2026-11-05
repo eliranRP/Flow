@@ -40,13 +40,12 @@ export function unpaidFiltered(rows: readonly UnpaidInvoice[], filter: UnpaidFil
   return rows.filter((row) => !unpaidIsMarked(row) && unpaidDaysOpen(row.doc_date, today) > UNPAID_OVERDUE_DAYS);
 }
 
-/** The row's line under the name: its age (or the mark), the invoice number, and a bank match when there is one. */
+/** The row's line under the name: its age (or the mark) and the invoice number. A bank match shows on the invoice. */
 function rowHint(row: UnpaidInvoice, days: number): string {
   const marked = unpaidIsMarked(row);
   return [
     marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`,
     row.doc_number ? `#${row.doc_number}` : null,
-    !marked && row.match != null ? "נמצא תשלום תואם" : null,
   ].filter((part): part is string => part != null).join(" · ");
 }
 
@@ -74,9 +73,9 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
   const totals = unpaidTotals(all).filter((total) => total.minor !== 0n);
   const primaryCurrency = totals[0]?.currency ?? "ILS";
   const overdue = useMemo(() => unpaidOverdueMinor(all, primaryCurrency, today), [all, primaryCurrency, today]);
-  const late = unpaidFiltered(rows, "late", today);
   const shown = unpaidFiltered(rows, filter, today);
   const back = `/${search}`;
+  // FLOW-335: the SUMIT refresh shows once a mark waits for the sync, and on the all-paid page.
   const refresh = holdWrites ? null : (
     <button type="button" className="ui-inv-refresh" onClick={actions.startSync} disabled={syncing} aria-busy={syncing || undefined}>
       {syncing ? <span className="ui-spinner" aria-hidden="true" /> : <RefreshIcon size={14} />}
@@ -89,8 +88,8 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
       showLabel={false}
       value={filter}
       options={[
-        { value: "all", label: `כל הפתוחות · ${String(open.length)}` },
-        { value: "late", label: `באיחור ${String(UNPAID_OVERDUE_DAYS)}+ · ${String(late.length)}` },
+        { value: "all", label: "כל הפתוחות" },
+        { value: "late", label: `באיחור ${String(UNPAID_OVERDUE_DAYS)}+` },
       ]}
       onChange={(next) => {
         setFilter(next);
@@ -115,18 +114,24 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
         <h1 className="t-title">חשבוניות פתוחות</h1>
         {hasRows ? (
           <>
-            <p className="ui-inv-list-sub t-meta">{`${String(open.length)} חשבוניות · לגבייה מלקוחות`}</p>
+            <p className="ui-inv-list-sub t-meta">
+              {[`${String(open.length)} חשבוניות`, actions.lastSyncAt ? `מעודכן מ־SUMIT ${syncedAgo(actions.lastSyncAt)}` : null].filter(Boolean).join(" · ")}
+            </p>
             {totals.map((total) => (
               <p key={total.currency} className="ui-inv-total t-detail">
                 <Amount agorot={total.minor} currency={total.currency} size="total" income signless />
               </p>
             ))}
-            {overdue > 0n ? (
-              <p className="ui-inv-overdue t-meta">
-                <bdi dir="ltr">{formatAmountText(overdue, primaryCurrency)}</bdi>
-                {` פתוחים יותר מ־${String(UNPAID_OVERDUE_DAYS)} ימים`}
-              </p>
-            ) : null}
+            <p className="ui-inv-list-sub t-meta">
+              {"לגבייה מלקוחות"}
+              {overdue > 0n ? (
+                <span className="ui-inv-overdue">
+                  {" · "}
+                  <bdi dir="ltr">{formatAmountText(overdue, primaryCurrency)}</bdi>
+                  {` פתוחות יותר מ־${String(UNPAID_OVERDUE_DAYS)} ימים`}
+                </span>
+              ) : null}
+            </p>
           </>
         ) : null}
         <span ref={setTitleMark} className="ui-compact-mark" aria-hidden="true" />
@@ -175,13 +180,12 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
                       agorot={absAgorot(row.open_gross_agorot)}
                       currency={row.currency ?? "ILS"}
                       amountDirection="income"
-                      amountSignless
                     />
                     {holdWrites ? null : marked ? (
                       <button type="button" className="ui-inv-undo" onClick={() => { actions.setPaid(row.id, false); }}>ביטול</button>
                     ) : (
                       <IconButton label={`סימון כשולם: ${name}`} className="ui-inv-check" onClick={() => { actions.setPaid(row.id, true); }}>
-                        <CheckIcon size={20} />
+                        <span className="ui-inv-check-ring" aria-hidden="true"><CheckIcon size={14} stroke={2.6} /></span>
                       </IconButton>
                     )}
                   </li>
@@ -189,7 +193,7 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
               })}
             </ul>
           )}
-          {refresh == null ? null : <div className="ui-inv-sortrow">{refresh}</div>}
+          {refresh == null || !actions.anyMarked ? null : <div className="ui-inv-sortrow">{refresh}</div>}
         </>
       )}
     </div>

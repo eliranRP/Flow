@@ -313,6 +313,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
       <SettingsOfflineLine />
       <ViewerNote />
       {noCompany ? null : (
+        <>
+        {/* FLOW-1049 (V3-Settings): two groups under a 14px label each, the company's pages, then the app's. */}
+        <h2 className="ui-settings-group-head">העסק</h2>
         <List layout="inset">
           {namedBusiness !== "" ? (
             <SettingsPageRow
@@ -340,16 +343,6 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
               value={teamCount == null ? undefined : <bdi className="ui-num" dir="ltr">{String(teamCount)}</bdi>}
             />
           ) : null}
-          {pushShown ? (
-            <SettingsPageRow
-              page="notifications"
-              href={`/settings/notifications${search}`}
-              title="התראות"
-              icon={<BellIcon />}
-              value={notificationsData != null ? notificationsHint(notificationsData) : undefined}
-              skeleton={notificationsLoading}
-            />
-          ) : null}
           <SettingsPageRow
             page="categories"
             href={`/settings/categories${search}`}
@@ -359,6 +352,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
             skeleton={categoriesLoading}
           />
         </List>
+        </>
       )}
       <ThemeSheet open={themeOpen} onOpenChange={setThemeOpen} value={theme} onChange={pickTheme} returnFocusRef={themeRowRef} />
       <CompanySheet
@@ -368,7 +362,18 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         returnFocusRef={companyRowRef}
         toastPlace="top"
       />
+      <h2 className="ui-settings-group-head">האפליקציה</h2>
       <List layout="inset">
+        {pushShown ? (
+          <SettingsPageRow
+            page="notifications"
+            href={`/settings/notifications${search}`}
+            title="התראות"
+            icon={<BellIcon />}
+            value={notificationsData != null ? notificationsHint(notificationsData) : undefined}
+            skeleton={notificationsLoading}
+          />
+        ) : null}
         <ListRow
           variant="button"
           title={THEME_TITLE}

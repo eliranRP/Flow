@@ -448,14 +448,16 @@ html[data-company-switch] .ui-band-net {
   font-weight: var(--type-line2-weight);
 }
 
+/* V3-Company: "+ עסק חדש" is a 52px text action at the start side, 17/500 in the accent. */
 .cs-new {
-  block-size: var(--field-height);
-  border: 1.5px dashed var(--color-control-edge);
-  border-radius: var(--radius-toast);
+  align-self: flex-start;
+  block-size: var(--control-height);
+  padding: 0 var(--space-1);
+  border: 0;
   background: none;
   color: var(--color-accent-text);
   font: inherit;
-  font-size: var(--type-line2-size);
+  font-size: var(--type-body-size);
   font-weight: var(--type-btn-weight);
 }
 
