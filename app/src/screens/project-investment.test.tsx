@@ -13,7 +13,9 @@ import { toProjectInvestment } from "./project-investment-data";
 import { ProjectInvestmentScreen, INVESTMENT_REFUSED, applySample } from "./project-investment-screen";
 import { EMPTY_HOLD, editVerdict, rawToMinor } from "./project-investment-sheets";
 import { birchLaneReturns } from "../dev/returns-sample";
-import type { PropertyReturns } from "./project-returns-data";
+import { percentText, toPropertyReturns, type PropertyReturns } from "./project-returns-data";
+import { investmentAttentionRows, investmentKind } from "./project-returns-cards";
+import { totalRateFormula, totalSumFormula } from "./project-returns-sheets";
 import { toReturnsJson } from "./project-returns-test-support";
 
 type Result = { data: unknown; error: { message: string; code?: string } | null };
@@ -144,53 +146,74 @@ async function ready(): Promise<void> {
   await screen.findByText("נתוני הנכס");
 }
 
+/** The property's figures (the נכס tab, open on arrival). */
+function figures() {
+  return within(screen.getByRole("region", { name: "נתוני הנכס" }));
+}
+
+const band = () => document.querySelector(".ui-band") as HTMLElement;
+
+/** Opens a tab of the segment under the parts. */
+async function openTab(name: "נכס" | "מדדים" | "הלוואות"): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("radio", { name }));
+  return screen.findByRole("region", { name: name === "נכס" ? "נתוני הנכס" : name });
+}
+
 describe("the page", () => {
-  it("shows the equity in the property, the figures and the loans the project read", async () => {
+  it("leads a renovation with the expected profit, then the figures the project read", async () => {
     serve();
     renderPage();
     await ready();
-    await screen.findByText("הון בנכס");
-    expect(screen.getByText("₪1,250,000")).toBeInTheDocument();
-    expect(screen.getByText("₪1,900,000")).toBeInTheDocument();
-    expect(screen.getByText("₪1,650,000")).toBeInTheDocument();
-    expect(screen.getByText("₪312,400")).toBeInTheDocument();
-    expect(screen.getByText("₪337,600")).toBeInTheDocument();
-    expect(screen.getByText("₪850,000")).toBeInTheDocument();
+    // FLOW-1047: a project with an ARV is a renovation: its band is the profit at the ARV, with the ARV and the total cost.
+    expect(await within(band()).findByText("רווח צפוי במכירה")).toBeInTheDocument();
+    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("₪338K");
+    expect(within(band()).getByRole("button", { name: /^שווי אחרי שיפוץ \(ARV\)/ })).toHaveTextContent("₪1,900,000");
+    expect(within(band()).getByRole("link", { name: /^עלות כוללת/ })).toHaveTextContent("₪1,562,400");
+    expect(figures().getByText("₪1,250,000")).toBeInTheDocument();
+    expect(figures().getByText("₪1,650,000")).toBeInTheDocument();
+    expect(figures().getByText("₪312,400")).toBeInTheDocument();
     expect(screen.getByText("01/10/2026").parentElement).toHaveTextContent("נכון ל־01/10/2026");
     // The state line under the title, and the project's name as Back's label.
     expect(screen.getByText("flip · בשיפוץ")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /הלוואה לדוגמה/ })).toHaveAttribute("href", "/loans/l1");
     expect(rpc.calls.filter((call) => call.name === "get_project").every((call) => basisOf(call) !== "cash")).toBe(true);
   });
 
-  it("leads with the total return on the money in the deal and its four sources", async () => {
+  it("shows where the profit comes from, each part opening its calculation", async () => {
     serve();
     renderPage();
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
-    expect(within(card).getByText("54.4%")).toBeInTheDocument();
-    // FLOW-459: the money in the deal is named once, in its equity row, inside this card.
-    expect(card).toHaveTextContent("על הכסף בעסקה");
-    expect(within(card).getByRole("button", { name: /^כסף בעסקה/ })).toHaveTextContent("₪762,400");
-    expect(within(card).getByRole("group", { name: "הון בנכס" })).toBeInTheDocument();
-    for (const source of ["תזרים", "החזר קרן", "עליית ערך", "חיסכון מס"]) {
-      expect(within(card).getByRole("button", { name: `איך מחושב: ${source}` })).toBeInTheDocument();
-    }
-    expect(within(card).getByRole("link", { name: "איך מחושב" })).toHaveAttribute("href", "/projects/p1/investment/returns");
+    const card = await screen.findByRole("region", { name: "מאיפה הרווח" });
+    expect(within(card).getByRole("img")).toHaveAccessibleName(/^מחיר קנייה \d+%, שיפוץ עד היום \d+%, רווח צפוי \d+%$/);
+    expect(within(card).getByRole("button", { name: /^מחיר קנייה/ })).toHaveTextContent("−₪1,250,000");
+    expect(within(card).getByRole("link", { name: /^שיפוץ עד היום/ })).toHaveAttribute("href", "/projects/p1/investment/part/rehab");
+    expect(within(card).getByRole("link", { name: /^רווח צפוי/ })).toHaveAttribute("href", "/projects/p1/investment/part/forced");
   });
 
-  it("names a missing ARV in the השבחה, and its הוספה opens the ARV sheet", async () => {
-    serve(payload({ arv_minor: null, forced_equity_minor: null }), null, returnsOf({ forcedMinor: null }, { arvMinor: null }));
+  it("opens איך מחושב with the profit in numbers", async () => {
+    serve();
     renderPage();
     await ready();
-    const card = await screen.findByRole("group", { name: "הון בנכס" });
-    // FLOW-459: the row shows only הוספה; its hint says what is missing.
-    const forced = within(card).getByRole("button", { name: /^השבחה צפויה/ });
-    expect(forced).toHaveTextContent("השבחה צפויהחסר · שווי אחרי שיפוץ (ARV)הוספה");
-    expect(within(screen.getByRole("region", { name: "נתוני הנכס" })).getByRole("button", { name: /שווי אחרי שיפוץ.*הוספה/ })).toBeInTheDocument();
-    expect(screen.queryByText("₪0")).not.toBeInTheDocument();
-    fireEvent.click(forced);
+    fireEvent.click(await screen.findByRole("button", { name: "איך מחושב" }));
+    const dialog = await screen.findByRole("dialog", { name: "איך מחושב הרווח הצפוי" });
+    expect(within(dialog).getByRole("list", { name: "השבחה צפויה" })).toHaveTextContent("₪337,600");
+    fireEvent.click(within(dialog).getByRole("button", { name: "הבנתי" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
+  });
+
+  it("asks for a missing ARV in a card that opens its sheet, and hides it on this device", async () => {
+    window.localStorage.removeItem("flow.attention.investment:p1");
+    serve(payload({ arv_minor: null, forced_equity_minor: null }, { budget_agorot: 50_000_000 }), null, returnsOf({ forcedMinor: null }, { arvMinor: null }));
+    renderPage();
+    await ready();
+    const cards = await screen.findByRole("region", { name: "חסר לחישוב" });
+    const card = within(cards).getByRole("link", { name: /חסר ARV/ });
+    expect(card).toHaveAttribute("href", "/projects/p1/investment?edit=arv");
+    fireEvent.click(card);
     expect(await screen.findByRole("dialog", { name: "שווי אחרי שיפוץ (ARV)" })).toBeInTheDocument();
+    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("חסר");
+    expect(screen.queryByText("₪0")).not.toBeInTheDocument();
+    fireEvent.click(within(cards).getByRole("button", { name: /^הסתרה: חסר ARV/ }));
+    await waitFor(() => { expect(window.localStorage.getItem("flow.attention.investment:p1")).toContain("missing-arv"); });
+    window.localStorage.removeItem("flow.attention.investment:p1");
   });
 
   it("says another currency blocks the equity and lists the loan apart", async () => {
@@ -205,33 +228,30 @@ describe("the page", () => {
     ), null, returnsOf({ todayMinor: null }));
     renderPage();
     await ready();
-    const card = await screen.findByRole("group", { name: "הון בנכס" });
-    expect(within(card).getByText("לא מחושב")).toBeInTheDocument();
-    expect(screen.getByText(/במטבע אחר/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /הלוואה בדולר/ })).toHaveTextContent("$120,000");
+    const loans = within(await openTab("הלוואות"));
+    expect(loans.getByText(/במטבע אחר/)).toBeInTheDocument();
+    expect(loans.getByRole("link", { name: /הלוואה בדולר/ })).toHaveTextContent("$120,000");
   });
 
-  it("is read-only for a viewer: no הוספה, nothing opens but the renovation's page", async () => {
-    serve(payload({ arv_minor: null, forced_equity_minor: null }));
+  it("is read-only for a viewer: no הוספה, no card, nothing opens but the pages that read", async () => {
+    serve(payload({ arv_minor: null, forced_equity_minor: null }), null, returnsOf({ forcedMinor: null }, { arvMinor: null }));
     const { container } = renderPage({ viewer: true });
     await ready();
-    await screen.findByText("הון בנכס");
-    // A viewer still opens an ⓘ (how it is made, or how to read it), or an equity row's sheet: it reads, it writes nothing.
-    expect([...container.querySelectorAll(".ui-pinv-card button")].every((button) => /^איך (מחושב|לקרוא)/.test(button.getAttribute("aria-label") ?? "") || button.classList.contains("ui-ret-equity-row"))).toBe(true);
+    await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    expect(screen.queryByRole("region", { name: "חסר לחישוב" })).toBeNull();
     expect(screen.queryByText("הוספה")).not.toBeInTheDocument();
-    expect(screen.queryByText("+ הוספת הלוואה")).not.toBeInTheDocument();
     // FLOW-460: the renovation's page only reads, so it opens for a viewer too.
-    const chevrons = [...container.querySelectorAll('[aria-label="נתוני הנכס"] .ui-pinv-chevron')];
+    const chevrons = [...container.querySelectorAll(".ui-pinv-group .ui-pinv-chevron")];
     expect(chevrons).toHaveLength(1);
     expect(chevrons[0]?.closest("a")).toHaveAttribute("href", "/projects/p1/investment/part/rehab");
+    expect(within(await openTab("הלוואות")).queryByText("+ הוספת הלוואה")).not.toBeInTheDocument();
   });
 
   it("opens the renovation's own page from its row, not a sheet (FLOW-460)", async () => {
     serve();
     renderPage({ entry: "/projects/p1/investment?period=month&at=2026-09" });
     await ready();
-    const card = within(screen.getByRole("region", { name: "נתוני הנכס" }));
-    const rehab = card.getByRole("link", { name: /שיפוץ עד היום/ });
+    const rehab = figures().getByRole("link", { name: /שיפוץ עד היום/ });
     expect(rehab).toHaveAttribute("href", "/projects/p1/investment/part/rehab");
     expect(rehab).toHaveTextContent("₪312,400");
     fireEvent.click(rehab);
@@ -244,9 +264,10 @@ describe("the page", () => {
     serve(payload({ loan_balance_minor: 0 }, { loans: [] }));
     renderPage();
     await ready();
-    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /הלוואה/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "+ הוספת הלוואה" })).toBeInTheDocument();
+    const loans = within(await openTab("הלוואות"));
+    expect(loans.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+    expect(loans.queryByRole("link", { name: /הלוואה/ })).not.toBeInTheDocument();
+    expect(loans.getByRole("button", { name: "+ הוספת הלוואה" })).toBeInTheDocument();
   });
 
   it("shows only the loans for the overhead project", async () => {
@@ -254,7 +275,7 @@ describe("the page", () => {
     renderPage();
     await screen.findByRole("heading", { name: "הלוואות" });
     expect(screen.queryByText("נתוני הנכס")).not.toBeInTheDocument();
-    expect(screen.queryByText("הון עצמי היום")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.getByRole("link", { name: /הלוואה לדוגמה/ })).toBeInTheDocument();
   });
 
@@ -271,6 +292,7 @@ describe("the page", () => {
       </Routes>,
     );
     await ready();
+    await openTab("הלוואות");
     fireEvent.click(screen.getByRole("button", { name: "+ הוספת הלוואה" }));
     expect(await screen.findByTestId("at")).toHaveTextContent("/loans?new=loan|p1");
   });
@@ -294,6 +316,44 @@ describe("the page", () => {
     rpc.impl = () => new Promise(() => undefined);
     renderPage();
     expect(await screen.findByText("טוען…")).toBeInTheDocument();
+  });
+});
+
+describe("the kind and the attention cards", () => {
+  const r = toPropertyReturns(returnsOf());
+  it("reads a budget or an ARV as a renovation, else a rental", () => {
+    expect(investmentKind({ overhead: false, budget: true, arv: false, value: false, rent: false })).toBe("flip");
+    expect(investmentKind({ overhead: false, budget: false, arv: true, value: true, rent: true })).toBe("flip");
+    expect(investmentKind({ overhead: false, budget: false, arv: false, value: true, rent: true })).toBe("rent");
+    expect(investmentKind({ overhead: false, budget: false, arv: false, value: false, rent: false })).toBe("rent");
+  });
+
+  it("asks a rental for each missing input, keyed by what it counts", () => {
+    const missing: PropertyReturns = { ...r, missing: ["value_history", "land", "tax_bracket"], inputs: { ...r.inputs, valueDate: "2026-10-01", landSuggestion: null } };
+    const rows = investmentAttentionRows("rent", missing, "/projects/p1/investment", "", false);
+    expect(rows.map((row) => [row.id, row.dismissKey, row.to])).toEqual([
+      ["missing-value", "history:2026-10-01", "/projects/p1/investment?edit=value"],
+      ["missing-land", "land", "/projects/p1/investment?edit=land"],
+      ["missing-tax_bracket", "tax_bracket", "/projects/p1/investment?edit=tax_bracket"],
+    ]);
+    // A land the books suggest is taken on the figures; a viewer adds nothing.
+    expect(investmentAttentionRows("rent", { ...missing, inputs: { ...missing.inputs, landSuggestion: { accountId: "a", name: "Land", minor: 1n } } }, "/b", "", false).map((row) => row.id)).not.toContain("missing-land");
+    expect(investmentAttentionRows("rent", missing, "/b", "", true)).toEqual([]);
+  });
+
+  it("asks a renovation for its ARV and its purchase only", () => {
+    const rows = investmentAttentionRows("flip", { ...r, missing: ["tax_bracket"], inputs: { ...r.inputs, arvMinor: null, purchaseMinor: null } }, "/b", "?preview=on", false);
+    expect(rows.map((row) => row.to)).toEqual(["/b?preview=on&edit=arv", "/b?preview=on&edit=purchase"]);
+  });
+
+  it("adds a rental's four sources up to the year's total, then divides it by the money in", () => {
+    const sum = totalSumFormula(r);
+    const total = sum.rows.reduce((acc, row) => acc + (row.value.kind === "money" ? row.value.minor : 0n), 0n);
+    expect(sum.result?.value).toEqual({ kind: "money", minor: r.sources.totalMinor });
+    expect(total).toBe(r.sources.totalMinor);
+    const rate = totalRateFormula(r);
+    expect(rate.rows.map((row) => row.op)).toEqual(["", "÷"]);
+    expect(rate.result?.value).toEqual({ kind: "text", text: percentText(r.sources.totalBp ?? 0) });
   });
 });
 
@@ -327,8 +387,8 @@ describe("the equity formulas", () => {
     };
     renderPage();
     await ready();
-    await screen.findByText("הון בנכס");
-    fireEvent.click(screen.getByRole("button", { name: /^שווי אחרי שיפוץ/ }));
+    await screen.findByRole("region", { name: "מאיפה הרווח" });
+    fireEvent.click(figures().getByRole("button", { name: /^שווי אחרי שיפוץ/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "2000000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("₪437,600")).toBeInTheDocument();
@@ -349,7 +409,7 @@ describe("the undo toast", () => {
     };
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.click(figures().getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("₪1,300,000")).toBeInTheDocument();
@@ -364,7 +424,7 @@ describe("the undo toast", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי היום/ }));
+    fireEvent.click(figures().getByRole("button", { name: /שווי היום/ }));
     fireEvent.click(await screen.findByRole("button", { name: "מחיקה" }));
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(saves()).toHaveLength(2); });
@@ -378,7 +438,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.click(figures().getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(saves()).toHaveLength(1); });
@@ -389,7 +449,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי אחרי שיפוץ/ }));
+    fireEvent.click(figures().getByRole("button", { name: /שווי אחרי שיפוץ/ }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("שווי אחרי שיפוץ (ARV)")).toBeInTheDocument();
     expect(within(dialog).getByText("כמה הנכס יהיה שווה כשהשיפוץ יסתיים. משמש לחישוב ההשבחה הצפויה.")).toBeInTheDocument();
@@ -400,7 +460,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי אחרי שיפוץ/ }));
+    fireEvent.click(figures().getByRole("button", { name: /שווי אחרי שיפוץ/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "2000000" } });
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     await waitFor(() => { expect(saves()).toHaveLength(1); });
@@ -412,7 +472,7 @@ describe("the edit sheet", () => {
     serve(payload(), { data: null, error: { message: "boom" } });
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.click(figures().getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("לא הצלחנו לשמור את מחיר רכישה.")).toBeInTheDocument();
@@ -423,7 +483,7 @@ describe("the edit sheet", () => {
     serve(payload(), { data: null, error: { message: "forbidden", code: "42501" } });
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.click(figures().getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "1300000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText(INVESTMENT_REFUSED)).toBeInTheDocument();
@@ -434,7 +494,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.click(figures().getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "" } });
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(await screen.findByText(EMPTY_HOLD)).toBeInTheDocument();
@@ -448,7 +508,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /מחיר רכישה/ }));
+    fireEvent.click(figures().getByRole("button", { name: /מחיר רכישה/ }));
     fireEvent.click(await screen.findByRole("button", { name: "מחיקה" }));
     await waitFor(() => { expect(saves()).toHaveLength(1); });
     expect(saves()[0]?.args).toEqual({ p_project_id: "p1", p_patch: { purchase_minor: null } });
@@ -458,7 +518,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי היום/ }));
+    fireEvent.click(figures().getByRole("button", { name: /שווי היום/ }));
     fireEvent.click(await screen.findByRole("button", { name: "מחיקה" }));
     await waitFor(() => { expect(saves()).toHaveLength(1); });
     expect(saves()[0]?.args).toEqual({ p_project_id: "p1", p_patch: { value_minor: null, value_date: null } });
@@ -468,7 +528,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי היום/ }));
+    fireEvent.click(figures().getByRole("button", { name: /שווי היום/ }));
     expect(await screen.findByText(/היום ·/)).toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "1700000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
@@ -480,7 +540,7 @@ describe("the edit sheet", () => {
     serve();
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /שווי היום/ }));
+    fireEvent.click(figures().getByRole("button", { name: /שווי היום/ }));
     fireEvent.click(await screen.findByRole("button", { name: /נכון לתאריך/ }));
     fireEvent.click(await screen.findByRole("button", { name: "אתמול" }));
     fireEvent.click(screen.getByRole("button", { name: "בחירה" }));
@@ -554,7 +614,7 @@ describe("the land from the books (FLOW-461)", () => {
     serve(payload(), null, returnsOf({}, { landMinor: null, landSource: null, landTypedMinor: null, landSuggestion: { accountId: "acc-land", name: "קרקע לדוגמה", minor: 30_000_000n } }));
     renderPage({ viewer: true });
     await ready();
-    await screen.findByText("הון בנכס");
+    await screen.findByRole("region", { name: "מאיפה הרווח" });
     expect(screen.queryByRole("button", { name: /^השתמש/ })).toBeNull();
   });
 });
@@ -571,9 +631,9 @@ describe("the loans card", () => {
         ],
       },
     ));
-    const { container } = renderPage();
+    renderPage();
     await ready();
-    const card = within(container.querySelector('[aria-label="הלוואות"]') as HTMLElement);
+    const card = within(await openTab("הלוואות"));
     const names = card.getAllByRole("link").map((link) => link.textContent);
     expect(names[0]).toContain("הלוואה בשקלים");
     expect(card.getByText(/במטבע אחר/)).toBeInTheDocument();

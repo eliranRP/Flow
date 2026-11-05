@@ -422,9 +422,18 @@
 .ui-rep-band {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-inset-row);
   min-inline-size: 0;
   padding-block-end: var(--space-5);
+}
+
+/* The board's band (V3-Report): the figure's label 17 regular at the band's secondary white, its sub line 14. */
+.ui-rep-band .ui-band-label {
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+  color: var(--color-on-band-secondary);
 }
 
 .ui-rep-band-name {
@@ -465,12 +474,14 @@
 }
 
 .ui-rep-band-figure .ui-band-title {
-  margin-block-end: 0;
+  margin: 0;
 }
 
 .ui-rep-band-sub {
   margin: 0;
   color: var(--color-on-band-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
 }
 
 .ui-rep-band-rows {
@@ -484,10 +495,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-block-size: var(--touch-min);
+  min-block-size: var(--space-10);
   margin: 0;
   color: var(--color-on-band);
   font-size: var(--type-body-size);
+}
+
+/* The board's two rows read as one block: the second sits 8px closer. */
+.ui-rep-band-row + .ui-rep-band-row {
+  margin-block-start: calc(var(--space-2) * -1);
 }
 
 .ui-rep-band-row-amount {
@@ -527,6 +543,24 @@
   padding: var(--space-5) var(--space-side) 0;
 }
 
+/* The board's profit and loss draws the review card with no heading over it (V3-Report): the heading stays for
+   screen readers only, and its row takes no height until the "N הוסתרו" button needs it. */
+.ui-rep-page .ui-attn-head {
+  min-block-size: 0;
+}
+
+.ui-rep-page .ui-attn-title {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* The groups sit on the page's gutter; their sticky heads span it, as the board draws them. */
 .ui-rep-v3-group {
   display: flex;
@@ -546,6 +580,30 @@
   min-inline-size: 0;
 }
 
+/* FLOW-1045 (board V3-Report; the owner, 2026-11-05: "too much text"): a report's row is the board's 60px: the name
+   17 (it wraps once after a slash before it cuts, FLOW-358), the הכנסות · הוצאות line 13 secondary on one line cut
+   with an ellipsis, the net 17. */
+.ui-rep-v3-group .ui-row {
+  min-block-size: calc(var(--space-10) + var(--space-5));
+  padding-block: calc(var(--space-1) + var(--space-half));
+}
+
+/* The balance-by-project rows wrap their hint on purpose (ui-row-hint-wrap): the one-line cut is for the P&L line. */
+.ui-rep-v3-group .ui-row-project .ui-row-hint:not(.ui-row-hint-wrap) {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-rep-v3-group .ui-row-end .ui-num {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
 /* ---- The hub (Hub pattern) ---- */
 
 .ui-rep-hub {
@@ -553,11 +611,14 @@
   padding-block-end: var(--space-6);
 }
 
+/* The board (V3-Reports): 14px from the title row to the first card and between the cards (the owner, 2026-11-05:
+   the pill sat on the card). */
 .ui-rep-hub-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-inset-row);
   min-inline-size: 0;
+  padding-block-start: var(--space-inset-row);
   padding-inline: var(--space-side);
 }
 
@@ -568,10 +629,15 @@
   min-inline-size: 0;
 }
 
+/* The board's card: 16px 18px inside, 10px between its blocks, the title row its text (17/500) and no more. */
+.ui-rep-hub-card.ui-card {
+  padding-inline: calc(var(--space-4) + var(--space-half));
+}
+
 .ui-rep-hub-link {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: calc(var(--space-2) + var(--space-half));
   min-inline-size: 0;
   color: inherit;
   text-decoration: none;
@@ -582,7 +648,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  min-block-size: var(--touch-min);
   font-weight: var(--type-btn-2-weight);
 }
 
@@ -593,6 +658,7 @@
 .ui-rep-hub-figure {
   display: flex;
   flex-direction: column;
+  gap: var(--space-half);
   min-inline-size: 0;
 }
 
@@ -603,7 +669,7 @@
   grid-auto-columns: minmax(0, 1fr);
   align-items: end;
   gap: var(--space-1);
-  block-size: calc(var(--space-10) + var(--space-half));
+  block-size: var(--space-10);
 }
 
 .ui-rep-hub-bar {
@@ -653,5 +719,24 @@
 }
 
 .ui-rep-hub-cuts-title {
-  margin: var(--space-2) 0 0;
+  margin: calc(var(--space-1) + var(--space-half)) 0 var(--space-half);
+}
+
+/* The board's cut rows: 64px, a 36px icon tile (12px corners, the tint, the accent glyph), 12px to the text. */
+.ui-rep-hub-cuts .ui-row {
+  min-block-size: calc(var(--space-10) + var(--space-6));
+  padding-block: var(--space-1);
+  gap: var(--space-3);
+}
+
+.ui-rep-hub-cuts .ui-row-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--avatar);
+  block-size: var(--avatar);
+  border-radius: var(--radius-input);
+  background: var(--color-tint);
+  color: var(--color-accent);
 }
