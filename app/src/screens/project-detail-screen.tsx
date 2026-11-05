@@ -412,13 +412,13 @@ function LegacyEmptyProject() {
   );
 }
 
+/** The hidden-card entry: one row, keyed once (the card has no count to change). */
+const BUDGET_EMPTY_ROW = { id: "budget-empty", dismissKey: "budget-empty" };
+
 /**
  * FLOW-445: the budget card when a budget is set. FLOW-961: with none, a dashed card in its place whose
  * הוספת תקציב opens the edit sheet at the budget.
  */
-/** The hidden-card entry: one row, keyed once (the card has no count to change). */
-const BUDGET_EMPTY_ROW = { id: "budget-empty", dismissKey: "budget-empty" };
-
 function ProjectBudget({ project, type, spentAgorot, contract = false }: { project: NonNullable<ProjectDetail>; type: string | null; spentAgorot: bigint; contract?: boolean }) {
   const [editing, setEditing] = useState(false);
   const budget = project.budget_agorot ?? null;
