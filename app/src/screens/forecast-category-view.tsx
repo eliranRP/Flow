@@ -3,43 +3,21 @@ import { Link } from "react-router-dom";
 import { chargeHref } from "../recurring-charge";
 import { cx } from "../ui/cx";
 import { ChevronDownIcon } from "../ui/icons";
-import { onRadioArrow } from "../ui/segmented-control";
 import { type ForecastCategoryRow, type ForecastCategorySide, itemCharge } from "./forecast-categories";
 import { itemLate, itemWhen, signed } from "./forecast-parts";
 
 /** The views of the forecast (the board's chips): one row per item, items by project (FLOW-1004), or one row per category. */
 export type ForecastView = "items" | "projects" | "categories";
 
-// FLOW-1013: one word each, so the three chips keep one line at 320; the group's name says "לפי".
-const VIEWS: readonly (readonly [ForecastView, string])[] = [
-  ["items", "פריטים"],
-  ["projects", "פרויקטים"],
-  ["categories", "קטגוריות"],
-];
-
 /**
- * The board's chips as a radio group. The keys are SegmentedControl's (roving tabindex, arrows that follow
- * the reading direction, so they reverse under dir=rtl); the look stays the board's chips.
+ * FLOW-1013: one word each, so the three keep one line at 320; the group's name says "לפי". FLOW-1048 (V3-Forecast):
+ * the options of the screen's SegmentedControl, which docks into the compact bar.
  */
-export function ForecastViewSwitch({ view, onPick }: { view: ForecastView; onPick: (view: ForecastView) => void }) {
-  return (
-    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה לפי" onKeyDown={onRadioArrow}>
-      {VIEWS.map(([value, label]) => (
-        <button
-          key={value}
-          type="button"
-          role="radio"
-          aria-checked={view === value}
-          tabIndex={view === value ? 0 : -1}
-          className={cx("ui-forecast-view", view === value && "ui-forecast-view-on")}
-          onClick={() => { onPick(value); }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
+export const FORECAST_VIEWS: { value: ForecastView; label: string }[] = [
+  { value: "items", label: "פריטים" },
+  { value: "projects", label: "פרויקטים" },
+  { value: "categories", label: "קטגוריות" },
+];
 
 function money(minor: bigint, currency: string): string {
   return formatAmountText(minor, currency);

@@ -1,7 +1,6 @@
-import type { MissingBill, ProjectsCashMonth, RecurringChange } from "@flow/shared";
-import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery, useRecurringChangesQuery } from "../forecast";
-import { BUDGET_ALERT_PERCENT, budgetPercent, netIn, unassignedCountLabel } from "../project-list";
-import { chargeHref } from "../recurring-charge";
+import type { MissingBill, RecurringChange } from "@flow/shared";
+import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
+import { BUDGET_ALERT_PERCENT, budgetPercent } from "../project-list";
 import type { BannerRow } from "../ui/banner";
 import { attentionRows } from "./attention-rows";
 
@@ -80,72 +79,6 @@ export function projectAttentionRows({
     changes: String(own.length),
     budget: percent == null ? "" : percent > 100 ? "over" : String(BUDGET_ALERT_PERCENT),
   }));
-}
-
-/**
- * FLOW-1044 (board V3-Projects): the Projects list's "דורש טיפול". The lines with no project (they open their
- * own list), each renovation past 80% of its budget, each project's rent or other income that did not arrive
- * (missing_bills, income on a project), and the charges on a project that changed this month.
- */
-export function projectsAttentionRows({
-  month,
-  late,
-  changes,
-  search,
-  unassignedTo,
-}: {
-  month: NonNullable<ProjectsCashMonth>;
-  late: readonly MissingBill[];
-  changes: readonly RecurringChange[];
-  search: string;
-  /** The lines with no project, for the month the list shows. */
-  unassignedTo: string;
-}): BannerRow[] {
-  const rows: BannerRow[] = [];
-  const base = month.base_currency;
-  if (month.unassigned.count > 0) {
-    rows.push({
-      id: "unassigned",
-      to: unassignedTo,
-      title: unassignedCountLabel(month.unassigned.count),
-      dismissKey: `unassigned:${String(month.unassigned.count)}:${String(netIn(month.unassigned.cash, base))}`,
-    });
-  }
-  for (const project of month.projects) {
-    if (project.status !== "active") continue;
-    const percent = budgetPercent(project);
-    if (percent == null || percent < BUDGET_ALERT_PERCENT) continue;
-    const over = percent > 100;
-    rows.push({
-      id: `budget:${project.id}`,
-      to: `/projects/${project.id}${search}`,
-      title: over ? `${project.name} · מעל התקציב` : <>{project.name} · <bdi dir="ltr">{`${String(BUDGET_ALERT_PERCENT)}%`}</bdi></>,
-      dismissKey: `budget:${project.id}:${over ? "over" : String(BUDGET_ALERT_PERCENT)}`,
-    });
-  }
-  for (const bill of late) {
-    if (bill.direction !== "income" || bill.project_id == null || bill.party_id == null) continue;
-    const name = bill.project_name ?? month.projects.find((project) => project.id === bill.project_id)?.name ?? "";
-    rows.push({
-      id: `income:${bill.project_id}:${bill.party_id}`,
-      to: chargeHref("income", bill.party_id, search, bill.project_id),
-      title: `${bill.category_name ?? "הכנסה"} ${name} לא הגיעה`,
-      dismissKey: `income:${bill.project_id}:${bill.party_id}:${bill.due_month ?? ""}`,
-    });
-  }
-  const onProject = changes.filter((change) => change.project_id != null);
-  for (const view of chargeChangeViews(onProject, search)) {
-    rows.push({ id: `change:${view.id}`, to: view.href, title: `${view.title} · ${view.now}`, dismissKey: `change:${view.id}:${view.now}` });
-  }
-  return rows;
-}
-
-/** The list's reads behind its rows: Home's late bills and changed charges (usually cached by Home). */
-export function useProjectsRecurring(active: boolean, sample?: ProjectRecurringSample): ProjectRecurringSample {
-  const missing = useMissingBillsQuery(active && sample == null);
-  const changes = useRecurringChangesQuery(active && sample == null);
-  if (sample) return sample;
-  return { late: missing.data ?? [], changes: changes.data ?? [] };
 }
 
 /** The reads behind the rows: Home's, so a hide or a new bill refreshes both. Off for a sample or another section. */

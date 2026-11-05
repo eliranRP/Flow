@@ -1,12 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type TransactionDetail } from "@flow/shared";
 import { type TxnMeta } from "../txn-meta";
 import { jevNote, TxnFooter, txnSourceLabel, txnStatus } from "./transaction-head";
-import { MemoryRouter } from "react-router-dom";
-import { TransactionTopBar } from "./transaction-top-bar";
-import { stubPageObserver } from "../ui/test-support";
 
 // --- transaction-head.test.tsx
 
@@ -62,41 +58,5 @@ describe("TxnFooter", () => {
     render(<TxnFooter txn={base} meta={meta({ account: "EXAMPLE OFFICE SUITE ••6789", bank_description: "EXAMPLE OFFICE SUITE 123456789" })} />);
     expect(screen.getByText("EXAMPLE OFFICE SUITE ••6789")).toHaveAttribute("dir", "ltr");
     expect(screen.getByText("EXAMPLE OFFICE SUITE 123456789")).toBeInTheDocument();
-  });
-});
-// --- transaction-top-bar.test.tsx
-
-describe("TransactionTopBar (FLOW-366)", () => {
-  it("names the back step by the lines it came from, and hides the title until it is scrolled past", () => {
-    render(
-      <MemoryRouter>
-        <TransactionTopBar fallback="/cash/2026-10/in/ILS" backLabel="נכנס" title="Harbor Hardware · $1,284.50" end={<span />} head={null} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText("נכנס")).toBeInTheDocument();
-    expect(screen.getByText("Harbor Hardware · $1,284.50")).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("takes its line and title once the page's head has gone under it (FLOW-942)", () => {
-    const observer = stubPageObserver();
-    function Page() {
-      const [head, setHead] = useState<HTMLElement | null>(null);
-      return (
-        <MemoryRouter>
-          <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="Bayside · $142" end={null} head={head} />
-          <header ref={setHead}>Bayside</header>
-        </MemoryRouter>
-      );
-    }
-    const { container } = render(<Page />);
-    const bar = container.querySelector(".ui-txn-top");
-    expect(bar).not.toHaveClass("ui-txn-top-past");
-    observer.page.scrolled = true;
-    observer.settle();
-    expect(bar).toHaveClass("ui-txn-top-past");
-    expect(screen.getByText("Bayside · $142")).not.toHaveAttribute("aria-hidden");
-    observer.page.scrolled = false;
-    observer.settle();
-    expect(bar).not.toHaveClass("ui-txn-top-past");
   });
 });

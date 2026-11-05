@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { BooksProvider } from "../use-books";
@@ -69,9 +69,9 @@ describe("the step row on the transaction card (FLOW-345 option D)", () => {
     const row = screen.getByRole("group", { name: "מעבר בין תנועות" });
     expect(row).toHaveTextContent(/^הקודמת.*2 מתוך 3.*הבאה$/);
     expect(row.closest("header")).toBeNull();
-    const header = document.querySelector("header");
-    if (!header) throw new Error("no header");
-    // The top bar keeps Back and ⋯ only.
+    const header = document.querySelector<HTMLElement>(".ui-txn-back");
+    if (!header) throw new Error("no back row");
+    // The page's top row keeps Back and ⋯ only.
     expect(within(header).queryByRole("button", { name: "התנועה הבאה" })).toBeNull();
     expect(within(header).queryByRole("button", { name: "התנועה הקודמת" })).toBeNull();
     expect(row.parentElement).toHaveClass("ui-txn-stepped");
@@ -108,7 +108,7 @@ describe("the step row on the transaction card (FLOW-345 option D)", () => {
     act(() => {
       client.setQueryData(["txn", "off", "t2"], card("t2", "ספק ב"));
     });
-    expect(await screen.findByText("ספק ב")).toBeInTheDocument();
+    await waitFor(() => { expect(document.querySelector(".ui-txn-supplier")).toHaveTextContent("ספק ב"); });
     // The same row and button, not a new one: the loaded card's title took focus and handed it back.
     expect(screen.getByRole("group", { name: "מעבר בין תנועות" })).toBe(row);
     expect(screen.getByRole("button", { name: "התנועה הבאה" })).toBe(next);

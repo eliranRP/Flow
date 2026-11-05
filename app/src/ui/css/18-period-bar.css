@@ -22,9 +22,10 @@
   background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
 }
 
+/* The picked segment is the white pill with the accent label in both themes (V3-Home board; the owner, 2026-11-05). */
 .ui-seg-band .ui-seg-btn[aria-checked="true"] {
-  background: var(--color-band-pill);
-  color: var(--color-text);
+  background: var(--color-band-seg-on);
+  color: var(--color-band-seg-on-text);
   box-shadow: none;
 }
 

@@ -2,15 +2,15 @@ import { cx } from "./cx";
 
 /**
  * FLOW-447c: a late bill's suggested match (decision 0179), on the charge page. "אולי הגיע בשם אחר",
- * the suggested party, its amount and day, and the two answers. The name and amount are plain text.
+ * the suggested party, its amount and day, and the answers (V3-Charge: "כן, זה הוא", "לא", and "התעלמות החודש" when offered). The name and amount are plain text.
  */
 export function RecurringMatchBox({
   name,
   amount,
   date,
-  income,
   onYes,
   onNo,
+  onIgnore,
   className,
 }: {
   /** The suggested party's name. */
@@ -19,14 +19,15 @@ export function RecurringMatchBox({
   amount: string;
   /** The bill's day, "dd/mm". */
   date: string;
-  income: boolean;
   onYes: () => void;
   onNo: () => void;
+  /** FLOW-1048 (V3-Charge): the third answer, "התעלמות החודש": the late alert is set aside until the next late bill. */
+  onIgnore?: () => void;
   className?: string;
 }) {
   return (
-    <section className={cx("ui-recurring-match", className)} aria-label="אולי הגיע בשם אחר">
-      <p className="ui-recurring-match-title">אולי הגיע בשם אחר</p>
+    <section className={cx("ui-recurring-match", className)} aria-label="אולי הגיע בשם אחר?">
+      <p className="ui-recurring-match-title">אולי הגיע בשם אחר?</p>
       <p className="ui-recurring-match-detail">
         <bdi>{name}</bdi>
         {" · "}
@@ -36,11 +37,16 @@ export function RecurringMatchBox({
       </p>
       <div className="ui-recurring-match-actions">
         <button type="button" className="ui-recurring-match-yes ui-hit" onClick={onYes}>
-          {income ? "כן, אותו לקוח" : "כן, אותו ספק"}
+          כן, זה הוא
         </button>
         <button type="button" className="ui-recurring-match-no ui-hit" onClick={onNo}>
-          לא, זה משהו אחר
+          לא
         </button>
+        {onIgnore == null ? null : (
+          <button type="button" className="ui-recurring-match-skip ui-hit" onClick={onIgnore}>
+            התעלמות החודש
+          </button>
+        )}
       </div>
     </section>
   );

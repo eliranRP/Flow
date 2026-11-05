@@ -46,6 +46,15 @@ describe("BudgetCard (FLOW-445, FLOW-961)", () => {
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
+  it("hides the empty card from its X when it has a hide handler, and draws no X without one (the owner, 2026-11-05)", () => {
+    const onHide = vi.fn();
+    const { rerender } = render(<BudgetEmptyCard onAdd={() => undefined} onHide={onHide} />);
+    fireEvent.click(screen.getByRole("button", { name: "הסתרה: אין תקציב לפרויקט" }));
+    expect(onHide).toHaveBeenCalledTimes(1);
+    rerender(<BudgetEmptyCard onAdd={() => undefined} />);
+    expect(screen.queryByRole("button", { name: "הסתרה: אין תקציב לפרויקט" })).toBeNull();
+  });
+
   it("opens the project sheet from עריכה when it has an edit handler", () => {
     const onEdit = vi.fn();
     render(<BudgetCard spentMinor={0n} budgetMinor={10_000_000n} onEdit={onEdit} />);

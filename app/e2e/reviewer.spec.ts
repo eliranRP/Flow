@@ -390,7 +390,8 @@ test("a refused split save has no retry", async ({ page }) => {
 test("a split expense saves the category on the tap and keeps it after close", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/split-expense");
-  await expect(page.getByText("ליסינג הדרך בע״מ", { exact: true })).toBeVisible();
+  // FLOW-1048: the page's own name (24/600); the detail bar echoes it, hidden until the head scrolls away.
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ליסינג הדרך בע״מ$/ })).toBeVisible();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await expect(page.getByText("01/07/2026")).toBeVisible();
   // The exact amount: the compact top bar also carries "ליסינג הדרך בע״מ · ₪3,200", which a substring matches.

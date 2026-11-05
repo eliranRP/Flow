@@ -90,7 +90,7 @@ for (const width of [390, 320]) {
       await step("open search", () => page.getByRole("link", { name: "חיפוש", exact: true }).tap(), field);
       const row = page.getByRole("link", { name: /^ספק 3(?!\d)/ });
       await step("type the supplier", () => field.fill("ספק 3"), row);
-      await step("open the line", () => row.tap(), page.getByText("ספק 3", { exact: true }));
+      await step("open the line", () => row.tap(), page.locator("p.ui-txn-supplier", { hasText: /^ספק 3$/ }));
       await expect(page).toHaveURL(/\/transactions\/t-step-3\?preview=1$/);
     });
 

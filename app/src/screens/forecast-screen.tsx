@@ -9,10 +9,14 @@ import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart, monthEn
 import { CHART_MONTHS, cashMonthFigures, type MonthFigures } from "../month-figures";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useCashMonthsQuery } from "../use-cash";
-import { useGoBack } from "../ui/back";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { israelToday } from "../ui/date-math";
-import { ScreenHeader } from "../ui/screen-header";
+import { BackButton, useGoBack } from "../ui/back";
+import { CompactBar } from "../ui/compact-bar";
+import { DockSlot, useDockedFilter } from "../ui/dock-filter";
+import { FocusTitle } from "../ui/focus-title";
+import { DETAIL_BAR, ScreenHeader, useScrolledPast } from "../ui/screen-header";
+import { SegmentedControl } from "../ui/segmented-control";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
@@ -24,7 +28,7 @@ import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line
 import { useOverheadProject } from "../overhead-project";
 import { type ForecastProject, forecastProjects } from "../forecast-projects";
 import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
-import { ForecastCategoryView, type ForecastView, ForecastViewSwitch } from "./forecast-category-view";
+import { FORECAST_VIEWS, ForecastCategoryView, type ForecastView } from "./forecast-category-view";
 import { ForecastItemPage } from "./forecast-item-page";
 import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
@@ -55,8 +59,6 @@ export type ForecastSample = {
 
 const NO_SO_FAR: ForecastSoFar = { income: [], expense: [] };
 
-/** The page scrolls past this many pixels: the compact bar slides down (FLOW-141). */
-const COMPACT_AFTER = 150;
 /** The moved row folds away this long before its write, then the list is refreshed. */
 const FOLD_MS = 280;
 
@@ -127,7 +129,10 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const restore = useRestoreForecast(month);
   const [smallOpen, setSmallOpen] = useState(false);
   const [leavingKey, setLeavingKey] = useState<string | null>(null);
-  const [compact, setCompact] = useState(false);
+  // FLOW-1048 (V3-Forecast): the 56px bar comes down once the head has gone under it, and the views dock into it.
+  const [headEnd, setHeadEnd] = useState<HTMLElement | null>(null);
+  const barShown = useScrolledPast(headEnd, true, DETAIL_BAR);
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: DETAIL_BAR });
   const [view, setView] = useState<ForecastView>(sample?.view ?? "items");
   const [openCategories, setOpenCategories] = useState<ReadonlySet<string>>(() => new Set(sample?.openCategories ?? []));
   const online = useOnline();
@@ -204,12 +209,6 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     const row = Array.from(document.querySelectorAll<HTMLElement>("[data-forecast-key]")).find((node) => node.dataset.forecastKey === key);
     row?.focus({ preventScroll: true });
   }, [openKey]);
-
-  useEffect(() => {
-    const onScroll = () => { setCompact(window.scrollY > COMPACT_AFTER); };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); };
-  }, []);
 
   function toggleCategory(key: string) {
     setOpenCategories((current) => {
@@ -314,13 +313,39 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     ? NO_CATEGORY
     : categoryNames.get(open.category_id) ?? (live && categories.isPending ? "" : NO_CATEGORY);
 
+  // FLOW-1048: the views as the one segmented control, in the page and, once it reaches the bar, docked in it.
+  const viewSwitch = (
+    <SegmentedControl<ForecastView>
+      label="תצוגה לפי"
+      showLabel={false}
+      value={view}
+      options={FORECAST_VIEWS}
+      onChange={(next) => {
+        setView(next);
+        scrollUnderBar();
+      }}
+    />
+  );
+
   return (
     <div className={cx("ui-forecast-screen", open != null && "ui-forecast-screen-paged")}>
-      <div className={cx("ui-forecast-compact", compact && "ui-forecast-compact-on")} aria-hidden={!compact}>
-        <span>בית</span>
-        <span className="ui-forecast-compact-figure">{startKnown ? <>{`${FORECAST_TITLE} · `}<bdi dir="ltr">{forecastBigText(total, base)}</bdi></> : FORECAST_TITLE}</span>
-      </div>
-      <ScreenHeader title={FORECAST_TITLE} backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
+      <CompactBar
+        title={FORECAST_TITLE}
+        figure={startKnown && build != null && !failed ? forecastBigText(total, base) : undefined}
+        label="בית"
+        backTo="/"
+        size="detail"
+        shown={barShown}
+        dock={build == null || failed ? undefined : viewSwitch}
+        docked={docked}
+      />
+      {/* FLOW-1048 (V3-Forecast, Overview-lite): Back, the title and the month's line; the figure under them. */}
+      <header className="ui-forecast-head">
+        <BackButton fallback="/" text="בית" />
+        <FocusTitle className="t-title">{FORECAST_TITLE}</FocusTitle>
+        <p className="ui-forecast-sub t-meta">{`סוף ${monthName(month)} · עוד ${String(days)} ימים`}</p>
+        <span ref={setHeadEnd} className="ui-compact-mark" aria-hidden="true" />
+      </header>
       {/* A sample has no read to retry: its failure is fixed, so נסו שוב does nothing there. */}
       {failed ? <PageLoadFailed title="הצפי לא נטען" offline={!online} onRetry={() => { if (live) void query.refetch(); }} /> : null}
       {offlineSince == null || failed ? null : <BandOfflineLine since={offlineSince} onPage />}
@@ -363,7 +388,10 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
           </>
           )}
           <ChangedLine changed={changed} onReset={resetAll} />
-          <ForecastViewSwitch view={view} onPick={setView} />
+          <div className="ui-forecast-views">
+            <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+            <DockSlot docked={docked}>{viewSwitch}</DockSlot>
+          </div>
           {byProject ? (
             // In preview the read is off (no fetch at all): the view draws with no names, everything as general.
             live && projects.data == null && projects.fetchStatus !== "idle" ? (
