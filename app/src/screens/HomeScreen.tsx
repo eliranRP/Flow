@@ -591,7 +591,7 @@ export function CashHome({
         isPast={isPast}
         nav={nav}
         shown={compactShown}
-        dock={filtered ? <ActivityFilterControl value={filter} onChange={pickFilter} tone="band" past={activity?.past != null} /> : undefined}
+        dock={filtered ? <ActivityFilterControl value={filter} onChange={pickFilter} tone="band" past={activity.past != null} /> : undefined}
         docked={dockFilter.docked}
       />
       <MonthDrawer
