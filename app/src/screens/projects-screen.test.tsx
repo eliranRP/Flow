@@ -54,8 +54,8 @@ describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
     renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [], changes: [] }} now={NOW} />);
     const cards = screen.getByRole("heading", { name: "דורש טיפול" }).closest("section") as HTMLElement;
     expect(within(cards).getByRole("link", { name: /שורה אחת בלי פרויקט/ }).getAttribute("href")).toMatch(/^\/projects\/unassigned\?/);
-    expect(within(cards).getByRole("link", { name: /^Lark Hill עבר 80% מהתקציב/ })).toHaveAttribute("href", "/projects/p2");
-    expect(within(cards).getByRole("link", { name: /^Elm Ct עבר את התקציב/ })).toBeInTheDocument();
+    expect(within(cards).getByRole("link", { name: /^Lark Hill · 80%/ })).toHaveAttribute("href", "/projects/p2");
+    expect(within(cards).getByRole("link", { name: /^Elm Ct · מעל התקציב/ })).toBeInTheDocument();
     expect(within(cards).getByRole("button", { name: /^הסתרה: Lark Hill/ })).toBeInTheDocument();
   });
 

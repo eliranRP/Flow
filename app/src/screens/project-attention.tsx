@@ -1,4 +1,4 @@
-import { formatAmountText, type MissingBill, type ProjectsCashMonth, type RecurringChange } from "@flow/shared";
+import type { MissingBill, ProjectsCashMonth, RecurringChange } from "@flow/shared";
 import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery, useRecurringChangesQuery } from "../forecast";
 import { BUDGET_ALERT_PERCENT, budgetPercent, netIn, unassignedCountLabel } from "../project-list";
 import { chargeHref } from "../recurring-charge";
@@ -50,13 +50,14 @@ export function projectAttentionRows({
 }): BannerRow[] {
   const counts = lateCounts(late.filter((row) => row.project_id === projectId));
   const own = changes.filter((row) => row.project_id === projectId);
+  const views = chargeChangeViews(own, search);
   const rows = attentionRows({
     pending,
     unpaidCount: 0,
     unpaidGross: 0n,
     missingCount: counts.expense,
     missingIncome: counts.income,
-    changes: chargeChangeViews(own, search),
+    changes: views,
     search,
   });
   // FLOW-424 (C18-4): the review, קבועים and changed-charges rows open on this project, so the count matches.
@@ -70,7 +71,10 @@ export function projectAttentionRows({
       title: percent > 100 ? "עבר את התקציב" : <>עבר <bdi dir="ltr">{`${String(BUDGET_ALERT_PERCENT)}%`}</bdi> מהתקציב</>,
     });
   }
+  // A single changed charge's row counts its amount, so a new amount brings back a hidden row.
+  const nowById = Object.fromEntries(views.map((view) => [`change:${view.id}`, view.now]));
   return routed.map((row) => keyed(row, {
+    ...nowById,
     missing: String(counts.expense),
     "missing-income": String(counts.income),
     changes: String(own.length),
@@ -100,12 +104,11 @@ export function projectsAttentionRows({
   const rows: BannerRow[] = [];
   const base = month.base_currency;
   if (month.unassigned.count > 0) {
-    const net = netIn(month.unassigned.cash, base);
     rows.push({
       id: "unassigned",
       to: unassignedTo,
-      title: <>{unassignedCountLabel(month.unassigned.count)} · <bdi dir="ltr">{formatAmountText(BigInt(net), base)}</bdi></>,
-      dismissKey: `unassigned:${String(month.unassigned.count)}:${String(net)}`,
+      title: unassignedCountLabel(month.unassigned.count),
+      dismissKey: `unassigned:${String(month.unassigned.count)}:${String(netIn(month.unassigned.cash, base))}`,
     });
   }
   for (const project of month.projects) {
@@ -116,7 +119,7 @@ export function projectsAttentionRows({
     rows.push({
       id: `budget:${project.id}`,
       to: `/projects/${project.id}${search}`,
-      title: over ? `${project.name} עבר את התקציב` : <>{project.name} עבר <bdi dir="ltr">{`${String(BUDGET_ALERT_PERCENT)}%`}</bdi> מהתקציב</>,
+      title: over ? `${project.name} · מעל התקציב` : <>{project.name} · <bdi dir="ltr">{`${String(BUDGET_ALERT_PERCENT)}%`}</bdi></>,
       dismissKey: `budget:${project.id}:${over ? "over" : String(BUDGET_ALERT_PERCENT)}`,
     });
   }

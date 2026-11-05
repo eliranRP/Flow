@@ -15,6 +15,7 @@ import { CompactBar } from "../ui/compact-bar";
 import { DockSlot, useDockedFilter } from "../ui/dock-filter";
 import { FocusTitle } from "../ui/focus-title";
 import { GroupHead } from "../ui/group-head";
+import { FailureLine } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
@@ -136,6 +137,7 @@ export function ProjectCashOverview({
   fresh = false,
   schedule = [],
   lines = [],
+  linesRetry,
   offlineSince = null,
   example,
   now,
@@ -159,6 +161,8 @@ export function ProjectCashOverview({
   schedule?: readonly ScheduleRow[];
   /** The month's lines of the project, for the one-off group. */
   lines?: readonly CashLine[];
+  /** A failed read of the charges or the lines: its retry line sits above the groups, which then say nothing. */
+  linesRetry?: () => void;
   /** FLOW-961: offline, the moment the figures on screen are from; null online. */
   offlineSince?: number | null;
   example?: ReactNode;
@@ -273,7 +277,8 @@ export function ProjectCashOverview({
           <div className="ui-page-pad ui-project-lines-filter">
             <DockSlot docked={docked}>{control}</DockSlot>
           </div>
-          {hasLines ? null : <p className="ui-page-pad ui-project-lines-none t-line2">{filter === "left" ? "אין מה לשלם עוד החודש." : "אין עדיין תנועות החודש."}</p>}
+          {linesRetry == null ? null : <FailureLine offline={!navigator.onLine} onRetry={linesRetry} />}
+          {hasLines || linesRetry != null ? null : <p className="ui-page-pad ui-project-lines-none t-line2">{filter === "left" ? "אין מה לשלם עוד החודש." : "אין עדיין תנועות החודש."}</p>}
           {groups.left.length === 0 ? null : (
             <section className="ui-month" aria-labelledby={`project-left-${project.id}`}>
               <GroupHead id={`project-left-${project.id}`} title="נותר לשלם" summary={summaryOf(groups.left.length, groups.left[0]?.currency, chargeTotal(groups.left))} />

@@ -277,6 +277,12 @@
   margin: 0;
 }
 
+/* FLOW-1044 (board V3-Unassigned): the month heads sit in a container with no side padding, so they keep their
+   own gutter instead of the negative margin that cancels a padded parent's. */
+.ui-unassigned .ui-month-head {
+  margin-inline: 0;
+}
+
 /* FLOW-1044 (board V3-Unassigned): a line's row and its שיוך beside it, never inside the link. */
 .ui-unassigned-row {
   display: flex;

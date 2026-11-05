@@ -326,6 +326,7 @@ export function ProjectDetailScreen({
       fresh={fresh}
       schedule={sampleSchedule ?? schedule.data ?? []}
       lines={sampleLines ?? (monthLines.data == null ? [] : [...monthLines.data.counted, ...monthLines.data.kept])}
+      linesRetry={schedule.isError || monthLines.isError ? () => { void schedule.refetch(); void monthLines.refetch(); } : undefined}
       attention={projectAttentionRows({
         projectId: project.id,
         pending: project.pending_count ?? 0,

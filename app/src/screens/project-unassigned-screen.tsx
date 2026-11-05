@@ -26,7 +26,8 @@ import { useBlockedPreview } from "./screen-shared";
 /** A sample list (stories): the lines and the projects the picker offers. */
 export type UnassignedSample = { rows: SearchRow[]; projects: ProjectCashRow[] };
 
-type Assign = { row: SearchRow; projectId: string; projectName: string };
+/** `undo` takes the id reassign_transaction returns for this one assign (filled by its write). */
+type Assign = { row: SearchRow; projectId: string; projectName: string; undo: { id: string | null } };
 
 /** The undo id reassign_transaction returns, by line, so ביטול puts the line back. */
 type Undo = { line: string; id: string | null };
@@ -51,7 +52,6 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [picking, setPicking] = useState<SearchRow | null>(null);
   const opener = useRef<HTMLElement | null>(null);
-  const undo = useRef<Undo | null>(null);
   const pages = query.data?.pages ?? [];
   const all = sample?.rows ?? uniqueSearchRows(pages);
   const rows = all.filter((row) => !gone.has(row.id));
@@ -89,15 +89,14 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
     keys: ["search", "dashboard", "project", "projects-cash"],
     onError: (_error, payload) => { show(payload.row.id, true); },
     onSuccess: (payload) => {
-      const done = undo.current;
-      assigned(payload, () => { if (done != null) undoAssign.mutate(done); });
+      assigned(payload, () => { if (payload.undo.id != null) undoAssign.mutate({ line: payload.row.id, id: payload.undo.id }); });
     },
     run: async (payload) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const result = await supabase.rpc("reassign_transaction", { p_id: payload.row.id, p_project_id: payload.projectId, p_category_id: payload.row.category_id ?? "" });
       assertNoError(result);
-      undo.current = { line: payload.row.id, id: typeof result.data === "string" ? result.data : null };
+      payload.undo.id = typeof result.data === "string" ? result.data : null;
     },
   });
   const header = (
@@ -210,7 +209,7 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
           if (row == null || (sample == null && blocked())) return;
           const project = projects.find((item) => item.id === projectId);
           show(row.id, false);
-          const payload = { row, projectId, projectName: project?.name ?? "" };
+          const payload = { row, projectId, projectName: project?.name ?? "", undo: { id: null } };
           // A sample list writes nothing: the row folds and the toast's ביטול brings it back.
           if (sample != null) assigned(payload, () => { show(row.id, true); });
           else assign.mutate(payload);
