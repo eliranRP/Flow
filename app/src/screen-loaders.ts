@@ -36,6 +36,7 @@ export const screenLoaders = {
   reportLines: () => import("./screens/report-lines-screen"),
   reportAccount: () => import("./screens/report-account-screen"),
   projectProfit: () => import("./screens/project-profit-screen"),
+  projectUnassigned: () => import("./screens/project-unassigned-screen"),
   projectMonthProfit: () => import("./screens/project-month-profit-screen"),
   projectNextMonth: () => import("./screens/project-next-month-screen"),
   projectNextEdit: () => import("./screens/project-next-edit-screen"),

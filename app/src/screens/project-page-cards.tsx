@@ -1,11 +1,10 @@
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
 import { List, ListRow } from "../ui/list-row";
-import type { CashRow } from "../ui/cash-rows";
 
 type Figure = { currency: string; minor: bigint };
 
-function Figures({ figures }: { figures: Figure[] }) {
+function Figures({ figures }: { figures: readonly Figure[] }) {
   return (
     <span className="ui-project-figures">
       {figures.map((figure) => (
@@ -15,7 +14,7 @@ function Figures({ figures }: { figures: Figure[] }) {
           currency={figure.currency}
           presentation="detail"
           size="list"
-          // The board: a profit row signs a gain in the text colour.
+          // The board: a profit row signs a gain in the income colour.
           direction={figure.minor > 0n ? "income" : undefined}
           loss={figure.minor < 0n}
         />
@@ -24,38 +23,31 @@ function Figures({ figures }: { figures: Figure[] }) {
   );
 }
 
-/** The project page's profit card (board): this month's profit and the profit since the start, each with its line. */
-export function ProjectProfitCard({
-  monthName,
-  monthLabel,
-  month,
-  since,
-  sinceHint,
-  monthHref,
-  sinceHref,
-  extra,
-}: {
-  monthName: string;
-  /** Read in full by a screen reader: "רווח באוקטובר $… – פירוט". */
-  monthLabel?: string;
-  month: Figure[];
-  since: Figure[] | null;
-  sinceHint: string;
-  monthHref: string;
-  sinceHref: string;
-  /** FLOW-418: the cash the profit leaves out, when the month has some. */
-  extra?: CashRow;
-}) {
+/** One row of the project page's links: a name, a line under it, an optional figure, and where it opens. */
+export type ProjectLink = { id: string; title: string; hint?: string; figures?: readonly Figure[]; text?: string; href: string };
+
+/**
+ * FLOW-1044 (board V3-Project): the rows under the kind's card, each one tap to its page: השקעה והלוואות,
+ * רווח מתחילת הפרויקט and next month's forecast. A row with no figure shows its line only.
+ */
+export function ProjectLinks({ links }: { links: readonly ProjectLink[] }) {
+  if (links.length === 0) return null;
   return (
-    <Card className="ui-project-card ui-project-profit-card">
+    <Card className="ui-project-card ui-project-links">
       <List>
-        <ListRow variant="item" title={`רווח ${monthName}`} hint="הכנסות פחות הוצאות שנספרות ברווח" meta={<Figures figures={month} />} href={monthHref} label={monthLabel} chevron />
-        {since == null ? null : (
-          <ListRow variant="item" title="רווח מתחילת הפרויקט" hint={sinceHint} meta={<Figures figures={since} />} href={sinceHref} chevron />
-        )}
-        {extra?.href == null ? null : (
-          <ListRow variant="item" title={extra.label} hint={extra.hint} meta={<span className="ui-project-figures"><Amount agorot={extra.amounts[0]?.minor ?? 0n} currency={extra.amounts[0]?.currency} presentation="detail" size="list" /></span>} href={extra.href} label={extra.name} chevron />
-        )}
+        {links.map((link) => (
+          <ListRow
+            key={link.id}
+            variant="item"
+            title={link.title}
+            hint={link.hint}
+            meta={link.figures != null && link.figures.length > 0
+              ? <Figures figures={link.figures} />
+              : link.text == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{link.text}</bdi>}
+            href={link.href}
+            chevron
+          />
+        ))}
       </List>
     </Card>
   );

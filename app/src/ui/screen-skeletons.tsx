@@ -73,15 +73,11 @@ export function LinesSkeleton() {
   );
 }
 
-/** Projects (board States, projectsLoading): under the title, a label and a figure bar, then a card per project. */
+/** Projects (board States, projectsLoading): a card per project. FLOW-1044: the band above holds the label and figure. */
 export function ProjectsSkeleton() {
   return (
     <div className="ui-page-pad ui-projects-skel" aria-busy="true">
       <Loading />
-      <div className="ui-projects-skel-head">
-        <Bar w="130px" h={12} />
-        <Bar w="170px" h={34} className="ui-skel-figure" />
-      </div>
       <div className="ui-projects-skel-cards">
         {cards.map((key) => (
           <div className="ui-projects-skel-card" key={key}>

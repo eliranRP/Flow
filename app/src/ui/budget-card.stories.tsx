@@ -4,8 +4,8 @@ import { forceReducedMotion } from "./reduced-motion";
 import { padded } from "./story-support";
 
 /** Storybook args hold no bigint, so the amounts come in as agorot numbers and convert here. */
-function Budget({ spent, budget }: { spent: number; budget: number }) {
-  return <BudgetCard spentMinor={BigInt(spent)} budgetMinor={BigInt(budget)} onEdit={() => undefined} />;
+function Budget({ spent, budget, contract = false }: { spent: number; budget: number; contract?: boolean }) {
+  return <BudgetCard spentMinor={BigInt(spent)} budgetMinor={BigInt(budget)} onEdit={() => undefined} contract={contract} />;
 }
 
 const meta = {
@@ -23,4 +23,6 @@ export const Default: Story = {};
 export const Over: Story = { args: { spent: 6_480_000, budget: 6_000_000 } };
 /** FLOW-961: no budget yet, the dashed card in its place. */
 export const Empty: Story = { render: () => <BudgetEmptyCard onAdd={() => undefined} /> };
+/** FLOW-1044: a client project's contract, what is collected of it and what is left to collect. */
+export const Contract: Story = { args: { spent: 72_000_000, budget: 100_000_000, contract: true } };
 export const ReducedMotion: Story = { decorators: [forceReducedMotion] };
