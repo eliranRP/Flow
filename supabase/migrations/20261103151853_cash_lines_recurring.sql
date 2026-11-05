@@ -1,11 +1,14 @@
 -- FLOW-1035: each row of cash_month_lines says whether it belongs to a recurring charge.
 -- Home v3 splits the month into what is left to pay, the recurring charges paid and the one-off lines, and
 -- a month line carried no link to the recurring schedule.
--- - private.recurring_month_lines(company, today): the lines of today's month (up to today) that belong
---   to a charge recurring_schedule lists for today. It is the schedule's own match: the stream lines
+-- - private.recurring_month_lines(company, day): the lines of the day's month (up to that day; cash_month_lines
+--   passes the month's last day) that belong to a charge recurring_schedule lists for that day. It is the schedule's own match: the stream lines
 --   (recurring_stream_lines: the party or the party answered the same, FLOW-430; a split line as its
 --   counted parts, each by its own project, decision 0189) joined to recurring_parties on direction,
---   party, currency and the charge's project (decision 0185), for a party the schedule names.
+--   party, currency and the charge's project (decision 0185), for a party the schedule names. A line is matched
+--   by its document date, as the schedule matches its arrivals, so on the cash basis a bill dated last month
+--   and paid this month reads false on this month's row; a split line reads true when any of its parts
+--   belongs to a charge (the row is the whole line, and the schedule shows the part as the charge's arrival).
 -- - cash_month_lines: each row gains recurring, true when its line is one of those lines for the month
 --   (as of the month's last day), false otherwise. The signature, the grants and every other key stay.
 
