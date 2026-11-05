@@ -20,6 +20,10 @@ import {
 } from "../cash-sample";
 import { cashMonthKey } from "../../cash";
 import { SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "../../forecast-sample";
+import { RECURRING_FIXTURE } from "../../recurring-sample";
+import { DrawerNextMonth } from "../../screens/month-drawer-next";
+import { homeActivityLines } from "../home-activity-sample";
+import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_TODAY } from "../home-next-month-sample";
 import type { DevRoute } from "./types";
 
 export const devDashboard: Dashboard = {
@@ -114,6 +118,15 @@ export function DevCash() {
       onStepMonth={(key) => {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}
+      // FLOW-1036: the month's activity (the recurring sample and this month's lines, in the sample's currency), and next month in the drawer.
+      activity={{
+        schedule: RECURRING_FIXTURE.map((row) => ({ ...row, currency: data.base_currency })),
+        scheduleFailed: false,
+        lines: homeActivityLines(currentKey, { currency: data.base_currency }),
+        linesFailed: false,
+        onRetry: () => undefined,
+      }}
+      drawerNext={<DrawerNextMonth today={NEXT_MONTH_TODAY} currency="USD" cash={null} sample={HOME_NEXT_MONTH_SAMPLE} />}
       initialDrawerOpen={params.get("drawer") === "1"}
       drawerYearMonths={yearMonths}
       syncing={params.get("sync") === "1" ? "מסנכרן עם Mercury…" : null}

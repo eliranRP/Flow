@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AttentionBox, ForecastRow, HomeBandActions, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
+import { ForecastRow, HomeBandActions, HomeFigures, homeMonthLabel, HomeMonthPill, type HomeFigureRows } from "./home-parts";
 import { CashHomeSkeleton } from "./home-skeleton";
 import { useReturningRecurringOwner } from "../recurring-tip";
 import { renderWithProviders } from "../test-render";
@@ -63,58 +63,6 @@ describe("Home's band parts (FLOW-364)", () => {
     expect(screen.getByText(homeMonthLabel("2026-10"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "חודש קודם" })).not.toHaveAttribute("aria-disabled");
-  });
-
-  it("titles the split card with its takeaway, the metric's name above it (FLOW-958)", () => {
-    const { rerender } = render(
-      <MemoryRouter>
-        <SplitCard monthKey="2026-10" row={row(-94_600, 12_000)} search="" onOpenProfit={vi.fn()} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("region", { name: "רוב המינוס הלך לנכסים" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "רוב המינוס הלך לנכסים" })).toBeInTheDocument();
-    expect(screen.getByText("ממה מורכב המינוס")).toBeInTheDocument();
-    // The note under the rows said the title again; it is gone.
-    expect(screen.queryByText(/הפעילות השוטפת הרוויחה/)).toBeNull();
-    rerender(
-      <MemoryRouter>
-        <SplitCard monthKey="2026-10" row={row(50_000, 80_000)} search="" onOpenProfit={vi.fn()} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText("ממה מורכב התזרים")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "רוב התזרים הוא רווח" })).toBeInTheDocument();
-  });
-
-  it("words the takeaway by the part that leads", () => {
-    expect(splitTakeaway("out", -1n, 1n)).toBe("רוב המינוס הלך לנכסים");
-    expect(splitTakeaway("out", 1n, 1n)).toBe("רוב מה שיצא הלך לנכסים");
-    expect(splitTakeaway("in", 1n, 1n)).toBe("רוב מה שנכנס הוא הון");
-    expect(splitTakeaway(null, -1n, -1n)).toBe("רוב המינוס הוא הפסד שוטף");
-    expect(splitTakeaway(null, 1n, -1n)).toBe("הפעילות השוטפת הפסידה");
-    expect(splitTakeaway(null, 1n, 1n)).toBe("רוב התזרים הוא רווח");
-  });
-
-  it("hides the split card when both parts are 0", () => {
-    const { container } = render(
-      <MemoryRouter>
-        <SplitCard monthKey="2026-10" row={row(0, 0)} search="" onOpenProfit={vi.fn()} />
-      </MemoryRouter>,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("hides the attention box with no rows", () => {
-    const { container } = render(<AttentionBox rows={[]} recurringHref="/recurring" />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("ends the attention box with a link to קבועים by name (FLOW-1017)", () => {
-    render(
-      <MemoryRouter>
-        <AttentionBox rows={[{ id: "unpaid", to: "/unpaid", title: "חשבונית פתוחה אחת" }]} recurringHref="/recurring?preview=1" />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("link", { name: "כל הקבועים" })).toHaveAttribute("href", "/recurring?preview=1");
   });
 
   it("names the forecast by the month's name", () => {
@@ -262,7 +210,7 @@ describe("CashHomeSkeleton (FLOW-364)", () => {
     vi.useRealTimers();
   });
 
-  it("draws the band with its real month and icons, then the split card and the box", () => {
+  it("draws the band with its real month and icons, then the attention cards and the activity (FLOW-1036)", () => {
     expectRtl();
     renderWithProviders(<CashHomeSkeleton />);
     act(() => {
@@ -274,8 +222,7 @@ describe("CashHomeSkeleton (FLOW-364)", () => {
     expect(band?.querySelector(".ui-band-body .ui-skel-band-hero")).not.toBeNull();
     expect(band?.querySelectorAll(".ui-skel-band-row")).toHaveLength(2);
     expect(band?.querySelector('[aria-label="חיפוש"]')).not.toBeNull();
-    expect(document.querySelector(".ui-home-split")).not.toBeNull();
-    expect(document.querySelectorAll(".ui-home-attention .ui-skel-row")).toHaveLength(2);
+    expect(document.querySelectorAll(".ui-skel-attention .ui-skel-row")).toHaveLength(2);
     expect(document.querySelectorAll(".ui-skel-list .ui-skel-row")).toHaveLength(3);
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     // No past-month list is loaded on Home any more (FLOW-364).
@@ -285,6 +232,6 @@ describe("CashHomeSkeleton (FLOW-364)", () => {
   it("shows nothing before the delay", () => {
     renderWithProviders(<CashHomeSkeleton />);
     expect(screen.queryByText("טוען…")).toBeNull();
-    expect(document.querySelector(".ui-home-split")).toBeNull();
+    expect(document.querySelector(".ui-skel-attention")).toBeNull();
   });
 });

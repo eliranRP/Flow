@@ -26,8 +26,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ProjectsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
-import { CompanyCashCard, thisMonthCashOut, useCompanyCashNextMonth, type CompanyCashNextMonth } from "./company-cash-next-month";
-import type { HomeNextMonthSample } from "./home-next-month";
+import { CompanyCashCard, thisMonthCashOut, useCompanyCashNextMonth, type CompanyCashNextMonth, type HomeNextMonthSample } from "./company-cash-next-month";
 import { useCashMonthsQuery } from "../use-cash";
 import { ProjectFormSheet } from "./project-form-sheet";
 

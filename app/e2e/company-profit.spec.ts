@@ -1,20 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-// FLOW-140c1 (board Profit and ProfitBasis): Home's רווח row opens the company profit page; its head
+// FLOW-140c1 (board Profit and ProfitBasis): the company profit page (FLOW-1036: Home no longer links it; דוחות does). Its head
 // has the summary rows, next month's card and the chart (FLOW-143); its category rows open in place,
 // its chips set ?by=, its project row opens the project's profit, and the basis line opens the basis
 // sheet. The period switch (FLOW-145) turns the page to this year, a closed year or since the start.
 // Invented data only, in preview.
 test.use({ viewport: { width: 390, height: 844 } });
-
-test("Home's profit row opens the company profit page, and Back returns Home", async ({ page }) => {
-  await page.goto("/e2e/cash?preview=1");
-  await page.getByRole("button", { name: /^רווח החודש/ }).click();
-  await expect(page).toHaveURL(/\/profit\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "רווח", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "חזרה", exact: true }).click();
-  await expect(page).toHaveURL(/\/e2e\/cash\?preview=1$/);
-});
 
 test("the chips sort the page, a category opens in place, and a project opens its profit", async ({ page }) => {
   await page.goto("/e2e/company-profit?preview=1");
