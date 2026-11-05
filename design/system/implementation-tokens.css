@@ -174,6 +174,8 @@
   --motion-pulse: 1.2s;
   --motion-indet: 1.4s;          /* sync strip line, States board (FLOW-371) */
   --motion-spin: 800ms;
+  --motion-pull-spin: 880ms;     /* pull to refresh: one stepped turn of the iOS spinner (FLOW-1050) */
+  --motion-pull-return: 400ms;   /* pull to refresh: the glide to the rest and back to the top (FLOW-1050) */
   --motion-peek: 900ms;          /* the swipe row's first-view peek */
   --motion-peek-delay: 400ms;
   --dur-reduced: 1ms;             /* a user who asks for less motion: an animation still ends and fires animationend */
@@ -455,6 +457,8 @@
     --motion-pulse: 0ms;
     --motion-indet: 0ms;
     --motion-spin: 0ms;
+    --motion-pull-spin: 0ms;
+    --motion-pull-return: 0ms;
     --motion-peek: 0ms;
     --motion-peek-delay: 0ms;
     --rise-page: 0px;
