@@ -127,8 +127,9 @@ function paymentOn(loan: TagLoan, docDate: string): bigint {
  * The one loan this payment belongs to: a loan in the line's currency that takes a payment on
  * its date whose monthly payment equals the line; else whose last attached payment equals it (the
  * same recurring payment after an escrow change). A loan that already has a payment attached in
- * the line's month (whichever month that is, however late the line syncs) is left out: a second payment that month (a catch-up, a duplicate) would take
- * the same schedule row again, so the owner files it. Null when no loan, or more than one, matches.
+ * the line's month (whichever month that is, however late the line syncs) is left out: a second
+ * payment that month (a catch-up, a duplicate) would take the same schedule row again, so the
+ * owner files it. Null when no loan, or more than one, matches.
  */
 export function matchLoan(line: LoanLine, loans: readonly TagLoan[]): TagLoan | null {
   if (line.amountMinor <= 0n) return null;
