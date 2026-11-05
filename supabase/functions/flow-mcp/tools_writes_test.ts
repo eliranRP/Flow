@@ -128,6 +128,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
+    "answer_recurring_handover",
     "get_sync_status",
   ]);
   for (const tool of toolsFor(["write"])) {
@@ -286,6 +287,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
+    "answer_recurring_handover",
   ]);
   assertEquals(toolsFor([]), []);
 });

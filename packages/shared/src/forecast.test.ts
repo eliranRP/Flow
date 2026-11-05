@@ -56,6 +56,21 @@ describe("expectedMonthsSchema", () => {
     expect(parsed.months[0]?.by_currency[0]?.expense_minor).toBe(-283_000n);
     expect(parsed.months[1]?.by_currency).toEqual([]);
     expect(parsed.recurring[0]?.name).toBe("");
+    expect(parsed.recurring[0]?.handover).toBeUndefined();
+  });
+
+  it("reads a charge's handover (FLOW-1037), and null as none", () => {
+    const party = { direction: "expense", party_id: "s1", name: "Old Servicer", currency: "ILS", typical_amount_minor: -250_000, typical_day: 5, months_seen: 6, seen_this_month: false, project_id: "p1" };
+    const parsed = expectedMonthsSchema.parse({
+      today: "2026-10-20",
+      months: [],
+      recurring: [
+        { ...party, handover: { party_id: "s2", party_name: "New Servicer", transaction_id: "t1", doc_date: "2026-10-05", amount_minor: -249_000 } },
+        { ...party, party_id: "s3", handover: null },
+      ],
+    });
+    expect(parsed.recurring[0]?.handover).toEqual({ party_id: "s2", party_name: "New Servicer", transaction_id: "t1", doc_date: "2026-10-05", amount_minor: -249_000n });
+    expect(parsed.recurring[1]?.handover).toBeNull();
   });
 });
 

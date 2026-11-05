@@ -192,6 +192,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
+    "answer_recurring_handover",
     "get_sync_status",
   ], "write token lists writes and its sync status");
 

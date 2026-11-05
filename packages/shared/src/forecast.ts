@@ -160,6 +160,21 @@ const expectedPartySchema = z.object({
   next_due_month: z.string().nullable().optional(),
   /** True when the charge pays a loan (its lines have loan parts): its amount is the whole payment, principal included. */
   pays_loan: z.boolean().optional(),
+  /**
+   * FLOW-1037 (decision 0255): this month's payment of the charge seems to have come under another party (a loan
+   * moved to a new servicer), until the owner answers with `answer_recurring_handover`; null when not. The month
+   * forecast leaves such a charge out. Omitted on older payloads.
+   */
+  handover: z
+    .object({
+      party_id: z.string(),
+      party_name: z.string().nullable(),
+      transaction_id: z.string(),
+      doc_date: daySchema,
+      amount_minor: agorotSchema,
+    })
+    .nullable()
+    .optional(),
 });
 
 /** `expected_months(months, project_id)`: this month (still to come) and the next ones. */

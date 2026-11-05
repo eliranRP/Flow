@@ -10,7 +10,8 @@ import { dueInMonth } from "./recurring-due.ts";
  * Items: the recurring parties due this month and not yet seen (income and expense), and the open
  * customer invoices (income). A charge every 2 months, quarter or year is due only in its cycle's
  * months (dueInMonth, the rule the expected_months cells follow; decision 0199); a late one still
- * counts. A row's own number is never changed; an override only changes the forecast (its amount,
+ * counts. A charge with a likely handover (FLOW-1037: this month's payment came under another party) is left
+ * out until the owner answers. A row's own number is never changed; an override only changes the forecast (its amount,
  * its day, or "not this month", which moves it out of the totals).
  *
  * FLOW-1005 (decision 0240): the owner's project forecast edits for the month count too, as each project's
@@ -183,6 +184,8 @@ export function buildMonthForecast(input: {
   }
   for (const party of input.expected?.recurring ?? []) {
     if (party.seen_this_month || party.currency !== input.base) continue;
+    // FLOW-1037: its payment came this month under another party (a likely handover): counted once, in today's cash.
+    if (party.handover != null) continue;
     if (!dueInMonth(party.next_due_month, party.pace, thisMonth, thisMonth)) continue;
     const owner = party.project_id ?? overhead;
     const at = owner == null ? null : `${owner}|rec:${party.direction}:${party.party_id}`;

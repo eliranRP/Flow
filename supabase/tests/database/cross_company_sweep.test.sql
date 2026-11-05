@@ -175,7 +175,7 @@ begin
   update public.projects set group_id = token where id = project;
 
   insert into public.recurring_matches (company_id, direction, party_id, match_party_id, same, set_by)
-  values (a, 'expense', supplier, supplier2, true, owner);
+  values (a, 'expense', supplier, supplier2, true, owner); insert into public.recurring_handovers (company_id, direction, party_id, currency, project_id, to_party_id, same, set_by) values (a, 'expense', supplier, 'ILS', project, supplier2, false, owner); -- FLOW-1037: a handover answer of A's
   insert into public.recurring_overrides (company_id, direction, party_id, currency, recurring, pace, set_by)
   values (a, 'expense', supplier, 'ILS', true, 'month', owner);
   insert into public.recurring_dismissals (user_id, company_id, kind, alert_key)
@@ -654,7 +654,7 @@ begin
     ('mcp_move_category_lines', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
     ('mcp_set_bank_accounts', jsonb_build_object('p_account_ids', pg_temp.lit(array['victim-acct-1']::text[]), 'p_from', 'null::text')),
     ('answer_transfer_match', jsonb_build_object('p_out_transaction_id', pg_temp.lit(pg_temp.sid('xfer_out')), 'p_in_transaction_id', pg_temp.lit(pg_temp.sid('xfer_in')))),
-    ('mcp_answer_transfer_match', jsonb_build_object('p_out_transaction_id', pg_temp.lit(pg_temp.sid('xfer_out')), 'p_in_transaction_id', pg_temp.lit(pg_temp.sid('xfer_in')))),
+    ('mcp_answer_transfer_match', jsonb_build_object('p_out_transaction_id', pg_temp.lit(pg_temp.sid('xfer_out')), 'p_in_transaction_id', pg_temp.lit(pg_temp.sid('xfer_in')))), ('answer_recurring_handover', jsonb_build_object('p_to_party_id', pg_temp.lit(pg_temp.sid('supplier2')))), ('mcp_answer_recurring_handover', jsonb_build_object('p_to_party_id', pg_temp.lit(pg_temp.sid('supplier2')))), -- FLOW-1037: the charge's party and the one it moved to are two of A's suppliers
     ('delete_company', jsonb_build_object('p_confirm', pg_temp.lit('Victim Sample Co'::text))),
     ('set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),
     ('mcp_set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),
