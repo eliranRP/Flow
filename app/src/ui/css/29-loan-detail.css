@@ -8,31 +8,77 @@
 .ui-loan-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
-  padding: 0 var(--space-4) calc(var(--tabbar-height) + var(--space-section));
+  gap: var(--space-4);
+  padding: 0 var(--space-side) calc(var(--tabbar-height) + var(--space-section));
 }
 
-/* FLOW-1046 (V3-Loan): the band runs edge to edge over the page's cards, and the first card sits under it. */
+/* FLOW-1046 (V3-Loan): the band runs edge to edge over the page's cards, and the first card sits under it.
+   FLOW-1055 (decision 0257): the board's band: the back row 52px under 6px of band, 14px between its blocks,
+   20px of band under them, and the first card 20px below. */
 .ui-loan-page > .ui-band {
-  margin-inline: calc(var(--space-4) * -1);
-  margin-block-end: var(--space-2);
+  margin-inline: calc(var(--space-side) * -1);
+  margin-block-end: var(--space-1);
+  padding-bottom: var(--space-5);
+}
+
+.ui-loan-page > .ui-band > .ui-band-row {
+  min-block-size: calc(var(--touch-min) + var(--space-2) + var(--space-1) + var(--space-half));
+  padding-top: calc(var(--space-1) + var(--space-half));
+}
+
+.ui-loan-page > .ui-band > .ui-band-hero {
+  padding-top: calc(var(--space-3) + var(--space-half));
 }
 
 .ui-loan-band,
 .ui-loan-band-figures {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: calc(var(--space-3) + var(--space-half));
   min-inline-size: 0;
+}
+
+/* The name (24, 600) with its line (15) right under it; the label (17) right over the figure. */
+.ui-loan-band-name,
+.ui-loan-band-balance {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+/* Decision 0258: the band's text keeps v2's sizes (labels and rows 16/500); the board's spacing stays. */
+.ui-loan-band-name .ui-focus-title {
+  margin: 0;
 }
 
 .ui-loan-band-sub {
   margin: 0;
   color: var(--color-on-band-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
-.ui-loan-band-figures {
-  padding-block-start: var(--space-2);
+.ui-loan-band-label {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-btn-2-line);
+}
+
+/* A loan's two rows are 40px each, 6px apart. */
+.ui-loan-band-figures .ui-loans-band-rows {
+  gap: calc(var(--space-1) + var(--space-half));
+}
+
+/* The scroll mark under the figures adds no gap. */
+.ui-loan-band > .ui-compact-mark {
+  margin-block-start: calc((var(--space-3) + var(--space-half)) * -1);
+}
+
+.ui-loan-band-figures .ui-loans-band-row {
+  align-items: center;
+  min-block-size: var(--space-10);
 }
 
 .ui-loan-band-figure {
@@ -44,49 +90,93 @@
 .ui-loan-band-caption {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 /* The note waiting for a check (V3-Loan-Note): what to check, then הפרטים נכונים and עריכה side by side. */
+/* FLOW-1055 (V3-Loan-Note): the check card on the tint, 16px by 18px inside, 10px between its title (17/500),
+   its words (15, secondary) and its two 44px pills side by side at their own width: הפרטים נכונים filled. */
+.ui-card.ui-loan-check {
+  gap: calc(var(--space-2) + var(--space-half));
+  padding: var(--space-4) calc(var(--space-4) + var(--space-half));
+  background: var(--color-tint);
+}
+
 .ui-loan-check-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   margin: 0;
-  color: var(--color-signal);
+  color: var(--color-text);
   font-size: var(--type-body-size);
   font-weight: var(--type-btn-2-weight);
+  line-height: var(--line-board);
+}
+
+.ui-loan-check .ui-loan-card-text {
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--line-board);
 }
 
 .ui-loan-check-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: var(--space-2);
 }
 
-/* The next payment's card is one link to the payments on הבאים. */
+.ui-loan-check-actions .ui-btn {
+  height: auto;
+  min-block-size: var(--touch-min);
+  padding-inline: calc(var(--space-4) + var(--space-half));
+}
+
+/* The next payment's card, last in the band (V3-Loan, FLOW-1055): one 64px link to the payments on הבאים, on
+   the band's 14% white, with the date (17, 500) over its parts (13), the amount (24) and the chevron. */
+.ui-loan-next-card {
+  border-radius: var(--radius-card);
+  background: var(--band-card);
+  color: var(--color-on-band);
+}
+
 .ui-loan-next-link {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  min-block-size: var(--touch-min);
+  gap: var(--space-3);
+  min-block-size: var(--row-height);
+  padding: var(--space-3) var(--space-4);
   color: inherit;
   text-decoration: none;
 }
 
 .ui-loan-next-text {
   display: flex;
-  flex: 1;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-half);
   min-inline-size: 0;
 }
 
+.ui-loan-next-title,
+.ui-loan-next-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: var(--line-board);
+}
+
 .ui-loan-next-title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-loan-next-line {
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-caption-size);
+}
+
+.ui-loan-next-amount {
+  flex: none;
+  font-size: var(--type-name-size);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-board);
 }
 
 /* The new-loan sheet (V3-NewLoan): the kind first, with its one line under it. */
@@ -111,28 +201,20 @@
   border-radius: var(--radius-card);
 }
 
-/* The next payment, one line under the paid card: 14px above and below, 4px to its parts line (the board's). */
-.ui-card.ui-loan-next-card {
-  gap: var(--space-1);
-  padding-block: var(--space-inset-row);
-}
-
-.ui-loan-next-title,
-.ui-loan-next-amount {
-  margin: 0;
-  font-size: var(--type-body-size);
-  line-height: calc(var(--space-4) + var(--space-1));
-  font-weight: var(--type-body-weight);
-}
-
-.ui-loan-next-amount {
-  font-variant-numeric: tabular-nums;
-}
-
-/* שולם: the period switch beside the label, the total, the parts bar and one row per part with what it does. */
+/* שולם: the period switch beside the title, the total, the parts bar and one row per part with what it does.
+   FLOW-1055 (V3-Loan): 16px by 18px inside, 10px between the blocks. */
 .ui-card.ui-loan-paid {
-  gap: var(--space-3);
-  padding: calc(var(--space-card-inset) + var(--space-1) / 2);
+  gap: calc(var(--space-2) + var(--space-half));
+  padding: var(--space-4) calc(var(--space-4) + var(--space-half));
+}
+
+.ui-loan-paid-title {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--line-board);
 }
 
 .ui-loan-paid-head {
@@ -142,58 +224,43 @@
   gap: calc(var(--space-2) + var(--space-half));
 }
 
-/* The label wraps at 320 rather than lose its date. */
-.ui-loan-paid-head .ui-loan-card-label {
-  flex: 1;
-  min-inline-size: 0;
-  font-size: var(--type-line2-size);
-}
-
-/* The small switch: a 2px track on the raised tone, 36px segments (the board's). It takes its own width. */
+/* The page's switch (48px track, 40px segments) at the board's 190px. */
 .ui-loan-paid-head .ui-field {
   flex: none;
-  inline-size: auto;
+  inline-size: var(--size-seg-period);
 }
 
-/* FLOW-962: the period switch's choices are 44px targets. */
-.ui-loan-paid-head .ui-seg {
-  --size-seg: var(--touch-min);
-  --size-seg-track: calc(var(--touch-min) + var(--space-1));
-  gap: var(--space-half);
-  padding: var(--space-half);
-  border-radius: var(--radius-field-btn);
-}
-
-.ui-loan-paid-head .ui-seg-btn {
-  flex: none;
-  padding-inline: var(--space-3);
-  border-radius: var(--radius-seg-btn-small);
-}
-
+/* The total sits on the title's side (the board's), as its own width: an ltr bdi's start is the left. */
 .ui-loan-paid-total {
   display: block;
-  font-size: var(--type-total-size);
-  line-height: var(--type-total-line);
-  font-weight: var(--type-total-weight);
+  align-self: flex-start;
+  font-size: var(--type-card-size);
+  line-height: var(--type-card-line);
+  font-weight: var(--type-body-weight);
   font-variant-numeric: tabular-nums;
-  text-align: start;
+}
+
+/* The parts bar is 10px, a pill. */
+.ui-loan-paid .ui-parts-bar[data-height="8"] {
+  height: calc(var(--space-2) + var(--space-half));
 }
 
 .ui-loan-paid-parts {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: calc(var(--space-2) + var(--space-half));
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* A part's row: 48px, the 10px dot, the name (17) over its note (13), and the amount (17). */
 .ui-loan-paid-part {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: calc(var(--space-2) + var(--space-half));
   width: 100%;
-  min-block-size: var(--touch-min);
+  min-block-size: calc(var(--touch-min) + var(--space-1));
   padding: 0;
   border: 0;
   background: transparent;
@@ -208,32 +275,32 @@ button.ui-loan-paid-part {
 
 .ui-loan-paid-part .ui-parts-dot {
   flex: none;
-  width: var(--space-2);
-  height: var(--space-2);
+  width: calc(var(--space-2) + var(--space-half));
+  height: calc(var(--space-2) + var(--space-half));
 }
 
 .ui-loan-paid-text {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 1px;
   min-inline-size: 0;
 }
 
 .ui-loan-paid-name {
-  font-size: var(--type-line2-size);
-  line-height: calc(var(--type-line2-size) * 1.2);
+  font-size: var(--type-body-size);
+  line-height: var(--line-board);
 }
 
 .ui-loan-paid-note {
   font-size: var(--type-caption-size);
-  line-height: calc(var(--type-caption-size) * 1.2);
-  color: var(--color-text-muted);
+  line-height: var(--line-board);
+  color: var(--color-text-secondary);
 }
 
 .ui-loan-paid-amount {
   flex: none;
   font-size: var(--type-body-size);
+  line-height: var(--line-board);
   font-variant-numeric: tabular-nums;
 }
 
@@ -241,32 +308,39 @@ button.ui-loan-paid-part {
   line-height: var(--type-line2-line);
 }
 
-/* The cards of rows (terms, the last payments) hold their rows edge to edge. */
-.ui-card.ui-loan-rows,
-.ui-card.ui-loan-recent {
+/* The cards of rows (the terms, the rate changes) hold their rows edge to edge. */
+.ui-card.ui-loan-rows {
   gap: 0;
   padding: 0;
   overflow: hidden;
 }
 
-/* The last payments sit in a card with 6px above and 4px below (the board's). */
-.ui-card.ui-loan-recent {
-  padding-block: calc(var(--space-1) * 1.5) var(--space-1);
+.ui-loan-card.ui-loan-rows > * + * {
+  border-block-start: var(--stroke-hairline) solid var(--color-line);
 }
 
-.ui-loan-card.ui-loan-rows > * + *,
-.ui-loan-card.ui-loan-recent > * + * {
-  border-block-start: var(--stroke-hairline) solid var(--color-line);
+/* FLOW-1055 (V3-Loan): the last payments are a section on the page: a one-line head (the title, and כל התשלומים
+   at its end) 6px over and 8px under its words with a hairline, then the 64px rows. */
+.ui-loan-recent {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-loan-recent-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: calc(var(--space-1) + var(--space-half)) 0 var(--space-2);
+  border-block-end: var(--stroke-hairline) solid var(--color-line);
+}
+
+.ui-loan-recent-head .ui-loan-card-title {
+  line-height: var(--line-board);
 }
 
 .ui-loan-card-pad {
   padding: var(--space-3) calc(var(--space-4) + var(--space-1) / 2) var(--space-1);
-}
-
-.ui-loan-card-label {
-  margin: 0;
-  font-size: var(--type-meta-size);
-  color: var(--color-text-secondary);
 }
 
 .ui-loan-card-text,
@@ -280,13 +354,6 @@ button.ui-loan-paid-part {
 /* A card's note packs its lines closer than the caption's own leading (the board's pitch). */
 .ui-loan-card-note {
   line-height: var(--type-line2-size);
-}
-
-.ui-loan-card-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
 }
 
 .ui-loan-card-title {
@@ -303,23 +370,24 @@ button.ui-loan-paid-part {
 }
 
 /* FLOW-962: every part of a loan bar reads at 3:1 or more. Principal stays the one accent, interest is
-   ink, escrow the outline grey (it was the track tone, 1.44:1). */
+   ink, escrow the muted grey (V3-Loan's third part, FLOW-1055; it was the track tone, 1.44:1). */
 :is(.ui-loan-paid, .ui-loan-summary) :is(.ui-parts-part, .ui-parts-dot)[data-tone="accent-dim"] {
   background: var(--color-loan-interest);
 }
 
 :is(.ui-loan-paid, .ui-loan-summary) :is(.ui-parts-part, .ui-parts-dot)[data-tone="muted"] {
-  background: var(--color-track-outline);
+  background: var(--color-text-muted);
 }
 
-/* A row with a label over its value (the terms card), or a button row with a chevron. */
+/* A row with a label over its value (the terms card), or a button row with a chevron: 64px, 16px in
+   (V3-Loan, FLOW-1055). */
 .ui-loan-term {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  min-block-size: calc(var(--row-height) - var(--space-1));
-  padding: 0 calc(var(--space-4) + var(--space-1) / 2);
+  min-block-size: var(--row-height);
+  padding: 0 var(--space-4);
   border: 0;
   background: transparent;
   color: inherit;
@@ -334,27 +402,26 @@ button.ui-loan-paid-part {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--space-half);
-  padding: var(--space-2) calc(var(--space-4) + var(--space-1) / 2);
+  gap: 0;
+  padding: var(--space-2) var(--space-4);
 }
 
 .ui-loan-term-text {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
   min-inline-size: 0;
 }
 
 .ui-loan-term-label {
   font-size: var(--type-caption-size);
-  line-height: calc(var(--space-4) - 1px);
-  color: var(--color-text-muted);
+  line-height: var(--line-board);
+  color: var(--color-text-secondary);
 }
 
 .ui-loan-term-value {
   font-size: var(--type-body-size);
-  line-height: calc(var(--space-4) + var(--space-1));
+  line-height: var(--line-board);
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
@@ -365,14 +432,14 @@ button.ui-loan-paid-part {
   color: var(--color-text-muted);
 }
 
-/* A row of a payment, or of a part paid this year: text, the amount, and the chevron on the end. */
+/* A last payment's row: the date (17) over its split (13), and the amount (17); 64px, on the page's gutter. */
 .ui-loan-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  min-block-size: calc(var(--row-height) - var(--space-3));
-  padding: 0 calc(var(--space-4) + var(--space-1) / 2);
+  min-block-size: var(--row-height);
+  padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -385,26 +452,28 @@ button.ui-loan-paid-part {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
   min-inline-size: 0;
 }
 
-
 .ui-loan-row-title {
   font-size: var(--type-body-size);
-  line-height: calc(var(--space-4) + var(--space-1));
+  line-height: var(--line-board);
   color: var(--color-text);
 }
 
 .ui-loan-row-note {
+  overflow: hidden;
   font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-  color: var(--color-text-muted);
+  line-height: var(--line-board);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ui-loan-row-amount {
   flex: none;
   font-size: var(--type-body-size);
+  line-height: var(--line-board);
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
@@ -415,11 +484,11 @@ button.ui-loan-paid-part {
 
 .ui-loan-all {
   display: flex;
+  flex: none;
   align-items: center;
-  justify-content: center;
-  min-block-size: calc(var(--row-height) - var(--space-4));
+  min-block-size: var(--touch-min);
   color: var(--color-accent-text);
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
   text-decoration: none;
 }
 
@@ -437,22 +506,36 @@ button.ui-loan-paid-part {
 }
 
 /* All payments: the chip, the lender and the total, the split card, then a section per year. */
+/* FLOW-1055 (V3-LoanPayments): Back, the title (32), its line (14) and the figure (40) 4px apart, the figure
+   6px lower; 16px to the segment; each year 8px closer, its rows on the page's gutter. */
 .ui-loan-payments {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   padding: var(--space-2) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
 }
 
 .ui-loan-payments-head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: calc(var(--space-1) * -0.75);
+  gap: var(--space-1);
+}
+
+.ui-loan-payments > .ui-loan-year {
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+.ui-loan-payments .ui-project-list {
+  padding-inline: 0;
+}
+
+/* The scroll mark under the figure adds no gap. */
+.ui-loan-payments-head > .ui-compact-mark {
+  margin-block-start: calc(var(--space-1) * -1);
 }
 
 .ui-loan-payments-total {
-  margin: 0;
+  margin: calc(var(--space-1) + var(--space-half)) 0 0;
   font-size: var(--type-detail-size);
   line-height: var(--type-detail-line);
   font-weight: var(--type-detail-weight);
@@ -460,8 +543,9 @@ button.ui-loan-paid-part {
 }
 
 .ui-loan-payments-sub {
-  margin: calc(var(--pill-pad-block) * -1) 0 0;
+  margin: 0;
   font-size: var(--type-meta-size);
+  line-height: var(--line-board);
   color: var(--color-text-secondary);
 }
 
@@ -567,7 +651,7 @@ button.ui-loan-paid-part {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  padding-block-end: var(--space-3);
+  padding-block: var(--space-3);
 }
 
 .ui-loan-recent-empty .ui-loan-card-text {
@@ -634,7 +718,8 @@ button.ui-loan-paid-part {
 }
 
 .ui-loan-close-entry .ui-loan-card-note {
-  padding-inline: var(--space-1);
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
 /* A sheet's question over its choices (למה נסגרת?, מתי השינוי חל?), and the line on what follows. */

@@ -10,9 +10,8 @@ import { CompactBar } from "../ui/compact-bar";
 import { formatDisplay } from "../ui/date-math";
 import { FocusTitle } from "../ui/focus-title";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BackIcon, CheckIcon, ChevronIcon, MoreIcon } from "../ui/icons";
+import { BackIcon, CheckIcon, ChevronIcon, MoreIcon } from "../ui/icons";
 import { useScrolledPast } from "../ui/screen-header";
-import { StatusMark } from "../ui/status-mark";
 import { TopBand } from "../ui/top-band";
 import { LOAN_CLOSED_NOTE, loanClosedLine, type LoanCloseReason } from "./loan-copy";
 import { PartsBar } from "../ui/parts-bar";
@@ -21,7 +20,7 @@ import type { LoanCategory, LoanDetail, LoanPayment, LoanRateRow } from "./loan-
 import { formatRatePpm, rateInForce } from "./loan-detail-data";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import type { LoanOutlook } from "./loan-outlook";
-import { loanPaidCard, loanPaidParts, PAID_PARTS, paidMoney, type PaidPeriod } from "./loans-paid";
+import { loanPaidCard, loanPaidParts, PAID_PARTS, type PaidPeriod } from "./loans-paid";
 import {
   balanceProgress,
   balanceProgressText,
@@ -65,10 +64,11 @@ export function loanBandRows(loan: LoanDetail, outlook: LoanOutlook | null, paym
 
 /**
  * FLOW-1046 (V3-Loan, the Overview pattern): the loan's violet band. Back, the name and its line, the balance
- * with the principal's progress, and the kind's two rows; ⋯ opens the close sheet. Once the band has scrolled
- * under the top, the band bar slides in with the name and the balance.
+ * with the principal's progress, the kind's two rows and (FLOW-1055, as the board draws it) the next payment's
+ * card; ⋯ opens the close sheet. Once the band has scrolled under the top, the band bar slides in with the name
+ * and the balance.
  */
-export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended }: {
+export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended, next }: {
   loan: LoanDetail;
   projectName: string | null;
   outlook: LoanOutlook | null;
@@ -78,6 +78,8 @@ export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended
   onMore: (() => void) | null;
   /** FLOW-138: a paid-off loan with nothing left shows no balance, only how it ended (the closed card). */
   ended: boolean;
+  /** FLOW-1055: the next payment's card, last in the band (LoanNextCard). */
+  next?: ReactNode;
 }) {
   const goBack = useGoBack();
   const [mark, setMark] = useState<HTMLElement | null>(null);
@@ -96,25 +98,30 @@ export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended
         trailing={onMore == null ? null : more}
         hero={(
           <div className="ui-loan-band">
-            <FocusTitle className="t-title">{loan.name}</FocusTitle>
-            <p className="ui-loan-band-sub t-line2">{loanSubtitle(loan, projectName)}</p>
+            <div className="ui-loan-band-name">
+              <FocusTitle className="t-sheet">{loan.name}</FocusTitle>
+              <p className="ui-loan-band-sub">{loanSubtitle(loan, projectName)}</p>
+            </div>
             {ended ? null : <div className="ui-band-fade ui-loan-band-figures">
-              <p className="ui-band-label t-line2">{loan.kind === "demand" ? "יתרת קרן" : "יתרה היום"}</p>
-              <p className="ui-loan-band-figure"><Amount agorot={loan.balanceMinor} currency={loan.currency} size="hero" /></p>
-              {outlook == null ? null : (
-                <>
-                  <PartsBar parts={[{ key: "paid", value: paidMinor, tone: "band-past" }]} total={loan.principalMinor} height={8} radius="block" label="נפרע מהקרן" />
+              <div className="ui-loan-band-balance">
+                <p className="ui-loan-band-label">{loan.kind === "demand" ? "יתרת קרן" : "יתרה היום"}</p>
+                <p className="ui-loan-band-figure"><Amount agorot={loan.balanceMinor} currency={loan.currency} size="hero" /></p>
+              </div>
+              {outlook == null && !(loan.kind === "demand" && loan.status === "open") ? null : (
+                <div className="ui-loans-band-paid">
+                  <PartsBar parts={[{ key: "paid", value: paidMinor, tone: "band-past" }]} total={loan.principalMinor} height={8} label="נפרע מהקרן" />
                   <p className="ui-loan-band-caption">{balanceProgressText(loan, outlook)}</p>
-                </>
+                </div>
               )}
               <div className="ui-loans-band-rows">
                 {rows.map((row) => (
                   <p key={row.key} className="ui-loans-band-row">
-                    <span className="ui-loans-band-row-label">{row.label}</span>
+                    <span className="ui-loans-band-row-label" data-clip-ok="">{row.label}</span>
                     <bdi dir="ltr">{row.value}</bdi>
                   </p>
                 ))}
               </div>
+              {next}
             </div>}
             <span ref={setMark} className="ui-compact-mark" aria-hidden="true" />
           </div>
@@ -160,13 +167,11 @@ export function LoanCheckCard({ loanId, count, editHref, onChecked }: {
   return (
     <Card as="section" className="ui-loan-card ui-loan-check" aria-label="ממתין לבדיקה">
       <p className="ui-loan-check-title">
-        <AlertIcon size={20} />
         {count === 1 ? "תשלום אחד ממתין לבדיקה" : `${String(count)} תשלומים ממתינים לבדיקה`}
       </p>
       <p className="ui-loan-card-text">הסכום, הריבית והפרויקט מולאו לפי התשלומים מהבנק. בדקו אותם לפני שהם נכנסים לדוחות.</p>
       <div className="ui-loan-check-actions">
         <Button
-          variant="secondary"
           onClick={() => {
             hideRow(storageKey, row.id, row.dismissKey);
             setChecked(true);
@@ -236,21 +241,16 @@ export function LoanNextCard({ loan, outlook, to }: { loan: LoanDetail; outlook:
     .map((part) => `${LOAN_PART_SHORT_LABEL[part.key]} ${loanMoney(loan, part.value)}`)
     .join(" · ");
   return (
-    <Card as="section" className="ui-loan-card ui-loan-next-card" aria-label="התשלום הבא">
+    <section className="ui-loan-next-card" aria-label="התשלום הבא">
       <Link className="ui-loan-next-link m-press" to={to}>
         <span className="ui-loan-next-text">
-          <span className="ui-loan-card-head">
-            <span className="ui-loan-next-title">
-              <StatusMark kind="due" />
-              התשלום הבא · {dayMonth(next.dueDate)}
-            </span>
-            <bdi className="ui-loan-next-amount" dir="ltr">{loanMoney(loan, next.paymentMinor)}</bdi>
-          </span>
-          <span className="ui-loan-card-note">{line}</span>
+          <span className="ui-loan-next-title" data-clip-ok="">התשלום הבא · {dayMonth(next.dueDate)}</span>
+          <span className="ui-loan-next-line" data-clip-ok="">{line}</span>
         </span>
-        <span className="ui-loan-term-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
+        <bdi className="ui-loan-next-amount" dir="ltr">{loanMoney(loan, next.paymentMinor)}</bdi>
+        <ChevronIcon size={18} />
       </Link>
-    </Card>
+    </section>
   );
 }
 
@@ -283,7 +283,11 @@ export function LoanPaidCard({ loan, payments, categories, today, onOpenPart }: 
   return (
     <Card as="section" className="ui-loan-card ui-loan-paid" aria-label="שולם">
       <div className="ui-loan-paid-head">
-        <p className="ui-loan-card-label">{card.label}</p>
+        {/* FLOW-1055 (V3-Loan): the card's title is שולם; the period's start stays for a screen reader. */}
+        <h2 className="ui-loan-paid-title">
+          <span aria-hidden="true">שולם</span>
+          <span className="sr-only">{card.label}</span>
+        </h2>
         <SegmentedControl<PaidPeriod>
           label="תקופה"
           showLabel={false}
@@ -292,9 +296,9 @@ export function LoanPaidCard({ loan, payments, categories, today, onOpenPart }: 
           options={[{ value: "all", label: "מההתחלה" }, { value: "year", label: today.slice(0, 4), numeric: true }]}
         />
       </div>
-      <bdi className="ui-loan-paid-total" dir="ltr">{paidMoney(card.totalMinor, loan.currency)}</bdi>
+      <bdi className="ui-loan-paid-total" dir="ltr">{wholeMoney(card.totalMinor, loan.currency)}</bdi>
       {shown.length === 0 ? null : (
-        <PartsBar parts={shown.map(({ part, tone }) => ({ key: part, value: card.totals[part], tone }))} height={8} gap={2} radius="block" label={card.label} />
+        <PartsBar parts={shown.map(({ part, tone }) => ({ key: part, value: card.totals[part], tone }))} height={8} gap={2} label={card.label} />
       )}
       {shown.length === 0 ? null : (
         <ul className="ui-loan-paid-parts">
@@ -306,7 +310,7 @@ export function LoanPaidCard({ loan, payments, categories, today, onOpenPart }: 
                   <span className="ui-loan-paid-name">{LOAN_PART_BOARD_LABEL[part]}</span>{" "}
                   <span className="ui-loan-paid-note">{paidPartNote(loan, categories, part)}</span>
                 </span>
-                <bdi className="ui-loan-paid-amount" dir="ltr">{paidMoney(card.totals[part], loan.currency)}</bdi>
+                <bdi className="ui-loan-paid-amount" dir="ltr">{wholeMoney(card.totals[part], loan.currency)}</bdi>
               </>
             );
             return (
@@ -386,14 +390,12 @@ export function LoanRateChangesCard({ rates, onOpen }: { rates: readonly LoanRat
 }
 
 /** One payment as a row that opens its transaction: date (with the year when it is not this year), split, amount. */
-export function PaymentRowLink({ row, currency, search, year, withSplit = true }: {
+export function PaymentRowLink({ row, currency, search, year }: {
   row: PaymentRow;
   currency: LoanCurrency;
   search: string;
   /** The page's year: a date in another year shows its year too. */
   year: string;
-  /** The split under the date: the all-payments page has it, the loan page's last payments do not (the board's). */
-  withSplit?: boolean;
 }) {
   const showYear = row.dateIso.slice(0, 4) !== year;
   const date = showYear ? `${row.date}/${row.dateIso.slice(0, 4)}` : row.date;
@@ -401,17 +403,17 @@ export function PaymentRowLink({ row, currency, search, year, withSplit = true }
     <Link className={`ui-loan-row${row.needsReview ? " ui-loan-row-review" : ""}`} to={`/transactions/${row.transactionId}${search}`}>
       <span className="ui-loan-row-text">
         <bdi className="ui-loan-row-title" dir="ltr">{date}</bdi>
-        {row.needsReview || withSplit ? (
-          <span className="ui-loan-row-note">{row.needsReview ? "ממתין לבדיקה" : paymentSplitText(row, currency)}</span>
-        ) : null}
+        <span className="ui-loan-row-note" data-clip-ok="">{row.needsReview ? "ממתין לבדיקה" : paymentSplitText(row, currency)}</span>
       </span>
       <bdi className="ui-loan-row-amount" dir="ltr">{formatLoanMoney(row.totalMinor, currency)}</bdi>
-      <span className="ui-loan-term-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
     </Link>
   );
 }
 
-/** The last three payments, and the link to all of them. */
+/**
+ * The last three payments under a one-line head with the link to all of them (V3-Loan, FLOW-1055): a section on
+ * the page, not a card, its rows 64px with the split under the date.
+ */
 export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
   loan: LoanDetail;
   payments: readonly LoanPayment[];
@@ -421,11 +423,14 @@ export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
 }) {
   const rows = payments.slice(0, 3);
   return (
-    <Card className="ui-loan-card ui-loan-recent">
-      <h2 className="ui-loan-card-title ui-loan-card-pad">{payments.length >= 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
+    <section className="ui-loan-recent" aria-labelledby="loan-recent-title">
+      <div className="ui-loan-recent-head">
+        <h2 id="loan-recent-title" className="ui-loan-card-title">{payments.length >= 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
+        {payments.length === 0 ? null : <Link className="ui-loan-all" to={`${loanPath}/payments${search}`}>כל התשלומים</Link>}
+      </div>
       {payments.length === 0 ? (
         // FLOW-962 (board Loan new): what will appear here, and the way to the bank.
-        <div className="ui-loan-card-pad ui-loan-recent-empty">
+        <div className="ui-loan-recent-empty">
           <p className="ui-loan-card-text">עוד אין תשלומים. כשתשלום מהבנק ישויך ל־{loan.name}, הוא יופיע כאן והחוב יתעדכן.</p>
           <Link className="ui-loan-recent-bank" to={`/settings/connections${search}`}>איך מחברים את חשבון הבנק</Link>
         </div>
@@ -438,12 +443,10 @@ export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
               currency={loan.currency}
               search={search}
               year={year}
-              withSplit={false}
             />
           ))}
-          <Link className="ui-loan-all" to={`${loanPath}/payments${search}`}>כל התשלומים</Link>
         </>
       )}
-    </Card>
+    </section>
   );
 }

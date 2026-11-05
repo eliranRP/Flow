@@ -26,6 +26,12 @@ describe("loanListSummary", () => {
     expect(summary.totalBalanceMinor).toBe(42_528_904n);
   });
 
+  it("sums the open loans' principal at the start, for the band's paid line", () => {
+    const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_PAID_OFF), entry(SAMPLE_DEMAND)], USD);
+    expect(summary.principalMinor).toBe(SAMPLE_AMORTIZING.principalMinor + SAMPLE_INTEREST_ONLY.principalMinor + SAMPLE_DEMAND.principalMinor);
+    expect(summary.principalMinor > summary.totalBalanceMinor).toBe(true);
+  });
+
   it("sums each open loan's next payment part by part, as the monthly line", () => {
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_BALLOON)], USD);
     expect(summary.monthlyParts).toEqual({ principal: 406_915n, interest: 327_742n, escrow: 36_300n });

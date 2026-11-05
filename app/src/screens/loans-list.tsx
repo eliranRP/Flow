@@ -13,6 +13,7 @@ import { GroupHead } from "../ui/group-head";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CalendarIcon, ChevronIcon, PercentIcon, PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
+import { PartsBar } from "../ui/parts-bar";
 import { useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
 import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
@@ -24,6 +25,7 @@ import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import { dayMonth, monthYear, wholeMoney } from "./loan-detail-view-data";
 import { groupLoans, groupLoansByKind, isClosedLoan, type LoanKindGroup, type LoanListRow } from "./loan-list";
 import { LOANS_EMPTY_OWNER, LOANS_EMPTY_TITLE, LOANS_EMPTY_VIEWER, LOANS_ERROR_TITLE, type LoansHostCtx } from "./loans-host";
+import { percentOf } from "./loans-paid";
 
 /** FLOW-1046: the band bar's height (6 + 52 + 6), the docking hook's `bar`. */
 const BAND_BAR = 64;
@@ -94,7 +96,14 @@ function groupSummary(group: LoanKindGroup): string {
 }
 
 /** The band's figures: the open loans' balance in the company's currency, the next payment and the month's payments. */
-type BandFigures = { count: number; leftMinor: bigint; monthlyMinor: bigint | null; next: { name: string; dueDate: string; amountMinor: bigint } | null };
+type BandFigures = {
+  count: number;
+  leftMinor: bigint;
+  /** The open loans' principal at the start; null for a sample without a summary. */
+  principalMinor: bigint | null;
+  monthlyMinor: bigint | null;
+  next: { name: string; dueDate: string; amountMinor: bigint } | null;
+};
 
 function bandFigures(ctx: LoansHostCtx, open: readonly LoanListRow[], currency: LoanCurrency): BandFigures {
   if (ctx.summary != null) {
@@ -102,6 +111,7 @@ function bandFigures(ctx: LoansHostCtx, open: readonly LoanListRow[], currency: 
     return {
       count: ctx.summary.openCount,
       leftMinor: ctx.summary.totalBalanceMinor,
+      principalMinor: ctx.summary.principalMinor,
       monthlyMinor: ctx.summary.monthlyMinor,
       next: next == null ? null : { name: next.lenderName, dueDate: next.dueDate, amountMinor: next.amountMinor },
     };
@@ -112,9 +122,29 @@ function bandFigures(ctx: LoansHostCtx, open: readonly LoanListRow[], currency: 
   return {
     count: mine.length,
     leftMinor: mine.reduce((sum, row) => sum + row.balanceMinor, 0n),
+    principalMinor: null,
     monthlyMinor: null,
     next: first?.next == null ? null : { name: first.name, dueDate: first.next.dueDate, amountMinor: first.next.amountMinor },
   };
+}
+
+/**
+ * FLOW-1055 (V3-Loans): the band's paid line under the figure, as the loan page draws it: the principal's progress
+ * (8px) and "נפרע 12% · $68,591 מתוך $590,000".
+ */
+export function BandPaid({ principalMinor, leftMinor, currency }: { principalMinor: bigint; leftMinor: bigint; currency: string }) {
+  const paid = principalMinor > leftMinor ? principalMinor - leftMinor : 0n;
+  return (
+    <div className="ui-loans-band-paid">
+      <PartsBar parts={[{ key: "paid", value: paid, tone: "band-past" }]} total={principalMinor} height={8} label="נפרע מהקרן" />
+      <p className="ui-loan-band-caption">
+        {`נפרע ${String(percentOf(paid, principalMinor))}% · `}
+        <bdi dir="ltr">{money(paid, currency)}</bdi>
+        {" מתוך "}
+        <bdi dir="ltr">{money(principalMinor, currency)}</bdi>
+      </p>
+    </div>
+  );
 }
 
 function LoanRow({ row, onOpen, today }: { row: LoanListRow; onOpen: (id: string) => void; today: string }) {
@@ -126,7 +156,7 @@ function LoanRow({ row, onOpen, today }: { row: LoanListRow; onOpen: (id: string
       variant="project"
       layout="flat"
       title={row.name}
-      hint={hint}
+      hintParts={hint.split(" · ")}
       tone={row.flaggedParts > 0 && !closed ? "warning" : undefined}
       icon={closed ? <StatusMark kind="paid" /> : row.next == null ? undefined : <StatusMark kind={late ? "late" : "due"} />}
       agorot={row.balanceMinor}
@@ -181,7 +211,7 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
     <div className="ui-loans-screen">
       <TopBand
         wordmark={false}
-        leading={<h1 className="ui-loans-band-title t-name">הלוואות</h1>}
+        leading={<h1 className="ui-loans-band-title t-sheet">הלוואות</h1>}
         trailing={add}
         hero={ctx.loading ? (
           <div className="ui-loans-band-skel" aria-hidden="true">
@@ -199,16 +229,19 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
                 <Amount agorot={figures.leftMinor} currency={currency} size="hero" />
               </span>
             </Link>
+            {figures.principalMinor == null || figures.principalMinor <= 0n ? null : (
+              <BandPaid principalMinor={figures.principalMinor} leftMinor={figures.leftMinor} currency={currency} />
+            )}
             <div className="ui-loans-band-rows">
               {figures.next == null ? null : (
                 <p className="ui-loans-band-row">
-                  <span className="ui-loans-band-row-label">{`התשלום הבא · ${figures.next.name} · ${dayMonth(figures.next.dueDate)}`}</span>
+                  <span className="ui-loans-band-row-label" data-clip-ok="">{`התשלום הבא · ${figures.next.name} · ${dayMonth(figures.next.dueDate)}`}</span>
                   <bdi dir="ltr">{money(figures.next.amountMinor, currency)}</bdi>
                 </p>
               )}
               {figures.monthlyMinor == null ? null : (
                 <p className="ui-loans-band-row">
-                  <span className="ui-loans-band-row-label">תשלומים בחודש</span>
+                  <span className="ui-loans-band-row-label" data-clip-ok="">תשלומים בחודש</span>
                   <bdi dir="ltr">{money(figures.monthlyMinor, currency)}</bdi>
                 </p>
               )}

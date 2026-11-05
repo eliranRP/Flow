@@ -182,7 +182,20 @@ test("all payments: years newest first with sticky heads that push each other ou
   // the bar at --month-sticky-top (the bar, its dock and the 1px hairline).
   // scrollIntoView stops the head just above the bar's scroll padding; scroll on into 2025's rows so it pins.
   await head2025.evaluate((node) => { node.scrollIntoView({ block: "start" }); window.scrollBy(0, 120); });
-  await expect(page.locator(".ui-compact-bar")).toBeVisible();
+  // FLOW-1055: the bar slides in (m-bar-in) and its dock may still be opening right after the scroll; on a loaded
+  // runner the heads were measured against a bar still moving. Wait for the shown state, for every animation and
+  // transition in the bar to finish, and for its box to hold still across two animation frames.
+  const barNode = page.locator(".ui-compact-bar.m-bar-in");
+  await expect(barNode).toBeVisible();
+  await expect.poll(() => barNode.evaluate(async (node) => {
+    await Promise.all(node.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => undefined)));
+    const frame = () => new Promise<void>((done) => { requestAnimationFrame(() => { done(); }); });
+    const before = node.getBoundingClientRect();
+    await frame();
+    await frame();
+    const after = node.getBoundingClientRect();
+    return before.top === after.top && before.bottom === after.bottom;
+  })).toBe(true);
   const stickyTop = () => head2025.evaluate((node) => parseFloat(getComputedStyle(node).top));
   // The bar reports its height a frame after it shows (html[data-compact-bar]); until then the offset reads 0 and
   // a head at the very top would match it. Wait for the real offset, then for the head to sit on it.
@@ -191,7 +204,7 @@ test("all payments: years newest first with sticky heads that push each other ou
     const box = await head2025.boundingBox();
     return box == null ? Number.NaN : Math.abs(box.y - await stickyTop());
   }).toBeLessThanOrEqual(1);
-  const bar = await page.locator(".ui-compact-bar").boundingBox();
+  const bar = await barNode.boundingBox();
   const sticky = await head2025.boundingBox();
   const pushed = await head2026.boundingBox();
   expect(bar).not.toBeNull();
