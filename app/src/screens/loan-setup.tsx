@@ -54,32 +54,21 @@ export type LoanSetupInitial = {
   kindMonths?: string;
 };
 
-/** FLOW-106 §3.3: the סוג field. The sheet owns the choice and the picker view, like פרויקט. */
+/**
+ * FLOW-106 §3.3, FLOW-1046 (V3-NewLoan): the סוג field. The sheet owns the choice; the form draws it first, as a
+ * segment, and the fields under it follow the kind. A balloon loan is set on its page (the kind sheet).
+ */
 export type LoanKindField = {
   value: LoanKind;
-  buttonRef?: Ref<HTMLButtonElement>;
-  onOpen: () => void;
+  onChange: (kind: LoanKind) => void;
 };
 
-const LOAN_KINDS: readonly LoanKind[] = ["amortizing", "interest_only", "balloon", "demand"];
-
-/** The סוג view inside the new-loan sheet: one row per kind, each with its one-line description. */
-export function LoanKindPicker({ selected, onSelect }: { selected: LoanKind; onSelect: (kind: LoanKind) => void }) {
-  return (
-    <div role="radiogroup" aria-label="סוג ההלוואה" className="ui-choice-sheet ui-loan-kinds">
-      {LOAN_KINDS.map((option) => (
-        <ListRow control="radio"
-          key={option}
-          value={option}
-          title={LOAN_KIND_LABEL[option]}
-          description={LOAN_KIND_DESCRIPTION[option]}
-          selected={selected === option}
-          onSelect={() => { onSelect(option); }}
-        />
-      ))}
-    </div>
-  );
-}
+/** The kinds the new-loan sheet offers, in the board's order. */
+const NEW_LOAN_KINDS: ReadonlyArray<{ value: LoanKind; label: string }> = [
+  { value: "amortizing", label: LOAN_KIND_LABEL.amortizing },
+  { value: "interest_only", label: LOAN_KIND_LABEL.interest_only },
+  { value: "demand", label: LOAN_KIND_LABEL.demand },
+];
 
 type ReadyPreview = Extract<LoanPreview, { status: "ready" }>;
 
@@ -294,7 +283,19 @@ export function LoanSetupForm({
 
   return (
     <form ref={formRef} id={formId} className="ui-stack ui-loan-form" onSubmit={submit} onKeyDown={onFormEnter}>
-      {sheetMode ? <LoanSectionTitle>מלווה ופרויקט</LoanSectionTitle> : null}
+      {kindField ? (
+        <div className="ui-loan-kind-first">
+          <SegmentedControl<LoanKind>
+            label="סוג ההלוואה"
+            value={kind}
+            options={[...NEW_LOAN_KINDS]}
+            disabled={busy}
+            onChange={kindField.onChange}
+          />
+          <p className="ui-loan-kind-note">{LOAN_KIND_DESCRIPTION[kind]}</p>
+        </div>
+      ) : null}
+      {sheetMode ? <LoanSectionTitle className="ui-loan-section-gap">מלווה ופרויקט</LoanSectionTitle> : null}
       <TextField
         label="מלווה"
         value={name}
@@ -317,12 +318,7 @@ export function LoanSetupForm({
           onOpen={project.onOpen}
         />
       ) : null}
-      {kindField ? (
-        <>
-          <LoanSectionTitle className="ui-loan-section-gap">תנאים</LoanSectionTitle>
-          <LoanPickRow label="סוג" value={LOAN_KIND_LABEL[kind]} buttonRef={kindField.buttonRef} disabled={busy} onOpen={kindField.onOpen} />
-        </>
-      ) : null}
+      {sheetMode ? <LoanSectionTitle className="ui-loan-section-gap">תנאים</LoanSectionTitle> : null}
       {/* FLOW-115: the currency belongs to the amount. In the sheet it sits inside the field; onboarding keeps it under. */}
       {sheetMode ? (
         <MoneyField

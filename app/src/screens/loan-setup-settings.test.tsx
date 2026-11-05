@@ -61,7 +61,7 @@ vi.mock("../lib/supabase", () => ({
             }),
             select: () => ({
               eq: () => ({
-                order: () => Promise.resolve({ data: db.loans.map((loan) => ({ kind: "amortizing", status: "open", closed_on: null, ...loan })), error: null }),
+                order: () => Promise.resolve({ data: db.loans.map((loan) => ({ kind: "amortizing", status: "open", closed_on: null, principal_minor: 0, escrow_minor: 0, payment_minor: null, annual_rate_ppm: null, term_months: null, start_date: null, ...loan })), error: null }),
               }),
             }),
             update: (row: Record<string, unknown>) => ({
@@ -142,7 +142,7 @@ function renderSection(ui: ReactNode) {
 
 /** The empty list's primary action, or the header link once a loan is listed. */
 function openLoan() {
-  fireEvent.click(screen.queryByRole("button", { name: "הוספת הלוואה" }) ?? screen.getByRole("button", { name: "+ הלוואה חדשה" }));
+  fireEvent.click(screen.queryByRole("button", { name: "הוספת הלוואה" }) ?? screen.getByRole("button", { name: "הלוואה חדשה" }));
 }
 
 async function expectReopenedBlank(inserts: number) {
@@ -285,11 +285,10 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "סוג פריסה רגילה" }));
-    expect(screen.getByRole("heading", { name: "סוג ההלוואה" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: /לפי דרישה/ }));
-    expect(screen.getByRole("heading", { name: "הלוואה חדשה" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "סוג לפי דרישה" })).toBeInTheDocument();
+    // FLOW-1046: the kind is the form's first field, a segment; the fields under it follow it.
+    expect(screen.getByRole("radio", { name: "פריסה רגילה" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "לפי דרישה" }));
+    expect(screen.getByRole("radio", { name: "לפי דרישה" })).toHaveAttribute("aria-checked", "true");
     expect(screen.queryByLabelText("תקופה בחודשים")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("מסים וביטוח לחודש (escrow)")).not.toBeInTheDocument();
     expect(screen.getByText("לפי דרישה: בלי לוח תשלומים קבוע")).toBeInTheDocument();
@@ -309,8 +308,7 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "סוג פריסה רגילה" }));
-    fireEvent.click(screen.getByRole("radio", { name: /ריבית בלבד/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "ריבית בלבד" }));
     const months = screen.getByLabelText("חודשי ריבית בלבד");
     expect(months).toHaveValue("12");
     fireEvent.change(months, { target: { value: "24" } });
@@ -577,7 +575,7 @@ describe("FLOW-119 loan project", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "+ הלוואה חדשה" }));
+    fireEvent.click(screen.getByRole("button", { name: "הלוואה חדשה" }));
     await waitFor(() => {
       expect(router.state.location.state).toMatchObject({ flowLayer: "loan-new" });
     });

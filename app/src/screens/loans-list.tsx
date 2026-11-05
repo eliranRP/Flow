@@ -1,164 +1,281 @@
-import { useEffect, useId, useState } from "react";
-import { ChevronIcon, PlusIcon, PercentIcon } from "../ui/icons";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Amount } from "../ui/amount";
+import { AttentionCards } from "../ui/attention-cards";
 import { BandOfflineLine, PageLoadFailed } from "../ui/band-states";
-import { CompactBar } from "../ui/compact-bar";
-import { EmptyState } from "../ui/empty-state";
-import { IconButton } from "../ui/icon-button";
+import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
-import { DelayedSkeleton } from "../ui/skeleton";
+import { CompactBar } from "../ui/compact-bar";
+import { israelToday } from "../ui/date-math";
+import { DockSlot, useDockedFilter } from "../ui/dock-filter";
+import { EmptyState } from "../ui/empty-state";
+import { GroupHead } from "../ui/group-head";
+import { IconButton } from "../ui/icon-button";
+import { AlertIcon, CalendarIcon, ChevronIcon, PercentIcon, PlusIcon } from "../ui/icons";
+import { List, ListRow } from "../ui/list-row";
+import { useScrolledPast } from "../ui/screen-header";
+import { SegmentedControl } from "../ui/segmented-control";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { LoansSkeleton } from "../ui/screen-skeletons";
-import { cx } from "../ui/cx";
-import { LOAN_KIND_LIST_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
-import { formatRatePpm } from "./loan-detail-data";
-import { formatLoanMoney } from "./loan-form";
-import { groupLoans, LoanBalance, LOANS_CLOSED_UNDER_EMPTY, type LoanListRow } from "./loan-list";
-import { LoanSummaryCard } from "./loan-summary-card";
+import { StatusMark } from "../ui/status-mark";
+import { TopBand } from "../ui/top-band";
+import { LOAN_STATUS_LABEL } from "./loan-copy";
+import { formatLoanMoney, type LoanCurrency } from "./loan-form";
+import { dayMonth, monthYear, wholeMoney } from "./loan-detail-view-data";
+import { groupLoans, groupLoansByKind, isClosedLoan, type LoanKindGroup, type LoanListRow } from "./loan-list";
 import { LOANS_EMPTY_OWNER, LOANS_EMPTY_TITLE, LOANS_EMPTY_VIEWER, LOANS_ERROR_TITLE, type LoansHostCtx } from "./loans-host";
 
-/** The page scrolls past this many pixels: the compact bar slides down (the forecast's rule). */
-const COMPACT_AFTER = 90;
+/** FLOW-1046: the band bar's height (6 + 52 + 6), the docking hook's `bar`. */
+const BAND_BAR = 64;
+
+/** A payment due within this many days shows as a דורש טיפול card. */
+const SOON_DAYS = 10;
+
+export type LoansFilter = "open" | "closed";
+
+function money(minor: bigint, currency: string): string {
+  return wholeMoney(minor, currency === "USD" ? "USD" : "ILS");
+}
+
+/** Whole days from `today` to `iso` (both yyyy-mm-dd). */
+function daysUntil(iso: string, today: string): number {
+  return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+}
 
 /**
- * One row's meta line, in the board's order: project · rate · kind. A closed loan says how it
- * ended and when: project · kind · נפרעה MM/YYYY. A loan waiting for a check leads with ממתין לבדיקה.
+ * FLOW-1046: one row's line under its name. Open: ממתין לבדיקה first when payments wait, then the next payment
+ * ("הבא 20/11 · $5,240", or בלי תשלום קבוע for a loan with no schedule), then the project. Closed: how and when
+ * it ended ("נפרעה 08/2026"), then the project. The kind is the group's head, so the row leaves it out.
  */
-export function loanRowMeta(row: LoanListRow): string {
-  const project = row.projectName ?? "ללא פרויקט";
-  const kind = row.kind == null ? LOAN_KIND_LIST_LABEL.amortizing : LOAN_KIND_LIST_LABEL[row.kind];
-  const closed = row.status != null && row.status !== "open";
-  const parts = closed
-    ? [project, kind, closedWhen(row)]
-    : [project, row.ratePpm == null ? null : formatRatePpm(row.ratePpm), kind];
-  const shown = parts.filter((part): part is string => part != null);
-  return row.flaggedParts > 0 && !closed ? ["ממתין לבדיקה", ...shown].join(" · ") : shown.join(" · ");
+export function loanRowHint(row: LoanListRow): string {
+  const project = row.projectName ?? "בלי פרויקט";
+  if (isClosedLoan(row)) {
+    const label = row.status == null ? "" : LOAN_STATUS_LABEL[row.status];
+    const when = row.closedOn == null || row.closedOn === "" ? label : `${label} ${monthYear(row.closedOn)}`;
+    return [when, project].join(" · ");
+  }
+  const next = row.next == null ? "בלי תשלום קבוע" : `הבא ${dayMonth(row.next.dueDate)} · ${money(row.next.amountMinor, row.currency)}`;
+  return [row.flaggedParts > 0 ? "ממתין לבדיקה" : null, next, project].filter((part): part is string => part != null).join(" · ");
 }
 
-/** נפרעה 08/2026: the status word and the month it ended. */
-function closedWhen(row: LoanListRow): string {
-  const label = row.status == null ? "" : LOAN_STATUS_LABEL[row.status];
-  if (row.closedOn == null || row.closedOn === "") return label;
-  return `${label} ${row.closedOn.slice(5, 7)}/${row.closedOn.slice(0, 4)}`;
+/**
+ * FLOW-1046: the list's דורש טיפול cards. A loan whose payments wait for a check (the loan Jev filled from the
+ * bank, or a payment it split), then a payment due within SOON_DAYS. Each is keyed by what it counts, so a
+ * hidden card comes back when the count or the date changes.
+ */
+export function loansAttention(rows: readonly LoanListRow[], today: string, loanHref: (id: string) => string): BannerRow[] {
+  const open = groupLoans(rows).open;
+  const checks: BannerRow[] = open.filter((row) => row.flaggedParts > 0).map((row) => ({
+    id: `check:${row.id}`,
+    to: loanHref(row.id),
+    title: `${row.flaggedParts === 1 ? "תשלום אחד ממתין" : `${String(row.flaggedParts)} תשלומים ממתינים`} לבדיקה · ${row.name}`,
+    icon: <AlertIcon size={20} />,
+    dismissKey: `check:${String(row.flaggedParts)}`,
+  }));
+  const soon: BannerRow[] = open.flatMap((row) => {
+    if (row.next == null) return [];
+    const days = daysUntil(row.next.dueDate, today);
+    if (days < 0 || days > SOON_DAYS) return [];
+    const when = days === 0 ? "היום" : days === 1 ? "מחר" : `בעוד ${String(days)} ימים`;
+    return [{
+      id: `soon:${row.id}`,
+      to: loanHref(row.id),
+      title: `תשלום ${row.name} ${when} · ${money(row.next.amountMinor, row.currency)}`,
+      icon: <CalendarIcon size={20} />,
+      dismissKey: `soon:${row.next.dueDate}`,
+    }];
+  });
+  return [...checks, ...soon];
 }
 
-/** FLOW-962: a closed loan reads at full contrast, with a נסגרה tag and a chevron to its page. */
-function LoanRow({ row, closed, onOpen }: { row: LoanListRow; closed: boolean; onOpen: (id: string) => void }) {
-  const meta = loanRowMeta(row);
+/** A group head's summary: the count, and the balances (one per currency). */
+function groupSummary(group: LoanKindGroup): string {
+  return [String(group.rows.length), ...group.totals.map((total) => money(total.minor, total.currency))].join(" · ");
+}
+
+/** The band's figures: the open loans' balance in the company's currency, the next payment and the month's payments. */
+type BandFigures = { count: number; leftMinor: bigint; monthlyMinor: bigint | null; next: { name: string; dueDate: string; amountMinor: bigint } | null };
+
+function bandFigures(ctx: LoansHostCtx, open: readonly LoanListRow[], currency: LoanCurrency): BandFigures {
+  if (ctx.summary != null) {
+    const next = ctx.summary.next;
+    return {
+      count: ctx.summary.openCount,
+      leftMinor: ctx.summary.totalBalanceMinor,
+      monthlyMinor: ctx.summary.monthlyMinor,
+      next: next == null ? null : { name: next.lenderName, dueDate: next.dueDate, amountMinor: next.amountMinor },
+    };
+  }
+  // A sample without a summary: the rows' own balances and next payments.
+  const mine = open.filter((row) => row.currency === currency);
+  const first = mine.filter((row) => row.next != null).sort((a, b) => ((a.next?.dueDate ?? "") < (b.next?.dueDate ?? "") ? -1 : 1))[0];
+  return {
+    count: mine.length,
+    leftMinor: mine.reduce((sum, row) => sum + row.balanceMinor, 0n),
+    monthlyMinor: null,
+    next: first?.next == null ? null : { name: first.name, dueDate: first.next.dueDate, amountMinor: first.next.amountMinor },
+  };
+}
+
+function LoanRow({ row, onOpen, today }: { row: LoanListRow; onOpen: (id: string) => void; today: string }) {
+  const hint = loanRowHint(row);
+  const closed = isClosedLoan(row);
+  const late = row.next != null && row.next.dueDate < today;
   return (
-    <li className="ui-loans-li">
-      <button
-        type="button"
-        className="ui-loans-row"
-        onClick={() => { onOpen(row.id); }}
-        aria-label={[row.name, formatLoanMoney(row.balanceMinor, row.currency === "USD" ? "USD" : "ILS"), meta].join(", ")}
-      >
-        <span className="ui-loans-initial" aria-hidden="true">{row.name.trim().slice(0, 1)}</span>
-        <span className="ui-loans-text">
-          <span className="ui-loans-name-line">
-            <span className="ui-loans-name">{row.name}</span>
-            {closed ? <span className="ui-loans-tag" aria-hidden="true">{LOAN_STATUS_LABEL.closed}</span> : null}
-          </span>
-          <span className={cx("ui-loans-meta", row.flaggedParts > 0 && !closed && "ui-loans-meta-warn")}>{meta}</span>
-        </span>
-        <LoanBalance className="ui-loans-amount" minor={row.balanceMinor} currency={row.currency} />
-        {closed ? <span className="ui-loans-chevron" aria-hidden="true"><ChevronIcon size={18} /></span> : null}
-      </button>
-    </li>
+    <ListRow
+      variant="project"
+      layout="flat"
+      title={row.name}
+      hint={hint}
+      tone={row.flaggedParts > 0 && !closed ? "warning" : undefined}
+      icon={closed ? <StatusMark kind="paid" /> : row.next == null ? undefined : <StatusMark kind={late ? "late" : "due"} />}
+      agorot={row.balanceMinor}
+      currency={row.currency}
+      label={[row.name, formatLoanMoney(row.balanceMinor, row.currency === "USD" ? "USD" : "ILS"), hint].join(", ")}
+      onClick={() => { onOpen(row.id); }}
+    />
   );
 }
 
-/** The list's body under the header: the states (skeleton, error, empty) or the summary, the open rows and the closed group. */
-export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; closedOpen?: boolean }) {
-  const [compact, setCompact] = useState(false);
-  const [closedShown, setClosedShown] = useState(closedOpen);
-  const closedId = useId();
-  useEffect(() => {
-    const onScroll = () => { setCompact(window.scrollY > COMPACT_AFTER); };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); };
-  }, []);
-
+/**
+ * FLOW-1046 (V3-Loans, the Overview pattern): the violet band with what is left to pay (it opens the summary)
+ * and + for a new loan; דורש טיפול; the פעילות / נסגרו segment, which docks into the band bar; then the rows in
+ * groups by kind under one-line sticky heads. `closedOpen` opens on נסגרו (the dev fixture's ?closed=1).
+ */
+export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { ctx: LoansHostCtx; closedOpen?: boolean; today?: string }) {
+  const [filter, setFilter] = useState<LoansFilter>(closedOpen ? "closed" : "open");
+  const [bandMark, setBandMark] = useState<HTMLElement | null>(null);
+  const barShown = useScrolledPast(bandMark, true, BAND_BAR);
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
   const { open, closed } = groupLoans(ctx.rows);
   const ready = !ctx.loading && !ctx.failed;
-  const total = ctx.summary != null && ctx.currency != null ? formatLoanMoney(ctx.summary.totalBalanceMinor, ctx.currency) : null;
+  const currency = ctx.currency ?? "ILS";
+  const figures = bandFigures(ctx, open, currency);
+  const shownRows = filter === "open" ? open : closed;
+  const groups = groupLoansByKind(shownRows);
+  const left = <Amount agorot={figures.leftMinor} currency={currency} presentation="detail" />;
+  const control = (onBand: boolean) => (
+    <SegmentedControl<LoansFilter>
+      label="סינון הלוואות"
+      showLabel={false}
+      tone={onBand ? "band" : "page"}
+      value={filter}
+      options={[
+        { value: "open", label: `פעילות · ${String(open.length)}` },
+        { value: "closed", label: `נסגרו · ${String(closed.length)}` },
+      ]}
+      onChange={(next) => {
+        setFilter(next);
+        scrollUnderBar();
+      }}
+    />
+  );
+  // A failed read is not a page with a live primary action (CHECKLIST): + hides there.
+  const add = ctx.holdWrites || ctx.failed ? null : (
+    <IconButton label="הלוואה חדשה" onBand onClick={ctx.openNew} ref={ctx.newRef}>
+      <PlusIcon />
+    </IconButton>
+  );
+  const hasRows = ctx.rows.length > 0;
   return (
     <div className="ui-loans-screen">
+      <TopBand
+        wordmark={false}
+        leading={<h1 className="ui-loans-band-title t-name">הלוואות</h1>}
+        trailing={add}
+        hero={ctx.loading ? (
+          <div className="ui-loans-band-skel" aria-hidden="true">
+            <Skeleton tone="band" width="md" />
+            <Skeleton tone="band" className="ui-skel-project-num" />
+          </div>
+        ) : ready && hasRows && ctx.currency != null ? (
+          <div className="ui-loans-band ui-band-fade">
+            <Link className="ui-loans-band-link m-press" to={ctx.summaryHref}>
+              <span className="ui-loans-band-label">
+                {`נשאר לשלם · ${String(figures.count)} הלוואות`}
+                <ChevronIcon size={16} />
+              </span>
+              <span className="ui-loans-band-figure">
+                <Amount agorot={figures.leftMinor} currency={currency} size="hero" compact />
+              </span>
+            </Link>
+            <div className="ui-loans-band-rows">
+              {figures.next == null ? null : (
+                <p className="ui-loans-band-row">
+                  <span className="ui-loans-band-row-label">{`התשלום הבא · ${figures.next.name} · ${dayMonth(figures.next.dueDate)}`}</span>
+                  <bdi dir="ltr">{money(figures.next.amountMinor, currency)}</bdi>
+                </p>
+              )}
+              {figures.monthlyMinor == null ? null : (
+                <p className="ui-loans-band-row">
+                  <span className="ui-loans-band-row-label">תשלומים בחודש</span>
+                  <bdi dir="ltr">{money(figures.monthlyMinor, currency)}</bdi>
+                </p>
+              )}
+            </div>
+            <span ref={setBandMark} className="ui-compact-mark" aria-hidden="true" />
+          </div>
+        ) : null}
+      />
       <CompactBar
         title="הלוואות"
-        figure={total == null ? undefined : <bdi dir="ltr">{total}</bdi>}
-        shown={compact}
-        actions={ctx.holdWrites ? undefined : (
-          <IconButton label="הלוואה חדשה" onClick={ctx.openNew}>
-            <PlusIcon />
-          </IconButton>
+        shown={barShown}
+        tone="band"
+        start={<span className="ui-loans-bar-slot" aria-hidden="true" />}
+        centre={(
+          <Link className="ui-compact-bar-centre" to={ctx.summaryHref}>
+            <span className="ui-compact-bar-centre-title">הלוואות · נשאר לשלם</span>
+            <span className="ui-compact-bar-centre-net">{left}</span>
+          </Link>
         )}
+        end={add ?? <span className="ui-loans-bar-slot" aria-hidden="true" />}
+        dock={hasRows ? control(true) : undefined}
+        docked={docked}
       />
-      {/* The empty state (States board) has its own primary action, so the header link and the count stay out. */}
-      {ctx.holdWrites ? null : (
-        <div className="ui-loans-add">
-          {ctx.empty ? null : (
-            <button type="button" className="ui-loans-add-btn" onClick={ctx.openNew} ref={ctx.newRef}>+ הלוואה חדשה</button>
-          )}
-        </div>
-      )}
-      <h1 className="ui-loans-title">הלוואות</h1>
-      {ready && !ctx.empty ? <p className="ui-loans-count">{`${String(open.length)} פעילות`}</p> : null}
-      {ctx.loading ? (
-        <DelayedSkeleton>
-          <LoansSkeleton />
-        </DelayedSkeleton>
-      ) : ctx.failed ? (
-        // FLOW-962: Home v2's failure (what happened, נסו שוב, צריך עזרה?), as a card.
-        <PageLoadFailed title={LOANS_ERROR_TITLE} offline={ctx.offline} onRetry={ctx.retry} />
-      ) : (
-        <>
-          {ctx.offlineSince == null ? null : <BandOfflineLine since={ctx.offlineSince} onPage />}
-          {ctx.empty ? (
-            <EmptyState
-              icon={<PercentIcon />}
-              title={LOANS_EMPTY_TITLE}
-              body={ctx.holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
-              action={ctx.holdWrites ? undefined : (
-                <Button buttonRef={ctx.emptyRef} onClick={ctx.openNew}>
-                  הוספת הלוואה
-                </Button>
-              )}
-            />
-          ) : null}
-          {ctx.summary != null && ctx.summary.openCount > 0 && ctx.currency != null ? (
-            <div className="ui-loans-summary-wrap">
-              <LoanSummaryCard summary={ctx.summary} currency={ctx.currency} summaryHref={ctx.summaryHref} />
-            </div>
-          ) : null}
-          {open.length > 0 ? <h2 className="ui-loans-section-head">פעילות</h2> : null}
-          {open.length > 0 ? (
-            <ul className="ui-loans-list">
-              {open.map((row) => <LoanRow key={row.id} row={row} closed={false} onOpen={ctx.openLoan} />)}
-            </ul>
-          ) : null}
-          {closed.length > 0 ? (
-            <>
-              <button
-                type="button"
-                className="ui-loans-closed-toggle"
-                aria-expanded={closedShown}
-                aria-controls={closedId}
-                onClick={() => { setClosedShown((value) => !value); }}
-              >
-                <span className="ui-loans-closed-title">{open.length === 0 ? LOANS_CLOSED_UNDER_EMPTY : `נסגרו · ${String(closed.length)}`}</span>
-                <span className="ui-loans-closed-action">
-                  {closedShown ? "הסתר" : "הצג"}
-                  <span className="ui-loans-closed-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
-                </span>
-              </button>
-              {closedShown ? (
-                <ul className="ui-loans-list ui-loans-closed-list" id={closedId}>
-                  {closed.map((row) => <LoanRow key={row.id} row={row} closed onOpen={ctx.openLoan} />)}
-                </ul>
-              ) : null}
-            </>
-          ) : null}
-        </>
-      )}
+      <div className="ui-loans-body">
+        {ctx.loading ? (
+          <DelayedSkeleton>
+            <LoansSkeleton />
+          </DelayedSkeleton>
+        ) : ctx.failed ? (
+          // FLOW-962: Home v2's failure (what happened, נסו שוב, צריך עזרה?), as a card.
+          <PageLoadFailed title={LOANS_ERROR_TITLE} offline={ctx.offline} onRetry={ctx.retry} />
+        ) : (
+          <>
+            {ctx.offlineSince == null ? null : <BandOfflineLine since={ctx.offlineSince} onPage />}
+            <AttentionCards rows={loansAttention(ctx.rows, today, ctx.loanHref)} storageKey="loans" />
+            {hasRows ? (
+              <>
+                <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+                <DockSlot docked={docked}>{control(false)}</DockSlot>
+              </>
+            ) : null}
+            {filter === "open" && ctx.empty ? (
+              <EmptyState
+                icon={<PercentIcon />}
+                title={LOANS_EMPTY_TITLE}
+                body={ctx.holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
+                action={ctx.holdWrites ? undefined : (
+                  <Button buttonRef={ctx.emptyRef} onClick={ctx.openNew}>
+                    הוספת הלוואה
+                  </Button>
+                )}
+              />
+            ) : null}
+            {filter === "closed" && closed.length === 0 ? (
+              <EmptyState icon={<PercentIcon />} title="אין הלוואות שנסגרו" body="הלוואה שתיסגר תעבור לכאן, עם איך ומתי נסגרה." />
+            ) : null}
+            {groups.map((group) => (
+              <section key={group.kind} className="ui-month ui-loans-group" aria-labelledby={`loans-${filter}-${group.kind}`}>
+                <GroupHead id={`loans-${filter}-${group.kind}`} title={group.title} summary={groupSummary(group)} />
+                <List layout="flat">
+                  {group.rows.map((row) => <LoanRow key={row.id} row={row} onOpen={ctx.openLoan} today={today} />)}
+                </List>
+              </section>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }
