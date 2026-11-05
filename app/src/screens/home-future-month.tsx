@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import type { CashMonths, ProjectCashRow } from "@flow/shared";
 import type { ReactNode } from "react";
 import { NOT_IN_PROFIT_LABEL } from "../cash";

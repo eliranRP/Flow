@@ -639,9 +639,9 @@ html[data-kb="open"] .ui-sheet-body {
 
 .ui-home-future-note {
   color: var(--color-on-band-secondary);
-  font-size: var(--type-small-size);
-  line-height: var(--type-small-line);
-  font-weight: var(--type-small-weight);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-home-forecast-chevron {
