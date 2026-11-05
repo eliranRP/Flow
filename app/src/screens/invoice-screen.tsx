@@ -3,6 +3,7 @@ import { formatAmountText } from "@flow/shared";
 import { useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { usePreviewSearch } from "../preview";
+import { ActionBar } from "../ui/action-bar";
 import { Amount } from "../ui/amount";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -24,8 +25,10 @@ function daysBetween(from: string, to: string): number {
 }
 
 /**
- * The invoice page (FLOW-367), pushed from the list: its status, customer and amount, the bank deposit
- * it matches (with "זה התשלום" and "לא זה"), the facts, the SUMIT document, and the mark when nothing matches.
+ * The invoice page (FLOW-367; FLOW-1049, V3-Invoice, the Detail pattern), pushed from the list: the status line
+ * (the signal colour past 30 days), the customer, the figure and the meta line, the bank deposit it matches (with
+ * "זה התשלום" and "לא זה"), the fact card, the SUMIT document, and "סימון כשולם" pinned at the bottom when nothing
+ * matches. The mark's toast offers ביטול (useUnpaidActions).
  */
 export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offlineSince }: { sample?: UnpaidInvoice[]; summary?: UnpaidSummary; invoiceId?: string; offlineSince?: number } = {}) {
   const params = useParams();
@@ -58,15 +61,15 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offli
           <EmptyState title="החשבונית כבר לא פתוחה" body="היא סומנה או חוברה לתשלום, ולכן לא נשארה ברשימה." action={<Button full to={`/unpaid${search}`}>חשבוניות פתוחות</Button>} />
         </div>
       ) : row == null ? null : (
-        <div className="ui-page-pad ui-inv-detail m-push-in">
+        <div className="ui-page-pad ui-inv-detail m-push-in" data-bar={!holdWrites && !(match != null && !marked) ? "" : undefined}>
           {since != null ? <BandOfflineLine since={since} onPage /> : null}
           <div className="ui-inv-head">
-            <p className="ui-inv-chip" data-over={over && !marked ? "true" : undefined} data-marked={marked ? "true" : undefined}>
+            <p className="ui-inv-status t-meta" data-over={over && !marked ? "true" : undefined}>
               {marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`}
             </p>
-            <h2 className="ui-inv-customer">{customer}</h2>
-            <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income signless />
-            <p className="ui-inv-meta text-text-secondary">
+            <h2 className="ui-inv-customer t-name">{customer}</h2>
+            <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income />
+            <p className="ui-inv-meta t-meta">
               {[
                 row.doc_number ? `חשבונית #${row.doc_number}` : "חשבונית",
                 `הופקה ${unpaidFullDate(row.doc_date)}`,
@@ -121,7 +124,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offli
             </div>
             <div className="ui-inv-fact">
               <span className="ui-inv-fact-label">בתזרים</span>
-              <span className="ui-inv-fact-note text-text-secondary">לא נספרת עד שהתשלום מגיע. נכללת בתזרים הצפוי לסוף החודש.</span>
+              <span className="ui-inv-fact-note">נספרת ב״עוד ייכנס״ עד שהתשלום מגיע</span>
             </div>
           </section>
 
@@ -134,15 +137,15 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offli
           ) : null}
 
           {!holdWrites && match == null && !marked ? (
-            <div className="ui-inv-mark">
-              <Button full className="ui-inv-mark-yes" onClick={() => { actions.setPaid(row.id, true); }}>סימון כשולם</Button>
-              <p className="ui-inv-mark-note">שולם במזומן או בצ׳ק? סמנו כאן. העברה בנקאית תחובר לבד כשתגיע.</p>
-            </div>
+            <ActionBar className="ui-inv-mark">
+              <Button full onClick={() => { actions.setPaid(row.id, true); }}>סימון כשולם</Button>
+              <p className="ui-inv-mark-note t-caption">שולם במזומן או בצ׳ק? סמנו כאן. העברה בנקאית תסומן לבד.</p>
+            </ActionBar>
           ) : null}
           {!holdWrites && marked ? (
-            <div className="ui-inv-mark">
+            <ActionBar className="ui-inv-mark">
               <Button full variant="secondary" onClick={() => { actions.setPaid(row.id, false); }}>ביטול הסימון</Button>
-            </div>
+            </ActionBar>
           ) : null}
         </div>
       )}

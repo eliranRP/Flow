@@ -5,7 +5,7 @@ import { RECURRING_FIXTURE } from "../recurring-sample";
 import type { ScheduleRow } from "../recurring-schedule";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { activityGroups, HomeActivity, onceActivity, scheduleActivity, type ActivityFilter, type HomeActivityData } from "./home-activity";
+import { activityGroups, HomeActivity, monthFilter, onceActivity, pastActivityGroups, scheduleActivity, type ActivityFilter, type HomeActivityData } from "./home-activity";
 
 // This year's October, so the line dates read without a year.
 const MONTH = `${israelToday().slice(0, 4)}-10`;
@@ -113,5 +113,69 @@ describe("HomeActivity", () => {
   it("says an empty month in words", () => {
     renderActivity({ schedule: [], lines: [] });
     expect(screen.getByText("עוד אין תנועות החודש")).toBeInTheDocument();
+  });
+});
+
+describe("a past month's activity (FLOW-1056)", () => {
+  const pastFor = (filter: ActivityFilter, lines: typeof LINES | null = LINES) => pastActivityGroups({ lines, filter, base: "USD", search: "" });
+
+  it("groups the month's lines by the server's flag: recurring as קבועים (paid), one-off as חד-פעמי", () => {
+    const [fixed, once] = pastFor("all");
+    expect(fixed).toMatchObject({ id: "fixed", title: "קבועים", outMinor: 14_200n, inMinor: 210_000n, due: false });
+    expect(fixed?.rows.map((row) => row.title)).toEqual(["Bayside Water Utility", "Birch Lane rent"]);
+    expect(fixed?.rows.every((row) => row.mark === "paid")).toBe(true);
+    expect(once).toMatchObject({ id: "once", title: "חד-פעמי", outMinor: 147_200n, inMinor: 504_000n });
+    expect(once?.rows.every((row) => row.mark === "once")).toBe(true);
+  });
+
+  it("shows one group for קבועים and חד-פעמי, and nothing for a read still out", () => {
+    expect(pastFor("fixed").map((group) => group.id)).toEqual(["fixed"]);
+    expect(pastFor("once").map((group) => group.id)).toEqual(["once"]);
+    expect(pastFor("all", null)).toEqual([]);
+  });
+
+  it("keeps every line in one group while the server does not say which are recurring", () => {
+    const unflagged = homeActivityLines(MONTH, { flag: false });
+    expect(pastFor("all", unflagged).map((group) => [group.id, group.rows.length])).toEqual([["lines", 6]]);
+  });
+
+  it("reads a current month's filter it does not have as הכול", () => {
+    expect(monthFilter("left", true)).toBe("all");
+    expect(monthFilter("once", false)).toBe("all");
+    expect(monthFilter("once", true)).toBe("once");
+  });
+
+  function renderPast(over: Partial<HomeActivityData> = {}) {
+    const data: HomeActivityData = { schedule: null, scheduleFailed: false, lines: LINES, linesFailed: false, onRetry: vi.fn(), past: { more: true }, ...over };
+    renderWithProviders(
+      <HomeActivity
+        activity={data}
+        filter="left"
+        onFilter={vi.fn()}
+        markRef={() => undefined}
+        docked={false}
+        base="USD"
+        search=""
+        recurringHref="/recurring"
+        close={{ name: "אוקטובר", inMinor: 3_276_500n, outMinor: 6_694_000n, linesHref: "/cash/2026-10/out" }}
+      />,
+    );
+  }
+
+  it("titles the list with the month and how it finished, filters with חד-פעמי, and ends with the month's lines", () => {
+    renderPast();
+    const title = screen.getByRole("heading", { name: "הפעילות באוקטובר" });
+    expect(title.nextElementSibling?.textContent).toBe("נכנס $32,765 · יצא $66,940");
+    expect(screen.queryByRole("radio", { name: "נותר לשלם" })).toBeNull();
+    expect(screen.getByRole("radio", { name: "הכול" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "חד-פעמי" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "כל התנועות באוקטובר" })).toHaveAttribute("href", "/cash/2026-10/out");
+    expect(screen.queryByRole("link", { name: "כל הקבועים" })).toBeNull();
+  });
+
+  it("says a past month with no lines in words, and loads with skeleton rows", () => {
+    renderPast({ lines: [], past: { more: false } });
+    expect(screen.getByText("אין תנועות באוקטובר")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "כל התנועות באוקטובר" })).toBeNull();
   });
 });

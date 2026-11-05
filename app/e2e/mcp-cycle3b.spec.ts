@@ -131,7 +131,7 @@ for (const scheme of ["light", "dark"] as const) {
     // One card left, so the total is 1; the approve empties the queue, and undo grows the total to 2.
     await expect(page.getByText("פריט 1 מתוך 1")).toBeVisible();
     await page.getByRole("button", { name: "אישור" }).click();
-    await expect(page.getByText("הכל מאושר")).toBeVisible();
+    await expect(page.getByText("הכול אושר")).toBeVisible();
     await expect(page.getByText("מתוך")).toHaveCount(0);
     await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
     await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();

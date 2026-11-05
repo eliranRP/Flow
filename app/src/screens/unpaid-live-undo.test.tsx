@@ -57,7 +57,7 @@ describe("Unpaid mark undo on the live path (FLOW-357, FLOW-367)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(within(await rowOf("לקוח א")).getByRole("button", { name: "סימון כשולם" }));
+    fireEvent.click(within(await rowOf("לקוח א")).getByRole("button", { name: /^סימון כשולם/ }));
     const undo = within(await screen.findByRole("status")).getByRole("button", { name: "ביטול" });
     expect(db.rpcs).toEqual([{ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } }]);
     fireEvent.click(undo);
@@ -79,7 +79,7 @@ describe("Unpaid mark undo on the live path (FLOW-357, FLOW-367)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(within(await rowOf("לקוח א")).getByRole("button", { name: "סימון כשולם" }));
+    fireEvent.click(within(await rowOf("לקוח א")).getByRole("button", { name: /^סימון כשולם/ }));
     // The row takes its mark at once; the write is still pending.
     expect((await screen.findAllByText("סומן כשולם · ממתין לסנכרון")).length).toBeGreaterThan(0);
     expect(db.rpcs).toEqual([{ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } }]);

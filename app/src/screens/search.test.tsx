@@ -185,13 +185,13 @@ describe("Search screen (FLOW-323)", () => {
     expect(searchCalls().at(-1)?.args).toMatchObject({ p_scope: "pending" });
   });
 
-  it("says nothing matched, with one way out", async () => {
+  it("says nothing matched, and offers the filters and a clear (FLOW-1049)", async () => {
     page = { total: 0, expenses: [] };
     wrap("/search?q=%D7%9E%D7%A2%D7%9C%D7%99%D7%95%D7%AA");
     expect(await screen.findByText("לא מצאנו ״מעליות״")).toBeInTheDocument();
-    // The board's empty state has no action without chips: the field's own clear button is the way out.
-    expect(screen.queryByRole("button", { name: "ניקוי החיפוש" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "ניקוי" }));
+    // V3-Search: zero results is never a dead end: סינון opens the sheet, ניקוי החיפוש goes back to the start.
+    expect(screen.getAllByRole("button", { name: "סינון" }).length).toBe(2);
+    fireEvent.click(screen.getByRole("button", { name: "ניקוי החיפוש" }));
     await waitFor(() => {
       expect(searchCalls().at(-1)?.args).not.toHaveProperty("p_query");
     });

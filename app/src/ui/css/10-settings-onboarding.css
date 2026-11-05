@@ -602,10 +602,24 @@
   margin-top: calc(var(--space-1) * 3 / 4);
 }
 
+/* FLOW-1049 (V3-Settings): each group is a 14/500 secondary label, 8px over its card; the cards sit on the
+   page's 20px sides with the card radius. */
 .ui-settings-page > .ui-list-inset {
-  margin-inline: var(--space-4);
+  margin-inline: var(--space-side);
   inline-size: auto;
-  border-radius: var(--radius-card-tight);
+  border-radius: var(--radius-card);
+}
+
+.ui-settings-group-head {
+  margin: var(--space-4) var(--space-side) var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-chip-weight);
+  line-height: var(--type-meta-line);
+}
+
+.ui-settings-page > .ui-page-stacked + .ui-settings-group-head {
+  margin-block-start: 0;
 }
 
 .ui-settings-page > .ui-list-inset + .ui-list-inset {

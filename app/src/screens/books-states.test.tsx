@@ -436,7 +436,7 @@ describe("rejected writes", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
     expect(await screen.findByText("הפריט כבר טופל.")).toBeInTheDocument();
-    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    expect(await screen.findByText("הכול אושר")).toBeInTheDocument();
     expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
   });
 
@@ -562,7 +562,7 @@ describe("rejected writes", () => {
     expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
     expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
-    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    expect(await screen.findByText("הכול אושר")).toBeInTheDocument();
   });
 
   it("does not treat a malformed approve body as success", async () => {

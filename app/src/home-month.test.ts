@@ -1,6 +1,6 @@
 // FLOW-364: Home's month logic. Invented figures only; amounts are agorot.
 import { describe, expect, it } from "vitest";
-import { canStepYear, changeTone, drawerCells, homeMonthKey, homeMonthPath } from "./home-month";
+import { canStepYear, changeTone, drawerCells, homeMonthKey, homeMonthPath, homeMonthState, homeMonthSteps } from "./home-month";
 
 const TODAY = "2026-10-11";
 
@@ -70,5 +70,40 @@ describe("canStepYear", () => {
     expect(canStepYear(2026, -1, "2025-03", TODAY)).toBe(true);
     expect(canStepYear(2025, -1, "2025-03", TODAY)).toBe(false);
     expect(canStepYear(2025, -1, null, TODAY)).toBe(true);
+  });
+});
+
+describe("Home on next month (FLOW-1056)", () => {
+  it("reads ?month= as next month only with next month on, never a month beyond it", () => {
+    expect(homeMonthKey("?month=2026-11", TODAY, "2025-03", true)).toBe("2026-11");
+    expect(homeMonthKey("?month=2026-11", TODAY, "2025-03")).toBe("2026-10");
+    expect(homeMonthKey("?month=2026-12", TODAY, "2025-03", true)).toBe("2026-10");
+  });
+
+  it("names the three month states", () => {
+    expect(homeMonthState("2026-07", "2026-10")).toBe("past");
+    expect(homeMonthState("2026-10", "2026-10")).toBe("current");
+    expect(homeMonthState("2026-11", "2026-10")).toBe("future");
+  });
+
+  it("steps from the current month to next month, back to the current month, and no later", () => {
+    expect(homeMonthSteps("2026-10", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2026-09", laterKey: "2026-11" });
+    expect(homeMonthSteps("2026-11", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2026-10", laterKey: null });
+    // Without next month (a preview), the current month has no later arrow; a past month always has one.
+    expect(homeMonthSteps("2026-10", "2026-10", "2025-03", false)).toEqual({ earlierKey: "2026-09", laterKey: null });
+    expect(homeMonthSteps("2025-03", "2026-10", "2025-03", false)).toEqual({ earlierKey: null, laterKey: "2025-04" });
+  });
+
+  it("steps from December to January's forecast across the year", () => {
+    expect(homeMonthSteps("2026-12", "2026-12", "2025-03", true).laterKey).toBe("2027-01");
+    expect(homeMonthSteps("2027-01", "2026-12", "2025-03", true).earlierKey).toBe("2026-12");
+  });
+
+  it("marks next month as next in the drawer, and as selected with no net once picked", () => {
+    const net = { "2026-10": 100_00n };
+    expect(drawerCells(2026, net, "2026-01", TODAY, "2026-10", true).find((cell) => cell.index === 10)?.state).toBe("next");
+    const picked = drawerCells(2026, net, "2026-01", TODAY, "2026-11", true);
+    expect(picked.find((cell) => cell.index === 10)).toEqual({ key: "2026-11", index: 10, state: "selected", netMinor: null });
+    expect(picked.find((cell) => cell.index === 11)?.state).toBe("future");
   });
 });
