@@ -19,9 +19,12 @@
   padding-block: var(--space-2) var(--space-3);
 }
 
+/* FLOW-1054: the account and lines pages on the reports boards' type (V3-Report, V3-Reports): the figure's label
+   14 secondary, the line under it 14 secondary, the section heads 20/500 with their totals 14, the rows 17 over a
+   13 secondary line, every line at the 1.2 step. */
 .ui-rep-summary-label {
   color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
+  font-size: var(--type-meta-size);
   line-height: var(--type-title-line);
 }
 
@@ -41,9 +44,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-cents-line);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
 }
 
 .ui-rep-ok {
@@ -91,15 +94,16 @@
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
+  color: var(--color-text);
+  font-size: var(--type-section-size);
   font-weight: var(--type-section-weight);
+  line-height: var(--type-title-line);
 }
 
 .ui-rep-head-total {
   flex: none;
   color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
+  font-size: var(--type-meta-size);
 }
 
 .ui-rep-group .ui-rep-head {
@@ -151,9 +155,9 @@
 
 .ui-rep-row-meta {
   overflow-wrap: break-word;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
-  line-height: var(--type-cents-line);
+  line-height: var(--type-title-line);
 }
 
 /* The amounts form one column: each ends at the same point (its ones digit), up to −$999,999, so a
@@ -185,7 +189,7 @@
   padding-block: var(--space-2);
   border-top: 1px solid var(--color-line);
   font-size: var(--type-body-size);
-  font-weight: var(--type-section-weight);
+  font-weight: var(--type-sheet-weight);
 }
 
 .ui-rep-total-strong {
@@ -198,7 +202,7 @@
 
 .ui-rep-note {
   margin: var(--space-3) 0 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
   line-height: var(--type-cents-line);
 }
@@ -418,27 +422,28 @@
   padding-block-end: var(--space-6);
 }
 
-/* The band: the name, the period or date pill, the figure and its two rows (Overview pattern). */
+/* The band: the name, the period or date pill, the figure and its two rows (Overview pattern). FLOW-1054 (board
+   V3-Report): the name 14px under the Back row, 14px between the blocks, 22px under the last row. The board sets
+   its text at the font's own line height (about 1.2): the band's lines use the 1.2 step, not the body's 1.45. */
+.ui-rep-v3 > .ui-band {
+  padding-block-end: calc(var(--space-5) + var(--space-half));
+}
+
+.ui-rep-v3 > .ui-band .ui-band-hero {
+  padding-block-start: var(--space-4);
+}
+
 .ui-rep-band {
   display: flex;
   flex-direction: column;
   gap: var(--space-inset-row);
   min-inline-size: 0;
-  padding-block-end: var(--space-5);
-}
-
-/* The board's band (V3-Report): the figure's label 17 regular at the band's secondary white, its sub line 14. */
-.ui-rep-band .ui-band-label {
-  margin: 0;
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-weight);
-  line-height: var(--type-body-line);
-  color: var(--color-on-band-secondary);
 }
 
 .ui-rep-band-name {
   margin: 0;
   color: var(--color-on-band);
+  line-height: var(--type-title-line);
   overflow-wrap: anywhere;
 }
 
@@ -473,15 +478,21 @@
   min-inline-size: 0;
 }
 
+/* The figure's label 17 regular at the band's secondary white, the figure 52 at the start (right), its sub line 14. */
 .ui-rep-band-figure .ui-band-title {
   margin: 0;
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-band-figure .ui-band-net .ui-num {
+  text-align: right;
 }
 
 .ui-rep-band-sub {
   margin: 0;
   color: var(--color-on-band-secondary);
   font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  line-height: var(--type-title-line);
 }
 
 .ui-rep-band-rows {
@@ -501,14 +512,17 @@
   font-size: var(--type-body-size);
 }
 
-/* The board's two rows read as one block: the second sits 8px closer. */
+/* The board's two rows read as one block: the second 6px under the first (the band's 14 less 8). */
 .ui-rep-band-row + .ui-rep-band-row {
-  margin-block-start: calc(var(--space-2) * -1);
+  margin-block-start: calc(var(--space-inset-row) - var(--space-2));
 }
 
-.ui-rep-band-row-amount {
+/* The amounts 20/600 with no sign (V3-Report), not the list's 17 regular. */
+.ui-rep-band-row-amount,
+.ui-rep-band-row-amount .ui-num {
   font-size: var(--type-section-size);
   font-weight: var(--type-sheet-weight);
+  line-height: var(--type-title-line);
   white-space: nowrap;
 }
 
@@ -547,6 +561,17 @@
    screen readers only, and its row takes no height until the "N הוסתרו" button needs it. */
 .ui-rep-page .ui-attn-head {
   min-block-size: 0;
+  padding-block-end: 0;
+}
+
+/* The card is the board's 56px with the page's 16px gap under it, not the list's own 8. */
+.ui-rep-page .ui-attn-item:last-child .ui-attn-card {
+  margin-block-end: 0;
+}
+
+/* The dock's mark is a zero-height line: it takes no gap of its own, so the control sits 16px under the card. */
+.ui-rep-page > .ui-compact-mark {
+  margin-block-end: calc(var(--space-4) * -1);
 }
 
 .ui-rep-page .ui-attn-title {
@@ -561,11 +586,27 @@
   border: 0;
 }
 
-/* The groups sit on the page's gutter; their sticky heads span it, as the board draws them. */
+/* The groups sit on the page's gutter; their sticky heads span it, as the board draws them. FLOW-1054: each group
+   8px into the page's gap, its head 47px (14 + the 20/500 title at 24 + 8 and the hairline), the rows on the
+   gutter with no inset of their own. */
 .ui-rep-v3-group {
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+.ui-rep-page .ui-rep-v3-group .ui-month-head {
+  min-block-size: 0;
+  margin-block-start: 0;
+}
+
+.ui-rep-v3-group .ui-month-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-v3-group .ui-project-list {
+  padding-inline: 0;
 }
 
 /* A long Latin name wraps, after its slash first, and a word wider than the column breaks inside the row. */
@@ -581,22 +622,54 @@
 }
 
 /* FLOW-1045 (board V3-Report; the owner, 2026-11-05: "too much text"): a report's row is the board's 60px: the name
-   17 (it wraps once after a slash before it cuts, FLOW-358), the הכנסות · הוצאות line 13 secondary on one line cut
-   with an ellipsis, the net 17. */
+   17 (it wraps once after a slash before it cuts, FLOW-358), 4px, the הכנסות · הוצאות line 13 secondary on one
+   line cut with an ellipsis, 4px, the row's share bar, the net 17. FLOW-1054: the lines at the 1.2 step, so the
+   name, the line and the bar fit the 60px as the board's do; the balance by project cuts its line the same way. */
 .ui-rep-v3-group .ui-row {
   min-block-size: calc(var(--space-10) + var(--space-5));
   padding-block: calc(var(--space-1) + var(--space-half));
 }
 
-/* The balance-by-project rows wrap their hint on purpose (ui-row-hint-wrap): the one-line cut is for the P&L line. */
-.ui-rep-v3-group .ui-row-project .ui-row-hint:not(.ui-row-hint-wrap) {
-  display: block;
-  overflow: hidden;
+.ui-rep-v3-group .ui-row-text {
+  gap: var(--space-1);
+}
+
+.ui-rep-v3-group .ui-row-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-v3-group .ui-row-project .ui-row-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hint-text {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The share bar: 4px, the hairline's colour, its fill the accent (income green). Decoration only. */
+.ui-rep-share {
+  display: block;
+  block-size: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--color-line);
+}
+
+.ui-rep-share-fill {
+  display: block;
+  block-size: 100%;
+  background: var(--color-accent);
+}
+
+.ui-rep-share-fill[data-income] {
+  background: var(--color-income);
 }
 
 .ui-rep-v3-group .ui-row-end .ui-num {
@@ -604,11 +677,58 @@
   line-height: var(--type-body-line);
 }
 
+/* The bottom line (V3-Report): 56px, a 2px rule in the text colour over it, 20/600. */
+.ui-rep-page .ui-rep-total-strong {
+  align-items: center;
+  min-block-size: calc(var(--space-10) + var(--space-4));
+  padding-block: 0;
+  border-top: var(--space-half) solid var(--color-text);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-title-line);
+}
+
+/* The basis line: 13 secondary, in the page's 16px gap with no margin of its own. */
+.ui-rep-page > .ui-rep-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
 /* ---- The hub (Hub pattern) ---- */
 
 .ui-rep-hub {
   min-inline-size: 0;
   padding-block-end: var(--space-6);
+}
+
+/* FLOW-1054 (V3-Reports): the title row is 56px (12 over a 44px row), the period an outlined pill: 44px, 14px
+   inside, 15/500, the hairline, its 14px chevron. */
+.ui-rep-hub .ui-page-stacked {
+  padding-block-start: var(--space-3);
+}
+
+.ui-rep-hub-period {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-half));
+  min-block-size: var(--touch-min);
+  max-inline-size: 100%;
+  padding-inline: var(--space-inset-row);
+  border: var(--stroke-hairline) solid var(--color-line);
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
+  cursor: pointer;
+}
+
+.ui-rep-hub-period-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The board (V3-Reports): 14px from the title row to the first card and between the cards (the owner, 2026-11-05:
@@ -648,7 +768,28 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+/* The card's text at the board's sizes: the name 17/500, the label 14 and the facts' labels 13 in secondary. */
+.ui-rep-hub-title .t-body {
   font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-fact-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-fact .t-body {
+  line-height: var(--type-title-line);
 }
 
 .ui-rep-hub-title svg {
@@ -672,9 +813,10 @@
   block-size: var(--space-10);
 }
 
+/* The bars in the board's bar colour (the strong tint: #382A5E dark, #D9CBF6 light), the last in the accent. */
 .ui-rep-hub-bar {
   border-radius: var(--radius-chart-bar);
-  background: var(--color-track-strong);
+  background: var(--color-tint-strong);
 }
 
 .ui-rep-hub-bar[data-loss] {
@@ -685,17 +827,18 @@
   background: var(--color-accent);
 }
 
-/* The balance sheet's chart: how much of the assets the loans hold; the rest is equity. */
+/* The balance sheet's chart: how much of the assets the loans hold; the rest is equity. FLOW-1054: the chart slot's 40px, as
+   the board's bars, so both cards keep the board's height (the board's equity trend needs a read Flow does not have yet). */
 .ui-rep-hub-split {
   display: flex;
-  block-size: var(--space-3);
+  block-size: var(--space-10);
   overflow: hidden;
-  border-radius: var(--radius-bar-hair);
+  border-radius: var(--radius-chart-bar);
   background: var(--color-accent);
 }
 
 .ui-rep-hub-split-owed {
-  background: var(--color-track-strong);
+  background: var(--color-tint-strong);
 }
 
 .ui-rep-hub-facts {
@@ -720,6 +863,25 @@
 
 .ui-rep-hub-cuts-title {
   margin: calc(var(--space-1) + var(--space-half)) 0 var(--space-half);
+  line-height: var(--type-title-line);
+}
+
+/* The cut rows sit on the gutter: 17 over a 13 secondary line on one line, cut at its end. */
+.ui-rep-hub-cuts .ui-project-list {
+  padding-inline: 0;
+}
+
+.ui-rep-hub-cuts .ui-row-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-cuts .ui-row-hint {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The board's cut rows: 64px, a 36px icon tile (12px corners, the tint, the accent glyph), 12px to the text. */
@@ -739,4 +901,10 @@
   border-radius: var(--radius-input);
   background: var(--color-tint);
   color: var(--color-accent);
+}
+
+/* The tile's glyph is the board's 20px. */
+.ui-rep-hub-cuts .ui-row-icon svg {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
 }

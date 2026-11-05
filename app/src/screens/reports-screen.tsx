@@ -44,7 +44,7 @@ import type { ScreenPhase } from "../ui/screen-phase";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useCompanyMonths, usePnl } from "../use-reports";
 import { ReportShareSheet } from "./report-share-sheet";
-import { NetGroup, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, type BandFigure } from "./reports-parts";
+import { NetGroup, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, reportHint, type BandFigure } from "./reports-parts";
 import { PnlPeriodSheet, useLatePick } from "./reports-sheets";
 
 /** A fixture: today, and the reads as they would come back (a null drill-down: the project is not found). */
@@ -117,7 +117,7 @@ function KeptOut({ row }: { row: StatementCurrency }) {
             key={`${item.direction}:${item.id ?? "none"}`}
             variant="project"
             title={categoryName(item.name)}
-            {...(keptMeta(item) == null ? {} : { hint: keptMeta(item) })}
+            {...(keptMeta(item) == null ? {} : { hint: reportHint(keptMeta(item)) })}
             agorot={item.amount_minor}
             currency={row.currency}
             chevronSpace
@@ -262,7 +262,7 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
     );
   }
 
-  const attention = drill == null && statement != null && statement.review_count > 0
+  const attention = drill == null && phase.kind === "ready" && statement != null && statement.review_count > 0
     ? <AttentionCards storageKey="reports" title="לבדיקה" rows={[{ id: "review", to: `/review${search}`, title: `${String(statement.review_count)} תנועות לא נכללו · לבדיקה`, dismissKey: `review:${String(statement.review_count)}` }]} />
     : null;
   const ready = phase.kind === "ready" && !empty;
@@ -275,7 +275,7 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
         figureLabel="רווח נקי"
         figure={figure}
         {...(drill == null ? (top == null ? {} : { figureSub: marginText(top) }) : top == null ? {} : { figureSub: `מתוך רווח נקי ${amountText(top.net_minor, top.currency)}` })}
-        rows={shownRow == null ? [] : [{ label: "הכנסות", amount: shownRow.income_minor, income: true }, { label: "הוצאות", amount: shownRow.expense_minor }]}
+        rows={shownRow == null ? [] : [{ label: "הכנסות", amount: shownRow.income_minor }, { label: "הוצאות", amount: shownRow.expense_minor }]}
         onShare={ready ? () => { setShareOpen(true); } : null}
         control={drill == null ? (onBand, scrollUnderBar) => (
           <SegmentedControl<PnlView>
