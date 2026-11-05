@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { formatDisplay } from "../ui/date-math";
@@ -11,7 +11,6 @@ import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { currencyWord } from "../ui/investment-card";
 import { ScreenState } from "../ui/screen-state";
-import { ReportRow, ReportSection, ReportTotal, type Collapse } from "./reports-parts";
 import {
   RETURN_LINES,
   isAllTimeLine,
@@ -21,10 +20,10 @@ import {
   type ReturnLine,
   type ReturnLinesPage,
 } from "./project-returns-data";
-import { ALL_TIME, LINE_TITLES, acquisitionFormula, countHint, firstRentInPeriod, lineMinor } from "./project-returns-info";
+import { ALL_TIME, LINE_TITLES, acquisitionFormula, countHint, firstRentInPeriod, lineMinor, type FigureValue, type Formula, type FormulaRow } from "./project-returns-info";
 import { PAGE_LEARN } from "./project-returns-learn";
 import { LearnButton } from "./project-returns-learn-sheet";
-import { FormulaList, ReturnLinesSection, ReturnsHero, investmentBase, pageResolver, withParam, type Resolve } from "./project-returns-parts";
+import { CalcSection, FormulaList, ReturnLinesSection, ReturnsHero, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451: the cash-flow statement (board ConceptAReturnMath) and one line's page (board
@@ -32,22 +31,6 @@ import { FormulaList, ReturnLinesSection, ReturnsHero, investmentBase, pageResol
  * ---------------------------------------------------------------------------------------------- */
 
 export const PERIOD_LINE = "12 חודשים אחרונים";
-
-/** Which sections are closed: all open on arrival. */
-export function useCollapse(): Collapse {
-  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
-  return {
-    isOpen: (id) => !closed.has(id),
-    onToggle: (id) => {
-      setClosed((current) => {
-        const next = new Set(current);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      });
-    },
-  };
-}
 
 /** `rehab`: the renovation's categories (FLOW-460); none when left out. */
 export type ReturnsSample = { returns: PropertyReturns; projectName: string; lines?: ReturnLinesPage; rehab?: readonly RehabRow[] };
@@ -122,40 +105,60 @@ function statementMeta(r: PropertyReturns, lines: number): string {
  * "איך מחושב התזרים": income, opex, NOI, debt service, CapEx, cash flow, and what is left out: the
  * holding and renovation before the first rent (only when there are any), and the kept-out lines.
  */
+/** The statement as the board draws it: one list of + − = rows, the NOI between them. */
+export function statementFormula(r: PropertyReturns): Formula {
+  const st = r.statement;
+  const money = (minor: bigint, income = false): FigureValue => ({ kind: "money", minor, income });
+  return {
+    rows: [
+      { key: "income", op: "", label: LINE_TITLES.income, hint: countHint(st.counts.income), value: money(st.incomeMinor, true), target: { kind: "line", line: "income" } },
+      { key: "opex", op: "−", label: LINE_TITLES.opex, hint: categoriesHint(st.counts.opex, st.byCategory.opex.length), value: money(st.opexMinor), target: { kind: "line", line: "opex" } },
+      { key: "noi", op: "=", label: "רווח תפעולי (NOI)", hint: "לפני הלוואה", value: money(st.noiMinor) },
+      { key: "debt", op: "−", label: LINE_TITLES.debt_service, hint: `${countHint(st.counts.debt_service)} · חלקי הלוואה`, value: money(st.debtServiceMinor), target: { kind: "line", line: "debt_service" } },
+      { key: "capex", op: "−", label: LINE_TITLES.capex, hint: `${countHint(st.counts.capex)} · קטגוריות שנספרות בשיפוץ`, value: money(st.capexMinor), target: { kind: "line", line: "capex" } },
+    ],
+    result: { key: "cash", op: "=", label: "תזרים", value: money(st.cashFlowMinor) },
+  };
+}
+
+/** What the cash flow leaves out: the holding and renovation before the first rent (when any), and the kept-out lines. */
+export function outsideFormula(r: PropertyReturns): Formula {
+  const st = r.statement;
+  return {
+    rows: [
+      ...(st.beforeRentMinor === 0n ? [] : [{
+        key: "before",
+        op: "",
+        label: "עלויות החזקה ושיפוץ לפני השכרה",
+        hint: `${countHint(st.counts.before_rent)} · נכנס לכסף בעסקה`,
+        value: { kind: "money", minor: st.beforeRentMinor },
+        target: { kind: "line", line: "before_rent" },
+      } satisfies FormulaRow]),
+      { key: "not-counted", op: "", label: LINE_TITLES.not_counted, hint: `${countHint(st.counts.not_counted)} · ${NOT_COUNTED_HINT}`, value: { kind: "money", minor: st.notCountedMinor }, target: { kind: "line", line: "not_counted" } },
+    ],
+    result: null,
+  };
+}
+
+/**
+ * The cash flow (board V3-Calc): the figure and how it is made, then the calculation as + − = rows
+ * (each opening its line), and what is left out.
+ */
 function Statement({ r, base, search }: { r: PropertyReturns; base: string; search: string }) {
-  const collapse = useCollapse();
   const st = r.statement;
   const cur = r.currency;
-  const href = (line: ReturnLine) => `${base}/returns/${line}${search}`;
   const lines = st.counts.income + st.counts.opex + st.counts.debt_service + st.counts.capex;
-  const beforeRent = st.beforeRentMinor !== 0n;
-  // Each block of the calculation: its rows, then its total line. The count is of what is drawn (FLOW-457).
-  const operating = [
-    <ReportRow key="income" name={LINE_TITLES.income} meta={countHint(st.counts.income)} amount={income(st.incomeMinor, cur)} href={href("income")} />,
-    <ReportRow key="opex" name={LINE_TITLES.opex} meta={categoriesHint(st.counts.opex, st.byCategory.opex.length)} amount={money(st.opexMinor, cur)} href={href("opex")} />,
-  ];
-  const below = [
-    <ReportRow key="debt" name={LINE_TITLES.debt_service} meta={`${countHint(st.counts.debt_service)} · חלקי הלוואה`} amount={money(st.debtServiceMinor, cur)} href={href("debt_service")} />,
-    <ReportRow key="capex" name={LINE_TITLES.capex} meta={`${countHint(st.counts.capex)} · קטגוריות שנספרות בשיפוץ`} amount={money(st.capexMinor, cur)} href={href("capex")} />,
-  ];
-  const out = [
-    beforeRent ? (
-      <ReportRow key="before" name="עלויות החזקה ושיפוץ לפני השכרה" meta={`${countHint(st.counts.before_rent)} · נכנס לכסף בעסקה`} amount={money(st.beforeRentMinor, cur)} href={href("before_rent")} />
-    ) : null,
-    <ReportRow key="not-counted" name={LINE_TITLES.not_counted} meta={`${countHint(st.counts.not_counted)} · ${NOT_COUNTED_HINT}`} amount={money(st.notCountedMinor, cur)} href={href("not_counted")} />,
-  ].filter((row) => row != null);
+  const resolve = pageResolver(base, search);
+  const out = outsideFormula(r);
   return (
     <div className="ui-rep-content">
       <ReturnsHero figure={<Amount agorot={st.cashFlowMinor} currency={cur} loss={st.cashFlowMinor < 0n} />} meta={statementMeta(r, lines)} />
-      <ReportSection id="calc" title="החישוב" total={<span className="t-muted">{rowsCount(operating.length + 1 + below.length + 1)}</span>} collapse={collapse}>
-        <ul className="ui-rep-rows">{operating}</ul>
-        <ReportTotal label="רווח תפעולי (NOI)" amount={money(st.noiMinor, cur)} />
-        <ul className="ui-rep-rows">{below}</ul>
-        <ReportTotal label="תזרים" amount={money(st.cashFlowMinor, cur)} strong />
-      </ReportSection>
-      <ReportSection id="out" title="מחוץ לחישוב" total={<span className="t-muted">{rowsCount(out.length)}</span>} collapse={collapse} fixed={out.length === 1}>
-        <ul className="ui-rep-rows">{out}</ul>
-      </ReportSection>
+      <CalcSection title="החישוב" total={money(st.cashFlowMinor, cur)}>
+        <FormulaList formula={statementFormula(r)} currency={cur} resolve={resolve} label="החישוב" />
+      </CalcSection>
+      <CalcSection title="מחוץ לחישוב" total={<span className="t-muted">{rowsCount(out.rows.length)}</span>}>
+        <FormulaList formula={out} currency={cur} resolve={resolve} label="מחוץ לחישוב" />
+      </CalcSection>
       {r.otherCurrencies.length > 0 ? (
         <p className="ui-ret-caption">{`תנועות ${r.otherCurrencies.map(currencyWord).join(", ")} לא נספרות כאן.`}</p>
       ) : null}
@@ -164,11 +167,13 @@ function Statement({ r, base, search }: { r: PropertyReturns; base: string; sear
   );
 }
 
+
 export function PropertyStatementScreen({ sample, base: baseProp }: { sample?: ReturnsSample; base?: string } = {}) {
   const page = useReturnsPage(sample, baseProp);
   return (
     <ScreenState
-      title="איך מחושב התזרים"
+      headerClassName="ui-ret-head"
+      title="תזרים"
       titleAside={<LearnButton learnKey={PAGE_LEARN.statement} title="תזרים" />}
       kicker="השקעה"
       subtitle={page.subtitle}
@@ -203,6 +208,21 @@ function periodCategories(line: ReturnLine, r: PropertyReturns) {
 
 type LineCategory = { name: string | null; minor: bigint; count: number | null };
 
+/** A line's categories as rows, largest first, each opening the line narrowed to it. */
+function categoriesFormula(line: ReturnLine, categories: readonly { id: string | null; name: string | null; minor: bigint; count: number }[]): Formula {
+  return {
+    rows: categories.map((item): FormulaRow => ({
+      key: item.id ?? "none",
+      op: "",
+      label: item.name ?? "בלי קטגוריה",
+      hint: countHint(item.count),
+      value: { kind: "money", minor: item.minor, income: line === "income" },
+      target: item.id == null ? undefined : { kind: "line", line, categoryId: item.id },
+    })),
+    result: null,
+  };
+}
+
 /** The category a line page narrows to: the period's, or the renovation's since the purchase (FLOW-460). */
 function lineCategory(line: ReturnLine, r: PropertyReturns, rehab: readonly RehabRow[] | null, categoryId: string | null): LineCategory | null {
   if (categoryId == null) return null;
@@ -225,49 +245,36 @@ function LineBody({ line, categoryId, category, r, base, search, projectId, name
   name: string | null;
   lines?: ReturnLinesPage;
 }) {
-  const collapse = useCollapse();
   const cur = r.currency;
   // The returns read has the period's categories only: a line since the purchase lists its transactions.
   const categories = periodCategories(line, r);
   const minor = category?.minor ?? lineMinor(line, r);
   const count = category?.count ?? (line === "principal" || isAllTimeLine(line) ? null : r.statement.counts[line]);
   const own = (value: bigint) => (line === "income" ? income(value, cur) : money(value, cur));
-  const content = useRef<HTMLDivElement>(null);
+  const linesRef = useRef<HTMLElement>(null);
   // FLOW-466: a loan paid out at closing is in the price, so the page adds it up to the purchase row's figure.
   const calc = line === "acquisition" && categoryId == null ? acquisitionFormula(r) : null;
   const links = pageResolver(base, search);
   // The bank lines are the transactions below: their row opens that section and moves focus to it.
   const resolve: Resolve = (target) => (target.kind === "line" && target.line === line ? { onClick: () => {
-    if (!collapse.isOpen("lines")) collapse.onToggle("lines");
-    const head = content.current?.querySelector<HTMLElement>('section[aria-label="תנועות"] .ui-rep-head');
-    // Focus scrolls the section's head into view.
-    head?.focus();
+    // Focus scrolls the months into view.
+    linesRef.current?.focus();
   } } : links(target));
   const heroMinor = calc?.result?.value.kind === "money" ? calc.result.value.minor : minor;
   return (
-    <div className="ui-rep-content" ref={content}>
+    <div className="ui-rep-content">
       <ReturnsHero figure={heroMinor == null ? <span className="ui-ret-missing">חסר</span> : own(heroMinor)} meta={lineMeta(line, r, minor ?? 0n, count, name)} />
       {calc == null ? null : (
-        <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(calc.rows.length)}</bdi>} collapse={collapse}>
+        <CalcSection title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(calc.rows.length)}</bdi>}>
           <FormulaList formula={calc} currency={cur} resolve={resolve} label={LINE_TITLES[line]} />
-        </ReportSection>
+        </CalcSection>
       )}
       {categoryId == null && categories.length > 0 ? (
-        <ReportSection id="cats" title="לפי קטגוריה" total={<bdi dir="ltr" className="t-muted">{String(categories.length)}</bdi>} collapse={collapse}>
-          <ul className="ui-rep-rows">
-            {categories.map((item) => (
-              <ReportRow
-                key={item.id ?? "none"}
-                name={item.name ?? "בלי קטגוריה"}
-                meta={countHint(item.count)}
-                amount={own(item.minor)}
-                href={item.id == null ? undefined : `${base}/returns/${line}${withParam(search, "category", item.id)}`}
-              />
-            ))}
-          </ul>
-        </ReportSection>
+        <CalcSection title="לפי קטגוריה" total={<bdi dir="ltr" className="t-muted">{String(categories.length)}</bdi>}>
+          <FormulaList formula={categoriesFormula(line, categories)} currency={cur} resolve={links} label="לפי קטגוריה" />
+        </CalcSection>
       ) : null}
-      <ReturnLinesSection projectId={projectId} line={line} categoryId={categoryId} currency={cur} search={search} collapse={collapse} sample={lines} />
+      <ReturnLinesSection projectId={projectId} line={line} categoryId={categoryId} currency={cur} search={search} sample={lines} sectionRef={linesRef} />
     </div>
   );
 }
@@ -292,6 +299,7 @@ export function PropertyReturnLineScreen({ sample, base: baseProp }: { sample?: 
     : categoryId != null ? `${page.base}/returns/${line}${page.search}` : principal ? `${page.base}${page.search}` : `${page.base}/returns${page.search}`;
   return (
     <ScreenState
+      headerClassName="ui-ret-head"
       title={title}
       titleAside={learnKey == null ? undefined : <LearnButton learnKey={learnKey} title={title} />}
       kicker={categoryId != null || line === "rehab" ? LINE_TITLES[line] : principal ? "השקעה" : "התזרים"}

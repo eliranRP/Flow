@@ -1,70 +1,8 @@
-/* FLOW-451 (boards ConceptATotalReturn, ConceptATaxInfo, ConceptABuildingCost, ConceptAMetricCoc,
-   ConceptAReturnMath, ConceptAOpex). The investment page's returns cards, the ⓘ sheet, and the
-   statement, line, metric and part pages. */
+/* FLOW-451 (boards ConceptATaxInfo, ConceptABuildingCost, ConceptAMetricCoc, ConceptAReturnMath,
+   ConceptAOpex), FLOW-1047 (boards V3-Investment, V3-Calc): the parts of the investment page's figure,
+   the ⓘ and "איך מחושב" sheets, and the calculation pages (statement, line, metric and part). */
 
-/* The total return card: title and "איך מחושב", the 40px figure, the 8px bar, the four sources, then
-   the equity rows (FLOW-459). Sources and equity rows share the amount and chevron tracks. */
-.ui-ret-card {
-  --ret-col-amount: calc(var(--space-10) + var(--space-8));
-  --ret-col-go: calc(var(--space-4) + var(--space-1) / 2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-}
-
-.ui-ret-card-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-/* FLOW-462: the total's ⓘ sits by its title; the link keeps the far end. */
-.ui-ret-card-head .ui-ret-learn-btn {
-  align-self: center;
-  margin-inline-end: auto;
-}
-
-.ui-ret-card-title {
-  margin: 0;
-  font-size: var(--type-section-size);
-  line-height: var(--type-title-line);
-  font-weight: var(--type-section-weight);
-}
-
-/* FLOW-471: the period under the title, a caption, close to it. */
-.ui-ret-card-period {
-  margin: calc(var(--space-3) * -1 + var(--space-1) / 2) 0 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-}
-
-.ui-ret-link {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: var(--touch-min);
-  margin-block: calc(var(--space-3) * -1);
-  color: var(--color-accent-text);
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-btn-2-weight);
-  text-decoration: none;
-}
-
-.ui-ret-total {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) calc(var(--space-2) + var(--space-1) / 2);
-}
-
-.ui-ret-total-on {
-  color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-}
-
+/* The parts' bar: one shade per part, 8px, growing to its share (--motion-bar-grow). */
 .ui-ret-bar {
   display: flex;
   block-size: var(--bar-job);
@@ -76,10 +14,10 @@
 .ui-ret-bar > span {
   display: block;
   flex-basis: 0;
-  transition: flex-grow var(--motion-width) var(--ease-standard);
+  transition: flex-grow var(--motion-bar-grow) var(--ease-enter);
 }
 
-/* Four shades of the one accent, strongest first, in the legend's order. FLOW-458: the lightest is
+/* Four shades of the one accent, strongest first, in the parts' order. FLOW-458: the lightest is
    3:1 against the card in both themes (62%: 3.16:1 light, 3.54:1 dark). */
 .ui-ret-shade-1 {
   background: var(--color-accent);
@@ -93,67 +31,16 @@
   background: color-mix(in srgb, var(--color-accent) 73%, var(--color-surface));
 }
 
+/* Board V3-Investment: the fourth part in the muted colour (3:1 on the card in both themes). */
 .ui-ret-shade-4 {
-  background: color-mix(in srgb, var(--color-accent) 62%, var(--color-surface));
-}
-
-/* FLOW-454: each source is a grid of fixed tracks, dot | label | ⓘ and a flexible gap | amount | the
-   equity rows' chevron track, so the amounts keep one column whatever a row holds, in tabular figures.
-   FLOW-1022: the rows share the card's tracks (subgrid), so the label track is as wide as the longest
-   label and every ⓘ sits in one column, not right after its own label; the amounts sit at the column's
-   start (right in RTL), so their last digits line up. */
-.ui-ret-sources {
-  display: grid;
-  grid-template-columns: var(--space-2) max-content minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
-  column-gap: var(--space-2);
-}
-
-.ui-ret-source {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-  grid-template-rows: minmax(var(--touch-min), auto);
-  align-items: center;
-  font-size: var(--type-line2-size);
+  background: var(--color-text-muted);
 }
 
 .ui-ret-swatch {
+  flex: none;
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--radius-chip);
-}
-
-.ui-ret-source-label {
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.ui-ret-source > .ui-ret-info-btn {
-  justify-self: start;
-}
-
-.ui-ret-source-value {
-  grid-column: 4;
-  min-inline-size: 0;
-  font-variant-numeric: var(--font-numerals);
-  text-align: start;
-  white-space: nowrap;
-}
-
-/* FLOW-1022: an amount lines up on its last digit (the column's start, right in RTL), so a minus stands
-   outside the digits and amounts of one length share their "$"; הוספה keeps the column's far edge. */
-.ui-ret-source-value:has(.ui-ret-add),
-.ui-ret-equity-value:has(.ui-ret-add) {
-  text-align: end;
-}
-
-/* A hint under a row (what is missing): its own row of the grid, from the label's track to the end. */
-.ui-ret-source-hint {
-  grid-column: 2 / -1;
-  margin: calc(var(--space-1) * -1) 0 var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
 }
 
 /* "לפני השכירות הראשונה" in a per-cent figure's place: caption, muted. */
@@ -162,69 +49,6 @@
   font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
   line-height: var(--type-caption-line);
-}
-
-/* "חלקי · חסרים …" under the total: the figure leaves out a source (FLOW-458). Its own line. */
-.ui-ret-partial {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-}
-
-/* הון בנכס, inside the total card (FLOW-459): a sub-title, then rows that open their sheet. */
-.ui-ret-equity {
-  display: flex;
-  flex-direction: column;
-  padding-block-start: var(--space-2);
-  border-block-start: 1px solid var(--color-line);
-}
-
-.ui-ret-sub {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-  font-weight: var(--type-section-weight);
-}
-
-.ui-ret-equity-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-go);
-  align-items: center;
-  column-gap: var(--space-2);
-  inline-size: 100%;
-  min-block-size: var(--touch-min);
-  padding: var(--space-1) 0;
-  border: 0;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--type-line2-size);
-  text-align: start;
-}
-
-.ui-ret-equity-text {
-  display: flex;
-  min-inline-size: 0;
-  flex-direction: column;
-}
-
-.ui-ret-equity-label {
-  color: var(--color-text-secondary);
-}
-
-.ui-ret-equity-hint {
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-}
-
-.ui-ret-equity-value {
-  font-variant-numeric: var(--font-numerals);
-  text-align: start;
-  white-space: nowrap;
 }
 
 /* מדדים: the value in a fixed column, at its edge (left in RTL). The metrics are short (a per-cent,
@@ -425,4 +249,93 @@
 /* FLOW-471: the last paragraph scrolls clear of סגירה, so the body's end is in sight. */
 .ui-ret-info .ui-sheet-body {
   padding-block-end: var(--space-4);
+}
+
+/* FLOW-1047 (board V3-Calc): a calculation page's head. The name 24/600, the period line 14 secondary,
+   the 40px figure 6px under it, and how it is made in 14 secondary. */
+.ui-ret-head .t-title {
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
+  font-weight: var(--type-name-weight);
+}
+
+.ui-ret-head .t-title ~ p {
+  margin-block-start: var(--space-2);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-rep-content > .ui-ret-hero {
+  gap: var(--space-1);
+  padding-block: calc(var(--space-1) + var(--space-half)) var(--space-4);
+}
+
+.ui-rep-content > .ui-ret-hero .ui-ret-hero-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+/* A block of the calculation: a 20px card, 4px 16px inside, 16px apart; a 44px head over a hairline,
+   its name 15/500 and its figure 14, both secondary. */
+.ui-ret-calc {
+  margin-block-end: var(--space-4);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-ret-calc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.ui-ret-calc-title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-ret-calc-total {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  white-space: nowrap;
+}
+
+/* Its rows: 60px, a hairline between them (none under the last), the operator 20px in a 20px column,
+   the "=" rows' name and figure at 600, the figure 20px. */
+.ui-ret-calc .ui-ret-row {
+  min-block-size: calc(var(--touch-min) + var(--space-4));
+  gap: calc(var(--space-2) + var(--space-half));
+  padding-block: var(--space-1);
+}
+
+.ui-ret-calc .ui-ret-op {
+  font-size: var(--type-section-size);
+  line-height: 1;
+}
+
+.ui-ret-calc .ui-ret-text {
+  gap: 0;
+}
+
+.ui-ret-calc .ui-ret-result .ui-ret-label {
+  font-weight: var(--type-name-weight);
+}
+
+.ui-ret-calc .ui-ret-result .ui-ret-value {
+  font-size: var(--type-sheet-size);
+  font-weight: var(--type-sheet-weight);
+}
+
+/* The months under the calculation, one sticky head each. */
+.ui-ret-lines {
+  display: flex;
+  flex-direction: column;
 }
