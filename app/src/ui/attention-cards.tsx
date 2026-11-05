@@ -76,6 +76,10 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
   }
 
   function restore() {
+    // A fold still running would hide its card again once storage is cleared: end the folds first.
+    for (const timer of timers.current) clearTimeout(timer);
+    timers.current.clear();
+    setLeaving(new Set());
     restoreAll(storageKey);
     kept.current = null;
     setHidden({});

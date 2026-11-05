@@ -230,6 +230,10 @@
       "screens/HomeScreen.tsx",
       "screens/home-parts.tsx"
     ],
+    "pull-refresh.spec.ts": [
+      "ui/pull-refresh.tsx",
+      "screens/HomeScreen.tsx"
+    ],
     "phone-flows.spec.ts": [
       "screens/HomeScreen.tsx",
       "screens/project-detail-screen.tsx",
