@@ -11,7 +11,7 @@ Read, in this order: the handoff, this file, then your task file under `docs/bac
 3. **The data a screen shows comes from the reads it has today.** A new read is listed in the task file; a new user action ships its `flow-mcp` tool in the same PR ([0095](../../decisions/0095-mcp-first.md)). A view composed of existing reads needs no new tool.
 4. **Delete what the composition leaves unused** in the same PR: the split card, the next-month card, the reports card, hand-rolled group heads, a screen's own compact bar, their CSS, stories and tests. `node scripts/check-unused-app-code.mjs` and the CSS check are part of `pr (types)`.
 5. **Every PR:** a design log entry (`docs/design/log/2026-MM-DD-flow-<id>.md`), a changelog fragment, stories for every state on the `V3-States` board that applies (loading, failed with retry, offline, empty, long content), shots at 320 and 393 px in dark and light, reduced motion checked, 44 px targets, `<bdi dir="ltr">` on amounts.
-6. **Claim and lanes** as in the [backlog guide](../../backlog/README.md): a draft PR with a `Claim` block before the first build commit, one PR per task, `Files` naming CSS blocks in the hotspot files. The waves in §2 say which PRs run at the same time; their file sets are disjoint by design, so a lane never waits on another except for the merge of FLOW-1043.
+6. **Claim and lanes** as in the [backlog guide](../../backlog/README.md): a draft PR with a `Claim` block before the first build commit, one PR per task, `Files` naming CSS blocks in the hotspot files. The waves in §2 say which PRs run at the same time; their file sets are disjoint by design, so a lane never waits on another except for the merge of FLOW-1043. A claim lives only in an open PR (backlog guide); a closed PR's task file holds no file.
 7. **Reviewer and merge:** one reviewer per PR (code, pixels, motion), its APPROVED comment on the head, a green `pr` check, then a squash merge. Whoever merges second in a wave merges `main` into its branch first and re-shoots any screen the other PR changed (DESIGN-TEAM §Splitting work, rule 5).
 
 ## 2. Order and waves
@@ -33,7 +33,7 @@ flowchart LR
 
 | Wave | PRs at the same time | Why this grouping |
 | --- | --- | --- |
-| A | FLOW-1043 (app/src/ui only) and FLOW-1035 (supabase and packages/shared only) | No file in common. Everything else needs 1043's parts |
+| A | FLOW-1043 (app/src/ui, its CSS and docs) and FLOW-1035 (supabase, packages/shared and docs) | No file in common. Everything else needs 1043's parts |
 | B | FLOW-1036, FLOW-1044, FLOW-1045, FLOW-1046 | Home, Projects, Reports, Loans: the four tabs. Each owns its screen files and its own CSS files (§4) |
 | C | FLOW-1047, FLOW-1048, FLOW-1049 | The pages under the tabs. 1048 reads 1035's flag; 1047 touches only the investment and returns files, so it may start with wave B when a lane is free |
 
@@ -101,7 +101,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
 }): JSX.Element | null;
 ```
 
-- Each row is a 56px card: surface fill, `--color-line` border, radius `--radius-card-tight` (16px, a new token beside `--radius-card`), the row's icon, a one-line title (`t-body`, ellipsis), a chevron, and a 44px X with `aria-label="הסתרה: <title text>"`. A row with `button` (the review row) is the first card and has no X. The card body is the link.
+- Each row is a 56px card: surface fill, `--color-line` border, radius `--radius-card-tight` (the existing 16px token in `implementation-tokens.css`), the row's icon, a one-line title (`t-body`, ellipsis), a chevron, and a 44px X with `aria-label="הסתרה: <title text>"`. A row with `button` (the review row) is the first card and has no X. The card body is the link.
 - The X slides the card 24px toward itself, then folds it: `max-height` over `--motion-sheet-out` with `--ease-exit`, opacity 160ms. The section head shows "N הוסתרו · הצגה" when some are hidden; when every row is hidden the section is one 44px line, "אין מה לטפל · הכול נסקר" with a check in the income colour, and ביטול. The section is `aria-live="polite"`.
 - Persistence in `attention-dismiss.ts`: `readHidden(storageKey): Record<string, string>` (row id to dismissKey), `hideRow`, `restoreAll`. A row is hidden while its stored dismissKey equals its current one, so a changed count shows the row again. Every read and write is in try/catch; with no storage the cards work for the session.
 - `max-height` is the one property animated beyond transform and opacity (handoff §6).
@@ -148,7 +148,7 @@ Disjoint by construction; a lane that needs a file outside its set asks the coor
 
 - **Home without the flag.** Until FLOW-1035 is live, `recurring` is undefined on every line: Home shows נותר לשלם and קבועים ששולמו, hides the חד-פעמי group and the הכול option's third group, and the filter reads הכול / קבועים / נותר לשלם all the same. Nothing says "missing data".
 - **The review row is a card without an X.** It counts work to do; hiding it would hide the queue. The other attention rows are dismissable.
-- **Dismissal is per device and per screen** (`flow.attention.home`, `flow.attention.projects`, `flow.attention.loans`, `flow.attention.recurring`), keyed by the row id and what it counts. No server write.
+- **Dismissal is per device and per screen** (`flow.attention.home`, `flow.attention.projects`, `flow.attention.project:<id>`, `flow.attention.loans`, `flow.attention.recurring`, `flow.attention.investment:<id>`), keyed by the row id and what it counts. No server write.
 - **The toast with undo stays 5 seconds** (the component's value with an action), not the board's 4. The component wins.
 - **The month drawer carries next month's forecast** (the next-month card's read, `useCompanyCashNextMonth`) when next month is selected, the month-end forecast on the current month, the final net on a past month, and "עוד לא" beyond next month. The pill's next arrow on the current month opens the drawer on next month.
 - **Reports routes.** `/reports` is the hub. `/reports/pnl?view=category|project|month[&project=<id>|&month=YYYY-MM]` and `/reports/balance?view=assets|liabilities|project[&project=<id>]`. Old links (`/reports?kind=balance`, the project band's דוחות link) redirect to the new routes with their state. `/reports/lines` and `/reports/account` stay.
