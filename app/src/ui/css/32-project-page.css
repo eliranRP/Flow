@@ -277,11 +277,12 @@
   margin: 0;
 }
 
-/* FLOW-1044 (boards V3-Projects, V3-Profit, V3-Unassigned): the kind, category and month heads sit in a body
-   with no side padding, so they keep their own gutter instead of the negative margin that cancels a padded
-   parent's (the page would scroll sideways by one gutter). */
+/* FLOW-1044 (boards V3-Projects, V3-Project, V3-Profit, V3-Unassigned): the kind, month and category heads sit
+   in a body with no side padding, so they keep their own gutter instead of the negative margin that cancels a
+   padded parent's (the page would scroll sideways by one gutter: the owner's phone, 2026-11-05). The project
+   page and the profit page share .ui-project-page. */
 .ui-projects-body .ui-month-head,
-.ui-pp-page .ui-month-head,
+.ui-project-page .ui-month-head,
 .ui-unassigned .ui-month-head {
   margin-inline: 0;
 }
