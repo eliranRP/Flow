@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   BALANCE_PRESETS,
   PNL_PRESETS,
@@ -6,12 +6,9 @@ import {
   balancePresetLabel,
   pnlPresetLabel,
   pnlRange,
-  projectKeyName,
   rangeDays,
   type BalanceDate,
   type PnlPeriod,
-  type ReportScope,
-  type StatementProject,
 } from "../reports";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
@@ -20,11 +17,10 @@ import { ChevronIcon, OutwardChevron } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
 import { ListRow } from "../ui/list-row";
 import { MonthGrid } from "../ui/month-grid";
-import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
 
 /**
- * FLOW-161: the reports' two sheets (boards ReportPeriodSheet, ReportCustomDates, ReportProjectSheet). The
+ * FLOW-161: the reports' two sheets (boards ReportPeriodSheet, ReportCustomDates). The
  * period sheet leads with presets; "תאריכים אחרים" turns the same sheet into a range (or, for the balance sheet,
  * one date) on a month grid, with a back arrow to the presets: one sheet at a time (rule hierarchy § 10).
  */
@@ -208,44 +204,21 @@ export function BalanceDateSheet({ open, onOpenChange, value, today, onPick }: {
   );
 }
 
-/** All projects together, one statement per project, or one project; a search once there are ten or more. */
-export function ReportProjectSheet({ open, onOpenChange, value, projects, onPick, allowByProject }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  value: ReportScope;
-  projects: readonly StatementProject[];
-  onPick: (scope: ReportScope) => void;
-  /** The balance sheet has no by-project view. */
-  allowByProject: boolean;
-}) {
-  const setOpen = useSheetHistory("report-projects", open, onOpenChange);
-  const [query, setQuery] = useState("");
-  useEffect(() => {
-    if (open) setQuery("");
-  }, [open]);
-  const pick = (scope: ReportScope) => {
-    onPick(scope);
-    setOpen(false);
+/**
+ * A sheet whose pick lands once it has closed: closing steps back over the sheet's history entry, which would
+ * undo a URL written before it. `apply` writes the pick (a replace of the report's URL).
+ */
+export function useLatePick<T>(apply: (value: T) => void): { open: boolean; setOpen: (open: boolean) => void; onOpenChange: (open: boolean) => void; pick: (value: T) => void } {
+  const [open, setOpen] = useState(false);
+  const pending = useRef<{ value: T } | null>(null);
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next || pending.current == null) return;
+    const { value } = pending.current;
+    pending.current = null;
+    // After the sheet's own clean-up of its history entry, which rewrites the URL as it was.
+    queueMicrotask(() => { apply(value); });
   };
-  const real = projects.filter((project) => project.project_id != null);
-  const shown = query.trim() === "" ? real : real.filter((project) => projectKeyName(project).includes(query.trim()));
-  return (
-    <Sheet open={open} onOpenChange={setOpen} title="פרויקטים" panelClassName="ui-sheet-choice ui-rep-sheet">
-      <div role="radiogroup" aria-label="תצוגה" className="ui-choice-sheet">
-        <ListRow control="radio" value="all" title="כל הפרויקטים יחד" description="דוח אחד לעסק" selected={value.kind === "all"} onSelect={() => { pick({ kind: "all" }); }} />
-        {allowByProject ? (
-          <ListRow control="radio" value="by_project" title="לפי פרויקט" description="כל פרויקט בנפרד, אחד מתחת לשני" selected={value.kind === "by_project"} onSelect={() => { pick({ kind: "by_project" }); }} />
-        ) : null}
-      </div>
-      {real.length > 0 ? <p className="t-caption t-muted ui-rep-group-label">פרויקט אחד</p> : null}
-      {real.length >= 10 ? <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="שם הפרויקט" /> : null}
-      <div role="radiogroup" aria-label="פרויקט" className="ui-choice-sheet">
-        {shown.map((project) => {
-          const id = project.project_id ?? "";
-          return <ListRow control="radio" key={id} value={id} title={projectKeyName(project)} selected={value.kind === "project" && value.id === id} onSelect={() => { pick({ kind: "project", id }); }} />;
-        })}
-      </div>
-      {real.length >= 10 && shown.length === 0 ? <p className="t-caption t-muted">אין פרויקט בשם הזה</p> : null}
-    </Sheet>
-  );
+  return { open, setOpen, onOpenChange, pick: (value: T) => { pending.current = { value }; } };
 }
+

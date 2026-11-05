@@ -7,7 +7,8 @@ import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import type { AccountLines } from "../report-schemas";
-import { accountName, balanceDate, ltr, reportStateOf } from "../reports";
+import { accountName, asOfOf, balanceDate, ltr } from "../reports";
+import { reportBackPath, reportProjectId } from "../report-views";
 import { Amount, formatAmount } from "../ui/amount";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -37,13 +38,12 @@ type Span = "year" | "all";
 
 /** What the page shows, from its query string: the reports screen's date and project, the account, currency and period. */
 function accountArgs(params: URLSearchParams, today: string) {
-  const state = reportStateOf(params);
   const currency = params.get("cur") ?? "";
   const span: Span = params.get("span") === "all" ? "all" : "year";
   return {
     accountId: params.get("account") ?? "",
-    asOf: balanceDate(state.asOf, today),
-    projectId: state.scope.kind === "project" ? state.scope.id : null,
+    asOf: balanceDate(asOfOf(params), today),
+    projectId: reportProjectId(params),
     currency: /^[A-Z]{3}$/.test(currency) ? currency : null,
     span,
   };
@@ -184,11 +184,7 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   const pages = sample != null ? (sample.page === undefined ? undefined : [sample.page]) : read.data?.pages;
   const first = pages?.[0];
   // Back to the balance sheet with its own choices; the account's keys stay here.
-  const backParams = new URLSearchParams(params);
-  backParams.delete("account");
-  backParams.delete("cur");
-  backParams.delete("span");
-  const back = `/reports${backParams.size > 0 ? `?${backParams.toString()}` : ""}`;
+  const back = reportBackPath("balance", params.toString(), ["account", "cur", "span"]);
   const title = first != null ? accountName(first) : "חשבון";
   const header = <ScreenHeader layout="stacked" className="ui-rep-account-head" title={title} backTo={back} backText="דוחות" />;
   if (first === undefined) {

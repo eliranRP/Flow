@@ -14,13 +14,10 @@ import {
   pnlRange,
   projectKeyName,
   rangeDays,
-  readCollapsed,
   reportSearch,
   reportStateOf,
   reportsTo,
   statementEmpty,
-  statementSectionIds,
-  writeCollapsed,
 } from "./reports";
 
 const TODAY = "2026-10-29";
@@ -105,10 +102,6 @@ describe("the P&L statement", () => {
     expect(statementEmpty(REPORTS_EMPTY)).toBe(true);
   });
 
-  it("lists every section כיווץ הכל closes: the two sides and each parent", () => {
-    expect(statementSectionIds(REPORTS_STATEMENT_ROW)).toEqual(["USD:income", "USD:expense", "USD:expense:c-props", "USD:expense:c-general"]);
-  });
-
   it("puts numbered categories first, by their number, and keeps the rest in the order they came", () => {
     const names = ["ביטוח", "11 ארנונה", "06 ניהול", "פיקדון", null, "05 ניקיון", "10 תיקונים", "07 ביטוח"];
     expect(byCategoryNumber(names.map((name) => ({ name }))).map((row) => row.name))
@@ -145,21 +138,5 @@ describe("the balance sheet", () => {
     expect(balanceWarning(suspense)).toEqual({ amount: 125_000n, count: 1 });
     expect(balanceEmpty(REPORTS_BALANCE)).toBe(false);
     expect(balanceEmpty({ currencies: [] })).toBe(true);
-  });
-});
-
-describe("collapsed sections", () => {
-  it("are remembered per report", () => {
-    writeCollapsed("pnl", new Set(["USD:income"]));
-    writeCollapsed("balance", new Set(["USD:assets"]));
-    expect([...readCollapsed("pnl")]).toEqual(["USD:income"]);
-    expect([...readCollapsed("balance")]).toEqual(["USD:assets"]);
-  });
-
-  it("read as none when storage holds something else", () => {
-    window.localStorage.setItem("flow.reports.collapsed.pnl", "{not json");
-    expect(readCollapsed("pnl").size).toBe(0);
-    window.localStorage.setItem("flow.reports.collapsed.pnl", JSON.stringify([1, "USD:expense"]));
-    expect([...readCollapsed("pnl")]).toEqual(["USD:expense"]);
   });
 });

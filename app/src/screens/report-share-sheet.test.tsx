@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { REPORTS_BALANCE, REPORTS_BY_PROJECT, REPORTS_EMPTY, REPORTS_STATEMENT, REPORTS_TODAY } from "../dev/reports-sample";
 import { renderWithProviders } from "../test-render";
-import { ReportsScreen } from "./reports-screen";
+import { BalanceReportScreen } from "./reports-balance-screen";
+import { PnlReportScreen } from "./reports-screen";
 
 /** Stubs the browser's share calls only (jsdom has neither). */
 function stubShare(canShare: (() => boolean) | undefined, share: (() => Promise<void>) | undefined) {
@@ -32,8 +33,11 @@ beforeEach(() => {
   invoke.impl = () => Promise.resolve({ data: null, error: new Error("down") });
 });
 
-function renderReports(route = "/reports") {
-  return renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT }} />, { route });
+const MAPLE = "a0000000-0000-4000-8000-000000000162";
+
+function renderReports(route = "/reports/pnl") {
+  const drilled = { ...REPORTS_STATEMENT, project_id: MAPLE, project_name: "Maple Ave" };
+  return renderWithProviders(<PnlReportScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, byProject: REPORTS_BY_PROJECT, drilled }} />, { route });
 }
 
 describe("ReportShareSheet", () => {
@@ -87,13 +91,13 @@ describe("ReportShareSheet", () => {
   });
 
   it("has nothing to share before the report is in, or when it is empty", () => {
-    const loading = renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, phase: { kind: "loading" } }} />, { route: "/reports" });
+    const loading = renderWithProviders(<PnlReportScreen sample={{ today: REPORTS_TODAY, phase: { kind: "loading" } }} />, { route: "/reports/pnl" });
     expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();
     loading.unmount();
-    const empty = renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_EMPTY, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT }} />, { route: "/reports" });
+    const empty = renderWithProviders(<PnlReportScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_EMPTY, byProject: REPORTS_BY_PROJECT }} />, { route: "/reports/pnl" });
     expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();
     empty.unmount();
-    renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: { ...REPORTS_BALANCE, currencies: [] }, projects: REPORTS_BY_PROJECT }} />, { route: "/reports?kind=balance" });
+    renderWithProviders(<BalanceReportScreen sample={{ today: REPORTS_TODAY, balance: { ...REPORTS_BALANCE, currencies: [] }, projects: REPORTS_BY_PROJECT }} />, { route: "/reports/balance" });
     expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();
   });
 
@@ -116,7 +120,7 @@ describe("ReportShareSheet", () => {
   });
 
   it("by project on screen: a column per project; sub-categories still offered (FLOW-993)", async () => {
-    renderReports("/reports?scope=by_project");
+    renderReports("/reports/pnl?view=project");
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     expect(within(sheet).getByRole("radio", { name: "פרויקט" })).toBeChecked();
@@ -153,7 +157,7 @@ describe("ReportShareSheet", () => {
   });
 
   it("on a project's report, turning every project back off starts from that project (FLOW-456)", () => {
-    renderReports("/reports?scope=project&project=a0000000-0000-4000-8000-000000000162");
+    renderReports(`/reports/pnl?view=project&project=${MAPLE}`);
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     const all = within(sheet).getByRole("switch", { name: "כל הפרויקטים" });
@@ -166,7 +170,7 @@ describe("ReportShareSheet", () => {
   });
 
   it("by month over all time needs a range, and a wide PDF suggests quarters or Excel", () => {
-    renderReports("/reports?period=all");
+    renderReports("/reports/pnl?period=all");
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
@@ -175,7 +179,7 @@ describe("ReportShareSheet", () => {
   });
 
   it("a range of 18 months by month in a PDF is 19 columns with the total, and warns", () => {
-    renderReports("/reports?period=custom&from=2025-01-01&to=2026-06-30");
+    renderReports("/reports/pnl?period=custom&from=2025-01-01&to=2026-06-30");
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
@@ -184,7 +188,7 @@ describe("ReportShareSheet", () => {
   });
 
   it("by month over more than 36 columns is held back, and the sheet says the most", () => {
-    renderReports("/reports?period=custom&from=2024-01-01&to=2027-01-31");
+    renderReports("/reports/pnl?period=custom&from=2024-01-01&to=2027-01-31");
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));

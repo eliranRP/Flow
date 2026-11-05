@@ -1,78 +1,82 @@
 import "../ui/lazy.css";
-import { useMemo, useRef, useState } from "react";
+import type { ProfitMonths } from "@flow/shared";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import {
-  balanceChipLabel,
-  balanceDate,
-  balanceEmpty,
-  dateRangeText,
-  ltr,
-  equityTotal,
+  accountName,
+  categoryName,
+  marginPercent,
   pnlChipLabel,
   pnlRange,
-  readCollapsed,
-  reportSearch,
-  reportStateOf,
+  projectKeyName,
   statementEmpty,
-  statementSectionIds,
-  writeCollapsed,
-  type BalanceSheet,
-  type ReportKind,
-  type ReportState,
   type Statement,
+  type StatementCurrency,
 } from "../reports";
-import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
-import { Chip } from "../ui/chip";
-import { formatDisplay, israelToday } from "../ui/date-math";
-import { EmptyState } from "../ui/empty-state";
+import {
+  generalStatementRow,
+  groupsNet,
+  isGeneralKey,
+  monthRange,
+  monthTitleOf,
+  netTotal,
+  pnlMonthRows,
+  pnlPath,
+  pnlProjectGroups,
+  pnlRouteOf,
+  shareStateOf,
+  statementGroups,
+  type PnlRoute,
+  type PnlView,
+  type ViewRow,
+} from "../report-views";
+import { AttentionCards } from "../ui/attention-cards";
+import { useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
-import { DocumentIcon, ShareIcon } from "../ui/icons";
-import { IconButton } from "../ui/icon-button";
-import { ScreenHeader } from "../ui/screen-header";
-import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
+import { israelToday } from "../ui/date-math";
+import { EmptyState, FailureLine } from "../ui/empty-state";
+import { GroupHead } from "../ui/group-head";
+import { DocumentIcon } from "../ui/icons";
+import { List, ListRow } from "../ui/list-row";
 import type { ScreenPhase } from "../ui/screen-phase";
 import { SegmentedControl } from "../ui/segmented-control";
-import { DelayedSkeleton } from "../ui/skeleton";
-import { useBalanceSheet, useReportProjects, useStatement } from "../use-reports";
-import { BalanceView, ByProjectView, ReportSummary, StatementView, statementSub, type Collapse } from "./reports-parts";
+import { useCompanyMonths, usePnl } from "../use-reports";
 import { ReportShareSheet } from "./report-share-sheet";
-import { BalanceDateSheet, PnlPeriodSheet, ReportProjectSheet } from "./reports-sheets";
+import { NetGroup, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, type BandFigure } from "./reports-parts";
+import { PnlPeriodSheet, useLatePick } from "./reports-sheets";
 
-/** A fixture: today, and the reads as they would come back (null statement: the project is not found). */
-export type ReportsSample = {
+/** A fixture: today, and the reads as they would come back (a null drill-down: the project is not found). */
+export type PnlSample = {
   today: string;
-  statement?: Statement | null;
-  balance?: BalanceSheet;
-  /** The by-project statement the projects sheet lists. */
-  projects?: Statement;
+  /** The period's statement of every project. */
+  statement?: Statement;
+  /** The same by project: the project view, the general expenses' drill-down and the share sheet's projects. */
+  byProject?: Statement;
+  months?: NonNullable<ProfitMonths>;
+  /** The drilled project's or month's own statement. */
+  drilled?: Statement | null;
   phase?: ScreenPhase;
   offlineSince?: number;
 };
 
-/** The category drill-down for a row, keeping the period and the project. */
-export function reportLinesPath(state: ReportState, side: "income" | "expense", node: { id: string | null; name: string | null }, today: string, search: string, currency: string, projectName: string | null): string {
-  const range = pnlRange(state.period, today);
+/** The category drill-down for a row: its own dates (`lfrom`/`lto`, so the report's period stays as it was), the project. */
+export function reportLinesPath(range: { from: string | null; to: string | null }, side: "income" | "expense", node: { id: string | null; name: string | null }, search: string, currency: string, project: { id: string; name: string | null } | null): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   params.set("side", side);
   params.set("category", node.id ?? "none");
   if (node.name != null) params.set("name", node.name);
   if (range.from != null && range.to != null) {
-    params.set("from", range.from);
-    params.set("to", range.to);
-  } else {
-    params.delete("from");
-    params.delete("to");
+    params.set("lfrom", range.from);
+    params.set("lto", range.to);
   }
   params.set("cur", currency);
   // One project: its id, so the drill-down reads that project's lines (FLOW-165), and its name to show.
-  if (state.scope.kind === "project") {
-    params.set("scope", "project");
-    params.set("project", state.scope.id);
+  if (project != null) {
+    params.set("project", project.id);
+    if (project.name != null) params.set("pname", project.name);
   }
-  if (state.scope.kind === "project" && projectName != null) params.set("pname", projectName);
-  else params.delete("pname");
   return `/reports/lines?${params.toString()}`;
 }
 
@@ -84,204 +88,219 @@ export function reportAccountPath(search: string, accountId: string, currency: s
   return `/reports/account?${params.toString()}`;
 }
 
+const VIEWS: { value: PnlView; label: string }[] = [
+  { value: "category", label: "קטגוריה" },
+  { value: "project", label: "פרויקט" },
+  { value: "month", label: "חודש" },
+];
+
+/** Where a kept-out category posts: the account when its name differs, else its type. */
+function keptMeta(item: StatementCurrency["kept_out"][number]): string | undefined {
+  const account = item.account_name == null ? null : accountName({ name: item.account_name, is_system: true });
+  if (account != null && account !== item.name) return account;
+  if (item.account_type === "asset") return "נכס";
+  if (item.account_type === "liability") return "התחייבות";
+  if (item.account_type === "equity") return "הון";
+  return undefined;
+}
+
+/** What stays out of profit: loans, principal, deposits. In the balance sheet, not the P&L. */
+function KeptOut({ row }: { row: StatementCurrency }) {
+  if (row.kept_out.length === 0) return null;
+  const id = `pnl-kept-${row.currency}`;
+  return (
+    <section className="ui-month ui-rep-v3-group" aria-labelledby={id}>
+      <GroupHead id={id} title="לא נספר ברווח" summary={row.kept_out.length === 1 ? "קטגוריה אחת" : `${String(row.kept_out.length)} קטגוריות`} />
+      <List>
+        {row.kept_out.map((item) => (
+          <ListRow
+            key={`${item.direction}:${item.id ?? "none"}`}
+            variant="project"
+            title={categoryName(item.name)}
+            {...(keptMeta(item) == null ? {} : { hint: keptMeta(item) })}
+            agorot={item.amount_minor}
+            currency={row.currency}
+            chevronSpace
+            setAside
+            {...(item.direction === "income" ? { amountDirection: "income" as const } : {})}
+          />
+        ))}
+      </List>
+      <p className="ui-rep-note">נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ופיקדון מסים וביטוח. הם במאזן, לא ברווח.</p>
+    </section>
+  );
+}
+
+/** The margin under the band's figure: "30% מההכנסות". */
+function marginText(row: StatementCurrency): string | undefined {
+  const margin = marginPercent(row);
+  return margin == null ? undefined : `${String(margin)}% מההכנסות`;
+}
+
 /**
- * FLOW-161 (board row "דוחות", Home card Option 2): the P&L and the balance sheet. A switch picks the report,
- * two chips pick the period (or the date) and the projects, every section collapses with its total on its
- * header, and a category row opens its lines. Everything it picks is in the URL.
+ * FLOW-1045 (board V3-Report, kind pl): the profit and loss. The band carries the period pill and the net
+ * profit, income and expenses under it; a docking control picks the view: by category (the statement's
+ * sections), by project (each project's net, the general expenses in their own group) or by month
+ * (get_profit_months). A project or month row drills into its own P&L on the same screen.
  */
-export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
+export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const online = useOnline();
   const today = sample?.today ?? israelToday();
-  const state = useMemo(() => reportStateOf(new URLSearchParams(location.search)), [location.search]);
+  const route = useMemo(() => pnlRouteOf(new URLSearchParams(location.search)), [location.search]);
   const live = sample == null;
-  const statementRead = useStatement(state, today, live && state.kind === "pnl");
-  const balanceRead = useBalanceSheet(state, today, live && state.kind === "balance");
-  const projectsRead = useReportProjects(state, today, live);
-  const statement = live ? statementRead.data : sample.statement;
-  const balance = live ? balanceRead.data : sample.balance;
-  const projects = (live ? projectsRead.data : sample.projects)?.projects ?? [];
-  const [collapsedByKind, setCollapsedByKind] = useState<Record<ReportKind, Set<string>>>(() => ({ pnl: readCollapsed("pnl"), balance: readCollapsed("balance") }));
-  const collapsed = collapsedByKind[state.kind];
-  const [sheet, setSheet] = useState<"period" | "projects" | "share" | null>(null);
-  // A pick lands once its sheet has closed: closing steps back over the sheet's history entry, which
-  // would undo a URL written before it.
-  const pendingPick = useRef<ReportState | null>(null);
+  const range = pnlRange(route.period, today);
+  const drill = route.drill;
+  const projectKey = drill?.kind === "project" ? drill.key : null;
+  const general = projectKey != null && isGeneralKey(projectKey);
+  const month = drill?.kind === "month" ? drill.month : null;
+  const drillRange = month != null ? monthRange(month, today) : range;
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const go = (next: ReportState) => {
-    void navigate({ pathname: location.pathname, search: reportSearch(next) }, { replace: true });
-  };
-  const sheetChange = (which: "period" | "projects") => (open: boolean) => {
-    setSheet(open ? which : null);
-    if (open || pendingPick.current == null) return;
-    const next = pendingPick.current;
-    pendingPick.current = null;
-    // After the sheet's own clean-up of its history entry, which rewrites the URL as it was.
-    queueMicrotask(() => { go(next); });
-  };
-  const pickLater = (next: ReportState) => {
-    pendingPick.current = next;
-  };
-  const setCollapsed = (next: Set<string>) => {
-    setCollapsedByKind((current) => ({ ...current, [state.kind]: next }));
-    writeCollapsed(state.kind, next);
-  };
-  const collapse: Collapse = {
-    isOpen: (id) => !collapsed.has(id),
-    onToggle: (id) => {
-      const next = new Set(collapsed);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      setCollapsed(next);
-    },
-  };
+  const allRead = usePnl(range, null, false, live);
+  const byProjectRead = usePnl(range, null, true, live && (route.view === "project" || shareOpen));
+  const monthsRead = useCompanyMonths(range, live && route.view === "month" && drill == null);
+  const drillRead = usePnl(drillRange, general ? null : projectKey, false, live && drill != null && !general);
+  const statement = live ? allRead.data : sample.statement;
+  const byProject = live ? byProjectRead.data : sample.byProject;
+  const months = live ? monthsRead.data : sample.months;
+  const drilled = live ? drillRead.data : sample.drilled;
 
-  const read = state.kind === "pnl" ? statementRead : balanceRead;
-  const data = state.kind === "pnl" ? statement : balance;
-  const phase: ScreenPhase = sample?.phase ?? (sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : read.failed ? { kind: "error", offline: !online } : data === undefined ? { kind: "loading" } : { kind: "ready" });
-  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (read.readAt || null) : null;
+  const go = (next: PnlRoute) => {
+    void navigate(pnlPath(next, search), { replace: true });
+  };
+  const period = useLatePick<PnlRoute["period"]>((next) => { go({ period: next, view: route.view, drill: null }); });
+  const base = statement?.currencies[0]?.currency ?? "ILS";
+  const top = statement?.currencies.find((row) => row.currency === base);
+  const drilledRow = drill == null ? null : general ? (byProject == null ? undefined : generalStatementRow(byProject, projectKey, base)) : drilled === undefined ? undefined : drilled === null ? null : (drilled.currencies.find((row) => row.currency === base) ?? drilled.currencies[0] ?? emptyRow(base));
+  const bandRead = drill == null ? allRead : general ? byProjectRead : drillRead;
+  const bandData = drill == null ? statement : general ? byProject : drilled;
+  const phase: ScreenPhase = sample?.phase ?? (!live ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : bandRead.failed && bandData === undefined ? { kind: "error", offline: !online } : bandData === undefined ? { kind: "loading" } : { kind: "ready" });
+  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (bandRead.readAt || null) : null;
 
-  const projectName = state.scope.kind === "project"
-    ? (statement?.project_name ?? balance?.project_name ?? projects.find((project) => project.project_id === (state.scope.kind === "project" ? state.scope.id : ""))?.name ?? "פרויקט")
-    : null;
-  const scopeLabel = state.scope.kind === "all" ? "כל הפרויקטים" : state.scope.kind === "by_project" ? "לפי פרויקט" : (projectName ?? "פרויקט");
-  const periodLabel = state.kind === "pnl" ? pnlChipLabel(state.period, today) : balanceChipLabel(state.asOf, today);
-  const range = pnlRange(state.period, today);
-  const rangeText = dateRangeText(range.from, range.to);
-
-  const head = (
-    <div className="ui-rep-head-controls">
-      <SegmentedControl<ReportKind>
-        label="סוג דוח"
-        showLabel={false}
-        radius="input"
-        value={state.kind}
-        onChange={(kind) => { go({ ...state, kind, scope: kind === "balance" && state.scope.kind === "by_project" ? { kind: "all" } : state.scope }); }}
-        options={[{ value: "pnl", label: "רווח והפסד" }, { value: "balance", label: "מאזן" }]}
-      />
-      <div className="ui-rep-chips">
-        <Chip pressed onClick={() => { setSheet("period"); }}>{periodLabel}</Chip>
-        <Chip pressed={state.scope.kind !== "all"} onClick={() => { setSheet("projects"); }}>{scopeLabel}</Chip>
-      </div>
-    </div>
-  );
-  const sheets = (
-    <>
-      {state.kind === "pnl" ? (
-        <PnlPeriodSheet open={sheet === "period"} onOpenChange={sheetChange("period")} value={state.period} today={today} onPick={(period) => { pickLater({ ...state, period }); }} />
-      ) : (
-        <BalanceDateSheet open={sheet === "period"} onOpenChange={sheetChange("period")} value={state.asOf} today={today} onPick={(asOf) => { pickLater({ ...state, asOf }); }} />
-      )}
-      <ReportShareSheet open={sheet === "share"} onOpenChange={(open) => { setSheet(open ? "share" : null); }} state={state} today={today} projects={projects} />
-      <ReportProjectSheet open={sheet === "projects"} onOpenChange={sheetChange("projects")} value={state.scope} projects={projects} allowByProject={state.kind === "pnl"} onPick={(scope) => { pickLater({ ...state, scope }); }} />
-    </>
-  );
-  const share = phase.kind === "ready" && data != null && !(state.kind === "pnl" && statement != null && statementEmpty(statement)) && !(state.kind === "balance" && balance != null && balanceEmpty(balance))
-    ? <IconButton label="שיתוף הדוח" onClick={() => { setSheet("share"); }}><ShareIcon size={22} /></IconButton>
-    : null;
-  const header = <ScreenHeader layout="stacked" title="דוחות" below={head} action={share} />;
+  const drillName = projectKey != null
+    ? (general ? projectKeyName({ key: projectKey, name: null }) : (drilled?.project_name ?? byProject?.projects.find((item) => item.key === projectKey)?.name ?? "פרויקט"))
+    : month != null ? monthTitleOf(month) : null;
+  const shownRow = drill == null ? top : drilledRow;
+  const figure: BandFigure | null = phase.kind === "ready" && shownRow != null ? { amount: shownRow.net_minor, currency: shownRow.currency, loss: shownRow.net_minor < 0n } : phase.kind === "empty" ? { amount: 0n, currency: base, loss: false } : null;
+  const empty = phase.kind === "empty" || (statement != null && statementEmpty(statement));
+  const undrill = () => {
+    const state: unknown = location.state;
+    if (typeof state === "object" && state != null && "reportDrill" in state) void navigate(-1);
+    else go({ ...route, drill: null });
+  };
 
   let body;
-  if (phase.kind === "loading") {
-    body = <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>;
-  } else if (phase.kind === "error") {
-    body = <PageLoadFailed title="הדוח לא נטען" offline={phase.offline} onRetry={read.refetch} />;
-  } else if (data === null) {
-    body = <EmptyState icon={<DocumentIcon size={28} />} title="הפרויקט לא נמצא" body="ייתכן שנמחק. אפשר לראות את כל הפרויקטים יחד." action={<Button onClick={() => { go({ ...state, scope: { kind: "all" } }); }}>כל הפרויקטים</Button>} />;
-  } else if (phase.kind === "empty" || (state.kind === "pnl" && statement != null && statementEmpty(statement)) || (state.kind === "balance" && balance != null && balanceEmpty(balance))) {
-    const what = state.kind === "pnl" ? "אין תנועות בתקופה הזאת" : "אין עדיין יתרות במאזן";
-    body = <EmptyState icon={<DocumentIcon size={28} />} title={what} body={state.kind === "pnl" ? "לא נרשמו הכנסות או הוצאות בתקופה הזאת, אז אין עדיין מה להציג בדוח." : "אין עדיין תנועות עד התאריך הזה."} action={<Button onClick={() => { setSheet("period"); }}>{state.kind === "pnl" ? "בחירת תקופה אחרת" : "בחירת תאריך אחר"}</Button>} />;
-  } else if (state.kind === "pnl" && statement != null) {
-    const first = statement.currencies[0];
-    const byProject = state.scope.kind === "by_project";
-    const ids = byProject
-      ? statement.projects.map((project) => `project:${project.key}`)
-      : statement.currencies.flatMap((row) => statementSectionIds(row));
-    // By project the cards start closed, so a card's id in the set means open.
-    const allClosed = byProject ? ids.every((id) => !collapsed.has(id)) : ids.every((id) => collapsed.has(id));
-    const toggleAll = () => {
-      const next = new Set(collapsed);
-      for (const id of ids) {
-        const close = !allClosed;
-        if (byProject ? !close : close) next.add(id);
-        else next.delete(id);
-      }
-      setCollapsed(next);
-    };
+  if (phase.kind === "loading" || (drill != null && drilledRow === undefined)) {
+    body = <ReportRowsSkeleton />;
+  } else if (drill != null && drilledRow === null) {
+    body = <EmptyState icon={<DocumentIcon size={28} />} title="הפרויקט לא נמצא" body="ייתכן שנמחק. אפשר לראות את כל הפרויקטים." action={<Button onClick={() => { go({ ...route, drill: null }); }}>לפי פרויקט</Button>} />;
+  } else if (empty && drill == null) {
+    body = <EmptyState icon={<DocumentIcon size={28} />} title="אין תנועות בתקופה הזאת" body="לא נרשמו הכנסות או הוצאות בתקופה הזאת, אז אין עדיין מה להציג בדוח." action={<Button onClick={() => { period.setOpen(true); }}>בחירת תקופה אחרת</Button>} />;
+  } else if (drill != null && drilledRow != null) {
+    const projectId = projectKey != null && !general ? projectKey : null;
+    const groups = statementGroups(drilledRow);
+    const linesHref = general ? undefined : (row: ViewRow) => (row.category == null ? undefined : reportLinesPath(drillRange, row.category.side, row.category, location.search, drilledRow.currency, projectId == null ? null : { id: projectId, name: drillName }));
+    const searchRange = drillRange.from != null && drillRange.to != null ? `period=custom&from=${drillRange.from}&to=${drillRange.to}` : "";
+    const extra = search === "" ? "" : `&${search.slice(1)}`;
+    const onward = projectId != null
+      ? { label: "לדף הפרויקט", to: `/projects/${projectId}${search}` }
+      : month != null
+        ? { label: "תנועות החודש", to: `/search?${searchRange}${extra}` }
+        : projectKey === "unassigned"
+          ? { label: "כל התנועות", to: `/search?project=none${searchRange === "" ? "" : `&${searchRange}`}${extra}` }
+          : null;
     body = (
-      <div className="ui-rep-content">
-        {first != null ? (
-          <ReportSummary
-            label={byProject ? `רווח נקי · ${String(statement.projects.filter((project) => project.project_id != null).length)} פרויקטים` : state.scope.kind === "project" ? `רווח נקי · ${projectName ?? ""}` : "רווח נקי"}
-            amount={first.net_minor}
-            currency={first.currency}
-            sub={statementSub(first, rangeText)}
-          />
-        ) : null}
-        {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
-        <div className="ui-rep-tools">
-          <span className="t-caption t-muted">{statement.review_count > 0 ? `${String(statement.review_count)} תנועות ממתינות לבדיקה ולא נכללו` : ""}</span>
-          <button type="button" className="ui-rep-toggle-all" onClick={toggleAll}>{allClosed ? "פתיחת הכל" : "כיווץ הכל"}</button>
-        </div>
-        {byProject ? (
-          <ByProjectView projects={statement.projects} currency={first?.currency ?? "ILS"} collapse={{ isOpen: (id) => !collapsed.has(id), onToggle: collapse.onToggle }} openProject={(id) => `${location.pathname}${reportSearch({ ...state, scope: { kind: "project", id } })}`} />
-        ) : (
-          statement.currencies.map((row, index) => (
-            <div key={row.currency} className="ui-rep-currency">
-              {index > 0 ? <h2 className="t-section ui-rep-currency-title">{`ב־${row.currency}`}</h2> : null}
-              <StatementView row={row} collapse={collapse} drill={(side, node) => reportLinesPath(state, side, node, today, location.search, row.currency, projectName)} />
-            </div>
-          ))
-        )}
-        <p className="ui-rep-note">{`נספר לפי ${statement.basis === "cash" ? "מזומן" : "חשבוניות"}. דוח ניהולי, לא דוח כספי מבוקר.`}</p>
-      </div>
+      <>
+        <ViewGroups id="pnl-drill" groups={groups} currency={drilledRow.currency} {...(linesHref == null ? {} : { href: linesHref })} />
+        {/* The groups' own sum: it equals the row tapped and the band (a test). */}
+        <ReportBottomLine label="רווח נקי" amount={groupsNet(groups)} currency={drilledRow.currency} />
+        {onward == null ? null : <ReportGoOn label={onward.label} to={onward.to} />}
+      </>
     );
-  } else if (state.kind === "balance" && balance != null) {
-    const first = balance.currencies[0];
-    const ids = balance.currencies.flatMap((row) => [`${row.currency}:assets`, `${row.currency}:liabilities`, `${row.currency}:equity`]);
-    const allClosed = ids.every((id) => collapsed.has(id));
+  } else if (route.view === "project") {
+    if (byProject == null) {
+      body = byProjectRead.failed ? <FailureLine offline={!online} onRetry={byProjectRead.refetch} /> : <ReportRowsSkeleton />;
+    } else {
+      const groups = pnlProjectGroups(byProject, base);
+      const open = (key: string) => pnlPath({ ...route, drill: { kind: "project", key } }, search);
+      body = (
+        <>
+          <NetGroup id="pnl-projects" title="רווח נקי לפי פרויקט" rows={groups.projects} currency={base} open={(row) => open(row.key)} />
+          <NetGroup id="pnl-general" title="כלליות · לא פרויקט" rows={groups.general} currency={base} open={(row) => open(row.key)} />
+          <ReportBottomLine label="רווח נקי" amount={netTotal(groups.projects) + netTotal(groups.general)} currency={base} />
+        </>
+      );
+    }
+  } else if (route.view === "month") {
+    if (months == null) {
+      body = monthsRead.failed ? <FailureLine offline={!online} onRetry={monthsRead.refetch} /> : <ReportRowsSkeleton />;
+    } else {
+      const rows = pnlMonthRows(months, base);
+      body = (
+        <>
+          <NetGroup id="pnl-months" title="רווח נקי לפי חודש" rows={rows} currency={base} open={(row) => pnlPath({ ...route, drill: { kind: "month", month: row.key } }, search)} />
+          <ReportBottomLine label="רווח נקי" amount={netTotal(rows)} currency={base} />
+        </>
+      );
+    }
+  } else if (statement != null) {
     body = (
-      <div className="ui-rep-content">
-        {first != null ? (
-          <ReportSummary
-            label={state.scope.kind === "project" ? `הון עצמי · ${projectName ?? ""}` : "הון עצמי"}
-            amount={equityTotal(first)}
-            currency={first.currency}
-            sub={`${first.balanced && first.warnings.length === 0 ? "מאוזן · " : ""}נכון ל־${ltr(formatDisplay(balanceDate(state.asOf, today)))}`}
-            ok={first.balanced && first.warnings.length === 0}
-          />
-        ) : null}
-        {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
-        <div className="ui-rep-tools">
-          <span />
-          <button type="button" className="ui-rep-toggle-all" onClick={() => {
-            const next = new Set(collapsed);
-            for (const id of ids) {
-              if (allClosed) next.delete(id);
-              else next.add(id);
-            }
-            setCollapsed(next);
-          }}>{allClosed ? "פתיחת הכל" : "כיווץ הכל"}</button>
-        </div>
-        {balance.currencies.map((row, index) => (
-          <div key={row.currency} className="ui-rep-currency">
+      <>
+        {statement.currencies.map((row, index) => (
+          <div key={row.currency} className="ui-rep-v3-currency">
             {index > 0 ? <h2 className="t-section ui-rep-currency-title">{`ב־${row.currency}`}</h2> : null}
-            <BalanceView row={row} collapse={collapse} fixHref={`/settings/categories${search}`} accountHref={(id) => reportAccountPath(location.search, id, row.currency)} />
+            <ViewGroups id={`pnl-${row.currency}`} groups={statementGroups(row)} currency={row.currency} href={(item) => (item.category == null ? undefined : reportLinesPath(range, item.category.side, item.category, location.search, row.currency, null))} />
+            <ReportBottomLine label="רווח נקי" amount={row.net_minor} currency={row.currency} />
+            <KeptOut row={row} />
           </div>
         ))}
-        <p className="ui-rep-note">דוח ניהולי, לא דוח כספי מבוקר.</p>
-      </div>
+      </>
     );
   }
 
+  const attention = drill == null && statement != null && statement.review_count > 0
+    ? <AttentionCards storageKey="reports" title="לבדיקה" rows={[{ id: "review", to: `/review${search}`, title: `${String(statement.review_count)} תנועות לא נכללו · לבדיקה`, dismissKey: `review:${String(statement.review_count)}` }]} />
+    : null;
+  const ready = phase.kind === "ready" && !empty;
   return (
-    <div className="ui-rep-screen">
-      {header}
-      {body}
-      {sheets}
-    </div>
+    <>
+      <ReportShell
+        name={drillName ?? "רווח והפסד"}
+        back={drill == null ? { kind: "hub", to: `/reports${search}` } : { kind: "undrill", label: month != null ? "לפי חודש" : "לפי פרויקט", onBack: undrill }}
+        pill={{ label: month != null ? monthTitleOf(month) : pnlChipLabel(route.period, today), onOpen: () => { period.setOpen(true); } }}
+        figureLabel="רווח נקי"
+        figure={figure}
+        {...(drill == null ? (top == null ? {} : { figureSub: marginText(top) }) : top == null ? {} : { figureSub: `מתוך רווח נקי ${amountText(top.net_minor, top.currency)}` })}
+        rows={shownRow == null ? [] : [{ label: "הכנסות", amount: shownRow.income_minor, income: true }, { label: "הוצאות", amount: shownRow.expense_minor }]}
+        onShare={ready ? () => { setShareOpen(true); } : null}
+        control={drill == null ? (onBand, scrollUnderBar) => (
+          <SegmentedControl<PnlView>
+            label="תצוגה"
+            showLabel={false}
+            tone={onBand ? "band" : "page"}
+            value={route.view}
+            options={VIEWS}
+            onChange={(view) => { go({ ...route, view, drill: null }); scrollUnderBar(); }}
+          />
+        ) : null}
+        offlineSince={offlineSince}
+        failed={phase.kind === "error" ? { offline: phase.offline, onRetry: bandRead.refetch } : null}
+        top={attention}
+      >
+        {body}
+        {phase.kind === "ready" ? <p className="ui-rep-note">{`נספר לפי ${statement == null || statement.basis === "cash" ? "מזומן" : "חשבוניות"}. דוח ניהולי, לא דוח כספי מבוקר.`}</p> : null}
+      </ReportShell>
+      <PnlPeriodSheet open={period.open} onOpenChange={period.onOpenChange} value={route.period} today={today} onPick={period.pick} />
+      <ReportShareSheet open={shareOpen} onOpenChange={setShareOpen} state={shareStateOf("pnl", route.period, { kind: "today" }, projectKey, route.view === "project")} today={today} projects={byProject?.projects ?? []} />
+    </>
   );
+}
+
+/** A drilled statement with no line in the band's currency. */
+function emptyRow(currency: string): StatementCurrency {
+  return { currency, income_minor: 0n, expense_minor: 0n, net_minor: 0n, income: [], expense: [], kept_out: [] };
 }
