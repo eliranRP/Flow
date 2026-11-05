@@ -322,6 +322,53 @@ Deno.test("answer_recurring_match calls its writer, validates the pair, and undo
   ]);
 });
 
+Deno.test("answer_recurring_handover calls its writer, validates the charge and the pair, and undo takes recurring_handover", async () => {
+  const NEW = "22222222-2222-4222-8222-222222222222";
+  const WRITE = "66666666-6666-4666-8666-666666666666";
+  const charge = { direction: "expense", party_id: TXN, currency: "ILS", project_id: PROJECT, to_party_id: NEW };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: WRITE, write_id: WRITE, undo_kind: "recurring_handover" } } }));
+  for (
+    const [name, args] of [
+      ["answer_recurring_handover", { idempotency_key: "h-1", ...charge, same: true }],
+      ["answer_recurring_handover", { idempotency_key: "h-2", ...charge, direction: "income", same: false }],
+      ["answer_recurring_handover", { idempotency_key: "h-3", ...charge, same: null }],
+      ["undo", { idempotency_key: "u-4", kind: "recurring_handover", id: WRITE }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    const result = await callTool(name, args, ["write"], rpc);
+    assertEquals(result.isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", ...charge, direction: "transfer", same: true },
+      { idempotency_key: "k", ...charge, to_party_id: TXN, same: true },
+      { idempotency_key: "k", ...charge, project_id: null, same: true },
+      { idempotency_key: "k", ...charge, currency: "ils", same: true },
+      { idempotency_key: "k", ...charge, same: "yes" },
+      { idempotency_key: "k", ...charge },
+      { idempotency_key: "k", ...charge, same: true, match_party_id: NEW },
+    ]
+  ) {
+    const result = await callTool("answer_recurring_handover", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true);
+  }
+  const body = { p_direction: "expense", p_party_id: TXN, p_currency: "ILS", p_project_id: PROJECT, p_to_party_id: NEW };
+  assertEquals(calls, [
+    { name: "mcp_answer_recurring_handover", body: { p_idempotency_key: "h-1", ...body, p_same: true } },
+    { name: "mcp_answer_recurring_handover", body: { p_idempotency_key: "h-2", ...body, p_direction: "income", p_same: false } },
+    { name: "mcp_answer_recurring_handover", body: { p_idempotency_key: "h-3", ...body, p_same: null } },
+    { name: "mcp_undo", body: { p_idempotency_key: "u-4", p_kind: "recurring_handover", p_id: WRITE } },
+  ]);
+
+  const refused = await callTool("answer_recurring_handover", { idempotency_key: "h-4", ...charge, same: true }, ["write"], () => Promise.resolve({ status: 400, json: null }));
+  assertEquals(refused.isError, true);
+  if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.code, "refused");
+  const readOnly = await callTool("answer_recurring_handover", { idempotency_key: "h-5", ...charge, same: true }, ["read"], rpc);
+  assertEquals(readOnly.isError, true);
+  assertEquals(calls.length, 4);
+});
+
 Deno.test("reassign_recurring_charge calls its writer with a project or a category, and undo_batch takes it back", async () => {
   const PROJECT = "33333333-3333-4333-8333-333333333333";
   const BATCH = "44444444-4444-4444-8444-444444444444";

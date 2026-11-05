@@ -54,6 +54,22 @@ describe("buildMonthForecast", () => {
     expect(build.items.find((item) => item.key === "party:expense:p-tea:ILS")?.category_id).toBeNull();
   });
 
+  it("leaves a charge whose payment came under another party (a handover) out of the items and the totals", () => {
+    const handover = { party_id: "p-new", party_name: "New Servicer", transaction_id: "t-new", doc_date: "2026-10-05", amount_minor: -500000n };
+    const moved = { ...expected, recurring: expected.recurring.map((party) => party.party_id === "p-rent" ? { ...party, handover } : { ...party, handover: null }) };
+    const build = buildMonthForecast({ base: "ILS", expected: moved, unpaid, overrides: [] });
+    expect(build.items.some((item) => item.key === "party:expense:p-rent:ILS")).toBe(false);
+    expect(build.expenseTotal).toBe(3000n);
+    expect(build.incomeTotal).toBe(800000n + 250000n);
+  });
+
+  it("counts a charge with a null handover as before", () => {
+    const answered = { ...expected, recurring: expected.recurring.map((party) => ({ ...party, handover: null })) };
+    const build = buildMonthForecast({ base: "ILS", expected: answered, unpaid, overrides: [] });
+    expect(build.expense.map((item) => item.name)).toEqual(["Rent Co"]);
+    expect(build.expenseTotal).toBe(500000n + 3000n);
+  });
+
   it("uses the same total as Home's line: the cash net plus income minus charges", () => {
     const build = buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [] });
     expect(forecastTotal(100000n, build)).toBe(100000n + 1050000n - 503000n);

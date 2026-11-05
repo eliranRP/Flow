@@ -259,6 +259,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
+    "answer_recurring_handover",
   ], "read and write tools");
   const lookup = calls.find((call) => call.url.endsWith("/lookup_mcp_credential"));
   assertEquals(lookup?.body?.p_token_hash, hash, "lookup hash");

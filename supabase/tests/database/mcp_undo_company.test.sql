@@ -234,12 +234,12 @@ grant all on muc_sweep to authenticated, service_role;
 insert into muc_sweep (kind, write_id, p_id)
 select k, gen_random_uuid(),
   case
-    when k in ('project_forecast', 'index_rate', 'loan_part_category', 'loan_category_from') then null
+    when k in ('project_forecast', 'index_rate', 'loan_part_category', 'loan_category_from', 'recurring_handover') then null
     when k in ('cash_basis', 'company', 'loan_order', 'company_currency', 'jev_mode', 'books_closed', 'tax_bracket', 'land_account') then pg_temp.id('b')
     else pg_temp.id('target')
   end
 from unnest(array[
-  'supplier_category', 'recurring_match', 'line_pace', 'line_recurring', 'line_amount', 'category_cash', 'line_cash',
+  'supplier_category', 'recurring_match', 'recurring_handover', 'line_pace', 'line_recurring', 'line_amount', 'category_cash', 'line_cash',
   'cash_basis', 'invite', 'member_role', 'member_remove', 'review', 'reassign', 'project',
   'category', 'category_hidden', 'category_pnl', 'loan', 'loan_update', 'loan_split',
   'overhead_project', 'company', 'line_split', 'line_pnl', 'loan_rate', 'invoice_paid',
@@ -264,7 +264,7 @@ select s.write_id, pg_temp.id('tok_b'), tests.get_supabase_uid('muc_user'),
   jsonb_build_object(
     'before', 'null'::jsonb, 'after', 'null'::jsonb, 'written', 'null'::jsonb, 'rows', '[]'::jsonb,
     'company_id', t.id, 'invite_id', t.id, 'user_id', t.id, 'rate_id', t.id, 'group_id', t.id,
-    'party_id', t.id, 'match_party_id', t.id, 'project_id', t.id, 'deletion_id', t.id,
+    'party_id', t.id, 'match_party_id', t.id, 'to_party_id', t.id, 'currency', 'ILS', 'answer_set_at', null, 'project_id', t.id, 'deletion_id', t.id,
     'move_id', t.id, 'effective_date', '2026-01-01', 'written_at', null, 'parts', '[]'::jsonb,
     'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense', 'connection_id', t.id,
     'in_transaction_id', t.id, 'note_id', t.id, 'file_id', t.id, 'supplier_id', t.id,
@@ -290,7 +290,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  76,
+  77,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -298,7 +298,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  76,
+  77,
   'the swept writes keep the company they were stored with'
 );
 select is(

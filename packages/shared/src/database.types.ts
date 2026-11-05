@@ -1134,6 +1134,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"recurring_handovers": {
+                  Row: {
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior": boolean | null,"pace_set": boolean,"party_id": string,"project_id": string,"same": boolean,"set_at": string,"set_by": string | null,"to_pace_prior": string | null,"to_party_id": string,"to_prior": boolean | null
+                  }
+                  Insert: {
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id": string,"project_id": string,"same": boolean,"set_at"?: string,"set_by"?: string | null,"to_pace_prior"?: string | null,"to_party_id": string,"to_prior"?: boolean | null
+                  }
+                  Update: {
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id"?: string,"project_id"?: string,"same"?: boolean,"set_at"?: string,"set_by"?: string | null,"to_pace_prior"?: string | null,"to_party_id"?: string,"to_prior"?: boolean | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recurring_handovers_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recurring_handovers_project_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"recurring_matches": {
                   Row: {
                     "company_id": string,"direction": Database["public"]['Enums']["txn_direction"],"match_party_id": string,"party_id": string,"same": boolean,"set_at": string,"set_by": string | null
@@ -1565,6 +1590,9 @@ isOneToOne: false
 "answer_push_prompt":
 { Args: { "p_yes": boolean }; Returns: Json
                            },
+"answer_recurring_handover":
+{ Args: { "p_currency": string,"p_direction": string,"p_party_id": string,"p_project_id": string,"p_same": boolean,"p_to_party_id": string,"p_today"?: string }; Returns: Json
+                           },
 "answer_recurring_match":
 { Args: { "p_direction": Database["public"]['Enums']["txn_direction"],"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
                            },
@@ -1905,6 +1933,9 @@ isOneToOne: false
                            },
 "mcp_answer_bank_account":
 { Args: { "p_account_id": string,"p_idempotency_key": string,"p_slot": number,"p_sync": boolean }; Returns: Json
+                           },
+"mcp_answer_recurring_handover":
+{ Args: { "p_currency": string,"p_direction": string,"p_idempotency_key": string,"p_party_id": string,"p_project_id": string,"p_same": boolean,"p_to_party_id": string }; Returns: Json
                            },
 "mcp_answer_recurring_match":
 { Args: { "p_direction": string,"p_idempotency_key": string,"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
