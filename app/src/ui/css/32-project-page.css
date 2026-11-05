@@ -90,12 +90,27 @@
 
 /* FLOW-961: no budget yet: a dashed card in the budget's place, with what a budget gives. */
 .ui-budget-empty {
+  position: relative;
   display: grid;
   justify-items: start;
   gap: var(--space-2);
   padding: var(--space-4);
+  padding-inline-end: calc(var(--space-4) + var(--touch-min));
   border: 1.5px dashed var(--color-track-outline);
   border-radius: var(--radius-card);
+}
+
+/* The card's X (the owner, 2026-11-05): in the end-top corner, a 44px target like an attention card's. */
+.ui-budget-empty-hide {
+  position: absolute;
+  inset-block-start: var(--space-1);
+  inset-inline-end: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+/* The list's one quiet row for the lines with no project, under the kind groups. */
+.ui-projects-unassigned {
+  margin-block-start: var(--space-4);
 }
 
 .ui-budget-empty-title {

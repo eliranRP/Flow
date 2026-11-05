@@ -4,7 +4,6 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
-import { restoreAll } from "../ui/attention-dismiss";
 
 /** FLOW-445: one project's row in the month's cash (the list reads projects_cash_month). Invented names only. */
 function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; group?: string | null; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
@@ -60,9 +59,6 @@ const withFinished = cashMonth([
   cashRow({ id: "ashby", name: "Ashby Rd", type: "השכרה", status: "finished", profitAll: -4_000_00 }),
 ], { count: 2, net: -1_500_00 });
 
-/** No late bills or changed charges: the cards are the lines with no project and the budgets. */
-const NO_RECURRING = { late: [] };
-
 /** Many projects with long names and kind words (board V3-States, long content). */
 const LONG_MONTH = cashMonth([
   ...withFinished.projects,
@@ -97,7 +93,7 @@ export const ProjectsList: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -114,7 +110,7 @@ export const ProjectsFinished: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -131,7 +127,7 @@ export const ProjectsAll: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -148,7 +144,7 @@ export const ProjectsDocked: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={LONG_MONTH} recurringSample={NO_RECURRING} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={LONG_MONTH} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -163,48 +159,9 @@ export const ProjectsLong: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={LONG_MONTH} recurringSample={NO_RECURRING} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={LONG_MONTH} />
     </StoryRoute>
   ),
-};
-
-/** One card hidden: the head offers "1 הוסתרו · הצגה". */
-export const ProjectsAttentionSomeHidden: Story = {
-  name: "Projects, attention cards, one hidden",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    restoreAll("projects");
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getAllByRole("button", { name: /^הסתרה: / })[0] as HTMLElement);
-    await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
-    restoreAll("projects");
-  },
-};
-
-/** Every card hidden: the section is one line, "אין מה לטפל · הכול נסקר", with ביטול. */
-export const ProjectsAttentionAllHidden: Story = {
-  name: "Projects, attention cards, all hidden",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withFinished} recurringSample={NO_RECURRING} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    restoreAll("projects");
-    const canvas = within(canvasElement);
-    for (let left = canvas.queryAllByRole("button", { name: /^הסתרה: / }); left.length > 0; left = canvas.queryAllByRole("button", { name: /^הסתרה: / })) {
-      await userEvent.click(left[0] as HTMLElement);
-      await waitFor(() => expect(canvas.queryAllByRole("button", { name: /^הסתרה: / }).length).toBeLessThan(left.length));
-    }
-    await expect(await canvas.findByText(/אין מה לטפל/u)).toBeInTheDocument();
-    restoreAll("projects");
-  },
 };
 
 /** FLOW-1044 (board V3-NewProject): the kind comes first and the fields follow it. One story per kind. */
@@ -213,7 +170,7 @@ function newProjectStory(kind: "שיפוץ" | "השכרה" | "לקוח" | "תק�
     render: () => (
       <StoryRoute entry="/projects" tabs>
         <ExampleBar />
-        <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} recurringSample={NO_RECURRING} />
+        <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
       </StoryRoute>
     ),
     play: async ({ canvasElement }) => {
@@ -238,7 +195,7 @@ export const ProjectsNewMissingName: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} recurringSample={NO_RECURRING} />
+      <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {

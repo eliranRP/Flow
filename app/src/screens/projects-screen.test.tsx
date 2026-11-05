@@ -17,7 +17,7 @@ function group(title: string): HTMLElement {
 
 describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
   it("groups the active projects by kind, each head with its count and the month's total", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [] }} now={NOW} />);
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} now={NOW} />);
     expect(screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent)).toEqual(expect.arrayContaining(["שיפוץ", "השכרה", "לקוח", "תקורה"]));
     expect(within(group("שיפוץ")).getByRole("link", { name: /^Lark Hill/ })).toHaveAttribute("href", "/projects/p2");
     expect(within(group("השכרה")).getByRole("link", { name: /^Birch St/ })).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
   });
 
   it("names a project over its budget on its row, and keeps the finished ones under הסתיימו", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [] }} now={NOW} />);
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} now={NOW} />);
     expect(within(within(group("שיפוץ")).getByRole("link", { name: /^Elm Ct/ })).getByText(/מעל התקציב/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^פרויקט ישן/ })).not.toBeInTheDocument();
     const filter = screen.getAllByRole("radiogroup", { name: "סינון פרויקטים" })[0] as HTMLElement;
@@ -44,19 +44,17 @@ describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
   });
 
   it("the band adds the month across the projects; the next-month card is gone", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [] }} now={NOW} />);
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} now={NOW} />);
     expect(screen.getByText("תזרים הפרויקטים · עד היום")).toBeInTheDocument();
     expect(screen.queryByText("צפוי להיכנס")).toBeNull();
     expect(screen.queryByText(/צפי לחודש הבא/u)).toBeNull();
   });
 
-  it("דורש טיפול: the lines with no project open their list, and a budget past 80% its project", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [] }} now={NOW} />);
-    const cards = screen.getByRole("heading", { name: "דורש טיפול" }).closest("section") as HTMLElement;
-    expect(within(cards).getByRole("link", { name: /שורה אחת בלי פרויקט/ }).getAttribute("href")).toMatch(/^\/projects\/unassigned\?/);
-    expect(within(cards).getByRole("link", { name: /^Lark Hill · 80%/ })).toHaveAttribute("href", "/projects/p2");
-    expect(within(cards).getByRole("link", { name: /^Elm Ct · מעל התקציב/ })).toBeInTheDocument();
-    expect(within(cards).getByRole("button", { name: /^הסתרה: Lark Hill/ })).toBeInTheDocument();
+  it("no דורש טיפול on the list (the owner, 2026-11-05); the lines with no project open their list from a row at the end", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} now={NOW} />);
+    expect(screen.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^הסתרה: / })).toBeNull();
+    expect(screen.getByRole("link", { name: /^שורה אחת בלי פרויקט/ }).getAttribute("href")).toMatch(/^\/projects\/unassigned\?/);
   });
 
   it("with no project draws the board's empty state and its one action", () => {

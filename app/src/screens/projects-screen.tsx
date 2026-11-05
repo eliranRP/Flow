@@ -8,14 +8,13 @@ import { cashMonthName } from "../cash";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { useProjectsCashMonth } from "../project-cash";
 import { withPeriodSearch } from "../project-period";
-import { groupProjectRows, isOverBudget, netIn, projectMeta, projectsMonthTotals, type ProjectsFilter } from "../project-list";
+import { groupProjectRows, isOverBudget, netIn, projectMeta, projectsMonthTotals, unassignedCountLabel, type ProjectsFilter } from "../project-list";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
 import { israelToday } from "../ui/date-math";
 import { useSheetHistory } from "../ui/back";
 import { Amount } from "../ui/amount";
-import { AttentionCards } from "../ui/attention-cards";
 import { BandLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { CompactBar } from "../ui/compact-bar";
@@ -34,7 +33,6 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { ProjectFormSheet } from "./project-form-sheet";
-import { projectsAttentionRows, useProjectsRecurring, type ProjectsRecurringSample } from "./project-attention";
 
 /** The Home-style band bar: 6 + 52 + 6 (BUILD-PLAN §3.1). */
 const BAND_BAR = 64;
@@ -53,14 +51,11 @@ const FILTERS: { value: ProjectsFilter; label: string }[] = [
 export function ProjectsScreen({
   sample,
   cashSample,
-  recurringSample,
   finishedOpen: openFinished = false,
   now,
 }: {
   sample?: Dashboard;
   cashSample?: ProjectsCashMonth;
-  /** Late bills and changed charges as they would come back, for the attention rows (stories). */
-  recurringSample?: ProjectsRecurringSample;
   /** Stories and the proof build open הסתיימו at once. */
   finishedOpen?: boolean;
   /** Stories pin the month names. */
@@ -73,7 +68,6 @@ export function ProjectsScreen({
   const [monthKey, setMonthKey] = useState(currentKey);
   const dashboard = useDashboardQuery(sample == null);
   const cash = useProjectsCashMonth(monthKey === currentKey ? undefined : monthKey);
-  const recurring = useProjectsRecurring(cashSample == null && monthKey === currentKey, recurringSample);
   const holdWrites = useHoldWrites();
   const online = useOnline();
   const [open, setOpenState] = useState(false);
@@ -167,7 +161,6 @@ export function ProjectsScreen({
         search={search}
         filter={filter}
         setFilter={setFilter}
-        recurring={recurring}
         now={now}
       />
       {sheet}
@@ -185,7 +178,6 @@ function ProjectsOverview({
   search,
   filter,
   setFilter,
-  recurring,
   now,
 }: {
   month: NonNullable<ProjectsCashMonth>;
@@ -197,7 +189,6 @@ function ProjectsOverview({
   search: string;
   filter: ProjectsFilter;
   setFilter: (value: ProjectsFilter) => void;
-  recurring: ProjectsRecurringSample;
   now?: Date;
 }) {
   const base = month.base_currency;
@@ -210,13 +201,7 @@ function ProjectsOverview({
   const barShown = useScrolledPast(bandMark, true, 0);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
   const groups = groupProjectRows(month.projects, filter, base);
-  // The month's cards read this month's late bills: a past month shows only its lines with no project.
-  const attention = projectsAttentionRows({
-    month,
-    late: isCurrent ? recurring.late : [],
-    search,
-    unassignedTo: `/projects/unassigned${monthSearch}`,
-  });
+  const unassignedNet = BigInt(netIn(month.unassigned.cash, base));
   const control = (onBand: boolean) => (
     <SegmentedControl
       label="סינון פרויקטים"
@@ -287,9 +272,6 @@ function ProjectsOverview({
         docked={docked}
       />
       <div className="ui-projects-body">
-        <div className="ui-page-pad">
-          <AttentionCards rows={attention} storageKey="projects" />
-        </div>
         <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
         <div className="ui-page-pad ui-projects-filter">
           <DockSlot docked={docked}>{control(false)}</DockSlot>
@@ -310,6 +292,21 @@ function ProjectsOverview({
             </List>
           </section>
         ))}
+        {/* The owner (2026-11-05): no דורש טיפול on the list (each project's page keeps its own); the lines with
+            no project keep their way in as one quiet row at the end. */}
+        {month.unassigned.count > 0 ? (
+          <List className="ui-projects-unassigned">
+            <ListRow
+              variant="project"
+              title={unassignedCountLabel(month.unassigned.count)}
+              hint="נספרות בתזרים החברה, לא ברווח של פרויקט"
+              agorot={unassignedNet < 0n ? -unassignedNet : unassignedNet}
+              currency={base}
+              amountDirection={unassignedNet > 0n ? "income" : undefined}
+              href={`/projects/unassigned${monthSearch}`}
+            />
+          </List>
+        ) : null}
       </div>
     </div>
   );
