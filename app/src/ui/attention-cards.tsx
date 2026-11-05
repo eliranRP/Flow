@@ -1,4 +1,4 @@
-import { isValidElement, useEffect, useRef, useState, type ReactNode } from "react";
+import { isValidElement, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { hideRow, isRowHidden, readHidden, restoreAll, type HiddenRows } from "./attention-dismiss";
 import type { BannerRow } from "./banner";
@@ -43,6 +43,8 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
   // What is kept, cards still folding included, so two quick dismissals both stay hidden.
   const kept = useRef<{ key: string; rows: HiddenRows } | null>(null);
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  // The section is a named region ("דורש טיפול"), as the box it replaces was: the e2e specs and screen readers find it by name.
+  const titleId = useId();
   useEffect(() => {
     const pending = timers.current;
     return () => {
@@ -87,7 +89,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
 
   if (shown.length === 0) {
     return (
-      <section className="ui-attn ui-attn-done m-page-enter" aria-live="polite">
+      <section className="ui-attn ui-attn-done m-page-enter" aria-live="polite" aria-label={title}>
         <span className="ui-attn-done-text t-line2">
           <span className="ui-attn-done-check">
             <CheckIcon size={18} />
@@ -102,9 +104,9 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
   }
 
   return (
-    <section className="ui-attn" aria-live="polite">
+    <section className="ui-attn" aria-live="polite" aria-labelledby={titleId}>
       <div className="ui-attn-head">
-        <h2 className="ui-attn-title t-section">{title}</h2>
+        <h2 className="ui-attn-title t-section" id={titleId}>{title}</h2>
         {hiddenCount > 0 ? (
           <button type="button" className="ui-attn-restore t-meta m-press" onClick={restore}>
             {`${String(hiddenCount)} הוסתרו · הצגה`}
