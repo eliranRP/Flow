@@ -33,9 +33,10 @@ export type TagLoan = {
   amortizationMonths: number | null;
   balanceMinor: bigint;
   rates: LoanRate[];
-  /** The amount and date of the newest payment attached to this loan, if any. */
+  /** The amount of the newest payment attached to this loan, if any. */
   lastPaymentMinor: bigint | null;
-  lastPaymentDate: string | null;
+  /** Every month (YYYY-MM) that has a payment attached to this loan. */
+  attachedMonths: string[];
 };
 
 /** The line as the match needs it: its unsigned amount in its own currency, and its date. */
@@ -101,7 +102,9 @@ export function loanFromRow(row: unknown): TagLoan | null {
     balanceMinor,
     rates,
     lastPaymentMinor: int(r.last_payment_minor),
-    lastPaymentDate: text(r.last_payment_date),
+    attachedMonths: Array.isArray(r.attached_months)
+      ? r.attached_months.filter((month): month is string => typeof month === "string")
+      : [],
   };
 }
 
@@ -124,7 +127,7 @@ function paymentOn(loan: TagLoan, docDate: string): bigint {
  * The one loan this payment belongs to: a loan in the line's currency that takes a payment on
  * its date whose monthly payment equals the line; else whose last attached payment equals it (the
  * same recurring payment after an escrow change). A loan that already has a payment attached in
- * the line's month is left out: a second payment that month (a catch-up, a duplicate) would take
+ * the line's month (whichever month that is, however late the line syncs) is left out: a second payment that month (a catch-up, a duplicate) would take
  * the same schedule row again, so the owner files it. Null when no loan, or more than one, matches.
  */
 export function matchLoan(line: LoanLine, loans: readonly TagLoan[]): TagLoan | null {
@@ -134,7 +137,7 @@ export function matchLoan(line: LoanLine, loans: readonly TagLoan[]): TagLoan | 
     && loan.balanceMinor > 0n
     && line.docDate >= loan.startDate.slice(0, 7) + "-01"
     && loanTakesPaymentOn({ status: loan.status, closedOn: loan.closedOn }, line.docDate)
-    && loan.lastPaymentDate?.slice(0, 7) !== line.docDate.slice(0, 7)
+    && !loan.attachedMonths.includes(line.docDate.slice(0, 7))
   );
   const byPayment = usable.filter((loan) => paymentOn(loan, line.docDate) === line.amountMinor);
   if (byPayment.length > 0) return byPayment.length === 1 ? byPayment[0] : null;

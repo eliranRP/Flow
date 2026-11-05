@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(32);
+select plan(35);
 
 do $users$
 begin
@@ -81,10 +81,24 @@ from (values
   ('l_user', 'co', 'expense', -1, '2026-05-04'::date, true, false),
   ('l_inc', 'co', 'income', 1, '2026-05-05'::date, false, false),
   ('l_conf', 'co', 'expense', -1, '2026-06-01'::date, false, false),
-  ('l_b', 'co_b', 'expense', -1, '2026-02-01'::date, false, false)
+  ('l_b', 'co_b', 'expense', -1, '2026-02-01'::date, false, false),
+  ('l_dup1', 'co', 'expense', -1, '2026-07-01'::date, false, false),
+  ('l_dup2', 'co', 'expense', -1, '2026-07-03'::date, false, false),
+  ('l_cats', 'co', 'expense', -1, '2026-08-01'::date, false, false)
 ) as v(label, co, dir, sign, day, user_set, cat_set);
 insert into jls (label, id) select replace(idempotency_key, 'jls:', ''), id
 from public.transactions where idempotency_key like 'jls:%';
+-- Two payments to one servicer two days apart: a possible duplicate (line_anomalies). Jev scored
+-- the flag on l_dup2 as noise (0.2) and did not score l_dup1.
+insert into public.suppliers (company_id, name) values (pg_temp.id('co'), 'Example Servicer');
+update public.transactions
+set supplier_id = (select s.id from public.suppliers s where s.company_id = pg_temp.id('co') and s.name = 'Example Servicer')
+where id in (pg_temp.id('l_dup1'), pg_temp.id('l_dup2'));
+insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+values (pg_temp.id('co'), pg_temp.id('l_dup2'), '{"anomaly": {"type": "noul", "noul": 0.2}}'::jsonb, 0.95, 'jev-1.13.0', 'jev-1.13.0');
+insert into public.categories (company_id, name, kind, sort_order) values (pg_temp.id('co'), 'Example other', 'expense', 990);
+insert into jls (label, id) select 'cat_other', c.id from public.categories c
+where c.company_id = pg_temp.id('co') and c.name = 'Example other';
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select t.company_id, t.id, case when t.idempotency_key = 'jls:l_closed' then 'approved' else 'open' end::public.review_status, 'test'
 from public.transactions t
@@ -123,6 +137,18 @@ select throws_ok(
 );
 reset role;
 
+-- l_cats was split by category (two parts) by the owner, then a re-sync reopened its review.
+update public.review_queue set status = 'approved' where transaction_id = pg_temp.id('l_cats');
+select tests.authenticate_as('jls_owner');
+select public.save_line_split(pg_temp.id('l_cats'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('cat_plain'), 'amount_minor', 40000),
+  jsonb_build_object('category_id', pg_temp.id('cat_other'), 'amount_minor', 41946)
+));
+reset role;
+update public.review_queue set status = 'open' where transaction_id = pg_temp.id('l_cats');
+-- Not the owner's pick any more, so only the split itself can stop Jev.
+update public.transactions set user_assigned = false, category_assigned = false where id = pg_temp.id('l_cats');
+
 do $call$
 begin
   perform set_config('request.jwt.claim.role', 'service_role', true);
@@ -160,6 +186,12 @@ begin
   insert into jls_out values ('l_b', public.jev_prefill_loan(
     pg_temp.id('co_b'), pg_temp.id('l_b'), pg_temp.id('mortgage_b'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
   insert into jls_out values ('cands_b', public.jev_loan_candidates(pg_temp.id('co_b')));
+  insert into jls_out values ('l_dup1', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l_dup1'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  insert into jls_out values ('l_dup2', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l_dup2'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  insert into jls_out values ('l_cats', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l_cats'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
   insert into jls_out values ('l_conf', public.jev_prefill_loan(
     pg_temp.id('co'), pg_temp.id('l_conf'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
   perform set_config('request.jwt.claim.role', '', true);
@@ -184,9 +216,9 @@ select is(
   'after a split the last payment is that line''s amount'
 );
 select is(
-  (select result->0->>'last_payment_date' from jls_out where label = 'cands_after'),
-  '2026-03-01',
-  'and its date, the newest payment''s'
+  (select result->0->'attached_months' from jls_out where label = 'cands_after'),
+  '["2026-02", "2026-03"]'::jsonb,
+  'and every month that has a payment attached'
 );
 
 -- 2. jev_prefill skips a loan category and still fills a plain one.
@@ -249,6 +281,9 @@ select is(
 );
 select is((select result->>'skipped' from jls_out where label = 'l_user'), 'closed', 'a line the owner assigned is left alone');
 select is((select result->>'skipped' from jls_out where label = 'l_inc'), 'not_found', 'an income line is never split onto a loan');
+select is((select result->>'skipped' from jls_out where label = 'l_dup1'), 'flagged', 'a line SQL flags, with no Jev score, is left alone');
+select is((select result->'loan' from jls_out where label = 'l_dup2'), 'true'::jsonb, 'a flag Jev scored below 0.5 does not stop the split');
+select is((select result->>'skipped' from jls_out where label = 'l_cats'), 'split', 'a line split by category is left alone');
 
 -- 5. Company isolation: neither another company's loan nor another company's line is used.
 select is((select result->>'skipped' from jls_out where label = 'x_loan'), 'loan_not_found', 'another company''s loan is refused');
@@ -299,8 +334,8 @@ select throws_ok(
 reset role;
 select is(
   (select b.balance_minor from public.loan_balances b where b.loan_id = pg_temp.id('mortgage')),
-  12000000::bigint - 12000 - 11946,
-  'the balance counts the owner''s split and the split still on the confirmed line'
+  12000000::bigint - 12000 - 11946 - 11946,
+  'the balance counts the owner''s split and Jev''s splits still in place'
 );
 
 select * from finish();

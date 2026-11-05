@@ -73,13 +73,14 @@ Deno.test("matchLoan falls back to the loan's last payment, once its payment no 
 });
 
 Deno.test("matchLoan leaves out a loan that already has a payment attached in the line's month", () => {
-  assertEquals(matchLoan(line, [loan({ last_payment_minor: 81946, last_payment_date: "2026-01-02" })]), null);
-  assertEquals(matchLoan(line, [loan({ last_payment_minor: 81946, last_payment_date: "2025-12-02" })])?.id, MORTGAGE);
-  // The other loan with the same payment is not taken in its place either: it is the only one left.
-  assertEquals(
-    matchLoan(line, [loan({ last_payment_date: "2026-01-02" }), loan({ id: SECOND })])?.id,
-    SECOND,
-  );
+  assertEquals(matchLoan(line, [loan({ attached_months: ["2026-01"] })]), null);
+  assertEquals(matchLoan(line, [loan({ attached_months: ["2025-12"] })])?.id, MORTGAGE);
+  // A duplicate for an earlier month that syncs late, after the next month's payment.
+  const late = { ...line, docDate: "2026-02-15" };
+  assertEquals(matchLoan(late, [loan({ attached_months: ["2026-02", "2026-03"] })]), null);
+  assertEquals(loan({ attached_months: ["2026-02", 3] }).attachedMonths, ["2026-02"]);
+  // The other loan with the same payment is then the only one left.
+  assertEquals(matchLoan(line, [loan({ attached_months: ["2026-01"] }), loan({ id: SECOND })])?.id, SECOND);
 });
 
 Deno.test("loanSplit is the schedule row for the date, principal taking the difference", () => {

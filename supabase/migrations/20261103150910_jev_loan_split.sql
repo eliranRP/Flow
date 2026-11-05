@@ -329,15 +329,27 @@ begin
         from public.loan_rates r
         where r.company_id = l.company_id and r.loan_id = l.id
       ), '[]'::jsonb),
-      -- The newest payment attached to this loan: its line's amount, for a recurring payment, and
-      -- its date, so a second payment in the same month is left to the owner.
+      -- The newest payment attached to this loan: its line's amount, for a recurring payment.
       'last_payment_minor', lp.amount_original,
-      'last_payment_date', lp.doc_date
+      -- Every month (YYYY-MM) with a payment attached, so another payment in one of them (a
+      -- catch-up, a duplicate, however late it syncs) is left to the owner.
+      'attached_months', coalesce((
+        select jsonb_agg(distinct to_char(t.doc_date, 'YYYY-MM'))
+        from public.transactions t
+        where t.company_id = l.company_id
+          and t.removed_at is null
+          and t.line_status = 'posted'::public.line_status
+          and exists (
+            select 1 from private.loan_parts s
+            where s.company_id = t.company_id and s.transaction_id = t.id
+              and s.loan_id = l.id and not s.needs_review
+          )
+      ), '[]'::jsonb)
     ) order by l.id), '[]'::jsonb)
     from public.loans l
     join public.loan_balances b on b.company_id = l.company_id and b.loan_id = l.id
     left join lateral (
-      select t.amount_original, t.doc_date
+      select t.amount_original
       from public.transactions t
       where t.company_id = l.company_id
         and t.removed_at is null
@@ -365,7 +377,7 @@ grant execute on function public.jev_loan_candidates(uuid) to service_role;
 
 comment on function public.jev_loan_candidates(uuid) is
   'FLOW-1032. Service role (the jev-tag job): the company''s open loans with a schedule and a balance left, '
-  'with their terms, rates and the amount and date of the newest payment attached to each.';
+  'with their terms, rates, the amount of the newest payment attached to each and the months that have one.';
 
 -- The job's loan split, under jev_prefill's gates. A refusal of the split checks writes nothing
 -- and says why, so the line stays as the bank left it for the owner.
