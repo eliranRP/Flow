@@ -173,7 +173,9 @@ export function useScrolledPast(mark: HTMLElement | null, enabled: boolean, bar 
       if (!node.isConnected) return;
       const rect = node.getBoundingClientRect();
       if (rect.width === 0 && rect.top === 0 && rect.left === 0) return;
-      setPast(rect.top < bar + safeTop());
+      // Past once all of it is above the bar's edge, as the observer says it: a head passed as the mark (the
+      // transaction top bar's) is past only when its last line has gone under the bar, not when its top has.
+      setPast(rect.bottom < bar + safeTop());
     };
     measure();
     window.addEventListener("scroll", measure, { passive: true });
