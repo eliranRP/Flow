@@ -6,36 +6,58 @@ import { useToast } from "./toast";
 import "./css/62-pull-refresh.css";
 
 /**
- * FLOW-1039 and FLOW-1042 (DESIGN-RULES ld-07): pull to refresh, mounted once at the app root around
- * every routed screen. iOS gives a Home Screen web app no pull to refresh of its own, so a pull down
- * from the top of any screen does nothing there. The gesture rules follow FLOW-314, as the period,
- * card and edge swipes do:
+ * FLOW-1039, FLOW-1042 and FLOW-1043 (DESIGN-RULES ld-07): pull to refresh, mounted once at the app
+ * root around every routed screen. iOS gives a Home Screen web app no pull to refresh of its own, so
+ * a pull down from the top of any screen does nothing there. The gesture rules follow FLOW-314, as
+ * the period, card and edge swipes do:
  * - touch only, one finger, in the installed app (a browser tab keeps its own pull to refresh);
  * - the page is at scroll top 0, and the touch starts outside the edge zones (the edge-back swipe),
  *   a sheet or dialog, a field, a revealed swiped row, and any inner list scrolled down from its top;
  * - nothing is decided until the finger moved DECIDE_PX; a sideways move goes to the swipes, an
  *   upward one to the page scroll;
- * - the screen comes down at half the move, up to PULL_MAX_PX, over a gap in the colour of its top
- *   (the band's on Home and a project, the page's elsewhere), with the mark in the gap; a release at
- *   PULL_THRESHOLD_PX or more re-reads Flow's data from the server (every cached read goes stale,
- *   the ones on screen read again), and the screen rests there until they settle (PULL_MIN_MS at
- *   least). A pull starts no bank sync (the owner, 2026-11-05: "It should refresh the data from
- *   flow server.").
+ * - the screen comes down with the finger on a rubber band (`pullTravel`: 1:1 at first, then with
+ *   growing resistance, no hard stop), over a gap in the colour of its top (the band's on Home and a
+ *   project, the page's elsewhere), with the iOS activity indicator in the gap: its 12 spokes appear
+ *   one by one with the pull, all 12 at PULL_THRESHOLD_PX, where a light haptic tick plays once;
+ * - a release there re-reads Flow's data from the server (every cached read goes stale, the ones on
+ *   screen read again): the screen eases up to PULL_REST_PX and holds while the spinner turns, until
+ *   the reads settle (PULL_MIN_MS at least); then the spinner fades and shrinks and the screen glides
+ *   back. A release before the threshold glides back the same way. A touch during that return
+ *   catches the screen where it is and pulls on from there. A pull starts no bank sync (the owner,
+ *   2026-11-05: "It should refresh the data from flow server.").
  */
 export const PULL_THRESHOLD_PX = 64;
-const PULL_RESIST = 0.5;
-const PULL_MAX_PX = 96;
+/**
+ * The rubber band's scale. `travel = PULL_BAND_PX * ln(1 + move / PULL_BAND_PX)`: the slope is 1 at
+ * the start and falls as 1 / (1 + move / PULL_BAND_PX), with no cap. At the threshold's own size the
+ * threshold comes at (e - 1) * 64 = 110px of move after the 10px decision, 120px from touch-down.
+ */
+const PULL_BAND_PX = PULL_THRESHOLD_PX;
+/** Where the screen rests while refreshing: the 20px spinner with 18px above and below it. */
+export const PULL_REST_PX = 56;
+/** The spinner's spokes. */
+export const PULL_SPOKES = 12;
 /** The spinner stays at least this long, so a quick refresh does not flash. */
 const PULL_MIN_MS = 400;
 /** A read that never settles ends the spinner here; it goes on in the background. */
 export const PULL_CAP_MS = 15_000;
-/** The collapse runs on --motion-sheet-out (220ms); the gap and the mark unmount after this. */
-const CLOSE_FALLBACK_MS = 400;
+/** The return runs on --motion-pull-return (400ms); the gap and the spinner unmount after this. */
+const CLOSE_FALLBACK_MS = 500;
 export const PULL_FAILED = "הרענון נכשל. נסו שוב.";
 
-/** How far the screen travels for a finger moved `dy` px down. */
-export function pullTravel(dy: number): number {
-  return dy <= 0 ? 0 : Math.min(dy * PULL_RESIST, PULL_MAX_PX);
+/** How far the screen travels for a finger moved `move` px down: the rubber band. */
+export function pullTravel(move: number): number {
+  return move <= 0 ? 0 : PULL_BAND_PX * Math.log1p(move / PULL_BAND_PX);
+}
+
+/** The finger move that brings the screen `travel` px down: `pullTravel`'s inverse. */
+export function pullMove(travel: number): number {
+  return travel <= 0 ? 0 : PULL_BAND_PX * Math.expm1(travel / PULL_BAND_PX);
+}
+
+/** How many spokes show at this travel: none at the start, all 12 at the threshold. */
+export function pullSpokes(travel: number): number {
+  return Math.round(Math.min(1, Math.max(0, travel / PULL_THRESHOLD_PX)) * PULL_SPOKES);
 }
 
 /** True when a release at this travel refreshes. */
@@ -96,10 +118,37 @@ async function refreshAll(client: Pick<QueryClient, "invalidateQueries" | "getQu
   return !client.getQueryCache().findAll({ type: "active" }).some((query) => query.state.status === "error" && query.state.errorUpdatedAt >= started);
 }
 
-export type PullPhase = "idle" | "pulling" | "refreshing" | "closing";
+/**
+ * The phases: `returning` is the glide back after a refresh (the spinner turns as it fades),
+ * `closing` the glide back from a release before the threshold (the spokes fade where they stood).
+ */
+export type PullPhase = "idle" | "pulling" | "refreshing" | "returning" | "closing";
 
-type Track = { id: number; x: number; y: number; axis: SwipeAxis; active: boolean; travel: number };
+/** The move counts from `y`; `from` is the move the screen already had there (a caught return). */
+type Track = { id: number; x: number; y: number; axis: SwipeAxis; active: boolean; from: number; travel: number; ticked: boolean };
 type View = { phase: PullPhase; travel: number; tone: PullTone };
+
+function px(value: string): number {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+/**
+ * Where a returning screen is right now, as a pull's travel: read from the running transition (the
+ * screen's live `top`), less the share of the safe area that rides on it (`--pull-travel` in the CSS).
+ */
+function liveTravel(screenBox: HTMLElement | null): number {
+  if (screenBox == null) return 0;
+  const top = px(getComputedStyle(screenBox).top);
+  if (top <= 0) return 0;
+  const mark = document.querySelector(".ui-pull-refresh");
+  const safe = mark == null ? 0 : px(getComputedStyle(mark).top);
+  return top >= PULL_THRESHOLD_PX + safe ? top - safe : top / (1 + safe / PULL_THRESHOLD_PX);
+}
+
+function tick() {
+  if (typeof navigator.vibrate === "function") navigator.vibrate(10);
+}
 
 export function PullRefresh({ children }: { children: ReactNode }) {
   const client = useQueryClient();
@@ -107,7 +156,6 @@ export function PullRefresh({ children }: { children: ReactNode }) {
   const [view, setView] = useState<View>({ phase: "idle", travel: 0, tone: "page" });
   const screen = useRef<HTMLDivElement>(null);
   const track = useRef<Track | null>(null);
-  const busy = useRef(false);
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
@@ -115,25 +163,37 @@ export function PullRefresh({ children }: { children: ReactNode }) {
     let alive = true;
     let closeTimer = 0;
     let tone: PullTone = "page";
-    function close() {
-      setView({ phase: "closing", travel: 0, tone });
+    let phase: PullPhase = "idle";
+    function show(next: PullPhase, travel: number) {
+      phase = next;
+      setView({ phase, travel, tone });
+    }
+    /** Glides back from `travel`: the screen returns to the top and the spinner fades. */
+    function close(next: "returning" | "closing", travel: number) {
+      show(next, travel);
       window.clearTimeout(closeTimer);
       closeTimer = window.setTimeout(() => {
-        busy.current = false;
-        if (alive) setView({ phase: "idle", travel: 0, tone });
+        if (alive && phase === next) show("idle", 0);
       }, CLOSE_FALLBACK_MS);
     }
     function drop() {
       const current = track.current;
       track.current = null;
-      if (current?.active === true) close();
+      if (current?.active === true) close("closing", current.travel);
     }
     function onStart(event: TouchEvent) {
       if (track.current != null) drop();
-      if (busy.current || event.touches.length !== 1 || !pullAvailable() || !atTop()) return;
+      const returning = phase === "returning" || phase === "closing";
+      if ((phase !== "idle" && !returning) || event.touches.length !== 1 || !pullAvailable() || !atTop()) return;
       const touch = event.touches[0];
       if (touch == null || inEdgeZone(touch.clientX, window.innerWidth) || pullBlocked(event.target)) return;
-      track.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY, axis: null, active: false, travel: 0 };
+      track.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY, axis: null, active: false, from: 0, travel: 0, ticked: false };
+      if (!returning) return;
+      // The screen is on its way back: the finger catches it where it is and pulls on from there.
+      window.clearTimeout(closeTimer);
+      const travel = liveTravel(screen.current);
+      Object.assign(track.current, { axis: "y", active: true, from: pullMove(travel), travel });
+      show("pulling", travel);
     }
     function onMove(event: TouchEvent) {
       const current = track.current;
@@ -143,8 +203,8 @@ export function PullRefresh({ children }: { children: ReactNode }) {
         drop();
         return;
       }
-      const dy = touch.clientY - current.y;
       if (!current.active) {
+        const dy = touch.clientY - current.y;
         const axis = lockAxis(current, touch.clientX - current.x, dy);
         if (axis == null) return;
         // Sideways goes to the row, period and card swipes; upward to the page scroll.
@@ -152,28 +212,33 @@ export function PullRefresh({ children }: { children: ReactNode }) {
           track.current = null;
           return;
         }
+        // The move counts from here, so the screen starts at 0 and does not jump by the decision's 10px.
         current.active = true;
-        busy.current = true;
+        current.y = touch.clientY;
         tone = pullTone(screen.current);
       }
       // From here the pull owns the touch, so the page does not scroll under it.
       if (event.cancelable) event.preventDefault();
-      current.travel = pullTravel(dy);
-      setView({ phase: "pulling", travel: current.travel, tone });
+      current.travel = pullTravel(current.from + touch.clientY - current.y);
+      if (!current.ticked && pullArmed(current.travel)) {
+        current.ticked = true;
+        tick();
+      }
+      show("pulling", current.travel);
     }
     function onEnd() {
       const current = track.current;
       track.current = null;
       if (current?.active !== true) return;
       if (!pullArmed(current.travel)) {
-        close();
+        close("closing", current.travel);
         return;
       }
-      setView({ phase: "refreshing", travel: PULL_THRESHOLD_PX, tone });
+      show("refreshing", PULL_REST_PX);
       void refreshAll(client).then((ok) => {
         if (!alive) return;
         if (!ok) toastRef.current.show({ tone: "bad", message: PULL_FAILED });
-        close();
+        close("returning", PULL_REST_PX);
       });
     }
     window.addEventListener("touchstart", onStart, { passive: true });
@@ -197,13 +262,42 @@ export function PullRefresh({ children }: { children: ReactNode }) {
   );
 }
 
+/** A spoke's opacity while the spinner turns: full at the head, fading round to a quarter behind it. */
+function tail(spoke: number): number {
+  return 1 - (((PULL_SPOKES - spoke) % PULL_SPOKES) * 0.75) / (PULL_SPOKES - 1);
+}
+
 /**
- * Exported for the stories, which draw each phase. The pulled screen, the gap above it and the round mark in the gap, with the shared spinner. While
- * pulling the screen comes down with the finger and the spinner turns with the progress; armed, it
- * takes the accent; refreshing, the screen rests at the threshold and the spinner spins. The screen
- * moves by `top` on a relative box, not a transform, so the bars it pins (`position: fixed`: the
- * action bar, the card's step row, a save bar) keep the viewport and stay put. With reduced motion
- * the screen does not move: the mark fades in where it rests.
+ * The iOS activity indicator: 12 thin rounded spokes, clockwise from 12 o'clock, in `currentColor`.
+ * While pulling, the first `shown` stand at full strength and the rest are hidden; turning, they fade
+ * round from the head (the CSS turns it in 12 steps).
+ */
+function Spokes({ shown, turning }: { shown: number; turning: boolean }) {
+  return (
+    <svg className="ui-pull-spinner" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+      {Array.from({ length: PULL_SPOKES }, (_, spoke) => (
+        <line
+          key={spoke}
+          x1="10"
+          y1="1.8"
+          x2="10"
+          y2="4.8"
+          transform={`rotate(${String((spoke * 360) / PULL_SPOKES)} 10 10)`}
+          opacity={turning ? tail(spoke) : spoke < shown ? 1 : 0}
+        />
+      ))}
+    </svg>
+  );
+}
+
+/**
+ * Exported for the stories, which draw each phase. The pulled screen, the gap above it and the
+ * spinner in the gap. While pulling (and closing) the spinner shows `pullSpokes(travel)` spokes,
+ * standing still; refreshing and returning, all 12 turn and the screen rests at PULL_REST_PX (the CSS
+ * glides it back on returning and closing). The screen moves by `top` on a relative box, not a
+ * transform, so the bars it pins (`position: fixed`: the action bar, the card's step row, a save
+ * bar) keep the viewport and stay put. With reduced motion the screen does not move: the spinner
+ * fades in where it rests, its spokes still.
  */
 export function PullRefreshView({
   phase,
@@ -218,21 +312,20 @@ export function PullRefreshView({
   screenRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }) {
-  const refreshing = phase === "refreshing";
+  const turning = phase === "refreshing" || phase === "returning";
   const idle = phase === "idle";
   const style = {
     "--pull-y": `${String(travel)}px`,
-    "--pull-progress": String(Math.min(1, travel / PULL_THRESHOLD_PX)),
-    "--pull-rest": `${String(PULL_THRESHOLD_PX)}px`,
-    "--pull-max": `${String(PULL_MAX_PX)}px`,
+    "--pull-progress": String(turning ? 1 : Math.min(1, travel / PULL_THRESHOLD_PX)),
+    "--pull-rest": `${String(PULL_REST_PX)}px`,
   } as CSSProperties;
   return (
     <>
       {idle ? null : (
         <>
           <div className="ui-pull-gap" data-phase={phase} data-tone={tone} style={style} aria-hidden="true" />
-          <div className="ui-pull-refresh" data-phase={phase} data-armed={pullArmed(travel) ? "" : undefined} style={style} aria-hidden="true">
-            <span className="ui-spinner" />
+          <div className="ui-pull-refresh" data-phase={phase} data-tone={tone} style={style} aria-hidden="true">
+            <Spokes shown={turning ? PULL_SPOKES : pullSpokes(travel)} turning={turning} />
           </div>
         </>
       )}
@@ -240,7 +333,7 @@ export function PullRefreshView({
         {children}
       </div>
       <div role="status" className="sr-only">
-        {refreshing ? "מרענן" : null}
+        {phase === "refreshing" ? "מרענן" : null}
       </div>
     </>
   );

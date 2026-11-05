@@ -1,16 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { Amount } from "./amount";
 import { List, ListRow } from "./list-row";
-import { PULL_THRESHOLD_PX, PullRefreshView, type PullPhase, type PullTone } from "./pull-refresh";
+import { PULL_REST_PX, PULL_SPOKES, PULL_THRESHOLD_PX, PullRefreshView, pullSpokes, type PullPhase, type PullTone } from "./pull-refresh";
 import { ScreenHeader } from "./screen-header";
 import { StoryRoute } from "./story-route";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { BandCompany, TopBand } from "./top-band";
 
 /**
- * FLOW-1039 and FLOW-1042 (ld-07): a pull down from the top of a screen brings the screen down, over a
- * gap in the colour of its top, with the mark in the gap. Every story runs in light and dark.
+ * FLOW-1039, FLOW-1042 and FLOW-1043 (ld-07): a pull down from the top of a screen brings the screen
+ * down, over a gap in the colour of its top, with the iOS activity indicator in the gap: its spokes
+ * appear with the pull and turn while refreshing. Every story runs in light and dark.
  */
 const meta = {
   title: "Components/Pull to refresh",
@@ -19,6 +20,7 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+type Play = NonNullable<Story["play"]>;
 
 function Rows() {
   return (
@@ -72,6 +74,20 @@ function PlainScreen({ phase, travel }: { phase: PullPhase; travel: number }) {
   );
 }
 
+/** Mounts refreshing, then flips to returning, so the glide back runs as in the app. */
+function ReturningScreen({ notch = false }: { notch?: boolean }) {
+  const [phase, setPhase] = useState<PullPhase>("refreshing");
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setPhase("returning");
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return <BandScreen phase={phase} travel={PULL_REST_PX} notch={notch} />;
+}
+
 const at320 = { viewport: { value: "flow320", isRotated: false } };
 const at393 = { viewport: { value: "flow393", isRotated: false } };
 
@@ -87,19 +103,35 @@ export const Idle: Story = {
   },
 };
 
-const moved: Story["play"] = async ({ canvasElement }) => {
+const moved: Play = async ({ canvasElement }) => {
   const gap = canvasElement.querySelector(".ui-pull-gap");
   const band = canvasElement.querySelector(".ui-band");
   await expect(gap).not.toBeNull();
   await expect(band).not.toBeNull();
   if (gap == null || band == null) return;
-  // The gap ends where the band starts, in the band's own colour.
-  await expect(Math.round(gap.getBoundingClientRect().bottom)).toBe(Math.round(band.getBoundingClientRect().top));
+  // The gap reaches the band's top (1px under it, so no hairline shows), in the band's own colour.
+  const under = gap.getBoundingClientRect().bottom - band.getBoundingClientRect().top;
+  await expect(under).toBeGreaterThanOrEqual(0);
+  await expect(under).toBeLessThanOrEqual(1.5);
   await expect(getComputedStyle(gap).backgroundColor).toBe(getComputedStyle(band).backgroundColor);
 };
 
-/** The mark lies inside the gap, below the status bar and above the screen's top. */
-const inGap: Story["play"] = async (context) => {
+/** The spokes standing, by the share of the way to the threshold; no circle behind them. */
+function spokes(count: number): Play {
+  return async (context) => {
+    await moved(context);
+    const mark = context.canvasElement.querySelector(".ui-pull-refresh");
+    const lines = Array.from(context.canvasElement.querySelectorAll(".ui-pull-spinner > line"));
+    await expect(lines).toHaveLength(PULL_SPOKES);
+    await expect(lines.filter((line) => line.getAttribute("opacity") === "1")).toHaveLength(count);
+    if (mark == null) return;
+    await expect(getComputedStyle(mark).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    await expect(Math.round(mark.getBoundingClientRect().width)).toBe(20);
+  };
+}
+
+/** The spinner lies inside the gap, below the status bar and above the screen's top. */
+const inGap: Play = async (context) => {
   await moved(context);
   const gap = context.canvasElement.querySelector(".ui-pull-gap")?.getBoundingClientRect();
   const mark = context.canvasElement.querySelector(".ui-pull-refresh")?.getBoundingClientRect();
@@ -111,35 +143,64 @@ const inGap: Story["play"] = async (context) => {
   await expect(mark.bottom).toBeLessThanOrEqual(screenTop);
 };
 
-export const Notch320: Story = { name: "Home, notched iPhone, armed, 320", globals: at320, render: () => <BandScreen phase="pulling" travel={72} notch />, play: inGap };
-export const Notch393: Story = { name: "Home, notched iPhone, armed, 393", globals: at393, render: () => <BandScreen phase="pulling" travel={72} notch />, play: inGap };
+const quarter = PULL_THRESHOLD_PX / 4;
+const half = PULL_THRESHOLD_PX / 2;
+
+export const Pulling25At320: Story = { name: "Home, pulling 25%, 320", globals: at320, render: () => <BandScreen phase="pulling" travel={quarter} />, play: spokes(pullSpokes(quarter)) };
+export const Pulling25At393: Story = { name: "Home, pulling 25%, 393", globals: at393, render: () => <BandScreen phase="pulling" travel={quarter} />, play: spokes(pullSpokes(quarter)) };
+export const Pulling50At320: Story = { name: "Home, pulling 50%, 320", globals: at320, render: () => <BandScreen phase="pulling" travel={half} />, play: spokes(pullSpokes(half)) };
+export const Pulling50At393: Story = { name: "Home, pulling 50%, 393", globals: at393, render: () => <BandScreen phase="pulling" travel={half} />, play: spokes(pullSpokes(half)) };
+export const Notch100At320: Story = {
+  name: "Home, notched iPhone, pulling 100%, 320",
+  globals: at320,
+  render: () => <BandScreen phase="pulling" travel={PULL_THRESHOLD_PX} notch />,
+  play: async (context) => {
+    await spokes(PULL_SPOKES)(context);
+    await inGap(context);
+  },
+};
+export const Notch100At393: Story = {
+  name: "Home, notched iPhone, pulling 100%, 393",
+  globals: at393,
+  render: () => <BandScreen phase="pulling" travel={PULL_THRESHOLD_PX} notch />,
+  play: async (context) => {
+    await spokes(PULL_SPOKES)(context);
+    await inGap(context);
+  },
+};
+export const PastMonth: Story = { name: "Home, a past month's band, pulling 100%", globals: at393, render: () => <BandScreen phase="pulling" travel={PULL_THRESHOLD_PX} tone="band-past" />, play: moved };
+
+const refreshing: Play = async (context) => {
+  const live = within(context.canvasElement).getAllByRole("status").filter((node) => node.textContent === "מרענן");
+  await expect(live).toHaveLength(1);
+  const screenTop = context.canvasElement.querySelector(".ui-pull-screen")?.getBoundingClientRect().top;
+  const gapTop = context.canvasElement.querySelector(".ui-pull-gap")?.getBoundingClientRect().bottom;
+  // The screen rests at the gap's end.
+  await expect(Math.round((gapTop ?? 0) - (screenTop ?? 0))).toBe(1);
+};
+
 export const NotchRefreshing320: Story = {
   name: "Home, notched iPhone, refreshing, 320",
   globals: at320,
-  render: () => <BandScreen phase="refreshing" travel={PULL_THRESHOLD_PX} notch />,
-  play: inGap,
+  render: () => <BandScreen phase="refreshing" travel={PULL_REST_PX} notch />,
+  play: async (context) => {
+    await refreshing(context);
+    await inGap(context);
+  },
 };
 export const NotchRefreshing393: Story = {
   name: "Home, notched iPhone, refreshing, 393",
   globals: at393,
-  render: () => <BandScreen phase="refreshing" travel={PULL_THRESHOLD_PX} notch />,
-  play: inGap,
+  render: () => <BandScreen phase="refreshing" travel={PULL_REST_PX} notch />,
+  play: async (context) => {
+    await refreshing(context);
+    await inGap(context);
+  },
 };
-
-export const Pulling320: Story = { name: "Home, pulling, 320", globals: at320, render: () => <BandScreen phase="pulling" travel={48} />, play: moved };
-export const Pulling393: Story = { name: "Home, pulling, 393", globals: at393, render: () => <BandScreen phase="pulling" travel={48} />, play: moved };
-export const Armed: Story = { name: "Home, armed: release refreshes", globals: at393, render: () => <BandScreen phase="pulling" travel={80} />, play: moved };
-export const PastMonth: Story = { name: "Home, a past month's band", globals: at393, render: () => <BandScreen phase="pulling" travel={64} tone="band-past" />, play: moved };
-
-const refreshing: Story["play"] = async (context) => {
-  const live = within(context.canvasElement).getAllByRole("status").filter((node) => node.textContent === "מרענן");
-  await expect(live).toHaveLength(1);
-};
-
 export const Refreshing320: Story = {
   name: "Home, refreshing, 320",
   globals: at320,
-  render: () => <BandScreen phase="refreshing" travel={PULL_THRESHOLD_PX} />,
+  render: () => <BandScreen phase="refreshing" travel={PULL_REST_PX} />,
   play: async (context) => {
     await refreshing(context);
     await moved(context);
@@ -148,16 +209,33 @@ export const Refreshing320: Story = {
 export const Refreshing393: Story = {
   name: "Home, refreshing, 393",
   globals: at393,
-  render: () => <BandScreen phase="refreshing" travel={PULL_THRESHOLD_PX} />,
+  render: () => <BandScreen phase="refreshing" travel={PULL_REST_PX} />,
   play: async (context) => {
     await refreshing(context);
     await moved(context);
   },
 };
-export const PlainPulling: Story = { name: "A plain screen, pulling, 393", globals: at393, render: () => <PlainScreen phase="pulling" travel={48} /> };
+
+/** The glide back ends with the screen at the top and the spinner gone from sight. */
+const returned: Play = async ({ canvasElement }) => {
+  const box = canvasElement.querySelector(".ui-pull-screen");
+  const mark = canvasElement.querySelector(".ui-pull-refresh");
+  await expect(box?.getAttribute("data-phase")).toBe("returning");
+  await waitFor(async () => {
+    await expect(box == null ? -1 : Number.parseFloat(getComputedStyle(box).top)).toBe(0);
+    await expect(mark == null ? -1 : Number(getComputedStyle(mark).opacity)).toBe(0);
+  });
+};
+
+export const Returning320: Story = { name: "Home, notched iPhone, returning, 320", globals: at320, render: () => <ReturningScreen notch />, play: returned };
+export const Returning393: Story = { name: "Home, returning, 393", globals: at393, render: () => <ReturningScreen />, play: returned };
+export const PlainPulling: Story = { name: "A plain screen, pulling 50%, 393", globals: at393, render: () => <PlainScreen phase="pulling" travel={half} /> };
 export const PlainRefreshing: Story = {
   name: "A plain screen, refreshing, 320",
   globals: at320,
-  render: () => <PlainScreen phase="refreshing" travel={PULL_THRESHOLD_PX} />,
-  play: refreshing,
+  render: () => <PlainScreen phase="refreshing" travel={PULL_REST_PX} />,
+  play: async (context) => {
+    const live = within(context.canvasElement).getAllByRole("status").filter((node) => node.textContent === "מרענן");
+    await expect(live).toHaveLength(1);
+  },
 };
