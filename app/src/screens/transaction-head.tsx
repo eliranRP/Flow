@@ -45,7 +45,7 @@ export function TxnHead({
   meta,
   unsigned = false,
 }: {
-  /** The page's top bar takes its line once this head is under it (TransactionTopBar). */
+  /** The page's top bar takes its line once this head is under it (the 56px detail CompactBar, FLOW-1048). */
   headRef?: (node: HTMLElement | null) => void;
   txn: NonNullable<TransactionDetail>;
   party: string;

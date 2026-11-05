@@ -220,7 +220,8 @@ describe("ForecastScreen", () => {
       expect(screen.getByRole("button", { name: /^Example Utility,/ })).toBeTruthy();
       expect(document.querySelector(".ui-fc-start")).toBeNull();
       expect(document.querySelector(".ui-forecast-big")).toBeNull();
-      expect(document.querySelector(".ui-forecast-compact-figure")?.textContent).toBe("תזרים צפוי");
+      expect(document.querySelector(".ui-compact-bar-detail .ui-compact-title-text")?.textContent).toBe("תזרים צפוי");
+      expect(document.querySelector(".ui-compact-bar-detail .ui-compact-figure")).toBeNull();
     } finally {
       rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
     }
@@ -230,7 +231,8 @@ describe("ForecastScreen", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
     expect(screen.getByRole("heading", { level: 1, name: "תזרים צפוי" })).toBeTruthy();
     expect(screen.getByText("סוף אוקטובר · עוד 20 ימים")).toBeTruthy();
-    expect(document.querySelector(".ui-forecast-compact-figure")?.textContent).toBe("תזרים צפוי · −$5,741");
+    expect(document.querySelector(".ui-compact-bar-detail .ui-compact-title-text")?.textContent).toBe("תזרים צפוי");
+    expect(document.querySelector(".ui-compact-bar-detail .ui-compact-figure bdi")?.textContent).toBe("−$5,741");
   });
 
   it("shows the month's end as the big figure, and the card's whole sum under it: today, in, out, the end", () => {
@@ -379,7 +381,7 @@ describe("ForecastScreen", () => {
     expect(document.querySelector(".ui-fc-card")).toBeNull();
     expect(document.querySelector(".ui-forecast-changed")).toBeNull();
     expect(document.querySelector(".ui-forecast-foot")).toBeNull();
-    expect(document.querySelector(".ui-forecast-compact")).toBeNull();
+    expect(document.querySelector(".ui-compact-dock")).toBeNull();
   });
 
   it("gives the footnote no link", () => {

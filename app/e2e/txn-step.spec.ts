@@ -12,16 +12,16 @@ test("prev and next walk the list, and Back returns to its scroll spot", async (
   const before = await page.evaluate(() => window.scrollY);
   expect(before).toBeGreaterThan(0);
   await row.click();
-  await expect(page.getByText("ספק 12", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 12$/ })).toBeVisible();
 
   await page.getByRole("button", next).click();
   await expect(page).toHaveURL(/\/transactions\/t-step-13\?preview=1$/);
   await expect(page.getByRole("button", next)).toBeFocused();
   // The URL changes first, and a press before the new card renders is ignored (one move per card, txn-nav.tsx).
   // Card 14's name also sits hidden in card 13's swipe peek, so wait for 13 itself on screen.
-  await expect(page.getByText("ספק 13", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 13$/ })).toBeVisible();
   await page.getByRole("button", next).click();
-  await expect(page.getByText("ספק 14", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 14$/ })).toBeVisible();
   await page.getByRole("button", prev).click();
   await expect(page).toHaveURL(/\/transactions\/t-step-13\?preview=1$/);
 
@@ -37,10 +37,10 @@ test("the arrow keys move the right-to-left way", async ({ page }) => {
   await page.keyboard.press("ArrowLeft");
   await expect(page).toHaveURL(/\/transactions\/t-step-3\?preview=1$/);
   // The URL changes first; a press waits until the next card is on screen.
-  await expect(page.getByText("ספק 3", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 3$/ })).toBeVisible();
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL(/\/transactions\/t-step-2\?preview=1$/);
-  await expect(page.getByText("ספק 2", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 2$/ })).toBeVisible();
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL(/\/transactions\/t-step-1\?preview=1$/);
   // FLOW-345: at the start הקודמת is hidden, not disabled, and the counter says where the card is.
@@ -52,7 +52,7 @@ test("the arrow keys move the right-to-left way", async ({ page }) => {
 
 test("a card opened from a link has no prev or next", async ({ page }) => {
   await page.goto("/transactions/t-step-5?preview=1");
-  await expect(page.getByText("ספק 5", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 5$/ })).toBeVisible();
   await expect(page.getByRole("button", next)).toHaveCount(0);
   await expect(page.getByRole("group", { name: "מעבר בין תנועות" })).toHaveCount(0);
 });

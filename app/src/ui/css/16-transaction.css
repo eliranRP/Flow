@@ -111,68 +111,6 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
   display: contents;
 }
 
-/* FLOW-366: the transaction page's own top bar (Lines.dc 87–100). It is in the page's flow and
-   sticks to the top; at rest it takes the page colour, and once the page's head is under it the surface and a hairline. */
-.ui-txn-top {
-  position: sticky;
-  inset-block-start: 0;
-  /* Clear of the status bar once it sticks, as the compact header does (27-compact-header.css). The bar's
-     56px row sits under the status bar, so the inset adds to its height: inside it, an iPhone's 47px inset
-     squeezed the row to 9px and Back's label ran into the title. */
-  padding-block-start: var(--safe-top);
-  z-index: 2;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-2);
-  block-size: calc(var(--compact-bar-detail) + var(--safe-top));
-  padding-inline: var(--space-4);
-  border-block-end: 1px solid transparent;
-  background: var(--color-bg);
-  transition: background-color var(--motion-fade) linear, border-color var(--motion-fade) linear;
-}
-
-.ui-txn-top-past {
-  border-block-end-color: var(--color-line);
-  background: var(--color-surface);
-}
-
-.ui-txn-top-start {
-  justify-self: start;
-  color: var(--color-accent-text);
-  font-size: var(--type-btn-size);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-txn-top-title {
-  overflow: hidden;
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-btn-weight);
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity var(--motion-fade) linear;
-}
-
-.ui-txn-top-past .ui-txn-top-title {
-  opacity: 1;
-}
-
-.ui-txn-top-end {
-  justify-self: end;
-  min-inline-size: var(--touch-min);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ui-txn-top,
-  .ui-txn-top-title {
-    transition: none;
-  }
-}
-
 /* The page body: the side gutter and the 14px gap between blocks (the board's Lines.dc 101–153). */
 .ui-txn-body {
   display: flex;
@@ -181,27 +119,59 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
   padding-inline: var(--space-side);
 }
 
-/* The header block: 64px clears the bar (its 56px is already in the flow, so 8px more here). */
+/* FLOW-1048 (V3-Transaction, the Detail pattern): the header block under the safe area, Back and ⋯ on its first row. */
 .ui-txn-intro {
   display: flex;
   flex-direction: column;
   gap: var(--space-inset-row);
-  padding-block-start: var(--space-2);
+  padding-block-start: calc(var(--safe-top) + var(--space-2));
 }
 
+.ui-txn-back {
+  margin-block-end: calc(var(--space-1) - var(--space-inset-row));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+}
+
+/* FLOW-1048: the pending line's אישור / שינוי bar, pinned at the bottom over the tab bar (above the step row when
+   the page steps through a list). The page colour behind it and a hairline on top. */
+.ui-txn-approve {
+  position: sticky;
+  z-index: 14;
+  bottom: var(--tabbar-height);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-side) var(--space-4);
+  border-top: 1px solid var(--color-line);
+  background: var(--color-bg);
+}
+
+.ui-txn-stepped .ui-txn-approve {
+  bottom: calc(var(--tabbar-height) + var(--touch-min) + var(--space-3));
+}
+
+html:not(:has(.ui-tabbar)) .ui-txn-approve {
+  bottom: 0;
+}
+
+/* FLOW-1048 (V3-Transaction): the head column, 4px apart: the status 14/500, the name 24/600, the figure 40, the meta 14. */
 .ui-txn-head {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-1);
   text-align: start;
 }
 
 .ui-txn-status {
   color: var(--color-text-secondary);
-  /* board: the status chip is 12px, medium (no 12px token). */
-  font-size: calc(var(--type-cents-size) + 1px);
-  font-weight: var(--type-btn-weight);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-chip-weight);
   line-height: var(--type-meta-line);
 }
 
@@ -259,7 +229,12 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
   margin: 0;
   /* The head's column is stretched, so the figure fits its full width at 40px, not its own shrunk width. */
   align-self: stretch;
+  font-size: var(--type-detail-size);
   line-height: var(--type-detail-line);
+}
+
+.ui-txn-amount .ui-num {
+  font-size: inherit;
 }
 
 .ui-txn-meta {
@@ -267,36 +242,6 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
-}
-
-/* The pending banner: a link to the review item, on the tint. */
-.ui-txn-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: 52px;
-  padding-inline: var(--space-inset-row);
-  border-radius: var(--radius-toast);
-  background: var(--color-tint);
-  color: var(--color-text);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-  text-decoration: none;
-}
-
-.ui-txn-banner-text {
-  flex: 1;
-  min-inline-size: 0;
-}
-
-.ui-txn-banner-action {
-  color: var(--color-accent-text);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-txn-banner > svg {
-  flex: none;
-  color: var(--color-accent-text);
 }
 
 /* The footer: Jev's note, the bank line and the raw bank description (13px, muted). */

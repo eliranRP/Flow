@@ -110,7 +110,6 @@
       "screens/project-month-profit-screen.tsx",
       "screens/project-next-month-screen.tsx",
       "screens/company-profit-screen.tsx",
-      "screens/transaction-top-bar.tsx",
       "screens/recurring-charge-screen.tsx",
       "screens/loans-summary-screen.tsx",
       "screens/loan-detail-screen.tsx"
@@ -319,8 +318,7 @@
       "screens/transaction-screen.tsx",
       "ui/counted-in.tsx",
       "screens/transaction-recurring.tsx",
-      "screens/transaction-head.tsx",
-      "screens/transaction-top-bar.tsx"
+      "screens/transaction-head.tsx"
     ],
     "home-redesign.spec.ts": [
       "screens/HomeScreen.tsx",

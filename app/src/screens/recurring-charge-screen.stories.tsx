@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
+import { longHebrew } from "../ui/story-support";
 import { RECURRING_CHARGES_FIXTURE_POWER, RECURRING_CHARGES_FIXTURE_WATER, RECURRING_MISSING_FIXTURE } from "../recurring-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-charge-screen";
@@ -7,7 +8,7 @@ import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-c
 /** FLOW-447c: the charge page on the board's two parties, as the page's states. Invented names only. */
 const NOW = new Date("2026-10-11T12:00:00Z");
 
-function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" | "pick" }) {
+function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" | "pick" | "long" }) {
   const entry = state === "late" || state === "ignored" ? "/recurring/expense/power" : "/recurring/expense/water";
   return (
     <StoryRoute entry={entry}>
@@ -34,6 +35,7 @@ function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount
         />
       ) : null}
       {state === "late" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_POWER} /> : null}
+      {state === "long" ? <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_POWER, row: { ...RECURRING_CHARGES_FIXTURE_POWER.row, party_name: `Brightline Power ${longHebrew}` } }} /> : null}
       {state === "ignored" ? (
         <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_POWER, bills: RECURRING_MISSING_FIXTURE.filter((bill) => bill.party_id !== "power") }} />
       ) : null}
@@ -100,3 +102,15 @@ export const ProjectPicker: Story = {
 
 /** FLOW-963: offline, the line under the head says which moment the figures are from. */
 export const Offline: Story = { args: { state: "offline" } };
+
+/** A long name wraps in the head (V3-States). */
+export const LongContent: Story = { args: { state: "long" } };
+
+/** FLOW-1048: scrolled past the head, the 56px detail bar slides in with the name and the figure. */
+export const Scrolled: Story = {
+  args: { state: "late" },
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 600, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-bar-detail")).toHaveAttribute("aria-hidden", "false"));
+  },
+};
