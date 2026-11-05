@@ -1,0 +1,493 @@
+/* FLOW-1045: Reports v3 (boards V3-Reports, V3-Report), split out of 61-reports.css (FLOW-1054, file size); loaded right after it. Composition of the shared parts; every value a token. */
+
+.ui-rep-v3 {
+  min-inline-size: 0;
+  padding-block-end: var(--space-6);
+}
+
+/* The band: the name, the period or date pill, the figure and its two rows (Overview pattern). FLOW-1054 (board
+   V3-Report): the name 16px under the Back row, 14px between the blocks, 22px under the last row. Its text keeps
+   v2's sizes as Home's band does (decision 0258): the name 20/600, the pill 16/500, the label 16/500, the sub 13,
+   the rows 16/500; the figure 52. */
+.ui-rep-v3 > .ui-band {
+  padding-block-end: calc(var(--space-5) + var(--space-half));
+}
+
+.ui-rep-v3 > .ui-band .ui-band-hero {
+  padding-block-start: var(--space-4);
+}
+
+.ui-rep-band {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  min-inline-size: 0;
+}
+
+.ui-rep-band.ui-band-fade .ui-rep-band-name {
+  margin: 0;
+  color: var(--color-on-band);
+  font-size: var(--type-sheet-size);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-sheet-line);
+  overflow-wrap: anywhere;
+}
+
+/* The pill opens the period (or date) sheet: the band's 48px track, as Home's month pill. */
+.ui-rep-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--label-gap);
+  inline-size: 100%;
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  border: 0;
+  border-radius: var(--radius-pager-band);
+  background: var(--band-track);
+  color: var(--color-on-band);
+  font: inherit;
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-btn-2-line);
+  cursor: pointer;
+}
+
+.ui-rep-pill-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-rep-band-figure {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+/* The figure's label (the band's 16/500 at its secondary white), the figure 52 at the start (right), its sub line. */
+.ui-rep-band-figure .ui-band-title {
+  margin: 0;
+}
+
+.ui-rep-band-figure .ui-band-net .ui-num {
+  text-align: right;
+}
+
+.ui-rep-band-sub {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-rep-band-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Income and expenses (or assets and liabilities): the word at the start, the amount at the end, 44px each. */
+.ui-rep-band-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--space-10);
+  margin: 0;
+  color: var(--color-on-band);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+/* The board's two rows read as one block: the second 6px under the first (the band's 14 less 8). */
+.ui-rep-band-row + .ui-rep-band-row {
+  margin-block-start: calc(var(--space-inset-row) - var(--space-2));
+}
+
+/* The amounts with no sign (V3-Report), at the rows' 16/500 as Home's (decision 0258), not the list's 17. */
+.ui-rep-band-row-amount,
+.ui-rep-band-row-amount .ui-num {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  white-space: nowrap;
+}
+
+/* In the band the amounts keep the band's white; the income plus stays a word, not a colour. */
+.ui-rep-band .ui-num {
+  color: inherit;
+}
+
+/* "‹ לפי פרויקט": Back out of a drill-down, on the band's white. */
+.ui-band .ui-rep-undrill {
+  color: var(--color-on-band);
+}
+
+.ui-rep-bar-title {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The band bar's end when the report has nothing to share: the start's 44px, so the centre stays centred. */
+.ui-rep-bar-space {
+  flex: none;
+  inline-size: var(--touch-min);
+}
+
+.ui-rep-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  padding: var(--space-5) var(--space-side) 0;
+}
+
+/* The board's profit and loss draws the review card with no heading over it (V3-Report): the heading stays for
+   screen readers only, and its row takes no height until the "N הוסתרו" button needs it. */
+.ui-rep-page .ui-attn-head {
+  min-block-size: 0;
+  padding-block-end: 0;
+}
+
+/* The card is the board's 56px with the page's 16px gap under it, not the list's own 8. */
+.ui-rep-page .ui-attn-item:last-child .ui-attn-card {
+  margin-block-end: 0;
+}
+
+/* The dock's mark is a zero-height line: it takes no gap of its own, so the control sits 16px under the card. */
+.ui-rep-page > .ui-compact-mark {
+  margin-block-end: calc(var(--space-4) * -1);
+}
+
+.ui-rep-page .ui-attn-title {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The groups sit on the page's gutter; their sticky heads span it, as the board draws them. FLOW-1054: each group
+   8px into the page's gap, its head 47px (14 + the 20/500 title at 24 + 8 and the hairline), the rows on the
+   gutter with no inset of their own. */
+.ui-rep-v3-group {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+.ui-rep-page .ui-rep-v3-group .ui-month-head {
+  min-block-size: 0;
+  margin-block-start: 0;
+}
+
+.ui-rep-v3-group .ui-month-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-v3-group .ui-project-list {
+  padding-inline: 0;
+}
+
+/* A long Latin name wraps, after its slash first, and a word wider than the column breaks inside the row. */
+.ui-rep-v3-group .ui-row-title {
+  overflow-wrap: anywhere;
+}
+
+.ui-rep-v3-currency {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+/* FLOW-1045 (board V3-Report; the owner, 2026-11-05: "too much text"): a report's row is the board's 60px: the name
+   17 (it wraps once after a slash before it cuts, FLOW-358), 4px, the הכנסות · הוצאות line 13 secondary on one
+   line cut with an ellipsis, 4px, the row's share bar, the net 17. FLOW-1054: the lines at the 1.2 step, so the
+   name, the line and the bar fit the 60px as the board's do; the balance by project cuts its line the same way. */
+.ui-rep-v3-group .ui-row {
+  min-block-size: calc(var(--space-10) + var(--space-5));
+  padding-block: calc(var(--space-1) + var(--space-half));
+}
+
+.ui-rep-v3-group .ui-row-text {
+  gap: var(--space-1);
+}
+
+.ui-rep-v3-group .ui-row-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-v3-group .ui-row-project .ui-row-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hint-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The share bar: 4px, the hairline's colour, its fill the accent (income green). Decoration only. */
+.ui-rep-share {
+  display: block;
+  block-size: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--color-line);
+}
+
+.ui-rep-share-fill {
+  display: block;
+  block-size: 100%;
+  background: var(--color-accent);
+}
+
+.ui-rep-share-fill[data-income] {
+  background: var(--color-income);
+}
+
+.ui-rep-v3-group .ui-row-end .ui-num {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+/* The bottom line (V3-Report): 56px, a 2px rule in the text colour over it, 20/600. */
+.ui-rep-page .ui-rep-total-strong {
+  align-items: center;
+  min-block-size: calc(var(--space-10) + var(--space-4));
+  padding-block: 0;
+  border-top: var(--space-half) solid var(--color-text);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-title-line);
+}
+
+/* The basis line: 13 secondary, in the page's 16px gap with no margin of its own. */
+.ui-rep-page > .ui-rep-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* ---- The hub (Hub pattern) ---- */
+
+.ui-rep-hub {
+  min-inline-size: 0;
+  padding-block-end: var(--space-6);
+}
+
+/* FLOW-1054 (V3-Reports): the title row is 56px (12 over a 44px row), the period an outlined pill: 44px, 14px
+   inside, 15/500, the hairline, its 14px chevron. */
+.ui-rep-hub .ui-page-stacked {
+  padding-block-start: var(--space-3);
+}
+
+.ui-rep-hub-period {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-half));
+  min-block-size: var(--touch-min);
+  max-inline-size: 100%;
+  padding-inline: var(--space-inset-row);
+  border: var(--stroke-hairline) solid var(--color-line);
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
+  cursor: pointer;
+}
+
+.ui-rep-hub-period-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The board (V3-Reports): 14px from the title row to the first card and between the cards (the owner, 2026-11-05:
+   the pill sat on the card). */
+.ui-rep-hub-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  min-inline-size: 0;
+  padding-block-start: var(--space-inset-row);
+  padding-inline: var(--space-side);
+}
+
+.ui-rep-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* The board's card: 16px 18px inside, 10px between its blocks, the title row its text (17/500) and no more. */
+.ui-rep-hub-card.ui-card {
+  padding-inline: calc(var(--space-4) + var(--space-half));
+}
+
+.ui-rep-hub-link {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-half));
+  min-inline-size: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-rep-hub-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* The card's text at the board's sizes: the name 17/500, the label 14 and the facts' labels 13 in secondary. */
+.ui-rep-hub-title .t-body {
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-fact-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-fact .t-body {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-title svg {
+  color: var(--color-text-muted);
+}
+
+.ui-rep-hub-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+/* The mini chart: decoration, ten bars at most, the last in the accent colour (the figure is written above it). */
+.ui-rep-hub-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-1);
+  block-size: var(--space-10);
+}
+
+/* The bars in the board's bar colour (the strong tint: #382A5E dark, #D9CBF6 light), the last in the accent. */
+.ui-rep-hub-bar {
+  border-radius: var(--radius-chart-bar);
+  background: var(--color-tint-strong);
+}
+
+.ui-rep-hub-bar[data-loss] {
+  background: var(--color-signal-soft);
+}
+
+.ui-rep-hub-bar[data-last] {
+  background: var(--color-accent);
+}
+
+/* The balance sheet's chart: how much of the assets the loans hold; the rest is equity. FLOW-1054: the chart slot's 40px, as
+   the board's bars, so both cards keep the board's height (the board's equity trend needs a read Flow does not have yet). */
+.ui-rep-hub-split {
+  display: flex;
+  block-size: var(--space-10);
+  overflow: hidden;
+  border-radius: var(--radius-chart-bar);
+  background: var(--color-accent);
+}
+
+.ui-rep-hub-split-owed {
+  background: var(--color-tint-strong);
+}
+
+.ui-rep-hub-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+  border-block-start: var(--stroke-hairline) solid var(--color-line);
+}
+
+.ui-rep-hub-fact {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-rep-hub-cuts {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-rep-hub-cuts-title {
+  margin: calc(var(--space-1) + var(--space-half)) 0 var(--space-half);
+  line-height: var(--type-title-line);
+}
+
+/* The cut rows sit on the gutter: 17 over a 13 secondary line (one line at 390; at 320 a long one wraps whole). */
+.ui-rep-hub-cuts .ui-project-list {
+  padding-inline: 0;
+}
+
+.ui-rep-hub-cuts .ui-row-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-hub-cuts .ui-row-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+}
+
+/* The board's cut rows: 64px, a 36px icon tile (12px corners, the tint, the accent glyph), 12px to the text. */
+.ui-rep-hub-cuts .ui-row {
+  min-block-size: calc(var(--space-10) + var(--space-6));
+  padding-block: var(--space-1);
+  gap: var(--space-3);
+}
+
+.ui-rep-hub-cuts .ui-row-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--avatar);
+  block-size: var(--avatar);
+  border-radius: var(--radius-input);
+  background: var(--color-tint);
+  color: var(--color-accent);
+}
+
+/* The tile's glyph is the board's 20px. */
+.ui-rep-hub-cuts .ui-row-icon svg {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
+}
