@@ -178,7 +178,8 @@ export const CloseToast: Story = {
     await userEvent.click(within(canvasElement).getAllByRole("button", { name: "פעולות להלוואה" })[0] as HTMLElement);
     const sheet = await body.findByRole("dialog", { name: /^סגירת הלוואת גישור/ });
     await userEvent.click(within(sheet).getByRole("button", { name: "סגירת ההלוואה" }));
-    await expect(await body.findByRole("button", { name: "ביטול" })).toBeVisible();
+    // The toast fades in (--motion-fade): wait for it to be visible, not only present.
+    await waitFor(() => expect(body.getByRole("button", { name: "ביטול" })).toBeVisible());
   },
 };
 
