@@ -250,6 +250,17 @@
   margin-block-start: var(--space-5);
 }
 
+/* At 320 the unpaid title ("3 חשבוניות פתוחות · $21,300") is longer than the card: it wraps to two lines here, so the total is never cut. */
+@media (max-width: 359px) {
+  .ui-home-attn .ui-attn-text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* The month's activity: the filter 20px under the cards, then the groups with their one-line sticky heads. */
 .ui-home-act {
   display: flex;
