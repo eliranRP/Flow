@@ -27,19 +27,32 @@ export function SearchingRows({ allTime }: { allTime: boolean }) {
   );
 }
 
-/** A search with no lines (FLOW-368 §2.6): the name searched, one muted line, and with chips a text link to drop them. */
-export function SearchEmptyState({ text, withChips, onClearChips }: { text: string; withChips: boolean; onClearChips: () => void }) {
+/**
+ * A search with no lines (FLOW-368 §2.6, FLOW-1049 V3-Search): the name searched, one muted line, and never a
+ * dead end: with chips a link drops them; always the filters and a clear (back to the start's checks).
+ */
+export function SearchEmptyState({ text, withChips, onClearChips, onFilters, onClear }: {
+  text: string;
+  withChips: boolean;
+  onClearChips: () => void;
+  /** Opens the filter sheet. */
+  onFilters: () => void;
+  /** Clears the text and the filters: the start, with שווה לבדוק and the recent searches. */
+  onClear: () => void;
+}) {
   return (
     <div className="ui-search-empty">
       <h2 className="ui-search-empty-title">{text !== "" ? `לא מצאנו ״${text}״` : "אין תנועות שמתאימות לסינון"}</h2>
       <p className="ui-search-empty-body">
         {withChips
           ? "החיפוש הוא לפי ספק, לקוח, פרויקט, קטגוריה או סכום, בתוך הסינון שבחרתם."
-          : "החיפוש הוא לפי ספק, לקוח, פרויקט, קטגוריה או סכום."}
+          : "נסו שם אחר, פרויקט או סכום."}
       </p>
-      {withChips ? (
-        <Button variant="link" onClick={onClearChips}>חיפוש בלי הסינון</Button>
-      ) : null}
+      <div className="ui-search-empty-actions">
+        {withChips ? <Button variant="link" onClick={onClearChips}>חיפוש בלי הסינון</Button> : null}
+        <Button variant="secondary" onClick={onFilters}>סינון</Button>
+        <Button variant="link" onClick={onClear}>ניקוי החיפוש</Button>
+      </div>
     </div>
   );
 }

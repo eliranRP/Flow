@@ -4,12 +4,12 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
 import { homeActivityLines } from "../dev/home-activity-sample";
-import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
-import type { ActivityFilter, HomeActivityData } from "./home-activity";
-import { DrawerNextMonth } from "./month-drawer-next";
+import { FUTURE_CURRENT_KEY, FUTURE_MONTH_KEY, sampleHomeFuture } from "../dev/home-future-sample";
+import { HOME_NEXT_MONTH_SAMPLE } from "../dev/home-next-month-sample";
+import type { ActivityFilter, HomeActivityData, HomeFuture } from "./home-activity";
 import { RECURRING_FIXTURE } from "../recurring-sample";
 import { shiftMonthKey } from "../period";
-import { israelToday } from "../ui/date-math";
+import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
 import { BandCompany } from "../ui/top-band";
 import { exampleOnBand } from "../ui/screen-stories-support";
@@ -59,6 +59,19 @@ function sampleActivity(over: Partial<HomeActivityData> = {}): HomeActivityData 
   };
 }
 
+/** FLOW-1056: a past month's activity: its own lines (no schedule), past their first page. Invented names and figures. */
+function samplePastActivity(monthKey: string, over: Partial<HomeActivityData> = {}): HomeActivityData {
+  return {
+    schedule: null,
+    scheduleFailed: false,
+    lines: homeActivityLines(monthKey, { currency: "ILS" }),
+    linesFailed: false,
+    onRetry: () => undefined,
+    past: { more: true },
+    ...over,
+  };
+}
+
 // FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
 function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
   const currentKey = israelToday().slice(0, 7);
@@ -104,13 +117,13 @@ export const HomeAttentionSingular: Story = {
  */
 function CashHomeStory({
   monthBack = 0,
+  pastActivity,
   attention = true,
   review = true,
   hidden = null,
   activity = sampleActivity(),
   filter = "all",
   initialDrawerOpen = false,
-  initialDrawerNext = false,
   quiet = false,
   offlineSince = null,
   recurringTip = false,
@@ -119,13 +132,14 @@ function CashHomeStory({
   forecastPending = false,
 }: {
   monthBack?: number;
+  /** A past month's activity (its lines); the sample's by default. */
+  pastActivity?: HomeActivityData;
   attention?: boolean;
   review?: boolean;
   hidden?: Record<string, string> | null;
   activity?: HomeActivityData | null;
   filter?: ActivityFilter;
   initialDrawerOpen?: boolean;
-  initialDrawerNext?: boolean;
   quiet?: boolean;
   offlineSince?: number | null;
   recurringTip?: boolean;
@@ -145,10 +159,9 @@ function CashHomeStory({
         previewing={false}
         search=""
         attention={attention ? attentionRows({ pending: review ? 7 : 0, transfers: 2, unpaidCount: 3, unpaidGross: 460_000n, missingCount: late, search: "" }) : []}
-        activity={monthBack > 0 ? null : activity}
+        activity={monthBack > 0 ? pastActivity ?? samplePastActivity(shiftMonthKey(currentKey, -monthBack)) : activity}
         initialFilter={filter}
-        drawerNext={monthBack > 0 ? null : <DrawerNextMonth today={NEXT_MONTH_TODAY} currency="USD" cash={null} sample={HOME_NEXT_MONTH_SAMPLE} />}
-        initialDrawerNext={initialDrawerNext}
+        withNext
         example={exampleOnBand}
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
@@ -292,15 +305,114 @@ export const HomeScheduleFailed: Story = {
   },
 };
 
-/** FLOW-1036 (BUILD-PLAN §5): the pill's next arrow on the current month opens the drawer on next month and its forecast. */
+/**
+ * FLOW-1056: Home stepping between this month and next month, on the next-month sample (today 11/10/2026 there, so
+ * October and November, in dollars; invented names). The arrows and the drawer move it; November is its forecast.
+ */
+function NextMonthStory({ start = FUTURE_MONTH_KEY, drawer = false, phase = "ready", empty = false }: { start?: string; drawer?: boolean; phase?: HomeFuture["phase"]; empty?: boolean }) {
+  const [monthKey, setMonthKey] = useState(start);
+  useHiddenRows(null);
+  return (
+    <StoryRoute entry="/" tabs>
+      <CashHome
+        data={HOME_NEXT_MONTH_SAMPLE.cash}
+        monthKey={monthKey}
+        currentKey={FUTURE_CURRENT_KEY}
+        firstKey="2026-05"
+        previewing={false}
+        search=""
+        attention={monthKey === FUTURE_CURRENT_KEY ? attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, currency: "USD", search: "" }) : []}
+        example={exampleOnBand}
+        onStepMonth={setMonthKey}
+        withNext
+        initialDrawerOpen={drawer}
+        drawerYearMonths={HOME_NEXT_MONTH_SAMPLE.cash}
+        future={monthKey === FUTURE_MONTH_KEY ? sampleHomeFuture("", { phase, empty }) : null}
+      />
+    </StoryRoute>
+  );
+}
+
+/**
+ * FLOW-1056 (owner): Home on next month: the band keeps its shape with the forecast's figures (תזרים צפוי, צפוי להיכנס
+ * and צפוי לצאת with their lines), its foot row opens פירוט ועריכה, and the expected rows follow by project. No
+ * דורש טיפול and no filter; the earlier arrow goes back to this month, and there is no later one.
+ */
+export const HomeNextMonth: Story = {
+  name: "Home on next month",
+  render: () => <NextMonthStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("תזרים צפוי · נובמבר")).toBeInTheDocument();
+    await expect(canvas.getByText("צפוי להיכנס")).toBeInTheDocument();
+    await expect(canvas.getByText("צפוי לצאת")).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /פירוט ועריכה/u })).toHaveAttribute("href", "/forecast/next");
+    await expect(canvas.getByRole("heading", { name: "הצפוי בנובמבר" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "כללי" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("radiogroup", { name: "סינון תנועות" })).toBeNull();
+    await expect(canvas.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
+    await expect(canvasElement.querySelector(".ui-band .ui-band-month-name")?.textContent).toBe("נובמבר 2026");
+    await expect(canvas.getAllByRole("button", { name: "חודש הבא" })[0]).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(canvas.getAllByRole("button", { name: "חודש קודם" })[0] as HTMLElement);
+    await waitFor(() => expect(canvasElement.querySelector(".ui-band .ui-band-month-name")?.textContent).toBe("אוקטובר 2026"));
+    await userEvent.click(canvas.getAllByRole("button", { name: "חודש הבא" })[0] as HTMLElement);
+    await waitFor(() => expect(canvas.getByText("תזרים צפוי · נובמבר")).toBeInTheDocument());
+  },
+};
+
+/** FLOW-1056: next month while its forecast is read: the band's shape with bars for its figures, and rows to come. */
+export const HomeNextMonthLoading: Story = { name: "Home on next month, loading", render: () => <NextMonthStory phase="loading" /> };
+
+/** FLOW-1056: next month's forecast did not load: the band stays, the list says so with a retry. */
+export const HomeNextMonthFailed: Story = {
+  name: "Home on next month, failed",
+  render: () => <NextMonthStory phase="failed" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("הצפי לנובמבר לא נטען")).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    await expect(canvas.getByText("תזרים צפוי · נובמבר")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1056: nothing expected next month yet: the band at zero, and the list says so in words. */
+export const HomeNextMonthEmpty: Story = {
+  name: "Home on next month, nothing expected",
+  render: () => <NextMonthStory empty />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("אין עוד צפי לנובמבר")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1056: next month scrolled: the compact bar reads the month and its expected net; no filter docks. */
+export const HomeNextMonthScrolled: Story = {
+  name: "Home on next month, scrolled",
+  render: () => <NextMonthStory />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo(0, 400);
+    const bar = await waitFor(() => {
+      const node = canvasElement.ownerDocument.querySelector<HTMLElement>(".ui-compact-bar-band");
+      if (node == null) throw new Error("no bar");
+      return node;
+    });
+    await expect(bar.querySelector(".ui-compact-bar-centre-net")?.textContent).not.toBe("");
+    await expect(bar.querySelector(".ui-compact-dock [role=radiogroup]")).toBeNull();
+    window.scrollTo(0, 0);
+  },
+};
+
+/** FLOW-1056 (owner): in the drawer, next month picks like any month: the drawer closes and Home shows that month. */
 export const HomeDrawerNextMonth: Story = {
-  name: "Home, the drawer on next month",
-  render: () => <CashHomeStory initialDrawerNext />,
+  name: "Home, next month picked in the drawer",
+  render: () => <NextMonthStory start={FUTURE_CURRENT_KEY} drawer />,
   play: async ({ canvasElement }) => {
     const doc = within(canvasElement.ownerDocument.body);
     const dialog = await doc.findByRole("dialog", { name: "בחירת חודש" });
-    await waitFor(() => expect(dialog.querySelector(".ui-fc-card")).not.toBeNull());
-    await expect(dialog.querySelector('.ui-month-cell-next[aria-pressed="true"]')).not.toBeNull();
+    const next = within(dialog).getByRole("button", { name: "נובמבר, תחזית" });
+    await expect(next).toHaveClass("ui-month-cell-next");
+    await userEvent.click(next);
+    await waitFor(() => expect(doc.queryByRole("dialog", { name: "בחירת חודש" })).toBeNull());
+    await waitFor(() => expect(within(canvasElement).getByText("תזרים צפוי · נובמבר")).toBeInTheDocument());
   },
 };
 
@@ -391,8 +503,52 @@ export const HomeFailedOffline: Story = {
   ),
 };
 
-/** A past month: the darker band, "חזרה ל…" and no forecast, cards or activity. */
-export const HomePast: Story = { render: () => <CashHomeStory monthBack={1} attention={false} /> };
+/**
+ * A past month: the darker band, "חזרה ל…", no forecast or cards. FLOW-1056 (owner): its activity as the current
+ * month's: "הפעילות ב…" with the month's totals, its lines as קבועים and חד-פעמי, and the row to all its lines.
+ */
+export const HomePast: Story = {
+  render: () => <CashHomeStory monthBack={1} attention={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const name = HEBREW_MONTHS[Number(shiftMonthKey(israelToday().slice(0, 7), -1).slice(5, 7)) - 1] ?? "";
+    await expect(canvas.getByRole("heading", { name: `הפעילות ב${name}` })).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-home-act-close")?.textContent).toMatch(/^נכנס .+ · יצא .+$/u);
+    await expect(canvas.getByRole("heading", { name: "קבועים" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "חד-פעמי" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("radio", { name: "נותר לשלם" })).toBeNull();
+    await userEvent.click(canvas.getByRole("radio", { name: "חד-פעמי" }));
+    await waitFor(() => expect(canvas.queryByRole("heading", { name: "קבועים" })).toBeNull());
+    await expect(canvas.getByRole("link", { name: `כל התנועות ב${name}` })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1056: a past month while its lines are read: the band, then skeleton rows. */
+export const HomePastLoading: Story = {
+  name: "Home past, loading",
+  render: () => <CashHomeStory monthBack={1} attention={false} pastActivity={samplePastActivity(shiftMonthKey(israelToday().slice(0, 7), -1), { lines: null })} />,
+};
+
+/** FLOW-1056: a past month's lines did not load: the band stays, the list says so with a retry. */
+export const HomePastFailed: Story = {
+  name: "Home past, failed",
+  render: () => <CashHomeStory monthBack={1} attention={false} pastActivity={samplePastActivity(shiftMonthKey(israelToday().slice(0, 7), -1), { lines: null, linesFailed: true })} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("רשימת התנועות לא נטענה")).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1056: a past month with no lines: the list says so in words. */
+export const HomePastEmpty: Story = {
+  name: "Home past, no lines",
+  render: () => <CashHomeStory monthBack={1} attention={false} pastActivity={samplePastActivity(shiftMonthKey(israelToday().slice(0, 7), -1), { lines: [], past: { more: false } })} />,
+  play: async ({ canvasElement }) => {
+    const name = HEBREW_MONTHS[Number(shiftMonthKey(israelToday().slice(0, 7), -1).slice(5, 7)) - 1] ?? "";
+    await expect(within(canvasElement).getByText(`אין תנועות ב${name}`)).toBeInTheDocument();
+  },
+};
 
 /** Scrolled past the band: the compact bar pins the month and the arrows, and the band's figures fade away (FLOW-364). */
 export const HomeScrolled: Story = {

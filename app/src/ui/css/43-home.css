@@ -310,19 +310,29 @@
   margin-inline-start: auto;
 }
 
-/* FLOW-1036: next month's cell in the drawer opens its forecast; dashed like a month to come, but pickable. */
+/* FLOW-1036: next month's cell in the drawer; dashed like a month to come, but pickable (FLOW-1056: a pick shows
+   that month on Home, and the cell is then the selected one). */
 .ui-month-cell-next {
   border: 2px dashed var(--color-line);
 }
 
-.ui-month-cell-next[aria-pressed="true"] {
-  border-style: solid;
-  border-color: var(--color-accent);
-  background: var(--color-tint-strong);
+/* FLOW-1056: next month's activity has a title of its own ("הצפוי בדצמבר") where the current month's filter sits;
+   a past month's ("הפעילות באוקטובר") sits over its filter, with the month's totals as its summary line. */
+.ui-home-next-title {
+  margin: 0 0 var(--space-2);
 }
 
-.ui-month-drawer-next-none {
+.ui-home-act-head {
+  display: flex;
+  flex-direction: column;
+  margin-block-end: var(--space-3);
+}
+
+.ui-home-act-head .ui-home-next-title {
+  margin: 0;
+}
+
+.ui-home-act-close {
   margin: 0;
   color: var(--color-text-secondary);
-  text-align: center;
 }

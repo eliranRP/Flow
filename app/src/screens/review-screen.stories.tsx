@@ -1,6 +1,7 @@
 import type { ReviewRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ReviewAllList, ReviewQueue, ReviewScreen } from "./flow-screens";
+import { ReviewEmpty as ReviewDoneFrame } from "./review-shared";
 import { StoryRoute } from "../ui/story-route";
 import type { ReviewPaging } from "../use-review";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";
@@ -19,6 +20,17 @@ export const ReviewEmpty: Story = {
     <StoryRoute entry="/review?preview=empty" tabs>
       <ExampleBar />
       <ReviewScreen />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-1049 (V3-Review): the queue just emptied: "הכול אושר", the day's count, and the one way home. */
+export const ReviewDone: Story = {
+  name: "Review, all approved",
+  render: () => (
+    <StoryRoute entry="/review" tabs>
+      <ExampleBar />
+      <ReviewDoneFrame search="" done={{ approved: 3, auto: 0 }} />
     </StoryRoute>
   ),
 };

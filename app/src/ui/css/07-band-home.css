@@ -250,9 +250,9 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-band-company-name {
   min-inline-size: 0;
   overflow: hidden;
-  font-size: var(--type-name-size);
-  line-height: var(--type-name-line);
-  font-weight: var(--type-name-weight);
+  font-size: var(--type-sheet-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-sheet-weight);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -404,9 +404,9 @@ html[data-kb="open"] .ui-sheet-body {
   background: transparent;
   color: var(--color-on-band);
   font: inherit;
-  font-size: var(--type-sheet-size);
-  line-height: var(--type-sheet-line);
-  font-weight: var(--type-sheet-weight);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+  font-weight: var(--type-btn-2-weight);
   cursor: pointer;
 }
 
@@ -419,9 +419,9 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-band-title {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-weight);
-  line-height: var(--type-body-line);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-btn-2-line);
 }
 
 /* FLOW-1051 (V3-Home): Home's band ends 20px under its last block. */
@@ -493,8 +493,7 @@ html[data-kb="open"] .ui-sheet-body {
 /* FLOW-1051 (V3-Home): Home's two rows. The label is 17/1.45; the amount is LTR, 20/600, at the chip's side
    (the cell's left edge); the label keeps the row's end. Scoped here: other bands keep their rows. */
 .ui-band-rows .ui-band-row-link {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  font-size: var(--type-btn-2-size);
 }
 
 .ui-band-rows .ui-band-row-amount {
@@ -503,16 +502,16 @@ html[data-kb="open"] .ui-sheet-body {
 }
 
 .ui-band-rows .ui-band-row-amount .t-body {
-  font-size: var(--type-section-size);
-  font-weight: var(--type-sheet-weight);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
 }
 
 .ui-band-caption {
   margin: var(--label-gap) 0 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
-  font-weight: var(--type-meta-weight);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
 }
 
 /* The figures enter from the side the month came from (RTL: an earlier month from the right). */
@@ -576,9 +575,9 @@ html[data-kb="open"] .ui-sheet-body {
 
 .ui-home-forecast-title {
   margin: 0;
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
-  font-weight: var(--type-btn-weight);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-home-forecast-sub {
@@ -591,9 +590,8 @@ html[data-kb="open"] .ui-sheet-body {
 
 .ui-home-forecast-value {
   flex: none;
-  font-size: var(--type-name-size);
-  line-height: var(--type-name-line);
-  font-weight: var(--type-body-weight);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-2-weight);
 }
 
 .ui-home-forecast-value .t-body {
@@ -617,6 +615,31 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-skel-forecast-value {
   inline-size: calc(var(--space-10) * 2);
   block-size: var(--space-4);
+}
+
+/* FLOW-1056: next month's big figure while its forecast is read: a bar the hero's height, so nothing moves. */
+.ui-skel-future-net {
+  inline-size: calc(var(--space-10) * 4);
+  block-size: var(--type-band-size);
+}
+
+/* FLOW-1056: next month's two rows: the label takes its words (צפוי להיכנס), its line under it, the amount at the
+   row's other side as on the current month. Not links: the row keeps the 44px height without a press. */
+.ui-home-future-row {
+  min-block-size: var(--touch-min);
+}
+
+.ui-home-future-label {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-home-future-note {
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-home-forecast-chevron {

@@ -91,6 +91,9 @@ export const FilterSheet: Story = { render: () => <Search entry="/search?q=חו�
 /** Nothing matches the text: the es-06 pattern with one way out. */
 export const NoResults: Story = { render: () => <Search entry="/search?q=מעליות" /> };
 
+/** FLOW-1049: zero results with a filter on: the link that drops it, סינון, and the clear. Never a dead end. */
+export const NoResultsFiltered: Story = { render: () => <Search entry="/search?q=מעליות&dir=income" /> };
+
 export const Loading: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
 export const Failed: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: false } }} /> };
 /** FLOW-971: offline, the search runs on the lines already read and says so under the field. */

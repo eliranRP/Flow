@@ -277,6 +277,16 @@ export function ProjectInvestmentScreen({
     setEditField(field);
     setSheet(field);
   }, [location.key, location.search, readOnly]);
+  // The key is consumed on arrival and leaves the URL (a replace), so Back to this page, and the links the page
+  // builds from its own query, do not open the sheet again (the owner, 2026-11-05: "every time I return to this
+  // page the drawer is opened").
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (!params.has("edit")) return;
+    params.delete("edit");
+    const rest = params.toString();
+    void navigate({ pathname: location.pathname, search: rest === "" ? "" : `?${rest}`, hash: location.hash }, { replace: true, state: location.state as unknown });
+  }, [location.hash, location.pathname, location.search, location.state, navigate]);
 
   const save = useWrite<SaveRequest>({
     failure: investmentFailure,
