@@ -160,7 +160,10 @@ export function useScrolledPast(mark: HTMLElement | null, enabled: boolean, bar 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[entries.length - 1];
-        if (entry && node.isConnected) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
+        // v3 keeper 8: the rect, not `isIntersecting`. Chromium reported a zero-height mark parked 8px above the
+        // margined root's top edge as intersecting (the observer's word came after the last scroll event of a docked
+        // pick and closed the dock). Past once all of it is above the bar's edge, the same rule as the scroll read.
+        if (entry && node.isConnected) setPast(entry.boundingClientRect.bottom < top);
       },
       { rootMargin: `-${String(top)}px 0px 0px 0px` },
     );
