@@ -207,7 +207,7 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
             {hasLoans ? (
               <div className="ui-band-fade ui-loans-band-figures">
                 <p className="ui-band-label t-line2">{summary.totalLabel}</p>
-                <p className="ui-loans-band-figure"><Amount agorot={summary.totalMinor} currency={read.phase === "ready" ? read.currency : "ILS"} size="hero" compact /></p>
+                <p className="ui-loans-band-figure"><Amount agorot={summary.totalMinor} currency={read.phase === "ready" ? read.currency : "ILS"} size="hero" /></p>
                 <div className="ui-loans-band-rows">
                   <p className="ui-loans-band-row">
                     <span className="ui-loans-band-row-label">{summary.startLabel}</span>

@@ -196,7 +196,7 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
                 <ChevronIcon size={16} />
               </span>
               <span className="ui-loans-band-figure">
-                <Amount agorot={figures.leftMinor} currency={currency} size="hero" compact />
+                <Amount agorot={figures.leftMinor} currency={currency} size="hero" />
               </span>
             </Link>
             <div className="ui-loans-band-rows">

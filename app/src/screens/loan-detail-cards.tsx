@@ -100,7 +100,7 @@ export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended
             <p className="ui-loan-band-sub t-line2">{loanSubtitle(loan, projectName)}</p>
             {ended ? null : <div className="ui-band-fade ui-loan-band-figures">
               <p className="ui-band-label t-line2">{loan.kind === "demand" ? "יתרת קרן" : "יתרה היום"}</p>
-              <p className="ui-loan-band-figure"><Amount agorot={loan.balanceMinor} currency={loan.currency} size="hero" compact /></p>
+              <p className="ui-loan-band-figure"><Amount agorot={loan.balanceMinor} currency={loan.currency} size="hero" /></p>
               {outlook == null ? null : (
                 <>
                   <PartsBar parts={[{ key: "paid", value: paidMinor, tone: "band-past" }]} total={loan.principalMinor} height={8} radius="block" label="נפרע מהקרן" />
