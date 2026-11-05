@@ -92,8 +92,10 @@ test("סגירת ההלוואה takes why and a day from the last payment on, th
   await page.getByRole("button", { name: /^חזרה/ }).first().click();
   await expect(page).toHaveURL(/\/e2e\/loans$/);
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toHaveCount(0);
-  await page.getByRole("button", { name: /^נסגרו · 3/ }).click();
-  await expect(page.getByRole("button", { name: /^הלוואת גישור, .*נסגרה 10\/2026$/ })).toBeVisible();
+  // FLOW-1046: פעילות / נסגרו is a segment now, so נסגרו is a radio.
+  await page.getByRole("radio", { name: /^נסגרו · 3/ }).click();
+  // The closed row's line is when it closed, then its project.
+  await expect(page.getByRole("button", { name: /^הלוואת גישור, .*נסגרה 10\/2026 · בית דוגמה 9$/ })).toBeVisible();
 });
 
 test("a part's category saves on tap, and undo puts the default back", async ({ page }) => {
@@ -162,18 +164,40 @@ test("the kind sheet turns a mortgage interest-only with its months, and checks 
 test("all payments: years newest first with sticky heads that push each other out, and Back names the loan", async ({ page }) => {
   await page.goto(`/e2e/loans/loan-mortgage/payments?reset=1&today=${TODAY}`);
   await expect(page.getByText("22 תשלומים מאז 01/2025 · שיפוץ דוגמה 12")).toBeVisible();
-  const head2026 = page.locator(".ui-loan-year-head").filter({ hasText: "2026 · 10 תשלומים" });
-  const head2025 = page.locator(".ui-loan-year-head").filter({ hasText: "2025 · 12 תשלומים" });
+  // FLOW-1046: each year is a one-line GroupHead: the year, then "count · total".
+  const yearHead = (year: string, count: number) =>
+    page.locator(".ui-group-head.ui-group-head-line")
+      .filter({ has: page.locator(".ui-group-title", { hasText: new RegExp(`^${year}$`) }) })
+      .filter({ hasText: new RegExp(`${String(count)} · \\$`) });
+  const head2026 = yearHead("2026", 10);
+  const head2025 = yearHead("2025", 12);
   await expect(head2026).toBeVisible();
+  await expect(head2025).toBeVisible();
   await expect(page.getByRole("button", { name: /^חזרה/ }).first()).toBeVisible();
-  // Scrolled into 2025, the 2026 head has moved up out from under the top bar, and the 2025 head sits under it.
-  await head2025.evaluate((node) => { node.scrollIntoView({ block: "start" }); });
-  const bar = await page.locator(".ui-txn-top").boundingBox();
+  // Newest first: 2026 sits above 2025.
+  const first2026 = await head2026.boundingBox();
+  const first2025 = await head2025.boundingBox();
+  expect(first2026 != null && first2025 != null && first2026.y < first2025.y).toBe(true);
+  // Scrolled into 2025, the 2026 head has moved up out from under the compact bar, and the 2025 head sits under
+  // the bar at --month-sticky-top (the bar, its dock and the 1px hairline).
+  // scrollIntoView stops the head just above the bar's scroll padding; scroll on into 2025's rows so it pins.
+  await head2025.evaluate((node) => { node.scrollIntoView({ block: "start" }); window.scrollBy(0, 120); });
+  await expect(page.locator(".ui-compact-bar")).toBeVisible();
+  const stickyTop = () => head2025.evaluate((node) => parseFloat(getComputedStyle(node).top));
+  await expect.poll(async () => {
+    const box = await head2025.boundingBox();
+    return box == null ? Number.NaN : Math.abs(box.y - await stickyTop());
+  }).toBeLessThanOrEqual(1);
+  expect(await stickyTop()).toBeGreaterThan(0);
+  const bar = await page.locator(".ui-compact-bar").boundingBox();
   const sticky = await head2025.boundingBox();
+  const pushed = await head2026.boundingBox();
   expect(bar).not.toBeNull();
   expect(sticky).not.toBeNull();
-  if (bar == null || sticky == null) return;
-  expect(Math.abs(sticky.y - (bar.y + bar.height))).toBeLessThanOrEqual(1);
+  expect(pushed).not.toBeNull();
+  if (bar == null || sticky == null || pushed == null) return;
+  expect(sticky.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+  expect(pushed.y + pushed.height).toBeLessThanOrEqual(sticky.y + 1);
   await page.getByRole("button", { name: /^חזרה/ }).first().click();
   await expect(page.getByText("יתרה היום")).toBeVisible();
 });

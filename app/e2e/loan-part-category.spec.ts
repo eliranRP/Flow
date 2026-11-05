@@ -183,7 +183,9 @@ test("an attached payment's interest moves into the P&L and stays on the loan; a
 
   // Both payments are still on the loan.
   await page.goto(`/loans/${loanId}/payments`);
-  await expect(page.getByText("כל התשלומים", { exact: true })).toBeVisible();
+  // FLOW-1046: the payments page is titled תשלומים, with the count since the start on the summary line.
+  await expect(page.getByRole("heading", { level: 1, name: "תשלומים" })).toBeVisible();
+  await expect(page.getByText(/^\d+ תשלומים מאז \d\d\/\d{4}/)).toBeVisible();
   await expect(page.locator(`a[href^='/transactions/${january}']`)).toHaveCount(1);
   await expect(page.locator(`a[href^='/transactions/${march}']`)).toHaveCount(1);
   const split = await owner.rpc("get_loan_split", { p_transaction_id: january });
