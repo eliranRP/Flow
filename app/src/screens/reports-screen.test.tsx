@@ -57,6 +57,27 @@ describe("/reports", () => {
     for (const chart of document.querySelectorAll(".ui-rep-hub-bars, .ui-rep-hub-split")) expect(chart).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("keeps each card on its own read: a failed balance read keeps the P&L card and shows a retry line", () => {
+    renderWithProviders(<ReportsHubScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, byProject: REPORTS_BY_PROJECT, months: REPORTS_MONTHS, failed: ["balance"] }} />, { route: "/reports" });
+    expect(screen.getByRole("link", { name: /רווח והפסד.*\$29,000/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /מאזן.*\$285,000/ })).toBeNull();
+    expect(screen.queryByText("הדוחות לא נטענו")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "נסו שוב" })).toHaveLength(1);
+  });
+
+  it("shows a retry line for a failed months or by-project read, and keeps the cards", () => {
+    renderWithProviders(<ReportsHubScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE, failed: ["months", "byProject"] }} />, { route: "/reports" });
+    expect(screen.getByRole("link", { name: /רווח והפסד.*\$29,000/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /מאזן.*\$285,000/ })).toBeInTheDocument();
+    expect(document.querySelector(".ui-rep-hub-bars")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "נסו שוב" })).toHaveLength(2);
+  });
+
+  it("fails as a whole only when both reports failed", () => {
+    renderWithProviders(<ReportsHubScreen sample={{ today: REPORTS_TODAY, failed: ["statement", "balance"] }} />, { route: "/reports" });
+    expect(screen.getByText("הדוחות לא נטענו")).toBeInTheDocument();
+  });
+
   it("keeps its period in the URL and hands it to the reports", async () => {
     renderWithProviders(<><ReportsHubScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} /><LocationProbe /></>, { route: "/reports" });
     fireEvent.click(screen.getByRole("button", { name: "השנה · 2026" }));

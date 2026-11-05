@@ -145,6 +145,7 @@ export function BalanceReportScreen({ sample }: { sample?: BalanceSample } = {})
                     variant="project"
                     title={row.name}
                     wrapTitle
+                    wrapHint
                     hint={row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : `שווי ${amountText(row.assets, base)} · הלוואות ${amountText(row.liabilities, base)}`}
                     {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
                     chevron={to != null}

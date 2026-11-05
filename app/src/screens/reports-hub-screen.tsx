@@ -23,7 +23,7 @@ import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Chip } from "../ui/chip";
 import { israelToday } from "../ui/date-math";
-import { EmptyState } from "../ui/empty-state";
+import { EmptyState, FailureLine } from "../ui/empty-state";
 import { BuildingIcon, CalendarIcon, ChevronIcon, DocumentIcon, ProjectsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -34,7 +34,10 @@ import { ReportShareSheet } from "./report-share-sheet";
 import { amountText } from "./reports-parts";
 import { PnlPeriodSheet, useLatePick } from "./reports-sheets";
 
-/** A fixture: today, and the hub's reads as they would come back. */
+/** The hub's four reads. */
+export type HubRead = "statement" | "byProject" | "months" | "balance";
+
+/** A fixture: today, and the hub's reads as they would come back (`failed`: the reads that failed). */
 export type HubSample = {
   today: string;
   statement?: Statement;
@@ -43,6 +46,7 @@ export type HubSample = {
   balance?: BalanceSheet;
   phase?: ScreenPhase;
   offlineSince?: number;
+  failed?: readonly HubRead[];
 };
 
 /** The months a P&L card draws, oldest first. */
@@ -86,8 +90,32 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** One report's card: its name, its headline figure, the mini chart and two facts. The whole card opens it. */
-function ReportCard({ to, title, label, figure, chart, facts }: { to: string; title: string; label: string; figure: ReactNode; chart: ReactNode; facts: ReactNode }) {
+/** A report's card while its read is out: the card's shape in skeletons. */
+function ReportCardSkeleton() {
+  return (
+    <Card className="ui-rep-hub-card">
+      <Skeleton width="sm" />
+      <Skeleton width="md" hero />
+      <Skeleton width="lg" />
+    </Card>
+  );
+}
+
+/** A report's card when its read failed: the report's name and a retry line. The rest of the hub stays. */
+function ReportCardFailed({ title, offline, onRetry }: { title: string; offline: boolean; onRetry: () => void }) {
+  return (
+    <Card className="ui-rep-hub-card">
+      <span className="ui-rep-hub-title t-body">{title}</span>
+      <FailureLine offline={offline} onRetry={onRetry} />
+    </Card>
+  );
+}
+
+/**
+ * One report's card: its name, its headline figure, the mini chart and two facts. The whole card opens it.
+ * `after` sits below the link, inside the card: the retry line of a read the card draws from.
+ */
+function ReportCard({ to, title, label, figure, chart, facts, after }: { to: string; title: string; label: string; figure: ReactNode; chart: ReactNode; facts: ReactNode; after?: ReactNode }) {
   return (
     <Card className="ui-rep-hub-card">
       <Link to={to} className="ui-rep-hub-link m-press">
@@ -102,6 +130,7 @@ function ReportCard({ to, title, label, figure, chart, facts }: { to: string; ti
         {chart}
         <span className="ui-rep-hub-facts">{facts}</span>
       </Link>
+      {after}
     </Card>
   );
 }
@@ -110,6 +139,8 @@ function ReportCard({ to, title, label, figure, chart, facts }: { to: string; ti
  * FLOW-1045 (board V3-Reports, the Hub pattern): the reports tab. The page title with the period chip, then
  * one card for each of the two reports (the net profit for the period, the equity as of today) with a mini
  * chart and two facts, then "פירוקים": the P&L by project and by month and the balance sheet by project.
+ * Each card draws from its own read: while a read is out its card is a skeleton, and a failed read shows a
+ * retry line in its card while the rest of the hub stays.
  */
 export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
   const location = useLocation();
@@ -130,8 +161,14 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
   const byProject = live ? byProjectRead.data : sample.byProject;
   const months = live ? monthsRead.data : sample.months;
   const balance = live ? balanceRead.data : sample.balance;
-  const failed = statementRead.failed || balanceRead.failed;
-  const phase: ScreenPhase = sample?.phase ?? (!live ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed && (statement == null || balance == null) ? { kind: "error", offline: !online } : statement == null || balance == null ? { kind: "loading" } : { kind: "ready" });
+  const failedOf = (name: HubRead, read: { failed: boolean }) => (live ? read.failed : sample.failed?.includes(name) ?? false);
+  const statementFailed = failedOf("statement", statementRead);
+  const byProjectFailed = failedOf("byProject", byProjectRead);
+  const monthsFailed = failedOf("months", monthsRead);
+  const balanceFailed = failedOf("balance", balanceRead);
+  // The whole hub fails only when nothing came back; one failed read keeps the rest (its card shows the retry).
+  const allFailed = statementFailed && balanceFailed && statement == null && balance == null;
+  const phase: ScreenPhase = sample?.phase ?? (live && preview !== "off" ? screenPhase(preview) : allFailed ? { kind: "error", offline: !online } : { kind: "ready" });
   const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (statementRead.readAt || null) : null;
   const pick = useLatePick<PnlPeriod>((next) => {
     const params = new URLSearchParams(search.replace(/^\?/, ""));
@@ -145,26 +182,22 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
   const pnlTo = (view: "category" | "project" | "month") => pnlPath({ period, view, drill: null }, search);
   const balanceTo = (view: "assets" | "project") => balancePath({ asOf: { kind: "today" }, view, project: null }, search);
 
+  const offline = !online;
   let body;
   if (phase.kind === "loading") {
     body = (
       <>
-        {[0, 1].map((index) => (
-          <Card key={index} className="ui-rep-hub-card">
-            <Skeleton width="sm" />
-            <Skeleton width="md" hero />
-            <Skeleton width="lg" />
-          </Card>
-        ))}
+        <ReportCardSkeleton />
+        <ReportCardSkeleton />
       </>
     );
   } else if (phase.kind === "error") {
     body = <PageLoadFailed title="הדוחות לא נטענו" offline={phase.offline} onRetry={() => { statementRead.refetch(); balanceRead.refetch(); }} />;
   } else if (phase.kind === "empty" || (statement != null && balance != null && statementEmpty(statement) && balanceEmpty(balance))) {
     body = <EmptyState icon={<DocumentIcon size={28} />} title="אין עדיין מה להציג בדוחות" body="אחרי שנרשמות הכנסות והוצאות, הרווח והמאזן מופיעים כאן." action={<Button onClick={() => { pick.setOpen(true); }}>בחירת תקופה אחרת</Button>} />;
-  } else if (statement != null && balance != null) {
-    const pnl = statement.currencies[0];
-    const sheet = balance.currencies[0];
+  } else {
+    const pnl = statement?.currencies[0];
+    const sheet = balance?.currencies[0];
     const currency = pnl?.currency ?? sheet?.currency ?? "ILS";
     const monthRows = months == null ? [] : pnlMonthRows(months, currency);
     const bars = monthRows.slice(0, CHART_MONTHS).reverse().map((row) => row.net);
@@ -172,34 +205,41 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
     const best = groups?.projects[0];
     const latest = monthRows[0];
     const average = monthRows.length === 0 ? null : netTotal(monthRows) / BigInt(monthRows.length);
+    const pnlCard = statement != null ? (
+      <ReportCard
+        to={pnlTo("category")}
+        title="רווח והפסד"
+        label={`רווח נקי · ${pnlChipLabel(period, today)}`}
+        figure={pnl == null ? "—" : <Amount agorot={pnl.net_minor} currency={pnl.currency} loss={pnl.net_minor < 0n} size="card" />}
+        chart={bars.length === 0 ? null : <MonthBars values={bars} />}
+        facts={pnl == null ? null : (
+          <>
+            <Fact label="הכנסות"><Amount agorot={pnl.income_minor} currency={pnl.currency} income /></Fact>
+            <Fact label="הוצאות"><Amount agorot={pnl.expense_minor} currency={pnl.currency} /></Fact>
+          </>
+        )}
+        after={monthsFailed && months == null ? <FailureLine offline={offline} onRetry={() => { monthsRead.refetch(); }} /> : null}
+      />
+    ) : statementFailed ? <ReportCardFailed title="רווח והפסד" offline={offline} onRetry={() => { statementRead.refetch(); }} /> : <ReportCardSkeleton />;
+    const balanceCard = balance != null ? (
+      <ReportCard
+        to={balanceTo("assets")}
+        title="מאזן"
+        label="הון עצמי · היום"
+        figure={sheet == null ? "—" : <Amount agorot={equityTotal(sheet)} currency={sheet.currency} loss={equityTotal(sheet) < 0n} size="card" />}
+        chart={sheet == null ? null : <SplitBar assets={sheet.total_assets_minor} liabilities={sheet.liabilities.total_minor} />}
+        facts={sheet == null ? null : (
+          <>
+            <Fact label="נכסים"><Amount agorot={sheet.total_assets_minor} currency={sheet.currency} /></Fact>
+            <Fact label="התחייבויות"><Amount agorot={sheet.liabilities.total_minor} currency={sheet.currency} /></Fact>
+          </>
+        )}
+      />
+    ) : balanceFailed ? <ReportCardFailed title="מאזן" offline={offline} onRetry={() => { balanceRead.refetch(); }} /> : <ReportCardSkeleton />;
     body = (
       <>
-        <ReportCard
-          to={pnlTo("category")}
-          title="רווח והפסד"
-          label={`רווח נקי · ${pnlChipLabel(period, today)}`}
-          figure={pnl == null ? "—" : <Amount agorot={pnl.net_minor} currency={pnl.currency} loss={pnl.net_minor < 0n} size="card" />}
-          chart={bars.length === 0 ? null : <MonthBars values={bars} />}
-          facts={pnl == null ? null : (
-            <>
-              <Fact label="הכנסות"><Amount agorot={pnl.income_minor} currency={pnl.currency} income /></Fact>
-              <Fact label="הוצאות"><Amount agorot={pnl.expense_minor} currency={pnl.currency} /></Fact>
-            </>
-          )}
-        />
-        <ReportCard
-          to={balanceTo("assets")}
-          title="מאזן"
-          label="הון עצמי · היום"
-          figure={sheet == null ? "—" : <Amount agorot={equityTotal(sheet)} currency={sheet.currency} loss={equityTotal(sheet) < 0n} size="card" />}
-          chart={sheet == null ? null : <SplitBar assets={sheet.total_assets_minor} liabilities={sheet.liabilities.total_minor} />}
-          facts={sheet == null ? null : (
-            <>
-              <Fact label="נכסים"><Amount agorot={sheet.total_assets_minor} currency={sheet.currency} /></Fact>
-              <Fact label="התחייבויות"><Amount agorot={sheet.liabilities.total_minor} currency={sheet.currency} /></Fact>
-            </>
-          )}
-        />
+        {pnlCard}
+        {balanceCard}
         <section className="ui-rep-hub-cuts" aria-labelledby="rep-hub-cuts">
           <h2 id="rep-hub-cuts" className="t-section ui-rep-hub-cuts-title">פירוקים</h2>
           <List>
@@ -207,8 +247,9 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
             <ListRow variant="item" icon={<CalendarIcon />} title="רווח והפסד לפי חודש" hint={latest == null || average == null ? "הרווח של כל חודש בתקופה" : `${latest.name} ${amountText(latest.net, currency, true)} · ממוצע ${amountText(average, currency)}`} href={pnlTo("month")} chevron />
             <ListRow variant="item" icon={<BuildingIcon />} title="מאזן לפי פרויקט" hint="הון עצמי בכל נכס · שווי פחות הלוואה" href={balanceTo("project")} chevron />
           </List>
+          {byProjectFailed && byProject == null ? <FailureLine offline={offline} onRetry={() => { byProjectRead.refetch(); }} /> : null}
         </section>
-        <Button variant="secondary" full onClick={() => { setShareOpen(true); }}>שליחת רווח והפסד ומאזן לרו״ח</Button>
+        {statement == null && balance == null ? null : <Button variant="secondary" full onClick={() => { setShareOpen(true); }}>שליחת רווח והפסד ומאזן לרו״ח</Button>}
       </>
     );
   }

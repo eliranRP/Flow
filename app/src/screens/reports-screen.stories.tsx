@@ -92,6 +92,32 @@ export const Hub320: Story = { name: "Hub · 320", ...phone320, render: () => <H
 export const HubLoading: Story = { name: "Hub · loading", render: () => <Hub sample={{ phase: { kind: "loading" } }} /> };
 export const HubFailed: Story = { name: "Hub · failed to load", render: () => <Hub sample={{ phase: { kind: "error", offline: false } }} /> };
 export const HubOffline: Story = { name: "Hub · offline", render: () => <Hub sample={{ offlineSince: Date.parse("2026-10-31T07:41:00Z") }} /> };
+/** One read failed: the P&L card that loaded stays, the balance card shows its retry line. */
+export const HubBalanceFailed: Story = {
+  name: "Hub · P&L loaded, balance failed",
+  render: () => <Hub sample={{ balance: undefined, failed: ["balance"] }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /רווח והפסד.*\$29,000/ })).toBeInTheDocument();
+    await expect(canvas.queryByRole("link", { name: /מאזן.*\$285,000/ })).toBeNull();
+    await expect(canvas.getAllByRole("button", { name: "נסו שוב" })).toHaveLength(1);
+    await fits(canvasElement);
+  },
+};
+
+/** The months read failed: the cards stay, the P&L card shows the retry line in place of its chart. */
+export const HubMonthsFailed: Story = {
+  name: "Hub · balance loaded, months failed",
+  render: () => <Hub sample={{ months: undefined, failed: ["months"] }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /מאזן.*\$285,000/ })).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-rep-hub-bars")).toBeNull();
+    await expect(canvas.getAllByRole("button", { name: "נסו שוב" })).toHaveLength(1);
+    await fits(canvasElement);
+  },
+};
+
 export const HubEmpty: Story = { name: "Hub · empty", render: () => <Hub sample={{ statement: REPORTS_EMPTY, balance: { ...REPORTS_BALANCE, currencies: [] } }} /> };
 
 // ---- The P&L -------------------------------------------------------------------------------------
@@ -197,6 +223,17 @@ export const BalanceByProject: Story = {
   render: () => <Balance entry="/reports/balance?view=project" />,
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText("בנק ושאר")).toBeInTheDocument();
+    await fits(canvasElement);
+  },
+};
+
+/** At 320 the rows' hints wrap in full: "בנק ושאר"'s hint is not cut by the two-line clamp. */
+export const BalanceByProject320: Story = {
+  name: "Balance sheet · by project at 320",
+  ...phone320,
+  render: () => <Balance entry="/reports/balance?view=project" />,
+  play: async ({ canvasElement }) => {
+    for (const hint of canvasElement.querySelectorAll<HTMLElement>(".ui-row-hint")) await expect(hint.scrollHeight).toBeLessThanOrEqual(hint.clientHeight + 1);
     await fits(canvasElement);
   },
 };
