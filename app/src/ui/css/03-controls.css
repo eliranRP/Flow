@@ -71,13 +71,13 @@
   background: transparent;
 }
 
-/* On the band the pill is white (the band pill) and the selected label is the accent colour (the V3-Home board). */
+/* On the band the pill is white and the picked label the light accent, in both themes (the V3-Home board). */
 .ui-seg-band > .ui-seg-ind {
-  background: var(--color-band-pill);
+  background: var(--color-band-seg-on);
 }
 
 .ui-seg.ui-seg-band .ui-seg-btn:is([aria-checked="true"], [aria-selected="true"]) {
-  color: var(--color-accent);
+  color: var(--color-band-seg-on-text);
 }
 
 /* A period switch on the page (the loans summary, the company profit page): its track is the card tone (the

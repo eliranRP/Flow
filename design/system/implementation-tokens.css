@@ -238,6 +238,8 @@
   --color-on-band-secondary: #F0E8FF;
   --color-band-chip: #FFFFFF;
   --color-band-pill: #FFFFFF;
+  --color-band-seg-on: #FFFFFF;      /* the docked filter's pill on the band: white in both themes (V3-Home board; the owner, 2026-11-05) */
+  --color-band-seg-on-text: #6C2ED6; /* its picked label: the light accent in both themes, 6.6:1 on the white pill */
   --color-good: #1A8048;
   --color-income: #1A8048;
   --color-bad: #D23B2F;
@@ -314,6 +316,8 @@
     --color-on-band-secondary: #F0E8FF;
     --color-band-chip: #1E1929;
     --color-band-pill: #1E1929;
+    --color-band-seg-on: #FFFFFF;      /* the docked filter's pill on the band: white in both themes (V3-Home board; the owner, 2026-11-05) */
+    --color-band-seg-on-text: #6C2ED6; /* its picked label: the light accent in both themes, 6.6:1 on the white pill */
     --color-good: #62CB8D;
     --color-income: #62CB8D;
     --color-bad: #FF8A80;
@@ -393,6 +397,8 @@
   --color-on-band-secondary: #F0E8FF;
   --color-band-chip: #1E1929;
   --color-band-pill: #1E1929;
+  --color-band-seg-on: #FFFFFF;      /* the docked filter's pill on the band: white in both themes (V3-Home board; the owner, 2026-11-05) */
+  --color-band-seg-on-text: #6C2ED6; /* its picked label: the light accent in both themes, 6.6:1 on the white pill */
   --color-good: #62CB8D;
   --color-income: #62CB8D;
   --color-bad: #FF8A80;
