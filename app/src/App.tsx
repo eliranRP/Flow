@@ -130,11 +130,13 @@ export function App() {
         <ScrollMemory />
         <DropRestoredSheet />
         <EdgeSwipeBack />
-        {/* FLOW-1039: one pull to refresh for every routed screen (the page scrolls the window). */}
-        <PullRefresh />
-        <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
-          <AppRoutes />
-        </div>
+        {/* FLOW-1039, FLOW-1042: one pull to refresh for every routed screen (the page scrolls the
+            window); the screen comes down with the finger, and the bars it pins stay put. */}
+        <PullRefresh>
+          <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
+            <AppRoutes />
+          </div>
+        </PullRefresh>
       </BooksProvider>
     </SessionProviders>
   );

@@ -63,4 +63,4 @@ export { ReviewCount, reviewCountDigits } from "./review-count";
 export { CountedInRow, CountedInSheet } from "./counted-in";
 export { PACE_LABEL, paceSheetCopy, paceToast } from "./pace";
 export { PartsBar, type BarPart, type PartTone } from "./parts-bar";
-export { PullRefresh, PullRefreshMark } from "./pull-refresh";
+export { PullRefresh } from "./pull-refresh";
