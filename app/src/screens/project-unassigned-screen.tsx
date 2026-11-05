@@ -80,26 +80,19 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
       assertNoError(await supabase.rpc("undo_reassign", { p_id: payload.id }));
     },
   });
+  /** The toast after an assign: the project's name and ביטול, which puts the line back. */
+  function assigned(payload: Assign, undoIt: () => void) {
+    toast.show({ message: `שויך ל${payload.projectName}`, action: "ביטול", onAction: undoIt });
+  }
   const assign = useWrite<Assign>({
     failure: "לא הצלחנו לשייך את השורה.",
     keys: ["search", "dashboard", "project", "projects-cash"],
     onError: (_error, payload) => { show(payload.row.id, true); },
     onSuccess: (payload) => {
       const done = undo.current;
-      toast.show({
-        message: `שויך ל${payload.projectName}`,
-        action: "ביטול",
-        onAction: () => {
-          if (sample != null) {
-            show(payload.row.id, true);
-            return;
-          }
-          if (done != null) undoAssign.mutate(done);
-        },
-      });
+      assigned(payload, () => { if (done != null) undoAssign.mutate(done); });
     },
     run: async (payload) => {
-      if (sample != null) return;
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const result = await supabase.rpc("reassign_transaction", { p_id: payload.row.id, p_project_id: payload.projectId, p_category_id: payload.row.category_id ?? "" });
@@ -214,10 +207,13 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
         onPick={(projectId, close) => {
           const row = picking;
           close();
-          if (row == null || blocked()) return;
+          if (row == null || (sample == null && blocked())) return;
           const project = projects.find((item) => item.id === projectId);
           show(row.id, false);
-          assign.mutate({ row, projectId, projectName: project?.name ?? "" });
+          const payload = { row, projectId, projectName: project?.name ?? "" };
+          // A sample list writes nothing: the row folds and the toast's ביטול brings it back.
+          if (sample != null) assigned(payload, () => { show(row.id, true); });
+          else assign.mutate(payload);
         }}
       />
     </div>

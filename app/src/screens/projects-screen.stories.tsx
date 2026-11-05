@@ -245,7 +245,8 @@ export const ProjectsNewMissingName: Story = {
     await userEvent.click(within(canvasElement).getAllByRole("button", { name: "פרויקט חדש" })[0] as HTMLElement);
     const dialog = await within(document.body).findByRole("dialog", { name: "פרויקט חדש" });
     await userEvent.click(within(dialog).getByRole("button", { name: "יצירת פרויקט" }));
-    await expect(within(dialog).getByRole("alert")).toHaveTextContent("צריך שם כדי ליצור את הפרויקט");
+    // The field says it under itself (TextField: aria-invalid and its live message line, plan §3.7).
+    await expect(within(dialog).getByRole("textbox", { name: "שם הפרויקט" })).toHaveAccessibleDescription("צריך שם כדי ליצור את הפרויקט");
   },
 };
 

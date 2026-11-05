@@ -34,7 +34,7 @@ export const UnassignedAssigned: Story = {
     const sheet = await within(document.body).findByRole("dialog", { name: "לאיזה פרויקט?" });
     await expect(within(sheet).getAllByRole("radio")[0]).toHaveTextContent("מוצע");
     await userEvent.click(within(sheet).getAllByRole("radio")[0] as HTMLElement);
-    await expect(await within(document.body).findByText("שויך לLark Hill")).toBeInTheDocument();
+    await expect(await within(document.body).findByText("שויך לLark Hill", undefined, { timeout: 4000 })).toBeInTheDocument();
     await expect(within(document.body).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
   },
 };

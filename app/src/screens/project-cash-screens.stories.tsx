@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 
 /** The flip's row on the Projects list: it began three months ago, with its purchase. */
 const base = devProjectsCash.projects[0];
-const flipRow = base == null ? undefined : { ...base, id: project.id, first_month: `${shiftMonthKey(thisMonth, -3)}-01`, deletable: false };
+const flipRow = base == null ? undefined : { ...base, id: project.id, type: "flip · בשיפוץ", first_month: `${shiftMonthKey(thisMonth, -3)}-01`, deletable: false };
 const flipNext = kindNextSample("flip", project.id);
 
 const schedule = projectScheduleSample(project.id);

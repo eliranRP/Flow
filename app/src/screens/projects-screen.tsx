@@ -360,7 +360,8 @@ function ProjectCashRowItem({ row, currency, search }: { row: ProjectCashRow; cu
       variant="project"
       title={row.name}
       // FLOW-961: the flag leads the line, so a long type never cuts it off.
-      hint={<span className="ui-proj-hint-line">{isOverBudget(row) ? <span className="ui-proj-over">מעל התקציב · </span> : null}{projectMeta(row)}</span>}
+      // A long type ends in an ellipsis on one line (board V3-States, long content).
+      hint={<span className="ui-proj-hint-line" data-clip-ok="">{isOverBudget(row) ? <span className="ui-proj-over">מעל התקציב · </span> : null}{projectMeta(row)}</span>}
       icon={<Avatar name={row.name} fallback="person" />}
       agorot={BigInt(net)}
       currency={currency}
