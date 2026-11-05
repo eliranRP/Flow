@@ -110,6 +110,11 @@ declare
   supplier_ids uuid[];
   customer_ids uuid[];
   cat_interest uuid;
+  split_short integer;
+  legs_short integer;
+  pool integer;
+  extra integer;
+  new_ids uuid[];
   last_names constant text[] := array['כהן', 'לוי', 'מזרחי', 'פרץ', 'ביטון', 'אברהם', 'פרידמן', 'שפירא', 'דהן', 'אזולאי', 'גבאי', 'חדד'];
   first_names constant text[] := array['יוסי', 'מיכל', 'דני', 'נועה', 'אבי', 'שירה', 'רון', 'תמר', 'עומר', 'יעל'];
   trades constant text[] := array['בנייה', 'שיפוצים', 'חשמל', 'אינסטלציה', 'צבע', 'נגרות', 'ריצוף', 'גינון', 'הובלות', 'חומרי בניין', 'ייעוץ', 'ביטוח'];
@@ -427,6 +432,51 @@ begin
     end if;
   end if;
 
+  -- FLOW-1029: the two split steps below split categorised seeded overhead lines with no open review row. When the
+  -- split parts or legs are short and too few such lines are left (each split takes one line), add the missing
+  -- lines, each with its overhead row and an approved review row. The transactions count may go above its own
+  -- target; a target is a minimum.
+  select greatest(target - (select count(*) from public.legs l where l.company_id = qa and l.split_part), 0) into split_short
+  from pg_temp.qa_seed_report where tbl = 'split parts';
+  select greatest(target - (select count(*) from public.legs l where l.company_id = qa), 0) into legs_short
+  from pg_temp.qa_seed_report where tbl = 'legs';
+  select count(*) into pool
+  from public.transactions t
+  where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead' and t.user_assigned
+    and not exists (select 1 from public.legs l where l.company_id = qa and l.transaction_id = t.id and l.split_part)
+    and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id and q.status = 'open');
+  extra := ceil(split_short / 2.0)::integer + ceil(legs_short / 2.0)::integer - pool;
+  if extra > 0 and array_length(expense_cats, 1) >= 3 then
+    with ins as (
+      insert into public.transactions (
+        id, company_id, direction, doc_kind, pnl_role, amount_gross, amount_net, vat_amount, vat_status,
+        doc_date, cash_date, source, idempotency_key, supplier_id, category_id,
+        description, user_assigned, category_suggested, category_assigned, project_assigned, currency, provider_meta
+      )
+      select x.id, qa, 'expense', 'expense', 'overhead', x.amount, x.amount, 0, 'derived', x.doc_date, x.doc_date, 'manual',
+        'qa-seed:txn:' || x.g, x.supplier_id, x.category_id,
+        coalesce((select p.name from public.suppliers p where p.company_id = qa and p.id = x.supplier_id), ''),
+        true, false, true, true, cur, '{"qa_seed": true}'
+      from (
+        select g, pg_temp.qa_id(qa, 'transactions', g) as id,
+          -round(2000 * power(1000, pg_temp.qa_r('ta' || g)))::bigint as amount,
+          span_start + floor(pg_temp.qa_r('td' || g) * (span_days + 1))::integer as doc_date,
+          supplier_ids[1 + floor(pg_temp.qa_r('ts' || g) * array_length(supplier_ids, 1))::integer] as supplier_id,
+          expense_cats[1 + floor(pg_temp.qa_r('tk' || g) * array_length(expense_cats, 1))::integer] as category_id
+        from pg_temp.qa_free(qa, 'transactions', extra) g
+      ) x
+      on conflict do nothing
+      returning id
+    )
+    select array_agg(id) into new_ids from ins;
+    insert into public.overhead (company_id, transaction_id)
+    select qa, n from unnest(coalesce(new_ids, '{}')) n;
+    insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+    select qa, t.id, 'approved', 'missing_project', t.doc_date + 2
+    from public.transactions t
+    where t.company_id = qa and t.id = any(coalesce(new_ids, '{}'));
+  end if;
+
   -- Split parts through save_line_split: an overhead expense split across two categories.
   select target - (select count(*) from public.legs l where l.company_id = qa and l.split_part) into k from pg_temp.qa_seed_report where tbl = 'split parts';
   if k > 0 and array_length(expense_cats, 1) >= 2 then
@@ -436,7 +486,7 @@ begin
       where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead'
         and t.user_assigned
         and not exists (select 1 from public.legs l where l.company_id = qa and l.transaction_id = t.id and l.split_part)
-        and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id)
+        and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id and q.status = 'open')
       order by t.idempotency_key
       limit ceil(k / 2.0)::integer
     loop
