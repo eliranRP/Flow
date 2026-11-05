@@ -118,8 +118,8 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   }
 
   await page.goto("/loans");
-  // An empty list offers הוספת הלוואה in place of the header's + הלוואה חדשה (the board's StatesLoansEmpty).
-  await page.getByRole("button", { name: /^(\+ הלוואה חדשה|הוספת הלוואה)$/ }).first().click();
+  // An empty list offers הוספת הלוואה beside the band's + (the board's StatesLoansEmpty).
+  await page.getByRole("button", { name: /^(הלוואה חדשה|הוספת הלוואה)$/ }).first().click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("מלווה").fill(lender);
   await sheet.getByLabel("סכום מקורי").fill("100000");
@@ -133,11 +133,14 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א`) });
   await expect(row).toBeVisible();
 
-  // FLOW-419: the project's השקעה והלוואות row names its one open loan.
+  // FLOW-1044: a project with no lines yet shows the empty card in place of its link rows, so the
+  // loan is reached from ⋯ (its השקעה והלוואות row shows once the project has a loan).
   await page.goto(`/projects/${projectA}`);
-  await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toContainText(lender);
+  await expect(page.getByRole("heading", { name: "אין עדיין תנועות" })).toBeVisible();
+  await page.getByRole("button", { name: "עוד" }).click();
+  await page.getByRole("dialog", { name: "פרויקט א" }).getByRole("link", { name: /^השקעה והלוואות/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectA}/investment`));
   // FLOW-446: the investment page lists the loan in its loans card.
-  await page.goto(`/projects/${projectA}/investment`);
   await expect(page.getByRole("link", { name: new RegExp(lender) })).toBeVisible();
 
   await page.goto("/loans");
@@ -156,7 +159,12 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await expect(page.getByRole("button", { name: /^פרויקט ללא פרויקט/ })).toBeVisible();
 
   await page.goto(`/projects/${projectB}`);
-  // FLOW-419: the project opens on its cash, so wait for its נכנס row, then check no loan row is left.
+  // FLOW-419: the project opens on its cash, so wait for its נכנס row, then check no loan row is left
+  // (FLOW-1044: on the page nor in ⋯, which shows השקעה והלוואות only with a loan or a figure).
   await expect(page.getByRole("link", { name: /^נכנס/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "עוד" }).click();
+  const menu = page.getByRole("dialog", { name: "פרויקט ב" });
+  await expect(menu.getByRole("link", { name: /^רווח מתחילת הפרויקט/ })).toBeVisible();
+  await expect(menu.getByRole("link", { name: /^השקעה והלוואות/ })).toHaveCount(0);
 });

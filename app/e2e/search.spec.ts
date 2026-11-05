@@ -41,11 +41,13 @@ test("search opens from the cash Home, finds a line, opens it, and Back keeps th
   await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toHaveCount(0);
 });
 
-test("Projects has no search field; its unassigned link opens review", async ({ page }) => {
+test("Projects has no search field; its unassigned link opens the lines with no project", async ({ page }) => {
   await page.goto("/e2e/projects?preview=1");
   // FLOW-342 (A): no header magnifier on Projects.
   await expect(page.getByRole("link", { name: "חיפוש תנועות" })).toHaveCount(0);
   await expect(page.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveCount(0);
+  // FLOW-1044: the attention card opens /projects/unassigned for the list's month.
   await page.getByRole("link", { name: /^שורה אחת בלי פרויקט/ }).click();
-  await expect(page).toHaveURL(/\/review/);
+  await expect(page).toHaveURL(/\/projects\/unassigned\?preview=1&period=month&at=\d{4}-\d{2}$/);
+  await expect(page.getByRole("heading", { name: "שורות בלי פרויקט" })).toBeVisible();
 });

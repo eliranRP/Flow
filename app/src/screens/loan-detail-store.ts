@@ -13,9 +13,16 @@ import {
   type LoanPayment,
   type LoanRateRow,
 } from "./loan-detail-data";
-import type { LoanListRow } from "./loan-list";
+import { nextPaymentOf, type LoanListRow } from "./loan-list";
+import { israelToday } from "../ui/date-math";
 import type { LoanProjectChoice } from "./loan-project-picker";
 import { usePropertyReturnsQuery } from "./project-returns-data";
+
+/** FLOW-1046: a sample loan's next payment for its list row, as the live read gives it. */
+function nextOf(loan: Parameters<typeof nextPaymentOf>[0]): Pick<LoanListRow, "next"> {
+  const next = nextPaymentOf(loan, israelToday());
+  return next == null ? {} : { next };
+}
 
 /**
  * FLOW-106 B / FLOW-110: where the loan page reads and writes. Live reads go through react-query
@@ -346,6 +353,7 @@ export function memoryLoanStore(
       kind: sample.loan.kind,
       status: sample.loan.status,
       closedOn: sample.loan.closedOn,
+      ...nextOf(sample.loan),
     })),
     subscribe: (listener) => {
       listeners.add(listener);

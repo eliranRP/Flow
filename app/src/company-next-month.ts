@@ -152,11 +152,6 @@ export function companyCashForecast(forecast: CompanyNextMonth): CompanyNextMont
   return { ...forecast, parts, expenseMinor, netMinor: forecast.incomeMinor - expenseMinor };
 }
 
-/** FLOW-990: one part's net (a project's, or the general costs' for null), or null when it expects nothing. */
-export function companyPartNet(forecast: Pick<CompanyNextMonth, "parts">, projectId: string | null): bigint | null {
-  return forecast.parts.find((part) => part.projectId === projectId)?.forecast.netMinor ?? null;
-}
-
 /**
  * FLOW-1002: the general costs' part on its own (what carries no project and what the overhead project carries),
  * with the overhead project's edits, even when it expects nothing. The company sums it with the projects'; the

@@ -1,25 +1,20 @@
 import { formatAmountText } from "@flow/shared";
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { cashMonthName } from "../cash";
 import { JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { cash as flipCash, investment as flipInvestment, project as flipProject, thisMonth } from "../dev/project-cash-sample";
 import { kindNextSample } from "../dev/project-kinds-next-sample";
 import { kindSample } from "../dev/project-kinds-sample";
 import { devProjectsCash } from "../dev/projects-sample";
 import { shiftMonthKey } from "../period";
-import { monthWord } from "../project-next-edit";
 import type { ForecastLoan } from "../project-next-loans";
 import { applyForecastEdits, nextMonthForecast, nextMonthKey } from "../project-next-month";
 import { paymentsLeft } from "./loan-outlook";
 import { renderWithProviders } from "../test-render";
 import { ProjectDetailScreen } from "./flow-screens";
 
-// The project page's next-month card and month chart (canvas note spec-fcwide), by kind. The samples' months
-// run from today, so the month names are worked out here too.
+// The project page's next-month row, by kind. The samples' months run from today.
 
-const next = cashMonthName(shiftMonthKey(thisMonth, 1));
-const previous = monthWord(shiftMonthKey(thisMonth, -1));
 
 function renderKind(kind: "rental" | "client", loans?: ForecastLoan[]) {
   const data = kindSample(kind, devProjectsCash.projects[0]);
@@ -37,37 +32,22 @@ function renderFlip() {
   );
 }
 
-function bar(chart: HTMLElement, month: number, side: "in" | "out"): string {
-  return (chart.children[month]?.querySelector(`.ui-fc-bar-${side}`) as HTMLElement | null)?.style.blockSize ?? "";
+/** FLOW-1044: next month is one row under the kind's card; it opens the צפי page. */
+function forecastRow(): HTMLElement {
+  return screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
 }
 
-describe("the project page's next month (spec-fcwide), in cash words (spec-cash2)", () => {
-  it("a rental: the card says תזרים צפוי and opens the צפי page; six months and the forecast; the link opens the profit page", () => {
-    const { container } = renderKind("rental");
-    expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
-    const card = screen.getByRole("link", { name: new RegExp(`^צפי ${next}:`) });
-    expect(card.getAttribute("href")).toBe("/projects/p-rental/profit/next");
-    expect(within(card).getByText("2 שכירויות קבועות")).toBeInTheDocument();
-    expect(within(card).getByText(`מול $1,740 ב${previous}`)).toBeInTheDocument();
-    expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי+$2,285");
-    // Cash words: צפוי להיכנס and צפוי לצאת on the card, נכנס and יצא on the chart.
-    expect(within(card).getByText("צפוי להיכנס")).toBeInTheDocument();
-    expect(within(card).getByText("צפוי לצאת")).toBeInTheDocument();
-    expect(within(card).queryByText("הכנסות צפויות")).not.toBeInTheDocument();
-    const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, / });
-    expect(chart.children).toHaveLength(7);
-    expect(chart.getAttribute("aria-label")).toContain("נכנס $4,150, יצא $1,865");
-    expect(container.querySelector(".ui-fc-legend")?.textContent).toBe("נכנסיצאצפי");
-    // FLOW-961: the metric and its months are the label; the heading is the month's takeaway.
-    expect(screen.getByText(`נכנס ויצא לפי חודש · ${monthWord(shiftMonthKey(thisMonth, -5))} עד ${monthWord(thisMonth)} וצפי`)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: new RegExp(`^${monthWord(thisMonth)}: נכנס \\$[\\d,.]+ יותר משיצא$`) })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "רווח לפי חודש" }).getAttribute("href")).toBe("/projects/p-rental/profit?period=all");
-    // The investment card comes last, after the chart (the owner's ask, 20/10).
-    expect(chart.compareDocumentPosition(screen.getByRole("heading", { name: "השקעה והלוואות" }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+describe("the project page's next month (spec-cash2), one row under the card (FLOW-1044)", () => {
+  it("a rental: the row shows next month's cash net and opens the צפי page", () => {
+    renderKind("rental");
+    const row = forecastRow();
+    expect(row.getAttribute("href")).toBe("/projects/p-rental/profit/next");
+    expect(row).toHaveTextContent("+$2,285");
+    // The chart and the card left the page with v3 (the profit page keeps them).
+    expect(screen.queryByRole("img", { name: /^נכנס ויצא לפי חודש/ })).not.toBeInTheDocument();
   });
 
-  it("a rental with an amortizing loan: the card and the chart add next month's principal to the צפי page's expenses", () => {
-    // The profit sample's loan, moved to start the month before this one, after two payments.
+  it("a rental with an amortizing loan: the row takes next month's principal off, as the צפי page's cash", () => {
     const base = JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan;
     const data = kindSample("rental", devProjectsCash.projects[0]);
     const today = data.next?.today ?? "";
@@ -75,50 +55,27 @@ describe("the project page's next month (spec-fcwide), in cash words (spec-cash2
     const due = paymentsLeft(loan, today)?.find((row) => row.dueDate.startsWith(nextMonthKey(today)));
     const principal = due?.principalMinor ?? 0n;
     expect(principal).toBeGreaterThan(0n);
-    // What the צפי page shows for the same reads.
     const profit = applyForecastEdits(nextMonthForecast({
       projectId: data.project.id, currency: "USD", today, recurring: data.next?.expected.recurring ?? [], categoryMonths: data.next?.categoryMonths, loans: [loan], categories: data.next?.categories,
     }), data.next?.edits ?? []);
-    const expenses = formatAmountText(profit.expenseMinor + principal, "USD");
+    const net = profit.incomeMinor - profit.expenseMinor - principal;
     renderKind("rental", [loan]);
-    const card = screen.getByRole("link", { name: new RegExp(`^צפי ${next}:`) });
-    expect(card.getAttribute("aria-label")).toContain(`צפוי לצאת ${expenses}, תזרים צפוי `);
-    expect(card.getAttribute("aria-label")).toContain(formatAmountText(profit.incomeMinor - profit.expenseMinor - principal, "USD", { plus: true, direction: "income" }));
-    // The caption stays against last month's cash.
-    expect(within(card).getByText(`מול $1,740 ב${previous}`)).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, / }).getAttribute("aria-label")).toContain(`יצא ${expenses}`);
+    expect(forecastRow()).toHaveTextContent(formatAmountText(net, "USD", { plus: net > 0n, direction: net > 0n ? "income" : undefined }));
   });
 
-  it("a flip: since the purchase, which sets the scale; no income, so the $0 is grey", () => {
-    const { container } = renderFlip();
-    const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, מתחילת הפרויקט\. / });
-    expect(chart.children).toHaveLength(5);
-    expect(screen.getByText("נכנס ויצא לפי חודש · מתחילת הפרויקט וצפי")).toBeInTheDocument();
-    expect(bar(chart, 0, "out")).toBe("108px");
-    expect(bar(chart, 0, "in")).toBe("2px");
-    expect(bar(chart, 4, "in")).toBe("2px");
-    // November's renovation average, $12,000 against the $185,000 purchase: the 4px floor.
-    expect(bar(chart, 4, "out")).toBe("7px");
-    const zero = container.querySelector(".ui-fc-col-zero");
-    expect(zero?.textContent).toBe("צפוי להיכנס$0אין הכנסה צפויה");
-    expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי−$12,000");
-    expect(screen.getByText(`מול $38,120 ב${previous}`)).toBeInTheDocument();
+  it("a flip: the renovation's month ahead", () => {
+    renderFlip();
+    expect(forecastRow()).toHaveTextContent("−$12,000");
   });
 
-  it("a client job: the client's payment and the subcontractor the owner added, against last month's cash", () => {
-    const { container } = renderKind("client");
-    const card = screen.getByRole("link", { name: new RegExp(`^צפי ${next}:`) });
-    expect(within(card).getByText("תשלום מהלקוח")).toBeInTheDocument();
-    expect(within(card).getByText(`מול $21,600 ב${previous}`)).toBeInTheDocument();
-    expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי+$8,300");
-    expect(screen.getByText("נכנס ויצא לפי חודש · מתחילת הפרויקט וצפי")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /^נכנס ויצא לפי חודש/ }).children).toHaveLength(4);
+  it("a client job: the client's payment less the subcontractor", () => {
+    renderKind("client");
+    expect(forecastRow()).toHaveTextContent("+$8,300");
   });
 
-  it("a project with nothing filed yet shows neither", () => {
+  it("a project with nothing filed yet shows no row", () => {
     const data = kindSample("new", devProjectsCash.projects[0]);
     renderWithProviders(<ProjectDetailScreen sample={data.project} sampleCash={data.cash} sampleInvestment={data.investment} sampleMenuRow={data.row} />);
-    expect(screen.queryByRole("img", { name: /^נכנס ויצא לפי חודש/ })).not.toBeInTheDocument();
-    expect(document.querySelector(".ui-fc-card")).toBeNull();
+    expect(screen.queryByRole("link", { name: /^צפוי לחודש הבא/ })).not.toBeInTheDocument();
   });
 });

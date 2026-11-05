@@ -3,21 +3,51 @@ import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "r
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useCompanyCurrency } from "../company-currency";
+import { kindLabel, PROJECT_KINDS, resolveProjectKind, type ProjectKind } from "../project-list";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite } from "../use-write";
 import { Button } from "../ui/button";
+import { israelToday } from "../ui/date-math";
 import { MoneyField } from "../ui/money-field";
+import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { LOAN_CURRENCY_MARK } from "./loan-form";
 import { useBlockedPreview } from "./screen-shared";
 
 /** The project an edit sheet opens on. `type` is the owner's own text (or none); `budget` is in agorot. */
-export type ProjectFormValues = { id: string; name: string; type: string | null; budget: bigint | null; status: string };
+export type ProjectFormValues = { id: string; name: string; type: string | null; budget: bigint | null; status: string; overhead?: boolean };
+
+/** What each kind asks for, and the one line that says how it is measured (board V3-NewProject). */
+const KIND_HELP: Record<ProjectKind, string> = {
+  renovation: "קונים, משפצים ומוכרים. נמדד מול תקציב.",
+  rental: "נכס מושכר. נמדד בתשואה.",
+  client: "עבודה ללקוח. נמדד מול החוזה.",
+  overhead: "הוצאות החברה שלא שייכות לפרויקט.",
+};
+
+type AmountField = "purchase" | "budget" | "arv" | "value";
+
+const FIELD_LABEL: Record<AmountField, string> = {
+  purchase: "מחיר קנייה",
+  budget: "תקציב שיפוץ",
+  arv: "שווי צפוי אחרי שיפוץ",
+  value: "שווי הנכס היום",
+};
+
+/** A new project's fields by kind. The edit sheet keeps the budget (the contract for a client); the rest live on the investment page. */
+function fieldsOf(kind: ProjectKind, editing: boolean): AmountField[] {
+  if (kind === "overhead") return [];
+  if (kind === "client") return ["budget"];
+  if (editing) return kind === "renovation" ? ["budget"] : [];
+  return kind === "renovation" ? ["purchase", "budget", "arv"] : ["purchase", "value"];
+}
 
 /**
- * FLOW-445: the new-project sheet (no project) and the edit sheet (a project). Both save through
- * upsert_project with the type, so an edit keeps or changes it on purpose. A new project opens its page.
+ * FLOW-445: the new-project sheet (no project) and the edit sheet (a project). FLOW-1044 (board V3-NewProject):
+ * the kind is picked first, שיפוץ, השכרה, לקוח or תקורה, and the fields follow it. The pick is stored as the
+ * project's type word, which the list and the page read the kind from (plan §5); purchase, ARV and value go to
+ * the investment, the budget (a client's contract) to the project. A new project opens its page.
  */
 export function ProjectFormSheet({
   open,
@@ -52,16 +82,22 @@ export function projectNameError(trimmed: string, editing: boolean): string | un
   return undefined;
 }
 
+function minorOf(text: string): number | null {
+  return text.trim() === "" ? null : Number(shekelsToAgorot(text));
+}
+
 function ProjectForm({ project, extras, focusBudget, onClose }: { project?: ProjectFormValues; extras?: ReactNode; focusBudget: boolean; onClose: () => void }) {
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
-  // The budget is in the company currency, so its field shows that currency's mark.
+  // The amounts are in the company currency, so each field shows that currency's mark.
   const mark = companyCurrency === "USD" ? LOAN_CURRENCY_MARK.USD : LOAN_CURRENCY_MARK.ILS;
   const holdWrites = useHoldWrites();
   const navigate = useNavigate();
+  const editing = project != null;
+  const storedKind = project == null ? null : resolveProjectKind({ overhead: project.overhead === true, type: project.type, budget: project.budget != null });
   const [name, setName] = useState(project?.name ?? "");
-  const [type, setType] = useState(project?.type ?? "");
-  const [budget, setBudget] = useState(shekelsText(project?.budget ?? null));
+  const [kind, setKind] = useState<ProjectKind>(storedKind ?? "renovation");
+  const [amounts, setAmounts] = useState<Record<AmountField, string>>({ purchase: "", budget: shekelsText(project?.budget ?? null), arv: "", value: "" });
   const createdId = useRef<string | null>(null);
   const trimmed = name.trim();
   // Shown after a tap on the button, cleared as the name changes.
@@ -73,6 +109,7 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
     const timer = window.setTimeout(() => { form.current?.querySelector<HTMLInputElement>(".ui-money-field input")?.focus(); }, 0);
     return () => { window.clearTimeout(timer); };
   }, [focusBudget]);
+  const fields = fieldsOf(kind, editing);
   const save = useWrite({
     failure: "לא הצלחנו לשמור את הפרויקט.",
     success: project ? "הפרטים נשמרו" : "הפרויקט נוצר",
@@ -84,17 +121,33 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      const agorot = budget.trim() === "" ? null : Number(shekelsToAgorot(budget));
+      const budget = fields.includes("budget") ? minorOf(amounts.budget) : null;
+      // An edit that keeps the kind keeps the owner's own type words; a new pick stores the kind's word.
+      const keepType = project != null && kind === storedKind;
       const result = await supabase.rpc("upsert_project", {
         ...(project ? { p_id: project.id } : {}),
         p_name: trimmed,
-        // An empty type clears it on an edit. When the stored type is not known (none, or not read yet), an empty field sends nothing, so it keeps the stored one.
-        ...(project != null && project.type == null && type.trim() === "" ? {} : { p_type: type.trim() }),
+        ...(keepType ? (project.type == null ? {} : { p_type: project.type }) : { p_type: kindLabel(kind) }),
         p_status: project?.status ?? "active",
-        ...(agorot == null ? {} : { p_budget_agorot: agorot }),
+        ...(budget == null ? {} : { p_budget_agorot: budget }),
       });
       assertNoError(result);
       createdId.current = typeof result.data === "string" ? result.data : null;
+      const id = project?.id ?? createdId.current;
+      const patch: Record<string, number | string> = {};
+      for (const field of fields) {
+        const minor = field === "budget" ? null : minorOf(amounts[field]);
+        if (minor == null) continue;
+        if (field === "purchase") patch.purchase_minor = minor;
+        if (field === "arv") patch.arv_minor = minor;
+        if (field === "value") {
+          patch.value_minor = minor;
+          patch.value_date = israelToday();
+        }
+      }
+      if (id != null && Object.keys(patch).length > 0) {
+        assertNoError(await supabase.rpc("set_project_investment", { p_project_id: id, p_patch: patch }));
+      }
     },
   });
 
@@ -120,16 +173,27 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
         placeholder={project ? undefined : "למשל: Ashby Rd"}
         error={nameError}
       />
-      <TextField
-        label="סוג (אופציונלי)"
-        value={type}
-        maxLength={40}
-        onChange={(event) => { setType(event.target.value); }}
-        placeholder="מה שמתאים לך: flip, השכרה, שיפוץ…"
-      />
-      <MoneyField label="תקציב (אופציונלי)" prefix={mark} value={budget} onValueChange={setBudget} />
-      <p className="ui-muted">נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
-      <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>
+      <div className="ui-project-kind">
+        <SegmentedControl
+          label="סוג"
+          value={kind}
+          options={PROJECT_KINDS.map((entry) => ({ value: entry.kind, label: entry.label }))}
+          onChange={setKind}
+          describedBy="project-kind-help"
+        />
+        <p id="project-kind-help" className="ui-muted">{KIND_HELP[kind]}</p>
+      </div>
+      {fields.map((field) => (
+        <MoneyField
+          key={field}
+          label={field === "budget" && kind === "client" ? "סכום החוזה" : FIELD_LABEL[field]}
+          prefix={mark}
+          value={amounts[field]}
+          onValueChange={(value) => { setAmounts((current) => ({ ...current, [field]: value })); }}
+        />
+      ))}
+      {fields.length === 0 ? null : <p className="ui-muted">אפשר להשאיר ריק ולמלא אחר כך בדף הפרויקט.</p>}
+      {project ? null : <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>}
       {extras}
       {/* FLOW-961: never a dead button; without a name the tap says why, under the field. */}
       <Button type="submit" busy={save.isPending} disabled={holdWrites}>

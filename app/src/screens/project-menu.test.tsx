@@ -111,17 +111,27 @@ describe("the project's ⋯ menu matches the board", () => {
     expect(within(edit).getByRole("button", { name: /קבוצה/ })).toHaveTextContent("בניין לדוגמה");
   });
 
-  it("finishes from the row itself, with no confirm, and says what finishing leaves (FLOW-961)", () => {
+  it("asks inside the sheet before a finish, says what finishing leaves, and חזרה goes back (FLOW-1044)", () => {
     const menu = openMenu();
-    expect(within(menu).getByRole("button", { name: /^סיום הפרויקט/ })).toHaveTextContent("אפשר לבטל מיד, ושום דבר לא נמחק");
+    expect(within(menu).getByRole("button", { name: /^סיום הפרויקט/ })).toHaveTextContent("יעבור ל״הסתיימו״. אפשר לבטל.");
     fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
-    expect(screen.queryByRole("dialog", { name: /^לסיים את/ })).not.toBeInTheDocument();
+    const confirm = screen.getByRole("dialog", { name: "לסיים את פרויקט לדוגמה?" });
+    expect(confirm).toHaveTextContent("התנועות והרווח נשמרים, ואפשר להחזיר אותו בכל זמן.");
+    expect(within(confirm).getByRole("button", { name: "סיום הפרויקט" })).toBeEnabled();
+    fireEvent.click(within(confirm).getByRole("button", { name: "חזרה" }));
+    expect(screen.getByRole("dialog", { name: "פרויקט לדוגמה" })).toBeInTheDocument();
   });
 
-  it("names the items still waiting on the finish row", () => {
+  it("lists רווח מתחילת הפרויקט, opening the profit page", () => {
+    const menu = openMenu();
+    expect(within(menu).getByRole("link", { name: /^רווח מתחילת הפרויקט/ }).getAttribute("href")).toMatch(/^\/projects\/p1\/profit/);
+  });
+
+  it("names the items still waiting in the finish confirm", () => {
     render(wrap(<ProjectDetailScreen sample={project} sampleMenuRow={{ id: "p1", pending_count: 2, deletable: false } as never} />));
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByRole("button", { name: /^סיום הפרויקט/ })).toHaveTextContent("יש בו 2 פריטים לאישור. הם יחכו גם אחרי הסיום");
+    fireEvent.click(screen.getByRole("button", { name: /^סיום הפרויקט/ }));
+    expect(screen.getByRole("dialog", { name: /^לסיים את/ })).toHaveTextContent("יש בו 2 פריטים לאישור. הם יחכו גם אחרי הסיום");
   });
 
   it("asks before a delete, on a button that names it", () => {
@@ -141,21 +151,20 @@ function renderKind(kind: Exclude<ProjectKind, "flip">) {
   );
 }
 
-describe("the project page by kind (FLOW-445b)", () => {
-  it("a rental: the open month says עד היום, the profit rows are signed, the summary card shows, no budget link", () => {
+describe("the project page by kind (FLOW-445b, FLOW-1044)", () => {
+  it("a rental: the open month says עד היום, the returns card shows, the profit since the start links, no budget", () => {
     renderKind("rental");
     expect(screen.getByText(/^תזרים .* · עד היום$/)).toBeInTheDocument();
-    expect(document.body.textContent).toContain("+$3,795.60");
-    expect(screen.getByText("מאז מרץ 2025")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^רווח מתחילת הפרויקט/ })).toHaveTextContent("מאז מרץ 2025");
     expect(screen.getByRole("heading", { name: "השקעה והלוואות" })).toBeInTheDocument();
     expect(screen.getByText("$160K")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הוספת תקציב" })).not.toBeInTheDocument();
   });
 
-  it("a client job: the budget card and the profit rows, with no investment card", () => {
+  it("a client job: the contract card and the profit since the start, with no investment card", () => {
     renderKind("client");
-    expect(screen.getByRole("heading", { name: "תקציב" })).toBeInTheDocument();
-    expect(screen.getByText("+$15,000")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חוזה" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "תקציב" })).not.toBeInTheDocument();
     expect(screen.getByText(`מאז ${cashMonthName(shiftMonthKey(thisMonth, -2), new Date(0))}`)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "השקעה והלוואות" })).not.toBeInTheDocument();
   });

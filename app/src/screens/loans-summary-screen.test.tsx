@@ -25,11 +25,13 @@ describe("loans summary (FLOW-142)", () => {
     renderSummary(sampleLoanStore());
     expect(screen.getByRole("heading", { level: 1, name: "סיכום הלוואות" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "מתחילת ההלוואות" })).toHaveAttribute("aria-checked", "true");
-    const debt = screen.getByRole("region", { name: "החוב" });
-    expect(within(debt).getByText("החוב בהתחלה")).toBeInTheDocument();
-    expect(within(debt).getByText("נשאר לשלם היום")).toBeInTheDocument();
+    // FLOW-1046: the band holds what was paid, the debt at the start and what is left.
+    const band = screen.getByRole("banner");
+    expect(within(band).getByText("שולם מתחילת ההלוואות")).toBeInTheDocument();
+    expect(within(band).getByText("החוב בהתחלה")).toBeInTheDocument();
+    expect(within(band).getByText("נשאר לשלם היום")).toBeInTheDocument();
     const paid = screen.getByRole("region", { name: "שולם" });
-    expect(within(paid).getByText("שולם מתחילת ההלוואות")).toBeInTheDocument();
+    expect(within(paid).getByText("ממה הורכבו התשלומים")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "לפי הלוואה" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^משכנתא דוגמה, / })).toHaveAccessibleName(/נפרע 26%/);
   });

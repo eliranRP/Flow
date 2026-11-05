@@ -29,6 +29,8 @@
 /add/ /add 301
 /projects /app-shell 200
 /projects/ /projects 301
+/projects/unassigned /app-shell 200
+/projects/unassigned/ /projects/unassigned 301
 /search /app-shell 200
 /search/ /search 301
 /forecast /app-shell 200

@@ -23,16 +23,14 @@ import { useOnline } from "../ui/band-states";
 import { useLoanSummary } from "./loan-summary-entries";
 import type { LoanListSummary } from "./loan-list-summary";
 import { LoanProjectPicker, projectNameOf, type LoanProjectSource } from "./loan-project-picker";
-import { LoanKindPicker, LoanSaveButton, LoanSetupForm, type LoanSetupInitial } from "./loan-setup";
+import { LoanSaveButton, LoanSetupForm, type LoanSetupInitial } from "./loan-setup";
 
 /**
- * The new-loan sheet's panel: the form is a tall sheet (board: 780 of 844, so its top sits 64px down), the
- * kind view a choice sheet, and the project view keeps the sheet's own height.
+ * The new-loan sheet's panel: the form is a tall sheet (board: 780 of 844, so its top sits 64px down), and the
+ * project view keeps the sheet's own height.
  */
-function sheetPanelClass(view: "form" | "project" | "kind"): string | undefined {
-  if (view === "kind") return "ui-sheet-choice ui-sheet-g8 ui-sheet-wide";
-  if (view === "form") return "ui-sheet-tall ui-sheet-wide ui-sheet-g14 ui-loan-new";
-  return undefined;
+function sheetPanelClass(view: "form" | "project"): string | undefined {
+  return view === "form" ? "ui-sheet-tall ui-sheet-wide ui-sheet-g14 ui-loan-new" : undefined;
 }
 
 /** Sample balances for stories and preview. Live omits it and reads `loans`. */
@@ -68,6 +66,8 @@ export type LoansHostCtx = {
   offline: boolean;
   /** Offline with figures on screen: the moment they were read. */
   offlineSince: number | null;
+  /** FLOW-1046: one loan's page, for the דורש טיפול cards' links. */
+  loanHref: (id: string) => string;
 };
 
 /**
@@ -115,7 +115,7 @@ export function LoansHost({
   const base = first === "loans" ? "/loans" : `/${first}/loans`;
   const loanHref = (id: string) => `${base}/${encodeURIComponent(id)}${search}`;
   const [open, setOpenState] = useState(false);
-  const [view, setView] = useState<"form" | "project" | "kind">("form");
+  const [view, setView] = useState<"form" | "project">("form");
   const [draftProject, setDraftProject] = useState<string | null>(null);
   const [draftKind, setDraftKind] = useState<LoanKind>("amortizing");
   // The picker keeps the form's height, so the sheet does not jump when they swap.
@@ -123,7 +123,6 @@ export function LoansHost({
   const formRef = useRef<HTMLDivElement>(null);
   const newButton = useRef<HTMLButtonElement>(null);
   const projectFieldRef = useRef<HTMLButtonElement>(null);
-  const kindFieldRef = useRef<HTMLButtonElement>(null);
   const sheetTitle = useRef<HTMLHeadingElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
   const loanFormId = useId();
@@ -229,17 +228,16 @@ export function LoansHost({
     askedProject.current = null;
   });
 
-  function openPicker(next: "project" | "kind" = "project") {
+  function openPicker() {
     setFormHeight(formRef.current?.offsetHeight ?? null);
-    setView(next);
+    setView("project");
     // The פרויקט field is hidden now. Focus the title, like the change sheet's picker.
     requestAnimationFrame(() => { sheetTitle.current?.focus({ preventScroll: true }); });
   }
 
   function backToForm() {
-    const field = view === "kind" ? kindFieldRef : projectFieldRef;
     setView("form");
-    requestAnimationFrame(() => { field.current?.focus({ preventScroll: true }); });
+    requestAnimationFrame(() => { projectFieldRef.current?.focus({ preventScroll: true }); });
   }
 
   const picking = view !== "form";
@@ -271,11 +269,12 @@ export function LoansHost({
         summaryHref: `${base}/summary${search}`,
         offline,
         offlineSince: failed ? null : offlineSince,
+        loanHref,
       })}
       <Sheet
         open={holdWrites ? false : open}
         onOpenChange={setLoanSheet}
-        title={view === "kind" ? "סוג ההלוואה" : picking ? "פרויקט" : "הלוואה חדשה"}
+        title={picking ? "פרויקט" : "הלוואה חדשה"}
         panelClassName={sheetPanelClass(view)}
         titleRef={sheetTitle}
         returnFocusRef={newLoanReturn}
@@ -313,17 +312,6 @@ export function LoansHost({
           </div>
         ) : (
           <>
-            {view === "kind" ? (
-              <div style={formHeight ? { minHeight: formHeight } : undefined}>
-                <LoanKindPicker
-                  selected={draftKind}
-                  onSelect={(next) => {
-                    setDraftKind(next);
-                    backToForm();
-                  }}
-                />
-              </div>
-            ) : null}
             {view === "project" ? (
               <div style={formHeight ? { minHeight: formHeight } : undefined}>
                 <LoanProjectPicker
@@ -348,13 +336,9 @@ export function LoansHost({
                 project={{
                   name: projectNameOf(source, draftProject),
                   buttonRef: projectFieldRef,
-                  onOpen: () => { openPicker("project"); },
+                  onOpen: openPicker,
                 }}
-                kind={{
-                  value: draftKind,
-                  buttonRef: kindFieldRef,
-                  onOpen: () => { openPicker("kind"); },
-                }}
+                kind={{ value: draftKind, onChange: setDraftKind }}
                 onSave={(row) => {
                   if (holdWrites || blocked?.()) return;
                   if (posted.current || save.isPending) return;

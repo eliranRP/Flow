@@ -5,56 +5,77 @@ import { useLocation } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
 import { cashMonthName } from "../cash";
-import { companyPartNet, type CompanyNextMonth } from "../company-next-month";
+import { monthPeriod, shiftMonthKey } from "../period";
 import { useProjectsCashMonth } from "../project-cash";
-import { netIn, orderActiveProjects, overheadRow, isOverBudget, projectMeta, unassignedCountLabel } from "../project-list";
+import { withPeriodSearch } from "../project-period";
+import { groupProjectRows, isOverBudget, netIn, projectMeta, projectsMonthTotals, type ProjectsFilter } from "../project-list";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
 import { israelToday } from "../ui/date-math";
 import { useSheetHistory } from "../ui/back";
+import { Amount } from "../ui/amount";
+import { AttentionCards } from "../ui/attention-cards";
+import { BandLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
-import { EmptyState } from "../ui/empty-state";
-import { IconButton } from "../ui/icon-button";
 import { CompactBar } from "../ui/compact-bar";
-import { useScrolledPast } from "../ui/screen-header";
-import { formatAmount } from "../ui/amount";
-import { cx } from "../ui/cx";
+import { DockSlot, useDockedFilter } from "../ui/dock-filter";
+import { EmptyState } from "../ui/empty-state";
+import { FocusTitle } from "../ui/focus-title";
+import { GroupHead } from "../ui/group-head";
+import { IconButton } from "../ui/icon-button";
 import { CheckIcon, HomeIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { Avatar } from "../ui/avatar";
 import { List, ListRow } from "../ui/list-row";
-import { ScreenHeader } from "../ui/screen-header";
+import { MonthStepper } from "../ui/month-stepper";
+import { ScreenHeader, useScrolledPast } from "../ui/screen-header";
 import { ProjectsSkeleton } from "../ui/screen-skeletons";
-import { ScreenState } from "../ui/screen-state";
-import { CompanyCashCard, thisMonthCashOut, useCompanyCashNextMonth, type CompanyCashNextMonth, type HomeNextMonthSample } from "./company-cash-next-month";
-import { useCashMonthsQuery } from "../use-cash";
+import { SegmentedControl } from "../ui/segmented-control";
+import { Skeleton } from "../ui/skeleton";
+import { TopBand } from "../ui/top-band";
 import { ProjectFormSheet } from "./project-form-sheet";
+import { projectsAttentionRows, useProjectsRecurring, type ProjectRecurringSample } from "./project-attention";
+
+/** The Home-style band bar: 6 + 52 + 6 (BUILD-PLAN §3.1). */
+const BAND_BAR = 64;
+
+const FILTERS: { value: ProjectsFilter; label: string }[] = [
+  { value: "active", label: "פעילים" },
+  { value: "finished", label: "הסתיימו" },
+  { value: "all", label: "הכול" },
+];
 
 /**
- * FLOW-445: the Projects tab. Rows are this month's cash per project, the overhead row last. FLOW-990: the
- * company's next month above the list, and each row's own next month under its figure.
+ * FLOW-445: the Projects tab. FLOW-1044 (board V3-Projects): an Overview. The band holds the month's cash
+ * across the projects with the month's arrows, then דורש טיפול as row-cards, then פעילים / הסתיימו / הכול
+ * (it docks into the band bar), then the rows in groups by kind with one-line sticky heads.
  */
 export function ProjectsScreen({
   sample,
   cashSample,
-  nextSample,
-  today: sampleToday,
+  recurringSample,
   finishedOpen: openFinished = false,
+  now,
 }: {
   sample?: Dashboard;
   cashSample?: ProjectsCashMonth;
-  /** FLOW-990: the next month's reads and the company's cash months, as they would come back; with `today`, the day they are from. */
-  nextSample?: HomeNextMonthSample;
-  today?: string;
+  /** Late bills and changed charges as they would come back, for the attention rows (stories). */
+  recurringSample?: ProjectRecurringSample;
   /** Stories and the proof build open הסתיימו at once. */
   finishedOpen?: boolean;
+  /** Stories pin the month names. */
+  now?: Date;
 } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const dashboard = useDashboardQuery(sample == null);
-  const cash = useProjectsCashMonth();
-  const holdWrites = useHoldWrites();
   const location = useLocation();
+  const currentKey = israelToday(now).slice(0, 7);
+  const [monthKey, setMonthKey] = useState(currentKey);
+  const dashboard = useDashboardQuery(sample == null);
+  const cash = useProjectsCashMonth(monthKey === currentKey ? undefined : monthKey);
+  const recurring = useProjectsRecurring(cashSample == null && monthKey === currentKey, recurringSample);
+  const holdWrites = useHoldWrites();
+  const online = useOnline();
   const [open, setOpenState] = useState(false);
   const adopt = useRef(false);
   // Back closes the sheet. A quick action opened over this page adopts its entry (one Back closes).
@@ -64,232 +85,289 @@ export function ProjectsScreen({
     adopt.current = sameEntry;
     setOpen(true);
   });
+  // A finish lands here with הסתיימו picked, so the project it moved is in view.
   const finishedFromRoute = (location.state as { finishedOpen?: boolean } | null)?.finishedOpen === true;
-  const [finishedOpen, setFinishedOpen] = useState(finishedFromRoute || openFinished);
+  const [filter, setFilter] = useState<ProjectsFilter>(finishedFromRoute || openFinished ? "finished" : "active");
   const month = cashSample ?? cash.data;
-  const today = sampleToday ?? israelToday();
-  // FLOW-990: the forecast waits for the list's currency; a sample list with no forecast sample reads nothing.
-  const next = useCompanyCashNextMonth(month?.base_currency ?? "ILS", today, month != null && cashSample == null, nextSample?.next);
-  // This month's cash out so far, for the card's expense caption, as Home reads it (usually cached by Home).
-  const companyCash = useCashMonthsQuery(nextSample == null && cashSample == null);
-  const thisMonthOut = thisMonthCashOut(nextSample?.cash ?? companyCash.data ?? null, today, month?.base_currency ?? "ILS");
   // The dashboard first, then the cash month: a pending or failed cash read is the screen's phase too.
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard.isPending || dashboard.isError || cashSample != null ? dashboard : cash);
-  const sheet = (
-    <ProjectFormSheet open={open} onOpenChange={setOpen} />
+  const onNew = holdWrites ? undefined : () => { setOpen(true); };
+  const sheet = <ProjectFormSheet open={open} onOpenChange={setOpen} />;
+  const actions = (
+    <span className="ui-projects-head-actions">
+      <IconButton to={`/search${search}`} label="חיפוש" onBand>
+        <SearchIcon />
+      </IconButton>
+      {onNew == null ? null : (
+        <IconButton label="פרויקט חדש" onBand onClick={onNew}>
+          <PlusIcon />
+        </IconButton>
+      )}
+    </span>
   );
-  const empty = (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader layout="stacked" title="פרויקטים" trailing={<span className="ui-header-slot" aria-hidden="true" />} className="ui-tab-root-head" />
-      <div className="ui-state-empty flex min-h-0 flex-1 flex-col">
-        <EmptyState
-          icon={<HomeIcon />}
-          title="עוד אין פרויקטים"
-          body={holdWrites ? "פרויקטים מגיעים מ־SUMIT." : "פרויקט מרכז את ההכנסות וההוצאות של נכס או עבודה, ומראה אם הוא מרוויח."}
-          action={holdWrites ? undefined : <Button onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
-        />
+  const title = <FocusTitle className="t-title ui-projects-band-title">פרויקטים</FocusTitle>;
+  if (phase.kind === "empty" || (phase.kind === "ready" && (month?.projects.length ?? 0) === 0 && monthKey === currentKey)) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <ScreenHeader layout="stacked" title="פרויקטים" trailing={<span className="ui-header-slot" aria-hidden="true" />} className="ui-tab-root-head" />
+        <div className="ui-state-empty flex min-h-0 flex-1 flex-col">
+          <EmptyState
+            icon={<HomeIcon />}
+            title="עוד אין פרויקטים"
+            body={holdWrites ? "פרויקטים מגיעים מ־SUMIT." : "פרויקט מרכז את ההכנסות וההוצאות של נכס או עבודה, ומראה אם הוא מרוויח."}
+            action={onNew == null ? undefined : <Button onClick={onNew}>פרויקט חדש</Button>}
+          />
+        </div>
+        {sheet}
       </div>
-      {sheet}
-    </div>
-  );
-  if (phase.kind === "empty" || (phase.kind === "ready" && (month?.projects.length ?? 0) === 0)) return empty;
-  const activeCount = month?.projects.filter((row) => row.status === "active" && !row.is_overhead).length ?? 0;
+    );
+  }
+  if (phase.kind === "error") {
+    return (
+      <>
+        <BandLoadFailed
+          title="הפרויקטים לא נטענו"
+          offline={phase.offline || !online}
+          leading={title}
+          onRetry={() => { void dashboard.refetch(); void cash.refetch(); }}
+        />
+        {sheet}
+      </>
+    );
+  }
+  if (phase.kind === "loading" || month == null) {
+    return (
+      <div className="ui-projects-page flex min-h-full flex-1 flex-col" aria-busy="true">
+        <TopBand
+          wordmark={false}
+          leading={title}
+          trailing={actions}
+          heroClassName="ui-band-hero-project"
+          hero={(
+            <div className="ui-project-skel">
+              <Skeleton tone="band" className="ui-skel-project-label" />
+              <Skeleton tone="band" className="ui-skel-project-num" />
+            </div>
+          )}
+        />
+        <ProjectsSkeleton />
+        {sheet}
+      </div>
+    );
+  }
   return (
     <>
-      <ScreenState
-        stacked
-        headerClassName="ui-tab-root-head ui-projects-root-head"
-        title="פרויקטים"
-        // FLOW-961: one row, the title with search and the filled + (the screen's main action).
-        titleAside={phase.kind !== "ready" ? <span className="ui-header-slot" aria-hidden="true" /> : (
-          <span className="ui-projects-head-actions">
-            <IconButton to={`/search${search}`} label="חיפוש">
-              <SearchIcon />
-            </IconButton>
-            {holdWrites ? null : (
-              <IconButton label="פרויקט חדש" className="ui-icon-btn-filled" onClick={() => { setOpen(true); }}>
-                <PlusIcon />
-              </IconButton>
-            )}
-          </span>
-        )}
-        subtitle={month ? `${String(activeCount)} פעילים · תזרים ${cashMonthName(month.month.slice(0, 7))} עד היום` : undefined}
-        phase={phase}
-        onRetry={() => { void dashboard.refetch(); void cash.refetch(); }}
-        loading={<ProjectsSkeleton />}
-      >
-        {month ? (
-          <ProjectsBody
-            month={month}
-            search={search}
-            finishedOpen={finishedOpen}
-            setFinishedOpen={setFinishedOpen}
-            onNew={holdWrites ? undefined : () => { setOpen(true); }}
-            next={next}
-            today={today}
-            thisMonthOut={thisMonthOut}
-          />
-        ) : null}
-      </ScreenState>
+      <ProjectsOverview
+        month={month}
+        monthKey={monthKey}
+        currentKey={currentKey}
+        onMonth={setMonthKey}
+        title={title}
+        actions={actions}
+        search={search}
+        filter={filter}
+        setFilter={setFilter}
+        recurring={recurring}
+        now={now}
+      />
       {sheet}
     </>
   );
 }
 
-function ProjectsBody({
+function ProjectsOverview({
   month,
+  monthKey,
+  currentKey,
+  onMonth,
+  title,
+  actions,
   search,
-  finishedOpen,
-  setFinishedOpen,
-  onNew,
-  next,
-  today,
-  thisMonthOut,
+  filter,
+  setFilter,
+  recurring,
+  now,
 }: {
   month: NonNullable<ProjectsCashMonth>;
+  monthKey: string;
+  currentKey: string;
+  onMonth: (key: string) => void;
+  title: ReactNode;
+  actions: ReactNode;
   search: string;
-  finishedOpen: boolean;
-  setFinishedOpen: (value: boolean) => void;
-  /** Undefined while writes are held: the compact bar then has no פרויקט חדש. */
-  onNew?: () => void;
-  next: CompanyCashNextMonth;
-  today: string;
-  thisMonthOut: bigint | null;
+  filter: ProjectsFilter;
+  setFilter: (value: ProjectsFilter) => void;
+  recurring: ProjectRecurringSample;
+  now?: Date;
 }) {
   const base = month.base_currency;
-  const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
-  const past = useScrolledPast(titleEnd, true);
-  const active = orderActiveProjects(month.projects, base);
-  const overhead = overheadRow(month);
-  const finished = month.projects.filter((row) => row.status === "finished" && !row.is_overhead);
-  const unassignedNet = netIn(month.unassigned.cash, base);
+  const totals = projectsMonthTotals(month);
+  const isCurrent = monthKey === currentKey;
+  const monthName = cashMonthName(monthKey, now);
+  const monthSearch = withPeriodSearch(search, monthPeriod(monthKey));
+  // The band's figure scrolls under the bar, then the band bar slides in; the filter docks into it.
+  const [bandMark, setBandMark] = useState<HTMLSpanElement | null>(null);
+  const barShown = useScrolledPast(bandMark, true, 0);
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
+  const groups = groupProjectRows(month.projects, filter, base);
+  // The month's cards read this month's late bills and changes: a past month shows only its lines with no project.
+  const attention = projectsAttentionRows({
+    month,
+    late: isCurrent ? recurring.late : [],
+    changes: isCurrent ? recurring.changes : [],
+    search,
+    unassignedTo: `/projects/unassigned${monthSearch}`,
+  });
+  const control = (onBand: boolean) => (
+    <SegmentedControl
+      label="סינון פרויקטים"
+      showLabel={false}
+      tone={onBand ? "band" : "page"}
+      value={filter}
+      options={FILTERS}
+      onChange={(next) => {
+        setFilter(next);
+        scrollUnderBar();
+      }}
+    />
+  );
+  const net = BigInt(totals.net);
   return (
-    <>
-      <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" />
-      {month.unassigned.count > 0 ? (
-        <div className="ui-page-pad ui-projects-unassigned">
-          <Button variant="link" to={`/review${search}`} chevron>
-            {unassignedCountLabel(month.unassigned.count)} · <bdi dir="ltr">{formatAmount(BigInt(unassignedNet), "detail", base)}</bdi> · לשיוך
-          </Button>
-        </div>
-      ) : null}
-      {/* FLOW-1017: the card's height is held while its reads are out, so the rows under it never jump. */}
-      <div className={cx("ui-page-pad ui-projects-next", next.loading && "ui-projects-next-loading")}>
-        <CompanyCashCard next={next} currency={base} today={today} thisMonthOut={thisMonthOut} href={`/forecast/next${search}`} />
-      </div>
-      <div className="ui-page-pad ui-projects-head">
-        <h2>פעילים</h2>
-        <span className="ui-muted">לפי פעילות</span>
-      </div>
-      <List>
-        {active.map((row) => (
-          <ProjectCashRowItem key={row.id} row={row} currency={base} search={search} next={nextFigure(next.forecast, row.id, base)} />
-        ))}
-        {overhead ? (
-          <ListRow
-            variant="project"
-            title={overhead.name}
-            hint="תקורה · לא פרויקט"
-            icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true"><HomeIcon size={18} /></span>}
-            agorot={BigInt(netIn(overhead.cash, base))}
-            signed
-            currency={base}
-            href={`/projects/${overhead.id}${search}`}
-            endSub={nextFigure(next.forecast, null, base)}
-          />
-        ) : null}
-      </List>
-      {finished.length > 0 ? (
-        <>
-          <button type="button" className="ui-page-pad ui-projects-head ui-projects-finished-toggle" aria-expanded={finishedOpen} onClick={() => { setFinishedOpen(!finishedOpen); }}>
-            <h2>הסתיימו · <bdi dir="ltr">{String(finished.length)}</bdi></h2>
-            <span className="ui-projects-toggle-word">{finishedOpen ? "הסתר" : "הצג"}</span>
-          </button>
-          {finishedOpen ? (
-            <List>
-              {finished.map((row) => (
-                <ProjectCashRowItem key={row.id} row={row} currency={base} search={search} finished />
-              ))}
-            </List>
-          ) : null}
-        </>
-      ) : null}
-      <CompactBar
-        title="פרויקטים"
-        size="detail"
-        shown={past}
-        actions={(
+    <div className="ui-projects-page ui-project-page flex min-h-full flex-1 flex-col">
+      <TopBand
+        wordmark={false}
+        leading={title}
+        trailing={actions}
+        heroClassName="ui-band-hero-project"
+        hero={(
           <>
-            <IconButton to={`/search${search}`} label="חיפוש">
-              <SearchIcon />
-            </IconButton>
-            {onNew ? (
-              <IconButton label="פרויקט חדש" onClick={onNew}>
-                <PlusIcon />
-              </IconButton>
-            ) : null}
+            <MonthStepper
+              earlier="חודש קודם"
+              later={isCurrent ? null : "חודש הבא"}
+              onBand
+              onStep={(delta) => {
+                const next = shiftMonthKey(monthKey, delta);
+                if (next <= currentKey) onMonth(next);
+              }}
+            >
+              <span className="ui-band-month-name">{monthName}</span>
+            </MonthStepper>
+            <p className="ui-band-label t-line2">{isCurrent ? "תזרים הפרויקטים · עד היום" : "תזרים הפרויקטים · חודש סגור"}</p>
+            <div className="ui-project-profits t-detail">
+              <p>
+                <Amount agorot={net} currency={base} loss={net < 0n} size="hero" compact />
+              </p>
+            </div>
+            <div className="ui-project-band-pair">
+              {(["in", "out"] as const).map((side) => (
+                <span key={side} className="ui-band-row-link">
+                  <span className="ui-band-row-label">{side === "in" ? "נכנס" : "יצא"}</span>
+                  <span className="ui-band-row-amount">
+                    <Amount agorot={BigInt(side === "in" ? totals.in : totals.out)} currency={base} presentation="detail" size="list" />
+                  </span>
+                </span>
+              ))}
+            </div>
+            <span ref={setBandMark} className="ui-compact-mark" aria-hidden="true" />
           </>
         )}
       />
-    </>
+      <CompactBar
+        title="פרויקטים"
+        tone="band"
+        shown={barShown}
+        centre={(
+          <span className="ui-compact-bar-centre">
+            <span className="ui-compact-bar-centre-title">{`פרויקטים · ${monthName}`}</span>
+            <span className="ui-compact-bar-centre-net">
+              <bdi dir="ltr">{formatAmountText(net, base)}</bdi>
+            </span>
+          </span>
+        )}
+        dock={control(true)}
+        docked={docked}
+      />
+      <div className="ui-projects-body">
+        <div className="ui-page-pad">
+          <AttentionCards rows={attention} storageKey="projects" />
+        </div>
+        <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+        <div className="ui-page-pad ui-projects-filter">
+          <DockSlot docked={docked}>{control(false)}</DockSlot>
+        </div>
+        {groups.length === 0 ? (
+          <p className="ui-page-pad ui-projects-none t-line2">{filter === "finished" ? "עוד אין פרויקטים שהסתיימו." : "אין פרויקטים פעילים."}</p>
+        ) : groups.map((group) => (
+          <section key={group.kind} className="ui-month" aria-labelledby={`projects-${group.kind}`}>
+            <GroupHead
+              id={`projects-${group.kind}`}
+              title={group.title}
+              summary={<><bdi dir="ltr">{String(group.rows.length)}</bdi> · <bdi dir="ltr">{formatAmountText(BigInt(group.net), base)}</bdi></>}
+            />
+            <List>
+              {group.rows.map((row) => (
+                <ProjectCashRowItem key={row.id} row={row} currency={base} search={search} />
+              ))}
+            </List>
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }
 
 /**
- * FLOW-990: a row's next month under its figure, the cash net (a project's part, or the general costs' on the
- * overhead row). FLOW-1017: plain secondary text that names the month, "צפי לחודש הבא ₪X", not a tag and a second
- * coloured figure. Undefined while the forecast is out or the part expects nothing.
+ * One project's row: initials, name, its type and status, and this month's cash. A finished one shows its
+ * final result, named רווח כולל, with a tick. The overhead project's circle is dashed.
  */
-function nextFigure(forecast: CompanyNextMonth | null, projectId: string | null, currency: string) {
-  const net = forecast == null ? null : companyPartNet(forecast, projectId);
-  if (net == null) return undefined;
-  const amount = formatAmountText(net, currency, { plus: net > 0n, direction: net > 0n ? "income" : undefined });
-  // Two lines, the words then the amount: on one line the figure would take the title's room at 320.
-  return (
-    <span className="ui-proj-next">
-      <span>צפי לחודש הבא</span> <bdi dir="ltr">{amount}</bdi>
-    </span>
-  );
-}
-
-/** One project's row: initials, name, its type and status, and this month's cash (or its profit when finished). */
-function ProjectCashRowItem({ row, currency, search, finished = false, next }: { row: ProjectCashRow; currency: string; search: string; finished?: boolean; next?: ReactNode }) {
-  const net = netIn(row.cash, currency);
-  // Cash outside the base currency lists each line; the order stays on the base currency.
-  const lines = finished ? [] : row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
-  const elsewhere = lines.length > 1 || lines.some((line) => line.currency !== currency);
-  const over = !finished && isOverBudget(row);
-  // The board's finished row: a tick, the owner's own words ("flip · נמכר ביוני 2026"), and the final result in whole
-  // dollars, named רווח כולל. FLOW-961: at full contrast, not dimmed.
-  const hint = finished ? (row.type ?? "הסתיים") : projectMeta(row);
-  if (finished) {
+function ProjectCashRowItem({ row, currency, search }: { row: ProjectCashRow; currency: string; search: string }) {
+  const href = `/projects/${row.id}${search}`;
+  if (row.status === "finished") {
     return (
       <ListRow
         variant="project"
         title={row.name}
-        hint={hint}
+        hint={row.type ?? "הסתיים"}
         icon={<span className="ui-row-initials ui-row-done" aria-hidden="true"><CheckIcon size={18} /></span>}
         agorot={BigInt(row.profit_all_minor)}
         currency={currency}
         amountDirection={row.profit_all_minor > 0 ? "income" : undefined}
         endSub="רווח כולל"
-        href={`/projects/${row.id}${search}`}
+        href={href}
       />
     );
   }
+  const net = netIn(row.cash, currency);
+  if (row.is_overhead) {
+    return (
+      <ListRow
+        variant="project"
+        title={row.name}
+        hint="תקורה · לא פרויקט"
+        icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true"><HomeIcon size={18} /></span>}
+        agorot={BigInt(net)}
+        signed
+        currency={currency}
+        href={href}
+      />
+    );
+  }
+  // Cash outside the base currency lists each line; the order stays on the base currency.
+  const lines = row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
+  const elsewhere = lines.length > 1 || lines.some((line) => line.currency !== currency);
   return (
     <ListRow
       variant="project"
       title={row.name}
       // FLOW-961: the flag leads the line, so a long type never cuts it off.
-      hint={<span className="ui-proj-hint-line">{over ? <span className="ui-proj-over">מעל התקציב · </span> : null}{hint}</span>}
+      // A long type ends in an ellipsis on one line (board V3-States, long content).
+      hint={<span className="ui-proj-hint-line" data-clip-ok="">{isOverBudget(row) ? <span className="ui-proj-over">מעל התקציב · </span> : null}{projectMeta(row)}</span>}
       icon={<Avatar name={row.name} fallback="person" />}
       agorot={BigInt(net)}
       currency={currency}
       amounts={elsewhere ? lines : undefined}
       signed
-      href={`/projects/${row.id}${search}`}
-      endSub={next}
+      href={href}
     />
   );
 }

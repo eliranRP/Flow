@@ -9,6 +9,7 @@ import { screenLoaders } from "../screen-loaders";
 const ProjectsScreen = lazy(() => screenLoaders.projects().then((m) => ({ default: m.ProjectsScreen })));
 const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) => ({ default: m.ProjectDetailScreen })));
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
+const ProjectUnassignedScreen = lazy(() => screenLoaders.projectUnassigned().then((m) => ({ default: m.ProjectUnassignedScreen })));
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
 const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
@@ -41,6 +42,8 @@ export function ProjectRoutes() {
   return (
     <>
       <Route path="projects" element={<ProjectsScreen />} />
+      {/* FLOW-1044: the lines with no project, before the project page so it is not read as an id. */}
+      <Route path="projects/unassigned" element={<ProjectUnassignedScreen />} />
       <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
       {/* FLOW-340 C: the screens the project page's rows open. */}
       {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}

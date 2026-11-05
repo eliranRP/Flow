@@ -162,7 +162,10 @@ describe("rejected reads", () => {
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await Promise.resolve(); });
     expect(screen.getByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument();
+    // The page is the saved read, not the failed band. FLOW-1044: the month's lines, whose own reads failed here,
+    // show their retry line under the band and keep the rest of the page.
+    expect(screen.queryByRole("heading", { name: /לא נטען/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" }).closest(".ui-failure")).not.toBeNull();
     forgetProjectReads();
     resetShownCompanyForTests();
   });

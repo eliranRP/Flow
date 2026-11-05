@@ -20,7 +20,17 @@ export function budgetUsedPercent(spentMinor: bigint, budgetMinor: bigint): numb
  * beyond a tick in the error colour, and the note carries an icon, so the overrun is not colour alone.
  * The edit link opens the project sheet.
  */
-export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit }: { spentMinor: bigint; budgetMinor: bigint; currency?: string; onEdit?: () => void }) {
+export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit, contract = false }: {
+  spentMinor: bigint;
+  budgetMinor: bigint;
+  currency?: string;
+  onEdit?: () => void;
+  /**
+   * FLOW-1044: a client project's contract. The same card, worded for what is collected: "חוזה", "נגבו X מתוך Y"
+   * and what is left to collect. Past the contract the overrun is good news, so it keeps the plain colour.
+   */
+  contract?: boolean;
+}) {
   const over = spentMinor > budgetMinor;
   const percent = budgetUsedPercent(spentMinor, budgetMinor);
   const spent = formatAmount(spentMinor, "summary", currency);
@@ -29,22 +39,31 @@ export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit }
   const used = Number(over ? budgetMinor : spentMinor);
   const rest = Number(over ? spentMinor - budgetMinor : budgetMinor - spentMinor);
   return (
-    <Card className="ui-budget-card" data-over={over ? "true" : undefined}>
+    <Card className="ui-budget-card" data-over={over && !contract ? "true" : undefined}>
       <div className="ui-budget-head">
-        <h2>תקציב</h2>
+        <h2>{contract ? "חוזה" : "תקציב"}</h2>
         {onEdit == null ? null : (
           <Button variant="link" onClick={onEdit}>עריכה</Button>
         )}
       </div>
       <p className="ui-budget-spent">
-        נוצל <bdi dir="ltr">{spent}</bdi>{" "}
+        {contract ? "נגבו" : "נוצל"} <bdi dir="ltr">{spent}</bdi>{" "}
         <span className="ui-muted">מתוך <bdi dir="ltr">{budget}</bdi></span>
       </p>
-      <div className="ui-budget-bar" role="img" aria-label={`נוצל ${spent} מתוך ${budget} · ${String(percent)}%`}>
+      <div className="ui-budget-bar" role="img" aria-label={`${contract ? "נגבו" : "נוצל"} ${spent} מתוך ${budget} · ${String(percent)}%`}>
         {used > 0 ? <span className="ui-budget-fill" style={{ flexGrow: used }} /> : null}
         {over ? <span className="ui-budget-tick" /> : null}
-        {rest > 0 ? <span className={over ? "ui-budget-over" : "ui-budget-left"} style={{ flexGrow: rest }} /> : null}
+        {rest > 0 ? <span className={over && !contract ? "ui-budget-over" : "ui-budget-left"} style={{ flexGrow: rest }} /> : null}
       </div>
+      {contract ? (
+        <p className="ui-budget-note">
+          <span>
+            {over
+              ? <>נגבו <bdi dir="ltr">{formatAmount(spentMinor - budgetMinor, "summary", currency)}</bdi> מעל החוזה</>
+              : <>נשאר לגבות <bdi dir="ltr">{formatAmount(budgetMinor - spentMinor, "summary", currency)}</bdi> · <bdi dir="ltr">{String(percent)}%</bdi></>}
+          </span>
+        </p>
+      ) : (
       <p className={over ? "ui-budget-note ui-budget-note-over" : "ui-budget-note"}>
         {over ? <AlertIcon size={16} /> : null}
         <span>
@@ -53,6 +72,7 @@ export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit }
             : <>נשארו <bdi dir="ltr">{formatAmount(budgetMinor - spentMinor, "summary", currency)}</bdi> · <bdi dir="ltr">{String(percent)}%</bdi></>}
         </span>
       </p>
+      )}
     </Card>
   );
 }

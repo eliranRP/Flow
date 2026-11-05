@@ -239,8 +239,9 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
     expect(screen.getByText(/^נפרע \$[\d,]+ מתוך \$240,000 · לתשלום עד \d{4}$/)).toBeInTheDocument();
     const paid = screen.getByRole("region", { name: "שולם" });
     const next = screen.getByRole("region", { name: "התשלום הבא" });
-    // FLOW-142: the paid card comes before the next payment.
-    expect(paid.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // FLOW-1046 (V3-Loan): the next payment comes first, then the paid card; it opens the payments on הבאים.
+    expect(next.compareDocumentPosition(paid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(next).getByRole("link")).toHaveAttribute("href", "/loans/loan-mortgage/payments?tab=upcoming");
     expect(within(paid).getByText("שולם מאז 01/2025")).toBeInTheDocument();
     expect(within(next).getByText(/^התשלום הבא · 01\/11$/)).toBeInTheDocument();
     expect(within(next).getByText(/^קרן \$[\d,]+ · ריבית \$[\d,]+ · נאמנות \$363$/)).toBeInTheDocument();
@@ -315,10 +316,11 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
 describe("loan page: all payments (FLOW-139c)", () => {
   it("lists every payment by year, newest year first, with the count and the total", () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "payments");
-    expect(screen.getByText("כל התשלומים")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "תשלומים" })).toBeInTheDocument();
     expect(screen.getByText("22 תשלומים מאז 01/2025 · שיפוץ דוגמה 12")).toBeInTheDocument();
     const years = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
-    expect(years).toEqual(["2026 · 10 תשלומים", "2025 · 12 תשלומים"]);
+    expect(years).toEqual(["2026", "2025"]);
+    expect(screen.getByText("10 · $52,400")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /\$5,240$/ })).toHaveLength(22);
   });
 
@@ -334,5 +336,39 @@ describe("loan page: all payments (FLOW-139c)", () => {
     const rows = screen.getAllByRole("link");
     expect(rows.some((row) => row.textContent.includes("קרן"))).toBe(false);
     expect(rows.some((row) => row.textContent.includes("ריבית $"))).toBe(true);
+  });
+});
+
+describe("loan page v3 (FLOW-1046)", () => {
+  it("opens the close sheet from ⋯ in the band, and the close undoes with ביטול", async () => {
+    const store = sampleLoanStore();
+    renderLoan(store, "loan-bridge");
+    fireEvent.click(screen.getAllByRole("button", { name: "פעולות להלוואה" })[0] as HTMLElement);
+    const sheet = screen.getByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    fireEvent.click(within(sheet).getByRole("button", { name: "סגירת ההלוואה" }));
+    await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "paid_off" } } }); });
+    expect(toast("הלוואת גישור נסגרה")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "open", closedOn: null } } }); });
+  });
+
+  it("opens a loan whose payments wait for a check with הפרטים נכונים and עריכה, and ביטול brings the card back", async () => {
+    window.localStorage.removeItem("flow.attention.loan:loan-note");
+    renderLoan(sampleLoanStore(), "loan-note");
+    const card = screen.getByRole("region", { name: "ממתין לבדיקה" });
+    expect(within(card).getByRole("link", { name: "עריכה" })).toHaveAttribute("href", "/transactions/txn-n2");
+    fireEvent.click(within(card).getByRole("button", { name: "הפרטים נכונים" }));
+    expect(screen.queryByRole("region", { name: "ממתין לבדיקה" })).not.toBeInTheDocument();
+    expect(toast("סומן כנבדק")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(screen.getByRole("region", { name: "ממתין לבדיקה" })).toBeInTheDocument(); });
+  });
+
+  it("lists the payments left on the schedule under הבאים, in years", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "payments");
+    fireEvent.click(screen.getAllByRole("radio", { name: /^הבאים · / })[0] as HTMLElement);
+    const years = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
+    expect(years[0]).toBe("2026");
+    expect(screen.getAllByText(/^צפוי · קרן /).length).toBeGreaterThan(0);
   });
 });

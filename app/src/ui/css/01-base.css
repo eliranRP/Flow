@@ -286,7 +286,6 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 /* List amount and the month totals over list rows: cents at 11px, raised 5px (Design guide, FLOW-363, FLOW-334). A detail figure keeps its
    cents at the figure's size ("$1,284.50" at 40/400 on the Design guide). */
 .t-body .ui-num-cents,
-.ui-loan-amount .ui-num-cents,
 .ui-month-totals .ui-num-cents {
   font-size: var(--type-cents-size);
   vertical-align: var(--cents-raise);
@@ -404,11 +403,4 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 
 .ui-row-title-muted {
   color: var(--color-text-muted);
-}
-
-/* FLOW-961: a screen's main action as an icon: a filled 44px circle (the Projects tab's +). */
-.ui-icon-btn.ui-icon-btn-filled {
-  border-radius: 50%;
-  background-color: var(--color-accent);
-  color: var(--color-on-accent);
 }

@@ -42,11 +42,10 @@ test("search: under a notch the search field sits below the status bar", async (
   expect(top).toBeGreaterThanOrEqual(59);
 });
 
-// The loans tab has no stacked header: its "+ הלוואה חדשה" link is the top line, and it sat under the
-// iPhone status bar because the screen's own top pad left out --safe-top.
-test("loans: under a notch the new-loan link sits below the status bar", async ({ page }) => {
+// The loans tab's band: its + (הלוואה חדשה) is on the top line, and it must sit below the iPhone status bar.
+test("loans: under a notch the new-loan button sits below the status bar", async ({ page }) => {
   await page.goto("/e2e/loans");
-  const add = page.getByRole("button", { name: "+ הלוואה חדשה" });
+  const add = page.getByRole("button", { name: "הלוואה חדשה" });
   await expect(add).toBeVisible();
   const top = await add.evaluate((node) => node.getBoundingClientRect().top);
   expect(top).toBeGreaterThanOrEqual(59);
@@ -85,7 +84,7 @@ async function headerCuts(): Promise<string[]> {
     const bars = [...document.querySelectorAll<HTMLElement>(".ui-compact-bar.m-bar-in, .ui-txn-top-past")];
     if (bars.length === 0) continue;
     const edge = Math.max(...bars.map((bar) => bar.getBoundingClientRect().bottom));
-    for (const root of document.querySelectorAll("header:not(.ui-txn-top), .ui-txn-head, .ui-loans-title, .ui-loans-count, .ui-pp-figure")) {
+    for (const root of document.querySelectorAll("header:not(.ui-txn-top), .ui-txn-head, .ui-pp-figure")) {
       if (root.closest(".ui-compact-bar, .ui-sheet, [role=dialog]")) continue;
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node; node = walker.nextNode()) {

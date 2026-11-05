@@ -47,8 +47,10 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   await expect(name).toHaveAttribute("autocomplete", "off");
   expect(await name.getAttribute("name")).toMatch(/^flow-text-/);
 
-  const amount = dialog.getByRole("textbox", { name: "תקציב (אופציונלי)" });
-  const amountBox = dialog.locator(".ui-money-field");
+  // FLOW-1044: the kind comes first (שיפוץ by default), so the sheet shows three amounts; the budget is the one checked.
+  await expect(dialog.getByRole("radiogroup", { name: "סוג" }).getByRole("radio", { name: "שיפוץ" })).toBeChecked();
+  const amount = dialog.getByRole("textbox", { name: "תקציב שיפוץ" });
+  const amountBox = amount.locator("xpath=ancestor::*[contains(@class,'ui-money-field')]");
   await focusAt(page, amountBox, amount, 0.02);
   await focusAt(page, amountBox, amount, 0.5);
   await focusAt(page, amountBox, amount, 0.98);
