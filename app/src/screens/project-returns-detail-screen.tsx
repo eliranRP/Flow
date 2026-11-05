@@ -8,10 +8,9 @@ import { ChevronDownIcon } from "../ui/icons";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { DelayedSkeleton } from "../ui/skeleton";
-import { ReportSection } from "./reports-parts";
 import { ALL_TIME, METRIC_KEYS, PART_KEYS, metricPage, partPage, type MetricKey, type PartKey } from "./project-returns-info";
-import { AllCashOutMeta, FigureText, FormulaList, ReturnLinesSection, ReturnsHero, pageResolver } from "./project-returns-parts";
-import { RETURNS_EMPTY, useCollapse, useReturnsPage, type RehabRead, type ReturnsSample } from "./project-returns-screen";
+import { AllCashOutMeta, CalcSection, FigureText, FormulaList, ReturnLinesSection, ReturnsHero, pageResolver } from "./project-returns-parts";
+import { RETURNS_EMPTY, useReturnsPage, type RehabRead, type ReturnsSample } from "./project-returns-screen";
 import type { PropertyReturns, RehabRow } from "./project-returns-data";
 import { PAGE_LEARN } from "./project-returns-learn";
 import { LearnButton } from "./project-returns-learn-sheet";
@@ -31,7 +30,6 @@ function isPart(value: string | undefined): value is PartKey {
 }
 
 function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: PropertyReturns; base: string; search: string }) {
-  const collapse = useCollapse();
   const page = metricPage(metric, r);
   const resolve = pageResolver(base, search);
   const negative = page.value.kind === "text" && page.value.text.startsWith("−");
@@ -42,18 +40,17 @@ function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: Propert
         meta={page.cashOut == null ? page.caption : <AllCashOutMeta minor={page.cashOut} currency={r.currency} />}
       />
       {page.sections.map((section) => (
-        <ReportSection
+        <CalcSection
           key={section.key}
-          id={section.key}
           title={section.title}
           total={section.total == null ? null : <FigureText value={section.total} currency={r.currency} />}
-          collapse={collapse}
+         
         >
           <FormulaList formula={section.formula} currency={r.currency} resolve={resolve} label={section.title} />
-        </ReportSection>
+        </CalcSection>
       ))}
       {page.result == null ? null : (
-        <ReportSection id="result" title="התוצאה" total={null} collapse={collapse}>
+        <CalcSection title="התוצאה" total={<FigureText value={page.result.value} currency={r.currency} />}>
           {/* FLOW-462: the same row as every "=": the figure's name, the division under it, the figure. */}
           <FormulaList
             formula={{ rows: page.result.yearly == null ? [] : [page.result.yearly], result: { key: "result", op: "=", label: page.title, hint: page.result.text, value: page.result.value } }}
@@ -61,7 +58,7 @@ function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: Propert
             resolve={resolve}
             label="התוצאה"
           />
-        </ReportSection>
+        </CalcSection>
       )}
     </div>
   );
@@ -76,6 +73,7 @@ export function PropertyMetricScreen({ sample, base: baseProp, learnOpen = false
   const title = page.returns == null ? "מדד" : metricPage(metric, page.returns).title;
   return (
     <ScreenState
+      headerClassName="ui-ret-head"
       title={title}
       titleAside={<LearnButton learnKey={PAGE_LEARN.metric[metric]} title={title} initialOpen={learnOpen} />}
       kicker="השקעה"
@@ -91,7 +89,6 @@ export function PropertyMetricScreen({ sample, base: baseProp, learnOpen = false
 }
 
 function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey; r: PropertyReturns; base: string; search: string; projectId: string; sample?: ReturnsSample }) {
-  const collapse = useCollapse();
   const page = partPage(part, r);
   const figure = page.formula.result?.value;
   const moneyIn = part === "money-in";
@@ -100,10 +97,10 @@ function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey;
     <div className="ui-rep-content">
       <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} loss={!moneyIn} />} meta={page.meta} />
       <p className="ui-ret-body">{page.body}</p>
-      <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(page.formula.rows.length)}</bdi>} collapse={collapse}>
+      <CalcSection title="החישוב" total={figure == null ? null : <FigureText value={figure} currency={r.currency} />}>
         <FormulaList formula={page.formula} currency={r.currency} resolve={pageResolver(base, search)} label={page.title} />
-      </ReportSection>
-      <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
+      </CalcSection>
+      <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} sample={sample?.lines} />
     </div>
   );
 }
@@ -159,7 +156,6 @@ function RehabCalc({ r, rows, base, search }: { r: PropertyReturns; rows: readon
  * link to the category settings for what is kept out.
  */
 function RehabPartBody({ r, rehab, base, search, projectId, sample }: { r: PropertyReturns; rehab: RehabRead; base: string; search: string; projectId: string; sample?: ReturnsSample }) {
-  const collapse = useCollapse();
   const page = partPage("rehab", r, rehab.rows ?? []);
   const settings = <Button variant="link" to={`/settings/categories${search}`} className="ui-ret-settings-link">מה לא נספר? לפי קטגוריה</Button>;
   if (rehab.rows != null && rehab.rows.length === 0 && (r.inputs.rehabMinor ?? 0n) === 0n) {
@@ -173,17 +169,16 @@ function RehabPartBody({ r, rehab, base, search, projectId, sample }: { r: Prope
   const figure = page.formula.result?.value;
   return (
     <div className="ui-rep-content">
-      {/* The one line under the figure says what it counts; no meta repeats it. */}
-      <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} />} meta={null} />
-      <p className="ui-ret-body">{page.body}</p>
-      <ReportSection id="calc" title="החישוב" total={rehab.rows == null ? null : <bdi dir="ltr" className="t-muted">{String(rehab.rows.length)}</bdi>} collapse={collapse}>
+      {/* The one line under the figure says what it counts (board V3-Calc-Rehab). */}
+      <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} />} meta={page.body} />
+      <CalcSection title="החישוב" total={figure == null ? null : <FigureText value={figure} currency={r.currency} />}>
         {rehab.rows != null ? (
           <RehabCalc r={r} rows={rehab.rows} base={base} search={search} />
         ) : rehab.failed ? (
           <FailureLine offline={rehab.offline} onRetry={rehab.retry} />
         ) : <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>}
-      </ReportSection>
-      <ReturnLinesSection projectId={projectId} line="rehab" categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
+      </CalcSection>
+      <ReturnLinesSection projectId={projectId} line="rehab" categoryId={null} currency={r.currency} search={search} sample={sample?.lines} />
       {settings}
     </div>
   );
@@ -201,6 +196,7 @@ export function PropertyPartScreen({ sample, base: baseProp }: { sample?: Return
   const subtitle = page.name == null ? ALL_TIME : `${ALL_TIME} · ${page.name}`;
   return (
     <ScreenState
+      headerClassName="ui-ret-head"
       title={title}
       titleAside={<LearnButton learnKey={PAGE_LEARN.part[part]} title={title} />}
       kicker={back}
