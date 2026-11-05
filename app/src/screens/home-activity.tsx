@@ -5,9 +5,9 @@ import { isSplitParty, rowId, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
 import { DockSlot } from "../ui/dock-filter";
-import { EmptyState, FailureLine } from "../ui/empty-state";
+import { EmptyState } from "../ui/empty-state";
 import { GroupHead } from "../ui/group-head";
-import { CalendarIcon } from "../ui/icons";
+import { AlertIcon, CalendarIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
 import { StatusMark, type StatusMarkKind } from "../ui/status-mark";
@@ -290,7 +290,7 @@ export function HomeActivity({ activity, filter: picked, onFilter, markRef, dock
     <section className="ui-home-act" aria-labelledby="home-act-title">
       {past && close != null ? (
         <div className="ui-home-act-head">
-          <h2 id="home-act-title" className="ui-home-next-title t-section">{`הפעילות ב${close.name}`}</h2>
+          <h2 id="home-act-title" className="ui-home-act-title t-section">{`הפעילות ב${close.name}`}</h2>
           <MonthClose close={close} base={base} />
         </div>
       ) : (
@@ -301,10 +301,7 @@ export function HomeActivity({ activity, filter: picked, onFilter, markRef, dock
         <ActivityFilterControl value={filter} onChange={onFilter} tone="page" past={past} />
       </DockSlot>
       {failed ? (
-        <div className="ui-home-act-failed">
-          <p className="ui-home-act-failed-title t-body">רשימת התנועות לא נטענה</p>
-          <FailureLine offline={false} onRetry={activity.onRetry} />
-        </div>
+        <ActivityFailed title="רשימת התנועות לא נטענה" offline={false} onRetry={activity.onRetry} />
       ) : null}
       {loading ? (
         <List layout="flat" className="ui-home-act-skel">
@@ -333,6 +330,24 @@ export function HomeActivity({ activity, filter: picked, onFilter, markRef, dock
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * FLOW-1052 (V3-States, "שגיאה"): a part of Home that did not load is one 52px card: the signal's mark, what did not
+ * load, and נסו שוב. Offline says so after the title. What else loaded stays.
+ */
+function ActivityFailed({ title, offline, onRetry }: { title: string; offline: boolean; onRetry: () => void }) {
+  return (
+    <div className="ui-home-act-failed" role="alert">
+      <span className="ui-home-act-failed-mark" aria-hidden="true">
+        <AlertIcon size={18} />
+      </span>
+      <span className="ui-home-act-failed-title t-line2">{offline ? `${title} · אין חיבור לאינטרנט` : title}</span>
+      <Button variant="link" onClick={onRetry}>
+        נסו שוב
+      </Button>
+    </div>
   );
 }
 
@@ -373,13 +388,10 @@ function ActivityGroups({ groups, base }: { groups: readonly ActivityGroup[]; ba
 export function HomeFutureActivity({ monthKey, future, base }: { monthKey: string; future: HomeFuture; base: string }) {
   const name = monthName(monthKey);
   return (
-    <section className="ui-home-act ui-home-next" aria-labelledby="home-next-title" aria-busy={future.phase === "loading" || undefined}>
-      <h2 id="home-next-title" className="ui-home-next-title t-section">{`הצפוי ב${name}`}</h2>
+    <section className="ui-home-act" aria-labelledby="home-act-title" aria-busy={future.phase === "loading" || undefined}>
+      <h2 id="home-act-title" className="ui-home-act-title t-section">{`הצפוי ב${name}`}</h2>
       {future.phase === "failed" ? (
-        <div className="ui-home-act-failed">
-          <p className="ui-home-act-failed-title t-body">{`הצפי ל${name} לא נטען`}</p>
-          <FailureLine offline={future.offline} onRetry={future.onRetry} />
-        </div>
+        <ActivityFailed title={`הצפי ל${name} לא נטען`} offline={future.offline} onRetry={future.onRetry} />
       ) : future.phase === "loading" ? (
         <List layout="flat" className="ui-home-act-skel">
           <ListRow variant="skeleton" layout="flat" icon />

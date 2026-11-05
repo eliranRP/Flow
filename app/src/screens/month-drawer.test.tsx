@@ -111,4 +111,22 @@ describe("MonthDrawer (FLOW-364)", () => {
     expect(screen.getByRole("button", { name: "שנה הבאה" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "שנה קודמת" })).not.toHaveAttribute("aria-disabled");
   });
+
+  it("shows Home's month in the figure box, and סגירה closes the drawer (FLOW-1052)", async () => {
+    const { onOpenChange, onPick } = renderDrawer({ figure: { label: "תזרים צפוי לסוף נובמבר", minor: 1_250_000n, sub: "הערכה · לפי קבועים וחשבוניות פתוחות" } });
+    await screen.findByRole("dialog", { name: "בחירת חודש" });
+    const box = document.querySelector<HTMLElement>(".ui-month-drawer-figure");
+    if (box == null) throw new Error("no figure box");
+    expect(within(box).getByText("תזרים צפוי לסוף נובמבר")).toBeInTheDocument();
+    expect(box.querySelector("bdi")?.textContent).toBe("₪12,500");
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("draws no figure box without a figure", async () => {
+    renderDrawer();
+    await screen.findByRole("dialog", { name: "בחירת חודש" });
+    expect(document.querySelector(".ui-month-drawer-figure")).toBeNull();
+  });
 });

@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import type { CashMonths, ProjectCashRow } from "@flow/shared";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { NOT_IN_PROFIT_LABEL } from "../cash";
 import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type CompanyNextMonth } from "../company-next-month";
 import type { RentCategory } from "../next-month-chart";
@@ -104,22 +104,28 @@ export function HomeFutureReads({ today, currency, cash, search, children }: {
   const next = useCompanyCashNextMonth(currency, today, true);
   // The Projects tab's rows, for the groups' names and order; a failed read leaves the names as פרויקט.
   const list = useProjectsCashMonth();
-  const future = homeFutureView({
-    forecast: next.forecast,
-    categories: next.categories,
-    projects: list.data?.projects ?? [],
+  const projects = list.data?.projects;
+  const loading = next.loading || (list.isPending && !list.isError);
+  // A read waiting for the network says so, with its retry, as a failed one does.
+  const failed = next.failed || next.paused;
+  const { forecast, categories, paused, refetch } = next;
+  const { isError: listFailed, refetch: refetchList } = list;
+  // FLOW-1052: the groups and figures are built once per read, not on every render of Home (a scroll, a dock).
+  const future = useMemo(() => homeFutureView({
+    forecast,
+    categories,
+    projects: projects ?? [],
     cash,
     today,
     currency,
     search,
-    loading: next.loading || (list.isPending && !list.isError),
-    // A read waiting for the network says so, with its retry, as a failed one does.
-    failed: next.failed || next.paused,
-    offline: next.paused,
+    loading,
+    failed,
+    offline: paused,
     onRetry: () => {
-      void next.refetch();
-      if (list.isError) void list.refetch();
+      void refetch();
+      if (listFailed) void refetchList();
     },
-  });
+  }), [forecast, categories, projects, cash, today, currency, search, loading, failed, paused, refetch, listFailed, refetchList]);
   return children(future);
 }
