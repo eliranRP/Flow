@@ -7,12 +7,14 @@
   flex-direction: column;
 }
 
+/* FLOW-1051 (V3-Home): the title row is 36px with 6px under it; the "N הוסתרו" link keeps its 44px. */
 .ui-attn-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-block-size: var(--touch-min);
+  min-block-size: calc(var(--space-8) + var(--space-1));
+  padding-block-end: var(--label-gap);
 }
 
 .ui-attn-title {
@@ -56,19 +58,22 @@
   transform: translateX(var(--rise-push));
 }
 
+/* FLOW-1051 (V3-Home): 56px, 4px in at the start; the link 16px in, 12 between its parts, the X flush at the end. */
 .ui-attn-card {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   block-size: calc(var(--touch-min) + var(--space-3));
   margin-block-end: var(--space-2);
+  padding-inline-start: var(--space-1);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
 }
 
-.ui-attn-card-x {
-  padding-inline-end: var(--space-1);
+/* A card without an X (the review row) keeps its chevron 12px from the card's end. */
+.ui-attn-card:not(.ui-attn-card-x) .ui-attn-link {
+  padding-inline-end: var(--space-3);
 }
 
 .ui-attn-link {
@@ -78,7 +83,7 @@
   gap: var(--space-3);
   min-inline-size: 0;
   block-size: 100%;
-  padding-inline: var(--space-4) var(--space-3);
+  padding-inline: var(--space-4) 0;
   border-radius: var(--radius-card-tight);
   color: var(--color-text);
   text-decoration: none;
@@ -123,7 +128,7 @@
 .ui-attn-done-text {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: calc(var(--space-2) + var(--space-half));
   min-inline-size: 0;
   color: var(--color-text-secondary);
 }
@@ -136,7 +141,7 @@
 
 .ui-attn-undo {
   min-block-size: var(--touch-min);
-  padding-inline: var(--space-2);
+  padding-inline: var(--label-gap);
   border: 0;
   background: transparent;
   color: var(--color-accent-text);
@@ -166,7 +171,7 @@
 
 .ui-status-mark-paid {
   background: var(--color-tint);
-  color: var(--color-accent-text);
+  color: var(--color-accent);
 }
 
 .ui-status-mark-dot {

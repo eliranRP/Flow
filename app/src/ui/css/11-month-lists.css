@@ -103,6 +103,11 @@
   -webkit-line-clamp: 1;
 }
 
+/* FLOW-1051 (V3-Home): one-line groups are 8px apart, not the month lists' 32. */
+.ui-month + .ui-month > .ui-group-head-line {
+  margin-block-start: var(--space-2);
+}
+
 .ui-group-summary {
   flex: none;
   margin: 0;

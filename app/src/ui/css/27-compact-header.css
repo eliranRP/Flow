@@ -74,21 +74,39 @@
   border-radius: 0 0 var(--radius-card) var(--radius-card);
   background: var(--color-band);
   color: var(--color-on-band);
-  box-shadow: var(--shadow-pill);
   transition: background-color var(--motion-bar) var(--ease-standard);
+}
+
+/* FLOW-1051 (V3-Home): the band bar slides in from its own height over the 280ms the pinned head's top moves
+   by, on the same curve, so the bar's edge and the head stay together all the way down (at 240ms from -110% the
+   head ran ahead and a row showed between the two). */
+.ui-compact-bar-band.m-bar-in {
+  animation: m-bar-in-band var(--motion-page) var(--ease-enter);
+}
+
+@keyframes m-bar-in-band {
+  from {
+    transform: translateY(-100%);
+  }
 }
 
 .ui-compact-bar-band-past {
   background: var(--color-band-past);
 }
 
-/* FLOW-364 (board): the band's compact bar is a centred month and its net, between the two arrows. */
-.ui-compact-bar-band-row {
+/* FLOW-1051 (V3-Home): the band's compact bar is a centred month and its net between two 44px arrows with 20px
+   glyphs, the row padded 6 12 with 4 between. */
+.ui-compact-bar-band .ui-compact-bar-band-row {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding-block: calc(var(--space-1) * 1.5);
-  padding-inline: var(--pill-pad-inline);
+  padding-block: calc(var(--space-1) + var(--space-half));
+  padding-inline: var(--space-3);
+}
+
+.ui-compact-bar-band-row > .ui-icon-btn svg {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
 }
 
 /* The bar is its figure's height, not the 44px list bar: 6 + 52 + 6 (the board). */
@@ -111,7 +129,7 @@
   cursor: pointer;
 }
 
-/* FLOW-374 (board): the band's bar title is 13px secondary, the net 20px/600 white, both LTR-safe. */
+/* FLOW-1051 (V3-Home): the band's bar title is 13/1.2 secondary, the net 20/1.2/600 white, both LTR-safe. */
 .ui-compact-bar-centre-title {
   display: inline-flex;
   align-items: center;
@@ -128,6 +146,12 @@
   line-height: var(--type-cents-line);
   font-variant-numeric: normal;
   white-space: nowrap;
+}
+
+.ui-compact-bar-centre-net .ui-num {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
 }
 
 .ui-compact-bar-band-row > .ui-compact-bar-centre {
@@ -215,8 +239,12 @@ html[data-compact-bar="panel"] {
   --compact-bar-base: calc(var(--touch-min) + var(--size-chip) + 2 * var(--space-2));
 }
 
+/* FLOW-1051: the band bar has no hairline under it, so the heads pin right at its edge, not a pixel below (with
+   the pixel a row's edge showed between the two on the phone). */
 html[data-compact-bar="band"] {
   --compact-bar-base: var(--compact-bar-band);
+  --month-sticky-top: calc(var(--safe-top) + var(--compact-bar-h));
+  scroll-padding-block-start: calc(var(--safe-top) + var(--compact-bar-h));
 }
 
 html[data-compact-bar][data-compact-dock="on"] {

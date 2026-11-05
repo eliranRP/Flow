@@ -268,8 +268,9 @@
   margin-block: var(--space-5) var(--space-6);
 }
 
+/* FLOW-1051 (V3-Home): the first group head 12px under the segment (the board's -8 on its 20px gap). */
 .ui-home-act .ui-dock-slot {
-  margin-block-end: var(--space-2);
+  margin-block-end: var(--space-3);
 }
 
 /* A due charge's amount is the usual one, not money that moved yet: muted, as the board draws it. */

@@ -279,7 +279,7 @@ The band holds only the summary. Home: one period pill, one label and the hero n
 - Must work from **320 to 480px**. Amounts never wrap. Above 480px, centre a column (`--content-max: 480px`). No desktop layout. [0015](../decisions/0015-installable-mobile-web-app.md), guide §4.
 - Sides 24px. Cards inset 16px. Sections 36–40px apart.
 - `viewport-fit=cover`. Pad with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`. Do not hard-code 47px or 34px.
-- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). When that inset is 0, a floor (`--tabbar-min-inset`) keeps the labels off the screen edge ([0045](../decisions/0045-phase-0-design-gaps.md), superseded for the floor by [0183](../decisions/0183-tab-bar-floor-from-the-board.md)). The default floor is 8px; the app sets 32px so the bar is 84px as on the board ([0183](../decisions/0183-tab-bar-floor-from-the-board.md) supersedes the 8px floor). Content pads so the last row is not hidden.
+- Tab bar is 64px (its hairline, 8px, a 36px icon slot, 4px, a 15px label) plus the bottom safe area. When that inset is 0, a floor (`--tabbar-min-inset`, 18px) keeps the labels off the screen edge, so the bar is 82px as on the V3-Home board ([0257](../decisions/0257-v3-boards-win.md), FLOW-1051; supersedes the 32px floor and 84px bar of [0183](../decisions/0183-tab-bar-floor-from-the-board.md)). Content pads so the last row is not hidden.
 - When the keyboard is open, hide the tab bar and keep the focused field visible.
 - Portrait, `display: standalone`. Guide §4 manifest excerpt.
 

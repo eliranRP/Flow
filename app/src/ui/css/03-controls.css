@@ -1,8 +1,9 @@
+/* FLOW-1051 (V3-Home): the track is the raised fill, radius 14, 4px in; its options touch (the pill is a third). */
 .ui-seg {
   display: flex;
   max-width: 100%;
   min-width: 0;
-  gap: var(--space-1);
+  gap: 0;
   padding: var(--space-1);
   border-radius: var(--radius-segment);
   background: var(--color-raised);
