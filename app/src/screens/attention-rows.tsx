@@ -75,9 +75,13 @@ export function attentionRows({
       dismissKey: `unpaid:${String(unpaidCount)}:${String(unpaidGross)}`,
       to: `/unpaid${search}`,
       icon: <InvoiceIcon />,
-      title: unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
+      // The board's title carries the total: "3 חשבוניות פתוחות · $21,300" (V3-Home); the card draws only the title.
+      title: unpaidOther.length === 0 && unpaidGross !== 0n ? (
+        <>{unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>} · <bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi></>
+      ) : unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
+      // The title carries the one total (above), so a list that draws the hint (the project page's rows) does not repeat it.
       hint: unpaidOther.length === 0 ? (
-        <><bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi> · לגבייה</>
+        unpaidGross !== 0n ? "לגבייה" : <><bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi> · לגבייה</>
       ) : (
         <>
           {[

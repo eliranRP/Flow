@@ -194,10 +194,10 @@ export const HomeAttentionDismiss: Story = {
   render: () => <CashHomeStory />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" }));
+    await userEvent.click(await canvas.findByRole("button", { name: /^הסתרה: 3 חשבוניות פתוחות · /u }));
     await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "1 הוסתרו · הצגה" }));
-    await expect(await canvas.findByRole("link", { name: "3 חשבוניות פתוחות" })).toBeInTheDocument();
+    await expect(await canvas.findByRole("link", { name: /^3 חשבוניות פתוחות · /u })).toBeInTheDocument();
   },
 };
 

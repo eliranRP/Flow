@@ -70,12 +70,12 @@ describe("Home's attention cards (FLOW-321, FLOW-1036)", () => {
   it("puts the review card first, with no X, then the unpaid card with its X", () => {
     renderHome({ review: 7, unpaid: 3, gross: 2_340_000n });
     const review = screen.getByRole("link", { name: "7 פריטים ממתינים לאישור" });
-    const unpaid = screen.getByRole("link", { name: "3 חשבוניות פתוחות" });
+    const unpaid = screen.getByRole("link", { name: /^3 חשבוניות פתוחות · /u });
     expect(review).toHaveAttribute("href", "/review");
     expect(unpaid).toHaveAttribute("href", "/unpaid");
     expect(review.compareDocumentPosition(unpaid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByRole("button", { name: /הסתרה: .*לאישור/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^הסתרה: 3 חשבוניות פתוחות · /u })).toBeInTheDocument();
   });
 
   it("comes before the month's activity", () => {
@@ -87,7 +87,7 @@ describe("Home's attention cards (FLOW-321, FLOW-1036)", () => {
 
   it("keeps a hidden card hidden until what it counts changes", async () => {
     const { unmount } = renderHome({ review: 0, unpaid: 3, gross: 2_340_000n });
-    fireEvent.click(screen.getByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" }));
+    fireEvent.click(screen.getByRole("button", { name: /^הסתרה: 3 חשבוניות פתוחות · /u }));
     await waitFor(() => {
       expect(unpaidLink()).toBeNull();
     });
@@ -105,7 +105,7 @@ describe("Home's attention cards (FLOW-321, FLOW-1036)", () => {
 
   it("brings hidden cards back from the section's head", async () => {
     renderHome({ review: 2, unpaid: 3, gross: 2_340_000n });
-    fireEvent.click(screen.getByRole("button", { name: "הסתרה: 3 חשבוניות פתוחות" }));
+    fireEvent.click(screen.getByRole("button", { name: /^הסתרה: 3 חשבוניות פתוחות · /u }));
     const restore = await screen.findByRole("button", { name: "1 הוסתרו · הצגה" });
     fireEvent.click(restore);
     expect(unpaidLink()).toBeInTheDocument();

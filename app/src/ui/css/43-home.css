@@ -282,6 +282,22 @@
   margin-block-start: var(--space-4);
 }
 
+/* At 320 the summary takes the head's width and cut the title to "חד-..."; the title keeps its words and the
+   summary moves to a line under it when the two do not fit on one. */
+.ui-home-act .ui-group-head-line {
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
+}
+
+.ui-home-act .ui-group-title {
+  flex: none;
+}
+
+.ui-home-act .ui-group-summary {
+  white-space: normal;
+  margin-inline-start: auto;
+}
+
 /* FLOW-1036: next month's cell in the drawer opens its forecast; dashed like a month to come, but pickable. */
 .ui-month-cell-next {
   border: 2px dashed var(--color-line);
