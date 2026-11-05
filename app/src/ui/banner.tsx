@@ -56,44 +56,10 @@ export type BannerRow = {
   button?: { label: string; hint: string };
   /**
    * FLOW-1043: what the row counts, e.g. "changes:4" or "unpaid:3:2130000". AttentionCards hides the row while
-   * the key it was hidden at is unchanged. A row without one cannot be hidden; BannerRows ignores it.
+   * the key it was hidden at is unchanged. A row without one cannot be hidden.
    */
   dismissKey?: string;
 };
-
-/**
- * The pending card with one linked row per destination (FLOW-321). One row draws
- * the plain Banner; two or more share one tinted card, each row its own link and
- * accessible name, separated by padding (no hairline, decision 0120).
- */
-export function BannerRows({ rows }: { rows: readonly BannerRow[] }) {
-  if (rows.length === 0) return null;
-  if (rows.length === 1) {
-    const [row] = rows;
-    if (!row) return null;
-    return <Banner to={row.to} title={row.title} hint={row.hint} icon={row.icon} />;
-  }
-  return (
-    <ul className="ui-banner-rows">
-      {rows.map((row) => (
-        <li key={row.id}>
-          <Link to={row.to} className="ui-banner-row ui-hit">
-            <span className="ui-banner-icon">{row.icon ?? <InboxIcon />}</span>
-            <span className="ui-row-text">
-              <span className="ui-row-title" dir="rtl">
-                {row.title}
-              </span>
-              {row.hint ? <span className="ui-row-hint">{row.hint}</span> : null}
-            </span>
-            <span className="ui-banner-chevron">
-              <ChevronIcon />
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 type NoticeProps = {
   title: string;

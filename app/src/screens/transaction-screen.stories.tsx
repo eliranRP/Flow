@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
@@ -13,7 +13,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function TransactionStory() {
+function TransactionStory({ pending = false }: { pending?: boolean } = {}) {
   return (
     <StoryRoute entry="/transactions/t1">
       <ExampleBar />
@@ -35,7 +35,8 @@ function TransactionStory() {
           category_name: "חומרים",
           supplier_name: "חומרי בניין לדוגמה בע״מ",
           customer_name: null,
-          review_status: "approved",
+          review_status: pending ? "open" : "approved",
+          review_id: pending ? "r-sample" : null,
           paid: true,
           open_gross_agorot: null,
         }}
@@ -300,3 +301,15 @@ function RecurringStory({ income = false }: { income?: boolean }) {
   );
 }
 export const TransactionRecurring: Story = { name: "Recurring charge, found by itself", render: () => <RecurringStory /> };
+
+/** FLOW-1048 (V3-Transaction): a line waiting for approval: the אישור / שינוי bar pinned at the bottom. */
+export const TransactionPending: Story = { render: () => <TransactionStory pending /> };
+
+/** FLOW-1048: אישור approves in place; the toast offers ביטול for 5 seconds. */
+export const TransactionApproved: Story = {
+  render: () => <TransactionStory pending />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "אישור" }));
+    await expect(await within(canvasElement.ownerDocument.body).findByRole("button", { name: "ביטול" })).toBeInTheDocument();
+  },
+};

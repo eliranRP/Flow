@@ -47,57 +47,11 @@ export type ChargeTarget = {
   projectId: string | null;
 };
 
-/** The writes the list makes, as the screen calls them. */
-export type RecurringWrites = {
-  dismiss: (alertKey: string) => Promise<void>;
-  restore: (alertKey: string) => Promise<void>;
-  /**
-   * The ask's "הסתיים": the charge is no longer recurring (decisions 0172, 0188), through its newest
-   * line. Returns the undo, which writes back the switch the charge had before.
-   */
-  end: (target: ChargeTarget) => Promise<() => Promise<void>>;
-};
-
-/** The owner's switch before a write, as `set_payment_recurring` returns it: true, false, or null (the rule decided). */
-function priorOverride(data: unknown): boolean | null {
-  if (data == null || typeof data !== "object" || !("prior_override" in data)) return null;
-  return typeof data.prior_override === "boolean" ? data.prior_override : null;
-}
-
-/** "הסתיים" on the live client: the newest line of the charge, then its switch off. The undo writes the prior switch back. */
-export async function endRecurringCharge(client: RpcClient, target: ChargeTarget): Promise<() => Promise<void>> {
-  const line = await client.rpc("recurring_party_line", {
-    p_direction: target.direction,
-    p_party_id: target.partyId,
-    p_currency: target.currency,
-    ...(target.projectId == null ? {} : { p_project_id: target.projectId }),
-  });
-  assertNoError(line);
-  const id = typeof line.data === "string" ? line.data : null;
-  if (id == null) throw new Error("no line");
-  // The charge's project, so a charge fed only by another property's split transfer is the one written (decision 0189).
-  const project = target.projectId == null ? {} : { p_project_id: target.projectId };
-  const set = await client.rpc("set_payment_recurring", { p_id: id, p_recurring: false, ...project });
-  assertNoError(set);
-  const prior = priorOverride(set.data);
-  return async () => {
-    // null hands the choice back to the rule; the generated type shows the parameter as boolean only.
-    assertNoError(await client.rpc("set_payment_recurring", { p_id: id, p_recurring: prior as boolean, ...project }));
-  };
-}
-
 function supabaseClient(): RpcClient {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   return supabase;
 }
-
-/** The live writes: the RPCs of the signed-in company, through the app's Supabase client. */
-export const liveRecurringWrites: RecurringWrites = {
-  dismiss: (alertKey) => dismissRecurringAlert(supabaseClient(), alertKey),
-  restore: (alertKey) => restoreRecurringAlert(supabaseClient(), alertKey),
-  end: (target) => endRecurringCharge(supabaseClient(), target),
-};
 
 /** The live client, for the charge page's writes. */
 export function liveRpcClient(): RpcClient {

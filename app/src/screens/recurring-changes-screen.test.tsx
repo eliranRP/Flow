@@ -8,6 +8,7 @@ import * as forecast from "../forecast";
 import { SAMPLE_RECURRING_THIS_MONTH } from "../forecast-sample";
 import { projectAttentionRows } from "./project-attention";
 import { RecurringChangesScreen } from "./recurring-changes-screen";
+import { ToastProvider } from "../ui/toast";
 
 // Two changes: the power bill up 38%, and the arnona bill as a drop.
 const [power, arnona] = SAMPLE_RECURRING_THIS_MONTH;
@@ -15,7 +16,7 @@ if (power == null || arnona == null) throw new Error("sample");
 const TWO: RecurringChange[] = [power, { ...arnona, change_percent: -30, amount_minor: -91_000n }];
 
 function withQuery(node: ReactNode) {
-  return <QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>;
+  return <QueryClientProvider client={new QueryClient()}><ToastProvider>{node}</ToastProvider></QueryClientProvider>;
 }
 
 function renderAt(path: string) {
@@ -30,8 +31,8 @@ describe("חיובים שהשתנו (FLOW-1021)", () => {
   it("lists only the changed charges, each with its amount, its usual one and its payment", () => {
     renderAt("/recurring/changes");
     expect(screen.getByRole("heading", { name: "חיובים שהשתנו" })).toBeTruthy();
-    const links = screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/transactions/"));
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/transactions/t-power-oct", "/transactions/t-arnona-oct"]);
+    const links = screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/recurring/expense/"));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/recurring/expense/s-power?project=p1", "/recurring/expense/s-arnona?project=p2"]);
     expect(links[0]?.textContent).toContain("חשמל עלה");
     expect(links[0]?.textContent).toContain("₪2,550 במקום ₪1,850");
     expect(links[1]?.textContent).toContain("ארנונה עירונית ירד");
@@ -40,8 +41,8 @@ describe("חיובים שהשתנו (FLOW-1021)", () => {
 
   it("narrows to the project named in the address", () => {
     renderAt("/recurring/changes?project=p2");
-    const links = screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/transactions/"));
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/transactions/t-arnona-oct"]);
+    const links = screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/recurring/expense/"));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/recurring/expense/s-arnona?project=p2"]);
   });
 
   it("says so when nothing changed", () => {
@@ -51,6 +52,14 @@ describe("חיובים שהשתנו (FLOW-1021)", () => {
       </MemoryRouter>,
     ));
     expect(screen.getByText("אין שינויים")).toBeTruthy();
+  });
+
+  it("marks a change as seen with its X, and ביטול brings it back (V3-Changes)", async () => {
+    renderAt("/recurring/changes");
+    fireEvent.click(screen.getByRole("button", { name: "סקרתי: חשמל עלה" }));
+    expect(screen.queryByText("חשמל עלה")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText("חשמל עלה")).toBeTruthy();
   });
 
   it("opens the project's own list from the project page", () => {
@@ -84,7 +93,7 @@ describe("חיובים שהשתנו, live (FLOW-1021 r1)", () => {
     live("/recurring/changes");
     expect(company).toHaveBeenCalledWith(true);
     expect(own).toHaveBeenCalledWith("", false);
-    expect(screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/transactions/"))).toHaveLength(2);
+    expect(screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/recurring/expense/"))).toHaveLength(2);
   });
 
   it("reads the project's own changes with ?project=", () => {
@@ -111,7 +120,7 @@ describe("חיובים שהשתנו, live (FLOW-1021 r1)", () => {
     expect(screen.getByRole("heading", { name: "חיובים שהשתנו" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "קבועים" })).toBeNull();
     expect(screen.getByRole("button", { name: "חזרה לבית" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toBe("טוען…");
+    expect(container.querySelector(".ui-changes-skel [role=status]")?.textContent).toBe("טוען…");
     expect(container.querySelectorAll(".ui-changes-skel .ui-skel-list-row")).toHaveLength(2);
   });
 
@@ -130,11 +139,11 @@ describe("חיובים שהשתנו, live (FLOW-1021 r1)", () => {
     const client = new QueryClient();
     client.setQueryData(["project", "off", "p9", "2026-10-01", "2026-10-31"], { id: "p9", name: "מגדלי הים" });
     render(
-      <QueryClientProvider client={client}>
+      <QueryClientProvider client={client}><ToastProvider>
         <MemoryRouter initialEntries={["/recurring/changes?project=p9"]}>
           <RecurringChangesScreen />
         </MemoryRouter>
-      </QueryClientProvider>,
+      </ToastProvider></QueryClientProvider>,
     );
     expect(screen.getByRole("button", { name: "חזרה למגדלי הים" })).toBeTruthy();
   });

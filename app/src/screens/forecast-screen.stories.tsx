@@ -97,3 +97,23 @@ export const ChangeItemPace: Story = {
     await expect(body.getByText("משנה את הצפי של אוקטובר, ואת השורה בצפי של הפרויקט מאוקטובר והלאה.")).toBeInTheDocument();
   },
 };
+
+/** FLOW-1048 (V3-Forecast): scrolled past the views, the 56px bar with the month-end figure, the views docked in it. */
+export const ForecastDocked: Story = {
+  name: "Forecast · docked views",
+  render: () => <BoardForecast variant="board" />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 1400, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
+  },
+};
+
+/** While the forecast loads (V3-States). */
+export const ForecastLoading: Story = {
+  name: "Forecast · loading",
+  render: () => (
+    <StoryRoute entry="/forecast?preview=loading">
+      <ForecastScreen />
+    </StoryRoute>
+  ),
+};

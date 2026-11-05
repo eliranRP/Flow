@@ -1,29 +1,11 @@
-/* The forecast's view chips and קטגוריות (the MonthForecast board, category preset): one row per
+/* The forecast's views (FLOW-1048: the SegmentedControl, which docks) and קטגוריות (the MonthForecast board, category preset): one row per
    category with its month so far and still to come, a two-part bar, and its items when opened. */
 .ui-forecast-views {
-  display: flex;
-  gap: var(--space-2);
-  padding-top: calc(var(--space-1) / 4);
+  padding-top: var(--space-2);
 }
 
-.ui-forecast-view {
-  height: var(--touch-min);
-  padding: 0 var(--space-4);
-  border: 1.5px solid var(--color-control-edge);
-  border-radius: var(--radius-chip);
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-chip-weight);
-  cursor: pointer;
-  transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
-}
-
-.ui-forecast-view-on {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+.ui-forecast-views .ui-seg {
+  inline-size: 100%;
 }
 
 .ui-forecast-cat-section {

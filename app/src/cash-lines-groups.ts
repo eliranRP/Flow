@@ -8,20 +8,30 @@ import { LOAN_PART_LABEL } from "./ui/loan-part-terms";
  * the page total add up to the figure Home shows for the side.
  */
 
-export const LINES_ORDERS = ["date", "amount", "project", "category"] as const;
+/** FLOW-1048 (V3-Lines): the chips' order: by date, recurring or one-off (FLOW-1035's flag), project, category, amount. */
+export const LINES_ORDERS = ["date", "recurring", "project", "category", "amount"] as const;
 export type LinesOrder = (typeof LINES_ORDERS)[number];
 
 /** The order in the URL (`?order=`). Date is the absent value. */
 export function linesOrder(value: string | null | undefined): LinesOrder {
-  return value === "amount" || value === "project" || value === "category" ? value : "date";
+  return value === "amount" || value === "project" || value === "category" || value === "recurring" ? value : "date";
 }
 
 export const LINES_ORDER_LABEL: Record<LinesOrder, string> = {
   date: "לפי תאריך",
-  amount: "לפי סכום",
+  recurring: "קבוע / חד-פעמי",
   project: "לפי פרויקט",
   category: "לפי קטגוריה",
+  amount: "לפי סכום",
 };
+
+/**
+ * FLOW-1048: every line says whether it is recurring (FLOW-1035's `recurring` on `cash_month_lines`). An older
+ * server sends no flag: the recurring-or-one-off order is then hidden, never drawn with every line as one-off.
+ */
+export function linesKnowRecurring(rows: readonly CashLine[]): boolean {
+  return rows.length > 0 && rows.every((row) => row.recurring !== undefined);
+}
 
 export type LineGroup = {
   key: string;
@@ -98,6 +108,15 @@ export function groupLines(rows: readonly CashLine[], order: LinesOrder, side: C
       return byRecency(a, b);
     });
     return sorted.length === 0 ? [] : [{ key: "amount", title: "מהגדול לקטן", total: null, rows: sorted }];
+  }
+  if (order === "recurring") {
+    // Recurring first, then one-off; each newest first, with its sum. An empty group is left out.
+    const fixed = rows.filter((row) => row.recurring === true).sort(byRecency);
+    const once = rows.filter((row) => row.recurring !== true).sort(byRecency);
+    return [
+      { key: "recurring", title: "קבועים", total: sumOf(fixed, side), rows: fixed },
+      { key: "once", title: "חד-פעמי", total: sumOf(once, side), rows: once },
+    ].filter((group) => group.rows.length > 0);
   }
   if (order === "project") return byKey(rows, side, (row) => row.project_name, "בלי פרויקט");
   if (order === "category") return byKey(rows, side, (row) => row.category_name, "בלי קטגוריה");

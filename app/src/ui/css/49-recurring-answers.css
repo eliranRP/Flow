@@ -20,3 +20,18 @@
   font-size: var(--type-line2-size);
   font-weight: var(--type-line2-weight);
 }
+
+/* FLOW-1048 (V3-Charge): the match box's third answer, "התעלמות החודש": a quiet text button at the end of the row. */
+.ui-recurring-match-skip {
+  display: inline-flex;
+  min-block-size: var(--touch-min);
+  align-items: center;
+  margin-inline-start: auto;
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+}
