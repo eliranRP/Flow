@@ -137,6 +137,8 @@
   /* ---- layout (guide-defined, from design-system.md) ---- */
   --touch-min: 44px;
   --compact-bar-detail: 56px;    /* the compact bar on a detail page (FLOW-363 3a) */
+  --compact-bar-band: 64px;      /* Home's band bar: 6 + 52 + 6 (FLOW-1043) */
+  --compact-dock: 60px;          /* the dock row a docked filter adds to any compact bar: 48 + 12 (FLOW-1043) */
   --control-height: 52px;        /* buttons, text inputs */
   --control-height-sm: 36px;     /* small pill buttons, chips (hit area still 44px) */
   --field-height: 48px;          /* text, amount, percent, select and code fields (board; buttons stay 52) */

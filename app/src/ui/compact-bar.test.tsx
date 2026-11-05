@@ -132,3 +132,76 @@ describe("CompactBar on Home (FLOW-364)", () => {
     expect(container.querySelector(".ui-compact-bar")).toHaveClass("ui-compact-bar-band-past");
   });
 });
+
+describe("CompactBar docks a control (FLOW-1043)", () => {
+  function band(props: { shown?: boolean; docked?: boolean; dock?: boolean }) {
+    return (
+      <MemoryRouter>
+        <CompactBar
+          title=""
+          shown={props.shown ?? true}
+          tone="band"
+          centre={<button type="button">בחירת חודש</button>}
+          dock={props.dock === false ? undefined : <button type="button">הכול</button>}
+          docked={props.docked}
+        />
+      </MemoryRouter>
+    );
+  }
+
+  it("reports a bar with a centre as the 64px band bar", () => {
+    const { unmount } = render(band({ dock: false }));
+    expect(document.documentElement).toHaveAttribute("data-compact-bar", "band");
+    unmount();
+    expect(document.documentElement).not.toHaveAttribute("data-compact-bar");
+  });
+
+  it("keeps the dock row rendered but closed, inert and hidden until docked", () => {
+    const { container, rerender } = render(band({ docked: false }));
+    const dock = container.querySelector(".ui-compact-bar > .ui-compact-dock");
+    expect(dock).not.toBeNull();
+    expect(dock).not.toHaveAttribute("data-open");
+    expect(dock).toHaveAttribute("aria-hidden", "true");
+    expect(dock).toHaveAttribute("inert");
+    expect(document.documentElement).not.toHaveAttribute("data-compact-dock");
+    rerender(band({ docked: true }));
+    expect(dock).toHaveAttribute("data-open");
+    expect(dock).toHaveAttribute("aria-hidden", "false");
+    expect(dock).not.toHaveAttribute("inert");
+    expect(screen.getByRole("button", { name: "הכול" })).toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute("data-compact-dock", "on");
+    rerender(band({ docked: false }));
+    expect(document.documentElement).not.toHaveAttribute("data-compact-dock");
+  });
+
+  it("closes the dock with the bar, and counts open docks like the bars", () => {
+    const { rerender } = render(
+      <>
+        {band({ docked: true })}
+        {bar({ shown: true, dock: <span>הכול</span>, docked: true })}
+      </>,
+    );
+    expect(document.documentElement).toHaveAttribute("data-compact-dock", "on");
+    rerender(
+      <>
+        {band({ docked: true, shown: false })}
+        {bar({ shown: true, dock: <span>הכול</span>, docked: true })}
+      </>,
+    );
+    expect(document.documentElement).toHaveAttribute("data-compact-dock", "on");
+    expect(document.documentElement).toHaveAttribute("data-compact-bar", "list");
+    rerender(
+      <>
+        {band({ docked: true, shown: false })}
+        {bar({ shown: true, dock: <span>הכול</span>, docked: false })}
+      </>,
+    );
+    expect(document.documentElement).not.toHaveAttribute("data-compact-dock");
+  });
+
+  it("puts the dock row under a list bar's row too", () => {
+    const { container } = render(bar({ shown: true, dock: <span>הכול</span>, docked: true }));
+    expect(container.querySelector(".ui-compact-bar-row + .ui-compact-dock")).toHaveAttribute("data-open");
+  });
+});
+

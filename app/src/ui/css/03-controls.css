@@ -51,6 +51,35 @@
   color: var(--color-text);
 }
 
+/* FLOW-1043: the selected pill is one indicator that slides between options (segmented-control.tsx measures
+   the selected option and places it). The options draw over it; while it is there, the selected option draws
+   no fill of its own. Without it (nothing selected, or before layout) the option keeps its own fill. */
+.ui-seg {
+  position: relative;
+}
+
+.ui-seg-ind {
+  position: absolute;
+  inset-block-start: 0;
+  left: 0;
+  background: var(--color-tint-strong);
+  pointer-events: none;
+  transition: transform var(--motion-page) var(--ease-enter);
+}
+
+.ui-seg:has(> .ui-seg-ind) .ui-seg-btn:is([aria-checked="true"], [aria-selected="true"]) {
+  background: transparent;
+}
+
+/* On the band the pill is white (the band pill) and the selected label is the accent colour (the V3-Home board). */
+.ui-seg-band > .ui-seg-ind {
+  background: var(--color-band-pill);
+}
+
+.ui-seg.ui-seg-band .ui-seg-btn:is([aria-checked="true"], [aria-selected="true"]) {
+  color: var(--color-accent);
+}
+
 /* A period switch on the page (the loans summary, the company profit page): its track is the card tone (the
    board's), with 9px segments. */
 .ui-period-switch .ui-seg {

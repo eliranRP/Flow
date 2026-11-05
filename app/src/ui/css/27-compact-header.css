@@ -196,20 +196,66 @@
   overscroll-behavior-x: contain;
 }
 
-/* The bar's height feeds the offsets under it: 44px on a list page, 56px on a detail page. */
+/* The bar's height feeds the offsets under it: 44px on a list page, 56px on a detail page, 64px for Home's band
+   bar (FLOW-1043), and 60px more while a dock is open, so sticky heads land at 0, 64 or 124; 44 or 104; 56 or 116. */
 html[data-compact-bar] {
-  --compact-bar-h: var(--touch-min);
+  --compact-bar-base: var(--touch-min);
+  --compact-bar-dock-h: 0px;
+  --compact-bar-h: calc(var(--compact-bar-base) + var(--compact-bar-dock-h));
   --month-sticky-top: calc(var(--safe-top) + var(--compact-bar-h) + 1px);
   /* A row reached by Tab stops below the bar, not under it (WCAG 2.4.11). */
   scroll-padding-block-start: calc(var(--safe-top) + var(--compact-bar-h) + 1px);
 }
 
 html[data-compact-bar="detail"] {
-  --compact-bar-h: var(--compact-bar-detail);
+  --compact-bar-base: var(--compact-bar-detail);
 }
 
 html[data-compact-bar="panel"] {
-  --compact-bar-h: calc(var(--touch-min) + var(--size-chip) + 2 * var(--space-2));
+  --compact-bar-base: calc(var(--touch-min) + var(--size-chip) + 2 * var(--space-2));
+}
+
+html[data-compact-bar="band"] {
+  --compact-bar-base: var(--compact-bar-band);
+}
+
+html[data-compact-bar][data-compact-dock="on"] {
+  --compact-bar-dock-h: var(--compact-dock);
+}
+
+/* FLOW-1043: the dock row under the bar holds the filter that reached it. It is always there when the bar has a
+   dock, so it can grow (max-height over --motion-page) and fade in (160ms); closed it is inert and hidden. */
+.ui-compact-dock {
+  overflow: hidden;
+  max-block-size: 0;
+  opacity: 0;
+  transition: max-block-size var(--motion-page) var(--ease-enter), opacity var(--motion-toast-out) var(--ease-linear);
+}
+
+.ui-compact-dock[data-open] {
+  max-block-size: var(--compact-dock);
+  opacity: 1;
+}
+
+/* 48px of segment track and 12px under it: 60px. */
+.ui-compact-dock-row {
+  box-sizing: border-box;
+  block-size: var(--compact-dock);
+  padding-block: 0 var(--space-3);
+  padding-inline: var(--space-side);
+}
+
+.ui-compact-dock-row .ui-seg {
+  inline-size: 100%;
+}
+
+/* FLOW-1043: the in-page copy of a docked filter fades out and keeps its height (dock-filter.tsx). */
+.ui-dock-slot {
+  transition: opacity var(--motion-toast-out) var(--ease-linear);
+}
+
+.ui-dock-slot[data-docked] {
+  opacity: 0;
 }
 
 /* With month heads pinned under the bar, both are reserved (11-month-lists.css). */

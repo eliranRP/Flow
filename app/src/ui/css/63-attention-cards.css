@@ -1,0 +1,177 @@
+/* FLOW-1043 (BUILD-PLAN §3.5): the "דורש טיפול" row-cards (attention-cards.tsx). Each card is 56px: surface fill,
+   a line border, radius 16, the row's icon, a one-line title, a chevron, and a 44px X. The X slides the card 24px
+   toward itself and folds it (max-height over --motion-sheet-out, the one property animated beyond transform
+   and opacity); reduced motion zeroes the tokens and the rise, so the card simply goes. */
+.ui-attn {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-attn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+}
+
+.ui-attn-title {
+  margin: 0;
+}
+
+.ui-attn-restore {
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+}
+
+.ui-attn-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-attn-item {
+  overflow: hidden;
+  max-block-size: calc(var(--touch-min) + var(--space-3) + var(--space-2));
+  transition:
+    max-block-size var(--motion-sheet-out) var(--ease-exit),
+    opacity var(--motion-toast-out) var(--ease-linear),
+    transform var(--motion-sheet-out) var(--ease-exit);
+}
+
+/* Toward the X, at the inline end: left under dir=rtl. */
+.ui-attn-item[data-leaving] {
+  max-block-size: 0;
+  opacity: 0;
+  transform: translateX(calc(-1 * var(--rise-push)));
+}
+
+.ui-attn-item[data-leaving]:dir(ltr) {
+  transform: translateX(var(--rise-push));
+}
+
+.ui-attn-card {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  block-size: calc(var(--touch-min) + var(--space-3));
+  margin-block-end: var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-attn-card-x {
+  padding-inline-end: var(--space-1);
+}
+
+.ui-attn-link {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  block-size: 100%;
+  padding-inline: var(--space-4) var(--space-3);
+  border-radius: var(--radius-card-tight);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-attn-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--color-text-secondary);
+}
+
+.ui-attn-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-attn-chevron {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
+.ui-attn-x {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+/* Every card hidden: one 44px line, a check in the income colour, and ביטול. */
+.ui-attn-done {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+}
+
+.ui-attn-done-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-attn-done-check {
+  display: inline-grid;
+  flex: none;
+  color: var(--color-income);
+}
+
+.ui-attn-undo {
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font-family: inherit;
+}
+
+/* FLOW-1043 (BUILD-PLAN §3.6): the status marks at the start of a row (status-mark.tsx), 24px. Shape tells them
+   apart: a dashed ring (due; the signal colour when late), a check on a tint disc (paid), a 6px dot (once). */
+.ui-status-mark {
+  box-sizing: border-box;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--icon-check);
+  block-size: var(--icon-check);
+  border-radius: var(--radius-chip);
+}
+
+.ui-status-mark-due,
+.ui-status-mark-late {
+  border: 2px dashed var(--color-text-muted);
+}
+
+.ui-status-mark-late {
+  border-color: var(--color-signal);
+}
+
+.ui-status-mark-paid {
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-status-mark-dot {
+  inline-size: calc(var(--space-1) + var(--space-half));
+  block-size: calc(var(--space-1) + var(--space-half));
+  border-radius: var(--radius-chip);
+  background: var(--color-text-muted);
+}

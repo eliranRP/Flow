@@ -64,3 +64,6 @@ export { CountedInRow, CountedInSheet } from "./counted-in";
 export { PACE_LABEL, paceSheetCopy, paceToast } from "./pace";
 export { PartsBar, type BarPart, type PartTone } from "./parts-bar";
 export { PullRefresh } from "./pull-refresh";
+export { AttentionCards } from "./attention-cards";
+export { DockSlot, useDockedFilter } from "./dock-filter";
+export { StatusMark, type StatusMarkKind } from "./status-mark";
