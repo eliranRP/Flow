@@ -31,24 +31,38 @@ export type CompactBarProps = {
   centre?: ReactNode;
   /** FLOW-364: Home's bar, the later arrow at the end. */
   end?: ReactNode;
+  /** FLOW-1043: a row under the bar that holds a control while `docked` (the filter that reached the bar). */
+  dock?: ReactNode;
+  /** FLOW-1043: the dock row is open: the bar grows by 60px (max-height, --motion-page, --ease-enter), the row fades in (160ms). */
+  docked?: boolean;
 };
 
-/** A bar with a panel reports "panel": it is taller than a list or detail bar. */
-type Reported = CompactBarSize | "panel";
+/** A bar with a panel reports "panel": it is taller than a list or detail bar. A bar with a centre is the 64px band bar. */
+type Reported = CompactBarSize | "panel" | "band";
 
 /**
  * Bars showing, by size. The html element reports the bar it has under it: the page's sticky month
  * heads and scroll padding use the height of the bar (27-compact-header.css).
  */
-const showing: Record<Reported, number> = { list: 0, detail: 0, panel: 0 };
+const showing: Record<Reported, number> = { list: 0, detail: 0, panel: 0, band: 0 };
 
 function reportShowing(size: Reported, delta: number): void {
   showing[size] = Math.max(0, showing[size] + delta);
   const root = document.documentElement;
-  const total = showing.list + showing.detail + showing.panel;
+  const total = showing.list + showing.detail + showing.panel + showing.band;
   if (total === 0) root.removeAttribute("data-compact-bar");
   else if (showing.panel > 0) root.setAttribute("data-compact-bar", "panel");
+  else if (showing.band > 0) root.setAttribute("data-compact-bar", "band");
   else root.setAttribute("data-compact-bar", showing.detail > 0 ? "detail" : "list");
+}
+
+/** FLOW-1043: open docks. Any one sets html[data-compact-dock="on"], which adds the dock's 60px to the bar's height. */
+let docksOpen = 0;
+
+function reportDock(delta: number): void {
+  docksOpen = Math.max(0, docksOpen + delta);
+  if (docksOpen === 0) document.documentElement.removeAttribute("data-compact-dock");
+  else document.documentElement.setAttribute("data-compact-dock", "on");
 }
 
 /**
@@ -56,8 +70,9 @@ function reportShowing(size: Reported, delta: number): void {
  * centred in one line, an optional figure after it, actions at the end. It stays mounted once a
  * page can show it, so the slide out has something to run on; `shown` drives the classes.
  */
-export function CompactBar({ title, figure, figureFirst = false, label, backTo, size = "list", shown, actions, panel, tone, start, centre, end }: CompactBarProps) {
-  const reported: Reported = panel != null ? "panel" : size;
+export function CompactBar({ title, figure, figureFirst = false, label, backTo, size = "list", shown, actions, panel, tone, start, centre, end, dock, docked = false }: CompactBarProps) {
+  const reported: Reported = panel != null ? "panel" : centre != null ? "band" : size;
+  const dockOpen = shown && dock != null && docked;
   const goBack = useGoBack();
   const landsOnLabel = useBackLandsOn(backTo ?? "/");
   // `gone` is true once a hidden bar's slide out has ended (or it never showed): visibility hidden.
@@ -75,6 +90,14 @@ export function CompactBar({ title, figure, figureFirst = false, label, backTo, 
       reportShowing(reported, -1);
     };
   }, [shown, reported]);
+
+  useEffect(() => {
+    if (!dockOpen) return;
+    reportDock(1);
+    return () => {
+      reportDock(-1);
+    };
+  }, [dockOpen]);
 
   // The slide out ends the hiding: the bar is visibility hidden from then on. A native listener, the
   // way the sheet listens for its own slide (sheet.tsx).
@@ -111,6 +134,13 @@ export function CompactBar({ title, figure, figureFirst = false, label, backTo, 
       </IconButton>
     );
   }
+  // FLOW-1043: always rendered with a dock, so it can grow and fade; closed, it takes no focus and reads as nothing.
+  const dockRow =
+    dock == null ? null : (
+      <div className="ui-compact-dock" data-open={dockOpen || undefined} aria-hidden={!dockOpen} inert={dockOpen ? undefined : true}>
+        <div className="ui-compact-dock-row">{dock}</div>
+      </div>
+    );
   if (centre != null) {
     // FLOW-364: Home's bar. Its arrows keep the scroll; its centre opens the month drawer.
     return (
@@ -125,6 +155,7 @@ export function CompactBar({ title, figure, figureFirst = false, label, backTo, 
           {centre}
           {end}
         </div>
+        {dockRow}
       </div>
     );
   }
@@ -157,6 +188,7 @@ export function CompactBar({ title, figure, figureFirst = false, label, backTo, 
         {actions != null ? <div className="ui-compact-actions">{actions}</div> : null}
       </div>
       {panel != null ? <div className="ui-compact-panel">{panel}</div> : null}
+      {dockRow}
     </div>
   );
 }

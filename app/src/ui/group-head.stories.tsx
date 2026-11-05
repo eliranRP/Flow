@@ -29,3 +29,13 @@ export const WithSums: Story = {
 export const LongName: Story = {
   args: { title: "פרויקט שיפוץ המטבח והחשמל בדירה ברחוב הרצל", children: SUM },
 };
+
+/** FLOW-1043: the v3 one-line head: the title at the start, the summary at the end, a hairline under it. */
+export const OneLine: Story = {
+  args: { title: "קבועים ששולמו", summary: "6 · $512 יצא", count: undefined },
+};
+
+export const OneLineLongName: Story = {
+  args: { title: "פרויקט שיפוץ המטבח והחשמל בדירה ברחוב הרצל", summary: "12 · $21,300 יצא", count: undefined },
+};
+

@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { cx } from "./cx";
 
 type Option<T extends string> = {
@@ -61,6 +61,48 @@ export function onRadioArrow(event: KeyboardEvent<HTMLElement>) {
   next?.click();
 }
 
+type Pill = { x: number; y: number; w: number; h: number; r: string };
+
+/**
+ * FLOW-1043: where the selected pill sits, measured from the selected option inside the track. Measured, not
+ * worked out from the index, because some tracks size each option to its words (the band's presets) and
+ * screens set their own gap and padding; offsetLeft is physical, so it is right under dir=rtl as well. Null
+ * while nothing is selected or before layout: the selected option then keeps its own fill.
+ */
+function useIndicator(
+  track: RefObject<HTMLDivElement | null>,
+  buttons: RefObject<Array<HTMLButtonElement | null>>,
+  selected: number,
+  count: number,
+): Pill | null {
+  const [pill, setPill] = useState<Pill | null>(null);
+  useLayoutEffect(() => {
+    const node = track.current;
+    if (node == null) return;
+    const place = () => {
+      const button = selected < 0 ? null : buttons.current[selected];
+      if (button == null || !button.isConnected || button.offsetWidth === 0) {
+        setPill(null);
+        return;
+      }
+      const next = { x: button.offsetLeft, y: button.offsetTop, w: button.offsetWidth, h: button.offsetHeight, r: getComputedStyle(button).borderRadius };
+      setPill((current) =>
+        current != null && current.x === next.x && current.y === next.y && current.w === next.w && current.h === next.h && current.r === next.r ? current : next,
+      );
+    };
+    place();
+    if (typeof ResizeObserver === "undefined") return;
+    // A label that switches at 360px, a font that loads late, or a track that grows moves the option.
+    const observer = new ResizeObserver(place);
+    observer.observe(node);
+    for (const button of buttons.current) if (button != null) observer.observe(button);
+    return () => {
+      observer.disconnect();
+    };
+  }, [track, buttons, selected, count]);
+  return pill;
+}
+
 /** Roving tabindex. Arrow keys follow the reading direction, so they reverse under dir=rtl. */
 export function SegmentedControl<T extends string>({
   label,
@@ -76,8 +118,10 @@ export function SegmentedControl<T extends string>({
   role = "radio",
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+  const track = useRef<HTMLDivElement>(null);
   const found = options.findIndex((option) => option.value === value);
   const index = Math.max(0, found);
+  const pill = useIndicator(track, buttons, found, options.length);
 
   function move(delta: number) {
     if (options.length === 0 || busy) return;
@@ -106,7 +150,15 @@ export function SegmentedControl<T extends string>({
         aria-disabled={disabled || undefined}
         aria-busy={busy || undefined}
         onKeyDown={disabled ? undefined : onKeyDown}
+        ref={track}
       >
+      {pill == null ? null : (
+        <span
+          className="ui-seg-ind"
+          aria-hidden="true"
+          style={{ inlineSize: `${String(pill.w)}px`, blockSize: `${String(pill.h)}px`, transform: `translate(${String(pill.x)}px, ${String(pill.y)}px)`, borderRadius: pill.r }}
+        />
+      )}
       {options.map((option, optionIndex) => {
         const selected = value === option.value;
         return (

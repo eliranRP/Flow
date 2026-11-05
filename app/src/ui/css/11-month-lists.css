@@ -86,6 +86,30 @@
   column-gap: var(--space-3);
 }
 
+/* FLOW-1043: the v3 one-line head (GroupHead `summary`): the title at the start, the summary at the end on its
+   baseline, 48px (14 + 26 + 8), a hairline under it. Its sticky top follows the bar and its dock. */
+.ui-group-head-line {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: space-between;
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  padding-block: calc(var(--space-3) + var(--space-half)) var(--space-2);
+  border-block-end: 1px solid var(--color-line);
+  transition: inset-block-start var(--motion-page) var(--ease-enter);
+}
+
+.ui-group-head-line .ui-group-title {
+  -webkit-line-clamp: 1;
+}
+
+.ui-group-summary {
+  flex: none;
+  margin: 0;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
 .ui-group-count {
   color: var(--color-text-muted);
   font-size: var(--type-meta-size);
