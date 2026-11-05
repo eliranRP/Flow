@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useBackLandsOn, useGoBack } from "./back";
 import { IconButton } from "./icon-button";
 import { BackIcon } from "./icons";
@@ -83,7 +83,9 @@ export function CompactBar({ title, figure, figureFirst = false, label, backTo, 
     if (shown) setGone(false);
   }
 
-  useEffect(() => {
+  // FLOW-1051: layout effects, so the html offsets the sticky heads read change in the same frame as the bar and its
+  // dock row (their transitions start together; in WebKit a later effect let a row show between the two).
+  useLayoutEffect(() => {
     if (!shown) return;
     reportShowing(reported, 1);
     return () => {
@@ -91,7 +93,7 @@ export function CompactBar({ title, figure, figureFirst = false, label, backTo, 
     };
   }, [shown, reported]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!dockOpen) return;
     reportDock(1);
     return () => {

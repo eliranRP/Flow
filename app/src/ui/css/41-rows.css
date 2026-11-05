@@ -8,6 +8,19 @@
   padding-block: var(--space-2);
 }
 
+/* FLOW-1051 (V3-Home): the v3 row, a flat row led by a status mark. Its meta line is 13/1.3 in secondary, in the
+   signal colour when the line is late; the name and the amount stay 17. */
+.ui-row-flat:has(> .ui-row-main .ui-status-mark) .ui-row-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-btn-2-line);
+}
+
+.ui-row-flat:has(> .ui-row-main .ui-status-mark-late) .ui-row-hint {
+  color: var(--color-signal);
+}
+
 /* Inset: one Card surface holds the rows. The rows are inset 14px, and a hairline sits between them. */
 .ui-list-inset {
   padding-inline: 0;

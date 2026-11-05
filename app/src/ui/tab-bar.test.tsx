@@ -66,7 +66,7 @@ describe("TabBar", () => {
     const active = screen.getByRole("link", { name: "פרויקטים" });
     expect(active).toHaveAttribute("aria-current", "page");
     expect(active.matches('.ui-tab-slot[aria-current="page"]')).toBe(true);
-    expect(accentRule()).toBe("var(--color-accent-text)");
+    expect(accentRule()).toBe("var(--color-accent)");
     expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
   });
 
@@ -101,23 +101,8 @@ describe("TabBar", () => {
         }
       }
     }
-    expect(background).toBe("var(--color-tint-strong)");
-    let weight = "";
-    for (const sheet of document.styleSheets) {
-      let rules: CSSRuleList;
-      try {
-        rules = sheet.cssRules;
-      } catch {
-        continue;
-      }
-      for (const rule of rules) {
-        if (rule instanceof CSSStyleRule && rule.selectorText === '.ui-tab-slot[aria-current="page"]') {
-          weight = rule.style.getPropertyValue("font-weight").trim() || weight;
-        }
-      }
-    }
-    // The label is bold too: a second cue beside the pill and the colour.
-    expect(weight).toBe("var(--type-name-weight)");
+    // FLOW-1051 (V3-Home): the pill is the tint; every label keeps 13/500, so the pill and the colour are the cues.
+    expect(background).toBe("var(--color-tint)");
   });
 
   it("scrolls to the top when the active tab is tapped", () => {

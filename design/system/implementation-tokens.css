@@ -146,8 +146,8 @@
   --search-height: 46px;
   --topbar-height: 52px;
   --fab-size: 48px;
-  --tabbar-content: 52px;        /* + safe-area-inset-bottom = 86px on notched iPhones */
-  --tabbar-min-inset: 8px;       /* floor when safe-area-inset-bottom is 0; decision 0045 */
+  --tabbar-content: 64px;        /* the hairline, 8, a 36px icon slot, 4, a 15px label (V3-Home, FLOW-1051) */
+  --tabbar-min-inset: 18px;      /* floor when safe-area-inset-bottom is 0 (V3-Home's 18; decision 0045) */
   --tabbar-height: calc(var(--tabbar-content) + max(env(safe-area-inset-bottom, 0px), var(--tabbar-min-inset)));
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -191,6 +191,10 @@
   --type-note-line: 1.5;         /* a card's two-line note: the loans summary, the recurring ask (board) */
   --size-seg: 40px;
   --size-seg-track: 48px; /* --size-seg plus the track's 4px padding on each side */
+  --glyph-band-step: 22px;        /* the band's month-pill chevrons and the avatar's glyph (V3-Home, FLOW-1051) */
+  --glyph-row-chevron: 18px;      /* an attention card's and the forecast card's chevron and X (V3-Home, FLOW-1051) */
+  --band-pill-track: rgba(255, 255, 255, 0.16); /* the band's month pill, both themes (V3-Home, FLOW-1051) */
+  --tabbar-label-line: 15px;      /* the tab label's line: 1 + 8 + 36 + 4 + 15 = 64 (V3-Home, FLOW-1051) */
   --swipe-action: 120px;
   --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */
   /* The sheet panel (board): 10 above the handle, 24 below the content (a choice sheet sets 28), 16 at the

@@ -6,7 +6,7 @@ Read, in this order: the handoff, this file, then your task file under `docs/bac
 
 ## 1. Rules that hold for every v3 PR
 
-1. **Composition, not components.** A screen composes `app/src/ui` parts. Where a board's inline value differs from the component, the component wins. The only component work is in FLOW-1043 (§3), and it is additive: no existing prop changes meaning, no existing story breaks.
+1. **Composition, not components.** A screen composes `app/src/ui` parts. Where a board's inline value differs from the component, the component wins. Decision [0257](../../decisions/0257-v3-boards-win.md) reverses this for v3: the board's measurements win (§7). The only component work is in FLOW-1043 (§3), and it is additive: no existing prop changes meaning, no existing story breaks.
 2. **One pattern per screen** (handoff §2): Overview, List, Detail, Sheet, Hub. Name the pattern in the PR body. A screen that needs a sixth pattern is a question for the design lead, not a new pattern.
 3. **The data a screen shows comes from the reads it has today.** A new read is listed in the task file; a new user action ships its `flow-mcp` tool in the same PR ([0095](../../decisions/0095-mcp-first.md)). A view composed of existing reads needs no new tool.
 4. **Delete what the composition leaves unused** in the same PR: the split card, the next-month card, the reports card, hand-rolled group heads, a screen's own compact bar, their CSS, stories and tests. `node scripts/check-unused-app-code.mjs` and the CSS check are part of `pr (types)`.
@@ -171,6 +171,10 @@ node scripts/check-unused-app-code.mjs
 
 For FLOW-1035 and any migration: the db part (`bash scripts/local-ci.sh --part db`), `pnpm db:types:check`, and the pgTAP file that names the change.
 
-## 7. After each wave
+## 7. The pixel pass
+
+Decision 0257 (2026-11-05): the boards' measurements win over the components' (this reverses §1.1 for v3). Each board renders standalone with the canvas runtime at 390×844; a story is shot at the same size, dark and light, and the two are laid side by side with a diff (the coordinator's `compare.cjs`; the method and the tooling are in the pass tasks' briefs). A pass is done when every pixel that is not sample data sits on the board's: block edges within 1px, the same font sizes, weights and colours, the same heights. Order: FLOW-1051 (the shared parts: the band, the compact bar and its dock, the section title, the attention cards, the segment, the group heads, the rows and status marks, the tab bar, the page padding), then FLOW-1052 Home, FLOW-1053 Projects, FLOW-1054 Reports, FLOW-1055 Loans in parallel; wave C's PRs run the same comparison before they are marked ready. Each PR's body carries the before and after percentages per pair.
+
+## 8. After each wave
 
 The coordinator confirms the deploy (`build.txt` on the Pages site shows the wave's last merge), does the read-only prod check on a real company, tells the MCP/data agent what moved (new tools, totals that will move), and marks the tasks `done (#PR)` in the next PR. The design lead folds each PR's `Rule:` lines into DESIGN-RULES in the cycle's backlog PR, and §2.8's inventory gains the dock, the one-line group head, the attention cards and the status marks.

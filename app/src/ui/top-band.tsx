@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { ChevronDownIcon } from "./icons";
 import { Wordmark } from "./wordmark";
 
@@ -84,32 +84,23 @@ function bandGone(scrollY: number, maxScroll: number): boolean {
 }
 
 /**
- * `read(scrollY, maxScroll)`, read once on mount, then once per frame on scroll and on resize (the
+ * `read(scrollY, maxScroll)`, read once on mount, then on every scroll and resize (the
  * page's height or the viewport changing moves the bottom without a scroll).
  */
 function usePageScroll(read: (scrollY: number, maxScroll: number) => boolean): boolean {
   const [value, setValue] = useState(false);
   useEffect(() => {
-    let pending = false;
-    let frame = 0;
+    // FLOW-1051: read in the event itself, not a frame later (a loaded WebKit ran that frame a second late, and the
+    // bar came down long after the jump); the state is a boolean, so a scroll that does not flip it renders nothing.
     const update = () => {
       setValue(read(window.scrollY, pageMaxScroll()));
     };
-    const onScroll = () => {
-      if (pending) return;
-      pending = true;
-      frame = requestAnimationFrame(() => {
-        pending = false;
-        update();
-      });
-    };
     update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (pending) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
     };
   }, [read]);
   return value;
@@ -147,8 +138,8 @@ export function TopBand({ children, hero, heroClassName, trailing, leading, stat
 
 /**
  * FLOW-601 (mockup a-3), folded into the band in FLOW-364. The company's name at the start of
- * Home's band row. It ends in the 16px ▼ every band label that opens a sheet uses (FLOW-335), and
- * opens the חברה sheet.
+ * Home's band row, 24/600 and cut with an ellipsis (FLOW-1051, V3-Home). It ends in the 16px ▼ every
+ * band label that opens a sheet uses (FLOW-335), and opens the חברה sheet.
  */
 export function BandCompany({
   name,
@@ -159,32 +150,6 @@ export function BandCompany({
   onOpen: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
 }) {
-  const nameRef = useRef<HTMLSpanElement>(null);
-  // A name too long for the row steps down one size before it ellipsizes.
-  useLayoutEffect(() => {
-    const node = nameRef.current;
-    const row = node?.closest(".ui-band-row") ?? node?.parentElement;
-    if (node == null || row == null) return;
-    const measure = () => {
-      node.classList.remove("ui-band-company-name-small");
-      node.classList.toggle("ui-band-company-name-small", node.scrollWidth > node.clientWidth);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(row);
-    let cancelled = false;
-    // jsdom has no FontFaceSet. The assertion is the runtime check.
-    const fonts = document.fonts as FontFaceSet | undefined;
-    if (fonts != null) {
-      void fonts.ready.then(() => {
-        if (!cancelled) measure();
-      });
-    }
-    return () => {
-      cancelled = true;
-      observer.disconnect();
-    };
-  }, [name]);
   return (
     <button
       ref={buttonRef}
@@ -194,8 +159,8 @@ export function BandCompany({
       aria-label={`חברה: ${name}`}
       onClick={onOpen}
     >
-      <span ref={nameRef} className="ui-band-company-name" dir="auto" data-clip-ok="">{name}</span>
-      <ChevronDownIcon size={14} />
+      <span className="ui-band-company-name" dir="auto" data-clip-ok="">{name}</span>
+      <ChevronDownIcon size={16} />
     </button>
   );
 }

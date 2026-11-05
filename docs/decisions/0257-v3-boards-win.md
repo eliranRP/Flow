@@ -1,0 +1,8 @@
+# 0257 · The v3 boards' measurements win over the components' (the pixel pass)
+
+- **Date:** 2026-11-05
+- **Status:** accepted (the owner: "Please do a pixel perfect for each new screen and make sure it is aligned with the new design colors, fonts, spaces")
+- **Context:** BUILD-PLAN §1.1 let a shared component keep its own size where a board's inline value differed, so wave B composed the v3 screens on parts that kept v2 measurements: group heads at 24/600 instead of 20/500, rows with 20px amounts instead of 17, attention cards 72px instead of 56, the segment's on-band pill in the dark surface instead of white. On the phone the owner saw colours and spacing off the boards, and a gap under the docked bar.
+- **Decision:** for every v3 screen, the board is the measure: its colours (already the tokens' hex), type sizes, weights, line heights, spacing, radii, heights and order. A component changes to the board's value; a token changes only when no token holds the board's value. The pixel pass (BUILD-PLAN §7) compares each board rendered at 390×844 with its story shot the same way, dark and light, and is done when every non-data pixel sits on the board's.
+- **Consequences:** FLOW-1051 moves the shared parts first; FLOW-1052 to FLOW-1055 then pass each tab's screens; wave C's PRs (FLOW-1047 to FLOW-1049) run the same comparison before they are marked ready. BUILD-PLAN §1.1 is reversed for v3.
+- **Alternatives rejected:** keeping the components and re-drawing the boards to them (the owner approved the boards, not the components); a token-level change of the type scale (the tokens already hold every size the boards use; the parts just did not pick them).
