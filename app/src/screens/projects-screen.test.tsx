@@ -1,83 +1,67 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { devProjectsCash } from "../dev/projects-sample";
-import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
-import { formatAmountText } from "@flow/shared";
-import { companyCashForecast, companyForecastCaption, companyNextMonthForecast } from "../company-next-month";
 import { renderWithProviders } from "../test-render";
 import { sampleDashboard } from "../ui/screen-stories-support";
 import { ProjectsScreen } from "./projects-screen";
 
-describe("ProjectsScreen (FLOW-445b)", () => {
-  it("lists the active projects and the overhead project's row under its own name, with no group rows", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} />);
-    expect(screen.getByRole("link", { name: /^Lark Hill/ })).toHaveAttribute("href", "/projects/p2");
-    const overhead = screen.getByRole("link", { name: /^משרד החברה \/ תקורה/ });
+const NOW = new Date(2026, 9, 11, 12);
+
+/** The rows of the list (the attention cards above them link to projects too). */
+function group(title: string): HTMLElement {
+  const head = screen.getByRole("heading", { name: title });
+  const section = head.closest("section");
+  if (section == null) throw new Error(`no group ${title}`);
+  return section;
+}
+
+describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
+  it("groups the active projects by kind, each head with its count and the month's total", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [], changes: [] }} now={NOW} />);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent)).toEqual(expect.arrayContaining(["שיפוץ", "השכרה", "לקוח", "תקורה"]));
+    expect(within(group("שיפוץ")).getByRole("link", { name: /^Lark Hill/ })).toHaveAttribute("href", "/projects/p2");
+    expect(within(group("השכרה")).getByRole("link", { name: /^Birch St/ })).toBeInTheDocument();
+    const overhead = within(group("תקורה")).getByRole("link", { name: /^משרד החברה \/ תקורה/ });
     expect(overhead).toHaveAttribute("href", "/projects/p0");
     expect(overhead).toHaveTextContent("תקורה · לא פרויקט");
+    expect(group("שיפוץ").querySelector(".ui-group-summary")?.textContent).toBe("2 · −$24,693");
     expect(document.querySelector('a[href*="/projects/groups/"]')).toBeNull();
   });
 
-  it("a renamed overhead project shows its new name (owner 20/10)", () => {
-    const renamed = { ...devProjectsCash, projects: devProjectsCash.projects.map((row) => (row.is_overhead ? { ...row, name: "הנהלה ומשרד" } : row)) };
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={renamed} />);
-    expect(screen.getByRole("link", { name: /^הנהלה ומשרד/ })).toHaveAttribute("href", "/projects/p0");
-    expect(screen.queryByText("משרד החברה / תקורה")).toBeNull();
-  });
-
-  it("names a project over its budget on its own row, and keeps the finished ones closed until opened", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} />);
-    const over = screen.getByRole("link", { name: /^Elm Ct/ });
-    expect(within(over).getByText(/מעל התקציב/)).toBeInTheDocument();
+  it("names a project over its budget on its row, and keeps the finished ones under הסתיימו", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [], changes: [] }} now={NOW} />);
+    expect(within(within(group("שיפוץ")).getByRole("link", { name: /^Elm Ct/ })).getByText(/מעל התקציב/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^פרויקט ישן/ })).not.toBeInTheDocument();
+    const filter = screen.getAllByRole("radiogroup", { name: "סינון פרויקטים" })[0] as HTMLElement;
+    fireEvent.click(within(filter).getByRole("radio", { name: "הסתיימו" }));
+    expect(within(group("לקוח")).getByRole("link", { name: /^פרויקט ישן/ })).toHaveTextContent("רווח כולל");
+    expect(screen.queryByRole("heading", { name: "שיפוץ" })).not.toBeInTheDocument();
   });
 
-  it("opens the finished projects at once with finishedOpen", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} finishedOpen />);
+  it("opens on הסתיימו with finishedOpen", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} finishedOpen now={NOW} />);
     expect(screen.getByRole("link", { name: /^פרויקט ישן/ })).toHaveTextContent("הסתיים");
   });
 
-  it("with no project draws the board's empty state and its one action", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={{ ...devProjectsCash, projects: [] }} />);
-    expect(screen.getByText("עוד אין פרויקטים")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "פרויקט חדש" })).toBeInTheDocument();
-  });
-
-  it("FLOW-990: shows the company's next month above the list, and each project's own under its figure", () => {
-    const next = HOME_NEXT_MONTH_SAMPLE.next;
-    const forecast = companyCashForecast(companyNextMonthForecast({ currency: "USD", today: NEXT_MONTH_TODAY, recurring: next.recurring, loans: next.loans, categories: next.categories, inputs: next.inputs }));
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={NEXT_MONTH_PROJECTS} nextSample={HOME_NEXT_MONTH_SAMPLE} today={NEXT_MONTH_TODAY} />);
-    expect(screen.getByText("נובמבר")).toBeInTheDocument();
-    // FLOW-1000: the card opens the company צפי page (its caption moves there).
-    expect(screen.getByRole("link", { name: /^צפי נובמבר:.*פירוט ועריכה$/u })).toHaveAttribute("href", "/forecast/next");
-    expect(screen.queryByText(companyForecastCaption(forecast))).toBeNull();
-    // Each part's cash net on its row (the general costs' on the overhead row), so the rows add up to the card.
-    const shown: bigint[] = [];
-    for (const part of forecast.parts) {
-      const row = NEXT_MONTH_PROJECTS.projects.find((item) => (part.projectId == null ? item.is_overhead : item.id === part.projectId));
-      expect(row).toBeDefined();
-      // FLOW-1017: plain text that names the month, in the row's accessible name too; no tag, no coloured figure.
-      const link = screen.getByRole("link", { name: new RegExp(`^${row?.name.replace("/", "\\/") ?? ""}`, "u") });
-      const figure = link.querySelector(".ui-row-end-sub");
-      const amount = formatAmountText(part.forecast.netMinor, "USD", { plus: part.forecast.netMinor > 0n, direction: part.forecast.netMinor > 0n ? "income" : undefined });
-      expect(figure?.textContent).toBe(`צפי לחודש הבא ${amount}`);
-      expect(figure?.querySelector(".ui-fc-tag, .ui-amount")).toBeNull();
-      expect(link).toHaveAccessibleName(expect.stringContaining(`צפי לחודש הבא ${amount}`) as string);
-      shown.push(part.forecast.netMinor);
-    }
-    expect(shown.reduce((sum, net) => sum + net, 0n)).toBe(forecast.netMinor);
-    // The overhead row carries the general costs' part.
-    expect(within(screen.getByRole("link", { name: /^משרד החברה \/ תקורה/u })).getByText(/^צפי לחודש הבא/u)).toBeInTheDocument();
-    // A project that expects nothing next month has no צפי figure.
-    const quiet = NEXT_MONTH_PROJECTS.projects.filter((item) => !item.is_overhead && !forecast.parts.some((part) => part.projectId === item.id));
-    for (const row of quiet) expect(within(screen.getByRole("link", { name: new RegExp(`^${row.name}`, "u") })).queryByText(/צפי/u)).toBeNull();
-  });
-
-  it("FLOW-990: no forecast sample, no card and no צפי figures", () => {
-    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} />);
+  it("the band adds the month across the projects; the next-month card is gone", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [], changes: [] }} now={NOW} />);
+    expect(screen.getByText("תזרים הפרויקטים · עד היום")).toBeInTheDocument();
     expect(screen.queryByText("צפוי להיכנס")).toBeNull();
     expect(screen.queryByText(/צפי לחודש הבא/u)).toBeNull();
-    // FLOW-1017: nothing read, nothing held: the empty slot takes no room.
-    expect(document.querySelector(".ui-projects-next-loading")).toBeNull();
+  });
+
+  it("דורש טיפול: the lines with no project open their list, and a budget past 80% its project", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} recurringSample={{ late: [], changes: [] }} now={NOW} />);
+    const cards = screen.getByRole("heading", { name: "דורש טיפול" }).closest("section") as HTMLElement;
+    expect(within(cards).getByRole("link", { name: /שורה אחת בלי פרויקט/ }).getAttribute("href")).toMatch(/^\/projects\/unassigned\?/);
+    expect(within(cards).getByRole("link", { name: /^Lark Hill עבר 80% מהתקציב/ })).toHaveAttribute("href", "/projects/p2");
+    expect(within(cards).getByRole("link", { name: /^Elm Ct עבר את התקציב/ })).toBeInTheDocument();
+    expect(within(cards).getByRole("button", { name: /^הסתרה: Lark Hill/ })).toBeInTheDocument();
+  });
+
+  it("with no project draws the board's empty state and its one action", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={{ ...devProjectsCash, projects: [] }} now={NOW} />);
+    expect(screen.getByText("עוד אין פרויקטים")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט חדש" })).toBeInTheDocument();
   });
 });

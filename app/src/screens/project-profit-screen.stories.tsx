@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "../dev/project-profit-sample";
 import { ProjectProfitScreen } from "./project-profit-screen";
 import { StoryRoute } from "../ui/story-route";
@@ -24,9 +24,54 @@ function ProfitRoute({ entry, data = sample }: { entry: string; data?: typeof sa
   );
 }
 
+/** FLOW-1044 (board V3-ProjectProfit): the band, then לפי חודש with its sticky head. */
 export const ProjectProfit: Story = {
-  name: "Project profit, summary and months",
+  name: "Project profit, by month",
   render: () => <ProfitRoute entry="/projects/juniper-ct/profit" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { level: 1, name: "רווח מתחילת הפרויקט" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "לפי חודש" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1044: לפי קטגוריה, the income group and the expense categories, largest first. */
+export const ProjectProfitByCategory: Story = {
+  name: "Project profit, by category",
+  render: () => <ProfitRoute entry="/projects/juniper-ct/profit?by=category" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "הוצאות" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "לפי חודש" })).toBeNull();
+  },
+};
+
+/** FLOW-1044 (board V3-ProjectProfit-Flip): a renovation says its renovation is not in the monthly profit. */
+export const ProjectProfitRenovation: Story = {
+  name: "Project profit, a renovation's note",
+  render: () => <ProfitRoute entry="/projects/juniper-ct/profit" data={{ ...sample, type: "שיפוץ" }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText(/השיפוץ לא נספר ברווח/u)).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1044: docked, the order rides in the band bar. */
+export const ProjectProfitDocked: Story = {
+  name: "Project profit, the order docked",
+  render: () => <ProfitRoute entry="/projects/juniper-ct/profit" />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 600, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
+  },
+};
+
+export const ProjectProfitLoading: Story = {
+  name: "Project profit, loading",
+  render: () => (
+    <StoryRoute entry="/projects/juniper-ct/profit?preview=loading" tabs>
+      <ProjectProfitScreen />
+    </StoryRoute>
+  ),
 };
 
 /** Reached from the company profit page: Back names "רווח". */

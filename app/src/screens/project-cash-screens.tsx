@@ -3,7 +3,6 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cashMonthKey, cashTitle, shownCashRows } from "../cash";
 import { projectCashSummaryRows } from "../project-cash";
-import type { NextMonthForecast } from "../project-next-month";
 import { projectLineGroups, type ProjectLinesFilter } from "../project-list";
 import { chargeHref } from "../recurring-charge";
 import type { ScheduleRow } from "../recurring-schedule";
@@ -27,20 +26,9 @@ import { israelToday } from "../ui/date-math";
 import { reportsTo } from "../reports";
 import { loansFigure } from "./project-overview";
 import { ProjectEmptyCard, ProjectLinks, type ProjectLink } from "./project-page-cards";
-import type { RentCategory } from "../next-month-chart";
 import type { ProjectInvestment } from "./project-investment-data";
 
 type Project = NonNullable<ProjectDetail>;
-
-/** What the project page's forecast row reads: the forecast, whether it is still loading, its currency. */
-export type NextMonthCash = {
-  forecast: NextMonthForecast | null;
-  loading: boolean;
-  currency: string;
-  categories: readonly RentCategory[];
-  /** yyyy-mm-dd, the forecast's today. */
-  today: string;
-};
 
 const FILTERS: { value: ProjectLinesFilter; label: string; short?: string }[] = [
   { value: "all", label: "הכול" },

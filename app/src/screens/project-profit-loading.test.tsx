@@ -73,7 +73,7 @@ describe("ProjectProfitScreen while its months and forecast load", () => {
     state.months = { data: undefined, isPending: true, isLoading: true, isError: false, isPaused: false, fetchStatus: "fetching", status: "pending", refetch: vi.fn() };
     state.forecast = { ...forecastBase, pending: true, paused: false };
     renderScreen();
-    expect(screen.getByText("הוצאות שנספרות ברווח")).toBeTruthy();
+    expect(screen.getByText("הוצאות")).toBeTruthy();
     act(() => { vi.advanceTimersByTime(400); });
     expect(screen.getByRole("status").textContent).toContain("טוען");
   });

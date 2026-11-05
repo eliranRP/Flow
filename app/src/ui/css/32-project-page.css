@@ -225,31 +225,79 @@
   padding-top: var(--space-3);
 }
 
-/* FLOW-445: the project page's bar is 60px tall on the board (the shared detail bar is 56px). */
-.ui-project-cash {
-  --compact-bar-detail: 60px;
+/* FLOW-1044: the Projects list as an Overview. The title sits on the band's row, the actions at its end. */
+.ui-projects-band-title {
+  margin: 0;
+  color: var(--color-on-band);
 }
 
-/* FLOW-445: the Projects list's unassigned link, finished section and overhead circle. */
-.ui-projects-head {
+.ui-projects-body {
+  padding-block: var(--space-4) var(--space-6);
+}
+
+/* The docking filters: the list's, the project page's and the profit page's, 16px above and below. */
+.ui-projects-filter,
+.ui-project-lines-filter,
+.ui-pp-order {
+  padding-block: var(--space-4);
+}
+
+.ui-projects-none,
+.ui-project-lines-none {
+  margin: 0;
+  padding-block: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+/* FLOW-1044: the project page's month lines under the stack, with room before the tab bar. */
+.ui-project-lines {
+  padding-block-end: var(--space-6);
+}
+
+/* FLOW-1044 (board V3-Project): the finish confirm inside the ⋯ sheet: what finishing leaves, then the two buttons. */
+.ui-project-menu-finish {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
-.ui-projects-unassigned {
-  color: var(--color-accent-text);
+.ui-project-menu-finish p {
+  margin: 0;
+  color: var(--color-text-secondary);
 }
 
-.ui-projects-finished-toggle {
-  background: none;
-  border: 0;
-  padding: 0 var(--space-side);
-  inline-size: 100%;
-  font: inherit;
-  color: var(--color-accent-text);
-  cursor: pointer;
+/* FLOW-1044 (board V3-NewProject): the kind picked first, its one line under it. */
+.ui-project-kind {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-project-kind p {
+  margin: 0;
+}
+
+/* FLOW-1044 (board V3-Unassigned): a line's row and its שיוך beside it, never inside the link. */
+.ui-unassigned-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: var(--space-side);
+}
+
+.ui-unassigned-row > .ui-row {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-unassigned-figure {
+  margin: 0;
+}
+
+.ui-unassigned-note {
+  margin: 0;
+  padding-block: var(--space-2) var(--space-4);
+  color: var(--color-text-secondary);
 }
 
 .ui-row-dashed {
@@ -357,78 +405,6 @@
   margin-block-start: calc(var(--space-2) * -1);
 }
 
-/* The Projects list at the board's rhythm: a 44px link row, a 20px section title, 64px rows. */
-.ui-projects-unassigned {
-  display: flex;
-  align-items: center;
-  min-block-size: 44px;
-  margin-block: var(--space-4) var(--space-5);
-  padding-block: 0;
-}
-
-.ui-projects-head {
-  padding-block-end: calc(var(--space-1) * 1.5);
-}
-
-.ui-projects-finished-toggle {
-  margin-block-start: calc(var(--space-1) * 1.25);
-  padding-block-start: var(--space-5);
-  color: var(--color-text);
-}
-
-.ui-projects-toggle-word {
-  display: inline-flex;
-  align-items: center;
-  min-inline-size: var(--touch-min);
-  min-block-size: var(--touch-min);
-  color: var(--color-accent-text);
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-line2-weight);
-}
-
-.ui-projects-unassigned .ui-btn-link {
-  gap: var(--space-2);
-}
-
-.ui-projects-unassigned .ui-btn-label {
-  display: flex;
-  gap: var(--space-2);
-  overflow: visible;
-}
-
-.ui-projects-unassigned bdi {
-  font-variant-numeric: normal;
-}
-
-.ui-projects-head h2 {
-  font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
-  line-height: var(--type-title-line);
-}
-
-.ui-projects-head .ui-muted {
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-line2-weight);
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
-.ui-projects-head ~ * .ui-row-project {
-  padding-block: var(--space-3);
-}
-
-.ui-projects-head ~ * .ui-row-initials {
-  font-weight: var(--type-section-weight);
-}
-
-.ui-projects-head ~ * .ui-row-project .ui-row-text {
-  gap: calc(var(--space-1) / 2);
-}
-
-.ui-projects-head ~ * .ui-row-project .ui-row-title,
-.ui-projects-head ~ * .ui-row-project .ui-row-hint {
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
 /* A tab root's header under its "+ new" row (board Projects): the title keeps a 4px lead and 2px under it, and the
    subtitle takes its 15px at the natural 1.2 line (18px), not the 1.4 label line. */
 .ui-tab-root-head .t-title {
@@ -437,16 +413,6 @@
 
 .ui-tab-root-head > p {
   line-height: var(--type-cents-line);
-}
-
-/* FLOW-961: the Projects header is one row: the title, search and the filled + (the screen's main action).
-   The empty bar row above the title goes, so the title starts 16px down, as on the board. */
-.ui-projects-root-head > .ui-page-title-row:empty {
-  display: none;
-}
-
-.ui-projects-root-head .ui-page-title-line {
-  min-block-size: calc(var(--space-10) + var(--space-2));
 }
 
 .ui-projects-head-actions {
@@ -458,7 +424,6 @@
 
 /* FLOW-961: amounts in figures that line up (the budget, the investment row, the unassigned line). */
 .ui-budget-card bdi,
-.ui-projects-unassigned bdi,
 .ui-project-row-figure {
   font-variant-numeric: tabular-nums lining-nums;
 }

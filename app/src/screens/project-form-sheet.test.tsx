@@ -61,22 +61,48 @@ describe("the project sheet (FLOW-445)", () => {
     expect(upsertCalls()).toHaveLength(0);
   });
 
-  it("creates a project with the trimmed name, an active status and the budget in agorot", async () => {
+  it("creates a renovation (the first kind) with its purchase, budget and ARV, the kind stored as its type", async () => {
     renderSheet();
+    expect(screen.getByRole("radio", { name: "שיפוץ" })).toHaveAttribute("aria-checked", "true");
     fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "  Lark Hill  " } });
-    fireEvent.change(screen.getByRole("textbox", { name: "תקציב (אופציונלי)" }), { target: { value: "1500" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "185000" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "תקציב שיפוץ" }), { target: { value: "1500" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "שווי צפוי אחרי שיפוץ" }), { target: { value: "310000" } });
     fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
-    await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
+    await waitFor(() => { expect(rpc.calls.filter((call) => call.name === "set_project_investment")).toHaveLength(1); });
     expect(upsertCalls()[0]).toEqual({
       name: "upsert_project",
-      args: { p_name: "Lark Hill", p_type: "", p_status: "active", p_budget_agorot: 150_000 },
+      args: { p_name: "Lark Hill", p_type: "שיפוץ", p_status: "active", p_budget_agorot: 150_000 },
+    });
+    expect(rpc.calls.find((call) => call.name === "set_project_investment")?.args).toEqual({
+      p_project_id: "p9",
+      p_patch: { purchase_minor: 18_500_000, arv_minor: 31_000_000 },
     });
   });
 
-  it("edits an existing project under its id and keeps the stored values on screen", async () => {
+  it("the fields follow the kind: a rental, a client's contract, and none for overhead (FLOW-1044)", async () => {
+    renderSheet();
+    fireEvent.click(screen.getByRole("radio", { name: "השכרה" }));
+    expect(screen.getByRole("textbox", { name: "מחיר קנייה" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "שווי הנכס היום" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "תקציב שיפוץ" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "לקוח" }));
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("radio", { name: "תקורה" }));
+    expect(screen.getAllByRole("textbox")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("radio", { name: "לקוח" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Okafor" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום החוזה" }), { target: { value: "1000000" } });
+    fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
+    await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
+    expect(upsertCalls()[0]?.args).toEqual({ p_name: "Okafor", p_type: "לקוח", p_status: "active", p_budget_agorot: 100_000_000 });
+    expect(rpc.calls.some((call) => call.name === "set_project_investment")).toBe(false);
+  });
+
+  it("edits an existing project under its id and keeps its own type words when the kind stays", async () => {
     renderSheet({ id: "p1", name: "Okafor", type: "flip", budget: null, status: "active" });
     expect(screen.getByRole("dialog", { name: "עריכת פרויקט" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "סוג (אופציונלי)" })).toHaveValue("flip");
+    expect(screen.getByRole("radio", { name: "שיפוץ" })).toHaveAttribute("aria-checked", "true");
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
     expect(upsertCalls()[0]).toEqual({

@@ -326,7 +326,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
           ) : monthsLoading ? (
             <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
           ) : (
-            <List>
+            <List className="ui-pp-months">
               {rows.map((month) => (
                 <MonthLine
                   key={month.month}

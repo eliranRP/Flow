@@ -159,7 +159,7 @@ describe("the project page's month lines (FLOW-1044)", () => {
       typical_amount_minor: -1000,
       amount_minor: null,
       typical_day: 10,
-      pace: "monthly",
+      pace: "month",
       next_due_month: "2026-11",
       expected_by: "2026-11-10",
       project_id: "p1",
@@ -167,7 +167,7 @@ describe("the project page's month lines (FLOW-1044)", () => {
       category_id: null,
       category_name: null,
       ...over,
-    } as ScheduleRow;
+    };
   }
   function cashLine(id: string, recurring?: boolean): CashLine {
     return {
@@ -183,7 +183,7 @@ describe("the project page's month lines (FLOW-1044)", () => {
       amount_minor: 500n,
       side: "out",
       recurring,
-    } as CashLine;
+    };
   }
   const schedule = [
     charge({ party_id: "soon20", state: "soon", typical_day: 20 }),
