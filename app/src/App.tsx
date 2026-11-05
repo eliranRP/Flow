@@ -19,6 +19,7 @@ import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
+import { PullRefresh } from "./ui/pull-refresh";
 import { HomeScreen } from "./screens/HomeScreen";
 import { SetupLanding, SetupResume } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
@@ -129,6 +130,8 @@ export function App() {
         <ScrollMemory />
         <DropRestoredSheet />
         <EdgeSwipeBack />
+        {/* FLOW-1039: one pull to refresh for every routed screen (the page scrolls the window). */}
+        <PullRefresh />
         <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
           <AppRoutes />
         </div>

@@ -1,0 +1,71 @@
+/* FLOW-1039 (ld-07): the pull-to-refresh mark. It waits just above the top safe area and comes
+   down with the finger (--pull-y, half the move), turning and fading in with the progress
+   (--pull-progress, 0 to 1 at the threshold). The same round mark as the edge-back swipe. */
+.ui-pull-refresh {
+  position: fixed;
+  inset-block-start: calc(env(safe-area-inset-top, 0px) - var(--space-10));
+  inset-inline: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: var(--space-10);
+  height: var(--space-10);
+  margin-inline: auto;
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  color: var(--color-text-secondary);
+  /* An inset ring, not a drop shadow (DESIGN-RULES 2.6), as on the edge-back mark. */
+  box-shadow: inset 0 0 0 1px var(--color-control-border);
+  opacity: var(--pull-progress, 0);
+  transform: translateY(var(--pull-y, 0px));
+  pointer-events: none;
+}
+
+/* While pulling the spinner stands still and turns with the pull; it spins once refreshing. */
+.ui-pull-refresh > .ui-spinner {
+  animation: none;
+  transform: rotate(calc(var(--pull-progress, 0) * -270deg));
+}
+
+/* Past the threshold, letting go refreshes. */
+.ui-pull-refresh[data-armed],
+.ui-pull-refresh[data-phase="refreshing"] {
+  color: var(--color-accent-text);
+}
+
+.ui-pull-refresh[data-phase="refreshing"] {
+  opacity: 1;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.ui-pull-refresh[data-phase="refreshing"] > .ui-spinner {
+  animation: ui-spin var(--motion-spin) linear infinite;
+  transform: none;
+}
+
+/* Done, or let go too soon: it goes back up and fades. */
+.ui-pull-refresh[data-phase="closing"] {
+  opacity: 0;
+  transition:
+    transform var(--motion-sheet-out) var(--ease-exit),
+    opacity var(--motion-sheet-out) var(--ease-exit);
+}
+
+/* Reduced motion: no follow and no spring. The mark rests at the threshold and only fades in. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-pull-refresh {
+    transform: translateY(var(--pull-rest));
+  }
+
+  .ui-pull-refresh > .ui-spinner {
+    transform: none;
+  }
+}
+
+/* The installed app: the page does not rubber-band past its top or end, so the pull is the only
+   thing that moves when a finger drags down at the top. */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior-y: none;
+  }
+}
