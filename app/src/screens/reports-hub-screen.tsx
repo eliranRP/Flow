@@ -21,10 +21,9 @@ import { Amount } from "../ui/amount";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { Chip } from "../ui/chip";
 import { israelToday } from "../ui/date-math";
 import { EmptyState, FailureLine } from "../ui/empty-state";
-import { BuildingIcon, CalendarIcon, ChevronIcon, DocumentIcon, ProjectsIcon } from "../ui/icons";
+import { BuildingIcon, CalendarIcon, ChevronDownIcon, ChevronIcon, DocumentIcon, ProjectsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import type { ScreenPhase } from "../ui/screen-phase";
@@ -84,7 +83,7 @@ function SplitBar({ assets, liabilities }: { assets: bigint; liabilities: bigint
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <span className="ui-rep-hub-fact">
-      <span className="t-caption t-muted">{label}</span>
+      <span className="ui-rep-hub-fact-label">{label}</span>
       <span className="t-body">{children}</span>
     </span>
   );
@@ -124,7 +123,7 @@ function ReportCard({ to, title, label, figure, chart, facts, after }: { to: str
           <ChevronIcon size={18} />
         </span>
         <span className="ui-rep-hub-figure">
-          <span className="t-meta t-muted">{label}</span>
+          <span className="ui-rep-hub-label">{label}</span>
           <span className="t-card">{figure}</span>
         </span>
         {chart}
@@ -177,7 +176,13 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
     void navigate({ pathname: "/reports", search: text === "" ? "" : `?${text}` }, { replace: true });
   });
 
-  const chip = <Chip pressed onClick={() => { pick.setOpen(true); }}>{pnlChipLabel(period, today)}</Chip>;
+  // The board's period button: an outlined pill, 15/500, with its chevron (V3-Reports).
+  const chip = (
+    <button type="button" className="ui-rep-hub-period m-press" aria-haspopup="dialog" onClick={() => { pick.setOpen(true); }}>
+      <span className="ui-rep-hub-period-label" data-clip-ok="">{pnlChipLabel(period, today)}</span>
+      <ChevronDownIcon size={14} />
+    </button>
+  );
   const header = <ScreenHeader layout="stacked" title="דוחות" titleAside={chip} />;
   const pnlTo = (view: "category" | "project" | "month") => pnlPath({ period, view, drill: null }, search);
   const balanceTo = (view: "assets" | "project") => balancePath({ asOf: { kind: "today" }, view, project: null }, search);

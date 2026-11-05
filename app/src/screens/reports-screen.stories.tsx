@@ -226,13 +226,13 @@ export const BalanceByProject: Story = {
   },
 };
 
-/** At 320 the rows' hints wrap in full: "בנק ושאר"'s hint is not cut by the two-line clamp. */
+/** At 320 each row's line stays on one line, cut at its end as the board draws it, over its share bar. */
 export const BalanceByProject320: Story = {
   name: "Balance sheet · by project at 320",
   ...phone320,
   render: () => <Balance entry="/reports/balance?view=project" />,
   play: async ({ canvasElement }) => {
-    for (const hint of canvasElement.querySelectorAll<HTMLElement>(".ui-row-hint")) await expect(hint.scrollHeight).toBeLessThanOrEqual(hint.clientHeight + 1);
+    for (const hint of canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")) await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
     await fits(canvasElement);
   },
 };
