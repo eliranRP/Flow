@@ -560,14 +560,15 @@
 }
 
 .ui-project-amounts .ui-field-label {
-  flex: 1;
+  flex: none;
   font-size: var(--type-line2-size);
 }
 
-/* The figure sits borderless at the row's far side; the row draws the focus ring for it. */
+/* The figure sits borderless at the row's far side; the row draws the focus ring for it. It takes the rest of the
+   row (at least the board's 120px), so a long amount keeps its currency mark inside the field at 320. */
 .ui-project-amounts .ui-field-control.ui-money-field {
-  flex: none;
-  inline-size: calc(var(--space-10) * 3);
+  flex: 1;
+  min-inline-size: calc(var(--space-10) * 3);
   min-block-size: var(--touch-min);
   padding-inline: 0;
   border: 0;
