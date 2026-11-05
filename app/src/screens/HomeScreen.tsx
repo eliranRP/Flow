@@ -5,19 +5,22 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "rea
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
-import { cashMonthKey, cashRows, profitPath, shownCashRows } from "../cash";
-import { useCashMonthData, useCashMonthsQuery, useCashYearsQuery } from "../use-cash";
+import { cashMonthKey, cashRows, shownCashRows } from "../cash";
+import { useCashLinesQuery, useCashMonthData, useCashMonthsQuery, useCashYearsQuery } from "../use-cash";
 import { useCashToDayQuery } from "../use-cash-to-day";
 import { Amount } from "../ui/amount";
 import { useSheetHistory } from "../ui/back";
 import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
-import { monthPeriod, shiftMonthKey } from "../period";
+import { shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath } from "../home-month";
 import { useAfterFirstPaint } from "../after-paint";
 import { useMonthForecastQuery } from "../month-forecast-query";
-import { HomeReportsCard } from "./home-reports-card";
-import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
+import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
+import { ActivityFilterControl, HomeActivity, type ActivityFilter, type HomeActivityData } from "./home-activity";
+import { useRecurringScheduleQuery } from "../recurring-schedule";
+import { AttentionCards } from "../ui/attention-cards";
+import { useDockedFilter } from "../ui/dock-filter";
 import { MonthDrawer } from "./month-drawer";
 import { BandLoadFailed, BandOfflineLine, useOnline } from "../ui/band-states";
 import type { BannerRow } from "../ui/banner";
@@ -30,7 +33,7 @@ import { previewFails, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
-import { useDashboardQuery, useOptionalBooks, useUnpaidQuery } from "../use-books";
+import { useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
 import { chargeChangeViews, lateCounts, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
@@ -43,8 +46,8 @@ import { useReturningRecurringOwner } from "../recurring-tip";
 const WeeklySummaryRoute = /* @__PURE__ */ lazy(() => import("./weekly-summary-sheet").then((m) => ({ default: m.WeeklySummaryRoute })));
 // FLOW-956: last week's card, Sunday to Tuesday; it and its read load in their own chunk too.
 const WeeklySummaryCardSlot = /* @__PURE__ */ lazy(() => import("./weekly-summary-card").then((m) => ({ default: m.WeeklySummaryCardSlot })));
-// FLOW-990: next month's card and chart, with their reads, load in their own chunk too.
-const HomeNextMonth = /* @__PURE__ */ lazy(() => import("./home-next-month").then((m) => ({ default: m.HomeNextMonth })));
+// FLOW-1036: next month's forecast in the month drawer, with its reads, loads in its own chunk too.
+const DrawerNextMonth = /* @__PURE__ */ lazy(() => import("./month-drawer-next").then((m) => ({ default: m.DrawerNextMonth })));
 
 export { attentionRows };
 
@@ -128,9 +131,10 @@ export function CashEmptyHome({
 
 /**
  * Home: the month's cash (FLOW-413, the owner's "Cash first"), redesigned in FLOW-364. The band
- * holds the company, +, search and the avatar, the month pill and its figures; the split card,
- * the attention box and the forecast follow. A past month reads the same way in the darker band.
- * The profit view is one tap away on "רווח החודש". The month comes from `?month=`.
+ * holds the company, +, search and the avatar, the month pill, its figures and the forecast row.
+ * FLOW-1036 (v3, pattern Overview): under it the דורש טיפול cards, then the month's activity with
+ * its filter, which docks into the compact bar. A past month reads the same way in the darker band.
+ * The month comes from `?month=`.
  */
 export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const preview = useHomePreview();
@@ -185,6 +189,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   // FLOW-1019 (owner, 2026-11-03): the forecast row and החודש הבא read once Home has drawn its figures.
   const afterPaint = useAfterFirstPaint(showBooks);
   const monthForecast = useMonthForecastQuery(currentKey, isCurrent && afterPaint);
+  // FLOW-1036: the month's activity: the recurring schedule, and the current month's lines for the one-off group
+  // (after first paint, like the forecast). Both on the current month only.
+  const schedule = useRecurringScheduleQuery(isCurrent && !previewing);
+  const linesIn = useCashLinesQuery(currentKey, "in", base, isCurrent && afterPaint);
+  const linesOut = useCashLinesQuery(currentKey, "out", base, isCurrent && afterPaint);
 
   function retry() {
     if (previewing) {
@@ -250,6 +259,18 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     void navigate(homeMonthPath(key, location.search, currentKey), { replace: true });
   };
   const weekly = previewing || !isCurrent ? null : cardWeek(today);
+  const linesData = linesIn.data == null || linesOut.data == null ? null : [...(linesIn.data.pages[0]?.rows ?? []), ...(linesOut.data.pages[0]?.rows ?? [])];
+  const activity: HomeActivityData | null = previewing || !isCurrent ? null : {
+    schedule: schedule.data ?? null,
+    scheduleFailed: schedule.isError,
+    lines: linesData,
+    linesFailed: linesIn.isError || linesOut.isError,
+    onRetry: () => {
+      if (schedule.isError) void schedule.refetch();
+      if (linesIn.isError) void linesIn.refetch();
+      if (linesOut.isError) void linesOut.refetch();
+    },
+  };
 
   return withWeekly(
     <CashHome
@@ -284,12 +305,12 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
-      nextMonth={previewing || !isCurrent || !afterPaint ? null : (
+      activity={activity}
+      drawerNext={previewing || !isCurrent ? null : (
         <Suspense fallback={null}>
-          <HomeNextMonth today={today} currency={base} />
+          <DrawerNextMonth today={today} currency={base} cash={cash.data} />
         </Suspense>
       )}
-      reports={previewing ? null : <HomeReportsCard today={today} search={search} />}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
       recurringTip={recurringOwner}
       weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
@@ -303,7 +324,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
 }
 
 /**
- * The band, the figures, the split card and the attention box. `data` holds the selected month
+ * The band, the figures, the attention cards and the month's activity. `data` holds the selected month
  * (and the month before it, for the comparison). Pure: HomeScreen supplies the reads.
  */
 export function CashHome({
@@ -328,8 +349,10 @@ export function CashHome({
   drawerYearMonths,
   syncing = null,
   offlineSince = null,
-  nextMonth = null,
-  reports = null,
+  activity = null,
+  drawerNext = null,
+  initialDrawerNext = false,
+  initialFilter = "all",
   lateRecurring = 0,
   recurringTo,
   recurringTip = false,
@@ -352,13 +375,17 @@ export function CashHome({
   checklist?: ReactNode;
   /** FLOW-956: last week's summary card, under the band (Sunday to Tuesday, the current month). */
   weekly?: ReactNode;
-  /** FLOW-990: next month's card and chart, after the split card (the current month only). */
-  nextMonth?: ReactNode;
-  /** FLOW-161: the reports card, the last card on the page. */
-  reports?: ReactNode;
+  /** FLOW-1036: the month's activity reads (the current month only); null draws no activity. */
+  activity?: HomeActivityData | null;
+  /** FLOW-1036: next month's forecast card, for the month drawer (the current month only). */
+  drawerNext?: ReactNode;
+  /** Stories open the drawer on next month. */
+  initialDrawerNext?: boolean;
+  /** Stories start on a filter. */
+  initialFilter?: ActivityFilter;
   /** FLOW-986: late recurring bills and income, the count on the band's קבועים icon (FLOW-1017). */
   lateRecurring?: number;
-  /** FLOW-986: where the קבועים icon and the attention box's link go (the dev fixtures' own path). */
+  /** FLOW-986: where the קבועים icon and the activity's link go (the dev fixtures' own path). */
   recurringTo?: string;
   /** FLOW-987: may show the one-time tip under the band's קבועים icon. */
   recurringTip?: boolean;
@@ -406,7 +433,9 @@ export function CashHome({
   };
   const earlierKey = firstKey != null && prevKey >= firstKey ? prevKey : null;
   const laterKey = isPast ? shiftMonthKey(monthKey, 1) : null;
-  const [drawerOpen, setDrawerOpen] = useState(initialDrawerOpen);
+  const [drawerOpen, setDrawerOpen] = useState(initialDrawerOpen || initialDrawerNext);
+  // FLOW-1036: the later arrow on the current month opens the drawer on next month.
+  const [drawerOnNext, setDrawerOnNext] = useState(initialDrawerNext);
   const setDrawer = useSheetHistory("month", drawerOpen, setDrawerOpen);
   // A pick closes the drawer by its history pop. The month moves after that pop: a navigation sent
   // before it would be undone by the pop (FLOW-364).
@@ -428,16 +457,22 @@ export function CashHome({
     laterKey,
     onStep: onStepMonth,
     onOpenDrawer: () => {
+      setDrawerOnNext(false);
+      setDrawer(true);
+    },
+    onOpenNext: isPast || drawerNext == null ? undefined : () => {
+      setDrawerOnNext(true);
       setDrawer(true);
     },
   };
   const compactShown = useBandGone();
   const animate = useMonthDirection(monthKey);
-  const books = useOptionalBooks();
-  const navigate = useNavigate();
-  const openProfit = () => {
-    books?.setPeriod(monthPeriod(monthKey));
-    void navigate(profitPath(monthKey, search));
+  // FLOW-1036: one filter in two places, the page and the bar's dock; a pick while docked brings the list's top under the bar.
+  const [filter, setFilter] = useState<ActivityFilter>(initialFilter);
+  const dockFilter = useDockedFilter({ barShown: compactShown && activity != null, bar: 64 });
+  const pickFilter = (next: ActivityFilter) => {
+    setFilter(next);
+    dockFilter.scrollUnderBar();
   };
 
   return (
@@ -481,24 +516,43 @@ export function CashHome({
           />
         </div>
       ) : null}
-      {/* Design lead: Home shows money that needs a hand whatever its main figure; an empty box hides.
-          FLOW-958: it comes right after the band, so its button is above the fold. */}
+      {/* Design lead: Home shows money that needs a hand whatever its main figure; no rows, no section.
+          FLOW-958: it comes right after the band, so the review card is above the fold. FLOW-1036: row-cards,
+          each but the review hidden on this device until what it counts changes. */}
       <div className="m-page-enter" style={pageEnterStyle(1)}>
-        {isPast ? null : <AttentionBox rows={attention} recurringHref={`${recurringTo ?? "/recurring"}${search}`} />}
+        {isPast || attention.length === 0 ? null : (
+          <div className="ui-page-pad ui-home-attn">
+            <AttentionCards rows={attention} storageKey="home" />
+          </div>
+        )}
         {checklist}
       </div>
 
-      {baseRow == null ? null : (
-        <div className="m-page-enter" style={pageEnterStyle(2)}>
-          <SplitCard monthKey={monthKey} row={baseRow} search={search} onOpenProfit={openProfit} />
+      {activity == null ? null : (
+        <div className="ui-page-pad m-page-enter" style={pageEnterStyle(2)}>
+          <HomeActivity
+            activity={activity}
+            filter={filter}
+            onFilter={pickFilter}
+            markRef={dockFilter.markRef}
+            docked={dockFilter.docked}
+            base={base}
+            search={search}
+            recurringHref={`${recurringTo ?? "/recurring"}${search}`}
+          />
         </div>
       )}
 
-      {nextMonth == null || isPast ? null : <div className="m-page-enter" style={pageEnterStyle(3)}>{nextMonth}</div>}
-
-      {reports == null ? null : <div className="m-page-enter" style={pageEnterStyle(4)}>{reports}</div>}
-
-      <HomeCompactBar monthKey={monthKey} net={baseRow?.net_minor ?? 0n} currency={base} isPast={isPast} nav={nav} shown={compactShown} />
+      <HomeCompactBar
+        monthKey={monthKey}
+        net={baseRow?.net_minor ?? 0n}
+        currency={base}
+        isPast={isPast}
+        nav={nav}
+        shown={compactShown}
+        dock={activity == null ? undefined : <ActivityFilterControl value={filter} onChange={pickFilter} tone="band" />}
+        docked={dockFilter.docked}
+      />
       <MonthDrawer
         open={drawerOpen}
         onOpenChange={setDrawer}
@@ -506,6 +560,8 @@ export function CashHome({
         firstKey={firstKey}
         base={base}
         yearMonths={drawerYearMonths}
+        next={isPast ? null : drawerNext}
+        openOnNext={drawerOnNext}
         onPick={(key) => {
           pendingMonth.current = key;
           setDrawer(false);

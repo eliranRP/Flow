@@ -1,6 +1,6 @@
 // FLOW-364: Home's month logic. Invented figures only; amounts are agorot.
 import { describe, expect, it } from "vitest";
-import { canStepYear, changeTone, drawerCells, homeMonthKey, homeMonthPath, splitParts } from "./home-month";
+import { canStepYear, changeTone, drawerCells, homeMonthKey, homeMonthPath } from "./home-month";
 
 const TODAY = "2026-10-11";
 
@@ -42,32 +42,6 @@ describe("changeTone", () => {
   it("has no tone for no change", () => {
     expect(changeTone("in", 0n)).toBeNull();
     expect(changeTone("out", 0n)).toBeNull();
-  });
-});
-
-describe("splitParts", () => {
-  it("splits a negative net into a left-out part and profit, and the percents add to 100", () => {
-    const parts = splitParts(-94_600n, 12_000n);
-    expect(parts.notCounted).toBe(-106_600n);
-    expect(parts.visible).toBe(true);
-    expect(parts.notCountedPct + parts.profitPct).toBe(100);
-    expect(parts.notCountedPct).toBe(90);
-    expect(parts.lead).toBe("out");
-  });
-
-  it("leads with capital when money in is the larger left-out part", () => {
-    const parts = splitParts(80_000n, 10_000n);
-    expect(parts.lead).toBe("in");
-    expect(parts.notCountedPct).toBe(88);
-    expect(parts.profitPct).toBe(12);
-  });
-
-  it("has no lead when profit is the larger part", () => {
-    expect(splitParts(5_000n, 20_000n).lead).toBeNull();
-  });
-
-  it("hides the card when both parts are 0", () => {
-    expect(splitParts(0n, 0n).visible).toBe(false);
   });
 });
 

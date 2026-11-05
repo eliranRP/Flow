@@ -6,7 +6,6 @@ import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
 import { HomeScreen } from "./HomeScreen";
-import { CompanyProfitScreen } from "./company-profit-screen";
 import { homeMonthLabel } from "./home-parts";
 
 const rpc = vi.hoisted(() => ({
@@ -85,13 +84,12 @@ function wrap(reviewCount = 0, path = "/") {
   rpc.impl = (name) => {
     if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard(reviewCount), error: null });
-    if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+    if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
     return Promise.resolve({ data: null, error: null });
   };
   return renderWithProviders(
     <Routes>
       <Route path="/" element={<HomeScreen />} />
-      <Route path="/profit" element={<CompanyProfitScreen />} />
     </Routes>,
     { route: path },
   );
@@ -114,6 +112,7 @@ describe("Home's forecast row (FLOW-1008)", () => {
         cash_months: cash,
         get_dashboard: dashboard(0),
         list_missing_bills: [],
+        recurring_schedule: [],
         mcp_company_loan_currency: "ILS",
         expected_months: {
           today: israelToday(),
@@ -148,32 +147,36 @@ describe("Home's forecast row (FLOW-1008)", () => {
 });
 
 describe("Home's cold load (FLOW-1019)", () => {
-  it("reads list_unpaid once, and starts the forecast's reads only after the figures are drawn", async () => {
+  it("reads list_unpaid once, and starts the forecast's and the month lines' reads only after the figures are drawn", async () => {
     let releaseCash: () => void = () => undefined;
     const cashHeld = new Promise<void>((resolve) => { releaseCash = resolve; });
     rpc.impl = (name) => {
       if (name === "cash_months") return cashHeld.then(() => ({ data: cash, error: null }));
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
-      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "list_unpaid")).toBe(true); });
     // Home's figures are not drawn yet: nothing of the forecast's has gone out.
-    for (const name of ["expected_months", "forecast_overrides_for", "company_forecast_edits_for", "company_next_month_inputs"]) {
+    for (const name of ["expected_months", "forecast_overrides_for", "company_forecast_edits_for", "cash_month_lines"]) {
       expect(rpc.calls.some((c) => c.name === name)).toBe(false);
     }
     releaseCash();
     await screen.findByText("תזרים · עד היום");
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
+    // FLOW-1036: the one-off group's lines, both sides of this month in the base currency.
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_month: `${current}-01`, p_currency: "ILS" });
     expect(rpc.calls.filter((c) => c.name === "list_unpaid")).toHaveLength(1);
+    // Next month's forecast moved to the month drawer: Home itself does not read it.
+    expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(false);
   });
 
   it("reads the forecast from the first render when Home is opened again with its data cached", async () => {
     const { client, unmount } = wrap();
     await screen.findByText("תזרים · עד היום");
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
     unmount();
     rpc.calls = [];
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/", client });
@@ -190,7 +193,7 @@ describe("Home's forecast row while it loads (FLOW-1031)", () => {
     rpc.impl = (name) => {
       if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
-      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
       if (name === "expected_months") return held.then(() => ({ data: null, error: { message: "boom" } }));
       return Promise.resolve({ data: null, error: null });
     };
@@ -206,7 +209,7 @@ describe("Home's forecast row while it loads (FLOW-1031)", () => {
 });
 
 describe("Home's cash (FLOW-364: the redesigned Home)", () => {
-  it("shows the month in the band with its net, נכנס, יצא and the split card", async () => {
+  it("shows the month in the band with its net, נכנס and יצא, and no split card (FLOW-1036)", async () => {
     wrap();
     await screen.findByText("תזרים · עד היום");
     const band = bandOf();
@@ -217,12 +220,11 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     const incoming = screen.getByRole("link", { name: /^נכנס/ });
     expect(incoming).toHaveAttribute("href", `/cash/${current}/in/ILS`);
     expect(screen.getByRole("link", { name: /^יצא/ })).toHaveAttribute("href", `/cash/${current}/out/ILS`);
-    // FLOW-418: the split card, the cash profit leaves out first, then the month's profit.
-    expect(screen.getByText("ממה מורכב התזרים")).toBeInTheDocument();
-    const kept = screen.getByRole("link", { name: /^השקעה, לא נספר ברווח/ });
-    expect(kept).toHaveAttribute("href", `/cash/${current}/kept/ILS`);
-    expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים · 30%")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^רווח החודש/ })).toBeInTheDocument();
+    // FLOW-1036: the split card, the next-month card and the reports card left Home; profit is in דוחות.
+    expect(screen.queryByText("ממה מורכב התזרים")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^רווח החודש/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "החודש הבא" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "תנועות החודש" })).toBeInTheDocument();
     // No profit band, period pill or projects: those are the profit view's.
     expect(screen.queryByRole("button", { name: /בחירת תקופה/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "פרויקטים" })).not.toBeInTheDocument();
@@ -263,36 +265,15 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     expect(screen.queryByRole("link", { name: /^הוספה/ })).not.toBeInTheDocument();
   });
 
-  it("keeps the attention box when something waits, and hides it when nothing does (design lead)", async () => {
+  it("keeps the attention cards when something waits, and hides them when nothing does (design lead)", async () => {
     const first = wrap(7);
-    expect(await screen.findByRole("link", { name: /^לאישור 7 פריטים/ })).toHaveAttribute("href", "/review");
-    expect(screen.getByRole("region", { name: "דורש טיפול" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "7 פריטים ממתינים לאישור" })).toHaveAttribute("href", "/review");
+    expect(screen.getByRole("heading", { name: "דורש טיפול" })).toBeInTheDocument();
     first.unmount();
     wrap(0);
     await screen.findByText("תזרים · עד היום");
-    expect(screen.queryByRole("link", { name: /^לאישור/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "דורש טיפול" })).not.toBeInTheDocument();
-  });
-
-  it("opens the profit page on the month from רווח החודש", async () => {
-    wrap();
-    fireEvent.click(await screen.findByRole("button", { name: /^רווח החודש/ }));
-    expect(await screen.findByRole("heading", { name: "רווח" })).toBeInTheDocument();
-    // The month's read, and the year's read for מתחילת השנה: neither sends a basis of its own (FLOW-103), so the server counts on the company's choice (0170).
-    const reads = rpc.calls.filter((c) => c.name === "get_dashboard");
-    expect(reads.map((c) => c.args)).toContainEqual(expect.objectContaining({ p_from: `${current}-01` }));
-    for (const read of reads) expect(read.args).not.toHaveProperty("p_basis");
-  });
-
-  it("opens the profit page on the past month Home shows, not the current one", async () => {
-    wrap(0, `/?month=${month(1)}`);
-    await screen.findByText("תזרים · חודש סגור");
-    rpc.calls.length = 0;
-    fireEvent.click(await screen.findByRole("button", { name: /^רווח החודש/ }));
-    expect(await screen.findByRole("heading", { name: "רווח" })).toBeInTheDocument();
-    const reads = rpc.calls.filter((c) => c.name === "get_dashboard");
-    expect(reads.map((c) => c.args)).toContainEqual(expect.objectContaining({ p_from: `${month(1)}-01` }));
-    expect(reads.map((c) => c.args)).not.toContainEqual(expect.objectContaining({ p_from: `${current}-01` }));
+    expect(screen.queryByRole("link", { name: /לאישור/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "דורש טיפול" })).not.toBeInTheDocument();
   });
 });
 
@@ -303,7 +284,7 @@ describe("Home's first paint waits on cash_months alone", () => {
     rpc.impl = (name) => {
       if (name === "cash_months") return Promise.resolve({ data: cashAnswer, error: null });
       if (name === "get_dashboard") return new Promise((resolve) => { answer = resolve; });
-      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<HomeScreen />);
@@ -314,9 +295,9 @@ describe("Home's first paint waits on cash_months alone", () => {
     const answer = held(cash);
     await screen.findByText("תזרים · עד היום");
     expect(within(bandOf()).getByText("₪3,200")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^לאישור/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /לאישור/ })).not.toBeInTheDocument();
     answer(dashboard(3));
-    expect(await screen.findByRole("link", { name: /^לאישור 3 פריטים/ })).toHaveAttribute("href", "/review");
+    expect(await screen.findByRole("link", { name: "3 פריטים ממתינים לאישור" })).toHaveAttribute("href", "/review");
   });
 
   it("keeps the skeleton, not the empty state, while a company with no recent cash line waits for get_dashboard to decide", async () => {
@@ -336,9 +317,7 @@ describe("Home's first paint waits on cash_months alone", () => {
     rpc.impl = (name) => {
       if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
       if (name === "get_dashboard") return Promise.resolve(fail ? { data: null, error: { message: "db down" } } : { data: dashboard(4), error: null });
-      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
-      // The reports card's reads stay out of this: they wait.
-      if (name === "get_pnl_statement" || name === "mcp_balance_sheet") return new Promise(() => {});
+      if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<HomeScreen />);
@@ -346,7 +325,7 @@ describe("Home's first paint waits on cash_months alone", () => {
     expect(await screen.findByText("לא הצלחנו לטעון.")).toBeInTheDocument();
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
-    expect(await screen.findByRole("link", { name: /^לאישור 4 פריטים/ })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "4 פריטים ממתינים לאישור" })).toBeInTheDocument();
     expect(screen.queryByText("לא הצלחנו לטעון.")).not.toBeInTheDocument();
   });
 });

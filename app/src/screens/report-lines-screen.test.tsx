@@ -1,9 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
-import { HomeReportsCard } from "./home-reports-card";
 import { lineMatches, lineText, linesByMonth, linesByProject, projectSplit, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
-import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -144,31 +142,6 @@ describe("ReportLinesScreen", () => {
     renderWithProviders(<ReportLinesScreen sample={{ rows: ROWS, hasMore: true }} />, { route: ROUTE });
     fireEvent.click(screen.getByRole("button", { name: "עוד תנועות" }));
     expect(screen.getByText("4 תנועות ועוד")).toBeInTheDocument();
-  });
-});
-
-describe("HomeReportsCard", () => {
-  it("opens the P&L with this year's net profit and the balance sheet with today's equity", () => {
-    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />);
-    const pnl = screen.getByRole("link", { name: /רווח והפסד/ });
-    expect(pnl.getAttribute("href")).toBe("/reports");
-    expect(pnl.textContent).toContain("$29,000");
-    const balance = screen.getByRole("link", { name: /מאזן/ });
-    expect(balance.getAttribute("href")).toBe("/reports?kind=balance");
-    expect(balance.textContent).toContain("$285,000");
-  });
-
-  it("keeps the preview flag on its links and shows a dash before the reads", () => {
-    renderWithProviders(<HomeReportsCard today="2026-10-31" search="?preview=1" sample={{}} />);
-    expect(screen.getByRole("link", { name: /מאזן/ }).getAttribute("href")).toBe("/reports?kind=balance&preview=1");
-    expect(document.querySelectorAll(".ui-home-rep-figure-empty")).toHaveLength(2);
-  });
-
-  it("says when its reads failed, with a retry, and keeps both ways in", async () => {
-    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" />);
-    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
-    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /רווח והפסד/ })).toBeInTheDocument();
   });
 });
 
