@@ -79,6 +79,8 @@ describe("motion tokens in implementation-tokens.css", () => {
       "--motion-bar-grow": "480ms",
       "--motion-pulse": "1.2s",
       "--motion-spin": "800ms",
+      "--motion-pull-spin": "880ms",
+      "--motion-pull-return": "400ms",
       "--rise-page": "8px",
       "--rise-push": "24px",
       "--rise-toast": "12px",
