@@ -1136,13 +1136,13 @@ isOneToOne: false
                   ]
                 },"recurring_handovers": {
                   Row: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior": boolean | null,"party_id": string,"project_id": string,"same": boolean,"set_at": string,"set_by": string | null,"to_party_id": string,"to_prior": boolean | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior": boolean | null,"pace_set": boolean,"party_id": string,"project_id": string,"same": boolean,"set_at": string,"set_by": string | null,"to_pace_prior": string | null,"to_party_id": string,"to_prior": boolean | null
                   }
                   Insert: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"party_id": string,"project_id": string,"same": boolean,"set_at"?: string,"set_by"?: string | null,"to_party_id": string,"to_prior"?: boolean | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id": string,"project_id": string,"same": boolean,"set_at"?: string,"set_by"?: string | null,"to_pace_prior"?: string | null,"to_party_id": string,"to_prior"?: boolean | null
                   }
                   Update: {
-                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"party_id"?: string,"project_id"?: string,"same"?: boolean,"set_at"?: string,"set_by"?: string | null,"to_party_id"?: string,"to_prior"?: boolean | null
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id"?: string,"project_id"?: string,"same"?: boolean,"set_at"?: string,"set_by"?: string | null,"to_pace_prior"?: string | null,"to_party_id"?: string,"to_prior"?: boolean | null
                   }
                   Relationships: [
                     {
@@ -1591,7 +1591,7 @@ isOneToOne: false
 { Args: { "p_yes": boolean }; Returns: Json
                            },
 "answer_recurring_handover":
-{ Args: { "p_currency": string,"p_direction": string,"p_party_id": string,"p_project_id": string,"p_same": boolean,"p_to_party_id": string }; Returns: Json
+{ Args: { "p_currency": string,"p_direction": string,"p_party_id": string,"p_project_id": string,"p_same": boolean,"p_to_party_id": string,"p_today"?: string }; Returns: Json
                            },
 "answer_recurring_match":
 { Args: { "p_direction": Database["public"]['Enums']["txn_direction"],"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json

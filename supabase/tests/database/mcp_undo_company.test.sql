@@ -264,7 +264,7 @@ select s.write_id, pg_temp.id('tok_b'), tests.get_supabase_uid('muc_user'),
   jsonb_build_object(
     'before', 'null'::jsonb, 'after', 'null'::jsonb, 'written', 'null'::jsonb, 'rows', '[]'::jsonb,
     'company_id', t.id, 'invite_id', t.id, 'user_id', t.id, 'rate_id', t.id, 'group_id', t.id,
-    'party_id', t.id, 'match_party_id', t.id, 'to_party_id', t.id, 'currency', 'ILS', 'project_id', t.id, 'deletion_id', t.id,
+    'party_id', t.id, 'match_party_id', t.id, 'to_party_id', t.id, 'currency', 'ILS', 'answer_set_at', null, 'project_id', t.id, 'deletion_id', t.id,
     'move_id', t.id, 'effective_date', '2026-01-01', 'written_at', null, 'parts', '[]'::jsonb,
     'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense', 'connection_id', t.id,
     'in_transaction_id', t.id, 'note_id', t.id, 'file_id', t.id, 'supplier_id', t.id,

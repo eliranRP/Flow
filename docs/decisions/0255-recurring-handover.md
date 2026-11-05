@@ -12,7 +12,7 @@ FLOW-430's suggestion ([0179](0179-recurring-match.md)) did not catch it. It loo
 
 ## Decision
 
-**A likely handover, per charge.** A recurring charge ([0185](0185-recurring-charge-per-project.md): one party, direction, currency and project) that is due this month and has no line yet has a likely handover when a posted line this month, up to today, from another party has the same direction and currency, the charge's project, an amount within 2% of the charge's usual amount, and that party had no posted line on that project before this month. The nearest amount wins, then the latest line. A charge with no project never has one. A party the company already answered for the charge is not offered again. `private.recurring_handover` computes it.
+**A likely handover, per charge.** A recurring charge ([0185](0185-recurring-charge-per-project.md): one party, direction, currency and project) that is due this month and has no line yet has a likely handover when a posted line this month, up to today, from another party has the same direction and currency, the charge's project, an amount within 2% of the charge's usual amount, and that party had no posted line on that project before this month. Lines are read as the recurring charges read them ([0189](0189-recurring-split-parts-usual-amount.md)): a split line by its parts, each on its own project, so a part filed to the project is a candidate and an earlier part on it is an earlier line. The nearest amount wins, then the latest line. A charge with no project never has one. A party the company already answered for the charge is not offered again. `private.recurring_handover` computes it.
 
 **The forecast stops expecting it at once.** `expected_months` gives each `recurring[]` item a `handover`: null, or `{ party_id, party_name, transaction_id, doc_date, amount_minor }` while unanswered. The month forecast builder (`buildMonthForecast`: the app, Home and the MCP's `get_forecast`) leaves such a charge out of its items and totals, and this month's `by_currency` cells leave it out too, so the payment counts once, in today's cash. `missing_bills` does not call it late. The next months still expect the old charge until the owner answers.
 
@@ -20,11 +20,11 @@ This amends 0179's "nothing merges by itself" for the forecast only: the hiding 
 
 **The answer is per charge and party.** `public.recurring_handovers` keeps it (RLS on, no client grants; written only by the functions). `answer_recurring_handover(p_direction, p_party_id, p_currency, p_project_id, p_to_party_id, p_same)`, owner or editor:
 
-- **Yes:** the old charge gets its own "not recurring" override and the new party's charge on that project its own "recurring" ([0188](0188-recurring-switch-per-charge.md): the charge's own row wins over a party-wide one), so the next months expect the new payee. The overrides from before are kept with the answer.
+- **Yes:** the old charge gets its own "not recurring" override and the new party's charge on that project its own "recurring" ([0188](0188-recurring-switch-per-charge.md): the charge's own row wins over a party-wide one), so the next months expect the new payee. When the old charge's pace is not monthly, the new charge also gets that pace as its own override, so a quarterly or yearly charge that moves stays quarterly or yearly instead of being expected every month from one line. The overrides from before are kept with the answer.
 - **No:** the old charge comes back into the forecast and the late bills, and the pair is not offered again.
-- **Null:** the answer is taken back; after a yes, both overrides go back to what they were before it.
+- **Null:** the answer is taken back; after a yes, the overrides it wrote (both recurring overrides, and the pace) go back to what they were before it. A no after a yes does the same.
 
-It returns what it replaced (`prior_same`, `prior_from_recurring`, `prior_to_recurring`) for the app's ביטול (undo). The MCP's `answer_recurring_handover` adds the idempotency key, the write rate limit and `undo` (kind `recurring_handover`, id: the write), which puts back the answer from before, and the overrides with it.
+It returns what it replaced (`prior_same`, `prior_from_recurring`, `prior_to_recurring`, `prior_to_pace`) and the answer's `answer_set_at` for the app's ביטול (undo). The MCP's `answer_recurring_handover` adds the idempotency key, the write rate limit and `undo` (kind `recurring_handover`, id: the write), which puts back the answer from before, and the overrides with it. The undo is a conflict once the pair was answered again since the write, even with the same answer: each answer stamps its own `set_at`, and the undo compares it, so undoing an older write never drops a later one.
 
 ## Alternatives rejected
 

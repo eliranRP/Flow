@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(26);
+select plan(41);
 
 do $users$
 begin
@@ -31,7 +31,12 @@ grant execute on function pg_temp.id(text) to authenticated, service_role;
 
 insert into rh (label, id) values
   ('maple', tests.fixture_project(pg_temp.id('co'), 'Maple House')),
-  ('cedar', tests.fixture_project(pg_temp.id('co'), 'Cedar Lot'));
+  ('cedar', tests.fixture_project(pg_temp.id('co'), 'Cedar Lot')),
+  ('aspen', tests.fixture_project(pg_temp.id('co'), 'Aspen Court')),
+  ('larch', tests.fixture_project(pg_temp.id('co'), 'Larch Row')),
+  ('birch', tests.fixture_project(pg_temp.id('co'), 'Birch Yard')),
+  ('fees', tests.fixture_category(pg_temp.id('co'), 'Service fees')),
+  ('utilities', tests.fixture_category(pg_temp.id('co'), 'Utilities'));
 insert into public.company_members (company_id, user_id, role)
 values (pg_temp.id('co'), tests.get_supabase_uid('rh_viewer'), 'viewer');
 
@@ -40,12 +45,10 @@ values (pg_temp.id('co'), tests.get_supabase_uid('rh_viewer'), 'viewer');
 -- the usual amount, on Cedar. pine: the usual amount on Maple, but it paid Maple in August too.
 insert into public.suppliers (company_id, name)
 select pg_temp.id('co'), n
-from unnest(array['Northgate Servicing', 'Summit Loan Care', 'Bayview Lending', 'Harbor Mortgage', 'Pine Credit']) n;
+from unnest(array['Northgate Servicing', 'Summit Loan Care', 'Bayview Lending', 'Harbor Mortgage', 'Pine Credit',
+  'Willow Power', 'Juniper Grid', 'Spruce Gas', 'Hazel Energy', 'Oakline Services', 'Rowan Utility']) n;
 insert into rh (label, id)
-select case s.name
-    when 'Northgate Servicing' then 'northgate' when 'Summit Loan Care' then 'summit'
-    when 'Bayview Lending' then 'bayview' when 'Harbor Mortgage' then 'harbor' else 'pine' end,
-  s.id
+select lower(split_part(s.name, ' ', 1)), s.id
 from public.suppliers s where s.company_id = pg_temp.id('co');
 
 -- label, party, project, date, amount
@@ -62,6 +65,39 @@ insert into rh_lines values
   ('harbor_10', 'harbor', 'cedar', '2026-10-07', 250000),
   ('pine_08', 'pine', 'maple', '2026-08-12', 40000),
   ('pine_10', 'pine', 'maple', '2026-10-08', 250000);
+
+-- In USD, apart from the ILS figures above. willow: Aspen's monthly charge; juniper's October line has no
+-- project of its own and is split, its part on Aspen at the usual amount. spruce: Larch's monthly charge;
+-- hazel paid Larch at the usual amount in October, but its August line, with no project, had a part on Larch.
+-- oakline: Birch's quarterly charge (January, April, July); rowan paid Birch at the usual amount in October.
+create temp table rh_usd (label text, party text, project text, doc_date date, amount bigint);
+insert into rh_usd
+select p || '_' || to_char(d, 'MM'), p, case p when 'willow' then 'aspen' else 'larch' end, d::date + 2,
+  case p when 'willow' then 100000 else 70000 end
+from unnest(array['willow', 'spruce']) p,
+  generate_series('2026-04-01'::date, '2026-09-01'::date, interval '1 month') d;
+insert into rh_usd values
+  ('juniper_10', 'juniper', null, '2026-10-09', 150000),
+  ('hazel_08', 'hazel', null, '2026-08-14', 50000),
+  ('hazel_10', 'hazel', 'larch', '2026-10-10', 70000),
+  ('oakline_01', 'oakline', 'birch', '2026-01-12', 300000),
+  ('oakline_04', 'oakline', 'birch', '2026-04-12', 300000),
+  ('oakline_07', 'oakline', 'birch', '2026-07-12', 300000),
+  ('rowan_10', 'rowan', 'birch', '2026-10-11', 300000);
+insert into rh (label, id)
+select l.label, tests.fixture_line(pg_temp.id('co'), 'rh:' || l.label, l.amount, 'expense', pg_temp.id(l.project),
+  pg_temp.id('utilities'), l.doc_date, 'USD')
+from rh_usd l;
+update public.transactions t
+set supplier_id = pg_temp.id(l.party)
+from rh_usd l
+where t.id = pg_temp.id(l.label);
+select tests.line_split(pg_temp.id('juniper_10'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('utilities'), 'project_id', pg_temp.id('aspen'), 'amount_minor', 100000),
+  jsonb_build_object('category_id', pg_temp.id('fees'), 'project_id', pg_temp.id('cedar'), 'amount_minor', 50000)));
+select tests.line_split(pg_temp.id('hazel_08'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('utilities'), 'project_id', pg_temp.id('larch'), 'amount_minor', 30000),
+  jsonb_build_object('category_id', pg_temp.id('fees'), 'project_id', pg_temp.id('cedar'), 'amount_minor', 20000)));
 
 insert into rh (label, id)
 select l.label, tests.fixture_line(pg_temp.id('co'), 'rh:' || l.label, l.amount, 'expense', pg_temp.id(l.project),
@@ -106,12 +142,12 @@ as $$
 $$;
 grant execute on function pg_temp.late(text) to authenticated, service_role;
 
-create or replace function pg_temp.own_override(p_party text)
+create or replace function pg_temp.own_override(p_party text, p_project text default 'maple')
 returns boolean
 language sql
 as $$
   select o.recurring from public.recurring_overrides o
-  where o.company_id = pg_temp.id('co') and o.party_id = pg_temp.id(p_party) and o.project_id = pg_temp.id('maple');
+  where o.company_id = pg_temp.id('co') and o.party_id = pg_temp.id(p_party) and o.project_id = pg_temp.id(p_project);
 $$;
 
 -- 1-4. The handover is offered and leaves the forecast.
@@ -129,7 +165,7 @@ select is(
 );
 select is(
   (select sum((c ->> 'expense_minor')::bigint)::bigint from jsonb_array_elements(public.expected_months(2, null, '2026-10-20') -> 'months') m,
-     jsonb_array_elements(m -> 'by_currency') c where not (m ->> 'open')::boolean),
+     jsonb_array_elements(m -> 'by_currency') c where not (m ->> 'open')::boolean and c ->> 'currency' = 'ILS'),
   -430000::bigint,
   'unanswered, next month still expects the old charge (and the new servicer''s other loan)'
 );
@@ -138,8 +174,8 @@ select is(pg_temp.late('northgate'), false, 'missing_bills does not call the han
 -- 5-9. No brings the old charge back and stops the pair; nothing else is offered.
 select is(
   public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), false)
-    - 'direction'::text - 'party_id'::text - 'currency'::text - 'project_id'::text - 'to_party_id'::text,
-  '{"same": false, "prior_same": null, "prior_from_recurring": null, "prior_to_recurring": null}'::jsonb,
+    - 'direction'::text - 'party_id'::text - 'currency'::text - 'project_id'::text - 'to_party_id'::text - 'answer_set_at'::text,
+  '{"same": false, "prior_same": null, "prior_from_recurring": null, "prior_to_recurring": null, "prior_to_pace": null}'::jsonb,
   'the owner says no'
 );
 select is(
@@ -164,8 +200,8 @@ select is(
 );
 select is(
   public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), true)
-    - 'direction'::text - 'party_id'::text - 'currency'::text - 'project_id'::text - 'to_party_id'::text,
-  '{"same": true, "prior_same": null, "prior_from_recurring": null, "prior_to_recurring": null}'::jsonb,
+    - 'direction'::text - 'party_id'::text - 'currency'::text - 'project_id'::text - 'to_party_id'::text - 'answer_set_at'::text,
+  '{"same": true, "prior_same": null, "prior_from_recurring": null, "prior_to_recurring": null, "prior_to_pace": null}'::jsonb,
   'the owner says yes'
 );
 select is(pg_temp.item('northgate', 'maple'), null, 'yes ends the old charge, though the party is marked recurring');
@@ -192,8 +228,8 @@ select tests.authenticate_as('rh_owner');
 select public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), true);
 select is(
   public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), null)
-    - 'direction'::text - 'party_id'::text - 'currency'::text - 'project_id'::text - 'to_party_id'::text,
-  '{"same": null, "prior_same": true, "prior_from_recurring": false, "prior_to_recurring": true}'::jsonb,
+    - 'direction'::text - 'party_id'::text - 'currency'::text - 'project_id'::text - 'to_party_id'::text - 'answer_set_at'::text,
+  '{"same": null, "prior_same": true, "prior_from_recurring": false, "prior_to_recurring": true, "prior_to_pace": null}'::jsonb,
   'taking the yes back names the answer and the overrides it replaces'
 );
 reset role;
@@ -258,7 +294,131 @@ select is(
   'the undo takes the answer back and restores both overrides'
 );
 
--- 22-25. Who may answer, and another company's charge.
+-- 22-29. The undo is a conflict once the pair was answered again; a yes then a no restores both overrides.
+create or replace function pg_temp.mcp_answer(p_key text, p_same boolean)
+returns jsonb
+language sql
+as $$
+  select public.mcp_answer_recurring_handover(p_key, 'expense', pg_temp.id('northgate'), 'ILS',
+    pg_temp.id('maple'), pg_temp.id('summit'), p_same);
+$$;
+grant execute on function pg_temp.mcp_answer(text, boolean) to authenticated, service_role;
+
+select pg_temp.as_mcp();
+insert into rh_out values
+  ('w1', pg_temp.mcp_answer('rh-w1', true)),
+  ('w2', pg_temp.mcp_answer('rh-w2', true));
+create or replace function pg_temp.write_of(p_label text)
+returns uuid
+language sql
+as $$ select (body -> 'data' ->> 'id')::uuid from pg_temp.rh_out where label = p_label; $$;
+grant execute on function pg_temp.write_of(text) to authenticated, service_role;
+select is(
+  public.mcp_undo('rh-undo-w1', 'recurring_handover', pg_temp.write_of('w1')) -> 'error' ->> 'code',
+  'conflict',
+  'a yes answered yes again: undoing the first is a conflict'
+);
+select is(
+  public.mcp_undo('rh-undo-w2', 'recurring_handover', pg_temp.write_of('w2')) ->> 'ok',
+  'true',
+  'undoing the latest yes goes through'
+);
+insert into rh_out values
+  ('w3', pg_temp.mcp_answer('rh-w3', false)),
+  ('w4', pg_temp.mcp_answer('rh-w4', true));
+select is(
+  public.mcp_undo('rh-undo-w1b', 'recurring_handover', pg_temp.write_of('w1')) -> 'error' ->> 'code',
+  'conflict',
+  'yes, then no, then yes: undoing the first yes is a conflict'
+);
+select is(
+  public.mcp_undo('rh-undo-w4', 'recurring_handover', pg_temp.write_of('w4')) ->> 'ok',
+  'true',
+  'undoing the last yes puts the no back'
+);
+reset role;
+select is(
+  array[pg_temp.own_override('northgate'), pg_temp.own_override('summit')]
+    || array[(select same from public.recurring_handovers where company_id = pg_temp.id('co'))],
+  array[null, false, false]::boolean[],
+  'back at no, both overrides are as before the yes'
+);
+select tests.authenticate_as('rh_owner');
+select public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), null);
+select public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), true);
+select is(
+  public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), false)
+    ->> 'prior_same',
+  'true',
+  'the owner says yes, then no'
+);
+reset role;
+select is(
+  array[pg_temp.own_override('northgate'), pg_temp.own_override('summit')],
+  array[null, false]::boolean[],
+  'a yes then a no restores both overrides'
+);
+select tests.authenticate_as('rh_owner');
+select is(
+  public.answer_recurring_handover('expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), pg_temp.id('summit'), null)
+    ->> 'answer_set_at',
+  null,
+  'taken back, there is no answer and no set_at'
+);
+
+-- 30-32. Lines are read by their parts: a split line's part on the project is a candidate, and an earlier
+-- part on the project counts as an earlier line.
+select is(
+  pg_temp.item('willow', 'aspen') -> 'handover',
+  jsonb_build_object('party_id', pg_temp.id('juniper'), 'party_name', 'Juniper Grid',
+    'transaction_id', pg_temp.id('juniper_10'), 'doc_date', '2026-10-09', 'amount_minor', -100000),
+  'a split line''s part on the charge''s project, at the usual amount, is offered with the part''s amount'
+);
+select is(
+  pg_temp.item('spruce', 'larch') -> 'handover',
+  'null'::jsonb,
+  'a payee whose earlier line had a part on the project is not offered'
+);
+select is(
+  (select count(*)::integer from jsonb_array_elements(public.expected_months(2, null, '2026-10-20') -> 'months') m,
+     jsonb_array_elements(m -> 'by_currency') c
+   where (m ->> 'open')::boolean and c ->> 'currency' = 'USD' and (c ->> 'expense_minor')::bigint = -70000),
+  1,
+  'this month''s USD cells expect the charge with no handover only'
+);
+
+-- 33-36. A quarterly charge handed over stays quarterly, and taking the answer back restores the pace.
+select is(
+  public.answer_recurring_handover('expense', pg_temp.id('oakline'), 'USD', pg_temp.id('birch'), pg_temp.id('rowan'), true,
+    '2026-10-20') ->> 'prior_to_pace',
+  null,
+  'the owner says yes to the quarterly charge''s handover'
+);
+select is(
+  (select jsonb_build_object('pace', e ->> 'pace', 'next', e ->> 'next_due_month')
+   from jsonb_array_elements(public.expected_months(4, null, '2026-10-20') -> 'recurring') e
+   where (e ->> 'party_id')::uuid = pg_temp.id('rowan')),
+  '{"pace": "quarter", "next": "2027-01"}'::jsonb,
+  'the new payee''s charge is quarterly, next due in January'
+);
+reset role;
+select is(
+  (select o.pace from public.recurring_overrides o
+   where o.company_id = pg_temp.id('co') and o.party_id = pg_temp.id('rowan') and o.project_id = pg_temp.id('birch')),
+  'quarter',
+  'the yes wrote the new charge''s pace'
+);
+select tests.authenticate_as('rh_owner');
+select public.answer_recurring_handover('expense', pg_temp.id('oakline'), 'USD', pg_temp.id('birch'), pg_temp.id('rowan'), null);
+reset role;
+select is(
+  (select count(*)::integer from public.recurring_overrides o
+   where o.company_id = pg_temp.id('co') and o.project_id = pg_temp.id('birch')),
+  0,
+  'taken back, neither charge on the project keeps an override'
+);
+
+-- 37-40. Who may answer, and another company's charge.
 select tests.authenticate_as('rh_viewer');
 select throws_ok(
   format('select public.answer_recurring_handover(%L, %L, %L, %L, %L, true)', 'expense', pg_temp.id('northgate'), 'ILS',
@@ -287,12 +447,12 @@ select throws_ok(
   'a charge with no project has no handover to answer'
 );
 
--- 26. The answers are read and written only through the functions.
+-- 41. The answers are read and written only through the functions.
 select tests.clear_authentication();
 reset role;
 select ok(
   not has_table_privilege('authenticated', 'public.recurring_handovers', 'select')
-  and not has_function_privilege('anon', 'public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean)', 'execute')
+  and not has_function_privilege('anon', 'public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean, date)', 'execute')
   and not has_function_privilege('anon', 'public.mcp_answer_recurring_handover(text, text, uuid, text, uuid, uuid, boolean)', 'execute')
   and not has_function_privilege('authenticated', 'private.recurring_handover(uuid, public.txn_direction, uuid, text, uuid, bigint, date)', 'execute'),
   'the answers are read and written only through the functions'

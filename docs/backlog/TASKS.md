@@ -455,6 +455,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-430"></a>[FLOW-430](tasks/FLOW-430.md) | A missing recurring bill suggests a renamed supplier, and the user decides | FEATURE |
 | <a id="flow-1037"></a>[FLOW-1037](tasks/FLOW-1037.md) | A recurring charge that moves to another payee: the forecast stops expecting it, and Flow asks | MCP + DB |
 | <a id="flow-1038"></a>[FLOW-1038](tasks/FLOW-1038.md) | The app asks "did this charge move to another payee?" (FLOW-1037's question) | SMALL UI |
+| <a id="flow-1041"></a>[FLOW-1041](tasks/FLOW-1041.md) | expected_months: check the per-charge handover lookup on a large company | BACKLOG NIT |
 | <a id="flow-416"></a>[FLOW-416](tasks/FLOW-416.md) | Loan money counts in cash by default | TASK |
 | <a id="flow-436"></a>[FLOW-436](tasks/FLOW-436.md) | Loan money in cash: the one-category rule keeps the owner's choice | TASK |
 | <a id="flow-417"></a>[FLOW-417](tasks/FLOW-417.md) | Cash history: all months from Home (years, then months) | PLAN FIRST |

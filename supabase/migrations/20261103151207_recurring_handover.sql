@@ -15,10 +15,13 @@
 --   other payee) while unanswered, and the open month's cells leave such a charge out; the forecast
 --   builder leaves it out of the items and totals. missing_bills leaves it out: it is not late.
 -- - answer_recurring_handover (owner or editor): yes writes the old charge "not recurring" and the new
---   party's charge on the project "recurring" (decision 0188's per-charge overrides); no keeps the old
---   charge and stops the pair's suggestion; null takes the answer back and puts both overrides back.
---   It returns what it replaced. mcp_answer_recurring_handover adds the idempotency key, the write gate
---   and the undo kind recurring_handover (id: the write).
+--   party's charge on the project "recurring" (decision 0188's per-charge overrides), with the old
+--   charge's pace when it is not monthly; no keeps the old charge and stops the pair's suggestion; null
+--   takes the answer back and puts the overrides back. It returns what it replaced and the answer's
+--   set_at. mcp_answer_recurring_handover adds the idempotency key, the write gate and the undo kind
+--   recurring_handover (id: the write); the undo is a conflict once the pair was answered again.
+-- - Lines are read as recurring_parties reads them (private.recurring_line_parts, decision 0189): a split
+--   line's part filed to the project is a candidate, and an earlier part on it counts as an earlier line.
 
 begin;
 
@@ -35,7 +38,8 @@ $$;
 -- 1. The answers. party_id is the recurring charge's supplier (expense) or customer (income) on
 -- project_id; to_party_id is the party whose line came instead. same: the charge moved to it (yes) or
 -- not (no). from_prior and to_prior keep, for a yes, the two charges' "recurring" overrides before it
--- (null: none), so taking the answer back puts them back.
+-- (null: none), and to_pace_prior the new charge's pace override when the yes wrote one (pace_set), so
+-- taking the answer back puts them back.
 create table public.recurring_handovers (
   company_id uuid not null references public.companies (id) on delete cascade,
   direction public.txn_direction not null,
@@ -46,6 +50,9 @@ create table public.recurring_handovers (
   same boolean not null,
   from_prior boolean,
   to_prior boolean,
+  -- A yes that carried the old charge's pace (not monthly) to the new charge, and its pace override before.
+  pace_set boolean not null default false,
+  to_pace_prior text,
   set_by uuid references auth.users (id) on delete set null,
   set_at timestamptz not null default now(),
   primary key (company_id, direction, party_id, currency, project_id, to_party_id),
@@ -74,23 +81,28 @@ security definer
 set search_path = ''
 as $$
   with b as (select date_trunc('month', p_today)::date as this_month),
+  -- This month's lines up to today, as recurring_parties reads them: a split line by its parts, each on
+  -- its own project (decision 0189).
   lines as (
-    select t.id, t.doc_date, t.created_at, t.amount_net::bigint as amount_net,
-      case when p_direction = 'expense' then t.supplier_id else t.customer_id end as party_id
-    from public.transactions t, b
+    select lp.id, lp.doc_date, lp.created_at, lp.amount_net, lp.line_party_id as party_id
+    from b, private.recurring_line_parts(p_company, b.this_month, p_today) lp
     where p_project is not null
       and p_typical <> 0
-      and t.company_id = p_company
-      and t.direction = p_direction
-      and t.currency = p_currency
-      and t.project_id = p_project
-      and t.removed_at is null
-      and t.line_status = 'posted'
-      and (p_direction = 'expense' or t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
-      and t.doc_date >= b.this_month
-      and t.doc_date <= p_today
+      and lp.direction = p_direction
+      and lp.currency = p_currency
+      and lp.project_id = p_project
+      and lp.line_party_id <> p_party
+      and lp.party_id <> p_party
       -- Within 2% of the usual amount, either way.
-      and abs(abs(t.amount_net::bigint) - abs(p_typical)) * 50 <= abs(p_typical)
+      and abs(abs(lp.amount_net) - abs(p_typical)) * 50 <= abs(p_typical)
+  ),
+  -- The candidates' lines and parts on the project before this month. Read only when there is a candidate.
+  earlier as (
+    select distinct lp.line_party_id as party_id
+    from b, private.recurring_line_parts(p_company, '0001-01-01'::date, (b.this_month - 1)) lp
+    where exists (select 1 from lines)
+      and lp.direction = p_direction
+      and lp.project_id = p_project
   )
   select jsonb_build_object(
       'party_id', l.party_id,
@@ -100,20 +112,11 @@ as $$
       'amount_minor', l.amount_net
     )
   from lines l
-  cross join b
   left join public.suppliers s on p_direction = 'expense' and s.company_id = p_company and s.id = l.party_id
   left join public.customers cu on p_direction = 'income' and cu.company_id = p_company and cu.id = l.party_id
-  where l.party_id is not null
-    and l.party_id <> p_party
-    and coalesce(s.id, cu.id) is not null
-    -- New on the project: no posted line of that party on it before this month.
-    and not exists (
-      select 1 from public.transactions o
-      where o.company_id = p_company and o.removed_at is null and o.line_status = 'posted'
-        and o.direction = p_direction and o.project_id = p_project
-        and l.party_id = case when p_direction = 'expense' then o.supplier_id else o.customer_id end
-        and o.doc_date < b.this_month
-    )
+  where coalesce(s.id, cu.id) is not null
+    -- New on the project: no posted line or part of that party on it before this month.
+    and not exists (select 1 from earlier e where e.party_id = l.party_id)
     -- Answered for this charge already (yes or no): not offered again.
     and not exists (
       select 1 from public.recurring_handovers h
@@ -305,10 +308,13 @@ $$;
 
 -- 5. The answer, per charge and party: yes ends the old charge and makes the new party's charge on the
 -- project recurring; no keeps the old charge and stops the suggestion; null takes the answer back. An
--- owner or an editor writes (decision 0167). Returns the answer, prior_same, and the two charges'
--- "recurring" overrides before this call (prior_from_recurring, prior_to_recurring) for ביטול.
+-- owner or an editor writes (decision 0167). A yes also carries the old charge's pace to the new charge
+-- when it is not monthly. Returns the answer, its set_at (answer_set_at; null when none), prior_same, and
+-- the overrides before this call (prior_from_recurring, prior_to_recurring, prior_to_pace) for ביטול.
+-- p_today (default today) is the day the old charge's pace is read on.
 create function public.answer_recurring_handover(
-  p_direction text, p_party_id uuid, p_currency text, p_project_id uuid, p_to_party_id uuid, p_same boolean
+  p_direction text, p_party_id uuid, p_currency text, p_project_id uuid, p_to_party_id uuid, p_same boolean,
+  p_today date default null
 )
 returns jsonb
 language plpgsql
@@ -322,6 +328,9 @@ declare
   found_held boolean;
   cur_from boolean;
   cur_to boolean;
+  cur_to_pace text;
+  old_pace text;
+  answer_at timestamptz;
 begin
   cid := private.current_company_id();
   if cid is null then
@@ -362,7 +371,7 @@ begin
   from public.recurring_overrides o
   where o.company_id = cid and o.direction = dir and o.party_id = p_party_id and o.currency = p_currency
     and o.project_id = p_project_id;
-  select o.recurring into cur_to
+  select o.recurring, o.pace into cur_to, cur_to_pace
   from public.recurring_overrides o
   where o.company_id = cid and o.direction = dir and o.party_id = p_to_party_id and o.currency = p_currency
     and o.project_id = p_project_id;
@@ -373,6 +382,10 @@ begin
       'recurring', to_jsonb(held.from_prior));
     perform private.write_recurring_override(cid, dir, p_to_party_id, p_currency, p_project_id,
       'recurring', to_jsonb(held.to_prior));
+    if held.pace_set then
+      perform private.write_recurring_override(cid, dir, p_to_party_id, p_currency, p_project_id,
+        'pace', to_jsonb(held.to_pace_prior));
+    end if;
   end if;
 
   if p_same is null then
@@ -381,22 +394,40 @@ begin
       and h.project_id = p_project_id and h.to_party_id = p_to_party_id;
   else
     if p_same then
+      -- The old charge's pace, read before it ends (a repeated yes finds it ended and keeps what the first wrote).
+      select rp.pace into old_pace
+      from private.recurring_parties(cid, coalesce(p_today, private.flow_today())) rp
+      where rp.direction = dir and rp.party_id = p_party_id and rp.currency = p_currency
+        and rp.project_id = p_project_id;
+      if old_pace is not null and old_pace <> 'month' then
+        perform private.write_recurring_override(cid, dir, p_to_party_id, p_currency, p_project_id,
+          'pace', to_jsonb(old_pace));
+      end if;
       perform private.write_recurring_override(cid, dir, p_party_id, p_currency, p_project_id,
         'recurring', 'false'::jsonb);
       perform private.write_recurring_override(cid, dir, p_to_party_id, p_currency, p_project_id,
         'recurring', 'true'::jsonb);
     end if;
+    -- set_at is the clock's, so two answers in one transaction differ (the undo's conflict check reads it).
     insert into public.recurring_handovers as h
-      (company_id, direction, party_id, currency, project_id, to_party_id, same, from_prior, to_prior, set_by, set_at)
+      (company_id, direction, party_id, currency, project_id, to_party_id, same, from_prior, to_prior,
+       pace_set, to_pace_prior, set_by, set_at)
     values (cid, dir, p_party_id, p_currency, p_project_id, p_to_party_id, p_same,
-      case when p_same then cur_from end, case when p_same then cur_to end, auth.uid(), now())
+      case when p_same then cur_from end, case when p_same then cur_to end,
+      coalesce(p_same and old_pace is not null and old_pace <> 'month', false),
+      case when p_same and old_pace is not null and old_pace <> 'month' then cur_to_pace end,
+      auth.uid(), clock_timestamp())
     on conflict (company_id, direction, party_id, currency, project_id, to_party_id)
     do update set
       same = excluded.same,
       -- A repeated yes keeps the overrides from before the first one.
       from_prior = case when h.same and excluded.same then h.from_prior else excluded.from_prior end,
       to_prior = case when h.same and excluded.same then h.to_prior else excluded.to_prior end,
-      set_by = excluded.set_by, set_at = excluded.set_at;
+      pace_set = case when h.same and excluded.same then h.pace_set or excluded.pace_set else excluded.pace_set end,
+      to_pace_prior = case when h.same and excluded.same and h.pace_set then h.to_pace_prior
+        else excluded.to_pace_prior end,
+      set_by = excluded.set_by, set_at = excluded.set_at
+    returning h.set_at into answer_at;
   end if;
 
   return jsonb_build_object(
@@ -407,14 +438,16 @@ begin
     'to_party_id', p_to_party_id,
     'same', p_same,
     'prior_same', case when found_held then held.same end,
+    'answer_set_at', answer_at,
     'prior_from_recurring', cur_from,
-    'prior_to_recurring', cur_to
+    'prior_to_recurring', cur_to,
+    'prior_to_pace', cur_to_pace
   );
 end;
 $$;
 
-revoke all on function public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean) from public, anon;
-grant execute on function public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean)
+revoke all on function public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean, date) from public, anon;
+grant execute on function public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean, date)
   to authenticated, service_role;
 
 -- 6. The MCP's answer: answer_recurring_handover with the idempotency key, the write gate and an undo
@@ -471,14 +504,17 @@ begin
       jsonb_build_object('before', written->'prior_same', 'written', to_jsonb(p_same),
         'direction', p_direction, 'party_id', p_party_id, 'currency', p_currency,
         'project_id', p_project_id, 'to_party_id', p_to_party_id,
+        'answer_set_at', written->'answer_set_at',
         'prior_from_recurring', written->'prior_from_recurring',
-        'prior_to_recurring', written->'prior_to_recurring'),
+        'prior_to_recurring', written->'prior_to_recurring',
+        'prior_to_pace', written->'prior_to_pace'),
       clock_timestamp()
     )
     returning id into write_id;
     response := jsonb_build_object(
       'ok', true,
-      'data', (written - 'prior_same' - 'prior_from_recurring' - 'prior_to_recurring') || jsonb_build_object(
+      'data', (written - 'prior_same' - 'answer_set_at' - 'prior_from_recurring' - 'prior_to_recurring' - 'prior_to_pace')
+        || jsonb_build_object(
         'undo_kind', 'recurring_handover',
         'id', write_id,
         'write_id', write_id
@@ -526,7 +562,7 @@ begin
   execute 'alter table private.mcp_writes drop constraint mcp_writes_target';
   execute 'alter table private.mcp_writes add constraint mcp_writes_target '
     || left(def, length(def) - 2)
-    || $n$ OR ((kind = 'recurring_handover'::text) AND (prior ? 'before'::text) AND (prior ? 'written'::text) AND (prior ? 'direction'::text) AND (prior ? 'party_id'::text) AND (prior ? 'currency'::text) AND (prior ? 'project_id'::text) AND (prior ? 'to_party_id'::text))))$n$;
+    || $n$ OR ((kind = 'recurring_handover'::text) AND (prior ? 'before'::text) AND (prior ? 'written'::text) AND (prior ? 'direction'::text) AND (prior ? 'party_id'::text) AND (prior ? 'currency'::text) AND (prior ? 'project_id'::text) AND (prior ? 'to_party_id'::text) AND (prior ? 'answer_set_at'::text))))$n$;
 
   def := pg_get_functiondef('public.mcp_undo(text,text,uuid)'::regprocedure);
   anchor := $a$'supplier_category', 'recurring_match', $a$;
@@ -547,22 +583,19 @@ begin
     raise exception 'mcp_undo branches are not the expected definition';
   end if;
   def := replace(def, anchor, $n$    elsif p_kind = 'recurring_handover' then
-      -- FLOW-1037 (decision 0255). The pair's answer changed since the write is a conflict; else
-      -- answer_recurring_handover puts back the answer from before (null: no answer) and, with it,
-      -- both charges' recurring overrides.
+      -- FLOW-1037 (decision 0255). The pair answered again since the write (its set_at differs, or the
+      -- row came or went) is a conflict; else answer_recurring_handover puts back the answer from
+      -- before (null: no answer) and, with it, the overrides.
       declare
-        cur jsonb;
+        cur timestamptz;
       begin
-        select coalesce(
-          (select to_jsonb(h.same) from public.recurring_handovers h
+        select h.set_at into cur from public.recurring_handovers h
            where h.company_id = cid and h.direction = (rec.prior->>'direction')::public.txn_direction
              and h.party_id = (rec.prior->>'party_id')::uuid and h.currency = rec.prior->>'currency'
              and h.project_id = (rec.prior->>'project_id')::uuid
              and h.to_party_id = (rec.prior->>'to_party_id')::uuid
-           for update),
-          'null'::jsonb
-        ) into cur;
-        if cur is distinct from rec.prior->'written' then
+           for update;
+        if cur is distinct from (rec.prior->>'answer_set_at')::timestamptz then
           response := private.mcp_error('conflict', 'conflict');
         else
           perform public.answer_recurring_handover(rec.prior->>'direction', (rec.prior->>'party_id')::uuid,

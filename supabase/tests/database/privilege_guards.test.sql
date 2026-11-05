@@ -14,7 +14,7 @@ create temp table pg_allowed (sig text primary key);
 insert into pg_allowed (sig) values
     ('accept_invite(uuid)'),
     ('answer_push_prompt(boolean)'),
-    ('answer_recurring_handover(text,uuid,text,uuid,uuid,boolean)'),
+    ('answer_recurring_handover(text,uuid,text,uuid,uuid,boolean,date)'),
     ('answer_recurring_match(txn_direction,uuid,uuid,boolean)'),
     ('answer_transfer_match(uuid,uuid,boolean)'),
     ('apply_starter_categories(text)'),
