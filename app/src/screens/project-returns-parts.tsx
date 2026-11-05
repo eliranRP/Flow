@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { lineInitials } from "../cash-lines-groups";
 import { Amount } from "../ui/amount";
@@ -6,11 +6,11 @@ import { Button } from "../ui/button";
 import { FailureLine } from "../ui/empty-state";
 import { ChevronIcon } from "../ui/icons";
 import { rowSource } from "../ui/line-marks";
+import { GroupHead } from "../ui/group-head";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { linesByMonth } from "./report-lines-screen";
-import { ReportSection, type Collapse } from "./reports-parts";
 import { usePropertyReturnLinesQuery, type ReturnLine, type ReturnLineRow, type ReturnLinesPage } from "./project-returns-data";
 import { INFINITY, INFINITY_NAME, type EditField, type FigureValue, type Formula, type FormulaRow, type Op, type Target } from "./project-returns-info";
 
@@ -46,18 +46,6 @@ export function pageResolver(base: string, search: string): Resolve {
     if (target.kind === "loans") return { href: target.loanId == null ? `/loans${search}` : `/loans/${target.loanId}${search}` };
     return { href: `${base}${withParam(search, "edit", target.field)}` };
   };
-}
-
-/** "חסר", then the accent הוספה (a button when the figure's row is not one already). */
-export function MissingFigure({ onAdd, addLabel }: { onAdd?: () => void; addLabel?: string }) {
-  return (
-    <span className="ui-ret-missing">
-      <span>חסר</span>
-      {onAdd == null ? null : (
-        <button type="button" className="ui-ret-add" aria-label={addLabel} onClick={onAdd}>הוספה</button>
-      )}
-    </span>
-  );
 }
 
 /** ∞ in a per-cent figure's place, named for a screen reader (FLOW-457). */
@@ -139,7 +127,7 @@ export function FormulaList({ formula, currency, resolve, readOnly = false, labe
     <ul className="ui-ret-formula" aria-label={label} ref={listRef}>
       {formula.rows.map((row) => (
         <li key={row.key}>
-          <FormulaLine row={row} currency={currency} action={rowAction(row, resolve, readOnly)} result={false} />
+          <FormulaLine row={row} currency={currency} action={rowAction(row, resolve, readOnly)} result={row.op === "="} />
         </li>
       ))}
       {more == null ? null : <li>{more}</li>}
@@ -149,6 +137,22 @@ export function FormulaList({ formula, currency, resolve, readOnly = false, labe
         </li>
       )}
     </ul>
+  );
+}
+
+/**
+ * FLOW-1047 (board V3-Calc): one block of a calculation page: a 20px card, a 44px head (its name, and its
+ * figure at the end), then its rows with their operators. It does not fold.
+ */
+export function CalcSection({ title, total, children }: { title: string; total: ReactNode; children: ReactNode }) {
+  return (
+    <section className="ui-ret-calc" aria-label={title}>
+      <div className="ui-ret-calc-head">
+        <h2 className="ui-ret-calc-title">{title}</h2>
+        {total == null ? null : <span className="ui-ret-calc-total">{total}</span>}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -178,13 +182,25 @@ function rowHint(row: ReturnLineRow): string {
   return row.categoryName == null ? date : `${date} · ${row.categoryName}`;
 }
 
-function TransactionGroups({ rows, line, currency, search }: { rows: readonly ReturnLineRow[]; line: ReturnLine; currency: string; search: string }) {
+/** A month's head line: its count and its sum, signed as the rows are ("4 · +$330"). */
+export function monthSummary(rows: readonly ReturnLineRow[], line: ReturnLine, currency: string): ReactNode {
+  const sum = rows.reduce((total, row) => total + row.minor, 0n);
+  const income = line === "income" || sum > 0n;
+  return (
+    <>
+      <bdi dir="ltr">{String(rows.length)}</bdi>
+      {" · "}
+      <Amount agorot={sum} currency={currency} income={income && sum > 0n} />
+    </>
+  );
+}
+
+function TransactionGroups({ rows, line, currency, search, idPrefix }: { rows: readonly ReturnLineRow[]; line: ReturnLine; currency: string; search: string; idPrefix: string }) {
   const groups = linesByMonth(rows.map((row) => ({ ...row, doc_date: row.date })));
+  // FLOW-1047: each month under the one-line sticky head: its name, then its count and sum.
   return groups.map((group) => (
-    <section key={group.key} className="ui-lines-group" aria-label={group.title}>
-      <div className="ui-lines-group-head">
-        <h3 className="t-section ui-lines-group-title">{group.title}</h3>
-      </div>
+    <section key={group.key} className="ui-month ui-ret-month" aria-labelledby={`${idPrefix}-${group.key}`}>
+      <GroupHead id={`${idPrefix}-${group.key}`} title={group.title} summary={monthSummary(group.rows, line, currency)} />
       <List layout="flat">
         {group.rows.map((row) => (
           <ListRow
@@ -210,15 +226,17 @@ function TransactionGroups({ rows, line, currency, search }: { rows: readonly Re
  * A figure's transactions, newest first by month, 50 at a time ("עוד N תנועות"). A transaction opens its
  * own page, where its category or project changes with the pickers there. `sample` draws one page.
  */
-export function ReturnLinesSection({ projectId, line, categoryId, currency, search, collapse, sample }: {
+export function ReturnLinesSection({ projectId, line, categoryId, currency, search, sample, sectionRef }: {
   projectId: string;
   line: ReturnLine;
   categoryId: string | null;
   currency: string;
   search: string;
-  collapse: Collapse;
   sample?: ReturnLinesPage;
+  /** The section a row of the calculation moves the focus to (its bank lines are these). */
+  sectionRef?: Ref<HTMLElement>;
 }) {
+  const idPrefix = useId();
   const read = usePropertyReturnLinesQuery(projectId, line, categoryId, sample == null);
   const pages = sample == null ? read.data?.pages : [sample];
   const rows = pages?.flatMap((page) => page.rows) ?? null;
@@ -236,7 +254,7 @@ export function ReturnLinesSection({ projectId, line, categoryId, currency, sear
   } else {
     body = (
       <>
-        <TransactionGroups rows={filtered} line={line} currency={currency} search={search} />
+        <TransactionGroups rows={filtered} line={line} currency={currency} search={search} idPrefix={idPrefix} />
         {more ? (
           <div className="ui-rep-more-wrap">
             <Button
@@ -252,10 +270,11 @@ export function ReturnLinesSection({ projectId, line, categoryId, currency, sear
       </>
     );
   }
+  // FLOW-1047 (board V3-Calc): the months under their own heads, no section card around them.
   return (
-    <ReportSection id="lines" title="תנועות" total={filtered == null ? null : <bdi dir="ltr" className="t-muted">{String(count)}</bdi>} collapse={collapse}>
+    <section className="ui-ret-lines" aria-label="תנועות" tabIndex={-1} ref={sectionRef}>
       {body}
-    </ReportSection>
+    </section>
   );
 }
 
