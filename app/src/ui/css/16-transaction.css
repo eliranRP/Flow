@@ -128,6 +128,7 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
 }
 
 .ui-txn-back {
+  margin-block-end: calc(var(--space-1) - var(--space-inset-row));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -158,19 +159,19 @@ html:not(:has(.ui-tabbar)) .ui-txn-approve {
   bottom: 0;
 }
 
+/* FLOW-1048 (V3-Transaction): the head column, 4px apart: the status 14/500, the name 24/600, the figure 40, the meta 14. */
 .ui-txn-head {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-1);
   text-align: start;
 }
 
 .ui-txn-status {
   color: var(--color-text-secondary);
-  /* board: the status chip is 12px, medium (no 12px token). */
-  font-size: calc(var(--type-cents-size) + 1px);
-  font-weight: var(--type-btn-weight);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-chip-weight);
   line-height: var(--type-meta-line);
 }
 
@@ -228,7 +229,12 @@ html:not(:has(.ui-tabbar)) .ui-txn-approve {
   margin: 0;
   /* The head's column is stretched, so the figure fits its full width at 40px, not its own shrunk width. */
   align-self: stretch;
+  font-size: var(--type-detail-size);
   line-height: var(--type-detail-line);
+}
+
+.ui-txn-amount .ui-num {
+  font-size: inherit;
 }
 
 .ui-txn-meta {

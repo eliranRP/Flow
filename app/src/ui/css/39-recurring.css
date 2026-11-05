@@ -1,5 +1,5 @@
-/* FLOW-447, FLOW-1048: the קבועים list and the changed charges (V3-Recurring, V3-Changes), the List pattern: the
-   stacked head (ScreenHeader), then the body with the page's side margin. Tokens only. */
+/* FLOW-447, FLOW-1048: the קבועים list and the changed charges (V3-Recurring, V3-Changes), the List pattern, to the
+   boards' px (decision 0257): one column at the 20px margin with a 16px gap. Tokens only. */
 .ui-recurring {
   display: flex;
   flex-direction: column;
@@ -10,25 +10,74 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-inline: var(--space-side);
+  padding: 0 var(--space-side) var(--space-6);
 }
 
-/* The figure under the month line: what is still to pay (40), and under it what was paid and what is still to come in. */
-.ui-recurring-figures {
+/* The head: 8px under the safe area, Back (44), the title 32/1.2/600 and the month line 14/1.4, 4px apart. */
+.ui-recurring-head {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
+  padding-top: calc(var(--safe-top) + var(--space-2));
 }
 
-.ui-recurring-figure-label,
-.ui-recurring-figure-line {
+.ui-recurring-head .t-title {
+  margin: 0;
+}
+
+.ui-recurring-kicker,
+.ui-recurring-sub {
   margin: 0;
   color: var(--color-text-secondary);
 }
 
-.ui-recurring-figure {
-  margin: 0;
+/* The two month cards: what is still to pay and still to come in, 12px apart, 20 corners, 14/16 inside. */
+.ui-recurring-sums {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ui-recurring-sum {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-width: 0;
+  padding: calc(var(--space-3) + var(--space-half)) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-recurring-sum-label {
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-recurring-sum-figure {
+  font-size: var(--type-card-size);
+  line-height: var(--type-card-line);
   font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.ui-recurring-sum-note {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-text-secondary);
+}
+
+/* The groups sit 8px closer to the segment and to each other than the column's gap (the board's −8px). */
+.ui-recurring-group {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+/* FLOW-1048 (V3-Changes): the count over the rows, 20/1.3/500, 6px above and 8px under, a hairline under it. */
+.ui-changes-head {
+  margin: 0;
+  padding: calc(var(--space-1) * 1.5) 0 var(--space-2);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .ui-recurring-income {

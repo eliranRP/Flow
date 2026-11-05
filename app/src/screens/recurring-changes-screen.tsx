@@ -13,7 +13,8 @@ import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { CloseIcon, RepeatIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
-import { ScreenHeader } from "../ui/screen-header";
+import { BackButton } from "../ui/back";
+import { FocusTitle } from "../ui/focus-title";
 import { ChangedChargesSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
 import { topToast } from "../ui/top-toast";
@@ -66,14 +67,18 @@ export function RecurringChangesScreen({ sample }: { sample?: readonly Recurring
   const backTo = project == null ? `/${search}` : `/projects/${encodeURIComponent(project)}${search}`;
 
   const head = (
-    <ScreenHeader layout="stacked" className="ui-recurring-head" title="חיובים שהשתנו" backTo={backTo} backText={backName} subtitle="החודש, 20% ומעלה מהסכום הרגיל" />
+    <header className="ui-recurring-head">
+      <BackButton fallback={backTo} text={backName} />
+      <FocusTitle className="t-title">חיובים שהשתנו</FocusTitle>
+      <p className="ui-recurring-sub t-meta">החודש, 20% ומעלה מהסכום הרגיל</p>
+    </header>
   );
   // A preview of a failed read (?preview=error) draws the failure, as the live read would.
   if ((live && query.isError && query.data == null) || previewFails(preview)) {
     return (
       <div className="ui-recurring">
-        {head}
         <div className="ui-recurring-body">
+          {head}
           <PageLoadFailed title="החיובים לא נטענו" offline={!online} onRetry={() => void query.refetch()} />
         </div>
       </div>
@@ -82,8 +87,8 @@ export function RecurringChangesScreen({ sample }: { sample?: readonly Recurring
   if (data == null) {
     return (
       <div className="ui-recurring">
-        {head}
         <div className="ui-recurring-body">
+          {head}
           <ChangedChargesSkeleton />
         </div>
       </div>
@@ -133,13 +138,13 @@ export function RecurringChangesScreen({ sample }: { sample?: readonly Recurring
   const rows = mine.map((row, index) => ({ row, view: views[index] })).filter((item) => item.view != null && !seen.has(item.row.transaction_id));
   return (
     <div className="ui-recurring">
-      {head}
       <div className="ui-recurring-body">
+        {head}
         {rows.length === 0 ? (
           <EmptyState icon={<RepeatIcon />} title="אין שינויים" body="כל החיובים הקבועים שהגיעו החודש קרובים לסכום הרגיל שלהם." />
         ) : (
           <section className="ui-changes" aria-labelledby="changes-count">
-            <h2 id="changes-count" className="sr-only">{rows.length === 1 ? "חיוב אחד לבדיקה" : `${String(rows.length)} חיובים לבדיקה`}</h2>
+            <h2 id="changes-count" className="ui-changes-head t-section">{rows.length === 1 ? "חיוב אחד לבדיקה" : `${String(rows.length)} חיובים לבדיקה`}</h2>
             <ul className="ui-changes-list" aria-live="polite">
               {rows.map(({ row, view }) => {
                 if (view == null) return null;

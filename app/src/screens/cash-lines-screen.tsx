@@ -47,7 +47,7 @@ import { SplitPartsHint } from "../ui/split-parts-hint";
 import { txnListState } from "../txn-nav";
 import { reviewItems, reviewMinutes } from "../weekly-summary";
 import { OrderChips } from "../ui/order-chips";
-import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, LinesCount, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
+import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, linesCountParts, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
 
 /**
  * FLOW-366, FLOW-1048 (V3-Lines, the List pattern). The lines behind one month's נכנס or יצא (or FLOW-418 the
@@ -225,7 +225,6 @@ function CashLinesBody({
   ) : (
     <>
       <LinesTotal side={side} currency={currency} total={total} />
-      {allLoaded ? <LinesCount summary={summary} currency={currency} /> : null}
       {/* FLOW-965: the lines waiting for approval are the page's one filled button (Home v2's). */}
       {allLoaded && summary.pending > 0 ? (
         <ReviewButton row={{ id: "review", to: `/review${search}`, title: reviewItems(summary.pending), button: { label: reviewItems(summary.pending), hint: reviewMinutes(summary.pending) } }} />
@@ -250,7 +249,7 @@ function CashLinesBody({
       <header className="ui-lines-head">
         <BackButton fallback={back} text={backText} />
         <FocusTitle className="t-title">{title}</FocusTitle>
-        <p className="ui-lines-sub t-meta">{subtitle}</p>
+        <p className="ui-lines-sub t-meta">{side === "kept" || !allLoaded ? subtitle : [subtitle, ...linesCountParts(summary, currency)].join(" • ")}</p>
         {headBlock}
         {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         <span ref={setHeadEnd} className="ui-compact-mark" aria-hidden="true" />

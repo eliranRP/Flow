@@ -34,7 +34,14 @@ describe("קבועים v3 (FLOW-1048, V3-Recurring)", () => {
     expect(screen.getByRole("heading", { level: 1, name: "קבועים" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "חזרה לבית" })).toBeTruthy();
     expect(screen.getByText("אוקטובר 2026 • נכון ל־11/10 • 15 קבועים")).toBeTruthy();
-    expect(document.querySelector(".ui-recurring-figure")?.textContent).toBe("$962");
+    expect(document.querySelector(".ui-recurring-sum-figure")?.textContent).toBe("$962");
+  });
+
+  it("filters the groups to the expenses or the income with the segment (V3-Recurring)", () => {
+    renderScreen();
+    fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
+    expect(screen.queryByRole("region", { name: "חשמל ומים" })).toBeNull();
+    expect(screen.getByRole("region", { name: "שכירות" })).toBeTruthy();
   });
 
   it("leads with the late charges as cards that open their charge page", () => {

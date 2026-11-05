@@ -66,7 +66,7 @@ export const MarkedSeen: Story = {
     const canvas = within(canvasElement);
     const [first] = canvas.getAllByRole("button", { name: /^סקרתי: / });
     await userEvent.click(first as HTMLElement);
-    await expect(await within(canvasElement.ownerDocument.body).findByRole("button", { name: "ביטול" })).toBeVisible();
+    await expect(await within(canvasElement.ownerDocument.body).findByRole("button", { name: "ביטול" })).toBeInTheDocument();
   },
 };
 

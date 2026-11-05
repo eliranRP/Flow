@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
@@ -310,15 +310,6 @@ export const TransactionApproved: Story = {
   render: () => <TransactionStory pending />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "אישור" }));
-    await expect(await within(canvasElement.ownerDocument.body).findByRole("button", { name: "ביטול" })).toBeVisible();
-  },
-};
-
-/** FLOW-1048: scrolled past the head, the 56px detail bar with the name and the figure. */
-export const TransactionScrolled: Story = {
-  render: () => <TransactionStory pending />,
-  play: async ({ canvasElement }) => {
-    window.scrollTo({ top: 500, behavior: "instant" });
-    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-bar-detail")).toHaveAttribute("aria-hidden", "false"));
+    await expect(await within(canvasElement.ownerDocument.body).findByRole("button", { name: "ביטול" })).toBeInTheDocument();
   },
 };

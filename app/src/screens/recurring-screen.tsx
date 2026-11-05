@@ -66,8 +66,8 @@ export function RecurringScreen({
     // FLOW-963: the failure keeps the title and says what happened, with the retry and the way to help.
     return (
       <div className="ui-recurring">
-        <RecurringHead />
         <div className="ui-recurring-body">
+          <RecurringHead />
           <PageLoadFailed title="הקבועים לא נטענו" offline={!online} onRetry={() => void (live ? query.refetch() : undefined)} />
         </div>
       </div>

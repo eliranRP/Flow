@@ -59,7 +59,8 @@ describe("supplier names", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const titles = screen.getAllByText(longName);
+    // The detail bar echoes the name on one line with an ellipsis (FLOW-1048); the page's own titles wrap.
+    const titles = screen.getAllByText(longName).filter((node) => node.closest(".ui-compact-bar") == null);
     expect(titles.length).toBeGreaterThanOrEqual(3);
     for (const title of titles) wraps(title);
     expect(titles.some((node) => node.classList.contains("ui-review-supplier"))).toBe(true);

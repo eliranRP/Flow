@@ -8,13 +8,15 @@
 /* FLOW-1048 (V3-Charge, the Detail pattern): the page's own Back on top, the 14px column gap, the 20px side margin. */
 .ui-charge-body {
   display: grid;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   padding: calc(var(--safe-top) + var(--space-2)) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
 }
 
+/* Back sits 4px over the status line, as the board's head column (gap 4) draws it. */
 .ui-charge-back {
   display: flex;
   justify-content: flex-start;
+  margin-block-end: calc(var(--space-1) - var(--space-4));
 }
 
 /* The head: the status line (14/500, coloured by state), the name (24/600), the figure (40), the meta line. */

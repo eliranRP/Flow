@@ -26,15 +26,9 @@
   color: var(--color-text-secondary);
 }
 
-/* The count line sits under the total, in muted text. */
-.ui-lines-count {
-  margin: 0;
-  color: var(--color-text-muted);
-  line-height: var(--type-card-line);
-}
-
+/* The figure (40) sits 6px under the month line (V3-Lines). */
 .ui-lines-head > .ui-breakdown-total {
-  margin-block-start: var(--space-2);
+  margin-block-start: calc(var(--space-1) * 1.5);
 }
 
 /* FLOW-965: the page's states: the review button and the offline line sit in the head. */

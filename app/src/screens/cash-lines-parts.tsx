@@ -115,17 +115,11 @@ export function LinesTotal({ side, currency, total }: { side: CashListSide; curr
 }
 
 /**
- * FLOW-366: "N תנועות · $X לא נספרים ברווח"; the out-of-profit part shows only when it applies. FLOW-965: the
- * lines waiting for approval are the review button under it, not a part of this line.
+ * FLOW-366, FLOW-1048: the month line's count, "N תנועות", and "$X לא נספרים ברווח" when it applies (V3-Lines puts
+ * them on the month line). FLOW-965: the lines waiting for approval are the review button, not a part of it.
  */
-export function LinesCount({
-  summary,
-  currency,
-}: {
-  summary: { count: number; notInProfit: bigint };
-  currency: string;
-}) {
+export function linesCountParts(summary: { count: number; notInProfit: bigint }, currency: string): string[] {
   const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
   if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
-  return <p className="t-line2 ui-lines-count">{parts.join(" • ")}</p>;
+  return parts;
 }
