@@ -1,0 +1,1 @@
+The 2026-11-05 daily perf report is in `docs/qa/perf/`. Flow QA is larger after the owner's top-up, so several reads return more; Home's figures show in about 1.85 s on a cold load. FLOW-1029 (#970) lets the Flow QA seed reach its split-part and leg targets.
