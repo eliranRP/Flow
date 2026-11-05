@@ -581,16 +581,11 @@
 }
 
 /* FLOW-1045 (board V3-Report; the owner, 2026-11-05: "too much text"): a report's row is the board's 60px: the name
-   17 on one line, the הכנסות · הוצאות line 13 secondary on one line, the net 17, each cut with an ellipsis. */
+   17 (it wraps once after a slash before it cuts, FLOW-358), the הכנסות · הוצאות line 13 secondary on one line cut
+   with an ellipsis, the net 17. */
 .ui-rep-v3-group .ui-row {
   min-block-size: calc(var(--space-10) + var(--space-5));
   padding-block: calc(var(--space-1) + var(--space-half));
-}
-
-.ui-rep-v3-group .ui-row-project .ui-row-title {
-  display: block;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .ui-rep-v3-group .ui-row-project .ui-row-hint {

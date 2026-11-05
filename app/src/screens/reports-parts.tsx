@@ -318,6 +318,7 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
               key={row.key}
               variant="project"
               title={slashBreaks(row.name)}
+              wrapTitle
               hint={hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`}
               {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
               chevron={to != null}
