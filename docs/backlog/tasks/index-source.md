@@ -286,6 +286,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Transactions and app UX
 
+- FLOW-1039
 - FLOW-311
 - FLOW-133
 - FLOW-137
