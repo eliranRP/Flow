@@ -39,8 +39,15 @@
 }
 
 .ui-pull-refresh[data-phase="refreshing"] > .ui-spinner {
-  animation: ui-spin var(--motion-spin) linear infinite;
   transform: none;
+}
+
+/* It spins only when motion is allowed: the shared reduced-motion rule (07-band-home.css) keeps
+   every spinner still, and the status line still says "מרענן". */
+@media (prefers-reduced-motion: no-preference) {
+  .ui-pull-refresh[data-phase="refreshing"] > .ui-spinner {
+    animation: ui-spin var(--motion-spin) linear infinite;
+  }
 }
 
 /* Done, or let go too soon: it goes back up and fades. */
