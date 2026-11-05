@@ -6,7 +6,6 @@ import { DateSheet } from "../ui/date-sheet";
 import { TextField } from "../ui/text-field";
 import { Button } from "../ui/button";
 import { formatDisplay } from "../ui/date-math";
-import { ListRow } from "../ui/list-row";
 import { LOAN_KIND_LABEL } from "./loan-copy";
 import { LOAN_KIND_DESCRIPTION } from "./loan-detail-data";
 import {

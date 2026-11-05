@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Route, Routes } from "react-router-dom";
 import { sampleLoanStore, sampleLoans } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
@@ -50,6 +50,16 @@ export const ThisYear: Story = {
     await userEvent.click(canvas.getByRole("radio", { name: "2026" }));
     await expect(canvas.getByText("החוב ב־01/01/2026")).toBeInTheDocument();
     await expect(canvas.getByText("שולם ב־2026")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1046: scrolled, the period segment docks into the band bar. */
+export const Docked: Story = {
+  name: "Docked",
+  args: { store: () => sampleLoanStore() },
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 500, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
   },
 };
 

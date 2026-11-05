@@ -11,23 +11,26 @@ function toast(page: Page, text: string | RegExp) {
   return page.getByRole("status").filter({ hasText: text });
 }
 
-test("the list puts paid-off and closed loans under a collapsed group, and a row opens its page", async ({ page }) => {
+test("the list puts paid-off and closed loans under נסגרו, and a row opens its page", async ({ page }) => {
   await page.goto("/e2e/loans");
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$210,000, .*ריבית בלבד$/ })).toBeVisible();
-  const group = page.getByRole("button", { name: /^נסגרו · 2/ });
-  await expect(group).toHaveAttribute("aria-expanded", "false");
+  // FLOW-1046: the rows sit in groups by kind; the bridge loan is under ריבית בלבד.
+  await expect(page.getByRole("heading", { name: "ריבית בלבד" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$210,000, / })).toBeVisible();
+  const closed = page.getByRole("radio", { name: /^נסגרו · 2/ });
+  await expect(closed).toHaveAttribute("aria-checked", "false");
   await expect(page.getByRole("button", { name: /^שטר ישן, / })).toHaveCount(0);
-  await group.click();
-  await expect(group).toHaveAttribute("aria-expanded", "true");
+  await closed.click();
+  await expect(closed).toHaveAttribute("aria-checked", "true");
   // FLOW-139c: a paid-off loan shows its balance as $0, as the board draws it.
-  await expect(page.getByRole("button", { name: /^שטר ישן, \$1,240, .*נפרעה 06\/2026$/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^הלוואת ציוד ישנה, \$0, .*נסגרה 11\/2025$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^שטר ישן, \$1,240, נפרעה 06\/2026/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת ציוד ישנה, \$0, נסגרה 11\/2025/ })).toBeVisible();
 
+  await page.getByRole("radio", { name: /^פעילות · / }).click();
   await page.getByRole("button", { name: /^הלוואת גישור, / }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge$/);
   await expect(page.getByRole("heading", { name: "הלוואת גישור" })).toBeVisible();
-  // FLOW-142: the page leads with the balance, what was paid and the next payment; the terms and the last payments follow.
+  // FLOW-1046: the band leads with the balance; the next payment, what was paid, the terms and the last payments follow.
   await expect(page.getByText("יתרה היום")).toBeVisible();
   await expect(page.getByRole("region", { name: "שולם" })).toBeVisible();
   await expect(page.getByText(/^התשלום הבא · /)).toBeVisible();
@@ -36,13 +39,13 @@ test("the list puts paid-off and closed loans under a collapsed group, and a row
   await expect(page.getByRole("heading", { name: "3 התשלומים האחרונים" })).toBeVisible();
   await page.getByRole("link", { name: "כל התשלומים" }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge\/payments$/);
-  await expect(page.getByText("כל התשלומים", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "תשלומים" })).toBeVisible();
   await expect(page.locator("a[href^='/transactions/']")).toHaveCount(3);
 });
 
-test("the summary card opens the loans summary, its switch moves to this year, and a row opens its loan (FLOW-142)", async ({ page }) => {
+test("the band opens the loans summary, its switch moves to this year, and a row opens its loan (FLOW-142)", async ({ page }) => {
   await page.goto("/e2e/loans?reset=1");
-  await page.getByRole("link", { name: /^מה שולם עד היום, וכמה נשאר מהחוב/ }).click();
+  await page.getByRole("link", { name: /^נשאר לשלם/ }).first().click();
   await expect(page).toHaveURL(/\/e2e\/loans\/summary$/);
   await expect(page.getByRole("heading", { level: 1, name: "סיכום הלוואות" })).toBeVisible();
   await expect(page.getByText("החוב בהתחלה")).toBeVisible();

@@ -15,14 +15,14 @@ import {
 } from "./loan-detail-data";
 import { nextPaymentOf, type LoanListRow } from "./loan-list";
 import { israelToday } from "../ui/date-math";
+import type { LoanProjectChoice } from "./loan-project-picker";
+import { usePropertyReturnsQuery } from "./project-returns-data";
 
 /** FLOW-1046: a sample loan's next payment for its list row, as the live read gives it. */
 function nextOf(loan: Parameters<typeof nextPaymentOf>[0]): Pick<LoanListRow, "next"> {
   const next = nextPaymentOf(loan, israelToday());
   return next == null ? {} : { next };
 }
-import type { LoanProjectChoice } from "./loan-project-picker";
-import { usePropertyReturnsQuery } from "./project-returns-data";
 
 /**
  * FLOW-106 B / FLOW-110: where the loan page reads and writes. Live reads go through react-query

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Route, Routes } from "react-router-dom";
 import { closingPaidLoanStore, oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
@@ -48,7 +48,23 @@ export const InterestOnlyRates: Story = {
     await expect(kind.scrollWidth - kind.clientWidth).toBeLessThanOrEqual(1);
   },
 };
-export const BalloonWaitingReview: Story = { name: "Balloon, a payment waiting for review", ...loan("loan-note") };
+/** FLOW-1046 (V3-Loan-Note): a loan whose payments wait for a check opens with הפרטים נכונים / עריכה. */
+export const NoteWaitingCheck: Story = {
+  name: "Note waiting for a check",
+  ...loan("loan-note"),
+  beforeEach: () => {
+    try {
+      window.localStorage.removeItem("flow.attention.loan:loan-note");
+    } catch {
+      // No storage: nothing to clear.
+    }
+  },
+  play: async ({ canvasElement }) => {
+    const card = within(canvasElement).getByRole("region", { name: "ממתין לבדיקה" });
+    await expect(within(card).getByRole("button", { name: "הפרטים נכונים" })).toBeVisible();
+    await expect(within(card).getByRole("link", { name: "עריכה" })).toBeVisible();
+  },
+};
 export const Demand: Story = { name: "Demand", ...loan("loan-partner") };
 /** FLOW-138 "Hide" (FLOW-356): נפרעה and its date lead; no balance and no next payment. */
 export const PaidOffWithBalance: Story = { name: "Paid off with a balance left", ...loan("loan-old") };
@@ -58,8 +74,28 @@ export const LoadError: Story = { name: "Error", ...loan("loan-mortgage", { phas
 /** FLOW-962: offline, the page keeps its figures and says which moment they are from. */
 export const Offline: Story = { name: "Offline", args: { loanId: "loan-mortgage", store: () => oneLoanStore("loan-mortgage"), offline: true } };
 
-/** FLOW-139c: every payment, by year, newest first. */
-export const Payments: Story = { name: "All payments", ...loan("loan-mortgage", {}, "payments") };
+/** FLOW-139c, FLOW-1046: the paid payments, by year under one-line heads, newest first. */
+export const Payments: Story = { name: "Payments, paid", ...loan("loan-mortgage", {}, "payments") };
+
+/** FLOW-1046: the payments left on the schedule, by year, soonest first. */
+export const PaymentsUpcoming: Story = {
+  name: "Payments, upcoming",
+  ...loan("loan-mortgage", {}, "payments"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("radio", { name: /^הבאים · / }));
+    await expect(within(canvasElement).getAllByText(/^צפוי · /).length).toBeGreaterThan(0);
+  },
+};
+
+/** FLOW-1046: scrolled, the שולמו / הבאים segment docks into the compact bar. */
+export const PaymentsDocked: Story = {
+  name: "Payments, docked",
+  ...loan("loan-mortgage", {}, "payments"),
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 600, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
+  },
+};
 
 function bodyOf(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
@@ -133,6 +169,19 @@ export const CloseSheet: Story = {
   },
 };
 
+/** FLOW-1046: ⋯ in the band opens the close sheet; closing shows the toast with ביטול. */
+export const CloseToast: Story = {
+  name: "Close sheet, toast with undo",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    const body = bodyOf(canvasElement);
+    await userEvent.click(within(canvasElement).getAllByRole("button", { name: "פעולות להלוואה" })[0] as HTMLElement);
+    const sheet = await body.findByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    await userEvent.click(within(sheet).getByRole("button", { name: "סגירת ההלוואה" }));
+    await expect(await body.findByRole("button", { name: "ביטול" })).toBeVisible();
+  },
+};
+
 /** FLOW-962: a refinance names the new loan, and the closed head opens it. */
 export const ClosedRefinanceLinked: Story = {
   name: "Closed for a refinance, linked",
@@ -160,7 +209,7 @@ export const RateFromDay: Story = {
   },
 };
 
-/** FLOW-142: the page's cards in order: the balance, what was paid, the next payment, then the last payments. */
+/** FLOW-1046 (V3-Loan): the band's balance, then the next payment, what was paid, then the last payments. */
 export const CardsInOrder: Story = {
   name: "Cards in order",
   ...loan("loan-mortgage"),
@@ -168,8 +217,8 @@ export const CardsInOrder: Story = {
     const page = within(canvasElement);
     const order = [
       page.getByText("יתרה היום"),
-      page.getByText("שולם מאז 01/2025"),
       page.getByText(/^התשלום הבא · /),
+      page.getByText("שולם מאז 01/2025"),
       page.getByText("3 התשלומים האחרונים"),
     ];
     for (let index = 1; index < order.length; index += 1) {
