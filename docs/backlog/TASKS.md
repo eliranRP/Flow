@@ -169,6 +169,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | --- | --- | --- |
 | <a id="flow-1046"></a>[FLOW-1046](tasks/FLOW-1046.md) | Loans v3: the list, the loan page by kind, payments, the summary, the new-loan and close sheets | UI (design approved) |
 | <a id="flow-1055"></a>[FLOW-1055](tasks/FLOW-1055.md) | v3 pixel pass: Loans on its boards | UI (design approved) |
+| <a id="flow-1058"></a>[FLOW-1058](tasks/FLOW-1058.md) | FLOW-1055b: the loan sheets on their boards | UI (design approved) |
 | <a id="flow-102"></a>[FLOW-102](tasks/FLOW-102.md) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE |
 | <a id="flow-109"></a>[FLOW-109](tasks/FLOW-109.md) | Income assigned to a project: confirm it counts in that project | BUG |
 | <a id="flow-111"></a>[FLOW-111](tasks/FLOW-111.md) | update_loan can store a payment below the interest | BUG |
@@ -308,6 +309,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1051"></a>[FLOW-1051](tasks/FLOW-1051.md) | v3 pixel pass: the shared parts on the boards' measurements | UI (design approved) |
 | <a id="flow-1052"></a>[FLOW-1052](tasks/FLOW-1052.md) | v3 pixel pass: Home on its boards | UI (design approved) |
 | <a id="flow-1056"></a>[FLOW-1056](tasks/FLOW-1056.md) | Home on a future month: the next month opens Home with its forecast as the month's data | UI (owner's ask) |
+| <a id="flow-1059"></a>[FLOW-1059](tasks/FLOW-1059.md) | FLOW-1052b: the month drawer's select-then-open flow | UI (the owner decides first) |
+| <a id="flow-1060"></a>[FLOW-1060](tasks/FLOW-1060.md) | v3 review nits in code: a duplicate CSS rule, Projects' line height, a token's indent, a slow test, the attention card's restore | BACKLOG NIT |
+| <a id="flow-1061"></a>[FLOW-1061](tasks/FLOW-1061.md) | v3 pixel checks the passes left: clip-check on main, the example strips, the review bar, the P&L band label, the empty frame, the month cell's border | BACKLOG NIT (UI) |
+| <a id="flow-1062"></a>[FLOW-1062](tasks/FLOW-1062.md) | v3 board items the build left for the owner: Add's drill-in rows, Search's scope chips, the investment page's reads, the reports hub's stepper | UI (the owner decides each item first) |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |
@@ -454,6 +459,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
 | <a id="flow-1053"></a>[FLOW-1053](tasks/FLOW-1053.md) | v3 pixel pass: Projects on its boards | UI (design approved) |
 | <a id="flow-1054"></a>[FLOW-1054](tasks/FLOW-1054.md) | v3 pixel pass: Reports on its boards | UI (design approved) |
+| <a id="flow-1057"></a>[FLOW-1057](tasks/FLOW-1057.md) | FLOW-1053b: the project page's month and its month-end forecast | UI (a feature; the owner decides first) |
 | <a id="flow-401"></a>[FLOW-401](tasks/FLOW-401.md) | Project view by category | PLAN FIRST |
 | <a id="flow-402"></a>[FLOW-402](tasks/FLOW-402.md) | All transactions of a project, at a glance | PLAN FIRST |
 | <a id="flow-403"></a>[FLOW-403](tasks/FLOW-403.md) | Project timeline and expected months | PLAN FIRST |

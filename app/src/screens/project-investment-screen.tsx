@@ -277,9 +277,9 @@ export function ProjectInvestmentScreen({
     setEditField(field);
     setSheet(field);
   }, [location.key, location.search, readOnly]);
-  // The key is consumed on arrival and leaves the URL (a replace), so Back to this page, and the links the page
-  // builds from its own query, do not open the sheet again (the owner, 2026-11-05: "every time I return to this
-  // page the drawer is opened").
+  // The key is consumed on arrival and leaves the URL (a replace), so Back to this page's entry URL, the way the
+  // sheet came back, does not open it again (the owner, 2026-11-05: "every time I return to this page the drawer
+  // is opened"). The page's own links never carried it: their `search` is `usePreviewSearch()`, only `preview`.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (!params.has("edit")) return;
