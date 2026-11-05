@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UnpaidScreen } from "./unpaid-screen";
+import { UnpaidScreen, unpaidFiltered } from "./unpaid-screen";
 import { ToastProvider } from "../ui/toast";
 import { type UnpaidInvoice } from "../unpaid";
 import { InvoiceScreen } from "./invoice-screen";
@@ -103,5 +103,25 @@ describe("Invoice page document and mark (FLOW-335, FLOW-367)", () => {
     expect(screen.getByRole("button", { name: "ביטול הסימון" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "ביטול הסימון" }));
     expect(screen.getByRole("button", { name: "סימון כשולם" })).toBeInTheDocument();
+  });
+});
+// FLOW-1049: the באיחור 30+ filter keeps the invoices open more than 30 days, and leaves out a marked one.
+describe("unpaidFiltered (FLOW-1049)", () => {
+  const row = (id: string, doc_date: string, marked_paid_at: string | null = null): UnpaidInvoice => ({
+    id, description: "חשבונית", doc_date, customer_name: `לקוח ${id}`, project_name: null,
+    open_gross_agorot: 10_000n, open_net_agorot: 10_000n, marked_paid_at,
+  });
+  const rows = [row("old", "2026-09-01"), row("new", "2026-10-07"), row("marked", "2026-08-01", "2026-10-08T08:00:00Z")];
+
+  it("all keeps every row, marked ones too", () => {
+    expect(unpaidFiltered(rows, "all", "2026-10-08").map((item) => item.id)).toEqual(["old", "new", "marked"]);
+  });
+
+  it("late keeps only the rows over 30 days that are not marked", () => {
+    expect(unpaidFiltered(rows, "late", "2026-10-08").map((item) => item.id)).toEqual(["old"]);
+  });
+
+  it("a row exactly 30 days open is not late", () => {
+    expect(unpaidFiltered([row("edge", "2026-09-08")], "late", "2026-10-08")).toEqual([]);
   });
 });

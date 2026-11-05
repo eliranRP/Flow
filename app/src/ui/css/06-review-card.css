@@ -703,6 +703,17 @@
 }
 
 /* The bar's three actions: אישור takes two parts, שינוי and דלג one each. */
+/* FLOW-1049: the bar's labels keep to one line at 320 ("שינוי" never breaks mid-word). */
+.ui-review-actions .ui-btn-label {
+  min-inline-size: max-content;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.ui-review-actions > .ui-btn {
+  padding-inline: var(--space-2);
+}
+
 .ui-action-bar-row.ui-review-actions {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
 }
