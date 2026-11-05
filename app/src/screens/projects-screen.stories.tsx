@@ -61,7 +61,7 @@ const withFinished = cashMonth([
 ], { count: 2, net: -1_500_00 });
 
 /** No late bills or changed charges: the cards are the lines with no project and the budgets. */
-const NO_RECURRING = { late: [], changes: [] };
+const NO_RECURRING = { late: [] };
 
 /** Many projects with long names and kind words (board V3-States, long content). */
 const LONG_MONTH = cashMonth([

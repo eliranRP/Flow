@@ -34,7 +34,7 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { ProjectFormSheet } from "./project-form-sheet";
-import { projectsAttentionRows, useProjectsRecurring, type ProjectRecurringSample } from "./project-attention";
+import { projectsAttentionRows, useProjectsRecurring, type ProjectsRecurringSample } from "./project-attention";
 
 /** The Home-style band bar: 6 + 52 + 6 (BUILD-PLAN §3.1). */
 const BAND_BAR = 64;
@@ -60,7 +60,7 @@ export function ProjectsScreen({
   sample?: Dashboard;
   cashSample?: ProjectsCashMonth;
   /** Late bills and changed charges as they would come back, for the attention rows (stories). */
-  recurringSample?: ProjectRecurringSample;
+  recurringSample?: ProjectsRecurringSample;
   /** Stories and the proof build open הסתיימו at once. */
   finishedOpen?: boolean;
   /** Stories pin the month names. */
@@ -197,7 +197,7 @@ function ProjectsOverview({
   search: string;
   filter: ProjectsFilter;
   setFilter: (value: ProjectsFilter) => void;
-  recurring: ProjectRecurringSample;
+  recurring: ProjectsRecurringSample;
   now?: Date;
 }) {
   const base = month.base_currency;
@@ -210,11 +210,10 @@ function ProjectsOverview({
   const barShown = useScrolledPast(bandMark, true, 0);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
   const groups = groupProjectRows(month.projects, filter, base);
-  // The month's cards read this month's late bills and changes: a past month shows only its lines with no project.
+  // The month's cards read this month's late bills: a past month shows only its lines with no project.
   const attention = projectsAttentionRows({
     month,
     late: isCurrent ? recurring.late : [],
-    changes: isCurrent ? recurring.changes : [],
     search,
     unassignedTo: `/projects/unassigned${monthSearch}`,
   });

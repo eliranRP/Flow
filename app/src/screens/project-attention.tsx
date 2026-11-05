@@ -1,5 +1,5 @@
 import type { MissingBill, ProjectsCashMonth, RecurringChange } from "@flow/shared";
-import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery, useRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
 import { BUDGET_ALERT_PERCENT, budgetPercent, netIn, unassignedCountLabel } from "../project-list";
 import { chargeHref } from "../recurring-charge";
 import type { BannerRow } from "../ui/banner";
@@ -84,19 +84,18 @@ export function projectAttentionRows({
 
 /**
  * FLOW-1044 (board V3-Projects): the Projects list's "דורש טיפול". The lines with no project (they open their
- * own list), each renovation past 80% of its budget, each project's rent or other income that did not arrive
- * (missing_bills, income on a project), and the charges on a project that changed this month.
+ * own list), each renovation past 80% of its budget, and each project's rent or other income that did not arrive
+ * (missing_bills, income on a project). The charges that changed stay on Home and קבועים (the owner, 2026-11-05:
+ * the board's list has no changed-charge cards).
  */
 export function projectsAttentionRows({
   month,
   late,
-  changes,
   search,
   unassignedTo,
 }: {
   month: NonNullable<ProjectsCashMonth>;
   late: readonly MissingBill[];
-  changes: readonly RecurringChange[];
   search: string;
   /** The lines with no project, for the month the list shows. */
   unassignedTo: string;
@@ -133,19 +132,17 @@ export function projectsAttentionRows({
       dismissKey: `income:${bill.project_id}:${bill.party_id}:${bill.due_month ?? ""}`,
     });
   }
-  const onProject = changes.filter((change) => change.project_id != null);
-  for (const view of chargeChangeViews(onProject, search)) {
-    rows.push({ id: `change:${view.id}`, to: view.href, title: `${view.title} · ${view.now}`, dismissKey: `change:${view.id}:${view.now}` });
-  }
   return rows;
 }
 
-/** The list's reads behind its rows: Home's late bills and changed charges (usually cached by Home). */
-export function useProjectsRecurring(active: boolean, sample?: ProjectRecurringSample): ProjectRecurringSample {
+/** A sample list's late bills (stories and tests). */
+export type ProjectsRecurringSample = { late: MissingBill[] };
+
+/** The list's read behind its rows: Home's late bills (usually cached by Home). */
+export function useProjectsRecurring(active: boolean, sample?: ProjectsRecurringSample): ProjectsRecurringSample {
   const missing = useMissingBillsQuery(active && sample == null);
-  const changes = useRecurringChangesQuery(active && sample == null);
   if (sample) return sample;
-  return { late: missing.data ?? [], changes: changes.data ?? [] };
+  return { late: missing.data ?? [] };
 }
 
 /** The reads behind the rows: Home's, so a hide or a new bill refreshes both. Off for a sample or another section. */
