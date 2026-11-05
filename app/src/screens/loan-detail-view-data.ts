@@ -62,8 +62,10 @@ export function balanceProgress(loan: Pick<LoanDetail, "principalMinor" | "balan
  * The line under the balance: "נפרע $X מתוך $Y · לתשלום עד 2030", or for a loan that pays only
  * interest until the end, "ריבית בלבד: הקרן ($Y) תיפרע בסוף, 11/2030".
  */
-export function balanceProgressText(loan: Pick<LoanDetail, "kind" | "principalMinor" | "balanceMinor" | "currency">, outlook: LoanOutlook): string {
+export function balanceProgressText(loan: Pick<LoanDetail, "kind" | "principalMinor" | "balanceMinor" | "currency">, outlook: LoanOutlook | null): string {
   const { paidMinor } = balanceProgress(loan);
+  // FLOW-1055 (V3-Loan-Partner): a demand loan has no schedule, so no end year.
+  if (outlook == null) return `נפרע ${wholeMoney(paidMinor, loan.currency)} מתוך ${wholeMoney(loan.principalMinor, loan.currency)} · אין לוח תשלומים`;
   if (loan.kind === "interest_only") {
     return `ריבית בלבד: הקרן (${wholeMoney(loan.balanceMinor, loan.currency)}) תיפרע בסוף, ${monthYear(outlook.endDate)}`;
   }

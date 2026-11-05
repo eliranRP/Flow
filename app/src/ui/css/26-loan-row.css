@@ -76,13 +76,6 @@
   font-weight: var(--type-body-weight);
 }
 
-.ui-loan-summary-label {
-  margin: 0;
-  font-size: var(--type-line2-size);
-  line-height: calc(var(--type-line2-size) * 1.2);
-  color: var(--color-text-secondary);
-}
-
 /* FLOW-139: the card's legend rows sit 30px apart, with no gap of their own. */
 .ui-loan-summary .ui-parts-legend {
   gap: 0;

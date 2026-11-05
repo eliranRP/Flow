@@ -15,6 +15,8 @@ export type LoanListSummary = {
   openCount: number;
   /** סך החוב היום: every open loan's balance. */
   totalBalanceMinor: bigint;
+  /** FLOW-1055 (V3-Loans, the band's paid line): every open loan's principal at the start ("מתוך $590,000"). */
+  principalMinor: bigint;
   /** תשלומים בחודש: each open loan's next payment, part by part. */
   monthlyParts: { principal: bigint; interest: bigint; escrow: bigint };
   monthlyMinor: bigint;
@@ -28,6 +30,7 @@ export type LoanListSummary = {
 export function loanListSummary(entries: readonly LoanListEntry[], currency: LoanCurrency): LoanListSummary {
   const monthlyParts = { principal: 0n, interest: 0n, escrow: 0n };
   let totalBalanceMinor = 0n;
+  let principalMinor = 0n;
   let twelveMonthsMinor = 0n;
   let openCount = 0;
   let next: LoanListSummary["next"] = null;
@@ -35,6 +38,7 @@ export function loanListSummary(entries: readonly LoanListEntry[], currency: Loa
     if (loan.status !== "open" || loan.currency !== currency) continue;
     openCount += 1;
     totalBalanceMinor += loan.balanceMinor;
+    principalMinor += loan.principalMinor;
     if (outlook == null) continue;
     monthlyParts.principal += outlook.next.principalMinor;
     monthlyParts.interest += outlook.next.interestMinor;
@@ -48,6 +52,7 @@ export function loanListSummary(entries: readonly LoanListEntry[], currency: Loa
   return {
     openCount,
     totalBalanceMinor,
+    principalMinor,
     monthlyParts,
     monthlyMinor: monthlyParts.principal + monthlyParts.interest + monthlyParts.escrow,
     next,

@@ -393,6 +393,7 @@ function LoanDetailReady({
               back={back}
               onMore={onClose}
               ended={!showsLoanBalance(loan)}
+              next={outlook == null || closed ? null : <LoanNextCard loan={loan} outlook={outlook} to={`${loanPath}/payments${upcomingSearch}`} />}
             />
             <ViewerNote />
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
@@ -415,7 +416,6 @@ function LoanDetailReady({
                 }}
               />
             ) : null}
-            {outlook == null || closed ? null : <LoanNextCard loan={loan} outlook={outlook} to={`${loanPath}/payments${upcomingSearch}`} />}
             <LoanPaidCard loan={loan} payments={payments} categories={categories} today={today} onOpenPart={holdWrites ? null : (item) => { setPart(item); open("part"); }} />
             <LoanRowsCard className="ui-loan-terms" rows={termRows} />
             {loan.rates.length > 0 ? (

@@ -182,11 +182,11 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
   const paid = (minor: bigint) => (read.phase === "ready" ? paidMoney(minor, read.currency) : "");
   const shown = summary == null ? [] : PAID_PARTS.filter(({ part }) => summary.totals[part] > 0n);
   const hasLoans = summary != null && summary.openCount > 0;
-  const control = (onBand: boolean) => (
+  const control = (
     <SegmentedControl<PaidPeriod>
       label="תקופה"
       showLabel={false}
-      tone={onBand ? "band" : "page"}
+      tone="band"
       value={period}
       onChange={(next) => {
         setPeriod(next);
@@ -202,12 +202,23 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
         leading={<BackButton fallback={back} text="הלוואות" onBand />}
         hero={(
           <div className="ui-loans-band">
-            <FocusTitle className="t-title">סיכום הלוואות</FocusTitle>
-            {summary == null ? null : <p className="ui-loans-band-sub t-line2">{summary.sub}</p>}
+            <div className="ui-loan-band-name">
+              <FocusTitle className="t-name">סיכום הלוואות</FocusTitle>
+              {summary == null ? null : <p className="ui-loan-band-sub">{summary.sub}</p>}
+            </div>
+            {/* FLOW-1055 (V3-LoansSummary): the period switch sits in the band, under the title; it docks into the bar. */}
+            {hasLoans ? (
+              <div className="ui-loans-sum-period">
+                <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+                <DockSlot docked={docked}>{control}</DockSlot>
+              </div>
+            ) : null}
             {hasLoans ? (
               <div className="ui-band-fade ui-loans-band-figures">
-                <p className="ui-band-label t-line2">{summary.totalLabel}</p>
-                <p className="ui-loans-band-figure"><Amount agorot={summary.totalMinor} currency={read.phase === "ready" ? read.currency : "ILS"} size="hero" /></p>
+                <div className="ui-loan-band-balance">
+                  <p className="ui-loan-band-label">{summary.totalLabel}</p>
+                  <p className="ui-loans-band-figure"><Amount agorot={summary.totalMinor} currency={read.phase === "ready" ? read.currency : "ILS"} size="hero" /></p>
+                </div>
                 <div className="ui-loans-band-rows">
                   <p className="ui-loans-band-row">
                     <span className="ui-loans-band-row-label">{summary.startLabel}</span>
@@ -240,7 +251,7 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
           </span>
         )}
         end={<span className="ui-loans-bar-slot" aria-hidden="true" />}
-        dock={hasLoans ? control(true) : undefined}
+        dock={hasLoans ? control : undefined}
         docked={docked}
       />
       <div className="ui-loans-body">
@@ -268,17 +279,14 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
           />
         ) : (
           <>
-            <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
-            <DockSlot docked={docked}>{control(false)}</DockSlot>
             <Card as="section" className="ui-loan-summary ui-loans-sum-paid" aria-label="שולם">
-              <p className="ui-loan-summary-label">ממה הורכבו התשלומים</p>
+              <h2 className="ui-loans-sum-title">ממה הורכבו התשלומים</h2>
               {shown.length === 0 ? null : (
                 <PartsBar
                   parts={shown.map(({ part, tone }) => ({ key: part, value: summary.totals[part], tone }))}
                   label={summary.totalLabel}
                   height={8}
                   gap={2}
-                  radius="block"
                   legend={shown.map(({ part }) => ({ key: part, label: LOAN_PART_BOARD_LABEL[part], value: <bdi dir="ltr">{paid(summary.totals[part])}</bdi> }))}
                 />
               )}

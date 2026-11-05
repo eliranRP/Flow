@@ -147,6 +147,11 @@ describe("the loan page's balance and subtitle", () => {
     expect(balanceProgressText(SAMPLE_INTEREST_ONLY, { ...outlook, endDate: "2028-03-01" })).toBe("ריבית בלבד: הקרן ($210,000) תיפרע בסוף, 03/2028");
   });
 
+  it("says what is paid of a demand loan's principal, with no schedule (V3-Loan-Partner)", () => {
+    const loan = { kind: "demand" as const, principalMinor: 4_000_000n, balanceMinor: 3_878_900n, currency: "USD" as const };
+    expect(balanceProgressText(loan, null)).toBe("נפרע $1,211 מתוך $40,000 · אין לוח תשלומים");
+  });
+
   it("names the project, the kind and the start month, or no project", () => {
     expect(loanSubtitle(SAMPLE_AMORTIZING, "שיפוץ דוגמה 12")).toBe("שיפוץ דוגמה 12 · פריסה רגילה · מאז 01/2025");
     expect(loanSubtitle(SAMPLE_AMORTIZING, null)).toBe("ללא פרויקט · פריסה רגילה · מאז 01/2025");
