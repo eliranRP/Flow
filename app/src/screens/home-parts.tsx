@@ -36,29 +36,16 @@ export function monthName(key: string): string {
   return HEBREW_MONTHS[Number(key.slice(5, 7)) - 1] ?? key;
 }
 
-/** The band's month steps: the earlier and later months (null at the ends) and the drawer. */
+/**
+ * The band's month steps: the earlier and later months (null at the ends) and the drawer. FLOW-1056: on the
+ * current month the later one is next month, which Home shows like any month (home-month.ts homeMonthSteps).
+ */
 export type HomeMonthNav = {
   earlierKey: string | null;
   laterKey: string | null;
   onStep: (key: string) => void;
   onOpenDrawer: () => void;
-  /** FLOW-1036: on the current month, the later arrow opens the drawer on next month and its forecast. */
-  onOpenNext?: () => void;
 };
-
-/** The later arrow's name and what it does: a later month, next month's forecast in the drawer, or nothing. */
-function laterStep(nav: HomeMonthNav): { label: string; go: () => void } | null {
-  const later = nav.laterKey;
-  if (later != null) {
-    return {
-      label: "חודש הבא",
-      go: () => {
-        nav.onStep(later);
-      },
-    };
-  }
-  return nav.onOpenNext == null ? null : { label: "חודש הבא · תחזית", go: nav.onOpenNext };
-}
 
 /**
  * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
@@ -153,18 +140,14 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
 
 /** The band's month pill: the arrows and the name, which opens the drawer. */
 export function HomeMonthPill({ monthKey, nav }: { monthKey: string; nav: HomeMonthNav }) {
-  const later = laterStep(nav);
   return (
     <MonthStepper
       earlier={nav.earlierKey == null ? null : "חודש קודם"}
-      later={later?.label ?? null}
+      later={nav.laterKey == null ? null : "חודש הבא"}
       onBand
       onStep={(delta) => {
-        if (delta > 0) {
-          later?.go();
-          return;
-        }
-        if (nav.earlierKey != null) nav.onStep(nav.earlierKey);
+        const key = delta > 0 ? nav.laterKey : nav.earlierKey;
+        if (key != null) nav.onStep(key);
       }}
     >
       <button type="button" className="ui-band-month-name m-press" aria-haspopup="dialog" onClick={nav.onOpenDrawer}>
@@ -230,8 +213,76 @@ export function HomeFigures({ monthKey, figures, search, animate }: { monthKey: 
   );
 }
 
+/** FLOW-1056: next month's figures on the band, from its forecast, as the drawer's card showed them (FLOW-1036). */
+export type HomeFutureFigureRows = {
+  currency: string;
+  netMinor: bigint;
+  incomeMinor: bigint;
+  expenseMinor: bigint;
+  /** Under צפוי להיכנס: "6 שכירויות ו־2 הכנסות". */
+  incomeNote: string;
+  /** Under צפוי לצאת: "מול $11,490 בנובמבר". */
+  expenseNote: string;
+  /** What the sum covers: "4 פרויקטים וכללי". */
+  caption: string;
+};
+
+/**
+ * FLOW-1056: the band on next month keeps its shape: the title "תזרים צפוי · דצמבר", the expected net as the big
+ * figure, and צפוי להיכנס and צפוי לצאת, each with its line under the label. Not links: nothing has moved yet.
+ * `figures` null is the read on its way (bars for the figures) or failed (`failed`, dashes).
+ */
+export function HomeFutureFigures({ monthKey, figures, failed = false, animate }: { monthKey: string; figures: HomeFutureFigureRows | null; failed?: boolean; animate: "earlier" | "later" | null }) {
+  const enter = animate === "earlier" ? "ui-band-month-in-earlier" : animate === "later" ? "ui-band-month-in-later" : undefined;
+  const value = (minor: bigint | undefined, size: "hero" | "list") => {
+    if (figures != null && minor != null) return <Amount agorot={minor} currency={figures.currency} size={size} compact={size === "hero"} />;
+    if (failed) return <span aria-hidden="true">—</span>;
+    return <Skeleton tone="band" className={size === "hero" ? "ui-skel-future-net" : "ui-skel-forecast-value"} />;
+  };
+  return (
+    <div className={cx("ui-home-figures ui-home-future ui-band-fade", enter)} aria-busy={figures == null && !failed ? true : undefined}>
+      <p className="ui-band-title">{`תזרים צפוי · ${monthName(monthKey)}`}</p>
+      <div className="ui-band-net">
+        <span className="ui-band-net-line">{value(figures?.netMinor, "hero")}</span>
+      </div>
+      <div className="ui-band-rows">
+        {(["in", "out"] as const).map((side) => (
+          <div key={side} className="ui-band-row-link ui-home-future-row">
+            <span className="ui-home-future-label">
+              <span>{side === "in" ? "צפוי להיכנס" : "צפוי לצאת"}</span>
+              {figures == null ? null : <span className="ui-home-future-note">{side === "in" ? figures.incomeNote : figures.expenseNote}</span>}
+            </span>
+            <span className="ui-band-row-amount">{value(side === "in" ? figures?.incomeMinor : figures?.expenseMinor, "list")}</span>
+          </div>
+        ))}
+      </div>
+      {figures == null || figures.caption === "" ? null : <p className="ui-band-caption">{`הערכה · ${figures.caption}`}</p>}
+    </div>
+  );
+}
+
+/**
+ * FLOW-1056: on next month the band's forecast row is the way to פירוט ועריכה, the company's צפי page
+ * (`/forecast/next`, FLOW-1000), in the forecast row's box.
+ */
+export function FutureForecastRow({ monthKey, search }: { monthKey: string; search: string }) {
+  return (
+    <Link to={`/forecast/next${search}`} className="ui-home-forecast-link">
+      <div className="ui-home-forecast ui-band-fade">
+        <div className="ui-home-forecast-text">
+          <p className="ui-home-forecast-title">פירוט ועריכה</p>
+          <p className="ui-home-forecast-sub">{`הצפי של כל פרויקט ל${monthName(monthKey)}`}</p>
+        </div>
+        <span className="ui-home-forecast-chevron" aria-hidden="true">
+          <OutwardChevron side="end" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 /** The figures, swipeable as the month page is: a sideways swipe steps the month (PeriodSwipe). */
-export function HomeSwipeFigures({ monthKey, figures, search, nav, animate }: { monthKey: string; figures: HomeFigureRows; search: string; nav: HomeMonthNav; animate: "earlier" | "later" | null }) {
+export function HomeSwipeFigures({ monthKey, nav, children }: { monthKey: string; nav: HomeMonthNav; children: ReactNode }) {
   return (
     <PeriodSwipe
       period={monthPeriod(monthKey)}
@@ -243,7 +294,7 @@ export function HomeSwipeFigures({ monthKey, figures, search, nav, animate }: { 
         nav.onStep(anchorOf(next));
       }}
     >
-      <HomeFigures monthKey={monthKey} figures={figures} search={search} animate={animate} />
+      {children}
     </PeriodSwipe>
   );
 }
@@ -272,10 +323,11 @@ export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; m
 
 /**
  * Home's compact bar: the arrows step the month and keep the scroll; the centre opens the drawer. FLOW-1036:
- * `dock` is the activity filter, held on the band while `docked` (the in-page one reached the bar).
+ * `dock` is the activity filter, held on the band while `docked` (the in-page one reached the bar). FLOW-1056:
+ * on next month `net` is the expected net, null while its read is out.
  */
-export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown, dock, docked = false }: { monthKey: string; net: bigint; currency: string; isPast: boolean; nav: HomeMonthNav; shown: boolean; dock?: ReactNode; docked?: boolean }) {
-  const later = laterStep(nav);
+export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown, dock, docked = false }: { monthKey: string; net: bigint | null; currency: string; isPast: boolean; nav: HomeMonthNav; shown: boolean; dock?: ReactNode; docked?: boolean }) {
+  const later = nav.laterKey;
   return (
     <CompactBar
       title=""
@@ -302,17 +354,17 @@ export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown, do
             <ChevronDownIcon size={10} />
           </span>
           <span className="ui-compact-bar-centre-net">
-            <bdi>{formatAmountText(net, currency)}</bdi>
+            {net == null ? null : <bdi>{formatAmountText(net, currency)}</bdi>}
           </span>
         </button>
       }
       end={
         <IconButton
-          label={later?.label ?? "חודש הבא"}
+          label="חודש הבא"
           onBand
           disabled={later == null}
           onClick={() => {
-            later?.go();
+            if (later != null) nav.onStep(later);
           }}
         >
           <OutwardChevron side="end" />
