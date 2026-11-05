@@ -11,48 +11,51 @@
   border-top: 1px solid var(--color-line);
 }
 
+/* FLOW-1051 (V3-Home): four equal columns 12px in from the sides, 8px under the hairline. */
 .ui-tabbar-slots {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
   height: var(--tabbar-content);
   padding-top: var(--space-2);
+  padding-inline: var(--space-3);
 }
 
+/* Each tab: a 36px icon slot, 4px, the label 13/500 in secondary (accent when current), 48px at least. */
 .ui-tab-slot {
   display: flex;
-  min-width: 56px;
-  max-inline-size: 100%;
   min-inline-size: 0;
-  min-height: var(--touch-min);
+  min-block-size: calc(var(--touch-min) + var(--space-1));
   flex-direction: column;
   align-items: center;
-  gap: calc(var(--space-1) * 3 / 4);
+  justify-content: center;
+  gap: var(--space-1);
   overflow: visible;
   color: var(--color-text-secondary);
-  font-size: var(--type-small-size);
-  line-height: var(--type-small-line);
-  font-weight: var(--type-small-weight);
+  font-size: var(--type-caption-size);
+  line-height: var(--tabbar-label-line);
+  font-weight: var(--type-btn-weight);
   text-decoration: none;
   border-radius: var(--radius-chip);
   transition: color var(--motion-press) var(--ease-linear), opacity var(--motion-fast) var(--ease-standard);
 }
 
 .ui-tab-slot[aria-current="page"] {
-  color: var(--color-accent-text);
-  font-weight: var(--type-name-weight);
+  color: var(--color-accent);
 }
 
-/* FLOW-958: the active tab is not told by its colour alone: a pill sits behind its icon. */
+/* FLOW-958: the active tab is not told by its colour alone: a 56x36 tint pill sits behind its icon. */
 .ui-tab-slot .ui-tab-icon {
-  inline-size: 56px;
-  block-size: 32px;
+  display: grid;
+  place-items: center;
+  inline-size: calc(var(--space-10) + var(--space-4));
+  block-size: calc(var(--space-8) + var(--space-1));
   border-radius: var(--radius-chip);
   transition: background-color var(--motion-press) var(--ease-standard);
 }
 
 .ui-tab-slot[aria-current="page"] .ui-tab-icon {
-  background-color: var(--color-tint-strong);
+  background-color: var(--color-tint);
 }
 
 /* FLOW-363 (3c): a press dims the tab, with no tint behind it. */

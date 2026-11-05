@@ -165,7 +165,22 @@ export function useScrolledPast(mark: HTMLElement | null, enabled: boolean, bar 
       { rootMargin: `-${String(top)}px 0px 0px 0px` },
     );
     observer.observe(node);
+    // FLOW-1051: WebKit delivers a zero-height mark's crossings late, or not at all, after a momentum scroll or a
+    // single jump. So the mark's own rect is also read on every scroll event and once now (one rect, no frame wait: a
+    // loaded WebKit ran a frame a second late); the observer stays for the common case. A mark with no box (removed,
+    // or a test document with no layout) is left to the observer.
+    const measure = () => {
+      if (!node.isConnected) return;
+      const rect = node.getBoundingClientRect();
+      if (rect.width === 0 && rect.top === 0 && rect.left === 0) return;
+      // Past once all of it is above the bar's edge, as the observer says it: a head passed as the mark (the
+      // transaction top bar's) is past only when its last line has gone under the bar, not when its top has.
+      setPast(rect.bottom < bar + safeTop());
+    };
+    measure();
+    window.addEventListener("scroll", measure, { passive: true });
     return () => {
+      window.removeEventListener("scroll", measure);
       observer.disconnect();
     };
   }, [mark, enabled, bar]);
