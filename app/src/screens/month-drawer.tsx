@@ -1,8 +1,7 @@
 import { formatAmountText, type CashMonth, type CashMonths } from "@flow/shared";
-import { useState, type ReactNode, type RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { cashRows } from "../cash";
 import { canStepYear, drawerCells, type DrawerCell } from "../home-month";
-import { shiftMonthKey } from "../period";
 import { useCashYearMonthsQuery } from "../use-cash";
 import { israelToday, HEBREW_MONTHS } from "../ui/date-math";
 import { Amount } from "../ui/amount";
@@ -13,10 +12,9 @@ import { cx } from "../ui/cx";
 
 /**
  * FLOW-364: the month drawer, opened from the band's month name and the compact bar's centre. A
- * year's twelve months, each with its net; a pick goes to that month on Home (`onPick`). FLOW-1036
- * (BUILD-PLAN §5): with `next`, the month after today is a cell too: it shows `next`, that month's
- * forecast card, above the grid; the band's later arrow on the current month opens the drawer there
- * (`openOnNext`). Months beyond it stay "עוד לא".
+ * year's twelve months, each with its net; a pick goes to that month on Home (`onPick`). FLOW-1036: with
+ * `withNext`, the month after today is a cell too, dashed and marked צפי. FLOW-1056 (owner): it picks like any
+ * month, and Home shows that month's forecast. Months beyond it stay "עוד לא".
  */
 export function MonthDrawer({
   open,
@@ -28,8 +26,8 @@ export function MonthDrawer({
   returnFocusRef,
   initialYear,
   yearMonths,
-  next = null,
-  openOnNext = false,
+  withNext = false,
+  currentKey,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,25 +42,19 @@ export function MonthDrawer({
   initialYear?: number;
   /** Stories and the dev route pass the year's months; the live drawer reads them. */
   yearMonths?: NonNullable<CashMonths>;
-  /** Next month's forecast card (the current month only); null leaves next month off. */
-  next?: ReactNode;
-  /** The drawer opens on next month, its forecast showing. */
-  openOnNext?: boolean;
+  /** Next month is a cell to pick (not in a preview, which has no forecast). */
+  withNext?: boolean;
+  /** Home's current month (YYYY-MM), so the drawer's next month is Home's; today's month by default. */
+  currentKey?: string;
 }) {
-  const today = israelToday();
-  const withNext = next != null;
-  const nextKey = shiftMonthKey(today.slice(0, 7), 1);
-  const openYear = () => (withNext && openOnNext ? Number(nextKey.slice(0, 4)) : initialYear ?? Number(selectedKey.slice(0, 4)));
+  const today = currentKey ?? israelToday().slice(0, 7);
+  const openYear = () => initialYear ?? Number(selectedKey.slice(0, 4));
   const [year, setYear] = useState(openYear);
-  const [nextShown, setNextShown] = useState(open && withNext && openOnNext);
-  // Each opening starts on the month it was opened for: the selected one, or next month from the later arrow.
+  // Each opening starts on the selected month's year.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) {
-      setYear(openYear());
-      setNextShown(withNext && openOnNext);
-    }
+    if (open) setYear(openYear());
   }
   const months = useCashYearMonthsQuery(year, open && yearMonths == null);
   const netByMonth = netsOf((yearMonths ?? months.data)?.months ?? [], base);
@@ -80,19 +72,9 @@ export function MonthDrawer({
           </p>
           {canEarlier || canLater ? <YearStep label="שנה הבאה" side="end" disabled={!canLater} onClick={() => { setYear((value) => value + 1); }} /> : null}
         </div>
-        {nextShown ? <div className="ui-month-drawer-next">{next}</div> : null}
         <div className="ui-month-drawer-grid">
           {cells.map((cell) => (
-            <MonthCell
-              key={cell.key}
-              cell={cell}
-              base={base}
-              nextShown={nextShown}
-              onPick={(key) => {
-                if (cell.state === "next") setNextShown(true);
-                else onPick(key);
-              }}
-            />
+            <MonthCell key={cell.key} cell={cell} base={base} onPick={onPick} />
           ))}
         </div>
       </div>
@@ -124,13 +106,15 @@ function YearStep({ label, side, disabled, onClick }: { label: string; side: "st
   );
 }
 
-function MonthCell({ cell, base, nextShown, onPick }: { cell: DrawerCell; base: string; nextShown: boolean; onPick: (key: string) => void }) {
+function MonthCell({ cell, base, onPick }: { cell: DrawerCell; base: string; onPick: (key: string) => void }) {
   const name = HEBREW_MONTHS[cell.index] ?? "";
   const off = cell.state === "future" || cell.state === "before";
+  // FLOW-1056: next month, picked or not, is a forecast: צפי, never a net.
+  const forecast = cell.state === "next" || (cell.state === "selected" && cell.netMinor == null);
   const label =
     cell.state === "future" ? `${name}, עוד לא הגיע`
     : cell.state === "before" ? `${name}, לפני הנתונים`
-    : cell.state === "next" ? `${name}, תחזית`
+    : forecast ? `${name}, תחזית`
     : `${name}, נטו ${formatAmountText(cell.netMinor ?? 0n, base)}`;
   return (
     <button
@@ -138,7 +122,6 @@ function MonthCell({ cell, base, nextShown, onPick }: { cell: DrawerCell; base: 
       className={cx("ui-month-cell", `ui-month-cell-${cell.state}`)}
       disabled={off}
       aria-current={cell.state === "selected" ? "date" : undefined}
-      aria-pressed={cell.state === "next" ? nextShown : undefined}
       aria-label={label}
       onClick={() => {
         onPick(cell.key);
@@ -148,7 +131,7 @@ function MonthCell({ cell, base, nextShown, onPick }: { cell: DrawerCell; base: 
       <span className="ui-month-cell-amount">
         {cell.state === "future" ? (
           "עוד לא"
-        ) : cell.state === "next" ? (
+        ) : forecast ? (
           "צפי"
         ) : cell.state === "before" ? (
           "—"

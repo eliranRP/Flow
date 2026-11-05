@@ -11,6 +11,7 @@ import { CalendarIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
 import { StatusMark, type StatusMarkKind } from "../ui/status-mark";
+import { monthName, type HomeFutureFigureRows } from "./home-parts";
 
 /**
  * FLOW-1036 (board V3-Home, "תנועות החודש"): the month's activity on Home, under the attention cards. A filter
@@ -41,16 +42,33 @@ export type ActivityRow = {
   currency: string;
   /** Money in: green with + (muted while still due). */
   income: boolean;
-  href: string;
+  /** FLOW-1056: none for a forecast row with nothing to edit (a general row with no overhead project, a loan's principal). */
+  href?: string;
+  /** FLOW-1056: a forecast's loan principal, kept out of profit: faded, as the צפי page draws it. */
+  setAside?: boolean;
 };
 
 export type ActivityGroup = {
-  id: ActivityGroupId;
+  /** The month's groups ("left", "paid", "once"); on next month (FLOW-1056) a project's id, or "general". */
+  id: string;
   title: string;
   rows: ActivityRow[];
   /** The group's money out and in, in the base currency (rows in another currency are not added). */
   outMinor: bigint;
   inMinor: bigint;
+  /** Its sums are still to come: "לתשלום" and "להיכנס", not "יצא" and "נכנס". */
+  due: boolean;
+};
+
+/** FLOW-1056: Home on next month: its forecast's band figures and its expected rows, grouped by project. */
+export type HomeFuture = {
+  phase: "loading" | "failed" | "ready";
+  /** A failed read waits for the network. */
+  offline: boolean;
+  onRetry: () => void;
+  /** Null until the forecast is read. */
+  figures: HomeFutureFigureRows | null;
+  groups: ActivityGroup[];
 };
 
 /** What Home has read for the activity: null while a read is out. */
@@ -118,6 +136,11 @@ export function onceActivity(lines: readonly CashLine[], search: string): Activi
 }
 
 function group(id: ActivityGroupId, rows: ActivityRow[], base: string): ActivityGroup {
+  return { id, title: GROUP_TITLES[id], rows, ...groupSums(rows, base), due: id === "left" };
+}
+
+/** A group's money out and in, in the base currency: a row in another currency is not added. */
+export function groupSums(rows: readonly ActivityRow[], base: string): { outMinor: bigint; inMinor: bigint } {
   let outMinor = 0n;
   let inMinor = 0n;
   for (const row of rows) {
@@ -125,7 +148,7 @@ function group(id: ActivityGroupId, rows: ActivityRow[], base: string): Activity
     if (row.income) inMinor += row.minor;
     else outMinor += row.minor;
   }
-  return { id, title: GROUP_TITLES[id], rows, outMinor, inMinor };
+  return { outMinor, inMinor };
 }
 
 /**
@@ -149,7 +172,7 @@ export function activityGroups({ schedule, lines, filter, base, search }: {
 
 /** "5 · $2,780 לתשלום": the count, then what goes out and what comes in, in the group's own words. */
 function GroupSummary({ group: item, base }: { group: ActivityGroup; base: string }) {
-  const due = item.id === "left";
+  const due = item.due;
   const parts: ReactNode[] = [<bdi key="count" dir="ltr">{String(item.rows.length)}</bdi>];
   if (item.outMinor > 0n) parts.push(<span key="out"><bdi dir="ltr">{formatAmountText(item.outMinor, base)}</bdi>{due ? " לתשלום" : " יצא"}</span>);
   if (item.inMinor > 0n) parts.push(<span key="in"><bdi dir="ltr">{`+${formatAmountText(item.inMinor, base)}`}</bdi>{due ? " להיכנס" : " נכנס"}</span>);
@@ -207,36 +230,72 @@ export function HomeActivity({ activity, filter, onFilter, markRef, docked, base
       ) : groups.length === 0 ? (
         failed ? null : <EmptyState icon={<CalendarIcon />} title={EMPTY[filter].title} body={EMPTY[filter].body} />
       ) : (
-        groups.map((item) => (
-          <section key={item.id} className="ui-month ui-home-act-group" aria-labelledby={`home-act-${item.id}`}>
-            <GroupHead id={`home-act-${item.id}`} title={item.title} summary={<GroupSummary group={item} base={base} />} />
-            <List layout="flat">
-              {item.rows.map((row) => (
-                <ListRow
-                  key={row.key}
-                  layout="flat"
-                  variant="transaction"
-                  className={row.mark === "due" || row.mark === "late" ? "ui-home-act-due" : undefined}
-                  title={row.title}
-                  hint={row.meta}
-                  tone={row.mark === "late" ? "warning" : undefined}
-                  icon={<StatusMark kind={row.mark} />}
-                  agorot={row.minor}
-                  currency={row.currency}
-                  sign={row.income ? "in" : "cost"}
-                  source="bank"
-                  href={row.href}
-                />
-              ))}
-            </List>
-          </section>
-        ))
+        <ActivityGroups groups={groups} base={base} />
       )}
       <div className="ui-home-act-foot">
         <Button variant="link" to={recurringHref} chevron>
           כל הקבועים
         </Button>
       </div>
+    </section>
+  );
+}
+
+/** The groups under their sticky one-line heads, each row with its status mark. */
+function ActivityGroups({ groups, base }: { groups: readonly ActivityGroup[]; base: string }) {
+  return groups.map((item) => (
+    <section key={item.id} className="ui-month ui-home-act-group" aria-labelledby={`home-act-${item.id}`}>
+      <GroupHead id={`home-act-${item.id}`} title={item.title} summary={<GroupSummary group={item} base={base} />} />
+      <List layout="flat">
+        {item.rows.map((row) => (
+          <ListRow
+            key={row.key}
+            layout="flat"
+            variant="transaction"
+            className={row.mark === "due" || row.mark === "late" ? "ui-home-act-due" : undefined}
+            title={row.title}
+            hint={row.meta}
+            tone={row.mark === "late" ? "warning" : undefined}
+            icon={<StatusMark kind={row.mark} />}
+            agorot={row.minor}
+            currency={row.currency}
+            sign={row.income ? "in" : "cost"}
+            source="bank"
+            setAside={row.setAside}
+            href={row.href}
+          />
+        ))}
+      </List>
+    </section>
+  ));
+}
+
+/**
+ * FLOW-1056: next month's activity on Home: "הצפוי בדצמבר", then the forecast's rows by project (the company צפי
+ * page's parts, in the Projects tab's order, the general costs last), each due. No filter: הכול, קבועים and
+ * נותר לשלם sort what has moved, and nothing has yet. Loading, failed (the band stays) and nothing expected.
+ */
+export function HomeFutureActivity({ monthKey, future, base }: { monthKey: string; future: HomeFuture; base: string }) {
+  const name = monthName(monthKey);
+  return (
+    <section className="ui-home-act ui-home-next" aria-labelledby="home-next-title" aria-busy={future.phase === "loading" || undefined}>
+      <h2 id="home-next-title" className="ui-home-next-title t-section">{`הצפוי ב${name}`}</h2>
+      {future.phase === "failed" ? (
+        <div className="ui-home-act-failed">
+          <p className="ui-home-act-failed-title t-body">{`הצפי ל${name} לא נטען`}</p>
+          <FailureLine offline={future.offline} onRetry={future.onRetry} />
+        </div>
+      ) : future.phase === "loading" ? (
+        <List layout="flat" className="ui-home-act-skel">
+          <ListRow variant="skeleton" layout="flat" icon />
+          <ListRow variant="skeleton" layout="flat" icon />
+          <ListRow variant="skeleton" layout="flat" icon />
+        </List>
+      ) : future.groups.length === 0 ? (
+        <EmptyState icon={<CalendarIcon />} title={`אין עוד צפי ל${name}`} body="קבועים, ממוצעים ותשלומי הלוואות יופיעו כאן כשיהיו." />
+      ) : (
+        <ActivityGroups groups={future.groups} base={base} />
+      )}
     </section>
   );
 }

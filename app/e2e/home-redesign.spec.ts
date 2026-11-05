@@ -34,13 +34,30 @@ test("the drawer opens, a future month is disabled, and a pick replaces the mont
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 
-test("the later arrow on the current month opens the drawer on next month's forecast (FLOW-1036)", async ({ page }) => {
+test("the later arrow on the current month lands on Home for next month, and the earlier one comes back (FLOW-1056)", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1");
-  await page.getByRole("button", { name: "חודש הבא · תחזית" }).first().click();
+  await page.locator(".ui-band").getByRole("button", { name: "חודש הבא" }).click();
+  await expect(page.getByText(/^תזרים צפוי · /u)).toBeVisible();
+  await expect(page.getByText("צפוי להיכנס")).toBeVisible();
+  await expect(page.getByRole("link", { name: /פירוט ועריכה/u })).toHaveAttribute("href", "/forecast/next?preview=1");
+  await expect(page.getByRole("heading", { name: /^הצפוי ב/u })).toBeVisible();
+  await expect(page.locator(".ui-band").getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+  await page.locator(".ui-band").getByRole("button", { name: "חודש קודם" }).click();
+  await expect(page.getByText("תזרים · עד היום")).toBeVisible();
+});
+
+test("next month in the drawer picks like any month: the drawer closes on Home for next month (FLOW-1056)", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1");
+  await page.locator(".ui-band-month-name").click();
   const drawer = page.getByRole("dialog", { name: "בחירת חודש" });
   await expect(drawer).toBeVisible();
-  await expect(drawer.locator('.ui-month-cell-next[aria-pressed="true"]')).toBeVisible();
-  await expect(drawer.locator(".ui-fc-card")).toBeVisible();
+  const next = drawer.locator(".ui-month-cell-next");
+  // December's drawer reaches January's forecast a year on.
+  if ((await next.count()) === 0) await drawer.getByRole("button", { name: "שנה הבאה" }).click();
+  await drawer.locator(".ui-month-cell-next").click();
+  await expect(drawer).toHaveCount(0);
+  await expect(page.getByText(/^תזרים צפוי · /u)).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test("the month's filter docks into the bar once it reaches it (FLOW-1036)", async ({ page }) => {

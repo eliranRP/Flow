@@ -580,6 +580,31 @@ html[data-kb="open"] .ui-sheet-body {
   block-size: var(--space-4);
 }
 
+/* FLOW-1056: next month's big figure while its forecast is read: a bar the hero's height, so nothing moves. */
+.ui-skel-future-net {
+  inline-size: calc(var(--space-10) * 4);
+  block-size: var(--type-band-size);
+}
+
+/* FLOW-1056: next month's two rows: the label takes its words (צפוי להיכנס), its line under it, the amount at the
+   row's other side as on the current month. Not links: the row keeps the 44px height without a press. */
+.ui-home-future-row {
+  min-block-size: var(--touch-min);
+}
+
+.ui-home-future-label {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-home-future-note {
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-small-size);
+  line-height: var(--type-small-line);
+  font-weight: var(--type-small-weight);
+}
+
 .ui-home-forecast-chevron {
   display: inline-flex;
   flex: none;

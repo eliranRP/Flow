@@ -21,9 +21,10 @@ import {
 import { cashMonthKey } from "../../cash";
 import { SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "../../forecast-sample";
 import { RECURRING_FIXTURE } from "../../recurring-sample";
-import { DrawerNextMonth } from "../../screens/month-drawer-next";
+import { shiftMonthKey } from "../../period";
 import { homeActivityLines } from "../home-activity-sample";
-import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_TODAY } from "../home-next-month-sample";
+import { FUTURE_CURRENT_KEY, FUTURE_MONTH_KEY, sampleHomeFuture } from "../home-future-sample";
+import { HOME_NEXT_MONTH_SAMPLE } from "../home-next-month-sample";
 import type { DevRoute } from "./types";
 
 export const devDashboard: Dashboard = {
@@ -86,6 +87,29 @@ export function DevCash() {
   const yearMonths = usdLoss ? sampleCashUsdYear() : undefined;
   // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
   const monthKey = past ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
+  // FLOW-1056: `?month=next` (or next month's key, where the later arrow goes) is Home on next month, from the
+  // next-month sample (its own October and November, in dollars).
+  const asked = params.get("month");
+  if (asked === "next" || asked === shiftMonthKey(currentKey, 1)) {
+    return (
+      <CashHome
+        data={HOME_NEXT_MONTH_SAMPLE.cash}
+        monthKey={FUTURE_MONTH_KEY}
+        currentKey={FUTURE_CURRENT_KEY}
+        firstKey={cashMonthKey(HOME_NEXT_MONTH_SAMPLE.cash.months.at(-1)?.month ?? FUTURE_CURRENT_KEY)}
+        previewing={false}
+        search="?preview=1"
+        attention={[]}
+        recurringTo="/e2e/recurring"
+        company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
+        onStepMonth={(key) => {
+          void navigate(key === FUTURE_MONTH_KEY ? "/e2e/cash?month=next" : "/e2e/cash", { replace: true });
+        }}
+        withNext
+        future={sampleHomeFuture("?preview=1", { phase: params.get("state") === "failed" ? "failed" : "ready", empty: params.get("state") === "empty" })}
+      />
+    );
+  }
   const home = (
     <CashHome
       data={data}
@@ -118,7 +142,7 @@ export function DevCash() {
       onStepMonth={(key) => {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}
-      // FLOW-1036: the month's activity (the recurring sample and this month's lines, in the sample's currency), and next month in the drawer.
+      // FLOW-1036: the month's activity (the recurring sample and this month's lines, in the sample's currency). FLOW-1056: next month is a month to step to.
       activity={{
         schedule: RECURRING_FIXTURE.map((row) => ({ ...row, currency: data.base_currency })),
         scheduleFailed: false,
@@ -126,7 +150,7 @@ export function DevCash() {
         linesFailed: false,
         onRetry: () => undefined,
       }}
-      drawerNext={<DrawerNextMonth today={NEXT_MONTH_TODAY} currency="USD" cash={null} sample={HOME_NEXT_MONTH_SAMPLE} />}
+      withNext
       initialDrawerOpen={params.get("drawer") === "1"}
       drawerYearMonths={yearMonths}
       syncing={params.get("sync") === "1" ? "מסנכרן עם Mercury…" : null}

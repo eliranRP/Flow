@@ -169,8 +169,29 @@ describe("Home's cold load (FLOW-1019)", () => {
     await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
     expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_month: `${current}-01`, p_currency: "ILS" });
     expect(rpc.calls.filter((c) => c.name === "list_unpaid")).toHaveLength(1);
-    // Next month's forecast moved to the month drawer: Home itself does not read it.
+    // FLOW-1056: next month's forecast is read on next month only.
     expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(false);
+  });
+});
+
+describe("Home on next month (FLOW-1056)", () => {
+  it("opens on ?month= next month with the forecast's band and its reads, no attention reads drawn, and steps back", async () => {
+    const next = shiftMonthKey(current, 1);
+    wrap(3, `/?month=${next}`);
+    expect(await screen.findByText(`תזרים צפוי · ${homeMonthLabel(next).split(" ")[0] ?? ""}`)).toBeInTheDocument();
+    expect(within(bandOf()).getByText(homeMonthLabel(next))).toBeInTheDocument();
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
+    // This sample's reads come back empty: the list says the forecast did not load, with its retry; the band stays.
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
+    expect(within(bandOf()).getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(within(bandOf()).getByRole("button", { name: "חודש קודם" }));
+    expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();
+  });
+
+  it("goes no further than next month: a later ?month= is the current month", async () => {
+    wrap(0, `/?month=${shiftMonthKey(current, 2)}`);
+    expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();
   });
 
   it("reads the forecast from the first render when Home is opened again with its data cached", async () => {
