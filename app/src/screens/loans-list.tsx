@@ -235,13 +235,13 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
             <div className="ui-loans-band-rows">
               {figures.next == null ? null : (
                 <p className="ui-loans-band-row">
-                  <span className="ui-loans-band-row-label">{`התשלום הבא · ${figures.next.name} · ${dayMonth(figures.next.dueDate)}`}</span>
+                  <span className="ui-loans-band-row-label" data-clip-ok="">{`התשלום הבא · ${figures.next.name} · ${dayMonth(figures.next.dueDate)}`}</span>
                   <bdi dir="ltr">{money(figures.next.amountMinor, currency)}</bdi>
                 </p>
               )}
               {figures.monthlyMinor == null ? null : (
                 <p className="ui-loans-band-row">
-                  <span className="ui-loans-band-row-label">תשלומים בחודש</span>
+                  <span className="ui-loans-band-row-label" data-clip-ok="">תשלומים בחודש</span>
                   <bdi dir="ltr">{money(figures.monthlyMinor, currency)}</bdi>
                 </p>
               )}

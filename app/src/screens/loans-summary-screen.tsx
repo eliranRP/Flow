@@ -21,7 +21,7 @@ import { useMemoryLoanStore, type MemoryLoanStore } from "./loan-detail-store";
 import { LOAN_PART_BOARD_LABEL, wholeMoney } from "./loan-detail-view-data";
 import { readCompanyLoanCurrency, type LoanCurrency } from "./loan-form";
 import { readLoanList } from "./loan-list";
-import { loansPaid, PAID_PARTS, paidMoney, type LoanPaidEntry, type PaidPeriod } from "./loans-paid";
+import { loansPaid, PAID_PARTS, type LoanPaidEntry, type PaidPeriod } from "./loans-paid";
 import { Amount } from "../ui/amount";
 import { BackButton, useGoBack } from "../ui/back";
 import { CompactBar } from "../ui/compact-bar";
@@ -179,7 +179,6 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
   const year = today.slice(0, 4);
   const summary = read.phase === "ready" ? loansPaid(read.entries, read.currency, period, today) : null;
   const money = (minor: bigint) => (read.phase === "ready" ? wholeMoney(minor, read.currency) : "");
-  const paid = (minor: bigint) => (read.phase === "ready" ? paidMoney(minor, read.currency) : "");
   const shown = summary == null ? [] : PAID_PARTS.filter(({ part }) => summary.totals[part] > 0n);
   const hasLoans = summary != null && summary.openCount > 0;
   const control = (
@@ -221,11 +220,11 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
                 </div>
                 <div className="ui-loans-band-rows">
                   <p className="ui-loans-band-row">
-                    <span className="ui-loans-band-row-label">{summary.startLabel}</span>
+                    <span className="ui-loans-band-row-label" data-clip-ok="">{summary.startLabel}</span>
                     <bdi dir="ltr">{money(summary.startMinor)}</bdi>
                   </p>
                   <p className="ui-loans-band-row">
-                    <span className="ui-loans-band-row-label">נשאר לשלם היום</span>
+                    <span className="ui-loans-band-row-label" data-clip-ok="">נשאר לשלם היום</span>
                     <bdi dir="ltr">{money(summary.leftMinor)}</bdi>
                   </p>
                 </div>
@@ -247,7 +246,7 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
         centre={(
           <span className="ui-compact-bar-centre">
             <span className="ui-compact-bar-centre-title">{summary == null ? "סיכום הלוואות" : `סיכום · ${summary.totalLabel}`}</span>
-            <span className="ui-compact-bar-centre-net"><bdi dir="ltr">{summary == null ? "" : paid(summary.totalMinor)}</bdi></span>
+            <span className="ui-compact-bar-centre-net"><bdi dir="ltr">{summary == null ? "" : money(summary.totalMinor)}</bdi></span>
           </span>
         )}
         end={<span className="ui-loans-bar-slot" aria-hidden="true" />}
@@ -287,13 +286,13 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
                   label={summary.totalLabel}
                   height={8}
                   gap={2}
-                  legend={shown.map(({ part }) => ({ key: part, label: LOAN_PART_BOARD_LABEL[part], value: <bdi dir="ltr">{paid(summary.totals[part])}</bdi> }))}
+                  legend={shown.map(({ part }) => ({ key: part, label: LOAN_PART_BOARD_LABEL[part], value: <bdi dir="ltr">{money(summary.totals[part])}</bdi> }))}
                 />
               )}
               <p className="ui-loans-sum-note">{summary.note}</p>
             </Card>
             <section className="ui-month ui-loans-group" aria-labelledby="loans-sum-per-loan">
-              <GroupHead id="loans-sum-per-loan" title="לפי הלוואה" summary={`${String(summary.loans.length)} · ${paid(summary.totalMinor)}`} />
+              <GroupHead id="loans-sum-per-loan" title="לפי הלוואה" summary={`${String(summary.loans.length)} · ${money(summary.totalMinor)}`} />
               <ul className="ui-loans-list">
                 {summary.loans.map((loan) => (
                   <li key={loan.id}>
@@ -301,12 +300,12 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
                       type="button"
                       className="ui-loans-row ui-loans-sum-row m-press"
                       onClick={() => { void navigate(loanHref(loan.id)); }}
-                      aria-label={[loan.name, paid(loan.paidMinor), loan.meta].join(", ")}
+                      aria-label={[loan.name, money(loan.paidMinor), loan.meta].join(", ")}
                     >
                       <span className="ui-loans-text">
                         <span className="ui-loans-sum-top">
                           <span className="ui-loans-name">{loan.name}</span>
-                          <bdi className="ui-loans-amount" dir="ltr">{paid(loan.paidMinor)}</bdi>
+                          <bdi className="ui-loans-amount" dir="ltr">{money(loan.paidMinor)}</bdi>
                         </span>
                         <span className="ui-loans-sum-bar" aria-hidden="true">
                           <span style={{ inlineSize: `${String(Math.max(2, loan.percent))}%` }} />

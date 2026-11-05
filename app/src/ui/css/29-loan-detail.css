@@ -94,20 +94,37 @@
 }
 
 /* The note waiting for a check (V3-Loan-Note): what to check, then הפרטים נכונים and עריכה side by side. */
+/* FLOW-1055 (V3-Loan-Note): the check card on the tint, 16px by 18px inside, 10px between its title (17/500),
+   its words (15, secondary) and its two 44px pills side by side at their own width: הפרטים נכונים filled. */
+.ui-card.ui-loan-check {
+  gap: calc(var(--space-2) + var(--space-half));
+  padding: var(--space-4) calc(var(--space-4) + var(--space-half));
+  background: var(--color-tint);
+}
+
 .ui-loan-check-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   margin: 0;
-  color: var(--color-signal);
+  color: var(--color-text);
   font-size: var(--type-body-size);
   font-weight: var(--type-btn-2-weight);
+  line-height: var(--line-board);
+}
+
+.ui-loan-check .ui-loan-card-text {
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--line-board);
 }
 
 .ui-loan-check-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: var(--space-2);
+}
+
+.ui-loan-check-actions .ui-btn {
+  height: auto;
+  min-block-size: var(--touch-min);
+  padding-inline: calc(var(--space-4) + var(--space-half));
 }
 
 /* The next payment's card, last in the band (V3-Loan, FLOW-1055): one 64px link to the payments on הבאים, on

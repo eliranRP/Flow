@@ -10,7 +10,7 @@ import { CompactBar } from "../ui/compact-bar";
 import { formatDisplay } from "../ui/date-math";
 import { FocusTitle } from "../ui/focus-title";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BackIcon, CheckIcon, ChevronIcon, MoreIcon } from "../ui/icons";
+import { BackIcon, CheckIcon, ChevronIcon, MoreIcon } from "../ui/icons";
 import { useScrolledPast } from "../ui/screen-header";
 import { TopBand } from "../ui/top-band";
 import { LOAN_CLOSED_NOTE, loanClosedLine, type LoanCloseReason } from "./loan-copy";
@@ -20,7 +20,7 @@ import type { LoanCategory, LoanDetail, LoanPayment, LoanRateRow } from "./loan-
 import { formatRatePpm, rateInForce } from "./loan-detail-data";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import type { LoanOutlook } from "./loan-outlook";
-import { loanPaidCard, loanPaidParts, PAID_PARTS, paidMoney, type PaidPeriod } from "./loans-paid";
+import { loanPaidCard, loanPaidParts, PAID_PARTS, type PaidPeriod } from "./loans-paid";
 import {
   balanceProgress,
   balanceProgressText,
@@ -116,7 +116,7 @@ export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended
               <div className="ui-loans-band-rows">
                 {rows.map((row) => (
                   <p key={row.key} className="ui-loans-band-row">
-                    <span className="ui-loans-band-row-label">{row.label}</span>
+                    <span className="ui-loans-band-row-label" data-clip-ok="">{row.label}</span>
                     <bdi dir="ltr">{row.value}</bdi>
                   </p>
                 ))}
@@ -167,13 +167,11 @@ export function LoanCheckCard({ loanId, count, editHref, onChecked }: {
   return (
     <Card as="section" className="ui-loan-card ui-loan-check" aria-label="ממתין לבדיקה">
       <p className="ui-loan-check-title">
-        <AlertIcon size={20} />
         {count === 1 ? "תשלום אחד ממתין לבדיקה" : `${String(count)} תשלומים ממתינים לבדיקה`}
       </p>
       <p className="ui-loan-card-text">הסכום, הריבית והפרויקט מולאו לפי התשלומים מהבנק. בדקו אותם לפני שהם נכנסים לדוחות.</p>
       <div className="ui-loan-check-actions">
         <Button
-          variant="secondary"
           onClick={() => {
             hideRow(storageKey, row.id, row.dismissKey);
             setChecked(true);
@@ -298,7 +296,7 @@ export function LoanPaidCard({ loan, payments, categories, today, onOpenPart }: 
           options={[{ value: "all", label: "מההתחלה" }, { value: "year", label: today.slice(0, 4), numeric: true }]}
         />
       </div>
-      <bdi className="ui-loan-paid-total" dir="ltr">{paidMoney(card.totalMinor, loan.currency)}</bdi>
+      <bdi className="ui-loan-paid-total" dir="ltr">{wholeMoney(card.totalMinor, loan.currency)}</bdi>
       {shown.length === 0 ? null : (
         <PartsBar parts={shown.map(({ part, tone }) => ({ key: part, value: card.totals[part], tone }))} height={8} gap={2} label={card.label} />
       )}
@@ -312,7 +310,7 @@ export function LoanPaidCard({ loan, payments, categories, today, onOpenPart }: 
                   <span className="ui-loan-paid-name">{LOAN_PART_BOARD_LABEL[part]}</span>{" "}
                   <span className="ui-loan-paid-note">{paidPartNote(loan, categories, part)}</span>
                 </span>
-                <bdi className="ui-loan-paid-amount" dir="ltr">{paidMoney(card.totals[part], loan.currency)}</bdi>
+                <bdi className="ui-loan-paid-amount" dir="ltr">{wholeMoney(card.totals[part], loan.currency)}</bdi>
               </>
             );
             return (
