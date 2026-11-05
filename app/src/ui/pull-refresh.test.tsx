@@ -1,8 +1,8 @@
-import { QueryClient, useQuery } from "@tanstack/react-query";
+import { QueryClient, useQuery, type QueryClient as Client } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
-import { PULL_FAILED, pullArmed, PullRefresh, pullTravel } from "./pull-refresh";
+import { PULL_FAILED, pullArmed, PullRefresh, pullTone, pullTravel } from "./pull-refresh";
 
 const WIDTH = 390;
 type Point = { identifier: number; clientX: number; clientY: number };
@@ -16,12 +16,18 @@ function fire(type: string, target: EventTarget, list: Point[]) {
   return event;
 }
 
-/** A one-finger drag from (x, 200) by dx and dy in 4 steps; returns the last move. */
-function pull(target: EventTarget, dy: number, { x = 200, dx = 0 } = {}) {
+/** A one-finger drag from (x, 200) by dx and dy in 4 steps, still held; returns the last move. */
+function drag(target: EventTarget, dy: number, { x = 200, dx = 0 } = {}) {
   const at = (step: number): Point[] => [{ identifier: 1, clientX: x + (dx * step) / 4, clientY: 200 + (dy * step) / 4 }];
   fire("touchstart", target, at(0));
   let last: Event = new Event("touchmove");
   for (let step = 1; step <= 4; step += 1) last = fire("touchmove", target, at(step));
+  return last;
+}
+
+/** The same drag, let go. */
+function pull(target: EventTarget, dy: number, options: { x?: number; dx?: number } = {}) {
+  const last = drag(target, dy, options);
   fire("touchend", target, []);
   return last;
 }
@@ -33,16 +39,19 @@ function Reads({ read }: { read: () => Promise<string> }) {
 
 function renderPull(read: () => Promise<string> = () => Promise.resolve("נתונים"), extra: React.ReactNode = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const refetch = vi.spyOn(client, "refetchQueries");
+  const refetch = vi.spyOn(client, "invalidateQueries");
   renderWithProviders(
-    <>
-      <PullRefresh />
+    <PullRefresh>
       <Reads read={read} />
       {extra}
-    </>,
+    </PullRefresh>,
     { client },
   );
   return { client, refetch };
+}
+
+function pulledScreen() {
+  return document.querySelector<HTMLElement>(".ui-pull-screen");
 }
 
 function status() {
@@ -82,12 +91,73 @@ describe("PullRefresh", () => {
     const move = pull(document.body, 200);
     expect(move.defaultPrevented).toBe(true);
     expect(refetch).toHaveBeenCalledTimes(1);
-    expect(refetch).toHaveBeenCalledWith({ type: "active" });
+    expect(refetch).toHaveBeenCalledWith();
+    expect(pulledScreen()).toHaveAttribute("data-phase", "refreshing");
+    expect(pulledScreen()?.style.getPropertyValue("--pull-y")).toBe("64px");
     expect(status()).toHaveTextContent("מרענן");
     expect(document.querySelector('.ui-pull-refresh[data-phase="refreshing"] .ui-spinner')).not.toBeNull();
     await waitFor(() => { expect(status()).toHaveTextContent(""); });
     await waitFor(() => { expect(document.querySelector(".ui-pull-refresh")).toBeNull(); });
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(pulledScreen()).not.toHaveAttribute("data-phase");
+    expect(document.querySelector(".ui-pull-gap")).toBeNull();
+  });
+
+  it("brings the screen down with the finger, over a gap in the page colour", async () => {
+    renderPull();
+    await screen.findByText("נתונים");
+    drag(document.body, 80);
+    expect(pulledScreen()).toHaveAttribute("data-phase", "pulling");
+    expect(pulledScreen()?.style.getPropertyValue("--pull-y")).toBe("40px");
+    expect(document.querySelector(".ui-pull-gap")).toHaveAttribute("data-tone", "page");
+    fire("touchend", document.body, []);
+  });
+
+  it("fills the gap with the band's colour where the screen starts with the band", async () => {
+    renderPull(undefined, <header className="ui-band" />);
+    await screen.findByText("נתונים");
+    drag(document.body, 80);
+    expect(document.querySelector(".ui-pull-gap")).toHaveAttribute("data-tone", "band");
+    fire("touchend", document.body, []);
+  });
+
+  it("reads the tone from the screen's top", () => {
+    const box = document.createElement("div");
+    expect(pullTone(box)).toBe("page");
+    expect(pullTone(null)).toBe("page");
+    const band = document.createElement("header");
+    band.className = "ui-band ui-band-past";
+    box.append(band);
+    expect(pullTone(box)).toBe("band-past");
+    band.className = "ui-band";
+    expect(pullTone(box)).toBe("band");
+    vi.spyOn(band, "getBoundingClientRect").mockReturnValue({ top: 120 } as DOMRect);
+    expect(pullTone(box)).toBe("page");
+  });
+
+  it("marks every cached read stale, so a nested fresh read and another screen's read read again", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    let inner = 0;
+    let outer = 0;
+    // Another screen's read, fresh and not on screen.
+    client.setQueryData(["other-screen"], "ישן");
+    function Nested() {
+      const query = useQuery({
+        queryKey: ["outer"],
+        queryFn: async ({ client: from }: { client: Client }) => {
+          outer += 1;
+          const value = await from.query({ queryKey: ["inner"], queryFn: () => Promise.resolve(`פנימי ${String(++inner)}`), staleTime: Infinity });
+          return `${value} · ${String(outer)}`;
+        },
+      });
+      return <p>{query.data ?? "…"}</p>;
+    }
+    renderWithProviders(<PullRefresh><Nested /></PullRefresh>, { client });
+    expect(await screen.findByText("פנימי 1 · 1")).toBeInTheDocument();
+    pull(document.body, 200);
+    expect(await screen.findByText("פנימי 2 · 2")).toBeInTheDocument();
+    expect(inner).toBe(2);
+    expect(client.getQueryState(["other-screen"])?.isInvalidated).toBe(true);
   });
 
   it("springs back with nothing done when let go before the threshold", async () => {
