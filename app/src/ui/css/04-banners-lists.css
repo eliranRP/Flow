@@ -338,17 +338,10 @@
   background: var(--color-band-pill);
 }
 
-/* FLOW-1051 (V3-Home): on the band the change pill is a 32px white pill, 16/500, padding 0 12, its text the helps
-   grey or the hurts red. */
+/* FLOW-364 (board): on the band the change pill is white, its text the helps grey or the hurts red. Its size is
+   Home's chip below (13/500, 4px 8px; decision 0258: the band's type keeps v2's sizes). */
 .ui-band .ui-change-amount {
-  box-sizing: border-box;
-  block-size: var(--space-8);
-  padding-block: 0;
-  padding-inline: var(--space-3);
   background: var(--color-on-band);
-  font-size: var(--type-btn-2-size);
-  line-height: var(--type-btn-2-line);
-  font-weight: var(--type-btn-2-weight);
 }
 
 .ui-change-amount.ui-delta-good {
