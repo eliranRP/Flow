@@ -31,6 +31,6 @@ After the v2 redesign ([0181](0181-redesign-foundation.md), option C "full Mercu
 
 ## Consequences
 
-- DESIGN-RULES §2.8's inventory grows by the four parts and the dock offsets (0, 64 and 124 under Home's band bar; 44 or 104 under the 44px list bar of a List screen; 56 or 116 under the 56px detail bar). The design lead folds the lanes' `Rule:` lines in after each wave.
+- DESIGN-RULES §2.8's inventory grows by the five parts and the dock offsets (0, 64 and 124 under Home's band bar; 44 or 104 under the 44px list bar of a List screen; 56 or 116 under the 56px detail bar). The design lead folds the lanes' `Rule:` lines in after each wave.
 - Settings' sub-pages, setup, sign-in, help, legal, install, the split and journal composer, and the next-month edit keep v2 (handoff §8). `/profit` stays until Reports v3 covers it; its retirement is a follow-up.
 - The project kind (renovation, rental, client, overhead) is read from the data a project already has; a stored kind, if the new-project sheet needs it, is a nullable column added by FLOW-1044 with its MCP arguments.
