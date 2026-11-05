@@ -317,7 +317,19 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
       </div>
     );
   } else if (rows.length === 0) {
-    body = <SearchEmptyState text={typed} withChips={hasChipFilters(active)} onClearChips={clearChips} />;
+    body = (
+      <SearchEmptyState
+        text={typed}
+        withChips={hasChipFilters(active)}
+        onClearChips={clearChips}
+        onFilters={openSheet}
+        onClear={() => {
+          setText("");
+          clearChips();
+          inputRef.current?.focus();
+        }}
+      />
+    );
   } else {
     body = (
       <>

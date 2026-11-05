@@ -73,11 +73,11 @@ test("a near-miss on ביטול undoes the card instead of dismissing the toast"
   await expect(page.getByText("2 מתוך 3")).toBeVisible();
 });
 
-test("approving the last card shows הכל מאושר, and חזרה לבית goes home", async ({ page }) => {
+test("approving the last card shows הכול אושר, and חזרה לבית goes home", async ({ page }) => {
   await page.goto("/review?preview=1&e2e=list&rows=1");
   await expect(page.getByText("1 מתוך 1")).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
-  await expect(page.getByText("הכל מאושר")).toBeVisible();
+  await expect(page.getByText("הכול אושר")).toBeVisible();
   await page.getByRole("link", { name: "חזרה לבית" }).click();
   await expect(page).toHaveURL(/\/$|\/\?/);
 });

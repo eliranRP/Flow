@@ -156,10 +156,4 @@ describe("Invoice states (FLOW-968)", () => {
     onlineManager.setOnline(false);
     expect(await screen.findByText(/אין חיבור · מוצג המצב/)).toBeInTheDocument();
   });
-
-  it("the bar names both amounts", async () => {
-    db.rows = [invoice("a", "לקוח א")];
-    renderPage(<UnpaidScreen summary={{ paid_agorot: 5_000n, issued_since: "2026-09-01", last_sync_at: null }} />);
-    expect(await screen.findByRole("img", { name: /שולם .*פתוח/ })).toBeInTheDocument();
-  });
 });

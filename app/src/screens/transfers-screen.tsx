@@ -15,9 +15,7 @@ import { HintParts } from "../ui/hint-parts";
 import { CheckIcon } from "../ui/icons";
 import { ScreenState } from "../ui/screen-state";
 import { useToast } from "../ui/toast";
-// The card is the recurring match box (48, 49) with its own rows (54); none of it is in Home's first load.
-import "../ui/css/48-recurring-charge.css";
-import "../ui/css/49-recurring-answers.css";
+// The pair cards' own CSS; none of it is in Home's first load.
 import "../ui/css/54-transfer-matches.css";
 
 const FAILED = "לא הצלחנו לעדכן את השורות.";
@@ -38,7 +36,7 @@ function TransferLeg({ side, income }: { side: TransferSide; income: boolean }) 
           {income ? "נכנס ל־" : "יצא מ־"}
           <bdi dir="ltr">{transferAccountName(side)}</bdi>
         </span>
-        <span className="ui-recurring-match-detail">
+        <span className="ui-xfer-leg-meta">
           <HintParts parts={[
             ...(side.org_label != null ? [<bdi key="org" dir="ltr">{side.org_label}</bdi>] : []),
             <bdi key="date">{formatDayMonth(side.doc_date)}</bdi>,
@@ -50,20 +48,23 @@ function TransferLeg({ side, income }: { side: TransferSide; income: boolean }) 
   );
 }
 
-/** One suggestion: the question, the money out and the money in, and the two answers (none for a viewer). */
+/**
+ * FLOW-1049 (V3-Transfers): one pair card. The money out and the money in as two rows, why Flow pairs them,
+ * and the two answers side by side (none for a viewer). The question is the card's hidden heading.
+ */
 export function TransferMatchCard({ match, readOnly, onAnswer }: { match: TransferMatch; readOnly: boolean; onAnswer: (same: boolean) => void }) {
   return (
-    <section className="ui-recurring-match ui-xfer-card" aria-label={`העברה אפשרית: ${formatAmountText(match.out.amount_minor, match.out.currency, { detail: true })}`}>
-      <p className="ui-recurring-match-title">זו העברה בין החשבונות שלכם?</p>
+    <section className="ui-xfer-card" aria-label={`העברה אפשרית: ${formatAmountText(match.out.amount_minor, match.out.currency, { detail: true })}`}>
+      <h2 className="sr-only">זו העברה בין החשבונות שלכם?</h2>
       <ul className="ui-xfer-legs">
         <TransferLeg side={match.out} income={false} />
         <TransferLeg side={match.in} income />
       </ul>
-      <p className="ui-recurring-match-detail"><HintParts text={pairNote(match)} /></p>
+      <p className="ui-xfer-why"><HintParts text={pairNote(match)} /></p>
       {readOnly ? null : (
-        <div className="ui-recurring-match-actions">
-          <button type="button" className="ui-recurring-match-yes ui-hit" onClick={() => { onAnswer(true); }}>כן, העברה</button>
-          <button type="button" className="ui-recurring-match-no ui-hit" onClick={() => { onAnswer(false); }}>לא, צירוף מקרים</button>
+        <div className="ui-xfer-actions">
+          <Button onClick={() => { onAnswer(true); }}>כן, העברה</Button>
+          <Button variant="secondary" onClick={() => { onAnswer(false); }}>לא, צירוף מקרים</Button>
         </div>
       )}
     </section>
@@ -71,7 +72,7 @@ export function TransferMatchCard({ match, readOnly, onAnswer }: { match: Transf
 }
 
 /**
- * העברות לבדיקה (FLOW-941, decision 0205), opened from Home's דורש טיפול row. Each card is a pair Flow
+ * העברות לבדיקה (FLOW-941, decision 0205; FLOW-1049 V3-Transfers, the List pattern), opened from Home's דורש טיפול row. Each card is a pair Flow
  * suggests: money out on one Mercury connection and the same amount in on another. כן files both lines as a
  * transfer (out of income and expenses); לא stops the suggestion. Both toast with ביטול. `sample` draws the
  * dev route and the stories, with local answers only.
@@ -131,6 +132,7 @@ export function TransfersScreen({ sample }: { sample?: TransferMatch[] } = {}) {
   return (
     <ScreenState
       title="העברות לבדיקה"
+      subtitle={rows.length === 1 ? "זוג אחד לבדיקה" : `${String(rows.length)} זוגות לבדיקה`}
       kicker="בית"
       backTo={`/${search}`}
       phase={phase}
@@ -147,7 +149,7 @@ export function TransfersScreen({ sample }: { sample?: TransferMatch[] } = {}) {
       )}
     >
       <div className="ui-page-pad ui-xfer-page">
-        <p className="ui-xfer-lead">אותו סכום יצא מחיבור Mercury אחד ונכנס לחיבור אחר. אם זו העברה בין החשבונות שלכם, היא לא תיספר כהכנסה או כהוצאה.</p>
+        <p className="ui-xfer-lead">אותו סכום יצא מחשבון אחד ונכנס לחשבון אחר. העברה בין החשבונות שלכם לא נספרת כהכנסה או כהוצאה.</p>
         {rows.map((match) => (
           <TransferMatchCard key={transferMatchKey(match)} match={match} readOnly={holdWrites && live} onAnswer={(same) => void answer(match, same)} />
         ))}

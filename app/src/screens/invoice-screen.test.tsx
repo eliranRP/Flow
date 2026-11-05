@@ -21,7 +21,7 @@ describe("Open invoices (FLOW-367)", () => {
 
   it("shows the over-30-days line for the oldest invoice, and not when none is over 30", () => {
     const first = render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><ToastProvider><UnpaidScreen sample={invoicesSample()} summary={invoicesSummary()} /></ToastProvider></MemoryRouter></QueryClientProvider>);
-    expect(first.container.querySelector(".ui-inv-overdue")?.textContent).toContain("פתוחים יותר מ־30 ימים");
+    expect(first.container.querySelector(".ui-inv-overdue")?.textContent).toContain("פתוחות יותר מ־30 ימים");
     first.unmount();
     renderList(invoicesSample().map((row) => ({ ...row, doc_date: shiftDays(israelToday(), -2) })));
     expect(document.querySelectorAll(".ui-inv-overdue")).toHaveLength(0);
@@ -74,16 +74,28 @@ describe("Invoice page follows the board (FLOW-367b)", () => {
     expect(facts.querySelector("[data-over]")).toBeNull();
   });
 
-  it("draws the open amount in the income colour with no plus sign", () => {
+  it("draws the open amount in the income colour with its plus sign, as V3-Invoice draws it", () => {
     renderPage("inv-1043");
     const figure = document.querySelector(".ui-inv-head .ui-num");
-    expect(figure?.textContent).not.toContain("+");
+    expect(figure?.textContent).toContain("+");
     expect(figure?.classList.contains("ui-income")).toBe(true);
   });
 
   it("pushes the ready detail in from the start side", () => {
     renderPage("inv-1043");
     expect(document.querySelector(".ui-inv-detail")?.classList.contains("m-push-in")).toBe(true);
+  });
+});
+
+// FLOW-1049: the pinned "סימון כשולם" toasts with ביטול, and ביטול puts the invoice back to open.
+describe("Invoice mark-paid toast (FLOW-1049)", () => {
+  it("ביטול on the mark's toast clears the mark and brings the pinned button back", () => {
+    renderPage("inv-1043");
+    fireEvent.click(screen.getByRole("button", { name: "סימון כשולם" }));
+    expect(screen.getByText("סומן כשולם")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(screen.getByRole("button", { name: "סימון כשולם" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ביטול הסימון" })).toBeNull();
   });
 });
 
