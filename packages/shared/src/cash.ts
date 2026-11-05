@@ -117,6 +117,8 @@ export const cashLinesSchema = z
         pending: z.boolean().optional().catch(undefined),
         /** FLOW-366: the row's part counts in profit (false on a line left out of the P&L). */
         in_pnl: z.boolean().optional().catch(undefined),
+        /** FLOW-1035: the row belongs to a charge recurring_schedule lists that month; undefined from an older server. */
+        recurring: z.boolean().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),
