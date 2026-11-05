@@ -277,8 +277,11 @@
   margin: 0;
 }
 
-/* FLOW-1044 (board V3-Unassigned): the month heads sit in a container with no side padding, so they keep their
-   own gutter instead of the negative margin that cancels a padded parent's. */
+/* FLOW-1044 (boards V3-Projects, V3-Profit, V3-Unassigned): the kind, category and month heads sit in a body
+   with no side padding, so they keep their own gutter instead of the negative margin that cancels a padded
+   parent's (the page would scroll sideways by one gutter). */
+.ui-projects-body .ui-month-head,
+.ui-pp-page .ui-month-head,
 .ui-unassigned .ui-month-head {
   margin-inline: 0;
 }
