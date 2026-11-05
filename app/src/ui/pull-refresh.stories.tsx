@@ -9,7 +9,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { BandCompany, TopBand } from "./top-band";
 
 /**
- * FLOW-1039, FLOW-1042 and FLOW-1043 (ld-07): a pull down from the top of a screen brings the screen
+ * FLOW-1039, FLOW-1042 and FLOW-1050 (ld-07): a pull down from the top of a screen brings the screen
  * down, over a gap in the colour of its top, with the iOS activity indicator in the gap: its spokes
  * appear with the pull and turn while refreshing. Every story runs in light and dark.
  */

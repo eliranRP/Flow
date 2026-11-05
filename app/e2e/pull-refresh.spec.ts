@@ -1,7 +1,7 @@
 import { expect, test, type CDPSession, type Page } from "@playwright/test";
 
 /**
- * FLOW-1043: pull to refresh on an iPhone-sized touch screen follows a smooth curve. Every animation
+ * FLOW-1050: pull to refresh on an iPhone-sized touch screen follows a smooth curve. Every animation
  * frame logs the screen's top over a scripted pull and release; it never moves faster than 12px per
  * 60Hz frame (0.72px/ms between two samples, so a dropped frame on a busy runner is not a jump),
  * through the pull, the glide to the rest, the hold and the glide back. Chromium with an iPhone

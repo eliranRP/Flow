@@ -116,5 +116,31 @@ describe("cashLinesSchema", () => {
     });
     expect(parsed?.rows[0]?.amount_minor).toBe(410_000n);
     expect(parsed?.rows[0]?.side).toBe("out");
+    expect(parsed?.rows[0]?.recurring).toBeUndefined();
+  });
+
+  it("reads whether a row is recurring (FLOW-1035), and an odd value as unknown", () => {
+    const row = {
+      transaction_id: "t1",
+      part: null,
+      description: "חשמל",
+      supplier_name: "ספק לדוגמה",
+      project_name: null,
+      category_name: null,
+      doc_date: "2026-10-05",
+      cash_month_date: "2026-10-05",
+      currency: "ILS",
+      amount_minor: 30_000,
+      side: "out",
+    };
+    const parsed = cashLinesSchema.parse({
+      rows: [
+        { ...row, recurring: true },
+        { ...row, transaction_id: "t2", recurring: false },
+        { ...row, transaction_id: "t3", recurring: "yes" },
+      ],
+      has_more: false,
+    });
+    expect(parsed?.rows.map((r) => r.recurring)).toEqual([true, false, undefined]);
   });
 });

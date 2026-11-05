@@ -6,7 +6,7 @@ import { useToast } from "./toast";
 import "./css/62-pull-refresh.css";
 
 /**
- * FLOW-1039, FLOW-1042 and FLOW-1043 (DESIGN-RULES ld-07): pull to refresh, mounted once at the app
+ * FLOW-1039, FLOW-1042 and FLOW-1050 (DESIGN-RULES ld-07): pull to refresh, mounted once at the app
  * root around every routed screen. iOS gives a Home Screen web app no pull to refresh of its own, so
  * a pull down from the top of any screen does nothing there. The gesture rules follow FLOW-314, as
  * the period, card and edge swipes do:

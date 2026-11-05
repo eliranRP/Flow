@@ -181,8 +181,8 @@ Short, calm and functional. Nothing bounces, overshoots or loops for attention. 
 | `--motion-stagger` | 40ms | Page-enter stagger, first five blocks |
 | `--motion-pulse` | 1.2s | Skeleton pulse |
 | `--motion-spin` | 800ms | Inline spinner, one turn |
-| `--motion-pull-spin` | 880ms | Pull to refresh: one stepped turn of the iOS spinner (FLOW-1043) |
-| `--motion-pull-return` | 400ms | Pull to refresh: the screen's glide to the rest and back to the top, on `--ease-enter` (FLOW-1043) |
+| `--motion-pull-spin` | 880ms | Pull to refresh: one stepped turn of the iOS spinner (FLOW-1050) |
+| `--motion-pull-return` | 400ms | Pull to refresh: the screen's glide to the rest and back to the top, on `--ease-enter` (FLOW-1050) |
 | `--skeleton-delay` | 300ms | Nothing shows before this |
 | `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise; push offset (in RTL the push comes from the left, the end side, and back leaves the same way) |
 
@@ -778,7 +778,7 @@ Each state has a dark artboard (`<Name>.dc.html`) and a light one (`<Name>Light.
 | ld-04 | StatesSaving | Primary button busy |
 | ld-05 | none yet | Not a build task. Bank file processing was dropped ([0065](../decisions/0065-review-round5.md) point 40) |
 | ld-06 | AddReading | Invoice photo reading |
-| ld-07 | none yet; the component is `PullRefresh` (`app/src/ui/pull-refresh.tsx`, FLOW-1039, FLOW-1042, FLOW-1043) | Pull to refresh, the iOS pattern: a pull down from the top of any screen, in the installed app, brings the screen down on a rubber band (1:1 at first, about 0.5 later, no hard stop) over a gap in the colour of its top (the band's on Home), with the iOS activity indicator in the gap (12 spokes, 28px, no background, the secondary text colour or the band's): the spokes appear one by one up to the 64px threshold (120px of finger), where a light haptic tick plays once. Released there, the screen eases to a 64px rest and holds while the spinner turns in 12 steps (`--motion-pull-spin`); then the spinner fades and shrinks to 0.7 and the screen glides back (`--motion-pull-return`, `--ease-enter`). A touch during the glide catches the screen where it is. Details: [design log](log/2026-11-05-flow-1043.md) |
+| ld-07 | none yet; the component is `PullRefresh` (`app/src/ui/pull-refresh.tsx`, FLOW-1039, FLOW-1042, FLOW-1050) | Pull to refresh, the iOS pattern: a pull down from the top of any screen, in the installed app, brings the screen down on a rubber band (1:1 at first, about 0.5 later, no hard stop) over a gap in the colour of its top (the band's on Home), with the iOS activity indicator in the gap (12 spokes, 28px, no background, the secondary text colour or the band's): the spokes appear one by one up to the 64px threshold (120px of finger), where a light haptic tick plays once. Released there, the screen eases to a 64px rest and holds while the spinner turns in 12 steps (`--motion-pull-spin`); then the spinner fades and shrinks to 0.7 and the screen glides back (`--motion-pull-return`, `--ease-enter`). A touch during the glide catches the screen where it is. Details: [design log](log/2026-11-05-flow-1050.md) |
 | ld-08 | none yet | Offline, nothing cached |
 | ld-09 | none yet | Offline, cached data kept |
 | er-01 | none yet | Wrong or unreadable bank file |
