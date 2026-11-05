@@ -1,5 +1,5 @@
 import type { CashCurrencyRow, CashMonths, ProjectCashRow, ProjectsCashMonth } from "@flow/shared";
-import type { HomeNextMonthSample } from "../screens/home-next-month";
+import type { HomeNextMonthSample } from "../screens/company-cash-next-month";
 import { COMPANY_NEXT_READS } from "./company-next-month-sample";
 
 /**

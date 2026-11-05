@@ -247,6 +247,9 @@ describe("rejected reads", () => {
     rpc.impl = (name) => {
       if (name === "get_dashboard") return Promise.resolve({ data: emptyDashboard, error: null });
       if (name === "cash_months") return Promise.resolve({ data: cashMonths, error: null });
+      // FLOW-1036: the month's activity reads its own; only the invoices fail here.
+      if (name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: [], has_more: false }, error: null });
       if (name === "get_home") {
         return Promise.resolve({
           data: { company_id: "c", name: "אלפא", net_profit_agorot: 100, is_demo: false },

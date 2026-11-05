@@ -1,6 +1,8 @@
 // FLOW-364: Home's month logic, with no React. Amounts are bigint minor units, months are
 // YYYY-MM keys and days are the Israel-local date (YYYY-MM-DD) that israelToday() returns.
 
+import { shiftMonthKey } from "./period";
+
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
@@ -36,43 +38,7 @@ export function changeTone(side: "in" | "out", delta: bigint): "helps" | "hurts"
   return (side === "in") === up ? "helps" : "hurts";
 }
 
-function abs(value: bigint): bigint {
-  return value < 0n ? -value : value;
-}
-
-export type SplitParts = {
-  /** net minus profit: the cash the P&L leaves out ("השקעה" or "הון שנכנס"). */
-  notCounted: bigint;
-  profit: bigint;
-  /** Whole percents of the two absolute parts; they add to 100. */
-  notCountedPct: number;
-  profitPct: number;
-  /** The note's lead when the left-out part is the larger one: money out went to properties, or money in is capital. */
-  lead: "out" | "in" | null;
-  /** False when both parts are 0: the card is hidden. */
-  visible: boolean;
-};
-
-/** The split card: the month's net, divided into the part the P&L leaves out and the month's profit. */
-export function splitParts(netMinor: bigint, profitMinor: bigint): SplitParts {
-  const notCounted = netMinor - profitMinor;
-  const total = abs(notCounted) + abs(profitMinor);
-  if (total === 0n) {
-    return { notCounted, profit: profitMinor, notCountedPct: 0, profitPct: 0, lead: null, visible: false };
-  }
-  const notCountedPct = Math.round((Number(abs(notCounted)) * 100) / Number(total));
-  const larger = abs(notCounted) > abs(profitMinor);
-  return {
-    notCounted,
-    profit: profitMinor,
-    notCountedPct,
-    profitPct: 100 - notCountedPct,
-    lead: larger ? (notCounted < 0n ? "out" : "in") : null,
-    visible: true,
-  };
-}
-
-export type DrawerCellState = "selected" | "data" | "future" | "before";
+export type DrawerCellState = "selected" | "data" | "next" | "future" | "before";
 
 export type DrawerCell = {
   key: string;
@@ -86,7 +52,8 @@ export type DrawerCell = {
 /**
  * The twelve cells of one year in the month drawer. `netByMonth` holds the base-currency net
  * of each month that has data, keyed by YYYY-MM. A month after today is "future"; a month
- * before the books' first month is "before" (both disabled).
+ * before the books' first month is "before" (both disabled). FLOW-1036: with `withNext`, the
+ * month after today is "next": it opens its forecast in the drawer.
  */
 export function drawerCells(
   year: number,
@@ -94,21 +61,28 @@ export function drawerCells(
   firstKey: string | null,
   todayKey: string,
   selectedKey: string,
+  withNext = false,
 ): DrawerCell[] {
   const today = todayKey.slice(0, 7);
+  const next = withNext ? shiftMonthKey(today, 1) : null;
   return Array.from({ length: 12 }, (_, index) => {
     const key = `${String(year)}-${String(index + 1).padStart(2, "0")}`;
     if (key === selectedKey) return { key, index, state: "selected", netMinor: netByMonth[key] ?? 0n };
+    if (key === next) return { key, index, state: "next", netMinor: null };
     if (key > today) return { key, index, state: "future", netMinor: null };
     if (firstKey != null && key < firstKey) return { key, index, state: "before", netMinor: null };
     return { key, index, state: "data", netMinor: netByMonth[key] ?? 0n };
   });
 }
 
-/** Whether a year button can step to `year + delta`: only into a year that has months in [first, current]. */
-export function canStepYear(year: number, delta: number, firstKey: string | null, todayKey: string): boolean {
+/**
+ * Whether a year button can step to `year + delta`: only into a year that has months in [first, current], or
+ * (FLOW-1036, `withNext`) the year of next month, so December's drawer reaches January's forecast.
+ */
+export function canStepYear(year: number, delta: number, firstKey: string | null, todayKey: string, withNext = false): boolean {
   const target = year + delta;
-  if (target > Number(todayKey.slice(0, 4))) return false;
+  if (target > Number((withNext ? shiftMonthKey(todayKey.slice(0, 7), 1) : todayKey).slice(0, 4))) return false;
   if (firstKey != null && target < Number(firstKey.slice(0, 4))) return false;
   return true;
 }
+
