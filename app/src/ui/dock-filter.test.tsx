@@ -60,6 +60,7 @@ describe("useDockedFilter and DockSlot (FLOW-1043)", () => {
     page.scrolled = true;
     settle();
     fireEvent.click(screen.getByRole("button", { name: "הכול", hidden: true }));
-    expect(scrollBy).toHaveBeenCalledWith({ top: -363, behavior: "instant" });
+    // The mark (at -300) lands 8px above the 64px bar: -300 - (64 - 8).
+    expect(scrollBy).toHaveBeenCalledWith({ top: -356, behavior: "instant" });
   });
 });
