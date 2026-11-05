@@ -52,13 +52,12 @@
   min-width: 0;
 }
 
+/* The account's name wraps rather than losing its last four digits on a narrow phone. */
 .ui-xfer-leg-title {
-  overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--color-text);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ui-xfer-leg-meta,
