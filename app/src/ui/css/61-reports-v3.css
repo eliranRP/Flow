@@ -74,6 +74,11 @@
   text-align: right;
 }
 
+/* The loading band keeps the ready height: the hero placeholder is the figure's line (52 at 1.1). */
+.ui-rep-band-figure .ui-skeleton-hero {
+  block-size: calc(var(--type-band-size) * var(--type-band-line));
+}
+
 .ui-rep-band-sub {
   margin: 0;
   color: var(--color-on-band-secondary);

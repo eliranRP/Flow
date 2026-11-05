@@ -201,7 +201,11 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
                   <Amount agorot={figure.amount} currency={figure.currency} loss={figure.loss} size="hero" compact />
                 </p>
               )}
-              {figureSub == null || figure == null ? null : <p className="ui-rep-band-sub t-line2">{figureSub}</p>}
+              {figure == null ? (
+                <p className="ui-rep-band-sub t-line2" aria-hidden="true">&nbsp;</p>
+              ) : figureSub == null ? null : (
+                <p className="ui-rep-band-sub t-line2">{figureSub}</p>
+              )}
             </div>
             {figure == null ? (
               // While the read is in, the two rows keep their place (V3-States: the band's height does not jump).
