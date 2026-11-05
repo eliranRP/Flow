@@ -17,6 +17,7 @@ import {
 import { renderWithProviders } from "../test-render";
 import { BalanceReportScreen, type BalanceSample } from "./reports-balance-screen";
 import { ReportsHubScreen, ReportsScreen } from "./reports-hub-screen";
+import { barShare } from "./reports-parts";
 import { PnlReportScreen, reportLinesPath, type PnlSample } from "./reports-screen";
 
 function LocationProbe() {
@@ -107,9 +108,19 @@ describe("the P&L", () => {
     expect(screen.getByRole("heading", { level: 1, name: "רווח והפסד" })).toBeInTheDocument();
     expect(band()?.textContent).toContain("$29,000");
     expect(band()?.textContent).toContain("30% מההכנסות");
-    expect(band()?.textContent).toContain("+$96,000");
+    // The board's two rows carry no sign: the word says which is income (V3-Report, FLOW-1054).
+    expect(band()?.textContent).toContain("הכנסות$96,000");
+    expect(band()?.textContent).not.toContain("+$96,000");
     expect(band()?.textContent).toContain("$67,000");
     expect(screen.getByRole("button", { name: "השנה · 2026" })).toHaveAttribute("aria-haspopup", "dialog");
+  });
+
+  it("draws each row's share of its group as a bar under its line: costs of a group of several, none on income", () => {
+    renderPnl();
+    const mortgage = screen.getByRole("link", { name: /ריבית משכנתא/ });
+    expect(mortgage.querySelector(".ui-rep-share")).toHaveAttribute("aria-hidden", "true");
+    const income = screen.getByRole("heading", { name: "הכנסות" }).closest("section");
+    expect(income?.querySelector(".ui-rep-share")).toBeNull();
   });
 
   it("lists the categories under one-line heads with their totals, a row opening its lines", () => {
@@ -141,7 +152,10 @@ describe("the P&L", () => {
     renderPnl({}, "/reports/pnl?view=project");
     const cedar = screen.getByRole("link", { name: /Cedar St/ });
     expect(cedar.textContent).toContain("+$13,000");
-    expect(cedar.textContent).toContain("הכנסות $30,000 · הוצאות $17,000");
+    expect(cedar.querySelector(".ui-rep-hint-text")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
+    expect(cedar.querySelector(".ui-rep-share-fill")).toHaveAttribute("data-income");
+    // The general expenses are one row alone: no bar.
+    expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest("section")?.querySelector(".ui-rep-share")).toBeNull();
     expect(cedar).toHaveAttribute("href", `/reports/pnl?view=project&project=${CEDAR}`);
     expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest(".ui-group-head-line")?.textContent).toContain("−$5,800");
     expect(document.querySelector(".ui-rep-total-strong")?.textContent).toContain("$29,000");
@@ -269,5 +283,15 @@ describe("reportLinesPath", () => {
     expect(params.get("from")).toBe("2026-01-01");
     expect(params.get("project")).toBe(CEDAR);
     expect(params.get("pname")).toBe("Cedar St");
+  });
+});
+
+describe("barShare", () => {
+  it("is a row's whole percent of its group, a loss by its size, never past 100", () => {
+    expect(barShare(1_890_000n, 4_720_000n)).toBe(40);
+    expect(barShare(-120_000n, 1_000_000n)).toBe(12);
+    expect(barShare(500n, -1_000n)).toBe(50);
+    expect(barShare(2_000n, 1_000n)).toBe(100);
+    expect(barShare(1_000n, 0n)).toBe(0);
   });
 });

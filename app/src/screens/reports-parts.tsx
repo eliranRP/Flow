@@ -124,8 +124,8 @@ export type ReportBack = { kind: "hub"; to: string } | { kind: "undrill"; label:
 
 export type BandFigure = { amount: bigint; currency: string; loss: boolean };
 
-/** One of the two rows under the band's figure: income and expenses, or assets and liabilities. */
-export type BandRow = { label: string; amount: bigint; income?: boolean };
+/** One of the two rows under the band's figure: income and expenses, or assets and liabilities (no sign, as the board). */
+export type BandRow = { label: string; amount: bigint };
 
 /** A figure as text, for the bar and the group heads: LTR, the minus U+2212 (formatAmountText). */
 export function amountText(amount: bigint, currency: string, signed = false): string {
@@ -201,15 +201,29 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
                   <Amount agorot={figure.amount} currency={figure.currency} loss={figure.loss} size="hero" compact />
                 </p>
               )}
-              {figureSub == null ? null : <p className="ui-rep-band-sub t-line2">{figureSub}</p>}
+              {figure == null ? (
+                <p className="ui-rep-band-sub t-line2" aria-hidden="true">&nbsp;</p>
+              ) : figureSub == null ? null : (
+                <p className="ui-rep-band-sub t-line2">{figureSub}</p>
+              )}
             </div>
-            {figure == null ? null : (
+            {figure == null ? (
+              // While the read is in, the two rows keep their place (V3-States: the band's height does not jump).
+              <div className="ui-rep-band-rows" aria-hidden="true">
+                {[0, 1].map((index) => (
+                  <p key={index} className="ui-rep-band-row">
+                    <Skeleton tone="band" width="sm" />
+                    <Skeleton tone="band" width="sm" />
+                  </p>
+                ))}
+              </div>
+            ) : (
               <div className="ui-rep-band-rows">
                 {rows.map((row) => (
                   <p key={row.label} className="ui-rep-band-row">
                     <span>{row.label}</span>
                     <span className="ui-rep-band-row-amount">
-                      <Amount agorot={row.amount} currency={currency} size="list" income={row.income === true} />
+                      <Amount agorot={row.amount} currency={currency} size="list" />
                     </span>
                   </p>
                 ))}
@@ -256,15 +270,55 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
   );
 }
 
-/** The rows' amount: income with its plus in green, a cost as it is (its group says so), a net with its sign. */
-function rowAmount(tone: ViewRow["tone"], amount: bigint): { agorot: bigint; amountDirection?: "income"; loss?: boolean; amountPlus?: boolean } {
-  if (tone === "income") return { agorot: amount, amountDirection: "income" };
-  if (tone === "net") return { agorot: amount, loss: amount < 0n, amountPlus: amount > 0n };
+/** The rows' amount: income with its plus in green, a cost as it is (its group says so), a net with its sign: a profit
+   in green as income, a loss in the signal colour (V3-Report). */
+function rowAmount(tone: ViewRow["tone"], amount: bigint): { agorot: bigint; amountDirection?: "income"; loss?: boolean } {
+  if (tone === "income" || (tone === "net" && amount > 0n)) return { agorot: amount, amountDirection: "income" };
+  if (tone === "net") return { agorot: amount, loss: amount < 0n };
   return { agorot: amount };
 }
 
+/** A row's share of its group, in whole percent from 0 to 100 (the bar under a report row; 0 for an empty total). */
+export function barShare(amount: bigint, total: bigint): number {
+  const whole = total < 0n ? -total : total;
+  if (whole === 0n) return 0;
+  const part = amount < 0n ? -amount : amount;
+  return Math.min(100, Number((part * 100n) / whole));
+}
+
+/**
+ * FLOW-1054 (board V3-Report): a report row's line under its name. The hint on one line, cut at its end, then
+ * the row's share of its group as a 4px bar (decoration: the amount is written beside it), green for income.
+ */
+export function reportHint(text: string | undefined, bar?: { share: number; income?: boolean }): ReactNode {
+  if (text == null && bar == null) return undefined;
+  return (
+    <>
+      {text == null ? null : <span className="ui-rep-hint-text" data-clip-ok="">{text}</span>}
+      {bar == null ? null : (
+        <span className="ui-rep-share" aria-hidden="true">
+          <span className="ui-rep-share-fill" data-income={bar.income === true || undefined} style={{ inlineSize: `${String(bar.share)}%` }} />
+        </span>
+      )}
+    </>
+  );
+}
+
+/** A category row's bar: a cost in a group of several, as its share of the group (the board draws none on income). */
+function viewBar(group: ViewGroup, row: ViewRow): { share: number } | undefined {
+  if (group.rows.length < 2 || row.tone !== "cost" || row.amount <= 0n) return undefined;
+  return { share: barShare(row.amount, group.total) };
+}
+
 /** Category groups, each under a one-line sticky head with its total; a row opens its lines when `href` gives one. */
-export function ViewGroups({ id, groups, currency, href }: { id: string; groups: readonly ViewGroup[]; currency: string; href?: (row: ViewRow) => string | undefined }) {
+export function ViewGroups({ id, groups, currency, href, bars = () => true }: {
+  id: string;
+  groups: readonly ViewGroup[];
+  currency: string;
+  href?: (row: ViewRow) => string | undefined;
+  /** Whether a group's rows draw their share bars (the balance sheet's equity does not). */
+  bars?: (group: ViewGroup) => boolean;
+}) {
   return (
     <>
       {groups.map((group) => (
@@ -273,13 +327,14 @@ export function ViewGroups({ id, groups, currency, href }: { id: string; groups:
           <List>
             {group.rows.map((row) => {
               const to = href?.(row);
+              const hint = reportHint(row.hint, bars(group) ? viewBar(group, row) : undefined);
               return (
                 <ListRow
                   key={row.key}
                   variant="project"
                   title={slashBreaks(row.name)}
                   wrapTitle
-                  {...(row.hint == null ? {} : { hint: row.hint })}
+                  {...(hint == null ? {} : { hint })}
                   {...(to == null ? {} : { href: to })}
                   chevron={to != null}
                   chevronSpace={to == null}
@@ -307,6 +362,8 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
 }) {
   if (rows.length === 0) return null;
   const total = rows.reduce((sum, row) => sum + row.net, 0n);
+  // The bars share the rows' sizes, a loss as much as a profit; one row alone draws none (the board).
+  const whole = rows.reduce((sum, row) => sum + (row.net < 0n ? -row.net : row.net), 0n);
   return (
     <section className="ui-month ui-rep-v3-group" aria-labelledby={id}>
       <GroupHead id={id} title={title} summary={<bdi dir="ltr">{amountText(total, currency, true)}</bdi>} />
@@ -319,7 +376,7 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
               variant="project"
               title={slashBreaks(row.name)}
               wrapTitle
-              hint={hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`}
+              hint={reportHint(hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`, rows.length < 2 ? undefined : { share: barShare(row.net, whole), income: row.net > 0n })}
               {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
               chevron={to != null}
               chevronSpace={to == null}

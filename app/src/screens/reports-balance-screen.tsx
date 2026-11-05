@@ -26,7 +26,7 @@ import type { ScreenPhase } from "../ui/screen-phase";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useBalanceAt, usePnl, useProjectBalances } from "../use-reports";
 import { ReportShareSheet } from "./report-share-sheet";
-import { BalanceWarningCard, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, type BandFigure } from "./reports-parts";
+import { BalanceWarningCard, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, barShare, reportHint, type BandFigure } from "./reports-parts";
 import { reportAccountPath } from "./reports-screen";
 import { BalanceDateSheet, useLatePick } from "./reports-sheets";
 
@@ -145,8 +145,7 @@ export function BalanceReportScreen({ sample }: { sample?: BalanceSample } = {})
                     variant="project"
                     title={row.name}
                     wrapTitle
-                    wrapHint
-                    hint={row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : `שווי ${amountText(row.assets, base)} · הלוואות ${amountText(row.liabilities, base)}`}
+                    hint={reportHint(row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : `שווי ${amountText(row.assets, base)} · הלוואות ${amountText(row.liabilities, base)}`, row.equity > 0n && rows.length > 1 ? { share: barShare(row.equity, equityTotal(top)) } : undefined)}
                     {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
                     chevron={to != null}
                     chevronSpace={to == null}
@@ -174,6 +173,7 @@ export function BalanceReportScreen({ sample }: { sample?: BalanceSample } = {})
               groups={route.view === "assets" ? [sideGroup("assets", "נכסים", row.assets)] : [sideGroup("liabilities", "התחייבויות", row.liabilities), equityGroup(row)]}
               currency={row.currency}
               href={accountHref(row.currency)}
+              bars={(group) => group.key !== "equity"}
             />
             <ReportBottomLine label="הון עצמי" amount={equityTotal(row)} currency={row.currency} />
           </div>
