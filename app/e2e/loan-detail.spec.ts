@@ -184,11 +184,13 @@ test("all payments: years newest first with sticky heads that push each other ou
   await head2025.evaluate((node) => { node.scrollIntoView({ block: "start" }); window.scrollBy(0, 120); });
   await expect(page.locator(".ui-compact-bar")).toBeVisible();
   const stickyTop = () => head2025.evaluate((node) => parseFloat(getComputedStyle(node).top));
+  // The bar reports its height a frame after it shows (html[data-compact-bar]); until then the offset reads 0 and
+  // a head at the very top would match it. Wait for the real offset, then for the head to sit on it.
+  await expect.poll(stickyTop).toBeGreaterThan(0);
   await expect.poll(async () => {
     const box = await head2025.boundingBox();
     return box == null ? Number.NaN : Math.abs(box.y - await stickyTop());
   }).toBeLessThanOrEqual(1);
-  expect(await stickyTop()).toBeGreaterThan(0);
   const bar = await page.locator(".ui-compact-bar").boundingBox();
   const sticky = await head2025.boundingBox();
   const pushed = await head2026.boundingBox();
