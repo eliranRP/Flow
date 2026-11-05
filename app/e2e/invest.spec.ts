@@ -9,7 +9,8 @@ test("the menu opens the investment page, the ARV row opens its sheet, Back retu
   await page.getByRole("link", { name: /^השקעה והלוואות/ }).click();
   await expect(page).toHaveURL(/\/e2e\/project-investment/);
   await expect(page.getByRole("heading", { name: "השקעה והלוואות" })).toBeVisible();
-  await page.getByRole("button", { name: /^שווי אחרי שיפוץ/ }).click();
+  // FLOW-1047: the band's ARV row and the נכס group's ARV row both open the sheet; the group's row carries its note.
+  await page.getByRole("button", { name: /^שווי אחרי שיפוץ \(ARV\) הערכה שלך/ }).click();
   const dialog = page.getByRole("dialog", { name: "שווי אחרי שיפוץ (ARV)" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "שמירה" })).toBeVisible();
