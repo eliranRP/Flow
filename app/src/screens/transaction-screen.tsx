@@ -1,7 +1,7 @@
 import "../ui/lazy.css";
 import { formatAmountText, type PartyCharges, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
 import { LoanCategoryRow } from "./loan-match-row";
 import { useLoanSplitView } from "./loan-match-api";
@@ -23,11 +23,11 @@ import { IconButton } from "../ui/icon-button";
 import { IconRow } from "../ui/icon-row";
 import { DocumentCard } from "../ui/document-card";
 import { unpaidDocumentUrl } from "../unpaid";
-import { ChevronIcon, MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
 import { CountedInRow, CountedInSheet, COUNTED_REASON_LOAN, COUNTED_REASON_RENO } from "../ui/counted-in";
-import { ScreenHeader } from "../ui/screen-header";
+import { DETAIL_BAR, ScreenHeader, useScrolledPast } from "../ui/screen-header";
 import { DetailSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
@@ -37,7 +37,9 @@ import { ReversalTag } from "../ui/suggest-tag";
 import { splitHeldByReview, type LineSplitRead } from "../line-split";
 import { lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
-import { TransactionTopBar } from "./transaction-top-bar";
+import { BackButton } from "../ui/back";
+import { CompactBar } from "../ui/compact-bar";
+import { TxnApproveBar, useTxnApprove } from "./transaction-approve";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TransactionThread } from "./transaction-thread";
 import { TxnRecurring } from "./transaction-recurring";
@@ -462,6 +464,10 @@ export function TransactionScreen({
       undoId.current = typeof saved.data === "string" ? saved.data : null;
     },
   });
+  // FLOW-1048 (V3-Transaction): the 56px detail bar slides in once the head has gone under it.
+  const barShown = useScrolledPast(head, true, DETAIL_BAR);
+  // FLOW-1048: the pinned אישור approves in place; ביטול reopens the review (transaction-approve.tsx).
+  const { approved: approvedLocal, write: approve } = useTxnApprove({ live: sample == null, keys: ASSIGN_KEYS });
   // FLOW-345: the step row stays while a card loads, fails or is gone, so the walk can go on past it.
   // Every layout goes through this frame, so the row keeps its place in the tree and is not remounted
   // (its focus move run again) when the card finishes loading.
@@ -596,8 +602,14 @@ export function TransactionScreen({
   const documentUrl = unpaidDocumentUrl(txn);
   // A loan line the server fixes by its category, with no parts of its own, is the principal alone: the board names it so.
   const heading = loanLine && loanSplitView == null && !loanSplitFlag ? `${party} · קרן` : party;
-  const pending = txn.review_status === "open";
+  const pending = txn.review_status === "open" && !approvedLocal;
   const amountText = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
+  const backLabel = (nav ? cashLinesBackLabel(nav.list.from) : sampleFrom != null ? cashLinesBackLabel(sampleFrom) : null) ?? undefined;
+  // FLOW-1048: אישור approves here when the line has its review, a project and a category on screen and no split to
+  // settle; otherwise it opens the line in the queue, as the banner it replaces did.
+  const approveProject = projectId || txn.project_id || "";
+  const approveInPlace = txn.review_id != null && approveProject !== "" && shownCategoryId !== "" && !splitRow && !holdWrites;
+  const reviewTo = txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all";
   // FLOW-954: the journal opens in place from a quiet link, or shows open when a leg is outside the P&L.
   const journal = sample ? (sampleJournal ?? null) : (journalQuery.data ?? null);
   const openJournal = journalShown(journal) && journalOpens(journal) ? journal : null;
@@ -607,25 +619,16 @@ export function TransactionScreen({
   const journalEdit = holdWrites || !journalEditable(txn) ? undefined : `/transactions/${txn.id}/journal${search}`;
   return frame(
     <>
-      <TransactionTopBar
-        fallback={parent}
-        backLabel={nav ? cashLinesBackLabel(nav.list.from) : sampleFrom != null ? cashLinesBackLabel(sampleFrom) : null}
-        title={`${heading} · ${amountText}`}
-        end={menuButton}
-        head={head}
-        toastCeiling
-      />
+      <CompactBar title={heading} figure={amountText} label={backLabel} backTo={parent} size="detail" shown={barShown} />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
           <div className="ui-txn-intro">
+          {/* FLOW-1048 (V3-Transaction, the Detail pattern): the page's own Back and ⋯; toasts hang under them (decision 0216). */}
+          <div className="ui-txn-back" data-toast-ceiling="">
+            <BackButton fallback={parent} text={backLabel} />
+            {menuButton}
+          </div>
           <TxnHead headRef={setHead} txn={txn} party={heading} moneyIn={moneyIn} meta={meta ?? undefined} unsigned={sampleUnsigned} />
-          {pending ? (
-            <Link className="ui-txn-banner" to={txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all"}>
-              <span className="ui-txn-banner-text">השורה מחכה לאישור שלך</span>
-              <span className="ui-txn-banner-action">לאישור</span>
-              <ChevronIcon />
-            </Link>
-          ) : null}
           </div>
         <List layout="inset">
           {holdWrites ? (
@@ -711,6 +714,12 @@ export function TransactionScreen({
         {quietJournal ? <TxnJournal key={txn.id} journal={quietJournal} bankName={meta?.account ?? null} collapsible editTo={journalEdit} /> : null}
         </div>
       </CardSwipe>
+      {pending && !holdWrites ? (
+        <TxnApproveBar busy={approve.isPending} reviewTo={reviewTo} onChange={() => { setChangeStart("project"); setChangeSheet(true); }} approve={approveInPlace ? () => {
+          if (approve.isPending || (sample == null && blocked())) return;
+          approve.mutate({ reviewId: txn.review_id ?? "", projectId: approveProject, categoryId: shownCategoryId, undo: false });
+        } : null} />
+      ) : null}
       {countedLocked ? null : (
         <CountedInSheet
           open={countedOpen}

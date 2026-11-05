@@ -22,7 +22,7 @@ export function ChargeHead({
   income,
   meta,
 }: {
-  /** The page's top bar takes its line once this head is under it (TransactionTopBar). */
+  /** The page's top bar takes its line once this head is under it (the 56px detail CompactBar, FLOW-1048). */
   headRef?: (node: HTMLElement | null) => void;
   status: string;
   statusBad: boolean;

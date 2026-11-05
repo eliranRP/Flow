@@ -1,17 +1,21 @@
 import { formatAmountText } from "@flow/shared";
-import { type ReactNode, useId } from "react";
-import { Link } from "react-router-dom";
+import { type ReactNode, useState } from "react";
 import { usePreviewSearch } from "../preview";
-import { Avatar } from "./avatar";
-import { BackButton } from "./back";
-import { ClockIcon, RepeatIcon } from "./icons";
-import { EmptyState } from "./empty-state";
-import { cx } from "./cx";
-import { SectionHead } from "./layout";
+import { AttentionCards } from "./attention-cards";
 import { BandOfflineLine } from "./band-states";
-import { SwipeRow } from "./swipe-row";
+import type { BannerRow } from "./banner";
+import { EmptyState } from "./empty-state";
+import { GroupHead } from "./group-head";
+import { RepeatIcon } from "./icons";
+import { List, ListRow } from "./list-row";
+import { BackButton } from "./back";
+import { CompactBar } from "./compact-bar";
+import { DockSlot, useDockedFilter } from "./dock-filter";
+import { FocusTitle } from "./focus-title";
+import { DETAIL_BAR, useScrolledPast } from "./screen-header";
+import { SegmentedControl } from "./segmented-control";
+import { StatusMark, type StatusMarkKind } from "./status-mark";
 import "./css/39-recurring.css";
-import "./css/49-recurring-answers.css";
 
 /** The suggested party a late bill may be (decision 0179), as the list shows it. */
 export type RecurringListSuggestion = {
@@ -23,16 +27,20 @@ export type RecurringListSuggestion = {
   date: string;
 };
 
-/** One charge on the list, as the screen shows it: its amount is already formatted. */
+/** One charge on the list, as the screen shows it. */
 export type RecurringListRow = {
   id: string;
   name: string;
-  /** "project · category", or the one of them the charge has; null for neither. */
+  /** The project, or the category when the charge has none; null for neither. */
   place: string | null;
   income: boolean;
   /** Paid this month: the primary text. Not paid yet: grey. */
   paid: boolean;
   minor: bigint;
+  /** FLOW-1048: the row's mark (V3-Recurring): a dashed ring while due (signal when late), a check once paid. */
+  mark: StatusMarkKind;
+  /** FLOW-1048: the state in words, so the mark's colour is never the only cue ("באיחור 8 ימים", "צפוי ב־15/10", "שולם"). */
+  status: string;
   /** "באיחור N ימים" for a late bill, or "▲ N%" for a change of 20% or more. */
   hint?: string;
   /** A bad-news hint, drawn in the danger colour. */
@@ -43,52 +51,55 @@ export type RecurringListRow = {
   suggestion?: RecurringListSuggestion | null;
   /** FLOW-447c: where the row opens, the party's charge page. */
   href: string;
-  /** A late charge with no suggested match asks whether it still recurs: "לא שולם ב־03/10. עדיין קבוע?". */
-  ask?: string;
 };
 
 export type RecurringListGroup = {
   id: string;
   title: string;
   income: boolean;
-  /** The group's monthly cost, shown on the head as "לחודש". */
+  /** The group's monthly cost. */
   monthlyMinor: bigint;
   rows: RecurringListRow[];
 };
 
 export type RecurringListProps = {
-  /** The project the list is narrowed to, named under the title. */
+  /** The project the list is narrowed to, named above the title. */
   project?: string;
-  /** "אוקטובר 2026 • 15 קבועים". */
+  /** "אוקטובר 2026 • נכון ל־11/10 • 15 קבועים". */
   subtitle: string;
   currency: string;
   outflow: { total: bigint; paid: bigint; toCome: bigint };
   /** The month's recurring income: what came in and what is still to come. */
   inflow: { total: bigint; got: bigint; toCome: bigint };
-  /** The bills late for their month: their own section, above the groups. */
+  /** The bills late for their month: the "לא הגיעו" cards above the groups (they stay in their groups too). */
   late: RecurringListRow[];
   groups: RecurringListGroup[];
-  /** FLOW-447b: ignoring a late bill, by swipe or by its button. Without it the rows cannot be ignored. */
-  onIgnore?: (row: RecurringListRow) => void;
-  /** The ask's answers: still recurring (the late alert is set aside), or ended (no longer recurring). */
-  onStill?: (row: RecurringListRow) => void;
-  onEnded?: (row: RecurringListRow) => void;
-  /** The row that opens over its action at first (the dev route's swiped row). */
-  openId?: string;
   /** FLOW-963: offline, the moment the rows on screen are from; undefined when online. */
   offlineSince?: number;
-  /** FLOW-1011: the row that adds a recurring line to a project's forecast; FLOW-1014: under the month card, in reach. */
+  /** FLOW-1011: the row that adds a recurring line to a project's forecast, at the end of the list (V3-Recurring). */
   addLine?: ReactNode;
 };
 
+/** FLOW-986: קבועים opens from Home, so Back goes there ("‹ בית"). */
+function useHomeBack(): string {
+  return `/${usePreviewSearch()}`;
+}
+
 /**
- * FLOW-986: קבועים is no longer a tab; it opens from Home, so Back goes there ("‹ בית"). FLOW-1030: a list
- * opened from a project page (`project`) goes back to it and names it.
+ * FLOW-1048 (V3-Recurring): the head every state of the screen keeps: Back to בית, the project when the list is one
+ * project's, the title (32/600) and its line (14). `endRef` marks its end for the compact bar.
  */
-export function RecurringBack({ project }: { project?: { id: string; name: string } }) {
-  const search = usePreviewSearch();
-  if (project != null) return <BackButton fallback={`/projects/${encodeURIComponent(project.id)}${search}`} text={project.name} />;
-  return <BackButton fallback={`/${search}`} text="בית" />;
+export function RecurringHead({ subtitle, kicker, endRef }: { subtitle?: string; kicker?: string; endRef?: (node: HTMLElement | null) => void }) {
+  const back = useHomeBack();
+  return (
+    <header className="ui-recurring-head">
+      <BackButton fallback={back} text="בית" />
+      {kicker != null ? <p className="ui-recurring-kicker t-meta">{kicker}</p> : null}
+      <FocusTitle className="t-title">קבועים</FocusTitle>
+      {subtitle != null ? <p className="ui-recurring-sub t-meta">{subtitle}</p> : null}
+      {endRef != null ? <span ref={endRef} className="ui-compact-mark" aria-hidden="true" /> : null}
+    </header>
+  );
 }
 
 /**
@@ -98,210 +109,132 @@ export function RecurringBack({ project }: { project?: { id: string; name: strin
 export function RecurringListEmpty({ addLine }: { addLine?: ReactNode }) {
   return (
     <div className="ui-recurring">
-      <header className="ui-recurring-head">
-        <RecurringBack />
-        <h1 className="t-title">קבועים</h1>
-      </header>
-      <EmptyState icon={<RepeatIcon />} title="עוד Flow לומד" body="חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה." action={addLine} />
+      <div className="ui-recurring-body">
+        <RecurringHead />
+        <EmptyState icon={<RepeatIcon />} title="עוד Flow לומד" body="חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה." action={addLine} />
+      </div>
     </div>
   );
 }
 
+/** A late charge's card: its name and how late, the dashed ring in the signal colour. Hidden until it is late again. */
+function lateCard(row: RecurringListRow, money: (minor: bigint) => string): BannerRow {
+  const words = row.suggestion != null ? "אולי הגיע בשם אחר" : row.status;
+  return {
+    id: `late:${row.id}`,
+    dismissKey: `late:${row.alertKey ?? row.id}`,
+    to: row.href,
+    icon: <StatusMark kind="late" />,
+    title: <>{row.name} · {words} · <bdi dir="ltr">{money(row.minor)}</bdi></>,
+  };
+}
+
+/** A group head's summary: "עוד $607 · שולם $76" (income: "עוד +$2,650 · התקבל $3,200"). */
+function groupSummary(group: RecurringListGroup, money: (minor: bigint) => string): ReactNode {
+  let left = 0n;
+  let done = 0n;
+  for (const row of group.rows) {
+    if (row.paid) done += row.minor;
+    else left += row.minor;
+  }
+  const plus = group.income ? "+" : "";
+  const parts: ReactNode[] = [];
+  if (left > 0n) parts.push(<span key="left">עוד <bdi dir="ltr">{`${plus}${money(left)}`}</bdi></span>);
+  if (done > 0n) parts.push(<span key="done">{group.income ? "התקבל" : "שולם"} <bdi dir="ltr">{money(done)}</bdi></span>);
+  if (parts.length === 0) return String(group.rows.length);
+  return parts.flatMap((part, index) => (index === 0 ? [part] : [" · ", part]));
+}
+
+/** The board's filter: every group, the expense groups, or the income groups. */
+export type RecurringFilter = "all" | "out" | "in";
+
+const FILTERS: { value: RecurringFilter; label: string }[] = [
+  { value: "all", label: "הכול" },
+  { value: "out", label: "הוצאות" },
+  { value: "in", label: "הכנסות" },
+];
+
+/** "5 מתוך 11": the charges of a side still to come, out of all of them. */
+function leftOf(groups: readonly RecurringListGroup[], income: boolean): string {
+  const rows = groups.filter((group) => group.income === income).flatMap((group) => group.rows);
+  return `${String(rows.filter((row) => !row.paid).length)} מתוך ${String(rows.length)}`;
+}
+
 /**
- * FLOW-447: the קבועים list. The card totals this month's income and expenses side by side; the late
- * bills come first, in a tinted box that asks for a decision; then the income groups under "הכנסות
- * קבועות" and the expense groups under "הוצאות קבועות", one group per category. The amounts are
- * formatted here; the rows only say what they are.
+ * FLOW-447, FLOW-1048 (V3-Recurring, the List pattern): Back to בית, the title and the month line; two cards, what
+ * is still to pay and still to come in; the late charges as "לא הגיעו" cards (hidden on this device until they are
+ * late again); the הכול / הוצאות / הכנסות segment, which docks into the 56px bar; then the groups by category under
+ * one-line sticky heads, 64px rows with a status mark each.
  */
-export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, onIgnore, onStill, onEnded, openId, offlineSince, addLine }: RecurringListProps) {
+export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, offlineSince, addLine }: RecurringListProps) {
   const money = (minor: bigint) => formatAmountText(minor, currency);
-  const lateHead = useId();
-  const rowView = (row: RecurringListRow) => (
-    <RowView key={row.id} row={row} money={money} onIgnore={onIgnore} onStill={onStill} onEnded={onEnded} defaultOpen={row.id === openId} />
+  const back = useHomeBack();
+  const [filter, setFilter] = useState<RecurringFilter>("all");
+  const [headEnd, setHeadEnd] = useState<HTMLElement | null>(null);
+  const barShown = useScrolledPast(headEnd, true, DETAIL_BAR);
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: DETAIL_BAR });
+  const shown = groups.filter((group) => filter === "all" || group.income === (filter === "in"));
+  const segment = (
+    <SegmentedControl<RecurringFilter>
+      label="סינון"
+      showLabel={false}
+      value={filter}
+      options={FILTERS}
+      onChange={(next) => {
+        setFilter(next);
+        scrollUnderBar();
+      }}
+    />
   );
   return (
     <div className="ui-recurring">
-      <header className="ui-recurring-head">
-        <RecurringBack />
-        <h1 className="t-title">קבועים</h1>
-        {project != null && <p className="t-sheet">{project}</p>}
-        <p className="t-line2">{subtitle}</p>
-      </header>
-      {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
-      <section className="ui-card ui-recurring-sums" aria-label="החודש">
-        <MonthTakeaway outflow={outflow} inflow={inflow} money={money} />
-        <MonthSum label="נכנס החודש" total={`+${money(inflow.total)}`} income done={inflow.got} whole={inflow.total} doneText={`התקבל ${money(inflow.got)}`} leftText={`עוד ${money(inflow.toCome)}`} />
-        <MonthSum label="יוצא החודש" total={money(outflow.total)} done={outflow.paid} whole={outflow.total} doneText={`שולם ${money(outflow.paid)}`} leftText={`עוד ${money(outflow.toCome)}`} />
-      </section>
-      {addLine}
-      {late.length > 0 && (
-        <section className="ui-recurring-late" aria-labelledby={lateHead}>
-          <div className="ui-recurring-late-head">
-            <span className="ui-recurring-late-icon" aria-hidden="true"><ClockIcon size={18} /></span>
-            <div className="ui-recurring-late-text">
-              <h2 id={lateHead} className="ui-recurring-late-title">לא הגיעו · {late.length}</h2>
-              <span className="ui-recurring-late-lead">היה אמור להגיע עד היום ומחכה להחלטה שלך.</span>
-            </div>
+      <CompactBar title="קבועים" figure={`עוד לשלם ${money(outflow.toCome)}`} label="בית" backTo={back} size="detail" shown={barShown} dock={segment} docked={docked} />
+      <div className="ui-recurring-body">
+        <RecurringHead kicker={project} subtitle={subtitle} endRef={setHeadEnd} />
+        {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
+        <section className="ui-recurring-sums" aria-label="החודש">
+          <div className="ui-recurring-sum">
+            <span className="ui-recurring-sum-label">עוד לשלם</span>
+            <bdi dir="ltr" className="ui-recurring-sum-figure">{money(outflow.toCome)}</bdi>
+            <span className="ui-recurring-sum-note">{leftOf(groups, false)} · שולם <bdi dir="ltr">{money(outflow.paid)}</bdi></span>
           </div>
-          <ul className="ui-recurring-rows">{late.map(rowView)}</ul>
-        </section>
-      )}
-      {groups.map((group, index) => (
-        <section key={group.id}>
-          {index === 0 || groups[index - 1]?.income !== group.income ? (
-            <div className={cx("ui-recurring-side", group.income && "ui-recurring-side-income")}>
-              <span className="ui-recurring-side-title"><span className="ui-recurring-side-dot" aria-hidden="true" />{group.income ? "הכנסות קבועות" : "הוצאות קבועות"}</span>
-              <span className="ui-recurring-side-note">צפוי <bdi dir="ltr">{group.income ? `+${money(inflow.total)}` : money(outflow.total)}</bdi></span>
-            </div>
-          ) : null}
-          <SectionHead title={group.title}>
-            <span className="t-line2">
-              {group.income ? "+" : ""}
-              {money(group.monthlyMinor)} לחודש
-            </span>
-          </SectionHead>
-          <ul className="ui-recurring-rows">{group.rows.map(rowView)}</ul>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-/**
- * FLOW-963: the month card leads with what is still to come, "עד סוף החודש: לשלם עוד $962, לקבל עוד
- * $1,650" (data-viz § 9). A side with nothing recurring this month is left out; with neither, no line.
- */
-function MonthTakeaway({ outflow, inflow, money }: Pick<RecurringListProps, "outflow" | "inflow"> & { money: (minor: bigint) => string }) {
-  const parts = [
-    outflow.total > 0n ? { key: "out", words: "לשלם עוד", minor: outflow.toCome } : null,
-    inflow.total > 0n ? { key: "in", words: "לקבל עוד", minor: inflow.toCome } : null,
-  ].filter((part) => part != null);
-  if (parts.length === 0) return null;
-  return (
-    <p className="ui-recurring-takeaway">
-      עד סוף החודש:{" "}
-      {parts.map((part, index) => (
-        <span key={part.key}>
-          {index > 0 ? ", " : null}
-          {part.words} <bdi dir="ltr">{money(part.minor)}</bdi>
-        </span>
-      ))}
-    </p>
-  );
-}
-
-/** One side of the month card: its total, a bar of what is done, and what is done and still to come. */
-function MonthSum({ label, total, income = false, done, whole, doneText, leftText }: {
-  label: string;
-  total: string;
-  income?: boolean;
-  done: bigint;
-  whole: bigint;
-  doneText: string;
-  leftText: string;
-}) {
-  return (
-    <div className="ui-recurring-sum">
-      <p className="ui-recurring-sum-label">{label}</p>
-      <bdi dir="ltr" className={cx("ui-recurring-sum-total", income && "ui-recurring-income")}>{total}</bdi>
-      <div className="ui-recurring-bar" role="img" aria-label={`${doneText} מתוך ${total.replace(/^\+/, "")}`}>
-        <span style={{ width: barWidth(done, whole) }} />
-      </div>
-      <p className="ui-recurring-sum-note"><span>{doneText}</span><span>{leftText}</span></p>
-    </div>
-  );
-}
-
-function RowView({
-  row,
-  money,
-  onIgnore,
-  onStill,
-  onEnded,
-  defaultOpen,
-}: {
-  row: RecurringListRow;
-  money: (minor: bigint) => string;
-  onIgnore?: (row: RecurringListRow) => void;
-  onStill?: (row: RecurringListRow) => void;
-  onEnded?: (row: RecurringListRow) => void;
-  defaultOpen: boolean;
-}) {
-  // An active late bill can be ignored: by the swipe, and by a button that is hidden until it has focus.
-  const ignorable = row.alertKey != null && onIgnore != null;
-  // The whole row opens the charge's page (FLOW-447c); the ignore control stays outside that link.
-  const className = cx("ui-recurring-row", !row.paid && "ui-recurring-row-open");
-  const inner = (
-    <>
-      <Avatar name={row.name} fallback="person" single />
-      <span className="ui-recurring-name">
-        <RowName row={row} />
-      </span>
-      <span className="ui-recurring-amount">
-        <span className={cx(row.income && row.paid && "ui-recurring-income")}>
-          {row.income ? "+" : ""}
-          {money(row.minor)}
-        </span>
-        {row.hint != null && <span className={cx("t-line2", row.alert && "ui-recurring-alert")}>{row.hint}</span>}
-      </span>
-    </>
-  );
-  const body = (
-    <Link className={className} to={row.href}>
-      {inner}
-    </Link>
-  );
-  return (
-    <li className="ui-recurring-item">
-      {ignorable && (
-        <button type="button" className="ui-recurring-ignore" aria-label={`התעלמות מההתראה: ${row.name}`} onClick={() => {
-            onIgnore(row);
-          }}>
-          התעלמות מההתראה
-        </button>
-      )}
-      {ignorable ? (
-        <SwipeRow reveal={{ label: "התעלמות מההתראה", onAct: () => {
-            onIgnore(row);
-          } }} onRemove={noop} defaultOpen={defaultOpen}>
-          {body}
-        </SwipeRow>
-      ) : (
-        body
-      )}
-      {row.ask != null && onStill != null && onEnded != null ? (
-        <div className="ui-recurring-ask">
-          <p className="ui-recurring-ask-text">{row.ask}</p>
-          <div className="ui-recurring-match-actions">
-            <button type="button" className="ui-recurring-match-yes ui-hit" onClick={() => { onStill(row); }}>כן, עדיין קבוע</button>
-            <button type="button" className="ui-recurring-match-no ui-hit" onClick={() => { onEnded(row); }}>הסתיים</button>
+          <div className="ui-recurring-sum">
+            <span className="ui-recurring-sum-label">עוד לקבל</span>
+            <bdi dir="ltr" className="ui-recurring-sum-figure ui-recurring-income">{`+${money(inflow.toCome)}`}</bdi>
+            <span className="ui-recurring-sum-note">{leftOf(groups, true)} · התקבל <bdi dir="ltr">{money(inflow.got)}</bdi></span>
           </div>
+        </section>
+        <AttentionCards rows={late.map((row) => lateCard(row, money))} storageKey="recurring" title="לא הגיעו" />
+        <div className="ui-recurring-filter">
+          <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+          <DockSlot docked={docked}>{segment}</DockSlot>
         </div>
-      ) : null}
-    </li>
+        {shown.map((group, index) => (
+          <section key={group.id} className="ui-month ui-recurring-group" aria-labelledby={`recurring-group-${String(index)}`}>
+            <GroupHead id={`recurring-group-${String(index)}`} title={group.title} summary={groupSummary(group, money)} />
+            <List layout="flat">
+              {group.rows.map((row) => (
+                <ListRow
+                  key={row.id}
+                  layout="flat"
+                  variant="project"
+                  className={row.paid ? undefined : "ui-recurring-due"}
+                  icon={<StatusMark kind={row.mark} />}
+                  title={row.name}
+                  hint={[row.status, row.place].filter((part) => part != null && part !== "").join(" · ")}
+                  tone={row.mark === "late" ? "warning" : undefined}
+                  agorot={row.minor}
+                  currency={currency}
+                  amountDirection={row.income ? "income" : undefined}
+                  endSub={row.paid && row.hint != null ? <span className={row.alert === true ? "ui-recurring-alert" : undefined}>{row.hint}</span> : undefined}
+                  href={row.href}
+                />
+              ))}
+            </List>
+          </section>
+        ))}
+        {addLine}
+      </div>
+    </div>
   );
-}
-
-/** The name, and under it the project or the category; a late bill with a suggestion says so instead. */
-function RowName({ row }: { row: RecurringListRow }) {
-  return (
-    <>
-      <span className="ui-recurring-title">{row.name}</span>
-      {row.suggestion != null ? (
-        <span className="t-line2 ui-recurring-suggest">אולי הגיע בשם אחר</span>
-      ) : (
-        row.place != null && <span className="t-line2">{row.place}</span>
-      )}
-    </>
-  );
-}
-
-function noop() {
-  // A reveal row is removed only by its action, never by a swipe.
-}
-
-/** The paid share of the month's outflow, as a width; an empty month shows an empty bar. */
-function barWidth(paid: bigint, total: bigint): string {
-  if (total <= 0n) return "0%";
-  return `${String(Number((paid * 10000n) / total) / 100)}%`;
 }

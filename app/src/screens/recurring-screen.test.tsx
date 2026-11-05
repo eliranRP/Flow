@@ -20,20 +20,28 @@ describe("recurringView (rule-25 fixture)", () => {
     ]);
   });
 
-  it("keeps late charges out of the group rows but counts them in the group's monthly cost", () => {
+  it("keeps late charges in their group too (V3-Recurring), marked late, and counts them in the group's monthly cost", () => {
     const monthly = Object.fromEntries(view.groups.map((group) => [group.title, group.monthlyMinor]));
     expect(monthly).toEqual({ "חשמל ומים": 28900n, אחזקה: 52300n, משרד: 25000n, "ביטוח ומסים": 67700n, שכירות: 560000n });
-    const names = view.groups.flatMap((group) => group.rows.map((item) => item.name));
-    expect(names).not.toContain("Brightline Power");
-    expect(names).not.toContain("Elm Row unit 2");
+    const rows = view.groups.flatMap((group) => group.rows);
+    expect(rows.find((item) => item.name === "Brightline Power")?.mark).toBe("late");
+    expect(rows.find((item) => item.name === "Elm Row unit 2")?.status).toBe("באיחור 10 ימים");
+  });
+
+  it("marks every row by its state, in words too (FLOW-1048)", () => {
+    const rows = view.groups.flatMap((group) => group.rows);
+    const water = rows.find((item) => item.name === "Bayside Water Utility");
+    expect([water?.mark, water?.status]).toEqual(["paid", "שולם"]);
+    expect(rows.filter((item) => item.mark === "due").every((item) => !item.paid && item.status !== "")).toBe(true);
   });
 
   it("narrows to one project, named, with its own count", () => {
     const birch = recurringView(FIXTURE, "2026-10-11", "p-birch-lane");
     expect(birch.project).toBe("Birch Lane");
     expect(birch.subtitle).toBe("אוקטובר 2026 • נכון ל־11/10 • 4 קבועים");
-    const names = [...birch.late, ...birch.groups.flatMap((group) => group.rows)].map((item) => item.name);
+    const names = birch.groups.flatMap((group) => group.rows).map((item) => item.name);
     expect(names.sort()).toEqual(["Bay County Tax", "Birch Lane rent", "Brightline Power", "Brightside Pest"]);
+    expect(birch.late.map((item) => item.name)).toEqual(["Brightline Power"]);
   });
 
   it("shows a change of 20% or more as the bad-news hint", () => {

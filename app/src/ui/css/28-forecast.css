@@ -12,38 +12,30 @@
   color: var(--color-text);
 }
 
-.ui-forecast-compact {
-  position: fixed;
-  inset-inline: 0;
-  top: 0;
-  z-index: 2;
+/* FLOW-1048 (V3-Forecast): Back, the title and the month's line, under the safe area; the figure (40) under them. */
+.ui-forecast-head {
   display: flex;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-side);
-  background: var(--color-surface);
-  transform: translateY(-100%);
-  transition: transform var(--motion-fast) var(--ease-standard);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding-top: calc(var(--safe-top) + var(--space-2));
 }
 
-.ui-forecast-compact-on {
-  transform: translateY(0);
-}
-
-.ui-forecast-compact-figure {
-  font-variant-numeric: tabular-nums lining-nums;
+.ui-forecast-sub {
+  margin: 0;
+  color: var(--color-text-secondary);
 }
 
 .ui-forecast-big {
   margin: var(--space-1) 0 0;
-  padding-top: calc(var(--space-1) * 3 / 4);
   font-variant-numeric: tabular-nums lining-nums;
-  font-size: var(--type-title-size);
-  line-height: var(--type-title-line);
+  font-size: var(--type-detail-size);
+  line-height: var(--type-detail-line);
 }
 
 .ui-forecast-big .t-detail {
-  font-size: var(--type-title-size);
-  line-height: var(--type-title-line);
+  font-size: var(--type-detail-size);
+  line-height: var(--type-detail-line);
 }
 
 .ui-forecast-big-neg {
@@ -368,7 +360,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ui-forecast-li,
-  .ui-forecast-compact,
   .ui-forecast-changed,
   .ui-forecast-moved-li {
     transition: none;

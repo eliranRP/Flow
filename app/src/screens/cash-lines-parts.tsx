@@ -33,14 +33,14 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
   return (
     <>
       {figure != null ? (
-        <p className="ui-breakdown-total ui-page-pad">
+        <p className="ui-breakdown-total">
           <span className="ui-breakdown-total-line">
             <Amount agorot={figure} currency={currency} size="total" income={side === "in"} />
           </span>
         </p>
       ) : null}
       {side === "kept" ? (
-        <p className="ui-breakdown-hint ui-page-pad t-caption t-muted">
+        <p className="ui-breakdown-hint t-caption t-muted">
           {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
         </p>
       ) : null}
@@ -48,7 +48,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
   );
 }
 
-/** The currency switch, shown only when the month has more than one currency. */
+/** The currency switch, shown only when the month has more than one currency. FLOW-1048: it docks into the bar with the side switch. */
 export function CashCurrencySwitch({
   currencies,
   currency,
@@ -60,15 +60,13 @@ export function CashCurrencySwitch({
 }) {
   if (currencies.length < 2) return null;
   return (
-    <div className="ui-page-pad">
-      <SegmentedControl
-        label="מטבע"
-        showLabel={false}
-        value={currency}
-        options={currencies.map((code) => ({ value: code, label: code }))}
-        onChange={onChange}
-      />
-    </div>
+    <SegmentedControl
+      label="מטבע"
+      showLabel={false}
+      value={currency}
+      options={currencies.map((code) => ({ value: code, label: code }))}
+      onChange={onChange}
+    />
   );
 }
 
@@ -117,17 +115,11 @@ export function LinesTotal({ side, currency, total }: { side: CashListSide; curr
 }
 
 /**
- * FLOW-366: "N תנועות · $X לא נספרים ברווח"; the out-of-profit part shows only when it applies. FLOW-965: the
- * lines waiting for approval are the review button under it, not a part of this line.
+ * FLOW-366, FLOW-1048: the month line's count, "N תנועות", and "$X לא נספרים ברווח" when it applies (V3-Lines puts
+ * them on the month line). FLOW-965: the lines waiting for approval are the review button, not a part of it.
  */
-export function LinesCount({
-  summary,
-  currency,
-}: {
-  summary: { count: number; notInProfit: bigint };
-  currency: string;
-}) {
+export function linesCountParts(summary: { count: number; notInProfit: bigint }, currency: string): string[] {
   const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
   if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
-  return <p className="t-line2 ui-lines-count">{parts.join(" • ")}</p>;
+  return parts;
 }

@@ -26,7 +26,7 @@ test("search opens from the cash Home, finds a line, opens it, and Back keeps th
 
   await row.click();
   await expect(page).toHaveURL(/\/transactions\/t-step-3\?preview=1$/);
-  await expect(page.getByText("ספק 3", { exact: true })).toBeVisible();
+  await expect(page.locator("p.ui-txn-supplier", { hasText: /^ספק 3$/ })).toBeVisible();
 
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/search\?preview=1$/);

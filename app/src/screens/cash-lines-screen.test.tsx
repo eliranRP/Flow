@@ -172,7 +172,7 @@ describe("Cash lines", () => {
     byDate.focus();
     fireEvent.keyDown(byDate, { key: "ArrowLeft" });
     await waitFor(() => {
-      expect(within(chips()).getByRole("radio", { name: "לפי סכום" })).toHaveAttribute("aria-checked", "true");
+      expect(within(chips()).getByRole("radio", { name: "לפי פרויקט" })).toHaveAttribute("aria-checked", "true");
     });
   });
 
@@ -246,6 +246,32 @@ describe("Cash lines groups", () => {
     expect(headings).toEqual(["בית צפון", "בית דרום"]);
     expect(groupSum("בית צפון")).toBe("+₪3,500");
     expect(groupSum("בית דרום")).toBe("+₪1,200");
+  });
+
+  it("orders by recurring or one-off once every line carries FLOW-1035's flag, and hides the chip while it is undefined", async () => {
+    const flagged = [{ ...group("r1", "בית צפון", "out", 80_000), recurring: true }, { ...group("o1", "בית דרום", "out", 20_000), recurring: false }];
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: flagged, has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/out/ILS?order=recurring`);
+    await screen.findByText("r1");
+    expect(screen.getAllByRole("radio", { name: "קבוע / חד-פעמי" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("region").map((region) => region.getAttribute("aria-label"))).toEqual(["קבועים", "חד-פעמי"]);
+  });
+
+  it("without the flag, has no recurring chip and orders ?order=recurring by date", async () => {
+    const plain = [group("o1", "בית צפון", "out", 80_000)];
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: plain, has_more: false }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    wrap(`/cash/${earlier}/out/ILS?order=recurring`);
+    await screen.findByText("o1");
+    expect(screen.queryByRole("radio", { name: "קבוע / חד-פעמי" })).toBeNull();
+    expect(screen.getAllByRole("region").map((region) => region.getAttribute("aria-label"))).not.toContain("קבועים");
   });
 
   it("shows the group sum on יצא with no sign, and orders the groups by their totals", async () => {

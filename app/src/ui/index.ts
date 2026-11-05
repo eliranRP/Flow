@@ -1,5 +1,5 @@
 export { BackButton, ScrollMemory, historyIndex, transactionParent, useGoBack, useSheetHistory } from "./back";
-export { Banner, BannerRows, Notice } from "./banner";
+export { Banner, Notice } from "./banner";
 export type { BannerRow } from "./banner";
 export { Amount, formatAmount } from "./amount";
 export type { AmountPresentation } from "./amount";
