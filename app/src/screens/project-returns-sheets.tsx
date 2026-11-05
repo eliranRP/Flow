@@ -6,8 +6,23 @@ import { HoldLine } from "../ui/hold-line";
 import { MoneyField } from "../ui/money-field";
 import { Sheet } from "../ui/sheet";
 import { FigureText, FormulaList, type Resolve } from "./project-returns-parts";
-import { infoFigure, returnInfo, type InfoKey } from "./project-returns-info";
-import type { PropertyReturns } from "./project-returns-data";
+import {
+  BEFORE_FIRST_RENT,
+  FEW_DAYS,
+  INFINITY,
+  beforeFirstRent,
+  fewDays,
+  firstMissing,
+  forcedFormula,
+  infiniteTotal,
+  infoFigure,
+  returnInfo,
+  type FigureValue,
+  type Formula,
+  type InfoKey,
+} from "./project-returns-info";
+import { percentText, type PropertyReturns } from "./project-returns-data";
+import { sourceValue, type InvestmentKind } from "./project-returns-cards";
 import { INFO_LEARN, englishName } from "./project-returns-learn";
 import { LearnSections } from "./project-returns-learn-sheet";
 
@@ -53,6 +68,81 @@ export function ReturnInfoSheet({
       {info.caption == null ? null : <p className="ui-ret-caption">{info.caption}</p>}
       {/* FLOW-462: after how it is made, how an investor reads it. FLOW-471: the body says what it is. */}
       <LearnSections learnKey={INFO_LEARN[infoKey]} defined />
+    </Sheet>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * FLOW-1047 (board V3-Investment, "איך מחושב" in the band): the band's figure in numbers. A rental adds
+ * its four sources up to the year's total and divides it by the money in the deal; a renovation takes
+ * the purchase and the renovation so far from the ARV. Each row opens where it comes from.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** The year's total: the four sources added up. */
+export function totalSumFormula(r: PropertyReturns): Formula {
+  return {
+    rows: [
+      { key: "cash", op: "", label: "תזרים", value: { kind: "money", minor: r.sources.cashFlowMinor }, target: { kind: "statement" } },
+      { key: "principal", op: "+", label: "החזר קרן", value: { kind: "money", minor: r.sources.principalMinor }, target: { kind: "line", line: "principal" } },
+      { key: "appreciation", op: "+", label: "עליית ערך", value: sourceValue(r.sources.appreciationMinor, r, ["value"]), target: { kind: "edit", field: "value" } },
+      { key: "tax", op: "+", label: "חיסכון מס", value: sourceValue(r.sources.taxSavingsMinor, r, ["purchase", "land", "tax_bracket"]), target: { kind: "edit", field: "tax_bracket" } },
+    ],
+    result: { key: "total", op: "=", label: "תשואה כוללת בשנה", value: { kind: "money", minor: r.sources.totalMinor } },
+  };
+}
+
+/** The year's total on the money in the deal; no per-cent before the first rent, with all the cash out, or on too few days. */
+export function totalRateFormula(r: PropertyReturns): Formula {
+  const moneyIn = r.equity.moneyInMinor;
+  const bp = r.sources.totalBp;
+  const result: FigureValue = infiniteTotal(r) ? { kind: "text", text: INFINITY }
+    : beforeFirstRent(r) ? { kind: "note", text: BEFORE_FIRST_RENT }
+    : bp != null && fewDays(r) ? { kind: "note", text: FEW_DAYS }
+    : bp != null ? { kind: "text", text: percentText(bp) }
+    : { kind: "text", text: "לא מחושב" };
+  return {
+    rows: [
+      { key: "total", op: "", label: "תשואה כוללת בשנה", value: { kind: "money", minor: r.sources.totalMinor } },
+      { key: "money-in", op: "÷", label: "כסף בעסקה", value: moneyIn == null ? { kind: "missing", add: firstMissing(r, ["purchase"]) } : { kind: "money", minor: moneyIn }, target: { kind: "part", part: "money-in" } },
+    ],
+    result: { key: "rate", op: "=", label: "תשואה כוללת", value: result },
+  };
+}
+
+const HOW = {
+  rent: { learn: "total", title: "איך מחושבת התשואה הכוללת", body: "תזרים, החזר קרן, עליית ערך וחיסכון מס ב־12 החודשים האחרונים, חלקי הכסף שעדיין בעסקה." },
+  flip: { learn: "forced", title: "איך מחושב הרווח הצפוי", body: "השווי אחרי השיפוץ, פחות מחיר הקנייה והשיפוץ עד היום. עלויות ההחזקה כבר ברווח השוטף." },
+} as const;
+
+/** "איך מחושב" from the band: the figure's calculation, each row opening its source, and הבנתי. */
+export function HowSheet({ kind, open, onOpenChange, returns, resolve, readOnly, returnFocusRef }: {
+  kind: InvestmentKind;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  returns: PropertyReturns;
+  resolve: Resolve;
+  readOnly: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}) {
+  const how = HOW[kind];
+  const formulas = kind === "rent" ? [totalSumFormula(returns), totalRateFormula(returns)] : [forcedFormula(returns)];
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={how.title}
+      subtitle={englishName(how.learn)}
+      closeButton={false}
+      returnFocusRef={returnFocusRef}
+      panelClassName="ui-sheet-wide ui-sheet-g10 ui-ret-info"
+      action={<Button full onClick={() => { onOpenChange(false); }}>הבנתי</Button>}
+    >
+      <p className="ui-pinv-help">{how.body}</p>
+      {formulas.map((formula) => (
+        <FormulaList key={formula.result?.key ?? "formula"} formula={formula} currency={returns.currency} resolve={resolve} readOnly={readOnly} label={formula.result?.label ?? how.title} />
+      ))}
+      {/* FLOW-462: after how it is made, how an investor reads it. */}
+      <LearnSections learnKey={how.learn} defined />
     </Sheet>
   );
 }

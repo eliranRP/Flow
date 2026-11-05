@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import type { ProjectDetail } from "@flow/shared";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { quickNewPath } from "../open-from-query";
@@ -9,22 +9,55 @@ import { useProjectPeriod } from "../project-period";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { useCompanyCurrency } from "../company-currency";
-import { sheetStack, useSheetHistory } from "../ui/back";
+import { AttentionCards } from "../ui/attention-cards";
+import { BackButton, sheetStack, useSheetHistory } from "../ui/back";
+import { BandLoadFailed, BandOfflineLine, useOnline } from "../ui/band-states";
+import { CompactBar } from "../ui/compact-bar";
 import { israelToday } from "../ui/date-math";
+import { DockSlot, useDockedFilter } from "../ui/dock-filter";
+import { EmptyState } from "../ui/empty-state";
+import { FocusTitle } from "../ui/focus-title";
 import { INVESTMENT_LABELS, type InvestmentField, type InvestmentFigures } from "../ui/investment-card";
-import { ScreenState } from "../ui/screen-state";
+import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
+import { SegmentedControl } from "../ui/segmented-control";
+import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
+import { TopBand, usePageAtEnd } from "../ui/top-band";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 import { projectStateLine } from "./project-detail-screen";
-import { FiguresCard, LoansCard, type InvestmentRowRefs, type PropertyExtras } from "./project-investment-cards";
+import { FiguresGroup, LoansGroup, type InvestmentRowRefs, type PropertyExtras } from "./project-investment-cards";
 import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
 import { InvestmentEditSheet, type InvestmentPatch } from "./project-investment-sheets";
-import { MetricsCard, ReturnsCardsFailed, ReturnsCardsSkeleton, TotalReturnCard } from "./project-returns-cards";
+import {
+  BandRowLink,
+  MetricsGroup,
+  PartsSection,
+  ReturnsCardsFailed,
+  ReturnsCardsSkeleton,
+  bandRows,
+  flipBandFigure,
+  investmentAttentionRows,
+  investmentKind,
+  rentBandFigure,
+  type InvestmentKind,
+} from "./project-returns-cards";
 import { usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
 import type { EditField, InfoKey } from "./project-returns-info";
 import { editFieldOf, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
-import { ReturnInfoSheet, TaxBracketSheet } from "./project-returns-sheets";
+import { HowSheet, ReturnInfoSheet, TaxBracketSheet } from "./project-returns-sheets";
+
+/** The segment under the parts: the property's figures, the metrics, the loans. */
+export type InvestmentTab = "property" | "metrics" | "loans";
+
+const TABS: { value: InvestmentTab; label: string }[] = [
+  { value: "property", label: "נכס" },
+  { value: "metrics", label: "מדדים" },
+  { value: "loans", label: "הלוואות" },
+];
+
+/** The line under the band's title, when the project has no state of its own to say. */
+const KIND_LINES: Record<InvestmentKind, string> = { rent: "השכרה · 12 חודשים אחרונים", flip: "שיפוץ ומכירה" };
 
 export type { InvestmentPatch } from "./project-investment-sheets";
 
@@ -140,10 +173,12 @@ function loansOnly(currency: string, data: ProjectInvestment): InvestmentFigures
 }
 
 /**
- * FLOW-446 (board Invest), FLOW-451 (board ConceptATotalReturn): a project's investment and loans, its
- * own page under the project. The year's total return and its sources, the equity in the property, the
- * metrics (each figure's ⓘ opens its sheet), the property's figures (each opens its edit sheet, rehab
- * its own page) and the loans. A viewer reads it; nothing opens for a write. `sample` draws it
+ * FLOW-446, FLOW-451; FLOW-1047 (boards V3-Investment, V3-Investment-Rent): a project's investment and
+ * loans, an Overview. The band by kind (a rental's total return with the money in the deal and today's
+ * equity, a renovation's expected profit with the ARV and the total cost) and its "איך מחושב" sheet; then
+ * "חסר לחישוב" cards opening the input sheets; the parts of the figure, each opening its calculation; and
+ * a segment that docks into the bar: the property's figures (each opening its edit sheet), the metrics
+ * (each opening its page) and the loans. A viewer reads it; nothing opens for a write. `sample` draws it
  * with no network (stories, dev route).
  */
 export function ProjectInvestmentScreen({
@@ -152,6 +187,8 @@ export function ProjectInvestmentScreen({
   sampleReturns,
   initialSheet = null,
   initialInfo = null,
+  initialHow = false,
+  initialTab = "property",
   backTo,
   base: baseProp,
   today = israelToday(),
@@ -162,6 +199,9 @@ export function ProjectInvestmentScreen({
   /** Stories open a sheet on first draw. */
   initialSheet?: OpenSheet;
   initialInfo?: InfoKey | null;
+  /** Stories open "איך מחושב", or a tab, on first draw. */
+  initialHow?: boolean;
+  initialTab?: InvestmentTab;
   /** Dev fixtures send Back here. Production goes to the project page. */
   backTo?: string;
   /** Dev fixtures' path for the returns pages. Production: /projects/:id/investment. */
@@ -212,6 +252,31 @@ export function ProjectInvestmentScreen({
     units: useRef<HTMLButtonElement>(null),
   };
   const setInfoSheet = useSheetHistory(`${INFO_LAYER}${infoKey}`, info != null, (next) => { setInfo(next ? infoKey : null); });
+  // FLOW-1047: "איך מחושב" in the band, the tab under the parts, and the bar that docks the tab.
+  const [how, setHow] = useState(initialHow);
+  const howOpener = useRef<HTMLElement | null>(null);
+  const setHowSheet = useSheetHistory("investment-how", how, setHow);
+  const [tab, setTab] = useState<InvestmentTab>(initialTab);
+  const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
+  const markPast = useScrolledPast(titleEnd, true, DETAIL_BAR);
+  const atEnd = usePageAtEnd();
+  const past = markPast || atEnd;
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown: past, bar: DETAIL_BAR });
+  const online = useOnline();
+  // An attention card links here with `?edit=`: a link that lands while the page is open opens that sheet too.
+  const arrived = useRef(location.key);
+  useEffect(() => {
+    if (arrived.current === location.key) return;
+    arrived.current = location.key;
+    const field = editFieldOf(new URLSearchParams(location.search).get("edit"));
+    if (field == null || readOnly) return;
+    if (field === "tax_bracket") {
+      setSheet("tax");
+      return;
+    }
+    setEditField(field);
+    setSheet(field);
+  }, [location.key, location.search, readOnly]);
 
   const save = useWrite<SaveRequest>({
     failure: investmentFailure,
@@ -372,84 +437,202 @@ export function ProjectInvestmentScreen({
   const onAdd = readOnly ? undefined : openEdit;
   const name = project?.name;
   const stateLine = project == null ? null : projectStateLine(project);
+  const back = backTo ?? `/projects/${projectId}${search}`;
+  const kind = investmentKind({
+    overhead: data?.isOverhead === true,
+    budget: project?.budget_agorot != null,
+    arv: (returns == null ? figures?.arvMinor : returns.inputs.arvMinor) != null,
+    value: (returns == null ? figures?.valueMinor : returns.inputs.valueMinor) != null,
+    rent: returns?.firstRent != null,
+  });
+  const band = returns == null || !hasFigures ? null : kind === "rent" ? rentBandFigure(returns) : flipBandFigure(returns);
+  const tabs = hasFigures ? TABS : TABS.filter((option) => option.value === "loans");
+  const shownTab = hasFigures ? tab : "loans";
+  const control = (
+    <SegmentedControl
+      label="תצוגה"
+      showLabel={false}
+      value={shownTab}
+      options={tabs}
+      onChange={(next) => {
+        setTab(next);
+        scrollUnderBar();
+      }}
+    />
+  );
+
+  if (phase.kind === "loading") return <InvestmentLoading back={back} name={name} />;
+  if (phase.kind === "empty") return <InvestmentEmpty back={back} name={name} />;
+  if (phase.kind === "error") {
+    return (
+      <BandLoadFailed
+        title={name == null ? "ההשקעה לא נטענה" : `ההשקעה ב${name} לא נטענה`}
+        offline={phase.offline || !online}
+        leading={<BackButton fallback={back} text={name ?? "פרויקט"} onBand />}
+        onRetry={() => { void detail.refetch(); }}
+      />
+    );
+  }
+  if (figures == null || data == null) return <InvestmentLoading back={back} name={name} />;
+  const offlineSince = sampled || online || preview !== "off" ? null : (detail.dataUpdatedAt || null);
+  const loansGroup = (
+    <LoansGroup
+      figures={figures}
+      loans={data.loans}
+      today={today}
+      search={search}
+      onAdd={readOnly ? undefined : () => {
+        // The loans tab's new-loan sheet, with this project set (FLOW-139d).
+        void navigate(quickNewPath("/loans", search, "loan"), { state: { newLoanProject: projectId } });
+      }}
+    />
+  );
 
   return (
-    <ScreenState
-      title="השקעה והלוואות"
-      kicker={name}
-      subtitle={stateLine ?? undefined}
-      backTo={backTo ?? `/projects/${projectId}${search}`}
-      headerClassName="ui-pinv-head"
-      phase={phase}
-      onRetry={() => { void detail.refetch(); }}
-    >
-      {figures == null || data == null ? null : (
-        <div className="ui-pinv-stack">
-          {hasFigures ? (
-            <>
-              {/* FLOW-459 (the owner's pick, 2026-11-02): the total with the equity, the inputs, then the metrics. */}
-              {returns != null ? (
-                <TotalReturnCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />
-              ) : returnsRead.isError ? (
-                <ReturnsCardsFailed offline={returnsRead.isPaused} onRetry={() => { void returnsRead.refetch(); }} />
-              ) : <ReturnsCardsSkeleton />}
-              <FiguresCard
-                figures={figures}
-                extras={extras}
-                readOnly={readOnly}
-                rows={rows}
-                linesHref={`${base}/returns/acquisition${search}`}
-                rehabHref={`${base}/part/rehab${search}`}
-                onEdit={openEdit}
-                onUseLand={readOnly ? undefined : onUseLand}
-                landBusy={saveLand.isPending}
-              />
-              {returns == null ? null : <MetricsCard returns={returns} base={base} search={search} onInfo={onInfo} onAdd={onAdd} />}
-            </>
-          ) : null}
-          <LoansCard
-            figures={figures}
-            loans={data.loans}
-            today={today}
-            search={search}
-            onAdd={readOnly ? undefined : () => {
-              // The loans tab's new-loan sheet, with this project set (FLOW-139d).
-              void navigate(quickNewPath("/loans", search, "loan"), { state: { newLoanProject: projectId } });
-            }}
-          />
-          {returns == null || !hasFigures ? null : (
-            <ReturnInfoSheet
-              infoKey={infoKey}
-              open={info != null}
-              onOpenChange={setInfoSheet}
-              returns={returns}
-              resolve={resolve}
+    <div className="ui-pinv flex min-h-full flex-1 flex-col">
+      <TopBand
+        wordmark={false}
+        leading={<BackButton fallback={back} text={name ?? "פרויקט"} onBand />}
+        trailing={returns == null || !hasFigures ? undefined : (
+          <button type="button" className="ui-pinv-how m-press" onClick={(event) => { howOpener.current = event.currentTarget; setHow(true); }}>
+            איך מחושב
+          </button>
+        )}
+        heroClassName="ui-pinv-hero"
+        hero={(
+          <>
+            <FocusTitle className="t-name">השקעה והלוואות</FocusTitle>
+            <p className="t-line2 ui-pinv-band-kind">{stateLine ?? (hasFigures ? KIND_LINES[kind] : "הלוואות")}</p>
+            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
+            {!hasFigures ? null : band == null ? (
+              returnsRead.isError && !sampled ? null : <Skeleton tone="band" className="ui-skel-project-num" />
+            ) : (
+              <>
+                <p className="ui-band-label t-line2">{band.label}</p>
+                <p className="ui-pinv-band-figure">{band.figure}</p>
+                {band.sub == null ? null : <p className="ui-pinv-band-sub t-meta">{band.sub}</p>}
+                {band.partial == null ? null : <p className="ui-pinv-band-sub t-meta">{band.partial}</p>}
+                {returns == null ? null : (
+                  <div className="ui-pinv-band-rows">
+                    {bandRows(kind, returns).map((row) => (
+                      <BandRowLink key={row.key} row={row} currency={returns.currency} resolve={resolve} onInfo={onInfo} readOnly={readOnly} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" />
+          </>
+        )}
+      />
+      <CompactBar
+        title={name == null ? "השקעה והלוואות" : `${name} · ${band?.short ?? "השקעה והלוואות"}`}
+        figure={band?.bar ?? undefined}
+        backTo={back}
+        size="detail"
+        shown={past}
+        dock={control}
+        docked={docked}
+      />
+      <div className="ui-pinv-stack ui-page-pad">
+        {returns == null || !hasFigures ? null : (
+          <AttentionCards rows={investmentAttentionRows(kind, returns, base, search, readOnly)} storageKey={`investment:${projectId}`} title="חסר לחישוב" />
+        )}
+        {!hasFigures ? null : returns != null ? (
+          <PartsSection kind={kind} returns={returns} resolve={resolve} onInfo={onInfo} onAdd={onAdd} />
+        ) : returnsRead.isError ? (
+          <ReturnsCardsFailed offline={returnsRead.isPaused} onRetry={() => { void returnsRead.refetch(); }} />
+        ) : <ReturnsCardsSkeleton />}
+        <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+        {hasFigures ? <DockSlot docked={docked}>{control}</DockSlot> : null}
+        <div className="ui-pinv-groups">
+          {shownTab === "property" ? (
+            <FiguresGroup
+              figures={figures}
+              extras={extras}
               readOnly={readOnly}
-              returnFocusRef={infoOpener}
+              rows={rows}
+              linesHref={`${base}/returns/acquisition${search}`}
+              rehabHref={`${base}/part/rehab${search}`}
+              onEdit={openEdit}
+              onUseLand={readOnly ? undefined : onUseLand}
+              landBusy={saveLand.isPending}
             />
-          )}
-          {readOnly || !hasFigures ? null : (
-            <>
-              <InvestmentEditSheet
-                key={editField}
-                field={editField}
-                open={sheet === editField}
-                onOpenChange={(next) => { setSheet(next ? editField : null); }}
-                minor={editMinor}
-                date={figures.valueDate}
-                returnFocusRef={rows[editField]}
-                onSave={onSave}
-              />
-              <TaxBracketSheet
-                open={sheet === "tax"}
-                onOpenChange={(next) => { setSheet(next ? "tax" : null); }}
-                bp={returns?.inputs.taxBracketBp ?? null}
-                onSave={onSaveBracket}
-              />
-            </>
-          )}
+          ) : shownTab === "metrics" ? (
+            returns == null ? <ListSkeleton /> : <MetricsGroup returns={returns} base={base} search={search} onAdd={onAdd} />
+          ) : loansGroup}
         </div>
+      </div>
+      {returns == null || !hasFigures ? null : (
+        <>
+          <ReturnInfoSheet
+            infoKey={infoKey}
+            open={info != null}
+            onOpenChange={setInfoSheet}
+            returns={returns}
+            resolve={resolve}
+            readOnly={readOnly}
+            returnFocusRef={infoOpener}
+          />
+          <HowSheet kind={kind} open={how} onOpenChange={setHowSheet} returns={returns} resolve={resolve} readOnly={readOnly} returnFocusRef={howOpener} />
+        </>
       )}
-    </ScreenState>
+      {readOnly || !hasFigures ? null : (
+        <>
+          <InvestmentEditSheet
+            key={editField}
+            field={editField}
+            open={sheet === editField}
+            onOpenChange={(next) => { setSheet(next ? editField : null); }}
+            minor={editMinor}
+            date={figures.valueDate}
+            returnFocusRef={rows[editField]}
+            onSave={onSave}
+          />
+          <TaxBracketSheet
+            open={sheet === "tax"}
+            onOpenChange={(next) => { setSheet(next ? "tax" : null); }}
+            bp={returns?.inputs.taxBracketBp ?? null}
+            onSave={onSaveBracket}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Nothing to show yet (a preview with no data): the band's title, and what will come. */
+function InvestmentEmpty({ back, name }: { back: string; name: string | undefined }) {
+  return (
+    <div className="ui-pinv flex min-h-full flex-1 flex-col">
+      <TopBand
+        wordmark={false}
+        leading={<BackButton fallback={back} text={name ?? "פרויקט"} onBand />}
+        heroClassName="ui-pinv-hero"
+        hero={<FocusTitle className="t-name">השקעה והלוואות</FocusTitle>}
+      />
+      <EmptyState title="אין עדיין נתונים" body="מחיר הקנייה, השווי וההלוואות של הנכס יופיעו כאן." />
+    </div>
+  );
+}
+
+/** The band and the rows while the project is read: the title stays real, the figure and the rows pulse. */
+function InvestmentLoading({ back, name }: { back: string; name: string | undefined }) {
+  return (
+    <div className="ui-pinv flex min-h-full flex-1 flex-col" aria-busy="true">
+      <TopBand
+        wordmark={false}
+        leading={<BackButton fallback={back} text={name ?? "פרויקט"} onBand />}
+        heroClassName="ui-pinv-hero"
+        hero={(
+          <>
+            <FocusTitle className="t-name">השקעה והלוואות</FocusTitle>
+            <Skeleton tone="band" className="ui-skel-project-label" />
+            <Skeleton tone="band" className="ui-skel-project-num" />
+          </>
+        )}
+      />
+      <ListSkeleton />
+    </div>
   );
 }

@@ -25,7 +25,7 @@ import { ViewerPreview } from "../use-is-viewer";
 import { ProjectInvestmentScreen } from "./project-investment-screen";
 import { UNITS_HOLD, editVerdict } from "./project-investment-sheets";
 import { barShares, partialLine } from "./project-returns-cards";
-import { bracketText, dscrText, percentText, toPropertyReturns, toReturnLinesPage } from "./project-returns-data";
+import { bracketText, dscrText, percentText, toPropertyReturns, toReturnLinesPage, type PropertyReturns } from "./project-returns-data";
 import { PropertyMetricScreen, PropertyPartScreen, REHAB_EMPTY } from "./project-returns-detail-screen";
 import {
   BEFORE_FIRST_RENT,
@@ -142,14 +142,25 @@ function renderAt(entry: string, viewer = false) {
   );
 }
 
-function renderInvestment(returns = birchLaneReturns, entry = "/projects/p1/investment") {
+/** FLOW-1047: a rental (no budget, no ARV) leads with its total return; `flip` keeps the sample's renovation. */
+const RENTAL_PROJECT = { ...sampleProject, budget_agorot: null };
+const RENTAL_INVESTMENT = { ...birchLaneInvestment, figures: birchLaneInvestment.figures && { ...birchLaneInvestment.figures, arvMinor: null, forcedEquityMinor: null } };
+
+function asRental(r: PropertyReturns): PropertyReturns {
+  return { ...r, inputs: { ...r.inputs, arvMinor: null }, equity: { ...r.equity, forcedMinor: null } };
+}
+
+function renderInvestment(returns = birchLaneReturns, entry = "/projects/p1/investment", flip = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const page = flip
+    ? <ProjectInvestmentScreen sample={sampleProject} sampleInvestment={birchLaneInvestment} sampleReturns={returns} today="2026-10-17" />
+    : <ProjectInvestmentScreen sample={RENTAL_PROJECT} sampleInvestment={RENTAL_INVESTMENT} sampleReturns={asRental(returns)} today="2026-10-17" />;
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={[entry]}>
           <Routes>
-            <Route path="/projects/:projectId/investment" element={<ProjectInvestmentScreen sample={sampleProject} sampleInvestment={birchLaneInvestment} sampleReturns={returns} today="2026-10-17" />} />
+            <Route path="/projects/:projectId/investment" element={page} />
             <Route path="*" element={<Where />} />
           </Routes>
         </MemoryRouter>
@@ -410,10 +421,19 @@ describe("the edit and tax inputs", () => {
   });
 });
 
+/** The band, the parts card, and the metrics tab (opened). */
+const band = () => document.querySelector(".ui-band") as HTMLElement;
+const parts = () => screen.getByRole("region", { name: "ממה מורכבת התשואה" });
+
+async function metricsTab(): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("radio", { name: "מדדים" }));
+  return screen.findByRole("region", { name: "מדדים" });
+}
+
 describe("the investment page's returns cards", () => {
   it("opens the ⓘ sheet of the tax savings with its parts", async () => {
     renderInvestment();
-    fireEvent.click(await screen.findByRole("button", { name: "איך מחושב: חיסכון מס" }));
+    fireEvent.click(within(await screen.findByRole("region", { name: "ממה מורכבת התשואה" })).getByRole("button", { name: /^חיסכון מס/ }));
     const dialog = await screen.findByRole("dialog", { name: "חיסכון מס" });
     expect(within(dialog).getByRole("link", { name: /עלות הבניין/ })).toHaveAttribute("href", "/projects/p1/investment/part/building");
     expect(within(dialog).getByText(TAX_CAPTION)).toBeInTheDocument();
@@ -431,14 +451,13 @@ describe("the investment page's returns cards", () => {
 
   it("reads חסר with הוספה for a missing input, and חסר · עדכון שווי נוסף with no button", async () => {
     renderInvestment(birchLaneReturnsMissing);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
+    const card = await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
     // FLOW-458: what is missing is on the hint line, and the total says it is partial.
     expect(within(card).getByText(`${MISSING_HISTORY}. ${HISTORY_HINT}`)).toBeInTheDocument();
     expect(within(card).getByText("חסר · שווי הקרקע")).toBeInTheDocument();
-    expect(card.querySelector(".ui-ret-total")).toHaveTextContent("חלקי · חסרים עליית ערך וחיסכון מס");
-    expect(within(card).getAllByRole("button", { name: /^הוספה/ })).toHaveLength(1);
-    fireEvent.click(within(card).getByRole("button", { name: "הוספה: שווי הקרקע" }));
+    expect(band()).toHaveTextContent("חלקי · חסרים עליית ערך וחיסכון מס");
+    expect(within(card).getAllByText("הוספה")).toHaveLength(1);
+    fireEvent.click(within(card).getByRole("button", { name: /^חיסכון מס.*הוספה/ }));
     // The tax savings need the land first.
     expect(await screen.findByRole("dialog", { name: "שווי הקרקע" })).toBeInTheDocument();
   });
@@ -460,26 +479,24 @@ describe("the investment page's returns cards", () => {
 
   it("draws ∞ on the total return when all the cash came out, with each source's amount and no per cent", async () => {
     renderInvestment(birchLaneReturnsCashOut);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
-    expect(within(card).getByRole("img", { name: INFINITY_NAME })).toHaveTextContent("∞");
-    expect(within(card).getByText(/כל הכסף חזר/)).toHaveTextContent("כל הכסף חזר · יצא $30,000 יותר משנכנס");
-    expect(within(card).getByText("$82,000")).toBeInTheDocument();
-    expect(within(card).queryByText(/%$/)).toBeNull();
-    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    expect(within(band()).getByRole("img", { name: INFINITY_NAME })).toHaveTextContent("∞");
+    expect(within(band()).getByText(/כל הכסף חזר/)).toHaveTextContent("כל הכסף חזר · יצא $30,000 יותר משנכנס");
+    expect(within(parts()).getByText("$82,000")).toBeInTheDocument();
+    expect(within(band()).queryByText(/%$/)).toBeNull();
+    const metrics = await metricsTab();
     expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent("∞");
   });
 
   it("draws the loss, not ∞, when all the cash came out but the rental loses money (FLOW-1025)", async () => {
     renderInvestment(birchLaneReturnsCashOutLosing);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
-    expect(within(card).queryByRole("img", { name: INFINITY_NAME })).toBeNull();
+    await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    expect(within(band()).queryByRole("img", { name: INFINITY_NAME })).toBeNull();
     // FLOW-469: the hero says it is a loss, and one short line says how long the cash out lasts.
-    expect(within(card).getByText(/כל הכסף חזר/)).toHaveTextContent("כל הכסף חזר · התזרים שלילי: מספיק לעוד כ־5 שנים");
-    expect(card.querySelector(".ui-ret-total")).toHaveTextContent(`−$4,600${LOSS_YEAR}`);
-    expect(within(card).getByText(/^חלקי/)).toBeInTheDocument();
-    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("−$4,600");
+    expect(within(band()).getByText(/כל הכסף חזר/)).toHaveTextContent(`${LOSS_YEAR} · כל הכסף חזר · התזרים שלילי: מספיק לעוד כ־5 שנים`);
+    expect(within(band()).getByText(/^חלקי/)).toBeInTheDocument();
+    const metrics = await metricsTab();
     const coc = within(metrics).getByRole("link", { name: /תשואה על המזומן/ });
     expect(coc).not.toHaveTextContent("∞");
     // FLOW-469: an amount where its siblings show a per-cent says it is a loss.
@@ -499,31 +516,30 @@ describe("the investment page's returns cards", () => {
 
   it("keeps each source's amount in one track, and what is missing on the hint line", async () => {
     renderInvestment(birchLaneReturnsMissing);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
-    const rows = [...card.querySelectorAll(".ui-ret-sources > .ui-ret-source")];
+    const card = await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    const rows = [...card.querySelectorAll(".ui-pinv-part")];
     expect(rows).toHaveLength(4);
     const cell = (label: string, selector: string) => {
-      const row = rows.find((item) => item.querySelector(".ui-ret-source-label")?.textContent === label);
+      const row = rows.find((item) => item.querySelector(".ui-pinv-row-title")?.textContent === label);
       return row?.querySelector(selector) ?? null;
     };
     // FLOW-458: an amount and nothing beside it (the per-cent of the money in is gone).
-    expect(cell("תזרים", ".ui-ret-source-value")).toHaveTextContent("$4,200");
-    expect(card.querySelector(".ui-ret-source-share")).toBeNull();
-    // A missing source: הוספה (when an input adds it) in the amount track, the reason on its own line.
-    expect(cell("עליית ערך", ".ui-ret-source-value")).toBeEmptyDOMElement();
-    expect(cell("עליית ערך", ":scope > .ui-ret-source-hint")).toHaveTextContent(MISSING_HISTORY);
-    expect(cell("חיסכון מס", ".ui-ret-source-value")).toHaveTextContent("הוספה");
-    expect(cell("חיסכון מס", ":scope > .ui-ret-source-hint")).toHaveTextContent("חסר · שווי הקרקע");
+    expect(cell("תזרים", ".ui-pinv-value")).toHaveTextContent("$4,200");
+    // A missing source: הוספה (when an input adds it) in the amount track, the reason on the hint line.
+    expect(cell("עליית ערך", ".ui-pinv-value")).not.toHaveTextContent("הוספה");
+    expect(cell("עליית ערך", ".ui-pinv-hint")).toHaveTextContent(MISSING_HISTORY);
+    expect(cell("חיסכון מס", ".ui-pinv-value")).toHaveTextContent("הוספה");
+    expect(cell("חיסכון מס", ".ui-pinv-hint")).toHaveTextContent("חסר · שווי הקרקע");
   });
 
   it("leaves the land suggested by the books one action, and ביטול puts it back (FLOW-470)", async () => {
     renderInvestment(birchLaneReturnsLandSuggestion);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
+    const card = await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
     // The tax savings says what is missing, with no הוספה of its own: השתמש adds it.
-    expect(within(card).queryByRole("button", { name: "הוספה: שווי הקרקע" })).toBeNull();
-    expect(within(card).getByText("חסר · שווי הקרקע")).toBeInTheDocument();
+    expect(within(card).queryByText("הוספה")).toBeNull();
+    expect(within(card).getAllByText("חסר · שווי הקרקע").length).toBeGreaterThan(0);
+    // Nor does a card ask for it: the books suggest one.
+    expect(screen.queryByRole("link", { name: /שווי הקרקע/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /^השתמש/ }));
     const figures = within(screen.getByRole("region", { name: "נתוני הנכס" }));
     await waitFor(() => { expect(figures.getByRole("button", { name: /^שווי הקרקע/ })).toHaveTextContent("מהספרים · Land - Birch Lane"); });
@@ -540,14 +556,15 @@ describe("the investment page's returns cards", () => {
 
   it("reads לפני השכירות הראשונה in place of the per-cents before the first rent, and keeps the amounts", async () => {
     renderInvestment(birchLaneReturnsBeforeRent);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
-    expect(card.querySelector(".ui-ret-total")).toHaveTextContent(BEFORE_FIRST_RENT);
-    expect(within(card).queryByText(/%$/)).toBeNull();
+    await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent(BEFORE_FIRST_RENT);
+    expect(within(band()).queryByText(/%$/)).toBeNull();
     // Once, in the total's place: the source rows leave their per-cents empty.
-    expect(within(card).getAllByText(BEFORE_FIRST_RENT)).toHaveLength(1);
-    expect(within(card).getByText("$12,000")).toBeInTheDocument();
-    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    expect(within(band()).getAllByText(BEFORE_FIRST_RENT)).toHaveLength(1);
+    expect(within(parts()).queryByText(BEFORE_FIRST_RENT)).toBeNull();
+    expect(within(parts()).getByText("$12,000")).toBeInTheDocument();
+    const card = band();
+    const metrics = await metricsTab();
     expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent(BEFORE_FIRST_RENT);
     expect(within(metrics).getByRole("link", { name: /Cap rate/ })).toHaveTextContent(BEFORE_FIRST_RENT);
     expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent(NO_PAYMENTS);
@@ -557,16 +574,15 @@ describe("the investment page's returns cards", () => {
     expect(metrics).not.toHaveTextContent("$0");
   });
 
-  it("names the loan taken over in the purchase, on the figures card and in the השבחה ⓘ", async () => {
-    renderInvestment(mapleCourtSub2Returns);
+  it("names the loan taken over in the purchase, on the figures and in the renovation's איך מחושב", async () => {
+    renderInvestment(mapleCourtSub2Returns, "/projects/p1/investment", true);
     const card = await screen.findByRole("region", { name: "נתוני הנכס" });
     const purchase = within(card).getByRole("link", { name: /מחיר רכישה/ });
     expect(purchase).toHaveTextContent("מהתנועות + הלוואה שנלקחה · לפירוט ולתיקון");
     expect(purchase).toHaveTextContent("$331,600");
-    // FLOW-459: the equity row opens its sheet itself, with no ⓘ of its own.
-    expect(screen.queryByRole("button", { name: "איך מחושב: השבחה צפויה" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /^השבחה צפויה/ }));
-    const dialog = await screen.findByRole("dialog", { name: "השבחה צפויה" });
+    // FLOW-1047: the band's figure is the expected profit, and איך מחושב opens its calculation.
+    fireEvent.click(screen.getByRole("button", { name: "איך מחושב" }));
+    const dialog = await screen.findByRole("dialog", { name: "איך מחושב הרווח הצפוי" });
     expect(within(dialog).getByRole("link", { name: /רכישה וסגירה \(מהתנועות\)/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
     const loan = within(dialog).getByRole("link", { name: new RegExp(TAKEN_OVER_LABEL) });
     expect(loan).toHaveAttribute("href", "/loans/loan-maple");
@@ -575,7 +591,7 @@ describe("the investment page's returns cards", () => {
 
   it("opens each metric's page", async () => {
     renderInvestment();
-    const card = await screen.findByRole("region", { name: "מדדים" });
+    const card = await metricsTab();
     expect(within(card).getByRole("link", { name: /תשואה על המזומן/ })).toHaveAttribute("href", "/projects/p1/investment/metric/coc");
     expect(within(card).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent("1.63");
   });
@@ -822,10 +838,10 @@ describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
     await waitFor(() => { expect(document.activeElement).toBe(button); });
   });
 
-  it("puts one beside the total return on the investment page", async () => {
+  it("ends the total return's איך מחושב with how to read it (FLOW-1047)", async () => {
     renderInvestment();
-    fireEvent.click(await screen.findByRole("button", { name: "איך לקרוא את תשואה כוללת" }));
-    const dialog = await screen.findByRole("dialog", { name: "תשואה כוללת" });
+    fireEvent.click(await screen.findByRole("button", { name: "איך מחושב" }));
+    const dialog = await screen.findByRole("dialog", { name: "איך מחושבת התשואה הכוללת" });
     // FLOW-465: the investor's English name under the Hebrew title.
     expect(within(dialog).getByText("\u2066Total return\u2069")).toBeInTheDocument();
     expect(within(dialog).getByText(LEARN.total.goal)).toBeInTheDocument();
@@ -908,14 +924,13 @@ describe("fewer than 60 days since a first rent inside the period (FLOW-473)", (
 
   it("shows מעט נתונים on the investment page's total and metrics, and keeps the amounts", async () => {
     renderInvestment(birchLaneReturnsFewDays);
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    if (card == null) throw new Error("no card");
-    const total = card.querySelector(".ui-ret-total");
-    expect(total).toHaveTextContent(FEW_DAYS);
+    await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    const total = band();
+    expect(total.querySelector(".ui-pinv-band-figure")).toHaveTextContent(FEW_DAYS);
     expect(total).toHaveTextContent("מהשכירות הראשונה · 21 ימים · מחושב לשנה מ־60 ימים");
-    expect(total).not.toHaveTextContent("%");
-    expect(within(card).getByText("$12,000")).toBeInTheDocument();
-    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    expect(total.querySelector(".ui-pinv-band-figure")).not.toHaveTextContent("%");
+    expect(within(parts()).getByText("$12,000")).toBeInTheDocument();
+    const metrics = await metricsTab();
     for (const name of [/תשואה על המזומן/, /Cap rate/, /תזרים ליחידה/]) {
       expect(within(metrics).getByRole("link", { name })).toHaveTextContent(FEW_DAYS);
     }
@@ -924,8 +939,8 @@ describe("fewer than 60 days since a first rent inside the period (FLOW-473)", (
 
   it("shows the total's per-cent again at 60 days", async () => {
     renderInvestment({ ...birchLaneReturnsFewDays, earningDays: 60 });
-    const card = (await screen.findByRole("heading", { name: "תשואה כוללת" })).closest("section");
-    expect(card?.querySelector(".ui-ret-total")).not.toHaveTextContent(FEW_DAYS);
-    expect(card?.querySelector(".ui-ret-total")).toHaveTextContent("%");
+    await screen.findByRole("region", { name: "ממה מורכבת התשואה" });
+    expect(band().querySelector(".ui-pinv-band-figure")).not.toHaveTextContent(FEW_DAYS);
+    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("%");
   });
 });

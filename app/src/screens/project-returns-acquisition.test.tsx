@@ -68,7 +68,7 @@ describe("the acquisition page's calculation (FLOW-466)", () => {
     // The bank lines are the transactions below: the row moves focus to their section.
     fireEvent.click(within(calc).getByRole("button", { name: /רכישה וסגירה \(מהתנועות\)/ }));
     const lines = screen.getByRole("region", { name: "תנועות" });
-    expect(document.activeElement).toBe(lines.querySelector(".ui-rep-head"));
+    expect(document.activeElement).toBe(lines);
   });
 
   it("stays the lines alone with no loan in the price", () => {

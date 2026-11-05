@@ -103,7 +103,7 @@ function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey;
       <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(page.formula.rows.length)}</bdi>} collapse={collapse}>
         <FormulaList formula={page.formula} currency={r.currency} resolve={pageResolver(base, search)} label={page.title} />
       </ReportSection>
-      <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
+      <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} sample={sample?.lines} />
     </div>
   );
 }
@@ -183,7 +183,7 @@ function RehabPartBody({ r, rehab, base, search, projectId, sample }: { r: Prope
           <FailureLine offline={rehab.offline} onRetry={rehab.retry} />
         ) : <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>}
       </ReportSection>
-      <ReturnLinesSection projectId={projectId} line="rehab" categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
+      <ReturnLinesSection projectId={projectId} line="rehab" categoryId={null} currency={r.currency} search={search} sample={sample?.lines} />
       {settings}
     </div>
   );

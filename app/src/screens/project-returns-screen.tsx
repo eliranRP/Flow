@@ -232,20 +232,18 @@ function LineBody({ line, categoryId, category, r, base, search, projectId, name
   const minor = category?.minor ?? lineMinor(line, r);
   const count = category?.count ?? (line === "principal" || isAllTimeLine(line) ? null : r.statement.counts[line]);
   const own = (value: bigint) => (line === "income" ? income(value, cur) : money(value, cur));
-  const content = useRef<HTMLDivElement>(null);
+  const linesRef = useRef<HTMLElement>(null);
   // FLOW-466: a loan paid out at closing is in the price, so the page adds it up to the purchase row's figure.
   const calc = line === "acquisition" && categoryId == null ? acquisitionFormula(r) : null;
   const links = pageResolver(base, search);
   // The bank lines are the transactions below: their row opens that section and moves focus to it.
   const resolve: Resolve = (target) => (target.kind === "line" && target.line === line ? { onClick: () => {
-    if (!collapse.isOpen("lines")) collapse.onToggle("lines");
-    const head = content.current?.querySelector<HTMLElement>('section[aria-label="תנועות"] .ui-rep-head');
-    // Focus scrolls the section's head into view.
-    head?.focus();
+    // Focus scrolls the months into view.
+    linesRef.current?.focus();
   } } : links(target));
   const heroMinor = calc?.result?.value.kind === "money" ? calc.result.value.minor : minor;
   return (
-    <div className="ui-rep-content" ref={content}>
+    <div className="ui-rep-content">
       <ReturnsHero figure={heroMinor == null ? <span className="ui-ret-missing">חסר</span> : own(heroMinor)} meta={lineMeta(line, r, minor ?? 0n, count, name)} />
       {calc == null ? null : (
         <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(calc.rows.length)}</bdi>} collapse={collapse}>
@@ -267,7 +265,7 @@ function LineBody({ line, categoryId, category, r, base, search, projectId, name
           </ul>
         </ReportSection>
       ) : null}
-      <ReturnLinesSection projectId={projectId} line={line} categoryId={categoryId} currency={cur} search={search} collapse={collapse} sample={lines} />
+      <ReturnLinesSection projectId={projectId} line={line} categoryId={categoryId} currency={cur} search={search} sample={lines} sectionRef={linesRef} />
     </div>
   );
 }
