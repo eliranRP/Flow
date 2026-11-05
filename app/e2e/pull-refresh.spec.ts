@@ -2,13 +2,16 @@ import { expect, test, type CDPSession, type Page } from "@playwright/test";
 
 /**
  * FLOW-1043: pull to refresh on an iPhone-sized touch screen follows a smooth curve. Every animation
- * frame logs the screen's top over a scripted pull and release; no frame moves it more than 12px,
- * through the pull, the glide to the rest, the hold and the glide back. The installed-app check is
- * opted into.
+ * frame logs the screen's top over a scripted pull and release; it never moves faster than 12px per
+ * 60Hz frame (0.72px/ms between two samples, so a dropped frame on a busy runner is not a jump),
+ * through the pull, the glide to the rest, the hold and the glide back. Chromium with an iPhone
+ * viewport and touch, not WebKit: the safe area, `lvh` and Safari's touch handling are not covered.
+ * The installed-app check is opted into.
  */
 test.use({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
 
 const MAX_STEP_PX = 12;
+const FRAME_MS = 1000 / 60;
 
 /** The parser replaces <html> after an init script, so the opt-in goes on once the page is up. */
 async function openHome(page: Page) {
@@ -19,22 +22,24 @@ async function openHome(page: Page) {
   });
 }
 
-/** Logs the pulled screen's top on every animation frame, from now on. */
+type Sample = [time: number, top: number];
+
+/** Logs the pulled screen's top with the frame's time on every animation frame, from now on. */
 async function sample(page: Page) {
   await page.evaluate(() => {
-    const log: number[] = [];
-    (window as unknown as { pullLog: number[] }).pullLog = log;
+    const log: [number, number][] = [];
+    (window as unknown as { pullLog: [number, number][] }).pullLog = log;
     const box = document.querySelector(".ui-pull-screen");
-    const each = () => {
-      if (box != null) log.push(box.getBoundingClientRect().top);
+    const each = (time: number) => {
+      if (box != null) log.push([time, box.getBoundingClientRect().top]);
       requestAnimationFrame(each);
     };
     requestAnimationFrame(each);
   });
 }
 
-async function samples(page: Page): Promise<number[]> {
-  return page.evaluate(() => (window as unknown as { pullLog: number[] }).pullLog.slice());
+async function samples(page: Page): Promise<Sample[]> {
+  return page.evaluate(() => (window as unknown as { pullLog: [number, number][] }).pullLog.slice());
 }
 
 async function nextFrame(page: Page) {
@@ -55,11 +60,19 @@ async function release(session: CDPSession) {
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
 
-function steps(log: number[]): number[] {
-  return log.slice(1).map((top, index) => Math.abs(top - (log[index] ?? top)));
+/**
+ * Each step between two samples, in px per 60Hz frame of the time between them (at least one frame:
+ * a pull moves once a frame, however fast the frames come).
+ */
+function steps(log: Sample[]): number[] {
+  return log.slice(1).map(([time, top], index) => {
+    const [before, from] = log[index] ?? [time, top];
+    return Math.abs(top - from) / (Math.max(time - before, FRAME_MS) / FRAME_MS);
+  });
 }
 
-const idle = (page: Page) => expect(page.locator(".ui-pull-screen")).not.toHaveAttribute("data-phase");
+/** The refresh may run to its 15s cap before the glide back. */
+const idle = (page: Page) => expect(page.locator(".ui-pull-screen")).not.toHaveAttribute("data-phase", { timeout: 20_000 });
 
 test("a pull past the threshold and its release move the screen on a smooth curve", async ({ page }) => {
   await openHome(page);
@@ -75,10 +88,11 @@ test("a pull past the threshold and its release move the screen on a smooth curv
   await nextFrame(page);
   await session.detach();
   const log = await samples(page);
-  const deepest = Math.max(...log) - start;
-  test.info().annotations.push({ type: "frames", description: `${String(log.length)} frames, deepest ${deepest.toFixed(1)}px, largest step ${Math.max(...steps(log)).toFixed(1)}px` });
+  const tops = log.map(([, top]) => top);
+  const deepest = Math.max(...tops) - start;
+  test.info().annotations.push({ type: "frames", description: `${String(log.length)} frames, deepest ${deepest.toFixed(1)}px, largest step ${Math.max(...steps(log)).toFixed(1)}px per frame` });
   expect(deepest).toBeGreaterThan(64);
-  expect(log.at(-1)).toBeCloseTo(start, 0);
+  expect(tops.at(-1)).toBeCloseTo(start, 0);
   expect(Math.max(...steps(log))).toBeLessThanOrEqual(MAX_STEP_PX);
 });
 
@@ -91,6 +105,8 @@ test("a touch during the glide back catches the screen where it is", async ({ pa
   await expect(page.locator(".ui-pull-screen")).toHaveAttribute("data-phase", "closing");
   await nextFrame(page);
   await nextFrame(page);
+  // Still on its way back when the finger lands.
+  await expect(page.locator(".ui-pull-screen")).toHaveAttribute("data-phase", "closing");
   await drag(page, session, 40, 10, 400, 2);
   await expect(page.locator(".ui-pull-screen")).toHaveAttribute("data-phase", "pulling");
   await release(session);
@@ -98,6 +114,6 @@ test("a touch during the glide back catches the screen where it is", async ({ pa
   await nextFrame(page);
   await session.detach();
   const log = await samples(page);
-  test.info().annotations.push({ type: "frames", description: `${String(log.length)} frames, largest step ${Math.max(...steps(log)).toFixed(1)}px` });
+  test.info().annotations.push({ type: "frames", description: `${String(log.length)} frames, largest step ${Math.max(...steps(log)).toFixed(1)}px per frame` });
   expect(Math.max(...steps(log))).toBeLessThanOrEqual(MAX_STEP_PX);
 });

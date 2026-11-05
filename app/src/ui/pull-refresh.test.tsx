@@ -99,9 +99,9 @@ describe("pull travel", () => {
   });
 
   it("follows the finger about 1:1 at first", () => {
-    expect(pullTravel(1)).toBeCloseTo(1, 1);
-    expect(pullTravel(8) / 8).toBeGreaterThan(0.93);
-    expect(pullTravel(20) / 20).toBeGreaterThan(0.85);
+    expect(pullTravel(1)).toBeCloseTo(0.98, 2);
+    expect(pullTravel(8) / 8).toBeCloseTo(0.86, 2);
+    expect(pullTravel(20) / 20).toBeGreaterThan(0.75);
   });
 
   it("rises with every move, at a falling rate", () => {
@@ -117,19 +117,18 @@ describe("pull travel", () => {
   });
 
   it("reaches the threshold at about 110px of move, 120px with the 10px decision", () => {
-    expect(pullMove(PULL_THRESHOLD_PX)).toBeGreaterThan(100);
-    expect(pullMove(PULL_THRESHOLD_PX)).toBeLessThan(120);
+    expect(pullMove(PULL_THRESHOLD_PX)).toBeCloseTo(110, 0);
     expect(pullArmed(pullTravel(105))).toBe(false);
     expect(pullArmed(pullTravel(111))).toBe(true);
   });
 
-  it("has no cap", () => {
-    expect(pullTravel(400)).toBeGreaterThan(120);
-    expect(pullTravel(4000)).toBeGreaterThan(pullTravel(2000) + 40);
+  it("reaches about 155px at 290px of move, and has no cap", () => {
+    expect(pullTravel(290)).toBeCloseTo(155, 0);
+    expect(pullTravel(4000)).toBeGreaterThan(pullTravel(2000) + 900);
   });
 
   it("turns a travel back into its move", () => {
-    for (const travel of [0, 10, 40, 64, 120]) expect(pullTravel(pullMove(travel))).toBeCloseTo(travel, 6);
+    for (const travel of [0, 10, 40, 64, 120, 155, 600]) expect(pullTravel(pullMove(travel))).toBeCloseTo(travel, 6);
   });
 
   it("arms at 64px of travel", () => {

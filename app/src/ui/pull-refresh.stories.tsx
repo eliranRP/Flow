@@ -109,10 +109,8 @@ const moved: Play = async ({ canvasElement }) => {
   await expect(gap).not.toBeNull();
   await expect(band).not.toBeNull();
   if (gap == null || band == null) return;
-  // The gap reaches the band's top (1px under it, so no hairline shows), in the band's own colour.
-  const under = gap.getBoundingClientRect().bottom - band.getBoundingClientRect().top;
-  await expect(under).toBeGreaterThanOrEqual(0);
-  await expect(under).toBeLessThanOrEqual(1.5);
+  // The gap ends where the band starts, in the band's own colour.
+  await expect(Math.abs(gap.getBoundingClientRect().bottom - band.getBoundingClientRect().top)).toBeLessThan(0.5);
   await expect(getComputedStyle(gap).backgroundColor).toBe(getComputedStyle(band).backgroundColor);
 };
 
@@ -126,7 +124,10 @@ function spokes(count: number): Play {
     await expect(lines.filter((line) => line.getAttribute("opacity") === "1")).toHaveLength(count);
     if (mark == null) return;
     await expect(getComputedStyle(mark).backgroundColor).toBe("rgba(0, 0, 0, 0)");
-    await expect(Math.round(mark.getBoundingClientRect().width)).toBe(20);
+    await expect(Math.round(mark.getBoundingClientRect().width)).toBe(28);
+    // The fade and the shrink are on a transition in every phase, so a caught return does not snap back.
+    await expect(getComputedStyle(mark).transitionProperty).toContain("scale");
+    await expect(getComputedStyle(mark).transitionProperty).toContain("opacity");
   };
 }
 
@@ -176,7 +177,7 @@ const refreshing: Play = async (context) => {
   const screenTop = context.canvasElement.querySelector(".ui-pull-screen")?.getBoundingClientRect().top;
   const gapTop = context.canvasElement.querySelector(".ui-pull-gap")?.getBoundingClientRect().bottom;
   // The screen rests at the gap's end.
-  await expect(Math.round((gapTop ?? 0) - (screenTop ?? 0))).toBe(1);
+  await expect(Math.round((gapTop ?? 0) - (screenTop ?? 0))).toBe(0);
 };
 
 export const NotchRefreshing320: Story = {
@@ -220,10 +221,11 @@ export const Refreshing393: Story = {
 const returned: Play = async ({ canvasElement }) => {
   const box = canvasElement.querySelector(".ui-pull-screen");
   const mark = canvasElement.querySelector(".ui-pull-refresh");
-  await expect(box?.getAttribute("data-phase")).toBe("returning");
   await waitFor(async () => {
+    await expect(box?.getAttribute("data-phase")).toBe("returning");
     await expect(box == null ? -1 : Number.parseFloat(getComputedStyle(box).top)).toBe(0);
     await expect(mark == null ? -1 : Number(getComputedStyle(mark).opacity)).toBe(0);
+    await expect(mark == null ? "" : getComputedStyle(mark).scale).toBe("0.7");
   });
 };
 

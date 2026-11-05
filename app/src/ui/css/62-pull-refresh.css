@@ -6,13 +6,16 @@
    The screen moves by `top` on a relative box, not by a transform: a transform would become the
    containing block of the bars the screen pins (position: fixed: the action bar, the card's step
    row, a save bar), and they would jump to the screen's end. The tab bar, toasts and sheets sit
-   outside the box. The gap and the spinner are absolute at the page's top, so they scroll away with
-   the screen if it is scrolled while a refresh runs.
+   outside the box. The gap is the screen's own first child, drawn just above it, so it moves with
+   the screen in every frame and has no animation of its own: as a separate transform it ran on the
+   compositor ahead of the screen's `top` while the refreshed screen rendered, and showed the page
+   between them. The spinner is absolute at the page's top; both scroll away with the screen if it
+   is scrolled while a refresh runs.
 
    On a notched iPhone the status bar covers the gap's top (--safe-top, up to 59px), so the screen
    also travels the safe area, in step with the progress (no jump at the first move): at the
    threshold the gap shows 64px under the status bar. The spinner is centred in that part of the gap
-   until the gap reaches the rest (56px), and stays there as the pull goes on.
+   until the gap reaches the rest (64px), and stays there as the pull goes on.
 
    `top` changes on every touchmove during a pull and in the glides only; idle, the box is not
    positioned at all. */
@@ -22,23 +25,19 @@
 }
 
 .ui-pull-screen[data-phase],
-.ui-pull-gap,
 .ui-pull-refresh {
   --pull-travel: calc(var(--pull-y, 0px) + var(--safe-top) * var(--pull-progress, 0));
 }
 
-/* The gap: a screen tall (the rubber band has no cap) and drawn above the page, its end 1px under
-   the screen's top: the rubber band's travel is fractional, and `top` and a transform round it to
-   device pixels apart, which would leave a hairline of the page between them. */
+/* The gap: a screen tall (the rubber band has no cap), its end at the screen's top. */
 .ui-pull-gap {
   position: absolute;
-  inset-block-start: -100lvh;
+  inset-block-end: 100%;
   inset-inline: 0;
-  block-size: calc(100lvh + 1px);
+  block-size: 100lvh;
   max-inline-size: var(--content-max);
   margin-inline: auto;
   background: var(--color-bg);
-  transform: translateY(var(--pull-travel));
   pointer-events: none;
 }
 
@@ -51,17 +50,25 @@
   background: var(--color-band-past);
 }
 
-/* The spinner: 20px, no background, in the secondary text colour (the band's own on a band). */
+/* The spinner: 28px, as the reference's, with no background, in the secondary text colour (the
+   band's own on a band). It fades and shrinks on the individual `scale` and `opacity`, both on a
+   transition in every phase, so a touch that catches a returning screen brings it back smoothly
+   instead of snapping. */
 .ui-pull-refresh {
+  --pull-size: 28px;
   position: absolute;
   inset-block-start: var(--safe-top);
   inset-inline: 0;
   z-index: 40;
-  inline-size: var(--space-5);
-  block-size: var(--space-5);
+  inline-size: var(--pull-size);
+  block-size: var(--pull-size);
   margin-inline: auto;
   color: var(--color-text-secondary);
-  transform: translateY(calc(min(var(--pull-travel) - var(--safe-top), var(--pull-rest)) / 2 - var(--space-5) / 2)) scale(var(--pull-scale, 1));
+  transform: translateY(calc(min(var(--pull-travel) - var(--safe-top), var(--pull-rest)) / 2 - var(--pull-size) / 2));
+  scale: var(--pull-scale, 1);
+  transition:
+    scale var(--motion-fade) var(--ease-exit),
+    opacity var(--motion-fade) var(--ease-exit);
   pointer-events: none;
 }
 
@@ -92,40 +99,25 @@
   }
 }
 
-/* Let go past the threshold: the screen and the gap ease up (or down) to the rest and hold. */
+/* Let go past the threshold: the screen (and the gap with it) eases up or down to the rest and holds. */
 .ui-pull-screen[data-phase="refreshing"] {
   transition: top var(--motion-pull-return) var(--ease-enter);
-}
-
-.ui-pull-gap[data-phase="refreshing"] {
-  transition: transform var(--motion-pull-return) var(--ease-enter);
 }
 
 /* Done, or let go too soon: the screen glides back to the top from where it was, and the spinner
    fades and shrinks where it stands. A new touch takes the screen's live position (pull-refresh.tsx),
    so dropping these transitions mid-way does not move it. */
-.ui-pull-screen:is([data-phase="returning"], [data-phase="closing"]),
-.ui-pull-gap:is([data-phase="returning"], [data-phase="closing"]) {
-  --pull-travel: 0px;
-}
-
 .ui-pull-screen:is([data-phase="returning"], [data-phase="closing"]) {
+  --pull-travel: 0px;
   transition: top var(--motion-pull-return) var(--ease-enter);
-}
-
-.ui-pull-gap:is([data-phase="returning"], [data-phase="closing"]) {
-  transition: transform var(--motion-pull-return) var(--ease-enter);
 }
 
 .ui-pull-refresh:is([data-phase="returning"], [data-phase="closing"]) {
   --pull-scale: 0.7;
   opacity: 0;
-  transition:
-    transform var(--motion-fade) var(--ease-exit),
-    opacity var(--motion-fade) var(--ease-exit);
 }
 
-/* Reduced motion: no follow and no glide. The screen stays put, and the spinner rests 18 to 38px
+/* Reduced motion: no follow and no glide. The screen stays put, and the spinner rests 18 to 46px
    under the top safe area, all its spokes still, and only fades in. */
 @media (prefers-reduced-motion: reduce) {
   .ui-pull-screen[data-phase] {
@@ -138,7 +130,7 @@
 
   .ui-pull-refresh {
     opacity: var(--pull-progress, 0);
-    transform: translateY(calc(var(--pull-rest) / 2 - var(--space-5) / 2));
+    transform: translateY(calc(var(--pull-rest) / 2 - var(--pull-size) / 2));
   }
 
   .ui-pull-refresh[data-phase="pulling"] > .ui-pull-spinner > line {

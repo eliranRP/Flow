@@ -28,13 +28,17 @@ import "./css/62-pull-refresh.css";
  */
 export const PULL_THRESHOLD_PX = 64;
 /**
- * The rubber band's scale. `travel = PULL_BAND_PX * ln(1 + move / PULL_BAND_PX)`: the slope is 1 at
- * the start and falls as 1 / (1 + move / PULL_BAND_PX), with no cap. At the threshold's own size the
- * threshold comes at (e - 1) * 64 = 110px of move after the 10px decision, 120px from touch-down.
+ * The rubber band: `travel = b·move + (1 - b)·H·move / (H + move)`, half straight and half a knee.
+ * Its slope is 1 at the start (b + (1 - b)) and falls toward b = 0.5, with no cap. The threshold
+ * comes at 110px of move after the 10px decision (120px from touch-down), and 290px of move gives
+ * 155px. The reference reaches about 170px there, but it runs close to straight (slope about 0.57)
+ * from the start: a curve that slows down and starts 1:1 cannot pass both 64px at 110 and 170px at
+ * 290 (that would need travel(290) / travel(110) above 290 / 110), so this one keeps the 1:1 start.
  */
-const PULL_BAND_PX = PULL_THRESHOLD_PX;
-/** Where the screen rests while refreshing: the 20px spinner with 18px above and below it. */
-export const PULL_REST_PX = 56;
+const PULL_LINEAR = 0.5;
+const PULL_KNEE_PX = 21.5;
+/** Where the screen rests while refreshing: the 28px spinner with 18px above and below it. */
+export const PULL_REST_PX = 64;
 /** The spinner's spokes. */
 export const PULL_SPOKES = 12;
 /** The spinner stays at least this long, so a quick refresh does not flash. */
@@ -47,12 +51,15 @@ export const PULL_FAILED = "הרענון נכשל. נסו שוב.";
 
 /** How far the screen travels for a finger moved `move` px down: the rubber band. */
 export function pullTravel(move: number): number {
-  return move <= 0 ? 0 : PULL_BAND_PX * Math.log1p(move / PULL_BAND_PX);
+  if (move <= 0) return 0;
+  return PULL_LINEAR * move + ((1 - PULL_LINEAR) * PULL_KNEE_PX * move) / (PULL_KNEE_PX + move);
 }
 
-/** The finger move that brings the screen `travel` px down: `pullTravel`'s inverse. */
+/** The finger move that brings the screen `travel` px down: `pullTravel`'s inverse (a quadratic's root). */
 export function pullMove(travel: number): number {
-  return travel <= 0 ? 0 : PULL_BAND_PX * Math.expm1(travel / PULL_BAND_PX);
+  if (travel <= 0) return 0;
+  const knee = PULL_KNEE_PX;
+  return (travel - knee + Math.sqrt((knee - travel) ** 2 + 4 * PULL_LINEAR * travel * knee)) / (2 * PULL_LINEAR);
 }
 
 /** How many spokes show at this travel: none at the start, all 12 at the threshold. */
@@ -270,18 +277,19 @@ function tail(spoke: number): number {
 /**
  * The iOS activity indicator: 12 thin rounded spokes, clockwise from 12 o'clock, in `currentColor`.
  * While pulling, the first `shown` stand at full strength and the rest are hidden; turning, they fade
- * round from the head (the CSS turns it in 12 steps).
+ * round from the head (the CSS turns it in 12 steps). With reduced motion the CSS stops the turn, so
+ * a refreshing spinner keeps this fade on spokes that stand still, and a pulling one shows all 12.
  */
 function Spokes({ shown, turning }: { shown: number; turning: boolean }) {
   return (
-    <svg className="ui-pull-spinner" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+    <svg className="ui-pull-spinner" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
       {Array.from({ length: PULL_SPOKES }, (_, spoke) => (
         <line
           key={spoke}
           x1="10"
-          y1="1.8"
+          y1="1.6"
           x2="10"
-          y2="4.8"
+          y2="5"
           transform={`rotate(${String((spoke * 360) / PULL_SPOKES)} 10 10)`}
           opacity={turning ? tail(spoke) : spoke < shown ? 1 : 0}
         />
@@ -291,8 +299,8 @@ function Spokes({ shown, turning }: { shown: number; turning: boolean }) {
 }
 
 /**
- * Exported for the stories, which draw each phase. The pulled screen, the gap above it and the
- * spinner in the gap. While pulling (and closing) the spinner shows `pullSpokes(travel)` spokes,
+ * Exported for the stories, which draw each phase. The pulled screen, the gap above it (the screen's
+ * own first child, so it moves with it) and the spinner in the gap. While pulling (and closing) the spinner shows `pullSpokes(travel)` spokes,
  * standing still; refreshing and returning, all 12 turn and the screen rests at PULL_REST_PX (the CSS
  * glides it back on returning and closing). The screen moves by `top` on a relative box, not a
  * transform, so the bars it pins (`position: fixed`: the action bar, the card's step row, a save
@@ -323,13 +331,13 @@ export function PullRefreshView({
     <>
       {idle ? null : (
         <>
-          <div className="ui-pull-gap" data-phase={phase} data-tone={tone} style={style} aria-hidden="true" />
           <div className="ui-pull-refresh" data-phase={phase} data-tone={tone} style={style} aria-hidden="true">
             <Spokes shown={turning ? PULL_SPOKES : pullSpokes(travel)} turning={turning} />
           </div>
         </>
       )}
       <div ref={screenRef} className="ui-pull-screen" data-phase={idle ? undefined : phase} style={idle ? undefined : style}>
+        {idle ? null : <div className="ui-pull-gap" data-tone={tone} aria-hidden="true" />}
         {children}
       </div>
       <div role="status" className="sr-only">
