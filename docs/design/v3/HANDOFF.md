@@ -1,6 +1,6 @@
 # Flow v3: design handoff for the dev team (2026-11-05)
 
-Everything the dev team needs to build v3 from the approved canvas. Read this file first, then open the canvas.
+Everything the dev team needs to build v3 from the approved canvas. Read this file first, then [BUILD-PLAN.md](BUILD-PLAN.md) (the order, the PRs, the shared parts' contract), then open the canvas.
 
 - **Canvas:** https://claude.ai/artifact/Rq2HmKi3E9WEQCFe9eXuyt (private: the owner shares it from its Share menu).
   - **Ready for dev:** 47 approved screens, with notes for order, interactions and tokens next to each area. Press **Play** on any board to tap through.
@@ -40,7 +40,7 @@ The owner liked v2's look and asked to keep it. v3 rearranges today's components
   - Picking an option while docked scrolls the list top under the bar.
 - **Sticky group heads:**
   - Heads stick under the compact bar with a 1px `--color-line` under them. The next head pushes the previous one out.
-  - The sticky offset follows the bar: 0, 64px, or 124px when docked. For List screens it is 56px, or 116px when docked.
+  - The sticky offset follows the bar: 0, 64px, or 124px when docked under Home's band bar. Under the 44px list bar of a List screen it is 44px, or 104px when docked; under the 56px detail bar 56px, or 116px (the component's bars win over the boards' 56px).
 - **Dismissable row-cards ("דורש טיפול"):**
   - 56px tall, surface fill with a line border, radius 16 (`--radius-card-tight`), icon or dot, one-line title, chevron, and a 44px X with `aria-label="הסתרה: <title>"`.
   - The X slides the card 24px toward it, then folds it: `max-height` 220ms `--ease-exit`, opacity 160ms.
@@ -51,7 +51,7 @@ The owner liked v2's look and asked to keep it. v3 rearranges today's components
   - **Check on tint:** paid or arrived.
   - **6px dot:** one-off.
 - **Toasts:**
-  - Bottom 100px (32px on screens without the tab bar), raised fill, radius 14 (`--radius-toast`), and a 4 s life.
+  - Bottom 100px (32px on screens without the tab bar), raised fill, radius 14 (`--radius-toast`), and a 4 s life on the boards; the component's 5 s with an action stays ([BUILD-PLAN §5](BUILD-PLAN.md#5-decisions-already-made-so-no-lane-asks)).
   - Every reversible action shows ביטול: approve, mark paid, assign, finish project, close loan, dismiss.
   - Destructive actions use undo, not "are you sure?". The exceptions are finishing a project and closing a loan, which confirm inside their sheet because they move the item to another list.
 - **Forms:**
@@ -138,7 +138,7 @@ The owner's rule: there are only two reports, profit and loss and the balance sh
 
 | Need | Status |
 | --- | --- |
-| Each `cash_month_lines` row says whether it belongs to a recurring charge (`recurring boolean`), using the schedule's party, merge and project matching | **New.** Task FLOW-1035 in draft PR #975. Home's one-off group depends on it |
+| Each `cash_month_lines` row says whether it belongs to a recurring charge (`recurring boolean`), using the schedule's party, merge and project matching | **New.** Task [FLOW-1035](../../backlog/tasks/FLOW-1035.md), wave A of the build plan. Home's one-off group depends on it |
 | Recurring schedule states (arrived, late, soon, later) and amounts | Exists (`recurring_schedule`) |
 | Dismissal of attention rows | Client only (localStorage), keyed by kind plus content |
 | Next month's forecast in the month drawer | Exists (the next-month card's read) |
@@ -183,8 +183,8 @@ Settings sub-pages (Business, Connections, Notifications, Team, Categories), set
 
 ## 9. How to build it
 
-1. **Merge draft PR #975** when the owner gives the go. It brings back the Home v3 tasks: FLOW-1035 (the server flag) and FLOW-1036 (the Home composition).
-2. **File one task PR per area** in the same format: Projects (list, project page entries, project profit, unassigned), Reports (hub, P&L and balance-sheet drill-down), Loans (list, loan page, payments, summary, close sheet), and Investor pages (investment, calculation pages).
+1. **The tasks are filed** ([BUILD-PLAN §2](BUILD-PLAN.md#2-order-and-waves)): FLOW-1035 and FLOW-1036 for Home, FLOW-1043 for the shared parts, FLOW-1044 to FLOW-1049 for Projects, Reports, Loans, the investor pages and the screens under Home. The build plan supersedes the earlier draft PRs that carried the handoff and the two Home tasks.
+2. **Each lane claims its task** with a draft PR and builds it on the shared parts.
 3. **Build in this order:**
    1. The shared behaviours: the compact bar with a docking segment, sticky heads, dismissable row-cards, and the toast with undo. Build them once as components, since every screen reuses them.
    2. Home.
