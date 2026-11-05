@@ -159,6 +159,13 @@
 
 .ui-skel-label { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
 
+/* On Home's band row the label gives way to the actions: at 320 the row's 280px hold the 182px of actions and
+   the 12px gap, so the label shrinks to what is left instead of pushing the actions off the edge. */
+.ui-band-row > .ui-skel-label {
+  flex: 0 1 var(--skel-md);
+  min-inline-size: 0;
+}
+
 /* Project loading only. These boxes match the loaded project band. */
 .ui-project-skel {
   display: flex;

@@ -243,6 +243,20 @@ test("every production route is listed in _redirects, and a stale entry fails", 
   assert.deepEqual(stale.stale, ["/gone"]);
 });
 
+test("the exact rules stay above the placeholder rules, and the placeholder rules fit Pages' limit", () => {
+  // wrangler, like Pages, counts every rule after the first splat or placeholder as dynamic and allows 100
+  // of those (2,000 static): the Reports v3 routes took main past it until the file was reordered (#991).
+  const rules = redirects
+    .split("\n")
+    .map((line) => line.replace(/\s+#.*$/, "").trim())
+    .filter((line) => line !== "" && !line.startsWith("#"));
+  const isDynamic = (rule) => /[:*]/.test(rule.split(/\s+/)[0]);
+  const first = rules.findIndex(isDynamic);
+  assert.notEqual(first, -1);
+  assert.deepEqual(rules.slice(first).filter((rule) => !isDynamic(rule)), []);
+  assert.ok(rules.length - first <= 100, `${String(rules.length - first)} dynamic rules`);
+});
+
 test("every production route is covered by _headers", () => {
   const routes = productionRoutes(appRouteSource());
   const blocks = headerRules(headers);

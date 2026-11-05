@@ -2,7 +2,7 @@
 # 404.html stays, so a missing file, including /assets/*, is 404.
 # These routes serve the built shell with status 200 and keep the URL.
 # A trailing slash 301s to the same path without the slash. The no-slash rule does not redirect back.
-# Static rules stay above placeholders.
+# Static rules stay above placeholders: wrangler counts every rule after the first placeholder as dynamic, and Pages allows 100 of those (2,000 static).
 /sign-in /app-shell 200
 /sign-in/ /sign-in 301
 /auth/callback /app-shell 200
@@ -37,8 +37,6 @@
 /forecast/ /forecast 301
 /forecast/next /app-shell 200
 /forecast/next/ /forecast/next 301
-/forecast/item/:itemKey /app-shell 200
-/forecast/item/:itemKey/ /forecast/item/:itemKey 301
 /reports /app-shell 200
 /reports/ /reports 301
 /reports/pnl /app-shell 200
@@ -59,8 +57,6 @@
 /review/filed/ /review/filed 301
 /unpaid /app-shell 200
 /unpaid/ /unpaid 301
-/unpaid/:invoiceId /app-shell 200
-/unpaid/:invoiceId/ /unpaid/:invoiceId 301
 /transfers /app-shell 200
 /transfers/ /transfers 301
 /missing-bills /app-shell 200
@@ -69,16 +65,12 @@
 /recurring/ /recurring 301
 /recurring/changes /app-shell 200
 /recurring/changes/ /recurring/changes 301
-/recurring/:direction/:partyId /app-shell 200
-/recurring/:direction/:partyId/ /recurring/:direction/:partyId 301
 /notifications /app-shell 200
 /notifications/ /notifications 301
 /settings /app-shell 200
 /settings/ /settings 301
 /settings/categories /app-shell 200
 /settings/categories/ /settings/categories 301
-/settings/categories/:parentId /app-shell 200
-/settings/categories/:parentId/ /settings/categories/:parentId 301
 /settings/connections /app-shell 200
 /settings/connections/ /settings/connections 301
 /settings/business /app-shell 200
@@ -87,8 +79,6 @@
 /settings/connections/ai/ /settings/connections/ai 301
 /settings/connections/ai/new /app-shell 200
 /settings/connections/ai/new/ /settings/connections/ai/new 301
-/settings/connections/ai/key/:keyId /app-shell 200
-/settings/connections/ai/key/:keyId/ /settings/connections/ai/key/:keyId 301
 /settings/connections/mercury /app-shell 200
 /settings/connections/mercury/ /settings/connections/mercury 301
 /settings/connections/sumit /app-shell 200
@@ -101,6 +91,23 @@
 /loans/ /loans 301
 /loans/summary /app-shell 200
 /loans/summary/ /loans/summary 301
+/profit /app-shell 200
+/profit/ /profit 301
+/setup/welcome /app-shell 200
+/setup/welcome/ /setup/welcome 301
+/setup/done /app-shell 200
+/setup/done/ /setup/done 301
+# Placeholder rules last.
+/forecast/item/:itemKey /app-shell 200
+/forecast/item/:itemKey/ /forecast/item/:itemKey 301
+/unpaid/:invoiceId /app-shell 200
+/unpaid/:invoiceId/ /unpaid/:invoiceId 301
+/recurring/:direction/:partyId /app-shell 200
+/recurring/:direction/:partyId/ /recurring/:direction/:partyId 301
+/settings/categories/:parentId /app-shell 200
+/settings/categories/:parentId/ /settings/categories/:parentId 301
+/settings/connections/ai/key/:keyId /app-shell 200
+/settings/connections/ai/key/:keyId/ /settings/connections/ai/key/:keyId 301
 /loans/:loanId /app-shell 200
 /loans/:loanId/ /loans/:loanId 301
 /loans/:loanId/payments /app-shell 200
@@ -125,8 +132,6 @@
 /projects/:projectId/profit/:month/ /projects/:projectId/profit/:month 301
 /projects/:projectId /app-shell 200
 /projects/:projectId/ /projects/:projectId 301
-/profit /app-shell 200
-/profit/ /profit 301
 /cash/:month/:side/:currency /app-shell 200
 /cash/:month/:side/:currency/ /cash/:month/:side/:currency 301
 /transactions/:transactionId/journal /app-shell 200
@@ -135,9 +140,5 @@
 /transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200
 /transactions/:transactionId/ /transactions/:transactionId 301
-/setup/welcome /app-shell 200
-/setup/welcome/ /setup/welcome 301
-/setup/done /app-shell 200
-/setup/done/ /setup/done 301
 /setup/:step /app-shell 200
 /setup/:step/ /setup/:step 301
