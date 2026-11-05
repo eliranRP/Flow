@@ -4,21 +4,21 @@ import { RecurringAskBox, RecurringMatchBox } from "./recurring-match-box";
 import { topToast } from "./top-toast";
 
 describe("Recurring v2: the answers (FLOW-963)", () => {
-  it("are two buttons of the same kind, and the match's no says what it means", () => {
+  it("are two buttons of the same kind, and the match answers in the board's words", () => {
     render(
       <>
         <RecurringAskBox text="לא שולם" hint="" onStill={() => undefined} onEnded={() => undefined} />
-        <RecurringMatchBox name="Other" amount="$1" date="08/10" income={false} onYes={() => undefined} onNo={() => undefined} />
+        <RecurringMatchBox name="Other" amount="$1" date="08/10" onYes={() => undefined} onNo={() => undefined} />
       </>,
     );
     const ask = screen.getByRole("region", { name: "עדיין קבוע?" });
     const [still, ended] = within(ask).getAllByRole("button");
     expect(still?.className.replace("ui-recurring-match-yes", "")).toBe(ended?.className.replace("ui-recurring-match-no", ""));
-    expect(screen.getByRole("button", { name: "לא, זה משהו אחר" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "לא" })).toBeTruthy();
   });
 
   it("the match's third answer ignores the bill this month, when the page offers it (V3-Charge)", () => {
-    render(<RecurringMatchBox name="Other" amount="$1" date="08/10" income={false} onYes={() => undefined} onNo={() => undefined} onIgnore={() => undefined} />);
+    render(<RecurringMatchBox name="Other" amount="$1" date="08/10" onYes={() => undefined} onNo={() => undefined} onIgnore={() => undefined} />);
     expect(screen.getByRole("region", { name: "אולי הגיע בשם אחר?" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "התעלמות החודש" })).toBeTruthy();
   });

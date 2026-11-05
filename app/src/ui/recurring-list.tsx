@@ -145,7 +145,6 @@ function groupSummary(group: RecurringListGroup, money: (minor: bigint) => strin
   return parts.flatMap((part, index) => (index === 0 ? [part] : [" · ", part]));
 }
 
-/**
 /** The board's filter: every group, the expense groups, or the income groups. */
 export type RecurringFilter = "all" | "out" | "in";
 

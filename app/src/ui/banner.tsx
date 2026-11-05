@@ -56,7 +56,7 @@ export type BannerRow = {
   button?: { label: string; hint: string };
   /**
    * FLOW-1043: what the row counts, e.g. "changes:4" or "unpaid:3:2130000". AttentionCards hides the row while
-   * the key it was hidden at is unchanged. A row without one cannot be hidden; BannerRows ignores it.
+   * the key it was hidden at is unchanged. A row without one cannot be hidden.
    */
   dismissKey?: string;
 };

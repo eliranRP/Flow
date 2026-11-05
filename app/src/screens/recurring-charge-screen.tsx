@@ -312,7 +312,6 @@ function ChargeBody({
             name={suggestion.party_name ?? ""}
             amount={money(suggestion.amount_minor)}
             date={dayMonth(suggestion.doc_date)}
-            income={income}
             onYes={() => void answer(true)}
             onNo={() => void answer(false)}
             {...(alert?.key == null ? {} : { onIgnore: () => void ignore() })}

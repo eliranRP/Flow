@@ -166,21 +166,21 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     renderPage("/recurring/expense/power", <ViewerPreview><RecurringChargeScreen now={NOW} /></ViewerPreview>);
     expect(screen.getByText("החשבון באיחור 8 ימים")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "אולי הגיע בשם אחר?" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "כן, אותו ספק" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "כן, זה הוא" })).toBeNull();
     expect(screen.getByRole("button", { name: /תשלום קבוע/ })).toBeDisabled();
     expect(calls()).not.toContainEqual(expect.arrayContaining(["set_payment_pace"]));
   });
 
-  it("כן, אותו ספק answers the match as the same party, and ביטול takes it back", async () => {
+  it("כן, זה הוא answers the match as the same party, and ביטול takes it back", async () => {
     renderPage("/recurring/expense/power");
-    fireEvent.click(screen.getByRole("button", { name: "כן, אותו ספק" }));
+    fireEvent.click(screen.getByRole("button", { name: "כן, זה הוא" }));
     expect(await screen.findByText("סומן כאותו ספק")).toBeTruthy();
     expect(calls()).toContainEqual(["answer_recurring_match", { p_direction: "expense", p_party_id: "power", p_match_party_id: "power-alt", p_same: true }]);
-    expect(screen.queryByRole("button", { name: "כן, אותו ספק" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "כן, זה הוא" })).toBeNull();
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     });
-    expect(await screen.findByRole("button", { name: "כן, אותו ספק" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "כן, זה הוא" })).toBeTruthy();
     expect(calls()).toContainEqual(["answer_recurring_match", { p_direction: "expense", p_party_id: "power", p_match_party_id: "power-alt", p_same: null }]);
   });
 
@@ -203,23 +203,23 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
 
   it("לא answers it as not the same, and toasts that it will not be offered again", async () => {
     renderPage("/recurring/expense/power");
-    fireEvent.click(screen.getByRole("button", { name: "לא, זה משהו אחר" }));
+    fireEvent.click(screen.getByRole("button", { name: "לא" }));
     expect(await screen.findByText("לא נציע שוב")).toBeTruthy();
     expect(calls()).toContainEqual(["answer_recurring_match", { p_direction: "expense", p_party_id: "power", p_match_party_id: "power-alt", p_same: false }]);
   });
 
-  it("an income party says כן, אותו לקוח", () => {
+  it("an income party is answered the same way, כן, זה הוא", () => {
     const income = { ...RECURRING_CHARGES_FIXTURE_POWER.row, direction: "income" as const, party_id: "rent-elm" };
     const bills = [{ ...RECURRING_MISSING_FIXTURE[0], direction: "income" as const, party_id: "rent-elm", alert_key: "income:rent-elm:USD:2026-10" }] as typeof RECURRING_MISSING_FIXTURE;
     state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, row: income, bills });
     renderPage("/recurring/income/rent-elm");
-    expect(screen.getByRole("button", { name: "כן, אותו לקוח" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "כן, זה הוא" })).toBeTruthy();
   });
 
   it("asks עדיין קבוע? once the match is answered as not this one", async () => {
     renderPage("/recurring/expense/power");
     expect(screen.queryByRole("region", { name: "עדיין קבוע?" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "לא, זה משהו אחר" }));
+    fireEvent.click(screen.getByRole("button", { name: "לא" }));
     const ask = await screen.findByRole("region", { name: "עדיין קבוע?" });
     expect(within(ask).getByText("לא שולם ב־03/10, 8 ימים אחרי המועד הרגיל. אם הסתיים, נפסיק לצפות לו בתחזית ובהתראות.")).toBeTruthy();
     expect(within(ask).getByText("אמרת שהשורה שהצענו היא לא זה.")).toBeTruthy();
