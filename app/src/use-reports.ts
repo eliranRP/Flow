@@ -3,7 +3,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
-import { balanceDate, pnlRange, type BalanceSheet, type ReportState, type Statement } from "./reports";
+import type { BalanceSheet, Statement } from "./reports";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
@@ -114,13 +114,4 @@ export function useProjectBalances(asOf: string, projectIds: readonly string[], 
       for (const query of queries) if (query.isError) void query.refetch();
     },
   };
-}
-
-/** Home's reports card (FLOW-161) reads the pre-v3 state. FLOW-1036 deletes that card; these two go with it. */
-export function useStatement(state: ReportState, today: string, enabled = true): ReportRead<Statement> {
-  return usePnl(pnlRange(state.period, today), state.scope.kind === "project" ? state.scope.id : null, state.scope.kind === "by_project", enabled);
-}
-
-export function useBalanceSheet(state: ReportState, today: string, enabled = true): ReportRead<BalanceSheet> {
-  return useBalanceAt(balanceDate(state.asOf, today), state.scope.kind === "project" ? state.scope.id : null, enabled);
 }
