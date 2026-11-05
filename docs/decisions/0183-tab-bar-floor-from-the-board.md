@@ -1,7 +1,9 @@
 # Tab-bar floor from the board
 
 **Date:** 2026-10-16
-**Status:** Accepted
+**Status:** Superseded
+
+Superseded on 2026-11-05 by decision [0257](0257-v3-boards-win.md) and FLOW-1051: the board's 18px floor and 82px bar.
 
 ## Context
 

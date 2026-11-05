@@ -84,32 +84,23 @@ function bandGone(scrollY: number, maxScroll: number): boolean {
 }
 
 /**
- * `read(scrollY, maxScroll)`, read once on mount, then once per frame on scroll and on resize (the
+ * `read(scrollY, maxScroll)`, read once on mount, then on every scroll and resize (the
  * page's height or the viewport changing moves the bottom without a scroll).
  */
 function usePageScroll(read: (scrollY: number, maxScroll: number) => boolean): boolean {
   const [value, setValue] = useState(false);
   useEffect(() => {
-    let pending = false;
-    let frame = 0;
+    // FLOW-1051: read in the event itself, not a frame later (a loaded WebKit ran that frame a second late, and the
+    // bar came down long after the jump); the state is a boolean, so a scroll that does not flip it renders nothing.
     const update = () => {
       setValue(read(window.scrollY, pageMaxScroll()));
     };
-    const onScroll = () => {
-      if (pending) return;
-      pending = true;
-      frame = requestAnimationFrame(() => {
-        pending = false;
-        update();
-      });
-    };
     update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (pending) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
     };
   }, [read]);
   return value;
