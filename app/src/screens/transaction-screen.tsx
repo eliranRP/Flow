@@ -37,10 +37,9 @@ import { ReversalTag } from "../ui/suggest-tag";
 import { splitHeldByReview, type LineSplitRead } from "../line-split";
 import { lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
-import { approveFailure, approveShown } from "../approve-review";
 import { BackButton } from "../ui/back";
 import { CompactBar } from "../ui/compact-bar";
-import { topToast } from "../ui/top-toast";
+import { TxnApproveBar, useTxnApprove } from "./transaction-approve";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TransactionThread } from "./transaction-thread";
 import { TxnRecurring } from "./transaction-recurring";
@@ -467,40 +466,8 @@ export function TransactionScreen({
   });
   // FLOW-1048 (V3-Transaction): the 56px detail bar slides in once the head has gone under it.
   const barShown = useScrolledPast(head, true, DETAIL_BAR);
-  // FLOW-1048: the pinned אישור approves the line in place (approve_review_item, as the queue does); ביטול reopens it.
-  const [approvedLocal, setApprovedLocal] = useState(false);
-  const approve = useWrite<{ reviewId: string; projectId: string; categoryId: string; undo: boolean }>({
-    failure: approveFailure,
-    keys: ASSIGN_KEYS,
-    place: "top",
-    onSuccess: (done) => {
-      if (done.undo) {
-        setApprovedLocal(false);
-        return;
-      }
-      toast.show(topToast({
-        message: "אושר",
-        action: "ביטול",
-        onAction: () => {
-          approve.mutate({ ...done, undo: true });
-        },
-      }));
-    },
-    onError: (_error, done) => {
-      if (!done.undo) setApprovedLocal(false);
-    },
-    run: async (input) => {
-      if (!input.undo) setApprovedLocal(true);
-      if (sample != null) return;
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      if (input.undo) {
-        assertNoError(await supabase.rpc("reopen_review", { p_id: input.reviewId }));
-        return;
-      }
-      await approveShown(supabase, { id: input.reviewId, projectId: input.projectId, categoryId: input.categoryId, shownProjectId: input.projectId, shownCategoryId: input.categoryId }, () => invalidate());
-    },
-  });
+  // FLOW-1048: the pinned אישור approves in place; ביטול reopens the review (transaction-approve.tsx).
+  const { approved: approvedLocal, write: approve } = useTxnApprove({ live: sample == null, keys: ASSIGN_KEYS });
   // FLOW-345: the step row stays while a card loads, fails or is gone, so the walk can go on past it.
   // Every layout goes through this frame, so the row keeps its place in the tree and is not remounted
   // (its focus move run again) when the card finishes loading.
@@ -748,31 +715,10 @@ export function TransactionScreen({
         </div>
       </CardSwipe>
       {pending && !holdWrites ? (
-        <div className="ui-txn-approve" role="group" aria-label="השורה מחכה לאישור שלך">
-          {approveInPlace ? (
-            <Button
-              full
-              busy={approve.isPending}
-              onClick={() => {
-                if (approve.isPending || (sample == null && blocked())) return;
-                approve.mutate({ reviewId: txn.review_id ?? "", projectId: approveProject, categoryId: shownCategoryId, undo: false });
-              }}
-            >
-              אישור
-            </Button>
-          ) : (
-            <Button full to={reviewTo}>אישור</Button>
-          )}
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setChangeStart("project");
-              setChangeSheet(true);
-            }}
-          >
-            שינוי
-          </Button>
-        </div>
+        <TxnApproveBar busy={approve.isPending} reviewTo={reviewTo} onChange={() => { setChangeStart("project"); setChangeSheet(true); }} approve={approveInPlace ? () => {
+          if (approve.isPending || (sample == null && blocked())) return;
+          approve.mutate({ reviewId: txn.review_id ?? "", projectId: approveProject, categoryId: shownCategoryId, undo: false });
+        } : null} />
       ) : null}
       {countedLocked ? null : (
         <CountedInSheet

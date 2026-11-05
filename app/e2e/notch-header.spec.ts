@@ -23,7 +23,8 @@ const ROUTES = ["settings", "notifications", "categories", "team", "business", "
 for (const route of ROUTES) {
   test(`${route}: under a notch the large title shows and the compact bar stays hidden at the top`, async ({ page }) => {
     await page.goto(`/e2e/${route}`);
-    const header = page.locator("header.ui-page-stacked").first();
+    // FLOW-1048: the forecast draws its own head (Back, the title, the month line) over its detail bar.
+    const header = page.locator("header.ui-page-stacked, header.ui-forecast-head").first();
     await expect(header).toBeVisible();
     await expect(page.locator(".ui-compact-bar").first()).toHaveClass(/ui-compact-bar-gone/);
     const title = header.locator(".ui-focus-title").first();
