@@ -339,9 +339,8 @@
 }
 
 /* FLOW-364 (board): on the band the change pill is white, its text the helps grey or the hurts red. Its size is
-   the chip's (decision 0258: the band's type keeps v2's sizes). */
+   Home's chip below (13/500, 4px 8px; decision 0258: the band's type keeps v2's sizes). */
 .ui-band .ui-change-amount {
-  padding-inline: calc(var(--space-2) + var(--space-half));
   background: var(--color-on-band);
 }
 

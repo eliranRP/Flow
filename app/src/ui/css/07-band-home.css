@@ -494,7 +494,6 @@ html[data-kb="open"] .ui-sheet-body {
    (the cell's left edge); the label keeps the row's end. Scoped here: other bands keep their rows. */
 .ui-band-rows .ui-band-row-link {
   font-size: var(--type-btn-2-size);
-  line-height: var(--type-btn-2-line);
 }
 
 .ui-band-rows .ui-band-row-amount {
@@ -592,7 +591,6 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-home-forecast-value {
   flex: none;
   font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
   font-weight: var(--type-btn-2-weight);
 }
 
