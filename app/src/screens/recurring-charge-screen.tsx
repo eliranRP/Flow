@@ -24,7 +24,9 @@ import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
-import { TransactionTopBar } from "./transaction-top-bar";
+import { BackButton } from "../ui/back";
+import { CompactBar } from "../ui/compact-bar";
+import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
 import { useBlockedPreview } from "./screen-shared";
 import { topToast } from "../ui/top-toast";
 
@@ -65,9 +67,12 @@ export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: {
   if (data.status === "loading") {
     return (
       <div className="ui-charge-page">
-        <DelayedSkeleton>
-          <ListSkeleton />
-        </DelayedSkeleton>
+        <div className="ui-charge-body">
+          <ChargeBack />
+          <DelayedSkeleton>
+            <ListSkeleton />
+          </DelayedSkeleton>
+        </div>
       </div>
     );
   }
@@ -76,14 +81,27 @@ export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: {
   return <ChargeBody key={chargeKey(data.row)} data={data} live={sample == null} today={today} openSheet={openSheet} />;
 }
 
+/**
+ * FLOW-1048 (V3-Charge, the Detail pattern): the page's own Back, "‹ קבועים", above the status line. Toasts hang
+ * under it (decision 0215); once the head scrolls away the 56px detail bar takes over.
+ */
+function ChargeBack() {
+  const search = usePreviewSearch();
+  return (
+    <div className="ui-charge-back" data-toast-ceiling="">
+      <BackButton fallback={`/recurring${search}`} text="קבועים" />
+    </div>
+  );
+}
+
 /** The schedule did not load: what happened, the retry and the way to help (FLOW-963). */
 export function ChargeError() {
   const client = useQueryClient();
   const online = useOnline();
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} toastCeiling />
       <div className="ui-charge-body">
+        <ChargeBack />
         <PageLoadFailed title="הקבועים לא נטענו" offline={!online} onRetry={() => void client.invalidateQueries({ queryKey: ["recurring-schedule"] })} />
       </div>
     </div>
@@ -95,8 +113,8 @@ export function ChargeMissing() {
   const search = usePreviewSearch();
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} toastCeiling />
       <div className="ui-charge-body">
+        <ChargeBack />
         <EmptyState title="החיוב לא נמצא" body="אולי סימנתם אותו כלא קבוע, או שהקישור ישן." action={<Button full to={`/recurring${search}`}>לקבועים</Button>} />
       </div>
     </div>
@@ -250,19 +268,23 @@ function ChargeBody({
     });
   }
 
+  const amountText = `${income && row.state === "arrived" ? "+" : ""}${money(amount.minor)}`;
+  // FLOW-1048: the 56px detail bar slides in once the head (status, name, figure, meta) has gone under it.
+  const barShown = useScrolledPast(head, true, DETAIL_BAR);
   const subLine = `${pace === "month" ? `בערך ב־${String(row.typical_day)} לחודש · ` : ""}${overridden ? "סימנת" : "זוהה לבד"}`;
   const alertText = alert == null ? null : ignored ? ignoredText(alert.kind) : bannerText(row, alert, today);
 
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title={row.party_name} end={null} head={head} toastCeiling />
+      <CompactBar title={row.party_name} figure={amountText} label="קבועים" backTo={`/recurring${search}`} size="detail" shown={barShown} />
       <div className="ui-charge-body">
+        <ChargeBack />
         <ChargeHead
           headRef={setHead}
           status={status.text}
           statusBad={status.tone === "bad"}
           name={row.party_name}
-          amount={`${income && row.state === "arrived" ? "+" : ""}${money(amount.minor)}`}
+          amount={amountText}
           muted={amount.muted}
           income={income && row.state === "arrived"}
           meta={metaOf(row, arrivedOn)}
@@ -293,6 +315,7 @@ function ChargeBody({
             income={income}
             onYes={() => void answer(true)}
             onNo={() => void answer(false)}
+            {...(alert?.key == null ? {} : { onIgnore: () => void ignore() })}
           />
         ) : null}
         <ChargeCard

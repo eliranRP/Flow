@@ -161,6 +161,29 @@ function project(id: string, name: string) {
   };
 }
 
+describe("the pending line's pinned bar (FLOW-1048, V3-Transaction)", () => {
+  it("approves in place, toasts with ביטול, and the bar leaves", async () => {
+    renderTxn({ ...expense, review_status: "open", review_id: "r1", paid: false, open_gross_agorot: null } as never);
+    const bar = screen.getByRole("group", { name: "השורה מחכה לאישור שלך" });
+    expect(screen.getByRole("button", { name: "שינוי" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("אושר")).toBeInTheDocument();
+    expect(bar).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByRole("group", { name: "השורה מחכה לאישור שלך" })).toBeInTheDocument();
+  });
+
+  it("opens the line in the queue when it has no review to approve here", () => {
+    renderTxn({ ...expense, review_status: "open", review_id: "r1", category_id: null, paid: false, open_gross_agorot: null } as never);
+    expect(screen.getByRole("link", { name: "אישור" })).toHaveAttribute("href", "/review?item=r1&from=all");
+  });
+
+  it("shows no bar on an approved line", () => {
+    renderTxn({ ...expense, review_status: "approved", paid: false, open_gross_agorot: null } as never);
+    expect(screen.queryByRole("group", { name: "השורה מחכה לאישור שלך" })).toBeNull();
+  });
+});
+
 describe("transaction status chips", () => {
   it("shows a queued expense as waiting and an unpaid invoice as uncollected", () => {
     const { unmount } = renderTxn({ ...expense, review_status: "open", paid: false, open_gross_agorot: null });

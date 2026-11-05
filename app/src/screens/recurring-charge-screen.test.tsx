@@ -156,7 +156,7 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     renderPage("/recurring/expense/power");
     expect(screen.getByText("לא הגיע")).toBeTruthy();
     expect(screen.getByText("החשבון באיחור 8 ימים")).toBeTruthy();
-    const box = screen.getByRole("region", { name: "אולי הגיע בשם אחר" });
+    const box = screen.getByRole("region", { name: "אולי הגיע בשם אחר?" });
     expect(within(box).getByText("Brightline Energy Svcs")).toBeTruthy();
     expect(within(box).getByText("$191")).toBeTruthy();
     expect(within(box).getByText("08/10")).toBeTruthy();
@@ -165,7 +165,7 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
   it("shows a viewer no match answer and no pace sheet, and keeps the ignore", () => {
     renderPage("/recurring/expense/power", <ViewerPreview><RecurringChargeScreen now={NOW} /></ViewerPreview>);
     expect(screen.getByText("החשבון באיחור 8 ימים")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "אולי הגיע בשם אחר" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "אולי הגיע בשם אחר?" })).toBeNull();
     expect(screen.queryByRole("button", { name: "כן, אותו ספק" })).toBeNull();
     expect(screen.getByRole("button", { name: /תשלום קבוע/ })).toBeDisabled();
     expect(calls()).not.toContainEqual(expect.arrayContaining(["set_payment_pace"]));
@@ -182,6 +182,23 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     });
     expect(await screen.findByRole("button", { name: "כן, אותו ספק" })).toBeTruthy();
     expect(calls()).toContainEqual(["answer_recurring_match", { p_direction: "expense", p_party_id: "power", p_match_party_id: "power-alt", p_same: null }]);
+  });
+
+  it("התעלמות החודש sets the late alert aside with the ignore write, and ביטול brings it back (V3-Charge)", async () => {
+    renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות החודש" }));
+    expect(await screen.findByText("התעלמת מההתראה")).toBeTruthy();
+    expect(calls()).toContainEqual(expect.arrayContaining(["dismiss_recurring_alert"]));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    });
+    expect(await screen.findByText("ההתראה חזרה")).toBeTruthy();
+  });
+
+  it("heads with its own Back to קבועים, and keeps the 56px detail bar hidden until the head scrolls away", () => {
+    renderPage("/recurring/expense/power");
+    expect(screen.getByRole("button", { name: "חזרה לקבועים" })).toBeTruthy();
+    expect(document.querySelector(".ui-compact-bar-detail")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("לא answers it as not the same, and toasts that it will not be offered again", async () => {
@@ -236,7 +253,7 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, bills: RECURRING_MISSING_FIXTURE.filter((bill) => bill.party_id !== "power") });
     renderPage("/recurring/expense/power");
     expect(screen.getByText("התעלמת מההתראה. היא תחזור אם גם החיוב הבא יאחר.")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "אולי הגיע בשם אחר" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "אולי הגיע בשם אחר?" })).toBeNull();
     expect(screen.getByRole("button", { name: "החזרה" })).toBeTruthy();
   });
 

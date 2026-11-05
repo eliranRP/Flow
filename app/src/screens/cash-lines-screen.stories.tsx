@@ -1,6 +1,8 @@
 import type { CashLine } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
+import { longHebrew } from "../ui/story-support";
+import { LinesSkeleton } from "../ui/screen-skeletons";
 import { cashMonthKey } from "../cash";
 import { sampleCashLines, sampleCashLinesFlagged, sampleCashMonths } from "../dev/cash-sample";
 import { LINES_ORDERS, type LinesOrder } from "../cash-lines-groups";
@@ -8,11 +10,15 @@ import { StoryRoute } from "../ui/story-route";
 import { CashLinesScreen } from "./cash-lines-screen";
 
 /** FLOW-366: the month lines page. Invented rows only; the flags the server sends are set here. */
-type LinesArgs = { side: "out" | "in" | "kept"; order: LinesOrder; lines?: "plain" | "flagged" | "none" };
+type LinesArgs = { side: "out" | "in" | "kept"; order: LinesOrder; lines?: "plain" | "flagged" | "none" | "recurring" | "long" };
 
 function linesFor(args: LinesArgs): CashLine[] {
   if (args.lines === "none") return [];
-  return args.lines === "flagged" ? sampleCashLinesFlagged(args.side) : sampleCashLines(args.side);
+  if (args.lines === "flagged") return sampleCashLinesFlagged(args.side);
+  // FLOW-1048: FLOW-1035's flag on every line (every other line recurring), so the recurring-or-one-off chip shows.
+  if (args.lines === "recurring") return sampleCashLines(args.side).map((row, index) => ({ ...row, recurring: index % 2 === 0 }));
+  if (args.lines === "long") return [0, 1, 2].flatMap((round) => sampleCashLines(args.side).map((row) => ({ ...row, transaction_id: `${row.transaction_id}-${String(round)}`, supplier_name: `${row.supplier_name ?? row.description} ${longHebrew}` })));
+  return sampleCashLines(args.side);
 }
 
 function Lines({ side, order, lines }: LinesArgs) {
@@ -37,7 +43,7 @@ const meta = {
   argTypes: {
     side: { control: "select", options: ["out", "in", "kept"] },
     order: { control: "select", options: [...LINES_ORDERS] },
-    lines: { control: "select", options: ["plain", "flagged", "none"] },
+    lines: { control: "select", options: ["plain", "flagged", "none", "recurring", "long"] },
   },
   render: (args) => <Lines {...args} />,
 } satisfies Meta<LinesArgs>;
@@ -139,5 +145,38 @@ export const CashLinesKept: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
     await expect(canvas.getByText("כסף שזז בבנק, אבל אינו הכנסה או הוצאה.")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1048: every line carries FLOW-1035's flag: the קבוע / חד-פעמי chip, and the two groups it orders. */
+export const RecurringOrder: Story = {
+  args: { side: "out", order: "recurring", lines: "recurring" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("radio", { name: "קבוע / חד-פעמי" })).toHaveAttribute("aria-checked", "true");
+    await expect(canvas.getByRole("heading", { name: "קבועים" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1048: an older server sends no flag: the chip is hidden, and the page orders by date. */
+export const RecurringOrderNoFlag: Story = {
+  args: { side: "out", order: "recurring", lines: "plain" },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("radio", { name: "קבוע / חד-פעמי" })).toBeNull();
+  },
+};
+
+/** While the lines load (V3-States). */
+export const Loading: Story = { render: () => <LinesSkeleton /> };
+
+/** Long names and many lines (V3-States). */
+export const LongContent: Story = { args: { side: "out", order: "date", lines: "long" } };
+
+/** FLOW-1048: scrolled past the segment: the 56px bar comes down and the side segment docks into it. */
+export const Docked: Story = {
+  args: { side: "out", order: "date", lines: "long" },
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 900, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
   },
 };

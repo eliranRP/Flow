@@ -1,7 +1,7 @@
 import type { CashCurrencyRow, CashLine } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { cashSummaryRows, notInProfitMinor } from "./cash";
-import { groupLines, lineDayTitle, lineInitials, linesOrder, linesSummary } from "./cash-lines-groups";
+import { groupLines, lineDayTitle, lineInitials, linesKnowRecurring, linesOrder, linesSummary } from "./cash-lines-groups";
 
 const TODAY = "2026-10-11";
 
@@ -89,6 +89,35 @@ describe("groupLines by project and category", () => {
     const groups = groupLines(rows, "category", "out", TODAY);
     expect(groups.map((g) => g.title)).toEqual(["שיפוץ", "חומרים", "בלי קטגוריה"]);
     expect(groups.reduce((sum, g) => sum + (g.total ?? 0n), 0n)).toBe(linesSummary(rows, "out").total);
+  });
+});
+
+describe("groupLines by recurring or one-off (FLOW-1048, on FLOW-1035's flag)", () => {
+  const flagged = rows.map((row) => ({ ...row, recurring: row.transaction_id === "b" || row.transaction_id === "d" }));
+
+  it("reads ?order=recurring", () => {
+    expect(linesOrder("recurring")).toBe("recurring");
+  });
+
+  it("puts the recurring lines first, then the one-off ones, each newest first with its sum", () => {
+    const groups = groupLines(flagged, "recurring", "out", TODAY);
+    expect(groups.map((g) => [g.title, g.total, g.rows.map((row) => row.transaction_id)])).toEqual([
+      ["קבועים", 90_000n, ["b", "d"]],
+      ["חד-פעמי", 420_000n, ["a", "c"]],
+    ]);
+    expect(groups.reduce((sum, g) => sum + (g.total ?? 0n), 0n)).toBe(linesSummary(rows, "out").total);
+  });
+
+  it("leaves out a group with no line", () => {
+    const groups = groupLines(flagged.map((row) => ({ ...row, recurring: false })), "recurring", "out", TODAY);
+    expect(groups.map((g) => g.title)).toEqual(["חד-פעמי"]);
+  });
+
+  it("knows the order only when every line carries the flag (an older server sends none)", () => {
+    expect(linesKnowRecurring(flagged)).toBe(true);
+    expect(linesKnowRecurring(rows)).toBe(false);
+    expect(linesKnowRecurring([...flagged, ...rows.slice(0, 1)])).toBe(false);
+    expect(linesKnowRecurring([])).toBe(false);
   });
 });
 

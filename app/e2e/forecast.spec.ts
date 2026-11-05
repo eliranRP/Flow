@@ -16,8 +16,8 @@ test("Home: the late-bills row opens the list at its לא הגיעו section", a
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
   const late = page.locator("section", { has: page.getByRole("heading", { name: "לא הגיעו" }) });
   await expect(late.locator("li")).toHaveCount(2);
-  // FLOW-447: the row says how many days late the bill is, counted from its usual day.
-  await expect(late.locator("li").first()).toContainText("באיחור");
+  // FLOW-447, FLOW-1048: a card says how many days late the bill is (the first one, with a match, says so instead).
+  await expect(late.locator("li").nth(1)).toContainText("באיחור");
 });
 
 test("קבועים: a charge up 20% or more shows its change as the bad-news hint", async ({ page }) => {
@@ -59,7 +59,7 @@ test("קבועים on one project shows only its rows and names it (FLOW-424)", 
   await page.goto("/e2e/recurring?preview=1&project=p-birch-lane");
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
   await expect(page.locator(".ui-recurring-head").getByText("Birch Lane", { exact: true })).toBeVisible();
-  await expect(page.locator(".ui-recurring li")).toHaveCount(4);
+  await expect(page.locator(".ui-recurring-group .ui-row")).toHaveCount(4);
   await expect(page.getByText("Juniper Pointe HOA")).toHaveCount(0);
 });
 

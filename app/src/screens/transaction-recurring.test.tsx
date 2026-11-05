@@ -148,6 +148,6 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
 
   it("names a loan line's principal in the title", async () => {
     show({ ...base, pnl_fixed: true }, null);
-    expect(await screen.findByText("אור חשמל · קרן")).toBeInTheDocument();
+    await waitFor(() => { expect(document.querySelector(".ui-txn-supplier")).toHaveTextContent("אור חשמל · קרן"); });
   });
 });

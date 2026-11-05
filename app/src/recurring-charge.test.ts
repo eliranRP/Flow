@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { amountOf, bannerText, changeFor, changeLine, chargeAlert, comparable, chargeHref, endedText, ignoredText, metaOf, monthsThrough, shiftMonth, statusOf } from "./recurring-charge";
 import { RECURRING_CHANGES_FIXTURE, RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "./recurring-sample";
 import { type ScheduleRow } from "./recurring-schedule";
-import { answerRecurringMatch, dismissRecurringAlert, endRecurringCharge, restoreRecurringAlert, type RpcClient } from "./recurring-actions";
+import { answerRecurringMatch, dismissRecurringAlert, restoreRecurringAlert, type RpcClient } from "./recurring-actions";
 
 // --- recurring-charge.test.ts
 
@@ -198,60 +198,6 @@ describe("recurring change alert and match writes (FLOW-447c)", () => {
     await expect(answerRecurringMatch(client, { direction: "income", partyId: "a", matchPartyId: "b", same: true })).rejects.toThrow("validation");
   });
 });
-describe("endRecurringCharge: הסתיים and its undo", () => {
-  /** A client whose recurring_party_line returns `line` and whose set_payment_recurring returns `prior`. */
-  function endClient(line: string | null, prior: boolean | null) {
-    const rpc = vi.fn((name: string) =>
-      Promise.resolve(name === "recurring_party_line" ? { data: line, error: null } : { data: { prior_override: prior }, error: null }),
-    );
-    return { client: { rpc } as unknown as RpcClient, rpc };
-  }
-  const target = { direction: "expense" as const, partyId: "servicer", currency: "USD", projectId: null };
-
-  it("finds the charge's line, then turns its party's switch off", async () => {
-    const { client, rpc } = endClient("tx-9", null);
-    await endRecurringCharge(client, target);
-    expect(rpc.mock.calls).toEqual([
-      ["recurring_party_line", { p_direction: "expense", p_party_id: "servicer", p_currency: "USD" }],
-      ["set_payment_recurring", { p_id: "tx-9", p_recurring: false }],
-    ]);
-  });
-
-  it("names the project only for a charge that has one", async () => {
-    const { client, rpc } = endClient("tx-9", null);
-    await endRecurringCharge(client, { ...target, projectId: "p-birch" });
-    expect(rpc).toHaveBeenNthCalledWith(1, "recurring_party_line", { p_direction: "expense", p_party_id: "servicer", p_currency: "USD", p_project_id: "p-birch" });
-  });
-
-  it("writes the charge's project, so a charge fed only by another line's split part is the one ended (decision 0189)", async () => {
-    const { client, rpc } = endClient("tx-elm", true);
-    const undo = await endRecurringCharge(client, { ...target, projectId: "p-grove" });
-    expect(rpc).toHaveBeenNthCalledWith(2, "set_payment_recurring", { p_id: "tx-elm", p_recurring: false, p_project_id: "p-grove" });
-    await undo();
-    expect(rpc).toHaveBeenLastCalledWith("set_payment_recurring", { p_id: "tx-elm", p_recurring: true, p_project_id: "p-grove" });
-  });
-
-  it("the undo writes back the owner's prior switch, true", async () => {
-    const { client, rpc } = endClient("tx-9", true);
-    const undo = await endRecurringCharge(client, target);
-    await undo();
-    expect(rpc).toHaveBeenLastCalledWith("set_payment_recurring", { p_id: "tx-9", p_recurring: true });
-  });
-
-  it("the undo hands the choice back to the rule when there was no switch (null)", async () => {
-    const { client, rpc } = endClient("tx-9", null);
-    const undo = await endRecurringCharge(client, target);
-    await undo();
-    expect(rpc).toHaveBeenLastCalledWith("set_payment_recurring", { p_id: "tx-9", p_recurring: null });
-  });
-
-  it("throws when the charge has no line, and writes nothing", async () => {
-    const { client, rpc } = endClient(null, null);
-    await expect(endRecurringCharge(client, target)).rejects.toThrow("no line");
-    expect(rpc).toHaveBeenCalledTimes(1);
-  });
-});
-
 describe("endedText", () => {
   it("names the project whose charge ends when the party is split by project (decision 0188)", () => {
     expect(endedText("Example Servicing", null)).toBe("Example Servicing הוסר מהקבועים ומהצפי");

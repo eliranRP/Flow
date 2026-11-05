@@ -11,6 +11,7 @@ export function RecurringMatchBox({
   income,
   onYes,
   onNo,
+  onIgnore,
   className,
 }: {
   /** The suggested party's name. */
@@ -22,11 +23,13 @@ export function RecurringMatchBox({
   income: boolean;
   onYes: () => void;
   onNo: () => void;
+  /** FLOW-1048 (V3-Charge): the third answer, "התעלמות החודש": the late alert is set aside until the next late bill. */
+  onIgnore?: () => void;
   className?: string;
 }) {
   return (
-    <section className={cx("ui-recurring-match", className)} aria-label="אולי הגיע בשם אחר">
-      <p className="ui-recurring-match-title">אולי הגיע בשם אחר</p>
+    <section className={cx("ui-recurring-match", className)} aria-label="אולי הגיע בשם אחר?">
+      <p className="ui-recurring-match-title">אולי הגיע בשם אחר?</p>
       <p className="ui-recurring-match-detail">
         <bdi>{name}</bdi>
         {" · "}
@@ -41,6 +44,11 @@ export function RecurringMatchBox({
         <button type="button" className="ui-recurring-match-no ui-hit" onClick={onNo}>
           לא, זה משהו אחר
         </button>
+        {onIgnore == null ? null : (
+          <button type="button" className="ui-recurring-match-skip ui-hit" onClick={onIgnore}>
+            התעלמות החודש
+          </button>
+        )}
       </div>
     </section>
   );

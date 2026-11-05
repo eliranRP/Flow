@@ -33,14 +33,14 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
   return (
     <>
       {figure != null ? (
-        <p className="ui-breakdown-total ui-page-pad">
+        <p className="ui-breakdown-total">
           <span className="ui-breakdown-total-line">
             <Amount agorot={figure} currency={currency} size="total" income={side === "in"} />
           </span>
         </p>
       ) : null}
       {side === "kept" ? (
-        <p className="ui-breakdown-hint ui-page-pad t-caption t-muted">
+        <p className="ui-breakdown-hint t-caption t-muted">
           {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
         </p>
       ) : null}
@@ -48,7 +48,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
   );
 }
 
-/** The currency switch, shown only when the month has more than one currency. */
+/** The currency switch, shown only when the month has more than one currency. FLOW-1048: it docks into the bar with the side switch. */
 export function CashCurrencySwitch({
   currencies,
   currency,
@@ -60,15 +60,13 @@ export function CashCurrencySwitch({
 }) {
   if (currencies.length < 2) return null;
   return (
-    <div className="ui-page-pad">
-      <SegmentedControl
-        label="מטבע"
-        showLabel={false}
-        value={currency}
-        options={currencies.map((code) => ({ value: code, label: code }))}
-        onChange={onChange}
-      />
-    </div>
+    <SegmentedControl
+      label="מטבע"
+      showLabel={false}
+      value={currency}
+      options={currencies.map((code) => ({ value: code, label: code }))}
+      onChange={onChange}
+    />
   );
 }
 

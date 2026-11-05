@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { type CashLine, type CashMonths, formatAmountText } from "@flow/shared";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   type CashListSide,
@@ -19,6 +19,7 @@ import {
   LINES_ORDER_LABEL,
   LINES_ORDERS,
   lineInitials,
+  linesKnowRecurring,
   lineTagReason,
   linesOrder,
   linesSummary,
@@ -33,7 +34,12 @@ import { BandOfflineLine, PageLoadFailed, ReviewButton, useOnline } from "../ui/
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { lineTagText, rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
-import { ScreenHeader } from "../ui/screen-header";
+import { BackButton } from "../ui/back";
+import { CompactBar } from "../ui/compact-bar";
+import { DockSlot, useDockedFilter } from "../ui/dock-filter";
+import { FocusTitle } from "../ui/focus-title";
+import { GroupHead } from "../ui/group-head";
+import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
 import { LinesSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -44,9 +50,10 @@ import { OrderChips } from "../ui/order-chips";
 import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, LinesCount, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
 
 /**
- * FLOW-366. The lines behind one month's נכנס or יצא (or FLOW-418 the cash profit leaves out), in
- * the order ?order= picks: a segment to flip the side, the total and the count line, the order
- * chips, groups with sticky heads, and every page loaded up front.
+ * FLOW-366, FLOW-1048 (V3-Lines, the List pattern). The lines behind one month's נכנס or יצא (or FLOW-418 the
+ * cash profit leaves out), in the order ?order= picks: Back, the title, the month line and the figure; the side
+ * and currency segments, which dock into the 56px bar once they reach it; the order chips; then groups under
+ * one-line sticky heads, with every page loaded up front.
  */
 
 function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
@@ -90,9 +97,10 @@ export function monthOf(data: CashMonths | undefined, key: string) {
 
 const ORDER_OPTIONS = LINES_ORDERS.map((value) => ({ value, label: LINES_ORDER_LABEL[value] }));
 
+/** V3-Lines: נכנס on the start side, יצא after it. */
 const SIDE_OPTIONS: Array<{ value: "out" | "in"; label: string }> = [
-  { value: "out", label: "יצא" },
   { value: "in", label: "נכנס" },
+  { value: "out", label: "יצא" },
 ];
 
 function CashLinesBody({
@@ -125,7 +133,7 @@ function CashLinesBody({
   const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
   const allLoaded = sample != null || !hasNextPage;
   const [locationParams] = useSearchParams();
-  const order = linesOrder(locationParams.get("order"));
+  const requested = linesOrder(locationParams.get("order"));
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);
   const data = sample?.months ?? months.data ?? null;
@@ -136,6 +144,10 @@ function CashLinesBody({
   const monthName = cashMonthName(monthKey);
   const monthTitle = /\d{4}$/.test(monthName) ? monthName : `${monthName} ${monthKey.slice(0, 4)}`;
   const subtitle = `${monthTitle}${isThisMonth ? " • עד היום" : ""}`;
+  // FLOW-1048 (V3-Lines): the 56px bar comes down once the head has gone under it; the side and currency segments dock into it.
+  const [headEnd, setHeadEnd] = useState<HTMLElement | null>(null);
+  const barShown = useScrolledPast(headEnd, true, DETAIL_BAR);
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: DETAIL_BAR });
 
   if (phase.kind !== "ready") {
     // FLOW-965: a failed read hides the figures and says what happened, with נסו שוב and צריך עזרה?.
@@ -166,6 +178,9 @@ function CashLinesBody({
   // The total is the figure Home shows for the side (the server's month row); on a side that is not
   // נכנס or יצא it is the month's figure, and on נכנס and יצא the rows once every page is in.
   const total = side === "kept" ? figure : allLoaded ? (figure ?? summary.total) : null;
+  // FLOW-1048: the recurring-or-one-off order needs FLOW-1035's flag on every line; without it the page orders by date.
+  const knowsRecurring = linesKnowRecurring(rows);
+  const order: LinesOrder = requested === "recurring" && !knowsRecurring ? "date" : requested;
   const groups = groupLines(rows, order, side, sample?.today ?? israelToday());
   const shownIds = groups.flatMap((group) => group.rows.map((row) => row.transaction_id));
   const from = cashLinesPath(monthKey, side, currency, searchWith(search, order));
@@ -177,6 +192,7 @@ function CashLinesBody({
       value={side === "in" ? "in" : "out"}
       options={SIDE_OPTIONS}
       onChange={(next) => {
+        scrollUnderBar();
         void navigate(cashLinesPath(monthKey, next, currency, searchWith(search, order)), { replace: true });
       }}
     />
@@ -185,7 +201,7 @@ function CashLinesBody({
     <OrderChips
       className="ui-lines-chips"
       value={order}
-      options={ORDER_OPTIONS}
+      options={knowsRecurring ? ORDER_OPTIONS : ORDER_OPTIONS.filter((option) => option.value !== "recurring")}
       onChange={(value) => {
         void navigate(cashLinesPath(monthKey, side, currency, searchWith(search, value)), { replace: true });
       }}
@@ -196,10 +212,13 @@ function CashLinesBody({
       currencies={shown.map((row) => row.currency)}
       currency={currency}
       onChange={(next) => {
+        scrollUnderBar();
         void navigate(cashLinesPath(monthKey, side, next, search), { replace: true });
       }}
     />
   );
+  // The segments the bar holds once they reach it: the side, and the currency on a month with two.
+  const segments = side === "kept" ? currencies : <>{sideSwitch}{currencies}</>;
   const figureText = total == null ? undefined : formatAmountText(total < 0n ? -total : total, currency);
   const headBlock = side === "kept" ? (
     <CashLinesHead side={side} currency={currency} figure={figure} rest={rest} />
@@ -215,29 +234,34 @@ function CashLinesBody({
   );
   // FLOW-965: offline, the page keeps the lines it read and says from when.
   const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online ? (lines.dataUpdatedAt || null) : null;
+  const backText = isThisMonth ? "בית" : kicker;
   return (
-    <div>
-      <ScreenHeader
-        layout="stacked"
-        className="ui-lines-header"
-        title={title}
+    <div className="ui-lines">
+      <CompactBar
+        title={`${title} · ${monthName}`}
+        figure={figureText}
+        label={backText}
         backTo={back}
-        backText={isThisMonth ? "בית" : kicker}
-        aboveTitle={side === "kept" ? undefined : <div className="ui-lines-switch">{sideSwitch}</div>}
-        subtitle={subtitle}
-        compactFigure={figureText}
-        panel={side === "kept" ? chips : <>{sideSwitch}{chips}</>}
-        below={
-          <div className="ui-lines-head">
-            {headBlock}
-            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
-            {currencies}
-            {chips}
-          </div>
-        }
+        size="detail"
+        shown={barShown}
+        dock={segments}
+        docked={docked}
       />
+      <header className="ui-lines-head">
+        <BackButton fallback={back} text={backText} />
+        <FocusTitle className="t-title">{title}</FocusTitle>
+        <p className="ui-lines-sub t-meta">{subtitle}</p>
+        {headBlock}
+        {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
+        <span ref={setHeadEnd} className="ui-compact-mark" aria-hidden="true" />
+      </header>
+      <div className="ui-lines-filter">
+        <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+        <DockSlot docked={docked}>{segments}</DockSlot>
+        {chips}
+      </div>
       {/* The נכנס / יצא tabs' panel: what the list below shows. */}
-      <div role={side === "kept" ? undefined : "tabpanel"} aria-label={side === "kept" ? undefined : side === "in" ? "נכנס" : "יצא"}>
+      <div className="ui-lines-body" role={side === "kept" ? undefined : "tabpanel"} aria-label={side === "kept" ? undefined : side === "in" ? "נכנס" : "יצא"}>
       {rows.length === 0 && allLoaded ? (
         <CashLinesEmpty
           side={side}
@@ -249,12 +273,13 @@ function CashLinesBody({
           }}
         />
       ) : (
-        groups.map((group) => (
-          <section key={group.key} className="ui-lines-group" aria-label={group.title}>
-            <div className={side === "in" ? "ui-lines-group-head ui-lines-group-head-in" : "ui-lines-group-head"}>
-              <h2 className="t-section ui-lines-group-title">{group.title}</h2>
-              {group.total != null ? <LinesGroupSum total={group.total} side={side} currency={currency} /> : null}
-            </div>
+        groups.map((group, index) => (
+          <section key={group.key} className="ui-month ui-lines-group" aria-label={group.title}>
+            <GroupHead
+              id={`lines-group-${String(index)}`}
+              title={group.title}
+              summary={group.total != null ? <LinesGroupSum total={group.total} side={side} currency={currency} /> : `${String(group.rows.length)} תנועות`}
+            />
             <List layout="flat">
               {group.rows.map((row) => {
                 // FLOW-432: a split line names the parts this list counts, out of the whole line.
@@ -290,6 +315,7 @@ function CashLinesBody({
     </div>
   );
 }
+
 
 /** A group's sum, with the plus on money in (decision 0181); a negative sum keeps its minus. */
 function LinesGroupSum({ total, side, currency }: { total: bigint; side: CashListSide; currency: string }) {

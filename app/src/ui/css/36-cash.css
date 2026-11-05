@@ -7,76 +7,63 @@
   background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
 }
 
-/* FLOW-366: the month lines page. The count line sits under the total, in muted text, at the board's 15px. */
-.ui-lines-count {
-  margin: 0;
-  color: var(--color-text-muted);
-  /* board: 15px lines at 1.2 (the token), and the count sits 8px under the head gap (the total to count gap is 4px). */
-  line-height: var(--type-card-line);
-  margin-block-start: calc(var(--space-2) * -1);
+/* FLOW-366, FLOW-1048 (V3-Lines, the List pattern): the month lines page. Back, the title, the month line and
+   the figure stack in one column at the page's side margin; the room under the tab bar ends the page. */
+.ui-lines {
+  padding-bottom: calc(var(--tabbar-height) + var(--space-section));
 }
 
-.ui-lines-head > .ui-breakdown-total {
-  /* board: the total sits 3px lower than the title block's gap gives it. */
-  padding-block-start: var(--pill-pad-block);
-}
-
-/* The board's tag line sits right under its hint (the hint and tag share one block). */
-.ui-lines-group .ui-row-tagline {
-  margin-block-start: 0;
-}
-
-/* board: a line is 73px at least, its three lines set at their natural height. */
-.ui-lines-group .ui-project-list .ui-row {
-  min-block-size: 73px;
-}
-
-.ui-lines-group :is(.ui-row-title, .ui-row-hint, .ui-row-tagline) {
-  line-height: var(--type-card-line);
-}
-
-/* board: the back row sits 4px higher and the period line 3px lower than the shared header draws them
-   (offsets only, so the switch, the figure and the chips keep their places). */
-.ui-lines-header .ui-page-title-row {
-  position: relative;
-  inset-block-start: calc(var(--space-1) * -1);
-}
-
-.ui-lines-header .t-line2:where(:not(.ui-lines-count)) {
-  position: relative;
-  inset-block-start: calc(var(--space-1) * 0.75);
-}
-
-/* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's
-   below slot is a row for the breakdown's single control, so the lines page wraps its own. */
 .ui-lines-head {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: calc(var(--safe-top) + var(--space-2)) var(--space-side) 0;
+}
+
+.ui-lines-sub {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* The count line sits under the total, in muted text. */
+.ui-lines-count {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--type-card-line);
+}
+
+.ui-lines-head > .ui-breakdown-total {
+  margin-block-start: var(--space-2);
+}
+
+/* FLOW-965: the page's states: the review button and the offline line sit in the head. */
+.ui-lines-head .ui-review-cta,
+.ui-lines-head .ui-page-offline {
+  inline-size: 100%;
+  margin-block-start: var(--space-2);
+}
+
+/* The segments (the side, and the currency on a month with two) and the order chips under the head; the
+   segments dock into the compact bar once they reach it (DockSlot keeps their place). */
+.ui-lines-filter {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  inline-size: 100%;
-  min-inline-size: 0;
+  padding: var(--space-4) var(--space-side) 0;
 }
 
-.ui-lines-head .ui-seg {
+.ui-lines-filter .ui-dock-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-lines-filter .ui-seg {
   inline-size: 100%;
 }
 
-/* FLOW-366: the side switch sits above the title, full width, as the board draws it. */
-.ui-lines-switch {
-  inline-size: 100%;
-  /* The board: the track sits lower under the back link, and the title sits well under the track. */
-  margin-block: var(--space-2) var(--space-3);
-}
-
-.ui-lines-switch .ui-seg {
-  inline-size: 100%;
-  /* The board sets יצא on the left half of the segment, on a surface-coloured track. */
-  direction: ltr;
-  background: var(--color-surface);
-}
-
-/* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text.
-   The organize row's component is gone (FLOW-368), so the row is plain flex here. */
+/* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text. */
 .ui-lines-chips {
   display: flex;
   gap: var(--space-2);
@@ -87,7 +74,7 @@
   scrollbar-width: none;
   /* Room for the 44px hit area and the focus ring around the chips, without moving them. */
   margin-block: calc(var(--space-1) * -1);
-  margin-inline: calc(var(--space-4) * -1);
+  margin-inline: calc(var(--space-side) * -1);
   padding-block: var(--space-1);
   padding-inline: var(--space-side);
 }
@@ -98,8 +85,18 @@
   max-width: none;
 }
 
-/* A group: its head sticks under the top of the screen, or under the compact bar when it shows
-   (--month-sticky-top, set on html by 27-compact-header.css). */
+/* The board's tag line sits right under its hint (the hint and tag share one block). */
+.ui-lines-group .ui-row-tagline {
+  margin-block-start: 0;
+}
+
+.ui-lines-group :is(.ui-row-title, .ui-row-hint, .ui-row-tagline) {
+  line-height: var(--type-card-line);
+}
+
+/* A group: its section pads the page's sides, so its one-line head (GroupHead) bleeds to the edge and
+   sticks under the bar and its dock (--month-sticky-top, 27-compact-header.css). Company profit's year
+   groups share the section and its hand-rolled head. */
 .ui-lines-group {
   padding: 0 var(--space-side) var(--space-2);
 }
@@ -122,11 +119,6 @@
   background: var(--color-bg);
 }
 
-/* The נכנס view's group heads draw their rows right under the head, with no gap under it (board LinesIn). */
-.ui-lines-group-head-in {
-  padding-block-end: 0;
-}
-
 .ui-lines-group-title {
   margin: 0;
 }
@@ -134,14 +126,6 @@
 .ui-lines-group-sum {
   color: var(--color-text-muted);
   white-space: nowrap;
-}
-
-/* FLOW-965: the page's states: the review button and the offline line sit in the head, the failed and empty
-   cards under it at the page's sides (band-states' page cards). */
-.ui-lines-head .ui-review-cta,
-.ui-lines-head .ui-page-offline {
-  inline-size: 100%;
-  margin-block-start: 0;
 }
 
 .ui-lines-state {

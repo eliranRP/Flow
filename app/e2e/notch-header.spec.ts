@@ -81,10 +81,10 @@ async function headerCuts(): Promise<string[]> {
     window.scrollTo(0, y);
     await frame();
     await frame();
-    const bars = [...document.querySelectorAll<HTMLElement>(".ui-compact-bar.m-bar-in, .ui-txn-top-past")];
+    const bars = [...document.querySelectorAll<HTMLElement>(".ui-compact-bar.m-bar-in")];
     if (bars.length === 0) continue;
     const edge = Math.max(...bars.map((bar) => bar.getBoundingClientRect().bottom));
-    for (const root of document.querySelectorAll("header:not(.ui-txn-top), .ui-txn-head, .ui-pp-figure")) {
+    for (const root of document.querySelectorAll("header, .ui-txn-head, .ui-pp-figure")) {
       if (root.closest(".ui-compact-bar, .ui-sheet, [role=dialog]")) continue;
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -117,7 +117,7 @@ test.describe("header lines and the top bar's edge", () => {
     test(`${route}: under a notch no header line sits half under the top bar at any scroll`, async ({ page }) => {
       await page.goto(`/e2e/${route}`);
       await expect(page.locator("h1").first()).toBeVisible();
-      await expect(page.locator(".ui-compact-bar.m-bar-in, .ui-txn-top-past")).toHaveCount(0);
+      await expect(page.locator(".ui-compact-bar.m-bar-in")).toHaveCount(0);
       expect(await page.evaluate(headerCuts)).toEqual([]);
     });
   }

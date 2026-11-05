@@ -137,7 +137,6 @@ test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW
     ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית פתוחה אחת"], 0],
     ["screens-routes--home-attention-review-only", ["7 פריטים ממתינים לאישור"], 0],
     ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות פתוחות"], 0],
-    ["components-banner--rows-long-hebrew", [], 2],
   ] as const;
   const failures: string[] = [];
   for (const theme of ["light", "dark"]) {

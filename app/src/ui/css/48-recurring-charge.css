@@ -5,26 +5,29 @@
   background: var(--color-bg);
 }
 
-/* The top bar is in the flow, so the body starts under it; the 14px column gap, the sides at 16px. */
+/* FLOW-1048 (V3-Charge, the Detail pattern): the page's own Back on top, the 14px column gap, the 20px side margin. */
 .ui-charge-body {
   display: grid;
   gap: var(--space-inset-row);
-  padding: var(--space-3) var(--space-4) calc(var(--space-6) + var(--space-1));
+  padding: calc(var(--safe-top) + var(--space-2)) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
 }
 
+.ui-charge-back {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* The head: the status line (14/500, coloured by state), the name (24/600), the figure (40), the meta line. */
 .ui-charge-head {
   display: grid;
-  gap: var(--space-2);
-  padding-inline: var(--space-1);
+  gap: var(--space-1);
 }
 
 .ui-charge-status {
   margin: 0;
   color: var(--color-accent-text);
-  /* board: 13px, its own line height, and 5px more than the column gap before the name. */
-  margin-block-end: calc(var(--space-1) + 1px);
-  font-size: var(--type-caption-size);
-  line-height: calc(var(--type-title-line) - 0.015);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
   font-weight: var(--type-chip-weight);
   text-align: start;
 }
@@ -36,8 +39,8 @@
 .ui-charge-name {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--type-section-size);
-  line-height: calc(var(--type-title-line) - 0.015);
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
   font-weight: var(--type-name-weight);
   overflow-wrap: anywhere;
 }
@@ -45,10 +48,11 @@
 .ui-charge-amount {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--type-title-size);
+  font-size: var(--type-detail-size);
   line-height: var(--type-detail-line);
   font-weight: var(--type-detail-weight);
   font-variant-numeric: tabular-nums;
+  /* The figure is its own LTR run (dir="ltr"): its end is the page's start side. */
   text-align: end;
 }
 

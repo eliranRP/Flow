@@ -1,31 +1,52 @@
-/* FLOW-447: the קבועים list, measured against the board (Recurring.dc.html). Tokens only; the card comes from 40-card.css. */
+/* FLOW-447, FLOW-1048: the קבועים list and the changed charges (V3-Recurring, V3-Changes), the List pattern: the
+   stacked head (ScreenHeader), then the body with the page's side margin. Tokens only. */
 .ui-recurring {
   display: flex;
   flex-direction: column;
-  padding: calc(var(--space-4) + var(--space-10) + var(--space-1)) var(--space-side) var(--space-6);
+  padding-bottom: calc(var(--tabbar-height) + var(--space-section));
 }
 
-.ui-recurring .t-line2 {
-  font-size: var(--type-line2-size);
-  line-height: var(--type-title-line);
+.ui-recurring-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-inline: var(--space-side);
+}
+
+/* The figure under the month line: what is still to pay (40), and under it what was paid and what is still to come in. */
+.ui-recurring-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-recurring-figure-label,
+.ui-recurring-figure-line {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-recurring-figure {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-recurring-income {
+  color: var(--color-income);
+}
+
+/* A charge not paid yet: its amount in the muted colour, as the board draws a due row. */
+.ui-recurring-due .ui-num {
   color: var(--color-text-muted);
 }
 
-/* FLOW-1014: הוספת קבוע under the month card (or as the empty state's action): the page already pads its sides. */
+.ui-recurring-alert {
+  color: var(--color-signal-soft);
+}
+
+/* FLOW-1014: הוספת קבוע at the end of the list (or as the empty state's action): the body already pads its sides. */
 .ui-recurring .ui-pn-edits {
   padding: var(--space-2) 0 0;
-}
-
-/* FLOW-1021: חיובים שהשתנו: the changed charges' card spans the page's own padding, as the month card does. */
-.ui-recurring .ui-banner-rows,
-.ui-recurring > .ui-banner {
-  margin: var(--space-6) 0 0;
-}
-
-/* FLOW-1030: the changed charges' rows while they load: the loaded rows' 12px inset and 70px height. */
-.ui-changes-skel .ui-skel-list-row {
-  block-size: calc(var(--space-8) * 2 + var(--space-1) + var(--space-half));
-  padding-inline: var(--space-3);
 }
 
 /* FLOW-1014: the empty screen's line is read in full at 320, not clipped after three lines. */
@@ -35,360 +56,48 @@
   -webkit-line-clamp: unset;
 }
 
-.ui-recurring-head {
+/* FLOW-1048 (V3-Changes): a changed charge's row and its X (seen), side by side on one 72px line. */
+.ui-changes-list {
   display: flex;
   flex-direction: column;
-}
-
-.ui-recurring-head > h1 {
-  margin: var(--space-1) 0 calc(var(--space-1) / 2);
-  font-size: var(--type-title-size);
-  font-weight: var(--type-title-weight);
-  line-height: var(--type-title-line);
-}
-
-.ui-recurring-head > .t-sheet {
   margin: 0;
-  font-weight: var(--type-section-weight);
-}
-
-/* The month card: the takeaway across it (FLOW-963), then income and expenses side by side, each a 32px
-   total, a 6px bar and two grey lines. */
-.ui-recurring-sums {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(var(--space-4) + var(--space-1) / 2);
-  margin-top: var(--space-4);
-  padding: calc(var(--space-4) + var(--space-1) / 2);
-  border-radius: var(--radius-card);
-}
-
-.ui-recurring-takeaway {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: var(--type-body-size);
-  font-weight: var(--type-section-weight);
-  line-height: var(--type-line2-line);
-}
-
-.ui-recurring-takeaway bdi {
-  font-variant-numeric: tabular-nums;
-}
-
-.ui-recurring-sum {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.ui-recurring-sum-label {
-  margin: 0;
-  font-size: var(--type-line2-size);
-  line-height: var(--type-title-line);
-  color: var(--color-text-secondary);
-}
-
-.ui-recurring-sum-total {
-  font-size: var(--type-title-size);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--type-card-weight);
-  line-height: var(--type-total-line);
-  text-align: start;
-  color: var(--color-text);
-}
-
-.ui-recurring-sum-total.ui-recurring-income {
-  color: var(--color-income);
-}
-
-/* On a 320 phone two 32px totals side by side do not fit ("+$5,600"): the card's 28px. */
-@media (max-width: 359px) {
-  .ui-recurring-sum-total {
-    font-size: var(--type-card-size);
-  }
-}
-
-.ui-recurring-sum-note {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin: 0;
-  font-size: var(--type-caption-size);
-  line-height: var(--type-title-line);
-  color: var(--color-text-muted);
-}
-
-/* FLOW-963: the bar's empty part is an outline at 3:1, not a 1.4:1 fill (visual § 7). */
-.ui-recurring-bar {
-  height: var(--bar-thin);
-  border-radius: var(--radius-chip);
-  box-shadow: inset 0 0 0 1px var(--color-track-outline);
-  overflow: hidden;
-}
-
-.ui-recurring-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-chip);
-  background: var(--color-accent);
-}
-
-/* The late bills: a tinted box (14px in, 22px above) headed by a clock and the line that asks for a decision. */
-.ui-recurring-late {
-  margin-top: calc(var(--space-5) + var(--space-1) / 2);
-  padding: 0 var(--space-inset-row) calc(var(--space-1) * 1.5);
-  border-radius: var(--radius-card);
-  background: var(--color-tint);
-}
-
-.ui-recurring-late-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-inset-row) 0 calc(var(--space-1) * 1.5);
-}
-
-.ui-recurring-late-icon {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  inline-size: var(--avatar);
-  block-size: var(--avatar);
-  border-radius: var(--radius-chip);
-  background: var(--color-tint-strong);
-  color: var(--color-signal-soft);
-}
-
-.ui-recurring-late-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-half);
-}
-
-.ui-recurring-late-title {
-  margin: 0;
-  font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
-  line-height: var(--type-title-line);
-}
-
-.ui-recurring-late-lead {
-  font-size: var(--type-caption-size);
-  line-height: var(--type-title-line);
-  color: var(--color-text-secondary);
-}
-
-.ui-recurring .ui-recurring-late .ui-swipe-row-body {
-  background: var(--color-tint);
-}
-
-/* A side's head: "הכנסות קבועות" or "הוצאות קבועות" in a raised strip, 28px above, with what it expects. */
-.ui-recurring-side {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(var(--space-2) + var(--space-half));
-  margin-top: calc(var(--space-6) + var(--space-1));
-  padding: var(--space-3) var(--space-inset-row);
-  border-radius: var(--radius-card-tight);
-  background: var(--color-surface);
-}
-
-.ui-recurring-side-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--type-body-size);
-  font-weight: var(--type-section-weight);
-  color: var(--color-text);
-}
-
-.ui-recurring-side-dot {
-  inline-size: calc(var(--space-1) * 1.5);
-  block-size: calc(var(--space-1) * 1.5);
-  border-radius: var(--radius-chip);
-  background: var(--color-text-muted);
-}
-
-.ui-recurring-side-income .ui-recurring-side-dot {
-  background: var(--color-income);
-}
-
-.ui-recurring-side-note {
-  font-size: var(--type-caption-size);
-  color: var(--color-text-muted);
-}
-
-.ui-recurring-side-note > bdi {
-  font-size: var(--type-line2-size);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text);
-}
-
-.ui-recurring-side-income .ui-recurring-side-note > bdi {
-  color: var(--color-income);
-}
-
-/* A late charge's question under its row: 50px in from the start, the card tone, two answers. */
-.ui-recurring-ask {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-half));
-  margin: 0 0 calc(var(--space-2) + var(--space-half));
-  margin-inline-start: calc(var(--avatar) + var(--space-inset-row));
-  padding: var(--space-3) var(--space-inset-row);
-  border-radius: var(--radius-toast);
-  background: var(--color-surface);
-}
-
-.ui-recurring-ask-text {
-  margin: 0;
-  font-size: var(--type-line2-size);
-  line-height: var(--type-title-line);
-}
-
-/* A section head: 22px above, 6px under, the title 20/500 and the note on its baseline. */
-.ui-recurring .ui-section-head {
-  align-items: baseline;
-  margin: 0;
-  padding: calc(var(--space-5) + var(--space-1) / 2) 0 calc(var(--space-1) + var(--space-1) / 2);
-}
-
-.ui-recurring .ui-section-head > h2 {
-  font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
-  line-height: var(--type-title-line);
-}
-
-.ui-recurring-rows {
+  padding: 0;
   list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
-/* A row: initial, name over place, amount over hint at the far end; no tint, the page colour behind it. */
-.ui-recurring-row {
+.ui-changes-item {
   display: flex;
   align-items: center;
-  gap: var(--space-inset-row);
-  box-sizing: border-box;
-  min-height: calc(var(--space-8) * 2);
-  padding: var(--space-2) 0;
-  color: var(--color-text);
-  text-decoration: none;
-}
-
-.ui-recurring .ui-swipe-row-body {
-  background: var(--color-bg);
-}
-
-.ui-recurring .ui-avatar {
-  font-weight: var(--type-chip-weight);
-}
-
-.ui-recurring-name {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   min-width: 0;
-  text-align: start;
 }
 
-/* FLOW-963: a long name or place wraps to a second line rather than losing its end (at 320 the late
-   box's rows are 116px wide). */
-.ui-recurring-name > span {
-  overflow-wrap: anywhere;
+.ui-changes-item > .ui-row {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.ui-recurring-title {
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-weight);
-  line-height: var(--type-title-line);
-  color: var(--color-text);
-}
-
-.ui-recurring-amount {
-  display: flex;
+.ui-changes-item > .ui-icon-btn {
   flex: none;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: calc(var(--space-1) / 2);
-  font-size: var(--type-body-size);
-  line-height: var(--type-title-line);
-  font-variant-numeric: tabular-nums;
-}
-
-.ui-recurring-amount > span:first-child {
-  direction: ltr;
-  color: var(--color-text);
-}
-
-.ui-recurring-row-open .ui-recurring-amount > span:first-child {
   color: var(--color-text-muted);
 }
 
-.ui-recurring-amount > .t-line2 {
-  font-size: var(--type-caption-size);
-}
-
-.ui-recurring-amount > .ui-recurring-alert {
-  color: var(--color-signal-soft);
-}
-
-.ui-recurring-amount > span:first-child.ui-recurring-income {
-  color: var(--color-income);
-}
-
-/* FLOW-447b: a late bill that still alerts. The swipe reveals the ignore action; its button is for
-   a keyboard, a screen reader and a mouse, and shows only when it has focus. */
-.ui-recurring-item {
-  position: relative;
-}
-
-.ui-recurring .ui-swipe-row-under {
-  border-radius: 0;
-  padding-inline: var(--space-2);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-}
-
-.ui-recurring-ignore {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-  inline-size: 1px;
-  block-size: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-  font: inherit;
-  font-size: var(--type-line2-size);
-}
-
-.ui-recurring-ignore:focus-visible {
-  inline-size: auto;
-  block-size: 44px;
+.ui-changes-note {
   margin: 0;
-  padding-inline: var(--space-3);
-  overflow: visible;
-  clip: auto;
-  white-space: normal;
-  z-index: 1;
+  color: var(--color-text-secondary);
 }
 
-.ui-recurring .ui-recurring-suggest {
-  color: var(--color-accent-text);
+/* FLOW-1030: the changed charges' rows while they load: the loaded rows' 12px inset and 70px height. */
+.ui-changes-skel .ui-skel-list-row {
+  block-size: calc(var(--space-8) * 2 + var(--space-1) + var(--space-half));
+  padding-inline: var(--space-3);
 }
 
 /* The loading skeleton, as the States board draws it: the real title, a 12/34/6 stack 14px under it, two groups. */
+.ui-recurring-skeleton {
+  padding: calc(var(--space-4) + var(--space-10) + var(--space-1)) var(--space-side) var(--space-6);
+}
+
 .ui-recurring-skeleton-top {
   display: flex;
   flex-direction: column;
