@@ -211,7 +211,7 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
     <div className="ui-loans-screen">
       <TopBand
         wordmark={false}
-        leading={<h1 className="ui-loans-band-title t-name">הלוואות</h1>}
+        leading={<h1 className="ui-loans-band-title t-sheet">הלוואות</h1>}
         trailing={add}
         hero={ctx.loading ? (
           <div className="ui-loans-band-skel" aria-hidden="true">

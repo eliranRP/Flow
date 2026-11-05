@@ -197,7 +197,7 @@
   --band-progress-track: rgba(255, 255, 255, 0.2); /* the principal's progress on the band (V3-Loans, V3-Loan, FLOW-1055) */
   --band-card: rgba(255, 255, 255, 0.14); /* the next payment's card on a loan's band (V3-Loan, FLOW-1055) */
   --size-seg-period: 190px;      /* the loan page's period switch beside שולם (V3-Loan, FLOW-1055) */
-  --line-board: normal;           /* the v3 boards' leading: Rubik's own line (17px text on 20, 14 on 17, 20 on 24), V3-Loans (FLOW-1055) */
+  --line-board: normal;           /* the v3 boards' leading: Rubik's own line (17px text on 20, 13 on 15), V3-Loan (FLOW-1055) */
   --tabbar-label-line: 15px;      /* the tab label's line: 1 + 8 + 36 + 4 + 15 = 64 (V3-Home, FLOW-1051) */
   --swipe-action: 120px;
   --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */

@@ -46,23 +46,24 @@
   min-inline-size: 0;
 }
 
+/* Decision 0258: the band's text keeps v2's sizes (labels and rows 16/500); the board's spacing stays. */
 .ui-loan-band-name .ui-focus-title {
   margin: 0;
-  line-height: var(--line-board);
 }
 
 .ui-loan-band-sub {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-line2-size);
-  line-height: var(--line-board);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-loan-band-label {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-body-size);
-  line-height: var(--line-board);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-btn-2-line);
 }
 
 /* A loan's two rows are 40px each, 6px apart. */
@@ -89,8 +90,8 @@
 .ui-loan-band-caption {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 /* The note waiting for a check (V3-Loan-Note): what to check, then הפרטים נכונים and עריכה side by side. */

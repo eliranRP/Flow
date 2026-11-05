@@ -202,7 +202,7 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
         hero={(
           <div className="ui-loans-band">
             <div className="ui-loan-band-name">
-              <FocusTitle className="t-name">סיכום הלוואות</FocusTitle>
+              <FocusTitle className="t-sheet">סיכום הלוואות</FocusTitle>
               {summary == null ? null : <p className="ui-loan-band-sub">{summary.sub}</p>}
             </div>
             {/* FLOW-1055 (V3-LoansSummary): the period switch sits in the band, under the title; it docks into the bar. */}

@@ -99,7 +99,7 @@ export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended
         hero={(
           <div className="ui-loan-band">
             <div className="ui-loan-band-name">
-              <FocusTitle className="t-name">{loan.name}</FocusTitle>
+              <FocusTitle className="t-sheet">{loan.name}</FocusTitle>
               <p className="ui-loan-band-sub">{loanSubtitle(loan, projectName)}</p>
             </div>
             {ended ? null : <div className="ui-band-fade ui-loan-band-figures">
