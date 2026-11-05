@@ -14,7 +14,7 @@ A loan payment is the most regular line there is: the same amount to the same se
 
 **A loan category is never filled on a whole line.** `jev_prefill` skips a category with a `loan_part` (interest, escrow, principal). The owner can still choose one.
 
-**Jev's loan category starts a split instead.** When Jev's category for an expense line is a loan category at or above the threshold, in auto mode, and the owner has not set the line, the tagging job looks for the loan the payment belongs to. It must be exactly one open loan with a schedule (not demand), in the line's currency, that takes a payment on the line's date, with a balance left, whose monthly payment on that date equals the line; else, the one such loan whose newest attached payment had the same amount (the same recurring payment after an escrow change). None, or more than one, writes nothing. The gate is the category answer alone: the project answer does not hold the split back.
+**Jev's loan category starts a split instead.** When Jev's category for an expense line is a loan category at or above the threshold, in auto mode, and the owner has not set the line, the tagging job looks for the loan the payment belongs to. It must be exactly one open loan with a schedule (not demand), in the line's currency, that takes a payment on the line's date, with a balance left, whose monthly payment on that date equals the line; else, the one such loan whose newest attached payment had the same amount (the same recurring payment after an escrow change). None, or more than one, writes nothing. A loan that already has a payment attached in the line's month is left out, so a second payment that month (a catch-up or a duplicate) never takes the same schedule row twice. The gate is the category answer alone: the project answer does not hold the split back.
 
 **The numbers come from the schedule, as in the app.** The job computes the split the way `attach_loan_payment` does with no parts given: the schedule row for the line's date, principal taking any difference ([0088](0088-loans.md)), refused when the principal would pass the balance. Jev supplies no amount.
 
@@ -33,7 +33,7 @@ A loan payment is the most regular line there is: the same amount to the same se
 
 ## Consequences
 
-- From the next tagging run, a recurring loan payment in auto mode arrives in לאישור already split, and the loan balance moves once it is approved (a posted line's split already counts, as any split does).
+- From the next tagging run, a recurring loan payment in auto mode arrives in לאישור already split. The loan balance and the P&L move as soon as the split is written, while the line still waits for approval, as they do for any split on a posted bank line and for Jev's category fills ([0145](0145-jev-auto-mode.md)); undo puts them back.
 - A payment that matches no loan, or two, waits for the owner as before, with the bank's hint, not a loan category.
 - Lines already approved are not touched: the owner (or the MCP agent) attaches them with the match sheet or `attach_loan_payment`.
 - The review card does not yet say that Jev split the line: [FLOW-1033](../backlog/tasks/FLOW-1033.md).

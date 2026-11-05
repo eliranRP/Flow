@@ -5,11 +5,12 @@
 
 begin;
 
-select plan(23);
+select plan(32);
 
 do $users$
 begin
   perform tests.create_supabase_user('jls_owner', 'jls-owner@example.com');
+  perform tests.create_supabase_user('jls_other', 'jls-other@example.com');
 end
 $users$;
 
@@ -27,8 +28,11 @@ grant execute on function pg_temp.id(text) to authenticated, service_role;
 
 select tests.authenticate_as('jls_owner');
 select public.create_company('Example Jev Loan Co', true);
+select tests.authenticate_as('jls_other');
+select public.create_company('Example Other Loan Co', true);
 reset role;
 insert into jls (label, id) select 'co', id from public.companies where name = 'Example Jev Loan Co';
+insert into jls (label, id) select 'co_b', id from public.companies where name = 'Example Other Loan Co';
 insert into jls (label, id)
 select 'cat_' || c.loan_part::text, c.id from public.categories c
 where c.company_id = pg_temp.id('co') and c.loan_part is not null;
@@ -49,23 +53,36 @@ insert into jls (label, id) select 'mortgage', id from public.loans where name =
 insert into jls (label, id) select 'demand', id from public.loans where name = 'Example Demand';
 insert into jls (label, id) select 'closed', id from public.loans where name = 'Example Closed';
 update public.loans set status = 'closed', closed_on = '2026-01-15' where id = pg_temp.id('closed');
+-- Company B's own loan, same terms.
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date,
+  payment_minor, escrow_minor, currency, kind)
+values (pg_temp.id('co_b'), 'Example Mortgage B', 12000000, 60000, 360, '2026-01-01', 81946, 10000, 'USD', 'amortizing');
+insert into jls (label, id) select 'mortgage_b', id from public.loans where name = 'Example Mortgage B';
 
 insert into public.transactions (
   company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original,
   vat_amount, vat_status, doc_date, cash_date, currency, source, idempotency_key, description,
   category_id, user_assigned, category_assigned
 )
-select pg_temp.id('co'), 'expense', 'expense', 'posted', -81946, -81946, 81946, 0, 'unknown',
+select pg_temp.id(v.co), v.dir::public.txn_direction,
+  case when v.dir = 'expense' then 'expense' else 'invoice' end::public.doc_kind, 'posted',
+  v.sign * 81946, v.sign * 81946, 81946, 0, 'unknown',
   v.day, v.day, 'USD', 'manual', 'jls:' || v.label, 'Example servicer payment',
-  pg_temp.id('cat_principal'), v.assigned, v.assigned
+  case when v.dir = 'expense' then (select c.id from public.categories c
+    where c.company_id = pg_temp.id(v.co) and c.loan_part = 'principal') end,
+  v.user_set, v.cat_set
 from (values
-  ('l1', '2026-02-01'::date, false),
-  ('l2', '2026-03-01'::date, false),
-  ('l3', '2026-04-01'::date, false),
-  ('l_closed', '2026-05-01'::date, false),
-  ('l_set', '2026-05-02'::date, true),
-  ('l_bad', '2026-05-03'::date, false)
-) as v(label, day, assigned);
+  ('l1', 'co', 'expense', -1, '2026-02-01'::date, false, false),
+  ('l2', 'co', 'expense', -1, '2026-03-01'::date, false, false),
+  ('l3', 'co', 'expense', -1, '2026-04-01'::date, false, false),
+  ('l_closed', 'co', 'expense', -1, '2026-05-01'::date, false, false),
+  ('l_set', 'co', 'expense', -1, '2026-05-02'::date, true, true),
+  ('l_bad', 'co', 'expense', -1, '2026-05-03'::date, false, false),
+  ('l_user', 'co', 'expense', -1, '2026-05-04'::date, true, false),
+  ('l_inc', 'co', 'income', 1, '2026-05-05'::date, false, false),
+  ('l_conf', 'co', 'expense', -1, '2026-06-01'::date, false, false),
+  ('l_b', 'co_b', 'expense', -1, '2026-02-01'::date, false, false)
+) as v(label, co, dir, sign, day, user_set, cat_set);
 insert into jls (label, id) select replace(idempotency_key, 'jls:', ''), id
 from public.transactions where idempotency_key like 'jls:%';
 insert into public.review_queue (company_id, transaction_id, status, reason)
@@ -131,6 +148,20 @@ begin
   insert into jls_out values ('l2', public.jev_prefill_loan(
     pg_temp.id('co'), pg_temp.id('l2'), pg_temp.id('mortgage'), pg_temp.parts(59940, 10000, 12006), 'jev-1.13.0', 0.95));
   insert into jls_out values ('cands_after', public.jev_loan_candidates(pg_temp.id('co')));
+  insert into jls_out values ('l_user', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l_user'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  insert into jls_out values ('l_inc', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l_inc'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  -- Another company's loan on this company's line, and this company's line under another company.
+  insert into jls_out values ('x_loan', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l3'), pg_temp.id('mortgage_b'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  insert into jls_out values ('x_line', public.jev_prefill_loan(
+    pg_temp.id('co_b'), pg_temp.id('l3'), pg_temp.id('mortgage_b'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  insert into jls_out values ('l_b', public.jev_prefill_loan(
+    pg_temp.id('co_b'), pg_temp.id('l_b'), pg_temp.id('mortgage_b'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
+  insert into jls_out values ('cands_b', public.jev_loan_candidates(pg_temp.id('co_b')));
+  insert into jls_out values ('l_conf', public.jev_prefill_loan(
+    pg_temp.id('co'), pg_temp.id('l_conf'), pg_temp.id('mortgage'), pg_temp.parts(60000, 10000, 11946), 'jev-1.13.0', 0.99));
   perform set_config('request.jwt.claim.role', '', true);
   perform set_config('request.jwt.claims', '{}', true);
 end
@@ -151,6 +182,11 @@ select is(
   (select (result->0->>'last_payment_minor')::bigint from jls_out where label = 'cands_after'),
   81946::bigint,
   'after a split the last payment is that line''s amount'
+);
+select is(
+  (select result->0->>'last_payment_date' from jls_out where label = 'cands_after'),
+  '2026-03-01',
+  'and its date, the newest payment''s'
 );
 
 -- 2. jev_prefill skips a loan category and still fills a plain one.
@@ -211,8 +247,25 @@ select is(
   0,
   'a refused split writes nothing'
 );
+select is((select result->>'skipped' from jls_out where label = 'l_user'), 'closed', 'a line the owner assigned is left alone');
+select is((select result->>'skipped' from jls_out where label = 'l_inc'), 'not_found', 'an income line is never split onto a loan');
 
--- 5. Undo: the split goes, the balance comes back; an owner's change is kept. The ledger checks
+-- 5. Company isolation: neither another company's loan nor another company's line is used.
+select is((select result->>'skipped' from jls_out where label = 'x_loan'), 'loan_not_found', 'another company''s loan is refused');
+select is((select result->>'skipped' from jls_out where label = 'x_line'), 'not_found', 'another company''s line is refused');
+select is(
+  (select count(*)::integer from private.loan_parts s where s.transaction_id = pg_temp.id('l3')),
+  0,
+  'and nothing is written on the line'
+);
+select is((select result->'loan' from jls_out where label = 'l_b'), 'true'::jsonb, 'the other company still splits its own line onto its own loan');
+select is(
+  (select jsonb_agg(e->>'id') from jsonb_array_elements((select result from jls_out where label = 'cands_b')) e),
+  jsonb_build_array(pg_temp.id('mortgage_b')::text),
+  'jev_loan_candidates lists only that company''s loans'
+);
+
+-- 6. Undo: the split goes, the balance comes back; an owner's change is kept. The ledger checks
 -- run at commit, as in the app (a split's legs are replaced in two statements).
 set constraints all deferred;
 select tests.authenticate_as('jls_owner');
@@ -237,10 +290,17 @@ select throws_ok(
   'P0001', 'line changed since', 'a split the owner changed is not undone'
 );
 reset role;
+update public.transactions set category_assigned = true where id = pg_temp.id('l_conf');
+select tests.authenticate_as('jls_owner');
+select throws_ok(
+  $$select public.undo_jev_prefill(pg_temp.id('l_conf'))$$,
+  'P0001', 'line changed since', 'a split on a line whose category the owner confirmed is not undone'
+);
+reset role;
 select is(
   (select b.balance_minor from public.loan_balances b where b.loan_id = pg_temp.id('mortgage')),
-  12000000::bigint - 12000,
-  'the balance counts the owner''s split only'
+  12000000::bigint - 12000 - 11946,
+  'the balance counts the owner''s split and the split still on the confirmed line'
 );
 
 select * from finish();

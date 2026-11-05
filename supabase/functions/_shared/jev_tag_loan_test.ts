@@ -1,9 +1,9 @@
 // FLOW-1032 (decision 0254): a loan payment Jev filed under a loan category is split onto its loan.
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import { JEV_MODEL } from "./jev.ts";
-import { tagWork } from "./jev_tag.ts";
+import { createTagStore, tagWork } from "./jev_tag.ts";
 import { loanFromRow, loanSplit, matchLoan, planLoanFill, type TagLoan } from "./jev_tag_loan.ts";
-import { company, COMPANY, expense, EXPENSE, memoryStore, PROJECT, projects } from "./jev_tag_test_support.ts";
+import { company, COMPANY, expense, EXPENSE, memoryStore, PROJECT, projects, txnRow } from "./jev_tag_test_support.ts";
 
 const MORTGAGE = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const SECOND = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
@@ -72,6 +72,16 @@ Deno.test("matchLoan falls back to the loan's last payment, once its payment no 
   assertEquals(matchLoan(raised, [loan()]), null);
 });
 
+Deno.test("matchLoan leaves out a loan that already has a payment attached in the line's month", () => {
+  assertEquals(matchLoan(line, [loan({ last_payment_minor: 81946, last_payment_date: "2026-01-02" })]), null);
+  assertEquals(matchLoan(line, [loan({ last_payment_minor: 81946, last_payment_date: "2025-12-02" })])?.id, MORTGAGE);
+  // The other loan with the same payment is not taken in its place either: it is the only one left.
+  assertEquals(
+    matchLoan(line, [loan({ last_payment_date: "2026-01-02" }), loan({ id: SECOND })])?.id,
+    SECOND,
+  );
+});
+
 Deno.test("loanSplit is the schedule row for the date, principal taking the difference", () => {
   const parts = loanSplit(line, loan());
   assert(parts);
@@ -118,6 +128,81 @@ Deno.test("auto splits a loan payment Jev filed under a loan category, and never
   assertEquals(store.loanWrites[0].loanId, MORTGAGE);
   assertEquals(store.loanWrites[0].confidence, 0.97);
   assertEquals(store.loanWrites[0].parts.map((part) => part.amountMinor), [60000n, 10000n, 11946n]);
+});
+
+Deno.test("a sure project and a loan category with no loan: the project is filled, the loan category never", async () => {
+  const store = memoryStore();
+  const sure = {
+    project: { type: "choice", choice: PROJECT, confidence: 0.97, probabilities: null },
+    category: { type: "choice", choice: INTEREST, confidence: 0.97, probabilities: null },
+  };
+  const report = await tagWork(
+    [company({ categories: loanCategories, loans: [], expenses: [loanLine()] })],
+    store,
+    () => Promise.resolve({ model: JEV_MODEL, answers: sure, usage: null }),
+    "jev-test-key",
+  );
+  assertEquals(report.prefilled, 1);
+  assertEquals(store.writes.length, 1);
+  assertEquals(store.writes[0].projectId, PROJECT);
+  assertEquals(store.writes[0].categoryId, undefined);
+  assertEquals(store.loanWrites.length, 0);
+});
+
+Deno.test("the store reads loans in auto mode, keeps tagging when that read fails, and sends the split", async () => {
+  const bodies = new Map<string, unknown>();
+  let loansAnswer: unknown = [loanRow(), { id: "not-a-loan" }];
+  const fetch: typeof globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (init?.body) bodies.set(url.replace(/^.*\/rpc\//, ""), JSON.parse(String(init.body)));
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "auto", threshold: 0.9 }]));
+    }
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/categories")) return Promise.resolve(Response.json([{ id: INTEREST, name: "Interest", loan_part: "interest" }]));
+    if (url.includes("/transactions")) {
+      return Promise.resolve(Response.json([txnRow({ amount_gross: -81946, amount_original: 81946, currency: "USD" })]));
+    }
+    if (url.includes("/rpc/jev_loan_candidates")) {
+      return Promise.resolve(loansAnswer === null ? new Response("boom", { status: 500 }) : Response.json(loansAnswer));
+    }
+    if (url.includes("/rpc/jev_prefill_loan")) return Promise.resolve(Response.json({ loan: true }));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const store = createTagStore(fetch, "http://db.test/", "service-role-test");
+  const work = await store.listWork(10);
+  assertEquals(work[0].loans?.map((row) => row.id), [MORTGAGE], "a row it cannot use is dropped");
+  assertEquals(work[0].categories[0].loanPart, "interest");
+  assertEquals(work[0].expenses[0].amountOriginal, 81946);
+  assertEquals(work[0].expenses[0].currency, "USD");
+  assertEquals(bodies.get("jev_loan_candidates"), { p_company: COMPANY });
+
+  loansAnswer = null;
+  const degraded = await store.listWork(10);
+  assertEquals(degraded[0].loans, []);
+  assertEquals(degraded[0].expenses.length, 1);
+
+  const wrote = await store.prefillLoan({
+    companyId: COMPANY,
+    transactionId: EXPENSE,
+    loanId: MORTGAGE,
+    parts: loanSplit(line, loan()) ?? [],
+    modelVersion: JEV_MODEL,
+    confidence: 0.97,
+  });
+  assertEquals(wrote, true);
+  assertEquals(bodies.get("jev_prefill_loan"), {
+    p_company: COMPANY,
+    p_transaction: EXPENSE,
+    p_loan: MORTGAGE,
+    p_parts: [
+      { part: "interest", amount_minor: 60000, scheduled_minor: 60000 },
+      { part: "escrow", amount_minor: 10000, scheduled_minor: 10000 },
+      { part: "principal", amount_minor: 11946, scheduled_minor: 11946 },
+    ],
+    p_model: JEV_MODEL,
+    p_confidence: 0.97,
+  });
 });
 
 Deno.test("a loan category below the threshold, in shadow, on a set line, or with no loan writes nothing", async () => {
