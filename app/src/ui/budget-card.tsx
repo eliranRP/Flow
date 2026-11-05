@@ -2,7 +2,8 @@ import { useId } from "react";
 import { formatAmount } from "./amount";
 import { Card } from "./card";
 import { Button } from "./button";
-import { AlertIcon } from "./icons";
+import { IconButton } from "./icon-button";
+import { AlertIcon, CloseIcon } from "./icons";
 
 /**
  * The share of the budget spent, to the nearest whole percent (the card's "N%"). Under the budget it
@@ -81,10 +82,15 @@ export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit, 
  * FLOW-961: a project with no budget shows, in the budget's place, a dashed card that says what a
  * budget gives and opens the edit sheet at the budget field.
  */
-export function BudgetEmptyCard({ onAdd }: { onAdd: () => void }) {
+export function BudgetEmptyCard({ onAdd, onHide }: { onAdd: () => void; onHide?: () => void }) {
   const titleId = useId();
   return (
     <section className="ui-budget-empty" aria-labelledby={titleId}>
+      {onHide == null ? null : (
+        <IconButton label="הסתרה: אין תקציב לפרויקט" className="ui-budget-empty-hide" onClick={onHide}>
+          <CloseIcon size={18} />
+        </IconButton>
+      )}
       <h2 id={titleId} className="ui-budget-empty-title">אין תקציב לפרויקט</h2>
       <p className="ui-budget-empty-body">עם תקציב נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
       <Button variant="secondary" onClick={onAdd}>הוספת תקציב</Button>

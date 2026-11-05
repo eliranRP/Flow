@@ -104,3 +104,20 @@ export const AcquisitionLoansAtClosing: Story = {
   name: "Acquisition, loans paid out at closing",
   args: { entry: "/projects/p1/investment/returns/acquisition", lines: "maple", returns: "closingPaid" },
 };
+
+/** FLOW-1047 (V3-States): a calculation page with no sample, in a preview state. */
+function LiveRoutes({ entry }: { entry: string }) {
+  return (
+    <StoryRoute entry={entry}>
+      <Routes>
+        <Route path="/projects/:projectId/investment/returns" element={<PropertyStatementScreen />} />
+        <Route path="/projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen />} />
+      </Routes>
+    </StoryRoute>
+  );
+}
+
+export const CalcLoading: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/returns?preview=loading" /> };
+export const CalcFailed: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/metric/coc?preview=error-server" /> };
+export const CalcOffline: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/metric/coc?preview=error" /> };
+export const CalcEmpty: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/returns?preview=empty" /> };

@@ -43,6 +43,7 @@ import { useRecurringScheduleQuery, type ScheduleRow } from "../recurring-schedu
 import { InvestmentSummary } from "../ui/investment-card";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
+import { hideRow, isRowHidden, readHidden } from "../ui/attention-dismiss";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
 
@@ -411,6 +412,9 @@ function LegacyEmptyProject() {
   );
 }
 
+/** The hidden-card entry: one row, keyed once (the card has no count to change). */
+const BUDGET_EMPTY_ROW = { id: "budget-empty", dismissKey: "budget-empty" };
+
 /**
  * FLOW-445: the budget card when a budget is set. FLOW-961: with none, a dashed card in its place whose
  * הוספת תקציב opens the edit sheet at the budget.
@@ -419,10 +423,19 @@ function ProjectBudget({ project, type, spentAgorot, contract = false }: { proje
   const [editing, setEditing] = useState(false);
   const budget = project.budget_agorot ?? null;
   const currency = useCompanyCurrency();
+  // The owner (2026-11-05): the dashed card can be hidden on this device; עריכת פרטים in ⋯ still sets a budget.
+  const hideKey = `project-budget:${project.id}`;
+  const [hidden, setHidden] = useState(() => isRowHidden(readHidden(hideKey), BUDGET_EMPTY_ROW));
   return (
     <>
-      {budget == null ? (
-        <BudgetEmptyCard onAdd={() => { setEditing(true); }} />
+      {budget == null ? hidden ? null : (
+        <BudgetEmptyCard
+          onAdd={() => { setEditing(true); }}
+          onHide={() => {
+            hideRow(hideKey, BUDGET_EMPTY_ROW.id, BUDGET_EMPTY_ROW.dismissKey);
+            setHidden(true);
+          }}
+        />
       ) : (
         <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} contract={contract} onEdit={() => { setEditing(true); }} />
       )}

@@ -1,7 +1,8 @@
-import type { ReactNode, RefObject } from "react";
+import { useId, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Amount } from "../ui/amount";
+import { GroupHead } from "../ui/group-head";
 import { formatDisplay } from "../ui/date-math";
 import { ChevronIcon } from "../ui/icons";
 import {
@@ -117,8 +118,11 @@ function LandSuggestion({ suggestion, currency, busy, onUse }: {
   );
 }
 
-/** "נתוני הנכס": the figures; each opens its sheet (a viewer's open nothing but the rehab page, which only reads). */
-export function FiguresCard({
+/**
+ * "נתוני הנכס" (the נכס tab): the figures under a one-line group head; each opens its sheet (a viewer's open
+ * nothing but the rehab page, which only reads).
+ */
+export function FiguresGroup({
   figures,
   extras,
   readOnly,
@@ -148,9 +152,10 @@ export function FiguresCard({
   const source = extras != null && extras.takenOverMinor > 0n ? "מהתנועות + הלוואה שנלקחה" : "מהתנועות";
   // FLOW-470: while the books suggest a land, השתמש is the land row's one action.
   const suggestion = extras?.landMinor == null && onUseLand != null ? (extras?.landSuggestion ?? null) : null;
+  const titleId = useId();
   return (
-    <section className="ui-pinv-card" aria-label="נתוני הנכס">
-      <h2 className="ui-pinv-card-title">נתוני הנכס</h2>
+    <section className="ui-month ui-pinv-group" aria-labelledby={titleId}>
+      <GroupHead id={titleId} title="נתוני הנכס" summary="" />
       {fromLines ? (
         // FLOW-453: the purchase comes from the acquisition lines; it opens them, with no edit sheet.
         <FigureRow
@@ -262,8 +267,8 @@ function LoanLine({ loan, today, search }: { loan: InvestmentLoan; today: string
   );
 }
 
-/** "הלוואות": the project's loans, the total at the title's end, then "+ הוספת הלוואה". */
-export function LoansCard({
+/** "הלוואות" (the הלוואות tab): the project's loans, the total at the head's end, then "+ הוספת הלוואה". */
+export function LoansGroup({
   figures,
   loans,
   today,
@@ -279,12 +284,10 @@ export function LoansCard({
 }) {
   const own = loans.filter((loan) => loan.currency === figures.currency);
   const other = loans.filter((loan) => loan.currency !== figures.currency);
+  const titleId = useId();
   return (
-    <section className="ui-pinv-card" aria-label="הלוואות">
-      <div className="ui-pinv-loans-head">
-        <h2 className="ui-pinv-card-title">הלוואות</h2>
-        <bdi dir="ltr" className="ui-pinv-total"><Amount agorot={figures.loanMinor} currency={figures.currency} /></bdi>
-      </div>
+    <section className="ui-month ui-pinv-group" aria-labelledby={titleId}>
+      <GroupHead id={titleId} title="הלוואות" summary={<Amount agorot={figures.loanMinor} currency={figures.currency} />} />
       {own.map((loan) => <LoanLine key={loan.id} loan={loan} today={today} search={search} />)}
       {other.length > 0 ? (
         <>
