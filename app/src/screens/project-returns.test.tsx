@@ -150,6 +150,12 @@ function asRental(r: PropertyReturns): PropertyReturns {
   return { ...r, inputs: { ...r.inputs, arvMinor: null }, equity: { ...r.equity, forcedMinor: null } };
 }
 
+/** The page's current query, for the tests that watch the URL. */
+function SearchProbe() {
+  const { search } = useLocation();
+  return <span data-testid="search">{search}</span>;
+}
+
 function renderInvestment(returns = birchLaneReturns, entry = "/projects/p1/investment", flip = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const page = flip
@@ -160,7 +166,7 @@ function renderInvestment(returns = birchLaneReturns, entry = "/projects/p1/inve
       <ToastProvider>
         <MemoryRouter initialEntries={[entry]}>
           <Routes>
-            <Route path="/projects/:projectId/investment" element={page} />
+            <Route path="/projects/:projectId/investment" element={<>{page}<SearchProbe /></>} />
             <Route path="*" element={<Where />} />
           </Routes>
         </MemoryRouter>
@@ -475,6 +481,13 @@ describe("the investment page's returns cards", () => {
   it("opens a figure's sheet from an edit link", async () => {
     renderInvestment(birchLaneReturns, "/projects/p1/investment?edit=units");
     expect(await screen.findByRole("dialog", { name: "מספר יחידות" })).toBeInTheDocument();
+  });
+
+  it("drops the edit key from the URL once the sheet opened, so the page's own links and a return do not reopen it", async () => {
+    renderInvestment(birchLaneReturns, "/projects/p1/investment?edit=units&m=2026-10");
+    expect(await screen.findByRole("dialog", { name: "מספר יחידות" })).toBeInTheDocument();
+    await waitFor(() => { expect(screen.getByTestId("search")).toHaveTextContent("?m=2026-10"); });
+    expect(screen.getByTestId("search")).not.toHaveTextContent("edit=");
   });
 
   it("draws ∞ on the total return when all the cash came out, with each source's amount and no per cent", async () => {
