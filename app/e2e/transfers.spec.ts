@@ -7,8 +7,9 @@ test.use({ viewport: { width: 390, height: 844 } });
 test("Home's attention box counts the suggested transfers", async ({ page }) => {
   await page.goto("/e2e/cash?transfers=1");
   const box = page.getByRole("region", { name: "דורש טיפול" });
+  // FLOW-1036: the row is a one-line card (no hint line); the X beside it can hide it.
   await expect(box.getByRole("link", { name: /2 העברות לבדיקה/ })).toBeVisible();
-  await expect(box.getByText("בין חשבונות Mercury")).toBeVisible();
+  await expect(box.getByRole("button", { name: /^הסתרה: 2 העברות לבדיקה/ })).toBeVisible();
 });
 
 test("each card shows the money out and in, and כן, העברה hides it until ביטול", async ({ page }) => {

@@ -5,7 +5,7 @@ import { HomeBandActions, homeMonthLabel } from "./home-parts";
 import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 
-/** FLOW-375 (board, States homeLoading): a skeleton row of the attention box and the third block: an icon slot, copy, a trailing bar. */
+/** FLOW-375 (board, States homeLoading): a skeleton row of the attention cards and the activity: an icon slot, copy, a trailing bar. */
 function CashSkeletonRow() {
   return (
     <div className="ui-skel-row">
@@ -21,8 +21,8 @@ function CashSkeletonRow() {
 
 /**
  * FLOW-364 / FLOW-375: Home's cash while it loads, in the shape it lands in: the band (the company, the icons
- * and the month pill are real; the figures are band bars), the split card and the attention box at the loaded
- * Home's geometry, then the board's third block (a title and three rows). A known `company` shows its name and
+ * and the month pill are real; the figures are band bars), then (FLOW-1036) the attention cards and the
+ * month's activity, a title and three rows. A known `company` shows its name and
  * initial in the band, as the board's loading frame does, in place of the label bar.
  */
 export function CashHomeSkeleton({ preview = false, example, company }: { preview?: boolean; example?: ReactNode; company?: string }) {
@@ -74,15 +74,7 @@ export function CashHomeSkeleton({ preview = false, example, company }: { previe
         </div>
       </TopBand>
       <DelayedSkeleton>
-        <section className="ui-home-split" aria-hidden="true">
-          <Skeleton className="ui-skel-split-title" />
-          <Skeleton className="ui-skel-split-bar" />
-          <div className="ui-skel-split-row">
-            <Skeleton className="ui-skel-split-a" />
-            <Skeleton className="ui-skel-split-b" />
-          </div>
-        </section>
-        <section className="ui-home-attention ui-skel-attention" aria-hidden="true">
+        <section className="ui-skel-attention ui-home-attn" aria-hidden="true">
           <Skeleton className="ui-skel-attention-title" />
           <div className="ui-skel-attention-rows">
             <CashSkeletonRow />

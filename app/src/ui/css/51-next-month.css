@@ -334,21 +334,6 @@
   }
 }
 
-/* FLOW-990: Home's החודש הבא, after the split card, at the cards' side margin (board HomeNextMonth). */
-.ui-home-next {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: calc(var(--space-5) - var(--space-1) / 2) var(--space-4) var(--space-1);
-}
-
-.ui-home-next-title {
-  margin: 0 var(--space-1);
-  font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
-  font-weight: var(--type-section-weight);
-}
-
 /* FLOW-1000: the company צפי page, one section per project (board CompanyNextA). */
 .ui-cn-group {
   margin-block-start: var(--space-5);

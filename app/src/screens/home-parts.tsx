@@ -1,33 +1,29 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
 import { addTriggerRef } from "../add-trigger";
 import { markRecurringTipSeen, recurringTipSeen, useTipDismiss } from "../recurring-tip";
 import { Link } from "react-router-dom";
-import { cashLinesPath, notInProfitHint } from "../cash";
-import { changeTone, splitParts } from "../home-month";
+import { cashLinesPath } from "../cash";
+import { changeTone } from "../home-month";
 import type { PeriodChoice } from "../period";
 import { anchorOf, monthPeriod } from "../period";
 import { useAllowAdd } from "../use-allow-add";
 import { Amount } from "../ui/amount";
-import { BannerRows, type BannerRow } from "../ui/banner";
-import { Button } from "../ui/button";
-import { ReviewButton } from "../ui/band-states";
 import { ChangePill } from "../ui/change-pill";
 import { CompactBar } from "../ui/compact-bar";
 import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
-import { ChevronDownIcon, ChevronIcon, CloseIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
+import { ChevronDownIcon, CloseIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
-import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { Skeleton } from "../ui/skeleton";
 
 /**
- * FLOW-364: Home's band, figures, split card, forecast, attention box and compact bar. The pure
- * month logic is in home-month.ts; these parts only draw it.
+ * FLOW-364: Home's band, figures, forecast row and compact bar. The pure month logic is in home-month.ts; these
+ * parts only draw it. FLOW-1036: the split card and the attention box left Home (the cards are AttentionCards).
  */
 
 /** "אוקטובר 2026": a month's name with its year. */
@@ -46,7 +42,23 @@ export type HomeMonthNav = {
   laterKey: string | null;
   onStep: (key: string) => void;
   onOpenDrawer: () => void;
+  /** FLOW-1036: on the current month, the later arrow opens the drawer on next month and its forecast. */
+  onOpenNext?: () => void;
 };
+
+/** The later arrow's name and what it does: a later month, next month's forecast in the drawer, or nothing. */
+function laterStep(nav: HomeMonthNav): { label: string; go: () => void } | null {
+  const later = nav.laterKey;
+  if (later != null) {
+    return {
+      label: "חודש הבא",
+      go: () => {
+        nav.onStep(later);
+      },
+    };
+  }
+  return nav.onOpenNext == null ? null : { label: "חודש הבא · תחזית", go: nav.onOpenNext };
+}
 
 /**
  * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
@@ -141,14 +153,18 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
 
 /** The band's month pill: the arrows and the name, which opens the drawer. */
 export function HomeMonthPill({ monthKey, nav }: { monthKey: string; nav: HomeMonthNav }) {
+  const later = laterStep(nav);
   return (
     <MonthStepper
       earlier={nav.earlierKey == null ? null : "חודש קודם"}
-      later={nav.laterKey == null ? null : "חודש הבא"}
+      later={later?.label ?? null}
       onBand
       onStep={(delta) => {
-        const next = delta < 0 ? nav.earlierKey : nav.laterKey;
-        if (next != null) nav.onStep(next);
+        if (delta > 0) {
+          later?.go();
+          return;
+        }
+        if (nav.earlierKey != null) nav.onStep(nav.earlierKey);
       }}
     >
       <button type="button" className="ui-band-month-name m-press" aria-haspopup="dialog" onClick={nav.onOpenDrawer}>
@@ -254,98 +270,19 @@ export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; m
   );
 }
 
-/** The split card: the net divided into the cash the P&L leaves out, and the month's profit. */
-export function SplitCard({ monthKey, row, search, onOpenProfit }: { monthKey: string; row: CashCurrencyRow; search: string; onOpenProfit: () => void }) {
-  const parts = splitParts(row.net_minor, row.profit_minor);
-  if (!parts.visible) return null;
-  const hint = notInProfitHint(row);
-  const keptLabel = parts.notCounted < 0n ? "השקעה, לא נספר ברווח" : "הון שנכנס, לא נספר ברווח";
-  const absKept = parts.notCounted < 0n ? -parts.notCounted : parts.notCounted;
-  const absProfit = parts.profit < 0n ? -parts.profit : parts.profit;
-  const metric = row.net_minor < 0n ? "ממה מורכב המינוס" : "ממה מורכב התזרים";
-  return (
-    <section className="ui-home-split" aria-labelledby="home-split-title">
-      <div className="ui-home-split-head">
-        <p className="ui-home-split-metric">{metric}</p>
-        <h2 id="home-split-title" className="ui-home-split-title">{splitTakeaway(parts.lead, row.net_minor, row.profit_minor)}</h2>
-      </div>
-      <PartsBar
-        label={metric}
-        height={8}
-        gap={2}
-        radius="block"
-        parts={[
-          { key: "kept", value: absKept, tone: "accent" },
-          { key: "profit", value: absProfit, tone: parts.profit < 0n ? "bad" : "muted" },
-        ]}
-      />
-      <Link to={cashLinesPath(monthKey, "kept", row.currency, search)} className="ui-home-split-row m-press">
-        <span className="ui-home-split-swatch" aria-hidden="true" />
-        <span className="ui-home-split-text">
-          <span className="ui-home-split-label">{keptLabel}</span>
-          <span className="ui-home-split-sub">{[hint, `${String(parts.notCountedPct)}%`].filter(Boolean).join(" · ")}</span>
-        </span>
-        <span className="ui-home-split-value">
-          <Amount agorot={parts.notCounted} currency={row.currency} size="list" />
-        </span>
-        <ChevronIcon size={18} />
-      </Link>
-      <button type="button" className="ui-home-split-row m-press" onClick={onOpenProfit}>
-        <span className={cx("ui-home-split-swatch", parts.profit < 0n ? "ui-home-split-loss" : "ui-home-split-swatch-none")} aria-hidden="true" />
-        <span className="ui-home-split-text">
-          <span className="ui-home-split-label">רווח החודש</span>
-          <span className="ui-home-split-sub">{`הפעילות השוטפת · ${String(parts.profitPct)}%`}</span>
-        </span>
-        <span className={cx("ui-home-split-value", parts.profit < 0n && "ui-home-split-loss")}>
-          <Amount agorot={parts.profit} currency={row.currency} size="list" loss={parts.profit < 0n} />
-        </span>
-        <ChevronIcon size={18} />
-      </button>
-    </section>
-  );
-}
-
 /**
- * FLOW-958: the split card's title says what the bar shows, not the metric's name. The larger part
- * leads: money that went to assets, owner's capital that came in, or the month's own profit or loss.
+ * Home's compact bar: the arrows step the month and keep the scroll; the centre opens the drawer. FLOW-1036:
+ * `dock` is the activity filter, held on the band while `docked` (the in-page one reached the bar).
  */
-export function splitTakeaway(lead: "out" | "in" | null, netMinor: bigint, profitMinor: bigint): string {
-  if (lead === "out") return netMinor < 0n ? "רוב המינוס הלך לנכסים" : "רוב מה שיצא הלך לנכסים";
-  if (lead === "in") return "רוב מה שנכנס הוא הון";
-  if (profitMinor < 0n) return netMinor < 0n ? "רוב המינוס הוא הפסד שוטף" : "הפעילות השוטפת הפסידה";
-  return "רוב התזרים הוא רווח";
-}
-
-/**
- * The דורש טיפול box: review, open invoices, late bills and changed charges. Hidden with no rows.
- * FLOW-958: the review row is Home's one filled button; the other rows follow it as lines. FLOW-1017: its foot
- * links to קבועים by name, so the band's icon is not the screen's only way there.
- */
-export function AttentionBox({ rows, recurringHref }: { rows: readonly BannerRow[]; recurringHref: string }) {
-  if (rows.length === 0) return null;
-  const [first, ...others] = rows;
-  const lines = first?.button == null ? rows : others;
-  return (
-    <section className="ui-home-attention" aria-labelledby="home-attention-title">
-      <h2 id="home-attention-title" className="ui-home-attention-title">דורש טיפול</h2>
-      <ReviewButton row={first} />
-      <BannerRows rows={lines} />
-      <div className="ui-home-attention-foot">
-        <Button variant="link" to={recurringHref} chevron>
-          כל הקבועים
-        </Button>
-      </div>
-    </section>
-  );
-}
-
-/** Home's compact bar: the arrows step the month and keep the scroll; the centre opens the drawer. */
-export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown }: { monthKey: string; net: bigint; currency: string; isPast: boolean; nav: HomeMonthNav; shown: boolean }) {
+export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown, dock, docked = false }: { monthKey: string; net: bigint; currency: string; isPast: boolean; nav: HomeMonthNav; shown: boolean; dock?: ReactNode; docked?: boolean }) {
+  const later = laterStep(nav);
   return (
     <CompactBar
       title=""
       shown={shown}
       tone={isPast ? "band-past" : "band"}
+      dock={dock}
+      docked={docked}
       start={
         <IconButton
           label="חודש קודם"
@@ -371,11 +308,11 @@ export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown }: 
       }
       end={
         <IconButton
-          label="חודש הבא"
+          label={later?.label ?? "חודש הבא"}
           onBand
-          disabled={nav.laterKey == null}
+          disabled={later == null}
           onClick={() => {
-            if (nav.laterKey != null) nav.onStep(nav.laterKey);
+            later?.go();
           }}
         >
           <OutwardChevron side="end" />
