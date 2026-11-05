@@ -26,7 +26,9 @@ export const PULL_THRESHOLD_PX = 64;
 const PULL_RESIST = 0.5;
 const PULL_MAX_PX = 96;
 /** The spinner stays at least this long, so a quick refresh does not flash. */
-export const PULL_MIN_MS = 400;
+const PULL_MIN_MS = 400;
+/** A read that never settles ends the spinner here; it goes on in the background. */
+export const PULL_CAP_MS = 15_000;
 /** The collapse runs on --motion-sheet-out (220ms); the gap and the mark unmount after this. */
 const CLOSE_FALLBACK_MS = 400;
 export const PULL_FAILED = "הרענון נכשל. נסו שוב.";
@@ -68,7 +70,8 @@ export type PullTone = "band" | "band-past" | "page";
 
 export function pullTone(screen: Element | null): PullTone {
   const band = screen?.querySelector(".ui-band");
-  if (band == null || band.getBoundingClientRect().top > 1) return "page";
+  // A band that is not drawn (display: none, here or above) has no boxes.
+  if (band == null || band.getClientRects().length === 0 || band.getBoundingClientRect().top > 1) return "page";
   return band.classList.contains("ui-band-past") ? "band-past" : "band";
 }
 
@@ -81,14 +84,15 @@ function wait(ms: number): Promise<void> {
 }
 
 /**
- * Re-reads Flow's data from the server and resolves once the reads on screen settled and `minMs`
- * passed: true when every one of them succeeded. Every cached read goes stale, so a read nested in
- * another (`client.query` with its own staleTime) and every other screen's reads read again too,
- * not only the ones on screen.
+ * Re-reads Flow's data from the server and resolves once the reads on screen settled and
+ * PULL_MIN_MS passed, or at PULL_CAP_MS, so a hung read never keeps the pull busy: true unless a
+ * read failed. Every cached read goes stale, so a read nested in another (`client.query` with its
+ * own staleTime) and every other screen's reads read again too, not only the ones on screen. No
+ * bank sync: a pull reads Flow's own server only.
  */
-export async function refreshAll(client: Pick<QueryClient, "invalidateQueries" | "getQueryCache">, minMs = PULL_MIN_MS): Promise<boolean> {
+async function refreshAll(client: Pick<QueryClient, "invalidateQueries" | "getQueryCache">): Promise<boolean> {
   const started = Date.now();
-  await Promise.all([client.invalidateQueries(), wait(minMs)]);
+  await Promise.race([Promise.all([client.invalidateQueries(), wait(PULL_MIN_MS)]), wait(PULL_CAP_MS)]);
   return !client.getQueryCache().findAll({ type: "active" }).some((query) => query.state.status === "error" && query.state.errorUpdatedAt >= started);
 }
 
@@ -194,7 +198,7 @@ export function PullRefresh({ children }: { children: ReactNode }) {
 }
 
 /**
- * The pulled screen, the gap above it and the round mark in the gap, with the shared spinner. While
+ * Exported for the stories, which draw each phase. The pulled screen, the gap above it and the round mark in the gap, with the shared spinner. While
  * pulling the screen comes down with the finger and the spinner turns with the progress; armed, it
  * takes the accent; refreshing, the screen rests at the threshold and the spinner spins. The screen
  * moves by `top` on a relative box, not a transform, so the bars it pins (`position: fixed`: the
@@ -235,7 +239,6 @@ export function PullRefreshView({
       <div ref={screenRef} className="ui-pull-screen" data-phase={idle ? undefined : phase} style={idle ? undefined : style}>
         {children}
       </div>
-      {/* After the screen, so nothing above it in the flow can push it down. */}
       <div role="status" className="sr-only">
         {refreshing ? "מרענן" : null}
       </div>

@@ -2,7 +2,10 @@ import { QueryClient, useQuery, type QueryClient as Client } from "@tanstack/rea
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
-import { PULL_FAILED, pullArmed, PullRefresh, pullTone, pullTravel } from "./pull-refresh";
+import { invokeEdge } from "../edge";
+import { PULL_CAP_MS, PULL_FAILED, pullArmed, PullRefresh, pullTone, pullTravel } from "./pull-refresh";
+
+vi.mock("../edge", async (original) => ({ ...(await original<typeof import("../edge")>()), invokeEdge: vi.fn() }));
 
 const WIDTH = 390;
 type Point = { identifier: number; clientX: number; clientY: number };
@@ -66,8 +69,15 @@ beforeEach(() => {
 
 afterEach(() => {
   delete document.documentElement.dataset.pullRefresh;
+  vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.mocked(invokeEdge).mockClear();
 });
+
+/** jsdom lays nothing out, so every element has no boxes; a drawn band has one. */
+function drawn() {
+  vi.spyOn(Element.prototype, "getClientRects").mockReturnValue([{}] as unknown as DOMRectList);
+}
 
 describe("pull travel", () => {
   it("follows at half the move, from zero, up to a cap", () => {
@@ -91,7 +101,9 @@ describe("PullRefresh", () => {
     const move = pull(document.body, 200);
     expect(move.defaultPrevented).toBe(true);
     expect(refetch).toHaveBeenCalledTimes(1);
+    // Every cached read, and nothing else: a pull reads Flow's own server, no bank sync.
     expect(refetch).toHaveBeenCalledWith();
+    expect(invokeEdge).not.toHaveBeenCalled();
     expect(pulledScreen()).toHaveAttribute("data-phase", "refreshing");
     expect(pulledScreen()?.style.getPropertyValue("--pull-y")).toBe("64px");
     expect(status()).toHaveTextContent("מרענן");
@@ -99,6 +111,7 @@ describe("PullRefresh", () => {
     await waitFor(() => { expect(status()).toHaveTextContent(""); });
     await waitFor(() => { expect(document.querySelector(".ui-pull-refresh")).toBeNull(); });
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(invokeEdge).not.toHaveBeenCalled();
     expect(pulledScreen()).not.toHaveAttribute("data-phase");
     expect(document.querySelector(".ui-pull-gap")).toBeNull();
   });
@@ -114,6 +127,7 @@ describe("PullRefresh", () => {
   });
 
   it("fills the gap with the band's colour where the screen starts with the band", async () => {
+    drawn();
     renderPull(undefined, <header className="ui-band" />);
     await screen.findByText("נתונים");
     drag(document.body, 80);
@@ -122,6 +136,7 @@ describe("PullRefresh", () => {
   });
 
   it("reads the tone from the screen's top", () => {
+    drawn();
     const box = document.createElement("div");
     expect(pullTone(box)).toBe("page");
     expect(pullTone(null)).toBe("page");
@@ -133,6 +148,37 @@ describe("PullRefresh", () => {
     expect(pullTone(box)).toBe("band");
     vi.spyOn(band, "getBoundingClientRect").mockReturnValue({ top: 120 } as DOMRect);
     expect(pullTone(box)).toBe("page");
+  });
+
+  it("takes the page colour when the band is not drawn", () => {
+    const box = document.createElement("div");
+    const band = document.createElement("header");
+    band.className = "ui-band";
+    box.append(band);
+    // jsdom gives every element no boxes, as a browser does for display: none.
+    expect(pullTone(box)).toBe("page");
+  });
+
+  it("ends the spinner at the cap when a read never settles, and a later pull works", async () => {
+    let calls = 0;
+    const { refetch } = renderPull(() => {
+      calls += 1;
+      return calls === 1 ? Promise.resolve("נתונים") : new Promise<string>(() => undefined);
+    });
+    await screen.findByText("נתונים");
+    vi.useFakeTimers();
+    pull(document.body, 200);
+    expect(status()).toHaveTextContent("מרענן");
+    await act(async () => { await vi.advanceTimersByTimeAsync(PULL_CAP_MS - 100); });
+    expect(status()).toHaveTextContent("מרענן");
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(status()).toHaveTextContent("");
+    expect(screen.queryByText(PULL_FAILED)).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(document.querySelector(".ui-pull-refresh")).toBeNull();
+    pull(document.body, 200);
+    expect(refetch).toHaveBeenCalledTimes(2);
+    expect(status()).toHaveTextContent("מרענן");
   });
 
   it("marks every cached read stale, so a nested fresh read and another screen's read read again", async () => {

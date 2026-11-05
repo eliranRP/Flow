@@ -7,22 +7,36 @@
    containing block of the bars the screen pins (position: fixed: the action bar, the card's step
    row, a save bar), and they would jump to the screen's end. The tab bar, toasts and sheets sit
    outside the box. The gap and the mark are absolute at the page's top, so they scroll away with
-   the screen if it is scrolled while a refresh runs. */
+   the screen if it is scrolled while a refresh runs.
+
+   On a notched iPhone the status bar covers the gap's top (--safe-top, up to 59px), so the screen
+   also travels the safe area, in step with the progress (no jump at the first move): at the
+   threshold the gap shows 64px under the status bar, room for the mark. Until then the mark can
+   meet the screen's top, while it is still fading in.
+
+   `top` changes on every touchmove during a pull only; idle, the box is not positioned at all. */
 .ui-pull-screen[data-phase] {
   position: relative;
-  top: var(--pull-y, 0px);
+  top: var(--pull-travel);
 }
 
-/* The gap: as tall as the longest pull and drawn above the page, its end at the screen's top. */
+.ui-pull-screen[data-phase],
+.ui-pull-gap,
+.ui-pull-refresh {
+  --pull-travel: calc(var(--pull-y, 0px) + var(--safe-top) * var(--pull-progress, 0));
+}
+
+/* The gap: as tall as the longest pull with the safe area and drawn above the page, its end at
+   the screen's top. */
 .ui-pull-gap {
   position: absolute;
-  inset-block-start: calc(var(--pull-max) * -1);
+  inset-block-start: calc((var(--pull-max) + var(--safe-top)) * -1);
   inset-inline: 0;
-  block-size: var(--pull-max);
+  block-size: calc(var(--pull-max) + var(--safe-top));
   max-inline-size: var(--content-max);
   margin-inline: auto;
   background: var(--color-bg);
-  transform: translateY(var(--pull-y, 0px));
+  transform: translateY(var(--pull-travel));
   pointer-events: none;
 }
 
@@ -35,7 +49,7 @@
   background: var(--color-band-past);
 }
 
-/* Centred in the gap under the top safe area: the screen's own top pads the safe area. */
+/* Centred in the gap's part under the status bar, from --safe-top to the screen's top. */
 .ui-pull-refresh {
   position: absolute;
   inset-block-start: var(--safe-top);
@@ -52,7 +66,7 @@
   /* An inset ring, not a drop shadow (DESIGN-RULES 2.6), as on the edge-back mark. */
   box-shadow: inset 0 0 0 1px var(--color-control-border);
   opacity: var(--pull-progress, 0);
-  transform: translateY(calc(var(--pull-y, 0px) / 2 - var(--space-10) / 2));
+  transform: translateY(calc((var(--pull-travel) - var(--safe-top)) / 2 - var(--space-10) / 2));
   pointer-events: none;
 }
 
