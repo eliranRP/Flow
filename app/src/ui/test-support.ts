@@ -134,7 +134,7 @@ export function stubPageObserver(): { page: { scrolled: boolean }; settle: () =>
   const entry = (target: Element) => {
     const attached = target.isConnected;
     const top = attached ? (page.scrolled ? -20 : 120) : 0;
-    return { target, isIntersecting: attached && !page.scrolled, boundingClientRect: { top, bottom: top } } as unknown as IntersectionObserverEntry;
+    return { target, boundingClientRect: { top, bottom: top } } as unknown as IntersectionObserverEntry;
   };
   vi.stubGlobal("IntersectionObserver", class {
     private readonly watch: Watch;

@@ -6,15 +6,15 @@ function reducedMotion(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/** How far above the bar's edge a pick parks the mark, so rounding never puts it back in view. */
+const DOCK_KEEP = 8;
+
 /**
  * FLOW-1043 (BUILD-PLAN §3.2): the filter that docks into the compact bar. The screen renders one
  * SegmentedControl in the page inside DockSlot, right under the mark, and the same control (same value, same
  * onChange) in the bar's `dock`; the state lives in the screen. `bar` is the bar's height: 64 on Home's band
  * bar, COMPACT_BAR (44) or DETAIL_BAR (56) elsewhere.
  */
-/** How far above the bar's edge a pick parks the mark, so rounding never puts it back in view. */
-const DOCK_KEEP = 8;
-
 export function useDockedFilter({ barShown, bar }: { barShown: boolean; bar: number }): {
   /** A callback ref for the zero-height mark placed right above the in-page control. */
   markRef: (node: HTMLElement | null) => void;

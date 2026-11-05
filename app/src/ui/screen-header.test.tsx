@@ -147,7 +147,7 @@ describe("ScreenHeader", () => {
 
     function scrolled(past: boolean) {
       act(() => {
-        report?.({ isIntersecting: !past, boundingClientRect: { top: past ? -20 : 120, bottom: past ? -20 : 120 } as DOMRectReadOnly });
+        report?.({ boundingClientRect: { top: past ? -20 : 120, bottom: past ? -20 : 120 } as DOMRectReadOnly });
       });
     }
 
