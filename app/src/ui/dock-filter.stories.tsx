@@ -105,7 +105,8 @@ export const DocksOnScroll: Story = {
     await waitFor(() => expect(document.documentElement).toHaveAttribute("data-compact-dock", "on"));
     await userEvent.click(within(dock() as HTMLElement).getByRole("radio", { name: "קבועים" }));
     const mark = canvasElement.querySelector<HTMLElement>("[data-testid='dock-mark']");
-    await waitFor(() => expect(Math.round(mark?.getBoundingClientRect().top ?? 0)).toBe(63), { timeout: 3000 });
+    // The mark parks 8px above the 64px bar edge (dock-filter.tsx, v3 keeper 8).
+    await waitFor(() => expect(Math.round(mark?.getBoundingClientRect().top ?? 0)).toBe(56), { timeout: 3000 });
     await expect(dock()).toHaveAttribute("data-open");
     await expect(within(dock() as HTMLElement).getByRole("radio", { name: "קבועים" })).toHaveAttribute("aria-checked", "true");
     window.scrollTo({ top: 0, behavior: "instant" });
