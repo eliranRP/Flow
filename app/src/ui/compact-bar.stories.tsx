@@ -132,11 +132,14 @@ function Docking({ kind, docked }: { kind: "band" | "list"; docked: boolean }) {
   );
 }
 
-/** The sticky head's top settles at the bar's height plus its 1px line (the safe area is 0 here). */
-async function headTop(canvasElement: HTMLElement, px: number) {
+/**
+ * The sticky head's top settles at the bar's height plus its 1px line (the safe area is 0 here). The band bar has no
+ * line, so its heads pin right at its edge (FLOW-1051).
+ */
+async function headTop(canvasElement: HTMLElement, px: number, line = 1) {
   const head = canvasElement.querySelector<HTMLElement>(".ui-group-head-line");
   await expect(head).not.toBeNull();
-  await waitFor(() => expect(getComputedStyle(head as HTMLElement).top).toBe(`${String(px + 1)}px`));
+  await waitFor(() => expect(getComputedStyle(head as HTMLElement).top).toBe(`${String(px + line)}px`));
 }
 
 export const BandDockClosed: Story = {
@@ -145,7 +148,7 @@ export const BandDockClosed: Story = {
     await expect(document.documentElement).toHaveAttribute("data-compact-bar", "band");
     await expect(document.documentElement).not.toHaveAttribute("data-compact-dock");
     await expect(canvasElement.ownerDocument.querySelector(".ui-compact-dock")).toHaveAttribute("inert");
-    await headTop(canvasElement, 64);
+    await headTop(canvasElement, 64, 0);
   },
 };
 
@@ -153,7 +156,7 @@ export const BandDocked: Story = {
   render: () => <Docking kind="band" docked />,
   play: async ({ canvasElement }) => {
     await expect(document.documentElement).toHaveAttribute("data-compact-dock", "on");
-    await headTop(canvasElement, 124);
+    await headTop(canvasElement, 124, 0);
   },
 };
 
