@@ -423,8 +423,9 @@
 }
 
 /* The band: the name, the period or date pill, the figure and its two rows (Overview pattern). FLOW-1054 (board
-   V3-Report): the name 14px under the Back row, 14px between the blocks, 22px under the last row. The board sets
-   its text at the font's own line height (about 1.2): the band's lines use the 1.2 step, not the body's 1.45. */
+   V3-Report): the name 16px under the Back row, 14px between the blocks, 22px under the last row. Its text keeps
+   v2's sizes as Home's band does (decision 0258): the name 20/600, the pill 16/500, the label 16/500, the sub 13,
+   the rows 16/500; the figure 52. */
 .ui-rep-v3 > .ui-band {
   padding-block-end: calc(var(--space-5) + var(--space-half));
 }
@@ -440,10 +441,12 @@
   min-inline-size: 0;
 }
 
-.ui-rep-band-name {
+.ui-rep-band.ui-band-fade .ui-rep-band-name {
   margin: 0;
   color: var(--color-on-band);
-  line-height: var(--type-title-line);
+  font-size: var(--type-sheet-size);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-sheet-line);
   overflow-wrap: anywhere;
 }
 
@@ -460,8 +463,9 @@
   background: var(--band-track);
   color: var(--color-on-band);
   font: inherit;
-  font-size: var(--type-section-size);
-  font-weight: var(--type-sheet-weight);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-btn-2-line);
   cursor: pointer;
 }
 
@@ -478,10 +482,9 @@
   min-inline-size: 0;
 }
 
-/* The figure's label 17 regular at the band's secondary white, the figure 52 at the start (right), its sub line 14. */
+/* The figure's label (the band's 16/500 at its secondary white), the figure 52 at the start (right), its sub line. */
 .ui-rep-band-figure .ui-band-title {
   margin: 0;
-  line-height: var(--type-title-line);
 }
 
 .ui-rep-band-figure .ui-band-net .ui-num {
@@ -491,8 +494,8 @@
 .ui-rep-band-sub {
   margin: 0;
   color: var(--color-on-band-secondary);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-title-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-rep-band-rows {
@@ -509,7 +512,8 @@
   min-block-size: var(--space-10);
   margin: 0;
   color: var(--color-on-band);
-  font-size: var(--type-body-size);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
 }
 
 /* The board's two rows read as one block: the second 6px under the first (the band's 14 less 8). */
@@ -517,12 +521,11 @@
   margin-block-start: calc(var(--space-inset-row) - var(--space-2));
 }
 
-/* The amounts 20/600 with no sign (V3-Report), not the list's 17 regular. */
+/* The amounts with no sign (V3-Report), at the rows' 16/500 as Home's (decision 0258), not the list's 17. */
 .ui-rep-band-row-amount,
 .ui-rep-band-row-amount .ui-num {
-  font-size: var(--type-section-size);
-  font-weight: var(--type-sheet-weight);
-  line-height: var(--type-title-line);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
   white-space: nowrap;
 }
 
@@ -866,7 +869,7 @@
   line-height: var(--type-title-line);
 }
 
-/* The cut rows sit on the gutter: 17 over a 13 secondary line on one line, cut at its end. */
+/* The cut rows sit on the gutter: 17 over a 13 secondary line (one line at 390; at 320 a long one wraps whole). */
 .ui-rep-hub-cuts .ui-project-list {
   padding-inline: 0;
 }
@@ -876,12 +879,9 @@
 }
 
 .ui-rep-hub-cuts .ui-row-hint {
-  overflow: hidden;
   color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
   line-height: var(--type-title-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* The board's cut rows: 64px, a 36px icon tile (12px corners, the tint, the accent glyph), 12px to the text. */
