@@ -34,42 +34,60 @@ function isIso(value: string | null): value is string {
   return date.getUTCFullYear() === y && date.getUTCMonth() + 1 === m && date.getUTCDate() === d;
 }
 
-/** The screen's choices from its query string. Anything unknown falls back to the default. */
-export function reportStateOf(params: URLSearchParams): ReportState {
-  const kind: ReportKind = params.get("kind") === "balance" ? "balance" : "pnl";
+/** The P&L's period from a query string (`period`, and `from`/`to` for a custom range); this year by default. */
+export function periodOf(params: URLSearchParams): PnlPeriod {
   const periodName = params.get("period");
   const from = params.get("from");
   const to = params.get("to");
-  let period: PnlPeriod = { kind: "year" };
-  if (periodName === "custom" && isIso(from) && isIso(to) && from <= to) period = { kind: "custom", from, to };
-  else if (PNL_PRESETS.some((preset) => preset === periodName)) period = { kind: periodName as PnlPreset };
+  if (periodName === "custom" && isIso(from) && isIso(to) && from <= to) return { kind: "custom", from, to };
+  if (PNL_PRESETS.some((preset) => preset === periodName)) return { kind: periodName as PnlPreset };
+  return { kind: "year" };
+}
+
+/** The balance sheet's date from a query string (`asof`, and `date` for a custom one); today by default. */
+export function asOfOf(params: URLSearchParams): BalanceDate {
   const asOfName = params.get("asof");
   const date = params.get("date");
-  let asOf: BalanceDate = { kind: "today" };
-  if (asOfName === "custom" && isIso(date)) asOf = { kind: "custom", date };
-  else if (BALANCE_PRESETS.some((preset) => preset === asOfName)) asOf = { kind: asOfName as BalancePreset };
+  if (asOfName === "custom" && isIso(date)) return { kind: "custom", date };
+  if (BALANCE_PRESETS.some((preset) => preset === asOfName)) return { kind: asOfName as BalancePreset };
+  return { kind: "today" };
+}
+
+/** Writes a period into a query string; this year, the default, is left out. */
+export function writePeriod(params: URLSearchParams, period: PnlPeriod): void {
+  if (period.kind === "custom") {
+    params.set("period", "custom");
+    params.set("from", period.from);
+    params.set("to", period.to);
+  } else if (period.kind !== "year") params.set("period", period.kind);
+}
+
+/** Writes a balance date into a query string; today, the default, is left out. */
+export function writeAsOf(params: URLSearchParams, asOf: BalanceDate): void {
+  if (asOf.kind === "custom") {
+    params.set("asof", "custom");
+    params.set("date", asOf.date);
+  } else if (asOf.kind !== "today") params.set("asof", asOf.kind);
+}
+
+/** The pre-v3 screen's choices from its query string (old links and the share sheet). Anything unknown falls back. */
+export function reportStateOf(params: URLSearchParams): ReportState {
+  const kind: ReportKind = params.get("kind") === "balance" ? "balance" : "pnl";
   const scopeName = params.get("scope");
   const project = params.get("project");
   let scope: ReportScope = { kind: "all" };
-  // The balance sheet has no by-project view: a link that asks for one shows all projects, with that chip not pressed.
+  // The balance sheet had no by-project view: a link that asks for one shows all projects.
   if (scopeName === "by_project" && kind === "pnl") scope = { kind: "by_project" };
   else if (scopeName === "project" && project != null && UUID.test(project)) scope = { kind: "project", id: project };
-  return { kind, period, asOf, scope };
+  return { kind, period: periodOf(params), asOf: asOfOf(params), scope };
 }
 
-/** The query string for a state: defaults are left out, so the plain route is the year's P&L of everything. */
+/** The pre-v3 query string for a state: defaults are left out. Old links use it; `/reports` redirects them. */
 export function reportSearch(state: ReportState): string {
   const params = new URLSearchParams();
   if (state.kind === "balance") params.set("kind", "balance");
-  if (state.period.kind === "custom") {
-    params.set("period", "custom");
-    params.set("from", state.period.from);
-    params.set("to", state.period.to);
-  } else if (state.period.kind !== "year") params.set("period", state.period.kind);
-  if (state.asOf.kind === "custom") {
-    params.set("asof", "custom");
-    params.set("date", state.asOf.date);
-  } else if (state.asOf.kind !== "today") params.set("asof", state.asOf.kind);
+  writePeriod(params, state.period);
+  writeAsOf(params, state.asOf);
   if (state.scope.kind === "by_project") params.set("scope", "by_project");
   if (state.scope.kind === "project") {
     params.set("scope", "project");
@@ -290,12 +308,6 @@ export function statementEmpty(statement: Pick<Statement, "currencies">): boolea
   return statement.currencies.every((row) => row.income.length === 0 && row.expense.length === 0 && row.kept_out.length === 0);
 }
 
-/** The collapsible section ids of one currency's statement, for כיווץ הכל. */
-export function statementSectionIds(row: StatementCurrency, prefix = ""): string[] {
-  const nodes = (side: "income" | "expense") => row[side].filter((node) => node.children.length > 0).map((node) => `${prefix}${row.currency}:${side}:${node.id ?? "none"}`);
-  return [`${prefix}${row.currency}:income`, `${prefix}${row.currency}:expense`, ...nodes("income"), ...nodes("expense")];
-}
-
 // ---- The balance sheet ---------------------------------------------------------------------------
 
 export type BalanceAccount = { account_id: string; name: string; is_system: boolean; balance_minor: bigint };
@@ -335,30 +347,6 @@ export function balanceWarning(row: Pick<BalanceCurrency, "warnings">): { amount
   if (row.warnings.length === 0) return null;
   const amount = row.warnings.reduce((sum, warning) => sum + (warning.balance_minor < 0n ? -warning.balance_minor : warning.balance_minor), 0n);
   return { amount, count: row.warnings.length };
-}
-
-// ---- Collapsed sections, remembered per report ---------------------------------------------------
-
-const STORE_KEY = "flow.reports.collapsed";
-
-/** The sections a report had collapsed last time; none when storage is off or empty. */
-export function readCollapsed(kind: ReportKind): Set<string> {
-  try {
-    const raw = window.localStorage.getItem(`${STORE_KEY}.${kind}`);
-    if (raw == null) return new Set();
-    const parsed: unknown = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []);
-  } catch {
-    return new Set();
-  }
-}
-
-export function writeCollapsed(kind: ReportKind, collapsed: ReadonlySet<string>): void {
-  try {
-    window.localStorage.setItem(`${STORE_KEY}.${kind}`, JSON.stringify([...collapsed].slice(0, 200)));
-  } catch {
-    // Storage off (a private window): the page still works, it just forgets.
-  }
 }
 
 /** Text kept left to right inside a Hebrew line (an LTR isolate): a date or a date range. */

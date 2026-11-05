@@ -41,6 +41,10 @@
 /forecast/item/:itemKey/ /forecast/item/:itemKey 301
 /reports /app-shell 200
 /reports/ /reports 301
+/reports/pnl /app-shell 200
+/reports/pnl/ /reports/pnl 301
+/reports/balance /app-shell 200
+/reports/balance/ /reports/balance 301
 /reports/lines /app-shell 200
 /reports/lines/ /reports/lines 301
 /reports/account /app-shell 200

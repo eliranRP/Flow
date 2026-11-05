@@ -11,7 +11,7 @@ import {
 import { REPORTS_BALANCE, REPORTS_TODAY } from "../dev/reports-sample";
 import { renderWithProviders } from "../test-render";
 import { ReportAccountScreen } from "./report-account-screen";
-import { ReportsScreen } from "./reports-screen";
+import { BalanceReportScreen } from "./reports-balance-screen";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -49,9 +49,9 @@ function wire(page: typeof REPORT_ACCOUNT_LOAN, rows: typeof page.rows = page.ro
 
 describe("the balance sheet", () => {
   it("opens an account's movements from its row, keeping the date and the project", () => {
-    renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, balance: REPORTS_BALANCE }} />, { route: "/reports?kind=balance&asof=last_month" });
+    renderWithProviders(<BalanceReportScreen sample={{ today: REPORTS_TODAY, balance: REPORTS_BALANCE }} />, { route: "/reports/balance?view=liabilities&asof=last_month" });
     const loan = screen.getByRole("link", { name: /קרן הלוואה|Loan principal/ });
-    expect(loan.getAttribute("href")).toBe("/reports/account?kind=balance&asof=last_month&account=l-loan&cur=USD");
+    expect(loan.getAttribute("href")).toBe("/reports/account?view=liabilities&asof=last_month&account=l-loan&cur=USD");
     // The running profit is not an account.
     expect(screen.queryByRole("link", { name: /רווח שנצבר/ })).toBeNull();
   });
@@ -258,8 +258,8 @@ describe("ReportAccountScreen: the period (FLOW-171)", () => {
 
 describe("the balance sheet's dated rows (FLOW-171)", () => {
   it("opens an account from a sheet dated at the end of last year, keeping that date", () => {
-    renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, balance: REPORTS_BALANCE }} />, { route: "/reports?kind=balance&asof=custom&date=2025-12-31" });
+    renderWithProviders(<BalanceReportScreen sample={{ today: REPORTS_TODAY, balance: REPORTS_BALANCE }} />, { route: "/reports/balance?view=liabilities&asof=custom&date=2025-12-31" });
     const loan = screen.getByRole("link", { name: /קרן הלוואה|Loan principal/ });
-    expect(loan.getAttribute("href")).toBe("/reports/account?kind=balance&asof=custom&date=2025-12-31&account=l-loan&cur=USD");
+    expect(loan.getAttribute("href")).toBe("/reports/account?view=liabilities&asof=custom&date=2025-12-31&account=l-loan&cur=USD");
   });
 });

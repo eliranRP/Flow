@@ -7,8 +7,12 @@ import {
   REPORTS_BALANCE,
   REPORTS_BALANCE_SUSPENSE,
   REPORTS_BY_PROJECT,
+  REPORTS_CEDAR,
   REPORTS_EMPTY,
+  REPORTS_MONTHS,
+  REPORTS_OCTOBER,
   REPORTS_PROJECT_IDS,
+  REPORTS_PROJECT_SHEETS,
   REPORTS_STATEMENT,
   REPORTS_TODAY,
 } from "../dev/reports-sample";
@@ -16,9 +20,14 @@ import { ExampleBar, storyBody } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ToastProvider } from "../ui/toast";
 import { CATEGORY_ROWS, CategoryLinesView, inView, line, titleLines } from "./report-lines-story-support";
-import { ReportsScreen, type ReportsSample } from "./reports-screen";
+import { BalanceReportScreen, type BalanceSample } from "./reports-balance-screen";
+import { ReportsHubScreen, type HubSample } from "./reports-hub-screen";
+import { PnlReportScreen, type PnlSample } from "./reports-screen";
 
-/** FLOW-161: the reports screen, the category drill-down and the Home card (board row "דוחות"). */
+/**
+ * FLOW-1045 (boards V3-Reports, V3-Report and its variants, V3-States): the hub, the P&L and the balance
+ * sheet with their views and drill-downs; FLOW-161: the category drill-down and the Home card.
+ */
 const meta = {
   title: "Screens/Reports",
   parameters: { flowRouter: false },
@@ -27,70 +36,232 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function Reports({ entry = "/reports", sample = {} }: { entry?: string; sample?: Partial<ReportsSample> }) {
+const CEDAR = REPORTS_PROJECT_IDS.cedar;
+const OAK_SHEET = REPORTS_PROJECT_SHEETS.find((sheet) => sheet.project_id === REPORTS_PROJECT_IDS.oak);
+const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
+
+function Hub({ entry = "/reports", sample = {} }: { entry?: string; sample?: Partial<HubSample> }) {
   return (
     <StoryRoute entry={entry} tabs>
       <ExampleBar />
-      <ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT, ...sample }} />
+      <ReportsHubScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, byProject: REPORTS_BY_PROJECT, months: REPORTS_MONTHS, balance: REPORTS_BALANCE, ...sample }} />
     </StoryRoute>
   );
 }
 
-/** The P&L of every project this year: the net first, then income, expenses and the bottom line. */
-export const ProfitAndLoss: Story = {
-  name: "P&L · all projects",
-  render: () => <Reports />,
+function Pnl({ entry = "/reports/pnl", sample = {} }: { entry?: string; sample?: Partial<PnlSample> }) {
+  return (
+    <StoryRoute entry={entry} tabs>
+      <ExampleBar />
+      <PnlReportScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, byProject: REPORTS_BY_PROJECT, months: REPORTS_MONTHS, ...sample }} />
+    </StoryRoute>
+  );
+}
+
+function Balance({ entry = "/reports/balance", sample = {} }: { entry?: string; sample?: Partial<BalanceSample> }) {
+  return (
+    <StoryRoute entry={entry} tabs>
+      <ExampleBar />
+      <BalanceReportScreen sample={{ today: REPORTS_TODAY, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT, projectSheets: REPORTS_PROJECT_SHEETS, ...sample }} />
+    </StoryRoute>
+  );
+}
+
+/** Nothing wider than the screen: the page never scrolls sideways. */
+async function fits(canvasElement: HTMLElement) {
+  const root = canvasElement.ownerDocument.documentElement;
+  await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+}
+
+// ---- The hub -------------------------------------------------------------------------------------
+
+/** The two reports' cards, each with its figure, a decorative chart and two facts, then the three breakdowns. */
+export const HubStory: Story = {
+  name: "Hub",
+  render: () => <Hub />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("30% מההכנסות · \u206601/01/2026–31/10/2026\u2069")).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /רווח והפסד לפי פרויקט/ })).toHaveAttribute("href", "/reports/pnl?view=project");
+    for (const chart of canvasElement.querySelectorAll(".ui-rep-hub-bars, .ui-rep-hub-split")) await expect(chart).toHaveAttribute("aria-hidden", "true");
+    await fits(canvasElement);
+  },
+};
+
+export const Hub320: Story = { name: "Hub · 320", ...phone320, render: () => <Hub />, play: async ({ canvasElement }) => { await fits(canvasElement); } };
+export const HubLoading: Story = { name: "Hub · loading", render: () => <Hub sample={{ phase: { kind: "loading" } }} /> };
+export const HubFailed: Story = { name: "Hub · failed to load", render: () => <Hub sample={{ phase: { kind: "error", offline: false } }} /> };
+export const HubOffline: Story = { name: "Hub · offline", render: () => <Hub sample={{ offlineSince: Date.parse("2026-10-31T07:41:00Z") }} /> };
+/** One read failed: the P&L card that loaded stays, the balance card shows its retry line. */
+export const HubBalanceFailed: Story = {
+  name: "Hub · P&L loaded, balance failed",
+  render: () => <Hub sample={{ balance: undefined, failed: ["balance"] }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /רווח והפסד.*\$29,000/ })).toBeInTheDocument();
+    await expect(canvas.queryByRole("link", { name: /מאזן.*\$285,000/ })).toBeNull();
+    await expect(canvas.getAllByRole("button", { name: "נסו שוב" })).toHaveLength(1);
+    await fits(canvasElement);
+  },
+};
+
+/** The months read failed: the cards stay, the P&L card shows the retry line in place of its chart. */
+export const HubMonthsFailed: Story = {
+  name: "Hub · balance loaded, months failed",
+  render: () => <Hub sample={{ months: undefined, failed: ["months"] }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /מאזן.*\$285,000/ })).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-rep-hub-bars")).toBeNull();
+    await expect(canvas.getAllByRole("button", { name: "נסו שוב" })).toHaveLength(1);
+    await fits(canvasElement);
+  },
+};
+
+export const HubEmpty: Story = { name: "Hub · empty", render: () => <Hub sample={{ statement: REPORTS_EMPTY, balance: { ...REPORTS_BALANCE, currencies: [] } }} /> };
+
+// ---- The P&L -------------------------------------------------------------------------------------
+
+/** By category: the band with the period pill and the net, the review card, the view control, the sections. */
+export const ProfitAndLoss: Story = {
+  name: "P&L · by category",
+  render: () => <Pnl />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("30% מההכנסות")).toBeInTheDocument();
+    await expect(canvas.getByRole("radio", { name: "קטגוריה" })).toHaveAttribute("aria-checked", "true");
     await expect(canvas.getByRole("link", { name: /ריבית משכנתא/ })).toBeInTheDocument();
   },
 };
 
-/** כיווץ הכל: every section shut, each total still on its header. */
-export const Collapsed: Story = {
-  name: "P&L · collapsed",
-  render: () => <Reports />,
+export const ProfitAndLoss320: Story = { name: "P&L · by category at 320", ...phone320, render: () => <Pnl />, play: async ({ canvasElement }) => { await fits(canvasElement); } };
+
+/** By project: each project's net, income and expenses under it; the general expenses in their own group. */
+export const ByProject: Story = {
+  name: "P&L · by project",
+  render: () => <Pnl entry="/reports/pnl?view=project" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "כיווץ הכל" }));
-    await expect(canvas.getByRole("button", { name: "פתיחת הכל" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "כלליות · לא פרויקט" })).toBeInTheDocument();
+    await fits(canvasElement);
   },
 };
 
-export const ByProject: Story = {
-  name: "P&L · by project",
-  render: () => <Reports entry="/reports?scope=by_project" sample={{ statement: REPORTS_BY_PROJECT }} />,
+export const ByMonth: Story = { name: "P&L · by month", render: () => <Pnl entry="/reports/pnl?view=month" /> };
+
+/** A project row drilled on the same screen: the band says its name and net, "‹ לפי פרויקט" returns. */
+export const ProjectDrill: Story = {
+  name: "P&L · a project drilled",
+  render: () => <Pnl entry={`/reports/pnl?view=project&project=${CEDAR}`} sample={{ drilled: REPORTS_CEDAR }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { level: 1, name: "Cedar St" })).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "חזרה ללפי פרויקט" })).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /לדף הפרויקט/ })).toBeInTheDocument();
+  },
 };
 
-export const OneProject: Story = {
-  name: "P&L · one project",
-  render: () => <Reports entry={`/reports?scope=project&project=${REPORTS_PROJECT_IDS.cedar}`} sample={{ statement: { ...REPORTS_STATEMENT, project_id: REPORTS_PROJECT_IDS.cedar, project_name: "Cedar St" } }} />,
+export const GeneralDrill: Story = { name: "P&L · the general expenses drilled", render: () => <Pnl entry="/reports/pnl?view=project&project=overhead" /> };
+
+export const MonthDrill: Story = {
+  name: "P&L · a month drilled",
+  render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
+  },
 };
 
-export const BalanceSheet: Story = {
-  name: "Balance sheet · today",
-  render: () => <Reports entry="/reports?kind=balance" />,
+/** Scrolled: the band bar slides in, and the view control docks into it; a pick there keeps it docked. */
+export const Docked: Story = {
+  name: "P&L · the view docked in the band bar",
+  render: () => <Pnl entry="/reports/pnl?view=month" />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 600, behavior: "instant" });
+    const dock = () => canvasElement.ownerDocument.querySelector(".ui-compact-dock");
+    await waitFor(() => expect(dock()).toHaveAttribute("data-open"));
+    await expect(canvasElement.querySelector(".ui-dock-slot")).toHaveAttribute("data-docked");
+    await expect(within(dock() as HTMLElement).getByRole("radio", { name: "חודש" })).toHaveAttribute("aria-checked", "true");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  },
 };
 
-export const BalanceSuspense: Story = {
-  name: "Balance sheet · Suspense",
-  render: () => <Reports entry="/reports?kind=balance" sample={{ balance: REPORTS_BALANCE_SUSPENSE }} />,
+/** The review card hidden on this device: its section folds to one line with ביטול. */
+export const AttentionHidden: Story = {
+  name: "P&L · the review card hidden",
+  render: () => {
+    try {
+      window.localStorage.setItem("flow.attention.reports", JSON.stringify({ review: "review:2" }));
+    } catch {
+      // No storage: the card shows.
+    }
+    return <Pnl />;
+  },
 };
+
+/** Long content: eight projects, one with a long Latin name, at 320. */
+export const ByProjectLong320: Story = {
+  name: "P&L · by project, long names at 320",
+  ...phone320,
+  render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: EIGHT_PROJECTS } }} />,
+  play: async ({ canvasElement }) => { await fits(canvasElement); },
+};
+
+export const Empty: Story = { name: "P&L · empty period", render: () => <Pnl entry="/reports/pnl?period=last_month" sample={{ statement: REPORTS_EMPTY }} /> };
+export const Loading: Story = { name: "P&L · loading", render: () => <Pnl sample={{ phase: { kind: "loading" } }} /> };
+export const Failed: Story = { name: "P&L · failed to load", render: () => <Pnl sample={{ phase: { kind: "error", offline: false } }} /> };
+export const Offline: Story = { name: "P&L · offline", render: () => <Pnl sample={{ offlineSince: Date.parse("2026-10-31T07:41:00Z") }} /> };
+
+// ---- The balance sheet ---------------------------------------------------------------------------
+
+export const BalanceSheet: Story = { name: "Balance sheet · assets", render: () => <Balance /> };
+export const BalanceLiabilities: Story = { name: "Balance sheet · liabilities and equity", render: () => <Balance entry="/reports/balance?view=liabilities" /> };
+export const BalanceSuspense: Story = { name: "Balance sheet · Suspense", render: () => <Balance sample={{ balance: REPORTS_BALANCE_SUSPENSE }} /> };
+
+/** By project: each property's equity, then the rest; a property row drills in. */
+export const BalanceByProject: Story = {
+  name: "Balance sheet · by project",
+  render: () => <Balance entry="/reports/balance?view=project" />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("בנק ושאר")).toBeInTheDocument();
+    await fits(canvasElement);
+  },
+};
+
+/** At 320 the rows' hints wrap in full: "בנק ושאר"'s hint is not cut by the two-line clamp. */
+export const BalanceByProject320: Story = {
+  name: "Balance sheet · by project at 320",
+  ...phone320,
+  render: () => <Balance entry="/reports/balance?view=project" />,
+  play: async ({ canvasElement }) => {
+    for (const hint of canvasElement.querySelectorAll<HTMLElement>(".ui-row-hint")) await expect(hint.scrollHeight).toBeLessThanOrEqual(hint.clientHeight + 1);
+    await fits(canvasElement);
+  },
+};
+
+export const PropertyDrill: Story = {
+  name: "Balance sheet · a property drilled",
+  render: () => <Balance entry={`/reports/balance?view=project&project=${REPORTS_PROJECT_IDS.oak}`} sample={OAK_SHEET == null ? {} : { drilled: OAK_SHEET }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("heading", { level: 1, name: "Oak Ridge" })).toBeInTheDocument();
+  },
+};
+
+export const BalanceLoading: Story = { name: "Balance sheet · loading", render: () => <Balance sample={{ phase: { kind: "loading" } }} /> };
+export const BalanceEmpty: Story = { name: "Balance sheet · empty", render: () => <Balance sample={{ balance: { ...REPORTS_BALANCE, currencies: [] } }} /> };
+
+// ---- The sheets ----------------------------------------------------------------------------------
 
 export const PeriodSheet: Story = {
   name: "Sheet · period",
-  render: () => <Reports />,
+  render: () => <Pnl />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "השנה · 2026" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "השנה · 2026" }));
   },
 };
 
 function BrowserReports() {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const [router] = useState(() => createBrowserRouter([
-    { path: "*", element: <ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT }} /> },
+    { path: "*", element: <PnlReportScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, byProject: REPORTS_BY_PROJECT }} /> },
   ]));
   return (
     <QueryClientProvider client={client}>
@@ -131,7 +302,7 @@ export const PeriodPickBrowserHistory: Story = {
  */
 export const ShareSheet: Story = {
   name: "Sheet · share",
-  render: () => <Reports />,
+  render: () => <Pnl />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "שיתוף הדוח" }));
@@ -145,8 +316,8 @@ export const ShareSheet: Story = {
 /** FLOW-993: some projects picked, by quarter, at 320: the five columns and the project switches fit the width. */
 export const ShareSheetProjects320: Story = {
   name: "Sheet · share · projects by quarter at 320",
-  globals: { viewport: { value: "flow320", isRotated: false } },
-  render: () => <Reports />,
+  ...phone320,
+  render: () => <Pnl />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "שיתוף PDF" });
@@ -162,7 +333,7 @@ export const ShareSheetProjects320: Story = {
   },
 };
 
-/** The four sample projects and four more, invented names. */
+/** The four sample projects, the general expenses and four more, invented names. */
 const EIGHT_PROJECTS = [
   ...REPORTS_BY_PROJECT.projects,
   ...["Birch Lane", "Elm Court", "Pine Hill", "Willow Row"].map((name, index) => {
@@ -177,8 +348,8 @@ const EIGHT_PROJECTS = [
  */
 export const ShareSheetNoProject320: Story = {
   name: "Sheet · share · 8 projects, none picked at 320",
-  globals: { viewport: { value: "flow320", isRotated: false } },
-  render: () => <Reports sample={{ projects: { ...REPORTS_BY_PROJECT, projects: EIGHT_PROJECTS } }} />,
+  ...phone320,
+  render: () => <Pnl sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: EIGHT_PROJECTS } }} />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "שיתוף PDF" });
@@ -204,8 +375,8 @@ export const ShareSheetNoProject320: Story = {
  */
 export const BalanceDateSheet320: Story = {
   name: "Sheet · balance date at 320",
-  globals: { viewport: { value: "flow320", isRotated: false } },
-  render: () => <Reports entry="/reports?kind=balance" />,
+  ...phone320,
+  render: () => <Balance />,
   play: async ({ canvasElement }) => {
     await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
     await userEvent.click(within(canvasElement).getByRole("button", { name: "היום" }));
@@ -226,28 +397,11 @@ export const BalanceDateSheet320: Story = {
 
 export const CustomDates: Story = {
   name: "Sheet · custom dates",
-  render: () => <Reports entry="/reports?period=custom&from=2026-10-05&to=2026-10-20" />,
+  render: () => <Pnl entry="/reports/pnl?period=custom&from=2026-10-05&to=2026-10-20" />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "\u206605/10/2026–20/10/2026\u2069" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "⁦05/10/2026–20/10/2026⁩" }));
   },
 };
-
-export const ProjectsSheet: Story = {
-  name: "Sheet · projects",
-  render: () => <Reports />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "כל הפרויקטים" }));
-  },
-};
-
-export const Empty: Story = { name: "State · empty period", render: () => <Reports entry="/reports?period=last_month" sample={{ statement: REPORTS_EMPTY }} /> };
-export const Loading: Story = { name: "State · loading", render: () => <Reports sample={{ phase: { kind: "loading" } }} /> };
-export const Failed: Story = { name: "State · failed to load", render: () => <Reports sample={{ phase: { kind: "error", offline: false } }} /> };
-export const Offline: Story = { name: "State · offline", render: () => <Reports sample={{ offlineSince: Date.parse("2026-10-31T07:41:00Z") }} /> };
-
-const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
 
 /** A row's hint parts that show on its one line, each with whether it is cut with "…". */
 function shownParts(row: Element): { text: string; cut: boolean }[] {

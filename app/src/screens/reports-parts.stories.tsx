@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { REPORTS_BALANCE } from "../dev/reports-sample";
+import { REPORTS_BALANCE, REPORTS_TODAY } from "../dev/reports-sample";
 import type { BalanceSheet } from "../reports";
 import { StoryRoute } from "../ui/story-route";
-import { BalanceView } from "./reports-parts";
+import { BalanceReportScreen } from "./reports-balance-screen";
 
 /** FLOW-171: the balance sheet's account rows with a long Latin name: they break after "/" and stay inside the screen. */
 const meta = {
@@ -16,25 +16,24 @@ type Story = StoryObj<typeof meta>;
 
 const [usd] = REPORTS_BALANCE.currencies;
 if (usd == null) throw new Error("the sample has a USD sheet");
-const ROW: BalanceSheet["currencies"][number] = {
-  ...usd,
-  equity: {
-    total_minor: usd.equity.total_minor,
-    accounts: [
-      { account_id: "q-partner", name: "Partner A – Contributions/Distributions", is_system: false, balance_minor: 11_000_000n },
-      { account_id: "q-owner", name: "Owner capital", is_system: true, balance_minor: usd.equity.total_minor - 11_000_000n },
-    ],
-  },
+const SHEET: BalanceSheet = {
+  ...REPORTS_BALANCE,
+  currencies: [{
+    ...usd,
+    equity: {
+      total_minor: usd.equity.total_minor,
+      accounts: [
+        { account_id: "q-partner", name: "Partner A – Contributions/Distributions", is_system: false, balance_minor: 11_000_000n },
+        { account_id: "q-owner", name: "Owner capital", is_system: true, balance_minor: usd.equity.total_minor - 11_000_000n },
+      ],
+    },
+  }],
 };
 
 function Rows() {
   return (
-    <StoryRoute entry="/reports?kind=balance" tabs>
-      <div className="ui-rep-screen">
-        <div className="ui-rep-content">
-          <BalanceView row={ROW} collapse={{ isOpen: () => true, onToggle: () => undefined }} fixHref="/settings/categories" accountHref={(id) => `/reports/account?kind=balance&account=${id}`} />
-        </div>
-      </div>
+    <StoryRoute entry="/reports/balance?view=liabilities" tabs>
+      <BalanceReportScreen sample={{ today: REPORTS_TODAY, balance: SHEET }} />
     </StoryRoute>
   );
 }
@@ -44,12 +43,14 @@ async function rowsFit(canvasElement: HTMLElement, width: number) {
   const root = canvasElement.ownerDocument.documentElement;
   await expect(root.clientWidth).toBeLessThanOrEqual(width);
   await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
-  for (const name of canvasElement.querySelectorAll<HTMLElement>(".ui-rep-row-name")) {
+  const titles = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-row-title")];
+  await expect(titles.length).toBeGreaterThan(0);
+  for (const name of titles) {
     const box = name.getBoundingClientRect();
     await expect(box.left >= 0 && box.right <= root.clientWidth).toBe(true);
     await expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
   }
-  const long = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-row-name")].find((name) => name.textContent.includes("Contributions"));
+  const long = titles.find((name) => name.textContent.includes("Contributions"));
   await expect(long?.querySelector("wbr")).not.toBeNull();
 }
 

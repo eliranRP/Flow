@@ -6,7 +6,8 @@ import { lineInitials } from "../cash-lines-groups";
 import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { categoryName, dateRangeText, projectKeyName, reportStateOf } from "../reports";
+import { categoryName, dateRangeText, projectKeyName } from "../reports";
+import { reportBackPath, reportProjectId } from "../report-views";
 import { Amount } from "../ui/amount";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -39,11 +40,12 @@ export function reportLinesArgs(params: URLSearchParams) {
     side,
     category: params.get("category") ?? "none",
     name: params.get("name"),
-    from: params.get("from"),
-    to: params.get("to"),
+    // The row's own dates (lfrom, lto); an older link carried them as from and to.
+    from: params.get("lfrom") ?? params.get("from"),
+    to: params.get("lto") ?? params.get("to"),
     projectName: params.get("pname"),
     // One project's report: its lines, read by project (FLOW-165).
-    projectId: ((scope) => (scope.kind === "project" ? scope.id : null))(reportStateOf(params).scope),
+    projectId: reportProjectId(params),
     currency: /^[A-Z]{3}$/.test(params.get("cur") ?? "") ? (params.get("cur") ?? "ILS") : "ILS",
   } as const;
 }
@@ -195,8 +197,8 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
     if (searching && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
   }, [searching, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
   const title = categoryName(args.name);
-  // Back to the report, with its own choices (the drill keys ride along and are ignored there).
-  const back = `/reports${location.search}`;
+  // Back to the P&L, with its own choices; the drill-down's keys go.
+  const back = reportBackPath("pnl", location.search, ["side", "category", "name", "lfrom", "lto", "cur", "pname"]);
   const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={args.projectName != null ? `${dateRangeText(args.from, args.to)} · ${args.projectName}` : dateRangeText(args.from, args.to)} />;
   if (rows == null) {
     return (

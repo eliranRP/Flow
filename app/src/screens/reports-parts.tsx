@@ -1,27 +1,26 @@
+import { formatAmountText } from "@flow/shared";
 import { useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { balanceWarning, type BalanceCurrency } from "../reports";
+import type { NetRow, ViewGroup, ViewRow } from "../report-views";
 import { Amount } from "../ui/amount";
-import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon } from "../ui/icons";
+import { BackButton, useGoBack } from "../ui/back";
+import { BandLoadFailed, BandOfflineLine } from "../ui/band-states";
+import { CompactBar } from "../ui/compact-bar";
+import { DockSlot, useDockedFilter } from "../ui/dock-filter";
+import { FocusTitle } from "../ui/focus-title";
+import { GroupHead } from "../ui/group-head";
+import { IconButton } from "../ui/icon-button";
+import { AlertIcon, BackIcon, CheckIcon, ChevronDownIcon, ChevronIcon, ShareIcon } from "../ui/icons";
+import { List, ListRow } from "../ui/list-row";
+import { Skeleton } from "../ui/skeleton";
 import { slashBreaks } from "../ui/slash-breaks";
-import {
-  accountName,
-  balanceWarning,
-  byCategoryNumber,
-  categoryName,
-  equityTotal,
-  marginPercent,
-  projectKeyName,
-  type BalanceCurrency,
-  type BalanceSide,
-  type StatementCurrency,
-  type StatementNode,
-  type StatementProject,
-} from "../reports";
+import { TopBand, useBandGone } from "../ui/top-band";
 
 /**
- * FLOW-161: the reports screen's parts (board row "דוחות"): a collapsible section whose total stays on its
- * header, the P&L statement, the by-project cards and the balance sheet. The screen holds which sections are
- * collapsed (remembered per report) and passes `isOpen` and `onToggle`.
+ * FLOW-161: the reports' older parts that other pages still compose (a collapsible section, a row, a total
+ * and the summary figure: the lines and account pages, the returns pages). FLOW-1045: the v3 report's shell
+ * (the band, its compact bar and the docking view control) and its list parts.
  */
 
 export type Collapse = { isOpen: (id: string) => boolean; onToggle: (id: string) => void };
@@ -91,7 +90,7 @@ export function ReportTotal({ label, amount, strong = false }: { label: string; 
   );
 }
 
-/** The number that leads a report: the net profit or the equity, capped at the total step (rule tables § 19). */
+/** The number that leads a page: capped at the total step (rule tables § 19). */
 export function ReportSummary({ label, amount, currency, sub, ok = false, loss = amount < 0n }: {
   label: string;
   amount: bigint;
@@ -115,173 +114,263 @@ export function ReportSummary({ label, amount, currency, sub, ok = false, loss =
   );
 }
 
-function costAmount(minor: bigint, currency: string): ReactNode {
-  // A cost shows its minus (decision 0096); a refund that leaves a side below zero shows a plus.
-  return <Amount agorot={-minor} currency={currency} />;
+// ---- FLOW-1045: the v3 report ---------------------------------------------------------------------
+
+/** The band bar's height (BUILD-PLAN §3.1: 6 + 52 + 6). */
+const BAND_BAR = 64;
+
+/** Back on a report: to the hub, or out of a drill-down to the view it came from ("‹ לפי פרויקט"). */
+export type ReportBack = { kind: "hub"; to: string } | { kind: "undrill"; label: string; onBack: () => void };
+
+export type BandFigure = { amount: bigint; currency: string; loss: boolean };
+
+/** One of the two rows under the band's figure: income and expenses, or assets and liabilities. */
+export type BandRow = { label: string; amount: bigint; income?: boolean };
+
+/** A figure as text, for the bar and the group heads: LTR, the minus U+2212 (formatAmountText). */
+export function amountText(amount: bigint, currency: string, signed = false): string {
+  return formatAmountText(amount, currency, signed ? { direction: amount < 0n ? "expense" : "income", plus: amount > 0n } : undefined);
 }
 
-function incomeAmount(minor: bigint, currency: string): ReactNode {
-  return <Amount agorot={minor} currency={currency} />;
-}
-
-type DrillHref = (side: "income" | "expense", node: { id: string | null; name: string | null }) => string;
-
-function sideRows(row: StatementCurrency, side: "income" | "expense", collapse: Collapse, drill: DrillHref, prefix: string): ReactNode {
-  const amount = (minor: bigint) => (side === "income" ? incomeAmount(minor, row.currency) : costAmount(minor, row.currency));
-  const nodes: StatementNode[] = byCategoryNumber(row[side]);
+function UndrillButton({ label, onBack }: { label: string; onBack: () => void }) {
   return (
-    <ul className="ui-rep-rows">
-      {nodes.map((node) => {
-        if (node.children.length === 0) {
-          return <ReportRow key={node.id ?? "none"} name={categoryName(node.name)} amount={amount(node.amount_minor)} href={drill(side, node)} />;
-        }
-        return (
-          <li key={node.id ?? "none"} className="ui-rep-row ui-rep-row-group">
-            <ReportSection id={`${prefix}${row.currency}:${side}:${node.id ?? "none"}`} title={categoryName(node.name)} total={amount(node.amount_minor)} collapse={collapse} tone="group">
-              <ul className="ui-rep-rows ui-rep-rows-sub">
-                {node.own_minor !== 0n ? <ReportRow name={categoryName(node.name)} meta="ישירות בקטגוריה" amount={amount(node.own_minor)} href={drill(side, node)} /> : null}
-                {byCategoryNumber(node.children).map((child) => <ReportRow key={child.id ?? "none"} name={categoryName(child.name)} amount={amount(child.amount_minor)} href={drill(side, child)} />)}
-              </ul>
-            </ReportSection>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-/** Where a kept-out category posts: the account when its name differs, else its type. */
-function keptMeta(item: StatementCurrency["kept_out"][number]): string | undefined {
-  const account = item.account_name == null ? null : accountName({ name: item.account_name, is_system: true });
-  if (account != null && account !== item.name) return account;
-  if (item.account_type === "asset") return "נכס";
-  if (item.account_type === "liability") return "התחייבות";
-  if (item.account_type === "equity") return "הון";
-  return undefined;
-}
-
-/** One currency's P&L: income, expenses, the net, and what stays out of profit. */
-export function StatementView({ row, collapse, drill, prefix = "" }: { row: StatementCurrency; collapse: Collapse; drill: DrillHref; prefix?: string }) {
-  const kept = row.kept_out;
-  return (
-    <div className="ui-rep-statement">
-      {row.income.length > 0 ? (
-        <ReportSection id={`${prefix}${row.currency}:income`} title="הכנסות" total={incomeAmount(row.income_minor, row.currency)} collapse={collapse}>
-          {sideRows(row, "income", collapse, drill, prefix)}
-        </ReportSection>
-      ) : null}
-      {row.expense.length > 0 ? (
-        <ReportSection id={`${prefix}${row.currency}:expense`} title="הוצאות" total={costAmount(row.expense_minor, row.currency)} collapse={collapse}>
-          {sideRows(row, "expense", collapse, drill, prefix)}
-        </ReportSection>
-      ) : null}
-      <ReportTotal label="רווח נקי" amount={<Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />} strong />
-      {kept.length > 0 ? (
-        <ReportSection id={`${prefix}${row.currency}:kept`} title="לא נספר ברווח" total={<span className="t-muted">{kept.length === 1 ? "קטגוריה אחת" : `${String(kept.length)} קטגוריות`}</span>} collapse={collapse}>
-          <ul className="ui-rep-rows ui-rep-rows-kept">
-            {kept.map((item) => (
-              <ReportRow
-                key={`${item.direction}:${item.id ?? "none"}`}
-                name={categoryName(item.name)}
-                meta={keptMeta(item)}
-                amount={item.direction === "income" ? <Amount agorot={item.amount_minor} currency={row.currency} /> : costAmount(item.amount_minor, row.currency)}
-              />
-            ))}
-          </ul>
-          <p className="ui-rep-note">נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ופיקדון מסים וביטוח. הם במאזן, לא ברווח.</p>
-        </ReportSection>
-      ) : null}
-    </div>
-  );
-}
-
-/** The by-project view: a card per project key, closed by default, with its income, cost and net. */
-export function ByProjectView({ projects, currency, collapse, openProject }: {
-  projects: readonly StatementProject[];
-  currency: string;
-  collapse: Collapse;
-  openProject: (projectId: string) => string;
-}) {
-  return (
-    <ul className="ui-rep-projects">
-      {projects.map((project) => {
-        const row = project.currencies.find((item) => item.currency === currency) ?? project.currencies[0];
-        if (row == null) return null;
-        const id = `project:${project.key}`;
-        const name = projectKeyName(project);
-        return (
-          <li key={project.key} className="ui-rep-project">
-            <ReportSection id={id} title={name} total={<Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />} collapse={{ ...collapse, isOpen: (key) => !collapse.isOpen(key) }}>
-              <div className="ui-rep-project-body">
-                <ReportTotal label="הכנסות" amount={incomeAmount(row.income_minor, row.currency)} />
-                <ReportTotal label="הוצאות" amount={costAmount(row.expense_minor, row.currency)} />
-                <ReportTotal label="רווח נקי" amount={<Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />} strong />
-                {project.project_id != null ? (
-                  <Link className="ui-rep-more m-press" to={openProject(project.project_id)}>
-                    {`הדוח המלא של ${name}`}
-                    <ChevronIcon size={16} />
-                  </Link>
-                ) : null}
-              </div>
-            </ReportSection>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function sideList(side: BalanceSide, currency: string, accountHref: (accountId: string) => string, extra?: ReactNode): ReactNode {
-  return (
-    <ul className="ui-rep-rows">
-      {side.accounts.map((account) => (
-        <ReportRow key={account.account_id} name={accountName(account)} amount={<Amount agorot={account.balance_minor} currency={currency} />} href={accountHref(account.account_id)} />
-      ))}
-      {extra}
-    </ul>
+    <button type="button" className="ui-back-labelled ui-rep-undrill m-press" aria-label={`חזרה ל${label}`} onClick={onBack}>
+      <BackIcon />
+      <span className="ui-back-text" data-clip-ok="">{label}</span>
+    </button>
   );
 }
 
 /**
- * One currency's balance sheet: assets, liabilities and equity (with the running profit), and the check line.
- * An account's row opens its movements (FLOW-165).
+ * FLOW-1045 (board V3-Report, the Overview pattern): the report's violet band (the name, the period or date
+ * pill that opens its sheet, the figure and its two rows), the band bar that slides in once the figures fade
+ * (Back, the name and figure, share), and the view control that docks into that bar. `control(onBand)` draws
+ * the same SegmentedControl in the page and in the bar; none in a drill-down. `top` sits above the control
+ * (the attention card, the drill-down's way on), the children under it.
  */
-export function BalanceView({ row, collapse, fixHref, accountHref }: { row: BalanceCurrency; collapse: Collapse; fixHref: string; accountHref: (accountId: string) => string }) {
-  const warning = balanceWarning(row);
-  const equity = equityTotal(row);
+export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, rows, onShare, control, offlineSince, failed, top, children }: {
+  name: string;
+  back: ReportBack;
+  pill: { label: string; onOpen: () => void };
+  figureLabel: string;
+  /** Null while the read is in: a band skeleton. */
+  figure: BandFigure | null;
+  figureSub?: string;
+  rows: readonly BandRow[];
+  onShare?: (() => void) | null;
+  control?: ((onBand: boolean, scrollUnderBar: () => void) => ReactNode) | null;
+  offlineSince?: number | null;
+  /** The read failed: the band says so with its retry (V3-States), and the page shows nothing under it. */
+  failed?: { offline: boolean; onRetry: () => void } | null;
+  top?: ReactNode;
+  children?: ReactNode;
+}) {
+  const goBack = useGoBack();
+  const barShown = useBandGone();
+  const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
+  const leading = back.kind === "hub" ? <BackButton fallback={back.to} text="דוחות" onBand /> : <UndrillButton label={back.label} onBack={back.onBack} />;
+  const share = onShare == null ? null : <IconButton label="שיתוף הדוח" onBand onClick={onShare}><ShareIcon size={22} /></IconButton>;
+  if (failed != null) {
+    return (
+      <div className="ui-rep-v3">
+        <BandLoadFailed title="הדוח לא נטען" offline={failed.offline} onRetry={failed.onRetry} leading={leading} />
+      </div>
+    );
+  }
+  const currency = figure?.currency ?? "ILS";
   return (
-    <div className="ui-rep-statement">
-      {warning != null ? (
-        <div className="ui-rep-warning" role="status">
-          <span className="ui-rep-warning-icon" aria-hidden="true"><AlertIcon size={20} /></span>
-          <span className="ui-rep-warning-text">
-            <span className="ui-rep-warning-title">
-              {"בחשבון מעבר · "}
-              <Amount agorot={warning.amount} currency={row.currency} />
+    <div className="ui-rep-v3">
+      <TopBand
+        wordmark={false}
+        leading={leading}
+        trailing={share}
+        hero={
+          <div className="ui-rep-band ui-band-fade">
+            <FocusTitle className="t-name ui-rep-band-name">{name}</FocusTitle>
+            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
+            <button type="button" className="ui-rep-pill m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
+              <span className="ui-rep-pill-label">{pill.label}</span>
+              <ChevronDownIcon size={14} />
+            </button>
+            <div className="ui-rep-band-figure">
+              <p className="ui-band-title">{figureLabel}</p>
+              {figure == null ? (
+                <Skeleton tone="band" hero />
+              ) : (
+                <p className="ui-band-net">
+                  <Amount agorot={figure.amount} currency={figure.currency} loss={figure.loss} size="hero" compact />
+                </p>
+              )}
+              {figureSub == null ? null : <p className="ui-rep-band-sub t-line2">{figureSub}</p>}
+            </div>
+            {figure == null ? null : (
+              <div className="ui-rep-band-rows">
+                {rows.map((row) => (
+                  <p key={row.label} className="ui-rep-band-row">
+                    <span>{row.label}</span>
+                    <span className="ui-rep-band-row-amount">
+                      <Amount agorot={row.amount} currency={currency} size="list" income={row.income === true} />
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        }
+      />
+      <CompactBar
+        title=""
+        shown={barShown}
+        tone="band"
+        start={
+          <IconButton label={back.kind === "hub" ? "חזרה לדוחות" : `חזרה ל${back.label}`} onBand onClick={() => { if (back.kind === "hub") goBack(back.to); else back.onBack(); }}>
+            <BackIcon />
+          </IconButton>
+        }
+        centre={
+          <button type="button" className="ui-compact-bar-centre m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
+            <span className="ui-compact-bar-centre-title">
+              <span className="ui-rep-bar-title" data-clip-ok="">{`${name} · ${pill.label}`}</span>
+              <ChevronDownIcon size={10} />
             </span>
-            <span className="ui-rep-warning-body">יש תנועות שהקטגוריה שלהן לא קשורה לחשבון במאזן. אחרי שמסדרים, המספרים מתעדכנים.</span>
-            <Link className="ui-rep-warning-action m-press" to={fixHref}>סידור הקטגוריות</Link>
-          </span>
-        </div>
-      ) : null}
-      <ReportSection id={`${row.currency}:assets`} title="נכסים" total={<Amount agorot={row.assets.total_minor} currency={row.currency} />} collapse={collapse}>
-        {sideList(row.assets, row.currency, accountHref)}
-      </ReportSection>
-      <ReportSection id={`${row.currency}:liabilities`} title="התחייבויות" total={<Amount agorot={row.liabilities.total_minor} currency={row.currency} />} collapse={collapse}>
-        {sideList(row.liabilities, row.currency, accountHref)}
-      </ReportSection>
-      <ReportSection id={`${row.currency}:equity`} title="הון" total={<Amount agorot={equity} currency={row.currency} loss={equity < 0n} />} collapse={collapse}>
-        {sideList(row.equity, row.currency, accountHref, row.retained_earnings_minor !== 0n ? (
-          <ReportRow name="רווח שנצבר" meta="מרווח והפסד" amount={<Amount agorot={row.retained_earnings_minor} currency={row.currency} loss={row.retained_earnings_minor < 0n} />} />
-        ) : null)}
-      </ReportSection>
-      <ReportTotal label="התחייבויות והון" amount={<Amount agorot={row.total_liabilities_and_equity_minor} currency={row.currency} />} strong />
+            <span className="ui-compact-bar-centre-net">
+              <bdi dir="ltr">{figure == null ? "" : amountText(figure.amount, figure.currency)}</bdi>
+            </span>
+          </button>
+        }
+        end={share ?? <span className="ui-rep-bar-space" aria-hidden="true" />}
+        dock={control == null ? undefined : control(true, scrollUnderBar)}
+        docked={docked}
+      />
+      <div className="ui-rep-page">
+        {top}
+        {control == null ? null : (
+          <>
+            <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
+            <DockSlot docked={docked}>{control(false, scrollUnderBar)}</DockSlot>
+          </>
+        )}
+        {children}
+      </div>
     </div>
   );
 }
 
-/** The P&L summary line: the margin and the period. */
-export function statementSub(row: StatementCurrency, period: string): string {
-  const margin = marginPercent(row);
-  return margin == null ? period : `${String(margin)}% מההכנסות · ${period}`;
+/** The rows' amount: income with its plus in green, a cost as it is (its group says so), a net with its sign. */
+function rowAmount(tone: ViewRow["tone"], amount: bigint): { agorot: bigint; amountDirection?: "income"; loss?: boolean; amountPlus?: boolean } {
+  if (tone === "income") return { agorot: amount, amountDirection: "income" };
+  if (tone === "net") return { agorot: amount, loss: amount < 0n, amountPlus: amount > 0n };
+  return { agorot: amount };
+}
+
+/** Category groups, each under a one-line sticky head with its total; a row opens its lines when `href` gives one. */
+export function ViewGroups({ id, groups, currency, href }: { id: string; groups: readonly ViewGroup[]; currency: string; href?: (row: ViewRow) => string | undefined }) {
+  return (
+    <>
+      {groups.map((group) => (
+        <section key={group.key} className="ui-month ui-rep-v3-group" aria-labelledby={`${id}-${group.key}`}>
+          <GroupHead id={`${id}-${group.key}`} title={group.title} summary={<bdi dir="ltr">{amountText(group.total, currency, group.tone === "income")}</bdi>} />
+          <List>
+            {group.rows.map((row) => {
+              const to = href?.(row);
+              return (
+                <ListRow
+                  key={row.key}
+                  variant="project"
+                  title={slashBreaks(row.name)}
+                  wrapTitle
+                  {...(row.hint == null ? {} : { hint: row.hint })}
+                  {...(to == null ? {} : { href: to })}
+                  chevron={to != null}
+                  chevronSpace={to == null}
+                  currency={currency}
+                  {...rowAmount(row.tone, row.amount)}
+                />
+              );
+            })}
+          </List>
+        </section>
+      ))}
+    </>
+  );
+}
+
+/** By project or by month: a group of rows, each its net with its income and expenses under it, each opening its own report. */
+export function NetGroup({ id, title, rows, currency, open, hint }: {
+  id: string;
+  title: string;
+  rows: readonly NetRow[];
+  currency: string;
+  /** The drill-down a row opens; none for a row that has nothing to open. */
+  open: (row: NetRow) => string | undefined;
+  hint?: (row: NetRow) => string;
+}) {
+  if (rows.length === 0) return null;
+  const total = rows.reduce((sum, row) => sum + row.net, 0n);
+  return (
+    <section className="ui-month ui-rep-v3-group" aria-labelledby={id}>
+      <GroupHead id={id} title={title} summary={<bdi dir="ltr">{amountText(total, currency, true)}</bdi>} />
+      <List>
+        {rows.map((row) => {
+          const to = open(row);
+          return (
+            <ListRow
+              key={row.key}
+              variant="project"
+              title={slashBreaks(row.name)}
+              wrapTitle
+              hint={hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`}
+              {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
+              chevron={to != null}
+              chevronSpace={to == null}
+              currency={currency}
+              {...rowAmount("net", row.net)}
+            />
+          );
+        })}
+      </List>
+    </section>
+  );
+}
+
+/** The bottom line under the groups: "רווח נקי" or "הון עצמי", the band's figure again. */
+export function ReportBottomLine({ label, amount, currency }: { label: string; amount: bigint; currency: string }) {
+  return <ReportTotal label={label} amount={<Amount agorot={amount} currency={currency} loss={amount < 0n} />} strong />;
+}
+
+/** A drill-down's way on, after its groups: "לדף הפרויקט" or "תנועות החודש". */
+export function ReportGoOn({ label, to }: { label: string; to: string }) {
+  return (
+    <List>
+      <ListRow variant="item" title={label} href={to} chevron />
+    </List>
+  );
+}
+
+/** The balance sheet's Suspense warning: an icon and words, never colour alone (rule visual § 7). */
+export function BalanceWarningCard({ row, fixHref }: { row: BalanceCurrency; fixHref: string }) {
+  const warning = balanceWarning(row);
+  if (warning == null) return null;
+  return (
+    <div className="ui-rep-warning" role="status">
+      <span className="ui-rep-warning-icon" aria-hidden="true"><AlertIcon size={20} /></span>
+      <span className="ui-rep-warning-text">
+        <span className="ui-rep-warning-title">
+          {"בחשבון מעבר · "}
+          <Amount agorot={warning.amount} currency={row.currency} />
+        </span>
+        <span className="ui-rep-warning-body">יש תנועות שהקטגוריה שלהן לא קשורה לחשבון במאזן. אחרי שמסדרים, המספרים מתעדכנים.</span>
+        <Link className="ui-rep-warning-action m-press" to={fixHref}>סידור הקטגוריות</Link>
+      </span>
+    </div>
+  );
+}
+
+/** The list's skeleton while a view's read is in: rows in the list's own shape. */
+export function ReportRowsSkeleton() {
+  return (
+    <List>
+      {Array.from({ length: 6 }, (_, index) => <ListRow key={index} variant="skeleton" />)}
+    </List>
+  );
 }
