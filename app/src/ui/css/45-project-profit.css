@@ -321,3 +321,59 @@
 .ui-pn-figure-label {
   margin: var(--space-2) 0 0;
 }
+
+/* FLOW-1053 (boards V3-ProjectProfit, -Flip, -Client): the profit page's summary card is 6px over 18px sides: two
+   48px rows (17, the label in the text colour), then past a hairline the 52px result (17/500, its figure 20/600).
+   The note sits 10px under the card; the month rows are 60px with 6px above and below, the line 13 in secondary. */
+.ui-pp-page .ui-pp-card {
+  margin: 0;
+  padding: calc(var(--space-1) + var(--space-half)) calc(var(--space-4) + var(--space-half));
+}
+
+.ui-pp-page .ui-pp-row,
+.ui-pp-page .ui-pp-row + .ui-pp-row {
+  min-height: calc(var(--space-10) + var(--space-2));
+  border-top: 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-pp-page .ui-pp-label {
+  color: var(--color-text);
+}
+
+.ui-pp-page .ui-pp-row.ui-pp-row-strong {
+  min-height: calc(var(--space-10) + var(--space-3));
+  border-top: 1px solid var(--color-line);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-pp-page .ui-pp-row-strong .ui-num {
+  font-size: var(--type-section-size);
+  font-weight: var(--type-sheet-weight);
+}
+
+.ui-pp-page .ui-project-stack > .ui-pp-note {
+  margin: calc((var(--space-1) + var(--space-half)) * -1) 0 0;
+  color: var(--color-text-secondary);
+  line-height: var(--type-caption-line);
+}
+
+.ui-pp-page .ui-pp-months .ui-row {
+  min-block-size: calc(var(--space-10) + var(--space-5));
+  padding-block: calc(var(--space-1) + var(--space-half));
+}
+
+.ui-pp-page .ui-pp-months .ui-row-text {
+  gap: 0;
+}
+
+.ui-pp-page .ui-pp-months .ui-row-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+}
+
+/* The profit band's rows are 40px (V3-ProjectProfit). */
+.ui-pp-page .ui-band-row-link {
+  min-block-size: var(--space-10);
+}

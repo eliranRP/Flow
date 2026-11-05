@@ -89,14 +89,15 @@ export function ProjectsScreen({
   const sheet = <ProjectFormSheet open={open} onOpenChange={setOpen} />;
   const actions = (
     <span className="ui-projects-head-actions">
-      <IconButton to={`/search${search}`} label="חיפוש" onBand>
-        <SearchIcon />
-      </IconButton>
+      {/* FLOW-1053 (board V3-Projects): + first, then search at the band's far side. */}
       {onNew == null ? null : (
         <IconButton label="פרויקט חדש" onBand onClick={onNew}>
           <PlusIcon />
         </IconButton>
       )}
+      <IconButton to={`/search${search}`} label="חיפוש" onBand>
+        <SearchIcon />
+      </IconButton>
     </span>
   );
   const title = <FocusTitle className="t-title ui-projects-band-title">פרויקטים</FocusTitle>;
@@ -234,7 +235,8 @@ function ProjectsOverview({
                 if (next <= currentKey) onMonth(next);
               }}
             >
-              <span className="ui-band-month-name">{monthName}</span>
+              {/* FLOW-1053 (board V3-Projects): the pill names the year too, this year's month included. */}
+              <span className="ui-band-month-name">{monthName.includes(" ") ? monthName : `${monthName} ${monthKey.slice(0, 4)}`}</span>
             </MonthStepper>
             <p className="ui-band-label t-line2">{isCurrent ? "תזרים הפרויקטים · עד היום" : "תזרים הפרויקטים · חודש סגור"}</p>
             <div className="ui-project-profits t-detail">
@@ -247,7 +249,7 @@ function ProjectsOverview({
                 <span key={side} className="ui-band-row-link">
                   <span className="ui-band-row-label">{side === "in" ? "נכנס" : "יצא"}</span>
                   <span className="ui-band-row-amount">
-                    <Amount agorot={BigInt(side === "in" ? totals.in : totals.out)} currency={base} presentation="detail" size="list" />
+                    <Amount agorot={BigInt(side === "in" ? totals.in : totals.out)} currency={base} size="list" />
                   </span>
                 </span>
               ))}
@@ -342,8 +344,8 @@ function ProjectCashRowItem({ row, currency, search }: { row: ProjectCashRow; cu
         hint="תקורה · לא פרויקט"
         icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true"><HomeIcon size={18} /></span>}
         agorot={BigInt(net)}
-        signed
         currency={currency}
+        amountDirection={net > 0 ? "income" : undefined}
         href={href}
       />
     );
@@ -362,7 +364,8 @@ function ProjectCashRowItem({ row, currency, search }: { row: ProjectCashRow; cu
       agorot={BigInt(net)}
       currency={currency}
       amounts={elsewhere ? lines : undefined}
-      signed
+      // FLOW-1053 (board V3-Projects): a whole figure at 17, green with a plus when money came in.
+      amountDirection={net > 0 ? "income" : undefined}
       href={href}
     />
   );

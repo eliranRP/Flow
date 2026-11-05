@@ -232,14 +232,6 @@
   border: 1px solid var(--color-track-outline);
 }
 
-/* FLOW-445: the project band's נכנס and יצא, one line under the month's figure (the board's band). */
-.ui-project-band-pair {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding-top: var(--space-3);
-}
-
 /* FLOW-1044: the Projects list as an Overview. The title sits on the band's row, the actions at its end. */
 .ui-projects-band-title {
   margin: 0;
@@ -247,14 +239,68 @@
 }
 
 .ui-projects-body {
-  padding-block: var(--space-4) var(--space-6);
+  padding-block: 0 var(--space-6);
 }
 
-/* The docking filters: the list's, the project page's and the profit page's, 16px above and below. */
-.ui-projects-filter,
+/* FLOW-1053 (V3-Projects, V3-Project, V3-ProjectProfit): the docking filters sit 20px under the band on the list
+   and 16px under the last card on a page; the first group's head follows 8px under the segment. */
+.ui-projects-filter {
+  padding-block: var(--space-5) var(--space-2);
+}
+
 .ui-project-lines-filter,
 .ui-pp-order {
-  padding-block: var(--space-4);
+  padding-block: var(--space-4) var(--space-2);
+}
+
+/* FLOW-1053 (V3-Projects, V3-Project, V3-Unassigned): a project row is 72px with 8px above and below, 12px between
+   its parts: the 44px initials circle, the name 17 over its line 13 in secondary (3px apart, the font's own
+   line), and the amount 17. */
+.ui-projects-body .ui-row-project,
+.ui-unassigned .ui-row-project {
+  gap: var(--space-3);
+  min-block-size: calc(var(--touch-min) + var(--space-6) + var(--space-1));
+  padding-block: var(--space-2);
+}
+
+.ui-projects-body .ui-row-project .ui-row-text,
+.ui-unassigned .ui-row-project .ui-row-text,
+.ui-project-lines .ui-row-project .ui-row-text {
+  gap: var(--space-half);
+}
+
+.ui-projects-body .ui-row-project .ui-row-title,
+.ui-unassigned .ui-row-project .ui-row-title,
+.ui-project-lines .ui-row-project .ui-row-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-projects-body .ui-row-project .ui-row-hint,
+.ui-unassigned .ui-row-project .ui-row-hint,
+.ui-project-lines .ui-row-project .ui-row-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-projects-body .ui-row-project .t-body,
+.ui-unassigned .ui-row-project .t-body,
+.ui-project-lines .ui-row-project .t-body {
+  line-height: var(--type-title-line);
+}
+
+/* The project page's month lines (V3-Project): 64px rows led by the 24px status mark. */
+.ui-project-lines .ui-row-project {
+  gap: var(--space-3);
+  min-block-size: var(--row-height);
+  padding-block: var(--space-2);
+}
+
+.ui-projects-body .ui-row-project .ui-row-icon,
+.ui-projects-body .ui-row-project .ui-avatar,
+.ui-projects-body .ui-row-initials {
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
 }
 
 .ui-projects-none,
@@ -264,8 +310,11 @@
   color: var(--color-text-secondary);
 }
 
-/* FLOW-1044: the project page's month lines under the stack, with room before the tab bar. */
+/* FLOW-1044: the project page's month lines under the stack, with room before the tab bar. FLOW-1053: at least a
+   screen under the detail bar, so the segment can always reach the bar and dock (and a pick can scroll it there)
+   now that the cards above sit at the board's tighter sizes. */
 .ui-project-lines {
+  min-block-size: calc(100dvh - var(--compact-bar-detail));
   padding-block-end: var(--space-6);
 }
 
@@ -315,14 +364,42 @@
   min-inline-size: 0;
 }
 
+/* FLOW-1053 (board V3-Unassigned): the head 8px under the top, 4px between Back, the title, the count (14 in
+   secondary) and the figure (40/1.15, 6px more), the note 15/1.4 16px under it; each line's שיוך a 44px tint pill
+   (15/500 in the accent, 14px in). */
+.ui-unassigned > .ui-page-stacked {
+  padding-block-start: var(--space-2);
+}
+
+.ui-unassigned > .ui-page-stacked .ui-focus-title {
+  margin-block-start: var(--space-1);
+}
+
+.ui-unassigned > .ui-page-stacked > .t-line2 {
+  margin-block-start: var(--space-1);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
+}
+
 .ui-unassigned-figure {
-  margin: 0;
+  margin: calc(var(--space-2) + var(--space-half)) 0 0;
 }
 
 .ui-unassigned-note {
   margin: 0;
-  padding-block: var(--space-2) var(--space-4);
+  padding-block: var(--space-4) var(--space-2);
   color: var(--color-text-secondary);
+}
+
+.ui-unassigned-row > .ui-btn {
+  min-block-size: var(--touch-min);
+  block-size: var(--touch-min);
+  padding-inline: calc(var(--space-3) + var(--space-half));
+  border: 0;
+  background: var(--color-tint);
+  color: var(--color-accent);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
 }
 
 .ui-row-dashed {
@@ -354,10 +431,11 @@
   color: var(--color-bad);
 }
 
-/* The project menu (board): a short sheet titled with the project's name, 4px between rows, each row
-   64px with a 36px icon circle. The delete row takes the bad colour on its circle too. */
+/* The project menu (board V3-Project, FLOW-1053): a short sheet titled with the project's name, 6px between rows,
+   each row 64px with a 40px icon circle in the raised colour, the name 17 over its line 13 in secondary. The
+   delete row takes the bad colour on its circle too. */
 .ui-project-menu {
-  --sheet-gap-y: var(--space-1);
+  --sheet-gap-y: calc(var(--space-1) + var(--space-half));
 }
 
 .ui-project-menu .ui-sheet-title {
@@ -376,11 +454,16 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: var(--space-10);
+  block-size: var(--space-10);
   border-radius: var(--radius-chip);
-  background: var(--color-avatar);
+  background: var(--color-raised);
+  color: var(--color-text);
+}
+
+.ui-project-menu .ui-row-hint {
   color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
 }
 
 .ui-project-menu-delete .ui-row-icon {
@@ -392,42 +475,117 @@
   color: var(--color-text-muted);
 }
 
-/* The new-project sheet (board): a 14px rhythm between the fields and the note, the 52px pill last. */
-.ui-project-new .ui-stack {
-  gap: var(--space-3);
+/* FLOW-1053 (board V3-NewProject): the new-project sheet. The title 20/600, then 16px between the blocks: each label
+   14 in secondary 6px over its field, the name's field 52px, the kind's segment with its 13px line, the amounts as
+   one outlined group (16px corners) of 60px rows 16px in (the label 15 in secondary, the figure 17 at the far
+   side), the 13px notes, and the 52px pill. */
+/* The sheet stands 96px under the top, as the board's, its pill at the foot 20px over the edge. */
+.ui-project-new.ui-sheet-panel {
+  --sheet-pad-bottom: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  min-block-size: calc(100dvh - var(--space-10) * 2 - var(--space-4));
 }
 
-/* The new-project sheet at the board's rhythm: title 9px lower, 14px between the 50px fields, 13px hints under the last one. */
-.ui-project-new .ui-sheet-head {
-  margin-block: calc(var(--space-2) + 1px) 0;
+/* The body fills the panel (the panel's own cap keeps it on screen and the body scrolls inside it). */
+.ui-project-new .ui-sheet-body {
+  max-height: none;
+}
+
+.ui-project-new .ui-stack {
+  flex: 1;
+}
+
+.ui-project-new .ui-stack > .ui-btn:last-child {
+  margin-block-start: auto;
 }
 
 .ui-project-new .ui-focus-title {
-  line-height: var(--type-title-line);
+  font-size: var(--type-sheet-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-sheet-weight);
 }
 
 .ui-project-new .ui-stack {
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   margin-block-start: var(--space-2);
 }
 
-.ui-project-new .ui-field-label {
-  line-height: calc(var(--type-title-line) - 0.05);
+.ui-project-new .ui-field {
+  gap: calc(var(--space-1) + var(--space-half));
 }
 
-.ui-project-new .ui-field-control,
-.ui-project-new .ui-money-field {
-  min-block-size: 50px;
+.ui-project-new .ui-field-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-project-new .ui-field-control {
+  min-block-size: calc(var(--touch-min) + var(--space-2));
 }
 
 .ui-project-new .ui-muted {
+  color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
-  line-height: calc(var(--type-title-line) - 0.05);
+  line-height: var(--type-caption-line);
+}
+
+.ui-project-new .ui-project-kind {
+  gap: calc(var(--space-1) + var(--space-half));
 }
 
 .ui-project-new .ui-muted:has(+ .ui-muted) {
-  margin-block-start: calc(var(--space-2) * -1);
+  margin-block-end: calc(var(--space-2) * -1);
+}
+
+.ui-project-amounts {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-project-amounts > .ui-field {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--space-10) + var(--space-5));
+  padding-inline: var(--space-4);
+}
+
+.ui-project-amounts > .ui-field + .ui-field {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-project-amounts .ui-field-label {
+  flex: none;
+  font-size: var(--type-line2-size);
+}
+
+/* The figure sits borderless at the row's far side; the row draws the focus ring for it. It takes the rest of the
+   row (at least the board's 120px), so a long amount keeps its currency mark inside the field at 320. */
+.ui-project-amounts .ui-field-control.ui-money-field {
+  flex: 1;
+  min-inline-size: calc(var(--space-10) * 3);
+  min-block-size: var(--touch-min);
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--type-body-size);
+}
+
+.ui-project-amounts .ui-money-field .ui-money-lead,
+.ui-project-amounts .ui-money-field input {
+  inset-inline: 0;
+  padding-inline: 0;
+}
+
+.ui-project-amounts > .ui-field:focus-within {
+  border-radius: var(--radius-card-tight);
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 /* A tab root's header under its "+ new" row (board Projects): the title keeps a 4px lead and 2px under it, and the
@@ -451,6 +609,12 @@
 .ui-budget-card bdi,
 .ui-project-row-figure {
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* FLOW-1053 (V3-Project): a link row's figure is 17, as a profit figure beside it. */
+.ui-project-row-figure {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
 }
 
 /* FLOW-163 (board ReportEntryProject): דוחות before ⋯ on the band, a 44px pill. White on the band's
