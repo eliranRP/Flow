@@ -127,7 +127,7 @@ export function FormulaList({ formula, currency, resolve, readOnly = false, labe
     <ul className="ui-ret-formula" aria-label={label} ref={listRef}>
       {formula.rows.map((row) => (
         <li key={row.key}>
-          <FormulaLine row={row} currency={currency} action={rowAction(row, resolve, readOnly)} result={false} />
+          <FormulaLine row={row} currency={currency} action={rowAction(row, resolve, readOnly)} result={row.op === "="} />
         </li>
       ))}
       {more == null ? null : <li>{more}</li>}
@@ -137,6 +137,22 @@ export function FormulaList({ formula, currency, resolve, readOnly = false, labe
         </li>
       )}
     </ul>
+  );
+}
+
+/**
+ * FLOW-1047 (board V3-Calc): one block of a calculation page: a 20px card, a 44px head (its name, and its
+ * figure at the end), then its rows with their operators. It does not fold.
+ */
+export function CalcSection({ title, total, children }: { title: string; total: ReactNode; children: ReactNode }) {
+  return (
+    <section className="ui-ret-calc" aria-label={title}>
+      <div className="ui-ret-calc-head">
+        <h2 className="ui-ret-calc-title">{title}</h2>
+        {total == null ? null : <span className="ui-ret-calc-total">{total}</span>}
+      </div>
+      {children}
+    </section>
   );
 }
 

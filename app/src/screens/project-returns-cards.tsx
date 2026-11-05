@@ -98,8 +98,8 @@ export function rentParts(r: PropertyReturns): Part[] {
   const tax = sourceValue(r.sources.taxSavingsMinor, r, ["purchase", "land", "tax_bracket"]);
   return [
     { key: "cash_flow", label: "תזרים", hint: "רווח תפעולי פחות הלוואה ושיפוץ", value: { kind: "money", minor: r.sources.cashFlowMinor }, open: { kind: "target", target: { kind: "statement" } }, shade: 1 },
-    { key: "principal", label: "החזר קרן", hint: "החוב שנפרע מתשלומי ההלוואה", value: { kind: "money", minor: r.sources.principalMinor }, open: { kind: "target", target: { kind: "line", line: "principal" } }, shade: 2 },
-    { key: "appreciation", label: "עליית ערך", hint: missingNote(appreciation) ?? "שווי בסוף התקופה מול תחילתה", value: appreciation, open: { kind: "info", key: "appreciation" }, shade: 3 },
+    { key: "principal", label: "החזר קרן", hint: "החוב קטן", value: { kind: "money", minor: r.sources.principalMinor }, open: { kind: "target", target: { kind: "line", line: "principal" } }, shade: 2 },
+    { key: "appreciation", label: "עליית ערך", hint: missingNote(appreciation) ?? "שווי היום מול שווי לפני שנה", value: appreciation, open: { kind: "info", key: "appreciation" }, shade: 3 },
     { key: "tax", label: "חיסכון מס", hint: missingNote(tax) ?? "פחת × מדרגת המס", value: tax, open: { kind: "info", key: "tax" }, shade: 4 },
   ];
 }
@@ -312,7 +312,9 @@ export function investmentAttentionRows(kind: InvestmentKind, r: PropertyReturns
   });
   const rows: BannerRow[] = [];
   if (kind === "flip") {
+    // Board V3-Investment: a typed ARV is the owner's estimate, and the profit rests on it, so the card asks to check it.
     if (r.inputs.arvMinor == null) rows.push(row("arv", "arv"));
+    else rows.push({ ...row("arv", `estimate:${String(r.inputs.arvMinor)}`, "ARV מבוסס על הערכה שלכם"), id: "arv-estimate" });
     if (r.inputs.purchaseMinor == null) rows.push(row("purchase", "purchase", "חסר מחיר רכישה לחישוב הרווח"));
     return rows;
   }

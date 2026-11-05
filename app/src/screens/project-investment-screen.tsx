@@ -508,7 +508,7 @@ export function ProjectInvestmentScreen({
               returnsRead.isError && !sampled ? null : <Skeleton tone="band" className="ui-skel-project-num" />
             ) : (
               <>
-                <p className="ui-band-label t-line2">{band.label}</p>
+                <p className="ui-band-label">{band.label}</p>
                 <p className="ui-pinv-band-figure">{band.figure}</p>
                 {band.sub == null ? null : <p className="ui-pinv-band-sub t-meta">{band.sub}</p>}
                 {band.partial == null ? null : <p className="ui-pinv-band-sub t-meta">{band.partial}</p>}

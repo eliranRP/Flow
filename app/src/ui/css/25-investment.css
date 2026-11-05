@@ -18,8 +18,11 @@
   font-weight: var(--type-btn-2-weight);
 }
 
+/* Board V3-Investment: the label 17 secondary 14px under the kind line, the figure 52/1.1, its line 14. */
 .ui-pinv-hero .ui-band-label {
-  margin-block: var(--space-3) 0;
+  margin-block: calc(var(--space-3) + var(--space-half)) 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
 }
 
 .ui-pinv-band-kind {
@@ -43,10 +46,12 @@
   color: var(--color-on-band-secondary);
 }
 
+/* The two rows: 44px each, 14px under the figure's line, 6px apart. */
 .ui-pinv-band-rows {
   display: flex;
   flex-direction: column;
-  padding-block-start: var(--space-2);
+  gap: calc(var(--space-1) + var(--space-half));
+  padding-block-start: calc(var(--space-3) + var(--space-half));
 }
 
 .ui-pinv-band-row {
@@ -100,11 +105,25 @@
 }
 
 /* The parts card: its title, the bar, then a row per part. */
+/* Board V3-Investment: 16px 18px inside, 10px between the title, the 10px bar and the rows. */
 .ui-pinv-parts {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) calc(var(--space-4) + var(--space-1) / 2) var(--space-2);
+  gap: calc(var(--space-2) + var(--space-half));
+  padding: var(--space-4) calc(var(--space-4) + var(--space-half));
+}
+
+.ui-pinv-parts .ui-ret-bar {
+  block-size: calc(var(--space-2) + var(--space-half));
+}
+
+.ui-pinv-parts .ui-ret-swatch {
+  inline-size: calc(var(--space-2) + var(--space-half));
+  block-size: calc(var(--space-2) + var(--space-half));
+}
+
+.ui-pinv-parts .ui-pinv-hint {
+  color: var(--color-text-secondary);
 }
 
 .ui-pinv-parts .ui-pinv-card-title {
@@ -118,9 +137,10 @@
 
 .ui-pinv-parts .ui-pinv-row {
   min-block-size: calc(var(--touch-min) + var(--space-3));
+  padding-block: 0;
   padding-inline: 0;
   border-block-start: 0;
-  gap: var(--space-3);
+  gap: calc(var(--space-2) + var(--space-half));
 }
 
 /* A group under the segment: rows of 64px or more on the gutter, no hairlines (the head draws its own). */

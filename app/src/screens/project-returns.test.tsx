@@ -663,9 +663,10 @@ describe("the returns pages", () => {
     serve();
     renderAt("/projects/p1/investment/returns");
     const calc = await screen.findByRole("region", { name: "החישוב" });
-    expect(within(calc).getByRole("button", { name: /החישוב/ })).toHaveTextContent("6 שורות");
+    // FLOW-1047 (board V3-Calc): the head carries the figure; the rows have their operators, the NOI an "=" of its own.
+    expect(calc.querySelector(".ui-ret-calc-total")).toHaveTextContent("$4,200");
     expect(within(calc).getAllByRole("link")).toHaveLength(4);
-    expect(within(screen.getByRole("region", { name: "מחוץ לחישוב" })).getByRole("button", { name: /מחוץ לחישוב/ })).toHaveTextContent("2 שורות");
+    expect(screen.getByRole("region", { name: "מחוץ לחישוב" }).querySelector(".ui-ret-calc-total")).toHaveTextContent("2 שורות");
   });
 
   it("reads a part of the money in since the purchase", async () => {
@@ -754,9 +755,8 @@ describe("the renovation's page (FLOW-460)", () => {
     const result = calc.getAllByRole("listitem").at(-1);
     expect(result?.querySelector(".ui-ret-result")).toHaveTextContent("=שיפוץ עד היום$61,300");
     expect(document.querySelector(".ui-ret-hero")).toHaveTextContent("$61,300");
-    // FLOW-471: the count is of the categories, not the "=" row.
-    expect(screen.getByRole("button", { name: /^החישוב/ })).toHaveTextContent(String(birchLaneRehab.length));
-    expect(screen.getByRole("button", { name: /^החישוב/ })).not.toHaveTextContent(String(birchLaneRehab.length + 1));
+    // FLOW-1047 (board V3-Calc-Rehab): the head carries the figure.
+    expect(screen.getByRole("region", { name: "החישוב" }).querySelector(".ui-ret-calc-total")).toHaveTextContent("$61,300");
     expect(screen.getByText("כל הוצאות הנכס שנספרות בשיפוץ, מאז הקנייה.")).toBeInTheDocument();
     expect(screen.getByText(/מאז הקנייה · Birch Lane/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "מה לא נספר? לפי קטגוריה" })).toHaveAttribute("href", "/settings/categories");

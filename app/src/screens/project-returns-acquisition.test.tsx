@@ -64,7 +64,7 @@ describe("the acquisition page's calculation (FLOW-466)", () => {
     expect(links.map((link) => link.getAttribute("href"))).toEqual(["/loans/loan-maple", "/loans/loan-oak"]);
     expect(within(calc).getByText("מחיר רכישה")).toBeInTheDocument();
     // FLOW-471: the count is of the rows that add up (the bank lines and two loans), not the "=" row.
-    expect(screen.getByRole("button", { name: /^החישוב/ })).toHaveTextContent(/^החישוב3$/);
+    expect(screen.getByRole("region", { name: "החישוב" }).querySelector(".ui-ret-calc-total")).toHaveTextContent("3");
     // The bank lines are the transactions below: the row moves focus to their section.
     fireEvent.click(within(calc).getByRole("button", { name: /רכישה וסגירה \(מהתנועות\)/ }));
     const lines = screen.getByRole("region", { name: "תנועות" });
@@ -73,7 +73,7 @@ describe("the acquisition page's calculation (FLOW-466)", () => {
 
   it("stays the lines alone with no loan in the price", () => {
     renderLine(birchLaneReturns);
-    expect(screen.queryByRole("button", { name: /החישוב/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "החישוב" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "תנועות" })).toBeInTheDocument();
   });
 
