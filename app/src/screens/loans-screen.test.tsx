@@ -44,13 +44,15 @@ function renderAt(ui: ReactNode, path = "/loans") {
 }
 
 describe("Loans tab", () => {
-  it("lists the open loans with cents, a rate and a kind in each row's meta", () => {
+  it("groups the open loans by kind, each row with its balance and its line", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: twoLoans }} />);
-    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
-    expect(screen.getByText("2 פעילות")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^משכנתא אלון, \$200,000,/ })).toHaveTextContent("וילה אלון · 6.25% · פריסה רגילה");
-    expect(screen.getByRole("button", { name: /^הלוואת ציוד, / })).toHaveTextContent(/ממתין לבדיקה · ללא פרויקט · 10\.5% · ריבית בלבד/);
-    expect(screen.getByRole("button", { name: "+ הלוואה חדשה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "הלוואות" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פריסה רגילה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ריבית בלבד" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^משכנתא אלון, \$200,000, / })).toHaveAccessibleName(/וילה אלון$/);
+    expect(screen.getByRole("button", { name: /^הלוואת ציוד, / })).toHaveAccessibleName(/ממתין לבדיקה · בלי תשלום קבוע · בלי פרויקט$/);
+    expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "פעילות · 2" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("lets a viewer read the balances and open a loan's page, with no new loan (FLOW-106 B)", () => {
@@ -60,33 +62,23 @@ describe("Loans tab", () => {
       </ViewerPreview>,
     );
     expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
-    expect(screen.getByText("הלוואת ציוד")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^משכנתא אלון, / })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^הלוואת ציוד, / })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /הלוואה חדשה/ })).not.toBeInTheDocument();
   });
 
-  it("collapses the closed group, opens it on הצג and shuts it on הסתר", () => {
+  it("shows the closed loans under נסגרו, each with how and when it ended", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: withClosed }} />);
-    const toggle = screen.getByRole("button", { name: /^נסגרו · 1/ });
-    expect(toggle).toHaveTextContent("הצג");
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: /^הלוואת גשר, / })).not.toBeInTheDocument();
-    fireEvent.click(toggle);
-    expect(toggle).toHaveTextContent("הסתר");
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(screen.getAllByRole("radio", { name: "נסגרו · 1" })[0] as HTMLElement);
     const closed = screen.getByRole("button", { name: /^הלוואת גשר, / });
-    expect(closed).toHaveTextContent("וילה אלון · בלון · נפרעה 11/2025");
-    expect(closed.querySelector(".ui-loans-amount")).toHaveTextContent("$0");
-    expect(closed).toHaveAccessibleName(/^הלוואת גשר, \$0, /);
-    // FLOW-962: a closed row carries its tag and a chevron, at full contrast.
-    expect(closed.querySelector(".ui-loans-tag")).toHaveTextContent("נסגרה");
-    expect(closed.querySelector(".ui-loans-chevron")).not.toBeNull();
-    expect(closed).not.toHaveClass("ui-loans-row-closed");
+    expect(closed).toHaveAccessibleName("הלוואת גשר, $0, נפרעה 11/2025 · וילה אלון");
+    expect(screen.getByRole("heading", { name: "בלון" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^משכנתא אלון, / })).not.toBeInTheDocument();
   });
 
-  it("opens the closed group from the URL (the dev fixture's ?closed=1)", () => {
+  it("opens on נסגרו from the URL (the dev fixture's ?closed=1)", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: withClosed }} closedOpen />);
-    expect(screen.getByRole("button", { name: /^נסגרו · 1/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("radio", { name: "נסגרו · 1" })[0]).toHaveAttribute("aria-checked", "true");
   });
 
   it("opens a loan's page at /loans/:id from its row", async () => {
@@ -103,9 +95,18 @@ describe("Loans tab", () => {
     expect(await screen.findByText("עמוד ההלוואה")).toBeInTheDocument();
   });
 
-  it("links the summary card to the summary page (/loans/summary)", () => {
-    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans, summary: LOAN_SUMMARY_SAMPLE }} />);
-    expect(screen.getByRole("link", { name: /^מה שולם עד היום, וכמה נשאר מהחוב/ })).toHaveAttribute("href", "/loans/summary");
+  it("opens the summary page from the band (/loans/summary), with what is left to pay", () => {
+    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans, loanCurrency: "USD", summary: LOAN_SUMMARY_SAMPLE }} />);
+    const band = screen.getAllByRole("link", { name: /נשאר לשלם/ })[0];
+    expect(band).toHaveAttribute("href", "/loans/summary");
+    expect(screen.getByText("תשלומים בחודש")).toBeInTheDocument();
+    expect(screen.getByText(/^התשלום הבא · Ember · 01\/11$/)).toBeInTheDocument();
+  });
+
+  it("puts a loan that waits for a check in דורש טיפול", () => {
+    window.localStorage.removeItem("flow.attention.loans");
+    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans }} />);
+    expect(screen.getByRole("link", { name: /תשלום אחד ממתין לבדיקה · הלוואת ציוד/ })).toHaveAttribute("href", "/loans/l2");
   });
 
   it("shows the empty state, and the viewer's has no button", () => {
@@ -123,10 +124,10 @@ describe("Loans tab", () => {
     expect(screen.queryByRole("button", { name: /הלוואה חדשה/ })).not.toBeInTheDocument();
   });
 
-  it("shows only the closed group, titled הלוואות שנסגרו, under the empty state", () => {
+  it("keeps the נסגרו segment under the empty state when only closed loans are left", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: withClosed.slice(2) }} />);
     expect(screen.getByText("אין הלוואות עדיין")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^הלוואות שנסגרו/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("radio", { name: "נסגרו · 1" })[0]).toBeInTheDocument();
   });
 
   it("shows the failure with נסו שוב and צריך עזרה? (FLOW-962)", () => {
@@ -134,7 +135,7 @@ describe("Loans tab", () => {
     expect(screen.getByRole("heading", { name: "ההלוואות לא נטענו" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "+ הלוואה חדשה" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
   });
 
   it("says which moment the list is from when offline (FLOW-962)", () => {

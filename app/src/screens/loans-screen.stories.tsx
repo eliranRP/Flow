@@ -1,31 +1,55 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { LOAN_SUMMARY_SAMPLE } from "../dev/loan-summary-sample";
 import { sampleLoanStore } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
+import { longHebrew } from "../ui/story-support";
 import { ViewerPreview } from "../use-is-viewer";
 import { ExampleBar, pagesBusiness, storyBody } from "../ui/screen-stories-support";
+import type { LoanListRow } from "./loan-list";
 import { LoansScreen, type LoansSample } from "./loans-screen";
 
-/** The הלוואות tab (FLOW-139b). Open loans, then the closed group, collapsed. Invented loans. */
+/**
+ * The הלוואות tab (FLOW-139b, FLOW-1046 V3-Loans): the band with what is left to pay, דורש טיפול, the פעילות /
+ * נסגרו segment and the rows in groups by kind. Invented loans.
+ */
 const ROWS = sampleLoanStore().rows();
 
-const pagesLoans = [
-  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון" },
-  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן" },
+const pagesLoans: LoanListRow[] = [
+  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 2, projectId: "p1", projectName: "וילה אלון", next: { dueDate: "2026-11-20", amountMinor: 524_000n } },
+  { id: "l2", name: "הלוואת ציוד", currency: "USD", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן", kind: "interest_only", next: { dueDate: "2026-11-15", amountMinor: 131_200n } },
 ];
+
+/** Long names and many rows, for the long-content state (V3-States). */
+const LONG_ROWS: LoanListRow[] = Array.from({ length: 14 }, (_, index) => ({
+  id: `long-${String(index)}`,
+  name: index === 0 ? longHebrew : `הלוואה ${String(index + 1)}`,
+  currency: "USD",
+  balanceMinor: BigInt(10_000_000 + index * 1_234_500),
+  flaggedParts: 0,
+  projectId: null,
+  projectName: index === 0 ? longHebrew : `פרויקט ${String(index + 1)}`,
+  kind: index % 3 === 0 ? "interest_only" : index % 3 === 1 ? "amortizing" : "demand",
+  ...(index % 3 === 2 ? {} : { next: { dueDate: "2026-12-01", amountMinor: 250_000n } }),
+}));
 
 /**
  * Stories pick the loans by name, never as args: the loans carry bigint amounts, and Storybook sends
  * args across the manager channel with JSON.stringify (story-args.test.ts).
  */
-type LoansData = "pages" | "rows" | "empty" | "loading" | "error";
+type LoansData = "pages" | "rows" | "long" | "empty" | "loading" | "error";
 
 /** FLOW-962: the offline stories' read, 09:41 Israel time. */
 const OFFLINE_SINCE = Date.UTC(2026, 9, 9, 6, 41);
 
 function Tab({ data, closedOpen = false, viewer = false, offline = false }: { data: LoansData; closedOpen?: boolean; viewer?: boolean; offline?: boolean }) {
-  const loans: LoansSample["loans"] = data === "pages" ? pagesLoans : data === "rows" ? ROWS : data === "empty" ? [] : data;
-  const screen = <LoansScreen sample={{ ...pagesBusiness, loans, ...(offline ? { offlineSince: OFFLINE_SINCE } : {}) }} closedOpen={closedOpen} />;
+  const loans: LoansSample["loans"] = data === "pages" ? pagesLoans : data === "rows" ? ROWS : data === "long" ? LONG_ROWS : data === "empty" ? [] : data;
+  const screen = (
+    <LoansScreen
+      sample={{ ...pagesBusiness, loans, loanCurrency: "USD", ...(data === "rows" || data === "pages" ? { summary: LOAN_SUMMARY_SAMPLE } : {}), ...(offline ? { offlineSince: OFFLINE_SINCE } : {}) }}
+      closedOpen={closedOpen}
+    />
+  );
   return (
     <StoryRoute entry="/loans" tabs>
       <ExampleBar />
@@ -34,52 +58,101 @@ function Tab({ data, closedOpen = false, viewer = false, offline = false }: { da
   );
 }
 
+function clearHidden() {
+  try {
+    window.localStorage.removeItem("flow.attention.loans");
+  } catch {
+    // No storage: nothing to clear.
+  }
+}
+
 const meta = {
   title: "Screens/Loans",
   parameters: { flowRouter: false },
   component: Tab,
   args: { data: "pages" },
+  beforeEach: clearHidden,
 } satisfies Meta<typeof Tab>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** פעילות: the open loans in groups by kind, under one-line heads. */
 export const List: Story = {
   name: "Loans",
   args: { data: "rows" },
+};
+
+/** נסגרו: how and when each loan ended. */
+export const Closed: Story = {
+  name: "Loans, closed",
+  args: { data: "rows", closedOpen: true },
+  play: async ({ canvasElement }) => {
+    const body = storyBody(canvasElement);
+    await expect(await body.findByRole("button", { name: /נפרעה/ })).toBeVisible();
+  },
+};
+
+/** The segment switches between פעילות and נסגרו. */
+export const FilterSwitch: Story = {
+  name: "Loans, filter",
+  args: { data: "rows" },
+  play: async ({ canvasElement }) => {
+    const radios = within(canvasElement).getAllByRole("radio", { name: /^נסגרו · / });
+    await userEvent.click(radios[0] as HTMLElement);
+    await expect(radios[0]).toHaveAttribute("aria-checked", "true");
+  },
+};
+
+/** Scrolled: the band bar slides in and the segment docks into it. */
+export const Docked: Story = {
+  name: "Loans, docked",
+  args: { data: "long" },
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 700, behavior: "instant" });
+    await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
+  },
+};
+
+/** דורש טיפול: the loan waiting for a check and the payment due soon. */
+export const Attention: Story = {
+  name: "Loans, attention",
+  args: { data: "pages" },
+};
+
+/** One card hidden: the head offers "1 הוסתרו · הצגה". */
+export const AttentionSomeHidden: Story = {
+  name: "Loans, attention, one hidden",
+  args: { data: "pages" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [first] = canvas.getAllByRole("button", { name: /^הסתרה: / });
+    await userEvent.click(first as HTMLElement);
+    await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeVisible();
+  },
+};
+
+/** Every card hidden: one line, "אין מה לטפל · הכול נסקר". */
+export const AttentionAllHidden: Story = {
+  name: "Loans, attention, all hidden",
+  args: { data: "pages" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const button of canvas.getAllByRole("button", { name: /^הסתרה: / })) await userEvent.click(button);
+    await waitFor(() => expect(canvas.getByText(/אין מה לטפל/)).toBeVisible(), { timeout: 3000 });
+  },
+};
+
+/** Long names and many rows (V3-States). */
+export const LongContent: Story = {
+  name: "Loans, long content",
+  args: { data: "long" },
 };
 
 /** FLOW-962: offline, the list keeps its figures and says which moment they are from. */
 export const ListOffline: Story = {
   name: "Offline",
   args: { data: "rows", offline: true },
-};
-
-/** FLOW-138: a paid-off loan shows only how and when it ended; the closed group is open. */
-export const ListClosedShown: Story = {
-  name: "Loans, closed shown",
-  args: { data: "rows", closedOpen: true },
-  play: async ({ canvasElement }) => {
-    const body = storyBody(canvasElement);
-    const paid = await body.findByRole("button", { name: /נפרעה/ });
-    // A paid-off loan still owing a balance shows it, as the list does for every loan.
-    await expect(paid.getAttribute("aria-label")).toMatch(/\$1,240/);
-    await expect(paid.querySelector(".ui-loans-amount")).not.toBeNull();
-    const closed = within(canvasElement).getByRole("button", { name: /נסגרה/ });
-    await expect(closed.querySelector(".ui-loans-amount")?.textContent).toMatch(/\$0/);
-  },
-};
-
-/** The closed group opens and shuts with its toggle. */
-export const ListClosedToggle: Story = {
-  name: "Loans, closed toggle",
-  args: { data: "rows" },
-  play: async ({ canvasElement }) => {
-    const toggle = await storyBody(canvasElement).findByRole("button", { name: /נסגרו · / });
-    await expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    await userEvent.click(toggle);
-    await expect(toggle.getAttribute("aria-expanded")).toBe("true");
-  },
 };
 
 export const Empty: Story = {

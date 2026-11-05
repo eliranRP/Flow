@@ -252,7 +252,7 @@ describe("App", () => {
     await renderAt("/loans?preview=1");
     expect(await screen.findByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
     expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "+ הלוואה חדשה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
   });
 
   it("moves an old Settings sheet link to the SUMIT page", async () => {

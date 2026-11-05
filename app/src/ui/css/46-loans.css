@@ -1,55 +1,115 @@
-/* FLOW-139b. The הלוואות tab (/loans): a top-level list, the board's Loans frame. Flat rows (no card,
-   no hairline), the open loans, then the closed group collapsed under a quiet toggle. */
-
-/* The page runs under the status bar, so its top pad starts below it (--safe-top), as .ui-page does. */
-.ui-loans-screen {
-  padding: calc(var(--safe-top) + var(--space-4)) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
+/* FLOW-139b, FLOW-1046 (V3-Loans). The הלוואות tab (/loans), the Overview pattern: the violet band (it runs
+   under the status bar itself), then the page's body on the side gutter: דורש טיפול, the segment, the groups. */
+.ui-loans-screen,
+.ui-loans-sum-page {
+  padding-bottom: calc(var(--tabbar-height) + var(--space-section));
   color: var(--color-text);
 }
 
-.ui-loans-add {
+.ui-loans-body {
   display: flex;
-  align-items: center;
-  height: 44px;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-side) 0;
 }
 
-.ui-loans-add-btn {
-  height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-accent-text);
-  font: inherit;
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-body-weight);
-  cursor: pointer;
-}
-
-.ui-loans-title {
-  margin: var(--space-1) 0 0;
-  font-size: var(--type-title-size);
-  line-height: var(--type-title-line);
-  font-weight: var(--type-title-weight);
-}
-
-.ui-loans-count {
-  margin: calc(var(--space-1) / 2) 0 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-line2-size);
-  line-height: calc(var(--type-line2-size) * 1.2);
-}
-
-.ui-loans-summary-wrap,
-.ui-loans-screen .ui-page-offline {
-  margin-top: var(--space-4);
-}
-
-.ui-loans-section-head {
+.ui-loans-body .ui-page-offline {
   margin: 0;
-  padding: calc(var(--space-5) + var(--space-1) / 2) 0 calc(var(--space-1) * 1.5);
+}
+
+/* The band: the title row, then the figure that opens the summary and the two rows under it. */
+.ui-loans-band-title {
+  margin: 0;
+}
+
+.ui-loans-band,
+.ui-loans-band-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-loans-band-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-on-band);
+  text-decoration: none;
+}
+
+.ui-loans-band-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--touch-min);
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-loans-band-figure {
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ui-loans-band-sub {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+}
+
+.ui-loans-band-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--band-label-gap);
+  padding-block-start: var(--space-2);
+}
+
+.ui-loans-band-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--color-on-band);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-loans-band-row bdi {
+  flex: none;
   font-size: var(--type-section-size);
-  line-height: calc(var(--type-section-size) * 1.2);
-  font-weight: var(--type-section-weight);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-loans-band-row-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-loans-band-skel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The band bar keeps its centre centred: an empty 44px slot stands in for a missing action. */
+.ui-loans-bar-slot {
+  flex: none;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+}
+
+.ui-compact-bar-band a.ui-compact-bar-centre {
+  text-decoration: none;
+}
+
+.ui-loans-group {
+  display: flex;
+  flex-direction: column;
 }
 
 .ui-loans-list {
@@ -71,59 +131,6 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
-}
-
-/* FLOW-962: a closed loan's name with its נסגרה tag; the row stays at full contrast. */
-.ui-loans-name-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* Beside the tag at 320px, a closed loan's name takes a second line rather than an ellipsis. */
-.ui-loans-name-line:has(.ui-loans-tag) .ui-loans-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.ui-loans-tag {
-  flex: none;
-  padding: var(--space-half) var(--space-2);
-  border: var(--stroke-hairline) solid var(--color-text-muted);
-  border-radius: var(--radius-chip);
-  color: var(--color-text-secondary);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-}
-
-.ui-loans-chevron,
-.ui-loans-closed-chevron {
-  display: inline-flex;
-  flex: none;
-  color: var(--color-text-muted);
-}
-
-/* The chevron points down while the group is shut, and up once it is open. */
-.ui-loans-closed-toggle[aria-expanded="true"] .ui-loans-closed-chevron {
-  transform: rotate(90deg);
-}
-
-.ui-loans-closed-toggle[aria-expanded="false"] .ui-loans-closed-chevron {
-  transform: rotate(-90deg);
-}
-
-.ui-loans-initial {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: var(--avatar);
-  height: var(--avatar);
-  border-radius: var(--radius-chip);
-  background: var(--color-avatar);
-  color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
-  font-weight: var(--type-line2-weight);
 }
 
 .ui-loans-text {
@@ -152,42 +159,10 @@
   white-space: nowrap;
 }
 
-.ui-loans-meta-warn {
-  color: var(--color-warning);
-}
-
 .ui-loans-amount {
   flex: none;
   font-size: var(--type-body-size);
   font-variant-numeric: tabular-nums;
-}
-
-.ui-loans-closed-toggle {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: var(--space-2);
-  padding: var(--space-4) 0 var(--space-2);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.ui-loans-closed-title {
-  font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
-}
-
-.ui-loans-closed-action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--type-line2-size);
 }
 
 /* The empty Loans tab (States board, StatesLoansEmpty): the icon and copy sit lower, the primary action follows. */
@@ -508,44 +483,6 @@
 
 /* /loans/summary (the board's Loans · summary): the period switch, the debt card, the paid card, one row per open
    loan with its thin progress bar, the closed line and the footnote. The cards are the list's summary card. */
-.ui-loans-sum {
-  padding: var(--space-2) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
-  color: var(--color-text);
-}
-
-.ui-loans-sum .ui-loans-title {
-  margin: 0;
-}
-
-.ui-loans-sum-period {
-  margin-top: var(--space-4);
-}
-
-.ui-card.ui-loans-sum-debt {
-  margin-top: var(--space-4);
-}
-
-.ui-card.ui-loans-sum-paid {
-  margin-top: var(--space-inset-row);
-}
-
-/* The card's two-sided lines keep the board's tight leading (1.2), not the body's. */
-.ui-loans-sum-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.ui-loans-sum-start {
-  font-size: var(--type-body-size);
-  line-height: calc(var(--type-body-size) * 1.2);
-}
-
-.ui-loans-sum-repaid bdi {
-  font-size: var(--type-line2-size);
-  line-height: calc(var(--type-line2-size) * 1.2);
-}
 
 .ui-loans-sum-note,
 .ui-loans-sum-foot {

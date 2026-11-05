@@ -1,15 +1,14 @@
 import "../ui/lazy.css";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
-import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { formatDisplay, israelToday } from "../ui/date-math";
+import { israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { AlertIcon, LoanIcon } from "../ui/icons";
+import { LoanIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -39,10 +38,8 @@ import {
   partCategoryValue,
   type LoanRateRow,
 } from "./loan-detail-data";
-import { LoanBalanceCard, LoanClosedCard, LoanNextCard, LoanRateChangesCard, LoanPaidCard, LoanRecentCard, LoanRowsCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
-import { LoanPaymentsView } from "./loan-payments-view";
-import { loanSubtitle, paymentTotals, wholeMoney } from "./loan-detail-view-data";
-import { TransactionTopBar } from "./transaction-top-bar";
+import { LoanBand, loanBandRows, LoanCheckCard, LoanClosedCard, LoanNextCard, LoanRateChangesCard, LoanPaidCard, LoanRecentCard, LoanRowsCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
+import { LoanPaymentsView, type LoanPaymentsTab } from "./loan-payments-view";
 import { LoanPartSheet } from "./loan-detail-sheets";
 import { LoanRateSheet } from "./loan-rate-sheet";
 import { LoanCloseSheet, LoanLinkPicker, type LoanLinkChoice } from "./loan-close-sheet";
@@ -63,7 +60,7 @@ import {
 import { showsLoanBalance, useLoanList } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
-import { loanOutlook } from "./loan-outlook";
+import { loanOutlook, paymentsLeft } from "./loan-outlook";
 
 
 
@@ -244,7 +241,9 @@ function LoanDetailReady({
   const toast = useToast();
   const client = useQueryClient();
   const navigate = useNavigate();
-  const [head, setHead] = useState<HTMLElement | null>(null);
+  const [params] = useSearchParams();
+  // FLOW-1046: התשלום הבא opens the payments on הבאים.
+  const initialTab: LoanPaymentsTab = params.get("tab") === "upcoming" ? "upcoming" : "paid";
   const [sheet, setSheetState] = useState<SheetName | null>(null);
   const [part, setPart] = useState<LoanSplitPart | null>(null);
   const [rate, setRate] = useState<LoanRateRow | null>(null);
@@ -351,12 +350,9 @@ function LoanDetailReady({
 
   const projectName = loan.projectId == null ? null : (projects.rows.find((row) => row.id === loan.projectId)?.name ?? null);
   const flagged = payments.filter((item) => item.needsReview);
-  // FLOW-138 "Hide" (FLOW-356): a paid-off loan with nothing left shows no balance card, as on the list.
-  const ended = !showsLoanBalance(loan);
   const closed = loan.status !== "open";
   const linked = loan.refinancedIntoId == null ? null : (loanChoices.find((choice) => choice.id === loan.refinancedIntoId) ?? null);
   const outlook = loanOutlook(loan, today);
-  const paidTotal = paymentTotals(payments).total;
   const lastPaid = lastPaymentDate(payments);
   const termRows: LoanTermRow[] = [
     { key: "kind", label: "סוג", value: LOAN_KIND_LIST_LABEL[loan.kind], onOpen: holdWrites ? null : () => { open("kind"); } },
@@ -368,22 +364,37 @@ function LoanDetailReady({
     // FLOW-962: the status only reads. סגירת ההלוואה and החזרה לפעילות below change it.
     { key: "status", label: "סטטוס", value: loan.status === "open" ? LOAN_STATUS_LABEL.open : loanClosedLine(loan.status, loan.closedOn), onOpen: null },
   ];
-  const topBar = view === "payments"
-    ? <TransactionTopBar fallback={`${loanPath}${search}`} backLabel={loan.name} title={`כל התשלומים · ${wholeMoney(paidTotal, loan.currency)}`} end={null} head={head} toastCeiling />
-    : <TransactionTopBar fallback={back} backLabel="הלוואות" title={`${loan.name} · ${wholeMoney(loan.balanceMinor, loan.currency)}`} end={null} head={head} toastCeiling />;
+  const upcomingSearch = (() => {
+    const params = new URLSearchParams(search);
+    params.set("tab", "upcoming");
+    return `?${params.toString()}`;
+  })();
+  const onClose = holdWrites || closed ? null : () => { open("close"); };
 
   return (
     <ViewerScope>
-      {topBar}
       {view === "payments" ? (
-          <LoanPaymentsView loan={loan} payments={payments} projectName={projectName} search={search} headRef={setHead} />
+          <LoanPaymentsView
+            loan={loan}
+            payments={payments}
+            upcoming={paymentsLeft(loan, today)}
+            projectName={projectName}
+            search={search}
+            back={`${loanPath}${search}`}
+            initialTab={initialTab}
+          />
         ) : (
           <div className="ui-loan-page">
+            <LoanBand
+              loan={loan}
+              projectName={projectName}
+              outlook={closed ? null : outlook}
+              rows={loanBandRows(loan, closed ? null : outlook, payments, today)}
+              back={back}
+              onMore={onClose}
+              ended={!showsLoanBalance(loan)}
+            />
             <ViewerNote />
-            <header ref={setHead} className="ui-loan-title">
-              <h1 className="ui-loan-name">{loan.name}</h1>
-              <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
-            </header>
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
             {loan.status === "open" ? null : (
               <LoanClosedCard
@@ -394,17 +405,18 @@ function LoanDetailReady({
                 onLink={loan.status === "closed" && !holdWrites && loan.refinancedIntoId == null ? () => { open("link"); } : null}
               />
             )}
-            {flagged.length > 0 ? (
-              <Banner
-                icon={<AlertIcon size={20} />}
-                title={flagged.length === 1 ? "תשלום אחד ממתין לבדיקה" : `${String(flagged.length)} תשלומים ממתינים לבדיקה`}
-                hint={<bdi className="ui-num" dir="ltr">{formatDisplay(flagged[0]?.docDate ?? "")}</bdi>}
-                to={`/transactions/${flagged[0]?.transactionId ?? ""}${search}`}
+            {flagged.length > 0 && !closed ? (
+              <LoanCheckCard
+                loanId={loan.id}
+                count={flagged.length}
+                editHref={`/transactions/${flagged[0]?.transactionId ?? ""}${search}`}
+                onChecked={(undo) => {
+                  toast.show({ message: "סומן כנבדק", ...LOAN_TOAST, action: "ביטול", onAction: undo });
+                }}
               />
             ) : null}
-            {ended ? null : <LoanBalanceCard loan={loan} outlook={outlook} />}
+            {outlook == null || closed ? null : <LoanNextCard loan={loan} outlook={outlook} to={`${loanPath}/payments${upcomingSearch}`} />}
             <LoanPaidCard loan={loan} payments={payments} categories={categories} today={today} onOpenPart={holdWrites ? null : (item) => { setPart(item); open("part"); }} />
-            {outlook == null || closed ? null : <LoanNextCard loan={loan} outlook={outlook} />}
             <LoanRowsCard className="ui-loan-terms" rows={termRows} />
             {loan.rates.length > 0 ? (
               <LoanRateChangesCard rates={loan.rates} onOpen={holdWrites ? null : (rate) => { setRate(rate); open("rate"); }} />

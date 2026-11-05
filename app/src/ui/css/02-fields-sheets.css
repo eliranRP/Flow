@@ -60,15 +60,6 @@
   inline-size: 4.5rem;
 }
 
-/* A loan's balance in a row's meta slot: the list amount size, not the hint size the slot sets,
-   so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
-.ui-loan-amount {
-  color: var(--color-text);
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
-  font-weight: var(--type-body-weight);
-  white-space: nowrap;
-}
 
 .ui-num-field {
   direction: ltr;

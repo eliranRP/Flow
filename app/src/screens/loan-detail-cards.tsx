@@ -1,9 +1,19 @@
 import type { LoanSplitPart } from "@flow/shared";
 import { useState, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
+import { Amount } from "../ui/amount";
+import { hideRow, isRowHidden, readHidden, restoreAll } from "../ui/attention-dismiss";
+import { BackButton, useGoBack } from "../ui/back";
+import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { CompactBar } from "../ui/compact-bar";
 import { formatDisplay } from "../ui/date-math";
-import { CheckIcon, ChevronIcon } from "../ui/icons";
+import { FocusTitle } from "../ui/focus-title";
+import { IconButton } from "../ui/icon-button";
+import { AlertIcon, BackIcon, CheckIcon, ChevronIcon, MoreIcon } from "../ui/icons";
+import { useScrolledPast } from "../ui/screen-header";
+import { StatusMark } from "../ui/status-mark";
+import { TopBand } from "../ui/top-band";
 import { LOAN_CLOSED_NOTE, loanClosedLine, type LoanCloseReason } from "./loan-copy";
 import { PartsBar } from "../ui/parts-bar";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -11,7 +21,7 @@ import type { LoanCategory, LoanDetail, LoanPayment, LoanRateRow } from "./loan-
 import { formatRatePpm, rateInForce } from "./loan-detail-data";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import type { LoanOutlook } from "./loan-outlook";
-import { loanPaidCard, PAID_PARTS, paidMoney, type PaidPeriod } from "./loans-paid";
+import { loanPaidCard, loanPaidParts, PAID_PARTS, paidMoney, type PaidPeriod } from "./loans-paid";
 import {
   balanceProgress,
   balanceProgressText,
@@ -19,6 +29,7 @@ import {
   LOAN_PART_BOARD_LABEL,
   LOAN_PART_SHORT_LABEL,
   loanMoney,
+  loanSubtitle,
   partInProfit,
   paymentRow,
   paymentSplitText,
@@ -26,31 +37,149 @@ import {
   type PaymentRow,
 } from "./loan-detail-view-data";
 
+/** FLOW-1046: the band bar's height (6 + 52 + 6). */
+const BAND_BAR = 64;
+
 /**
  * FLOW-139c: the loan page's cards (board: Loan amortizing, Loan interest only). Each card is
  * presentational; its props come from the loan page, which keeps the saves and the sheets.
  */
 
-/** The balance card: the figure, the progress of the principal, and what the line under it says. */
-export function LoanBalanceCard({ loan, outlook }: { loan: LoanDetail; outlook: LoanOutlook | null }) {
+export type LoanBandRow = { key: string; label: string; value: string };
+
+/**
+ * FLOW-1046 (V3-Loan): the band's two rows under the balance, by kind. A regular loan: its monthly payment and
+ * rate. Interest only: the monthly interest and the rate. On demand: the rate and what was repaid this year.
+ * A loan with no schedule left (closed) keeps the rate alone.
+ */
+export function loanBandRows(loan: LoanDetail, outlook: LoanOutlook | null, payments: readonly LoanPayment[], today: string): LoanBandRow[] {
+  const rate: LoanBandRow = { key: "rate", label: "ריבית", value: formatRatePpm(rateInForce(loan, today).ppm) };
+  if (loan.kind === "demand") {
+    const repaid = loanPaidParts(loan, payments, "year", today.slice(0, 4)).totals.principal;
+    return [rate, { key: "repaid", label: "הוחזר השנה", value: wholeMoney(repaid, loan.currency) }];
+  }
+  if (outlook == null) return [rate];
+  const payment = { key: "payment", label: loan.kind === "interest_only" ? "ריבית חודשית" : "תשלום חודשי", value: loanMoney(loan, outlook.next.paymentMinor) };
+  return [payment, rate];
+}
+
+/**
+ * FLOW-1046 (V3-Loan, the Overview pattern): the loan's violet band. Back, the name and its line, the balance
+ * with the principal's progress, and the kind's two rows; ⋯ opens the close sheet. Once the band has scrolled
+ * under the top, the band bar slides in with the name and the balance.
+ */
+export function LoanBand({ loan, projectName, outlook, rows, back, onMore, ended }: {
+  loan: LoanDetail;
+  projectName: string | null;
+  outlook: LoanOutlook | null;
+  rows: readonly LoanBandRow[];
+  back: string;
+  /** Opens the close sheet; null for a viewer or a closed loan. */
+  onMore: (() => void) | null;
+  /** FLOW-138: a paid-off loan with nothing left shows no balance, only how it ended (the closed card). */
+  ended: boolean;
+}) {
+  const goBack = useGoBack();
+  const [mark, setMark] = useState<HTMLElement | null>(null);
+  const barShown = useScrolledPast(mark, true, BAND_BAR);
   const { paidMinor } = balanceProgress(loan);
+  const more = onMore == null ? <span className="ui-loans-bar-slot" aria-hidden="true" /> : (
+    <IconButton label="פעולות להלוואה" onBand onClick={onMore}>
+      <MoreIcon />
+    </IconButton>
+  );
   return (
-    <Card className="ui-loan-card ui-loan-balance">
-      <p className="ui-loan-card-label">{loan.kind === "demand" ? "יתרת קרן" : "יתרה היום"}</p>
-      <span className="ui-loan-balance-figure">{wholeMoney(loan.balanceMinor, loan.currency)}</span>
-      {outlook == null ? null : (
-        <>
-          <PartsBar
-            parts={[{ key: "paid", value: paidMinor, tone: "accent" }]}
-            total={loan.principalMinor}
-            height={8}
-            gap={2}
-            radius="block"
-            label="נפרע מהקרן"
-          />
-          <p className="ui-loan-card-text">{balanceProgressText(loan, outlook)}</p>
-        </>
-      )}
+    <>
+      <TopBand
+        wordmark={false}
+        leading={<BackButton fallback={back} text="הלוואות" onBand />}
+        trailing={onMore == null ? null : more}
+        hero={(
+          <div className="ui-loan-band">
+            <FocusTitle className="t-title">{loan.name}</FocusTitle>
+            <p className="ui-loan-band-sub t-line2">{loanSubtitle(loan, projectName)}</p>
+            {ended ? null : <div className="ui-band-fade ui-loan-band-figures">
+              <p className="ui-band-label t-line2">{loan.kind === "demand" ? "יתרת קרן" : "יתרה היום"}</p>
+              <p className="ui-loan-band-figure"><Amount agorot={loan.balanceMinor} currency={loan.currency} size="hero" /></p>
+              {outlook == null ? null : (
+                <>
+                  <PartsBar parts={[{ key: "paid", value: paidMinor, tone: "band-past" }]} total={loan.principalMinor} height={8} radius="block" label="נפרע מהקרן" />
+                  <p className="ui-loan-band-caption">{balanceProgressText(loan, outlook)}</p>
+                </>
+              )}
+              <div className="ui-loans-band-rows">
+                {rows.map((row) => (
+                  <p key={row.key} className="ui-loans-band-row">
+                    <span className="ui-loans-band-row-label">{row.label}</span>
+                    <bdi dir="ltr">{row.value}</bdi>
+                  </p>
+                ))}
+              </div>
+            </div>}
+            <span ref={setMark} className="ui-compact-mark" aria-hidden="true" />
+          </div>
+        )}
+      />
+      <CompactBar
+        title={loan.name}
+        shown={barShown}
+        tone="band"
+        start={(
+          <IconButton label="חזרה" onBand onClick={() => { goBack(back); }}>
+            <BackIcon />
+          </IconButton>
+        )}
+        centre={(
+          <span className="ui-compact-bar-centre">
+            <span className="ui-compact-bar-centre-title">{loan.name}</span>
+            <span className="ui-compact-bar-centre-net"><Amount agorot={loan.balanceMinor} currency={loan.currency} presentation="detail" /></span>
+          </span>
+        )}
+        end={more}
+      />
+    </>
+  );
+}
+
+/**
+ * FLOW-1046 (V3-Loan-Note): a loan whose payments wait for a check opens with this card. הפרטים נכונים marks it
+ * checked on this device until the count changes (the attention cards' store, `flow.attention.loan:<id>`), with
+ * ביטול; עריכה opens the first payment that waits.
+ */
+export function LoanCheckCard({ loanId, count, editHref, onChecked }: {
+  loanId: string;
+  count: number;
+  editHref: string;
+  /** After הפרטים נכונים: the page's toast with its undo. */
+  onChecked: (undo: () => void) => void;
+}) {
+  const storageKey = `loan:${loanId}`;
+  const row = { id: "check", dismissKey: `check:${String(count)}` };
+  const [checked, setChecked] = useState(() => isRowHidden(readHidden(storageKey), row));
+  if (checked) return null;
+  return (
+    <Card as="section" className="ui-loan-card ui-loan-check" aria-label="ממתין לבדיקה">
+      <p className="ui-loan-check-title">
+        <AlertIcon size={20} />
+        {count === 1 ? "תשלום אחד ממתין לבדיקה" : `${String(count)} תשלומים ממתינים לבדיקה`}
+      </p>
+      <p className="ui-loan-card-text">הסכום, הריבית והפרויקט מולאו לפי התשלומים מהבנק. בדקו אותם לפני שהם נכנסים לדוחות.</p>
+      <div className="ui-loan-check-actions">
+        <Button
+          variant="secondary"
+          onClick={() => {
+            hideRow(storageKey, row.id, row.dismissKey);
+            setChecked(true);
+            onChecked(() => {
+              restoreAll(storageKey);
+              setChecked(false);
+            });
+          }}
+        >
+          הפרטים נכונים
+        </Button>
+        <Button variant="secondary" to={editHref}>עריכה</Button>
+      </div>
     </Card>
   );
 }
@@ -91,8 +220,11 @@ export function LoanClosedCard({ status, closedOn, link, onLink }: {
   );
 }
 
-/** The next payment, one line: its date and figure, and its parts in a row ("קרן $1,066 · ריבית $1,087 · נאמנות $363"). */
-export function LoanNextCard({ loan, outlook }: { loan: LoanDetail; outlook: LoanOutlook }) {
+/**
+ * The next payment, one line: its date and figure, and its parts in a row ("קרן $1,066 · ריבית $1,087 · נאמנות $363").
+ * FLOW-1046: the card opens the payments list on הבאים.
+ */
+export function LoanNextCard({ loan, outlook, to }: { loan: LoanDetail; outlook: LoanOutlook; to: string }) {
   const next = outlook.next;
   const parts = [
     { key: "principal", value: next.principalMinor },
@@ -105,11 +237,19 @@ export function LoanNextCard({ loan, outlook }: { loan: LoanDetail; outlook: Loa
     .join(" · ");
   return (
     <Card as="section" className="ui-loan-card ui-loan-next-card" aria-label="התשלום הבא">
-      <div className="ui-loan-card-head">
-        <h2 className="ui-loan-next-title">התשלום הבא · {dayMonth(next.dueDate)}</h2>
-        <bdi className="ui-loan-next-amount" dir="ltr">{loanMoney(loan, next.paymentMinor)}</bdi>
-      </div>
-      <p className="ui-loan-card-note">{line}</p>
+      <Link className="ui-loan-next-link m-press" to={to}>
+        <span className="ui-loan-next-text">
+          <span className="ui-loan-card-head">
+            <span className="ui-loan-next-title">
+              <StatusMark kind="due" />
+              התשלום הבא · {dayMonth(next.dueDate)}
+            </span>
+            <bdi className="ui-loan-next-amount" dir="ltr">{loanMoney(loan, next.paymentMinor)}</bdi>
+          </span>
+          <span className="ui-loan-card-note">{line}</span>
+        </span>
+        <span className="ui-loan-term-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
+      </Link>
     </Card>
   );
 }

@@ -1,7 +1,9 @@
+import { useState } from "react";
+import type { LoanKind } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { Sheet } from "../ui/sheet";
-import { LoanKindPicker, LoanSetupForm } from "./loan-setup";
+import { LoanSetupForm } from "./loan-setup";
 
 const meta = {
   title: "Screens/Loan setup",
@@ -83,12 +85,37 @@ export const DateSheetOpen: Story = {
   },
 };
 
-/** The סוג view inside the new-loan sheet: one row per kind with its description. */
-function KindPickerInSheet() {
+/** FLOW-1046 (V3-NewLoan): the sheet's form, the kind first; the fields under it follow the kind. */
+function KindFirst({ kind: initialKind }: { kind: LoanKind }) {
+  const [kind, setKind] = useState<LoanKind>(initialKind);
   return (
-    <Sheet open onOpenChange={() => undefined} title="סוג ההלוואה">
-      <LoanKindPicker selected="amortizing" onSelect={() => undefined} />
+    <Sheet open onOpenChange={() => undefined} title="הלוואה חדשה" panelClassName="ui-sheet-tall ui-sheet-wide ui-sheet-g14 ui-loan-new">
+      <LoanSetupForm companyCurrency="USD" initial={{ startDate: "2026-12-01" }} kind={{ value: kind, onChange: setKind }} />
     </Sheet>
   );
 }
-export const KindPicker: Story = { args: example, render: () => <KindPickerInSheet /> };
+
+export const NewAmortizing: Story = { name: "New loan, amortizing", args: example, render: () => <KindFirst kind="amortizing" /> };
+
+export const NewInterestOnly: Story = {
+  name: "New loan, interest only",
+  args: example,
+  render: () => <KindFirst kind="interest_only" />,
+  play: async ({ canvasElement }) => {
+    const sheet = within(canvasElement.ownerDocument.body);
+    await expect(await sheet.findByLabelText("חודשי ריבית בלבד")).toBeVisible();
+  },
+};
+
+/** A demand loan has no term, escrow or schedule. */
+export const NewDemand: Story = {
+  name: "New loan, on demand",
+  args: example,
+  render: () => <KindFirst kind="amortizing" />,
+  play: async ({ canvasElement }) => {
+    const sheet = within(canvasElement.ownerDocument.body);
+    await fireEvent.click(await sheet.findByRole("radio", { name: "לפי דרישה" }));
+    await waitFor(() => expect(sheet.queryByLabelText("תקופה בחודשים")).toBeNull());
+    await expect(sheet.getByText("לפי דרישה: בלי לוח תשלומים קבוע")).toBeVisible();
+  },
+};
