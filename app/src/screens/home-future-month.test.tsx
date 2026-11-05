@@ -19,7 +19,6 @@ function view(over: Partial<Parameters<typeof homeFutureView>[0]> = {}) {
     today: NEXT_MONTH_TODAY,
     currency: "USD",
     search: "",
-    hold: false,
     loading: false,
     failed: false,
     offline: false,
@@ -30,7 +29,7 @@ function view(over: Partial<Parameters<typeof homeFutureView>[0]> = {}) {
 
 describe("homeFutureGroups (FLOW-1056)", () => {
   it("groups the forecast's rows by project in the Projects tab's order, the general costs last, every row due", () => {
-    const groups = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "", hold: false });
+    const groups = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "" });
     expect(groups.length).toBeGreaterThan(1);
     // The צפי page's order (the Projects tab's), so Home and פירוט ועריכה list the projects alike.
     const order = orderParts(FORECAST.parts, PROJECTS, "USD").map((part) => part.projectId ?? "general");
@@ -47,7 +46,7 @@ describe("homeFutureGroups (FLOW-1056)", () => {
   });
 
   it("sums each group in the currency and names its project", () => {
-    const groups = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "", hold: false });
+    const groups = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "" });
     const names = new Map(PROJECTS.map((row) => [row.id, row.name]));
     for (const group of groups) {
       if (group.id !== "general") expect(group.title).toBe(names.get(group.id));
@@ -58,19 +57,22 @@ describe("homeFutureGroups (FLOW-1056)", () => {
     }
   });
 
-  it("opens each row's edit on its project's צפי page, and nothing for a viewer", () => {
-    const groups = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "?preview=1", hold: false });
-    const project = groups.find((group) => group.id !== "general");
-    const row = project?.rows.find((item) => item.setAside !== true);
-    expect(row?.href).toBe(`/projects/${project?.id ?? ""}/profit/next/edit/${encodeURIComponent(row?.key ?? "")}?preview=1`);
-    const held = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "", hold: true });
-    expect(held.flatMap((group) => group.rows).every((item) => item.href == null)).toBe(true);
+  it("opens each row's project's צפי page, a general row the overhead project's, and none without one", () => {
+    const groups = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS, currency: "USD", search: "?preview=1" });
+    for (const group of groups.filter((item) => item.id !== "general")) {
+      expect(group.rows.every((row) => row.href === `/projects/${group.id}/profit/next?preview=1`)).toBe(true);
+    }
+    const overhead = PROJECTS.find((row) => row.is_overhead)?.id ?? "";
+    const general = groups.find((group) => group.id === "general");
+    if (general != null) expect(general.rows.every((row) => row.href === `/projects/${overhead}/profit/next?preview=1`)).toBe(true);
+    const noOverhead = homeFutureGroups({ forecast: FORECAST, projects: PROJECTS.filter((row) => !row.is_overhead), currency: "USD", search: "" });
+    expect(noOverhead.find((group) => group.id === "general")?.rows.every((row) => row.href == null) ?? true).toBe(true);
   });
 
   it("is empty when nothing is expected", () => {
     const empty = { ...FORECAST, rows: [], parts: [], incomeMinor: 0n, expenseMinor: 0n, netMinor: 0n };
     expect(nothingExpected(empty)).toBe(true);
-    expect(homeFutureGroups({ forecast: empty, projects: PROJECTS, currency: "USD", search: "", hold: false })).toEqual([]);
+    expect(homeFutureGroups({ forecast: empty, projects: PROJECTS, currency: "USD", search: "" })).toEqual([]);
   });
 });
 

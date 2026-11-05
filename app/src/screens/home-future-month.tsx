@@ -5,12 +5,10 @@ import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type Com
 import type { RentCategory } from "../next-month-chart";
 import { useProjectsCashMonth } from "../project-cash";
 import { LOAN_SOURCE } from "../project-next-month";
-import { useHoldWrites } from "../use-is-viewer";
 import { nothingExpected, thisMonthCashOut, useCompanyCashNextMonth } from "./company-cash-next-month";
 import { orderParts, partHint, partRows } from "./company-next-month-screen";
 import { groupSums, type ActivityGroup, type ActivityRow, type HomeFuture } from "./home-activity";
 import type { HomeFutureFigureRows } from "./home-parts";
-import { editPath } from "./project-next-month-screen";
 
 /**
  * FLOW-1056 (owner, 2026-11-05: "Click on a future month should take me to the main screen in a future date with
@@ -20,23 +18,23 @@ import { editPath } from "./project-next-month-screen";
  */
 
 /** The forecast's rows by project, as the צפי page orders them (the general costs last), each still due. */
-export function homeFutureGroups({ forecast, projects, currency, search, hold }: {
+export function homeFutureGroups({ forecast, projects, currency, search }: {
   forecast: CompanyNextMonth;
   projects: readonly ProjectCashRow[];
   currency: string;
   search: string;
-  /** A viewer: the rows open nothing (the צפי page's edit is the owner's and an editor's). */
-  hold: boolean;
 }): ActivityGroup[] {
   if (nothingExpected(forecast)) return [];
   const names = new Map(projects.map((row) => [row.id, row.name]));
   const overhead = projects.find((row) => row.is_overhead) ?? null;
   return orderParts(forecast.parts, projects, currency).flatMap((part) => {
     const general = part.projectId == null;
-    // FLOW-1002: a general row opens the overhead project's edit page, and none when the company has none.
+    // Each row opens its project's צפי page; a general row the overhead project's (FLOW-1002: its צפי page is the
+    // general costs), and none when the company has none. Editing is פירוט ועריכה's (the band's foot row).
     const projectId = general ? overhead?.id ?? null : part.projectId;
+    const href = projectId == null ? undefined : `/projects/${projectId}/profit/next${search}`;
     const rows: ActivityRow[] = partRows(part).map((item) => (item.kind === "kept"
-      ? { key: "kept", title: NOT_IN_PROFIT_LABEL, meta: LOAN_SOURCE, mark: "due", minor: item.minor, currency, income: false, setAside: true }
+      ? { key: "kept", title: NOT_IN_PROFIT_LABEL, meta: LOAN_SOURCE, mark: "due", minor: item.minor, currency, income: false, setAside: true, href }
       : {
           key: item.row.key,
           title: item.row.name,
@@ -45,7 +43,7 @@ export function homeFutureGroups({ forecast, projects, currency, search, hold }:
           minor: item.row.minor < 0n ? -item.row.minor : item.row.minor,
           currency,
           income: item.row.minor >= 0n,
-          href: hold || projectId == null ? undefined : `${editPath(projectId, item.row.key)}${search}`,
+          href,
         }));
     if (rows.length === 0) return [];
     const title = general ? "כללי" : names.get(part.projectId ?? "") ?? "פרויקט";
@@ -68,7 +66,7 @@ export function homeFutureFigures(forecast: CompanyNextMonth, categories: readon
 }
 
 /** What Home draws for next month from the reads; stories and the dev route call it with a sample. */
-export function homeFutureView({ forecast, categories, projects, cash, today, currency, search, hold, loading, failed, offline, onRetry }: {
+export function homeFutureView({ forecast, categories, projects, cash, today, currency, search, loading, failed, offline, onRetry }: {
   forecast: CompanyNextMonth | null;
   categories: readonly RentCategory[];
   projects: readonly ProjectCashRow[];
@@ -78,7 +76,6 @@ export function homeFutureView({ forecast, categories, projects, cash, today, cu
   today: string;
   currency: string;
   search: string;
-  hold: boolean;
   loading: boolean;
   failed: boolean;
   offline: boolean;
@@ -91,7 +88,7 @@ export function homeFutureView({ forecast, categories, projects, cash, today, cu
     offline,
     onRetry,
     figures: homeFutureFigures(forecast, categories, thisMonthCashOut(cash, today, currency), today, currency),
-    groups: homeFutureGroups({ forecast, projects, currency, search, hold }),
+    groups: homeFutureGroups({ forecast, projects, currency, search }),
   };
 }
 
@@ -106,7 +103,6 @@ export function HomeFutureReads({ today, currency, cash, search, children }: {
   const next = useCompanyCashNextMonth(currency, today, true);
   // The Projects tab's rows, for the groups' names and order; a failed read leaves the names as פרויקט.
   const list = useProjectsCashMonth();
-  const hold = useHoldWrites();
   const future = homeFutureView({
     forecast: next.forecast,
     categories: next.categories,
@@ -115,7 +111,6 @@ export function HomeFutureReads({ today, currency, cash, search, children }: {
     today,
     currency,
     search,
-    hold,
     loading: next.loading || (list.isPending && !list.isError),
     // A read waiting for the network says so, with its retry, as a failed one does.
     failed: next.failed || next.paused,

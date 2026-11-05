@@ -24,7 +24,6 @@ export function sampleHomeFuture(search: string, { phase = "ready", empty = fals
     today: NEXT_MONTH_TODAY,
     currency: "USD",
     search,
-    hold: false,
     loading: phase === "loading",
     failed: phase === "failed",
     offline: false,
