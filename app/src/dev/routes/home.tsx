@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { type Dashboard } from "@flow/shared";
+import { type Dashboard, inForecastHorizon } from "@flow/shared";
 import { BandCompany } from "../../ui/top-band";
 import { attentionRows, CashEmptyHome, CashHome } from "../../screens/HomeScreen";
 import { AddForm } from "../../screens/add-sheet";
@@ -88,13 +88,17 @@ export function DevCash() {
   // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
   const monthKey = past ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
   // FLOW-1056: `?month=next` (or next month's key, where the later arrow goes) is Home on next month, from the
-  // next-month sample (its own October and November, in dollars).
+  // next-month sample (its own October and November, in dollars). FLOW-1066: `?future=YYYY-MM` is any month of
+  // that sample's forecast (November 2026 to October 2027), where its arrows and its drawer go.
   const asked = params.get("month");
-  if (asked === "next" || asked === shiftMonthKey(currentKey, 1)) {
+  const futureKey = params.get("future");
+  const future = futureKey != null && inForecastHorizon(futureKey, FUTURE_CURRENT_KEY) ? futureKey : null;
+  if (future != null || asked === "next" || asked === shiftMonthKey(currentKey, 1)) {
+    const shown = future ?? FUTURE_MONTH_KEY;
     return (
       <CashHome
         data={HOME_NEXT_MONTH_SAMPLE.cash}
-        monthKey={FUTURE_MONTH_KEY}
+        monthKey={shown}
         currentKey={FUTURE_CURRENT_KEY}
         firstKey={cashMonthKey(HOME_NEXT_MONTH_SAMPLE.cash.months.at(-1)?.month ?? FUTURE_CURRENT_KEY)}
         previewing={false}
@@ -103,10 +107,10 @@ export function DevCash() {
         recurringTo="/e2e/recurring"
         company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
         onStepMonth={(key) => {
-          void navigate(key === FUTURE_MONTH_KEY ? "/e2e/cash?month=next" : "/e2e/cash", { replace: true });
+          void navigate(key > FUTURE_CURRENT_KEY ? `/e2e/cash?future=${key}` : "/e2e/cash", { replace: true });
         }}
-        withNext
-        future={sampleHomeFuture("?preview=1", { phase: params.get("state") === "failed" ? "failed" : "ready", empty: params.get("state") === "empty" })}
+        withForecast
+        future={sampleHomeFuture("?preview=1", { phase: params.get("state") === "failed" ? "failed" : "ready", empty: params.get("state") === "empty", month: shown })}
       />
     );
   }
@@ -158,7 +162,7 @@ export function DevCash() {
         linesFailed: false,
         onRetry: () => undefined,
       }}
-      withNext
+      withForecast
       initialDrawerOpen={params.get("drawer") === "1"}
       drawerYearMonths={yearMonths}
       syncing={params.get("sync") === "1" ? "מסנכרן עם Mercury…" : null}

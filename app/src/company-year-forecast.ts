@@ -1,6 +1,6 @@
+import { forecastMonths } from "@flow/shared";
 import { companyIncomeNote, companyNextMonthForecast, type CompanyForecastEdit, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import type { RentCategory } from "./next-month-chart";
-import { nextMonthKey } from "./project-next-month";
 import { HEBREW_MONTHS } from "./ui/date-math";
 
 /**
@@ -8,10 +8,11 @@ import { HEBREW_MONTHS } from "./ui/date-math";
  * company forecast (every project's צפי page and the general costs, decision 0197) built again for each month
  * left in this year, from the same reads. Recurring charges come by the shared due rule (`dueInMonth`), the
  * loans by their schedules, the averages stay the six-month ones, and each month gets the owner's edits that
- * apply to it (company_next_month_inputs' `rest_edits`).
+ * apply to it (company_next_month_inputs' `rest_edits`). FLOW-1066 (decision 0260): the same build reaches any
+ * month of the forecast (companyMonthForecast), 12 months ahead, which Home and the צפי pages show.
  */
 
-type RestOfYearInput = Omit<CompanyForecastInput, "month">;
+export type RestOfYearInput = Omit<CompanyForecastInput, "month">;
 
 /** One month left in the year: its positive totals. */
 export type RestOfYearMonth = { month: string; incomeMinor: bigint; expenseMinor: bigint };
@@ -29,24 +30,41 @@ export type RestOfYear = {
   forecasts: CompanyNextMonth[];
 };
 
-/** yyyy-mm of every month after today's to December of the same year; none in December. */
+/**
+ * yyyy-mm of every month after today's to December of the same year; none in December. FLOW-1066: the forecast's
+ * months (forecastMonths, 12 ahead) that are in this year, so the year view's card still sums this year only.
+ */
 export function restOfYearMonths(today: string): string[] {
   const year = today.slice(0, 4);
-  const months: string[] = [];
-  for (let month = nextMonthKey(today); month.startsWith(year); month = nextMonthKey(`${month}-01`)) months.push(month);
-  return months;
+  return forecastMonths(today).filter((month) => month.startsWith(year));
 }
 
 /**
- * Each month's edits: the read's rest-of-year edits (every edit that applies to a month left, so a 2-month edit
- * started in October reaches December), each added one matched by its own month's line. The builder keeps the
- * edits that apply to the month. Without them (an older payload), next month's edits, matched in next month only.
+ * Each month's edits: the read's later edits (`rest_edits`, every edit that applies to a month of the forecast,
+ * so a 2-month edit started in October reaches December), each added one matched by its own month's line. The
+ * builder keeps the edits that apply to the month. Without them (an older payload), next month's edits, matched
+ * in next month only.
  */
 function monthEdits(inputs: CompanyNextMonthInputs, month: string): CompanyForecastEdit[] {
   if (inputs.rest_edits == null) {
     return month === inputs.month ? inputs.edits : inputs.edits.map((edit) => ({ ...edit, matched_transaction_id: null }));
   }
   return inputs.rest_edits.map(({ matches, ...edit }) => ({ ...edit, matched_transaction_id: matches?.[month] ?? null }));
+}
+
+/**
+ * FLOW-1066: the reads, set up for one month of the forecast (next month to forecastLastMonth): that month, and
+ * its own edits in place of next month's, so companyNextMonthForecast and companyGeneralForecast build it. Next
+ * month keeps the read's own `edits`, so its pages read exactly as before.
+ */
+export function companyMonthInput(input: RestOfYearInput, month: string): CompanyForecastInput {
+  if (month === input.inputs.month) return { ...input, month };
+  return { ...input, inputs: { ...input.inputs, edits: monthEdits(input.inputs, month) }, month };
+}
+
+/** FLOW-1066: the company's forecast for any month of the forecast, from next month's reads. */
+export function companyMonthForecast(input: RestOfYearInput, month: string): CompanyNextMonth {
+  return companyNextMonthForecast(companyMonthInput(input, month));
 }
 
 /**

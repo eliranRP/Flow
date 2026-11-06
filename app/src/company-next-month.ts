@@ -33,9 +33,9 @@ export type CompanyNextMonthInputs = {
   general: CategoryMonthsRow[];
   edits: CompanyForecastEdit[];
   /**
-   * The rest of the year's edits (decision 0200): every edit that applies to any month left in the year after
-   * this one, an added one with its matched line by month. Older payloads and fixtures omit it: next month's
-   * `edits` stand in.
+   * The later months' edits (decision 0200; FLOW-1066, decision 0260: every month of the forecast, next month to
+   * forecastLastMonth, no longer only the rest of the year): every edit that applies to any of them, an added one
+   * with its matched line by month. Older payloads and fixtures omit it: next month's `edits` stand in.
    */
   rest_edits?: RestOfYearEdit[];
 };
@@ -99,7 +99,7 @@ export type CompanyForecastInput = {
   loans: readonly ForecastLoan[];
   categories: readonly Pick<CategoryRow, "id" | "name" | "loan_part" | "excluded_from_pnl">[];
   inputs: CompanyNextMonthInputs;
-  /** yyyy-mm, a later month (the rest of the year, decision 0200); default next month. */
+  /** yyyy-mm, a later month of the forecast (decision 0200, FLOW-1066: companyMonthInput); default next month. */
   month?: string;
 };
 
@@ -158,7 +158,7 @@ export function companyCashForecast(forecast: CompanyNextMonth): CompanyNextMont
  * overhead project's own צפי page, its edit page and its card show it, so a general row is edited like any
  * project's row.
  */
-export function companyGeneralForecast(input: CompanyForecastInput, month = nextMonthKey(input.today)): NextMonthForecast {
+export function companyGeneralForecast(input: CompanyForecastInput, month = input.month ?? nextMonthKey(input.today)): NextMonthForecast {
   const overhead = input.inputs.overhead_project_id;
   // Its lines are already in the general months; built as one part under the builder's own project key, so a
   // category one of their charges or loans fills is never also averaged.

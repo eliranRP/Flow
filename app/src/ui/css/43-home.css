@@ -126,9 +126,11 @@
   background: var(--color-tint);
 }
 
-/* FLOW-958: "עוד לא" is information, not a dead control: muted text, which meets 4.5:1. */
+/* FLOW-958: "עוד לא" is information, not a dead control: muted text, which meets 4.5:1. FLOW-1066: only a month
+   past the forecast is one; solid and flat, so the dashed forecast cells stand apart from it. */
 .ui-month-cell-future {
-  border: var(--month-cell-border) dashed var(--color-line);
+  border-color: var(--color-line);
+  background: transparent;
   color: var(--color-text-muted);
 }
 
@@ -355,8 +357,8 @@
 }
 
 /* FLOW-1036: next month's cell in the drawer; dashed like a month to come, but pickable (FLOW-1056: a pick shows
-   that month on Home, and the cell is then the selected one). */
-.ui-month-cell-next {
+   that month on Home, and the cell is then the selected one). FLOW-1066: every month of the forecast. */
+.ui-month-cell-forecast {
   border: var(--month-cell-border) dashed var(--color-line);
 }
 

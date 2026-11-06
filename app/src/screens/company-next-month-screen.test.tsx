@@ -2,6 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { companyCashForecast, companyForecastCaption, companyNextMonthForecast } from "../company-next-month";
+import { companyMonthForecast } from "../company-year-forecast";
 import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
 import { JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { NOT_IN_PROFIT_LABEL } from "../cash";
@@ -150,5 +151,25 @@ describe("CompanyNextMonthScreen general costs (FLOW-1001)", () => {
     expect(section.querySelector(".ui-cn-name")?.textContent).toBe("כללי");
     expect(section.querySelectorAll(".ui-pn-rows .ui-row")).toHaveLength(part?.forecast.rows.length ?? 0);
     expect(within(section).queryByRole("link", { name: /^עוד /u })).toBeNull();
+  });
+});
+
+describe("CompanyNextMonthScreen on any month of the forecast (FLOW-1066)", () => {
+  const input = { currency: "USD", today: NEXT_MONTH_TODAY, recurring: reads.recurring, loans: reads.loans, categories: reads.categories, inputs: reads.inputs };
+  const page = (route: string) => renderWithProviders(<CompanyNextMonthScreen sample={reads} today={NEXT_MONTH_TODAY} projects={NEXT_MONTH_PROJECTS.projects} currency="USD" />, { route });
+
+  it("builds ?month= for that month, names it, and its rows' links carry it", () => {
+    const march = companyCashForecast(companyMonthForecast(input, "2027-03"));
+    const { container } = page("/forecast/next?month=2027-03");
+    expect(screen.getByRole("heading", { level: 1, name: "צפי מרץ 2027" })).toBeInTheDocument();
+    expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(signed(march.netMinor));
+    const edits = Array.from(container.querySelectorAll<HTMLAnchorElement>(".ui-pn-rows a[href*='/profit/next/edit/']"));
+    expect(edits.length).toBeGreaterThan(0);
+    expect(edits.every((link) => link.getAttribute("href")?.endsWith("?month=2027-03"))).toBe(true);
+  });
+
+  it("is next month for no month, or one past the forecast", () => {
+    page("/forecast/next?month=2027-11");
+    expect(screen.getByRole("heading", { level: 1, name: "צפי נובמבר" })).toBeInTheDocument();
   });
 });

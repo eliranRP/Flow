@@ -16,7 +16,7 @@ import { israelToday } from "./ui/date-math";
  * overhead project's edits, the same part the company's צפי page shows under כללי. So a general row opens the
  * overhead project's edit page, and its writes (the overhead project's edits) reach both pages.
  */
-export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true) {
+export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
   // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
@@ -24,14 +24,16 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   // than every project page failing over one small read.
   const deciding = live && overhead.project === undefined && !overhead.failed;
   const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
-  const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead);
+  const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead, month);
   const today = israelToday();
+  // FLOW-1066: a month of the forecast (?month=), next month by default.
+  const forMonth = month ?? nextMonthKey(today);
   // The general costs are the company's, in its books currency (0147), as the company's צפי page reads them,
   // whatever currency the overhead project's own figures are in. The pages show them in the currency returned.
   // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
   const currencyRead = useCompanyCurrencyQuery(isOverhead);
   const companyCurrency = currencyRead.data ?? currency;
-  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null);
+  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null, undefined, forMonth);
   const currencyFailed = currencyRead.data == null && currencyRead.isError;
   const input = company.input;
   const general = useMemo(() => {
@@ -53,7 +55,7 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   return {
     currency: companyCurrency,
     forecast: general?.forecast ?? null,
-    month: nextMonthKey(today),
+    month: forMonth,
     today,
     edits: general?.edits ?? [],
     recurring: general?.recurring ?? [],

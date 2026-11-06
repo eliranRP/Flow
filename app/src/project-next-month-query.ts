@@ -121,9 +121,10 @@ const NO_CATEGORIES: readonly CategoryRow[] = [];
  * (a sample screen with no forecast) reads nothing. The edit page also takes the reads themselves
  * (`recurring`, `categoryMonths`, `categories`).
  */
-export function useNextMonthForecast(projectId: string, currency: string, sample?: NextMonthSample, enabled = true) {
+export function useNextMonthForecast(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, forMonth?: string) {
   const today = sample?.today ?? israelToday();
-  const month = nextMonthKey(today);
+  // FLOW-1066: any month of the forecast (?month=); the reads are the same, the build and the edits are the month's.
+  const month = forMonth ?? nextMonthKey(today);
   const live = sample == null && enabled ? projectId : "";
   const expected = useProjectExpectedQuery(live);
   const categories = useProjectCategoryMonthsQuery(live, monthPeriod(today.slice(0, 7)));
@@ -140,9 +141,9 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   // Each loan's schedule is built here, so the forecast is rebuilt only when what it reads changes.
   const base: NextMonthForecast | null = useMemo(
     () => (ready && recurring != null
-      ? nextMonthForecast({ projectId, currency, today, recurring, categoryMonths, loans, categories: categoryList })
+      ? nextMonthForecast({ projectId, currency, today, recurring, categoryMonths, loans, categories: categoryList, month })
       : null),
-    [ready, recurring, projectId, currency, today, categoryMonths, loans, categoryList],
+    [ready, recurring, projectId, currency, today, categoryMonths, loans, categoryList, month],
   );
   const reads = [expected, categories, editsRead, loansRead, companyCategories];
   return {

@@ -21,7 +21,7 @@ const UNDO = { drop: ["new-edit"], put: [] };
 
 function renderEdit(preset: Partial<ProjectNextEditSample> = {}, add = false, query = "") {
   const sample: ProjectNextEditSample = { ...JUNIPER_PROFIT, next: JUNIPER_NEXT, ...preset };
-  const path = add ? `/projects/juniper-ct/profit/next/add${query}` : "/projects/juniper-ct/profit/next/edit/x";
+  const path = add ? `/projects/juniper-ct/profit/next/add${query}` : `/projects/juniper-ct/profit/next/edit/x${query}`;
   return renderWithProviders(
     <Routes>
       <Route path="/forecast" element={<p>the month-end forecast</p>} />
@@ -266,6 +266,38 @@ describe("ProjectNextEditScreen, a new line", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("edits a row of a month after next (?month=) for that month, and goes back to that month's page (FLOW-1066)", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { edit: {}, undo: UNDO } : null, error: null }));
+    renderEdit({ rowKey: "avg:repairs" }, false, "?month=2027-03");
+    expect(screen.getByText("צפי · מרץ")).toBeTruthy();
+    fireEvent.change(amountField(), { target: { value: "400" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", {
+        p_project_id: "juniper-ct",
+        p_month: "2027-03",
+        p_edit: { row_key: "avg:repairs", amount_minor: 40_000, pace: "once" },
+      });
+    });
+    expect(await screen.findByText("the forecast page")).toBeTruthy();
+  });
+
+  it("adds a line for a month after next, and ignores a month past the forecast's (FLOW-1066)", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { edit: {}, undo: UNDO } : null, error: null }));
+    renderEdit({ categoryId: "property-mgmt" }, true, "?month=2027-10");
+    expect(screen.getByText("חדש בצפי · אוקטובר")).toBeTruthy();
+    fireEvent.change(amountField(), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: "הוספה לצפי" }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", expect.objectContaining({ p_month: "2027-10" }));
+    });
+  });
+
+  it("keeps next month for a month past the forecast", () => {
+    renderEdit({ categoryId: "property-mgmt" }, true, "?month=2027-11");
+    expect(screen.getByText("חדש בצפי · נובמבר")).toBeTruthy();
   });
 
   it("asks for an amount when the picked category has no usual month", async () => {
