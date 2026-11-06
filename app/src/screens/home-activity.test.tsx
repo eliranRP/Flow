@@ -25,6 +25,17 @@ describe("the month's activity groups (FLOW-1036)", () => {
     expect(paid[0]).toMatchObject({ mark: "paid", minor: 14_200n, href: "/recurring/expense/water", meta: "Elm Row · חשמל ומים" });
   });
 
+  // FLOW-1079: a charge taken out of this month's forecast.
+  it("moves a charge out of the forecast from נותר לשלם to הוצא מהצפי, which no total counts", () => {
+    const keystone = "party:expense:insurance:USD";
+    const { left, skipped } = scheduleActivity(RECURRING_FIXTURE, "", new Set([keystone]), "נובמבר");
+    expect(left.some((row) => row.title === "Keystone Mutual")).toBe(false);
+    expect(skipped).toEqual([expect.objectContaining({ title: "Keystone Mutual", meta: "לא צפוי בנובמבר", forecastKey: keystone })]);
+    const groups = activityGroups({ schedule: RECURRING_FIXTURE, lines: LINES, filter: "all", base: "USD", search: "", skipped: new Set([keystone]), monthLabel: "נובמבר" });
+    expect(groups.map((group) => group.id)).toEqual(["left", "skipped", "paid", "once"]);
+    expect(groups[0]?.outMinor).toBe((groupsFor("all")[0]?.outMinor ?? 0n) - 21_200n);
+  });
+
   it("leaves a charge due in a later month out", () => {
     const { left, paid } = scheduleActivity(RECURRING_FIXTURE, "");
     expect([...left, ...paid].some((row) => row.title === "Fernway Lawn")).toBe(false);

@@ -6,7 +6,7 @@ import { sampleCashMonths, sampleCashToDay, sampleQuietCashMonths } from "../dev
 import { homeActivityLines } from "../dev/home-activity-sample";
 import { FAR_MONTH_KEY, FUTURE_CURRENT_KEY, FUTURE_MONTH_KEY, sampleHomeFuture } from "../dev/home-future-sample";
 import { HOME_NEXT_MONTH_SAMPLE } from "../dev/home-next-month-sample";
-import type { ActivityFilter, HomeActivityData, HomeFuture } from "./home-activity";
+import type { ActivityFilter, ActivitySkip, HomeActivityData, HomeFuture } from "./home-activity";
 import { RECURRING_FIXTURE } from "../recurring-sample";
 import { shiftMonthKey } from "../period";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
@@ -131,6 +131,7 @@ function CashHomeStory({
   forecast = null,
   forecastPending = false,
   example = true,
+  skip,
 }: {
   monthBack?: number;
   /** A past month's activity (its lines); the sample's by default. */
@@ -149,6 +150,8 @@ function CashHomeStory({
   forecastPending?: boolean;
   /** The "Example data" strip on the band; the board comparisons draw the band without it (FLOW-1052). */
   example?: boolean;
+  /** FLOW-1079: the swipes out of this month's forecast. */
+  skip?: ActivitySkip;
 }) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
@@ -175,6 +178,7 @@ function CashHomeStory({
         lateRecurring={late}
         forecast={forecast}
         forecastPending={forecastPending}
+        skip={skip}
         company={<BandCompany name="Acme Test Co" onOpen={() => undefined} />}
       />
     </StoryRoute>
@@ -243,6 +247,32 @@ export const HomeFilterLeft: Story = {
     await expect(canvas.getByRole("heading", { name: "נותר לשלם" })).toBeInTheDocument();
     await expect(canvas.queryByRole("heading", { name: "קבועים ששולמו" })).toBeNull();
     await expect(canvas.getAllByText("איחר").length).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * FLOW-1079: a charge taken out of this month's forecast sits under הוצא מהצפי, crossed out; נותר לשלם swipes to
+ * "לא החודש", and its first row peeks once (the first time on a phone). Invented names.
+ */
+export const HomeSkippedFromForecast: Story = {
+  name: "Home activity, taken out of the forecast",
+  render: () => (
+    <CashHomeStory
+      filter="left"
+      skip={{
+        skipped: new Set(["party:expense:insurance:ILS"]),
+        monthLabel: "נובמבר",
+        onSkip: () => undefined,
+        onRestore: () => undefined,
+        peek: true,
+        onPeeked: () => undefined,
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "הוצא מהצפי" })).toBeInTheDocument();
+    await expect(canvas.getByText("לא צפוי בנובמבר")).toBeInTheDocument();
   },
 };
 
