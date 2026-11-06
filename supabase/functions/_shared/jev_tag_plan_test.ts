@@ -34,7 +34,7 @@ import {
   projects,
   txnRow,
 } from "./jev_tag_test_support.ts";
-import { CARD_NAME_HINT, EXPECTED_LINE_HINT, lineQuestions, PAST_FILINGS_HINT } from "./jev_tag_plan.ts";
+import { CARD_NAME_HINT, cardProject, EXPECTED_LINE_HINT, lineQuestions, PAST_FILINGS_HINT } from "./jev_tag_plan.ts";
 
 Deno.test("questions use project and category ids, and 256 options omit that question", () => {
   const questions = buildTagQuestions(projects, categories);
@@ -510,4 +510,42 @@ Deno.test("FLOW-707: a failed card-name read still lists the lines, without name
   const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
   assertEquals(work[0].expenses.length, 1);
   assertEquals(work[0].expenses[0].cardName, undefined);
+});
+
+Deno.test("FLOW-1072: a card named after one property decides the project over the model's guess", () => {
+  const props = [
+    { id: PROJECT, name: "Example Rd 1234" },
+    { id: OTHER, name: "Sample Ave 2220" },
+    { id: "33333333-3333-4333-8333-333333333333", name: "Overhead", overhead: true },
+  ];
+  // The model followed the supplier's past filings to the other property.
+  const guessed = { ...answers(0.95, 0.95), project: { type: "choice", choice: OTHER, confidence: 0.95, probabilities: { [OTHER]: 0.95 } } };
+  const plan = planTag(expense({ cardName: "**** Example Rd Utilities" }), "auto", 0.9, props, categories, guessed);
+  assertEquals((plan.answers.project as { choice: string }).choice, PROJECT);
+  assertEquals(plan.write?.projectId, PROJECT);
+  assertEquals(plan.write?.categoryId, CATEGORY);
+  // No name, or a name that names no project, leaves the model's answer.
+  assertEquals(planTag(expense(), "auto", 0.9, props, categories, guessed).write?.projectId, OTHER);
+  assertEquals(planTag(expense({ cardName: "Ops Card" }), "auto", 0.9, props, categories, guessed).write?.projectId, OTHER);
+});
+
+Deno.test("FLOW-1072: the card's name matches a property by its own words, a number on both must agree", () => {
+  const props = [
+    { id: PROJECT, name: "Example Rd 1234" },
+    { id: OTHER, name: "Example Rd 1300" },
+    { id: "44444444-4444-4444-8444-444444444444", name: "Sample 2432" },
+    { id: "55555555-5555-4555-8555-555555555555", name: "Old Place 10", finished: true },
+  ];
+  assertEquals(cardProject({ cardName: "Sample Utilities" }, props), "44444444-4444-4444-8444-444444444444");
+  assertEquals(cardProject({ cardName: "sample 2432 water" }, props), "44444444-4444-4444-8444-444444444444");
+  // Two properties on one street: the number decides, and with none it is no match.
+  assertEquals(cardProject({ cardName: "Example Rd 1234 Utilities" }, props), PROJECT);
+  assertEquals(cardProject({ cardName: "Example Rd Utilities" }, props), null);
+  // Street kinds and purposes alone never match; a finished project is no candidate.
+  assertEquals(cardProject({ cardName: "Rd Utilities" }, props), null);
+  assertEquals(cardProject({ cardName: "Old Place 10" }, props), null);
+  // The account's name is read when the card has none.
+  assertEquals(cardProject({ accountName: "Sample Checking" }, props), "44444444-4444-4444-8444-444444444444");
+  // A Hebrew name matches the same way.
+  assertEquals(cardProject({ cardName: "הרצל חשמל" }, [{ id: PROJECT, name: "הרצל 12" }]), PROJECT);
 });

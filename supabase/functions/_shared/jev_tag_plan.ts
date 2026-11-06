@@ -400,6 +400,57 @@ export function buildTagState(
   return state;
 }
 
+/**
+ * Words a property's name shares with any card or account name, so they never decide a match: street
+ * kinds, the purposes the owner names cards by, and filler (FLOW-1072).
+ */
+const GENERIC_NAME_WORDS = new Set([
+  "rd", "road", "ave", "av", "avenue", "st", "street", "dr", "drive", "ln", "lane", "blvd", "boulevard", "ct", "court",
+  "way", "pl", "place", "ter", "terrace", "cir", "circle", "hwy", "pkwy", "trl", "sq", "north", "south", "east", "west",
+  "utilities", "utility", "card", "account", "checking", "savings", "ops", "operating", "rent", "rental", "flip",
+  "rehab", "renovation", "property", "project", "llc", "inc", "the", "and", "of", "unit", "apt",
+  "רחוב", "שדרות", "דרך", "כרטיס", "חשבון", "שיפוץ", "פרויקט", "דירה", "נכס",
+]);
+
+/** A name's own words and numbers: lower case, letters (any script) and digits, generic words left out. */
+function nameKeys(name: string): { words: Set<string>; numbers: Set<string> } {
+  const words = new Set<string>();
+  const numbers = new Set<string>();
+  for (const token of name.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) {
+    if (/^\p{N}+$/u.test(token)) {
+      if (token.length >= 2) numbers.add(token);
+    } else if (token.length >= 3 && !GENERIC_NAME_WORDS.has(token)) {
+      words.add(token);
+    }
+  }
+  return { words, numbers };
+}
+
+/**
+ * FLOW-1072: the project the paying card's or account's own name names, when exactly one does. The owner
+ * names cards by property ("Example Rd Utilities" for the "Example Rd 1234" project): every word of the
+ * project's name, street kinds left out, is in the card's name, and a number on both must agree. Overhead
+ * and finished projects are not candidates. Null when no project, or more than one, matches.
+ */
+export function cardProject(expense: Pick<TagExpense, "cardName" | "accountName">, projects: readonly TagProject[]): string | null {
+  for (const label of [expense.cardName, expense.accountName]) {
+    if (!label) continue;
+    const card = nameKeys(label);
+    const matches = projects.filter((project) => {
+      if (project.overhead || project.finished) return false;
+      const own = nameKeys(project.name);
+      if (own.words.size === 0) return false;
+      for (const word of own.words) if (!card.words.has(word)) return false;
+      // "Example Rd 1234 Utilities" names the 1234 project, not the 1300 one on the same street.
+      if (card.numbers.size > 0 && own.numbers.size > 0 && ![...own.numbers].some((number) => card.numbers.has(number))) return false;
+      return true;
+    });
+    if (matches.length === 1) return matches[0].id;
+    if (matches.length > 1) return null;
+  }
+  return null;
+}
+
 function readChoice(value: unknown, allowed: ReadonlySet<string>): { id: string; confidence: number } | null {
   if (!isObject(value)) return null;
   const choice = value.choice;
@@ -441,11 +492,17 @@ export function planTag(
 ): TagPlan {
   const askProject = !skipsProjectQuestion(expense);
   const questions = buildTagQuestions(askProject ? projects : [], categories, lineDirection(expense));
+  // FLOW-1072: the card the owner named after a property decides the project over the model's guess, which
+  // can follow the supplier's past filings to another property (the same utility company serves them all).
+  const named = askProject ? cardProject(expense, projects) : null;
+  const given: Record<string, unknown> = named == null
+    ? answers
+    : { ...answers, project: { type: "choice", choice: named, confidence: 1, probabilities: { [named]: 1 }, source: "card_name" } };
   const parts: number[] = [];
   const projectAllowed = new Set([...projects.map((row) => row.id), JEV_NO_PROJECT]);
   const categoryAllowed = new Set(categories.map((row) => row.id));
-  const project = "project" in questions ? readChoice(answers.project, projectAllowed) : undefined;
-  const category = "category" in questions ? readChoice(answers.category, categoryAllowed) : undefined;
+  const project = "project" in questions ? readChoice(given.project, projectAllowed) : undefined;
+  const category = "category" in questions ? readChoice(given.category, categoryAllowed) : undefined;
   if (project !== undefined) parts.push(project?.confidence ?? 0);
   if (category !== undefined) parts.push(category?.confidence ?? 0);
   const confidence = parts.length === 0 ? 0 : Math.min(...parts);
@@ -475,7 +532,7 @@ export function planTag(
   const hasWrite = write.projectId !== undefined || write.categoryId !== undefined;
   return {
     confidence,
-    answers: askProject ? answers : withoutProject(answers),
+    answers: askProject ? given : withoutProject(given),
     write: hasWrite ? write : null,
     loanConfidence,
   };
