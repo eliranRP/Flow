@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { DATE, envelopeOf, fail, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID, WRITE_REFUSED } from "./tools_args.ts";
 
-const LINES = ["income", "opex", "debt_service", "capex", "principal", "before_rent", "not_counted", "rehab", "acquisition", "renovation", "holding", "financing", "money_in", "deal_holding"];
+const LINES = ["income", "opex", "debt_service", "capex", "principal", "before_rent", "not_counted", "rehab", "acquisition", "renovation", "holding", "financing", "money_in", "deal_holding", "irr_out", "irr_in"];
 
 export const PROPERTY_READS = ["get_property_returns", "get_property_return_lines"] as const;
 
@@ -58,7 +58,7 @@ export const PROPERTY_READ_SPECS = [
     from: { type: "string" },
     to: { type: "string" },
   }, false),
-  spec("get_property_return_lines", "The lines behind one of get_property_returns' figures, newest first. For the period (from and to as in get_property_returns): income, opex, debt_service, capex, principal (the principal parts alone), before_rent (holding and renovation in the period) or not_counted (acquisition and financing in the period). For all time: acquisition, renovation, holding, financing, money_in (the four together), rehab (the building cost) or deal_holding (the holding costs a renovation's net profit counts, deal.holding_minor: holding lines rehab does not count, a loan's principal left out). category_id narrows to one category. rows[] (transaction_id, description, supplier_name, category_id, category_name, date, amount_minor signed as in get_property_returns, parts, shared) with has_more, and total_minor and count for the whole figure. limit 1 to 200 (default 50), offset. Another company's project is not_found.", {
+  spec("get_property_return_lines", "The lines behind one of get_property_returns' figures, newest first. For the period (from and to as in get_property_returns): income, opex, debt_service, capex, principal (the principal parts alone), before_rent (holding and renovation in the period) or not_counted (acquisition and financing in the period). For all time: acquisition, renovation, holding, financing, money_in (the four together), rehab (the building cost) deal_holding (the holding costs a renovation's net profit counts, deal.holding_minor: holding lines rehab does not count, a loan's principal left out), irr_out or irr_in (the IRR's cash from the first purchase line to today: every line below zero, or above it; deal.irr_out_minor and irr_in_minor). category_id narrows to one category. rows[] (transaction_id, description, supplier_name, category_id, category_name, date, amount_minor signed as in get_property_returns, parts, shared) with has_more, and total_minor and count for the whole figure. limit 1 to 200 (default 50), offset. Another company's project is not_found.", {
     project_id: { type: "string" },
     line: { type: "string", enum: LINES },
     from: { type: "string" },

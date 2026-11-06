@@ -119,16 +119,26 @@ describe("the IRR (FLOW-1069)", () => {
     expect(dealMetricValue("irr", none)).toEqual({ kind: "missing", add: "value", note: undefined });
   });
 
-  it("shows its flows, each opening where it comes from", () => {
+  it("shows its flows, each opening lines or a formula that add up to it (the review of #1016)", () => {
     const page = dealMetricPage("irr", birchLaneReturns);
-    const rows = page.sections.flatMap((section) => section.formula.rows);
-    expect(rows.map((row) => [row.key, row.target])).toEqual([
-      ["out", { kind: "part", part: "money-in" }],
-      ["in", { kind: "statement" }],
-      ["terminal", { kind: "metric", metric: "roe" }],
+    const [flows, terminal] = page.sections;
+    expect(flows?.formula.rows.map((row) => [row.key, row.target])).toEqual([
+      ["out", { kind: "line", line: "irr_out" }],
+      ["in", { kind: "line", line: "irr_in" }],
     ]);
-    expect(page.result?.text).toBe("\u2066XIRR · 61\u2069");
+    // With a value, the last flow is today's equity, its own formula (value less the loans).
+    expect(terminal?.title).toBe("הון עצמי היום");
+    expect(terminal?.formula.result?.key).toBe("equity");
+    // With none, a sale at the ARV: the ARV less the selling costs and the loans.
+    const noValue: PropertyReturns = { ...birchLaneReturns, equity: { ...birchLaneReturns.equity, todayMinor: null } };
+    expect(dealMetricPage("irr", noValue).sections[1]?.formula.rows.map((row) => row.key)).toEqual(["arv", "selling", "loans"]);
+    expect(page.result?.text).toBe("\u2066XIRR · 61 תאריכים\u2069");
     expect(dealMetricCaption("irr", birchLaneReturns)).toBe("שנתי, לפי תאריכי הכסף");
+  });
+
+  it("asks for a purchase line when the price is only typed", () => {
+    const typed: PropertyReturns = { ...birchLaneReturns, deal: { ...birchLaneReturns.deal, acquiredOn: null }, metrics: { ...birchLaneReturns.metrics, irrBp: null } };
+    expect(dealMetricValue("irr", typed)).toEqual({ kind: "missing", add: null, note: "חסרה שורת רכישה" });
   });
 });
 

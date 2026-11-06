@@ -138,6 +138,10 @@ export function dealMetricValue(metric: DealMetricKey, r: PropertyReturns): Figu
   }
   if (metric === "roe") return bp(m.roeBp, r, ["value"]);
   // FLOW-1069: with no value, the IRR's last flow is the ARV, so a renovation asks for either.
+  // FLOW-1069: the IRR dates its cash from the purchase line; a typed price alone has no date (review of #1016).
+  if (metric === "irr" && m.irrBp == null && r.deal.acquiredOn == null && r.inputs.purchaseMinor != null) {
+    return { kind: "missing", add: null, note: "חסרה שורת רכישה" };
+  }
   if (metric === "irr") return bp(m.irrBp, r, ["purchase", r.inputs.arvMinor == null ? "value" : "arv"]);
   if (metric === "break-even") return m.breakEvenOccupancyBp == null ? { kind: "text", text: NO_INCOME } : { kind: "text", text: percentText(m.breakEvenOccupancyBp) };
   if (metric === "expense-ratio") return m.expenseRatioBp == null ? { kind: "text", text: NO_INCOME } : { kind: "text", text: percentText(m.expenseRatioBp) };
@@ -280,32 +284,42 @@ function dealParts(metric: DealMetricKey, r: PropertyReturns): { sections: Metri
     : undefined);
   switch (metric) {
     case "irr": {
-      const terminal = r.deal.irrTerminalMinor;
       const valued = r.equity.todayMinor != null;
-      return {
-        sections: [{
-          key: "flows",
-          title: "תזרימים מתוארכים",
+      const selling = r.deal.sellingCostMinor;
+      const balance = r.inputs.loanBalanceMinor ?? 0n;
+      // The last flow: today's equity, or with no value what a sale at the ARV would leave (the review of #1016:
+      // each row opens lines, or a formula, that add up to it).
+      const terminal: MetricSection = valued
+        ? { key: "terminal", title: "הון עצמי היום", total: computed(r.equity.todayMinor, r, ["value"]), formula: equityTodayFormula(r) }
+        : {
+          key: "terminal",
+          title: "אם נמכר היום",
+          total: r.deal.irrTerminalMinor == null ? undefined : money(r.deal.irrTerminalMinor),
           formula: {
             rows: [
-              // FLOW-1069: what went in and what came back, each opening its lines; the last flow its source.
-              { key: "out", op: "", label: "מה נכנס לעסקה", hint: "רכישה, שיפוץ, החזקה ותשלומי הלוואה", value: money(r.deal.irrOutMinor), target: { kind: "part", part: "money-in" } },
-              { key: "in", op: "+", label: "מה חזר", hint: "שכירות ותקבולי הלוואות", value: money(r.deal.irrInMinor, true), target: { kind: "statement" } },
-              {
-                key: "terminal",
-                op: "+",
-                label: valued ? "הון עצמי היום" : "ARV פחות מכירה והלוואות",
-                hint: valued ? "שווי היום פחות הלוואות" : "אם נמכר היום",
-                value: terminal == null ? missing(r.inputs.arvMinor == null ? "value" : "arv") : money(terminal),
-                target: valued ? { kind: "metric", metric: "roe" } : { kind: "part", part: "profit" },
-              },
+              arvRow(r, ""),
+              { key: "selling", op: "−", label: "עלויות מכירה", hint: `${percentText(r.deal.sellingCostBp)} מה־ARV · עריכה`, value: selling == null ? missing("arv") : money(-selling), target: { kind: "edit", field: "selling_cost" } },
+              { key: "loans", op: "−", label: "יתרת הלוואות", value: money(-balance), target: { kind: "loans" } },
             ],
-            result: null,
+            result: { key: "terminal", op: "=", label: "אם נמכר היום", value: r.deal.irrTerminalMinor == null ? missing("arv") : money(r.deal.irrTerminalMinor) },
           },
-        }],
-        division: r.metrics.irrBp == null
-          ? null
-          : `XIRR · ${String(r.deal.irrDates)}`,
+        };
+      return {
+        sections: [
+          {
+            key: "flows",
+            title: "הכסף לפי תאריך",
+            formula: {
+              rows: [
+                { key: "out", op: "", label: "מה נכנס לעסקה", hint: "כל תשלום מהקנייה: רכישה, שיפוץ, החזקה, הוצאות ותשלומי הלוואה", value: money(r.deal.irrOutMinor), target: { kind: "line", line: "irr_out" } },
+                { key: "in", op: "+", label: "מה חזר", hint: "כל תקבול מהקנייה: שכירות ותקבולי הלוואות", value: money(r.deal.irrInMinor, true), target: { kind: "line", line: "irr_in" } },
+              ],
+              result: null,
+            },
+          },
+          terminal,
+        ],
+        division: r.metrics.irrBp == null ? null : `XIRR · ${String(r.deal.irrDates)} תאריכים`,
       };
     }
     case "roi-since":

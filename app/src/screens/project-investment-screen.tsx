@@ -187,7 +187,8 @@ export function sellingSample(r: PropertyReturns, bp: number | null): PropertyRe
     metrics: {
       ...r.metrics,
       flipRoiBp: roi,
-      flipRoiYearBp: roi == null || days == null || days <= 0 ? null : Math.round((roi * 365) / days),
+      // From the unrounded ROI, as the server works it out (the review of #1016).
+      flipRoiYearBp: net == null || moneyIn == null || moneyIn <= 0n || days == null || days <= 0 ? null : Number(divRound(net * 10_000n * 365n, moneyIn * BigInt(days))),
       arvMarginBp: net == null || arv == null || arv <= 0n ? null : Number(divRound(net * 10_000n, arv)),
       breakEvenSaleMinor: costs == null ? null : divHalfEven(costs * 10_000n, BigInt(10_000 - sellingBp)),
     },

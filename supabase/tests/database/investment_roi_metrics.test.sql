@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(44);
+select plan(46);
 
 do $users$
 begin
@@ -190,6 +190,12 @@ select is((pg_temp.ret('rental')->'deal'->>'irr_terminal_minor')::bigint, 120000
 select is((pg_temp.ret('rental')->'deal'->>'irr_out_minor')::bigint, -10200000::bigint, 'what went in');
 select is((pg_temp.ret('rental')->'deal'->>'irr_in_minor')::bigint, 1200000::bigint, 'what came back before the end');
 select is((pg_temp.ret('rental')->'deal'->>'irr_dates')::integer, 4, 'four dates of cash');
+-- The IRR page's rows open lines that add up to them (the review of #1016). The default period ends today,
+-- so these read from the purchase line to today.
+select is((public.get_property_return_lines(pg_temp.id('rental'), 'irr_out')->>'total_minor')::bigint,
+  (public.get_property_returns(pg_temp.id('rental'))->'deal'->>'irr_out_minor')::bigint, 'irr_out lines add up to what went in');
+select is((public.get_property_return_lines(pg_temp.id('rental'), 'irr_in')->>'total_minor')::bigint,
+  (public.get_property_returns(pg_temp.id('rental'))->'deal'->>'irr_in_minor')::bigint, 'irr_in lines add up to what came back');
 
 select * from finish();
 rollback;

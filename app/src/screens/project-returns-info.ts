@@ -670,6 +670,8 @@ export const LINE_TITLES: Record<ReturnLine, string> = {
   money_in: "כסף בעסקה",
   rehab: "שיפוץ עד היום",
   deal_holding: "החזקה",
+  irr_out: "מה נכנס לעסקה",
+  irr_in: "מה חזר",
 };
 
 /**
@@ -692,6 +694,8 @@ export function lineMinor(line: ReturnLine, r: PropertyReturns): bigint | null {
   if (line === "money_in") return r.equity.moneyInMinor == null ? null : -r.equity.moneyInMinor;
   if (line === "rehab") return r.inputs.rehabMinor == null ? null : -r.inputs.rehabMinor;
   if (line === "deal_holding") return r.deal.holdingMinor;
+  if (line === "irr_out") return r.deal.irrOutMinor;
+  if (line === "irr_in") return r.deal.irrInMinor;
   return r.sources.principalMinor;
 }
 

@@ -168,16 +168,36 @@ end
 $returns$;
 
 -- FLOW-1070: deal_holding reads the category's loan part first too, so its lines still add up to the figure.
+-- FLOW-1069: two more all-time lines, the IRR's own: irr_out (what went in: every line below zero from the
+-- first purchase line) and irr_in (what came back: every line above zero from it), so the IRR page's rows
+-- open lines that add up to deal.irr_out_minor and deal.irr_in_minor (up to today, the default period's end).
 do $lines$
 declare
   def text;
   a_filter constant text := $a$coalesce(x.part, lc.loan_part::text, '') <> 'principal'$a$;
+  a_all constant text := $a$'money_in', 'deal_holding'];$a$;
+  a_valid constant text := $a$'financing', 'money_in', 'deal_holding')$a$;
+  a_case constant text := $a$        when 'deal_holding' then$a$;
 begin
   def := pg_get_functiondef('public.get_property_return_lines(uuid,text,date,date,uuid,integer,integer)'::regprocedure);
-  if pg_temp.anchor_count(def, a_filter) <> 1 then
+  if pg_temp.anchor_count(def, a_filter) <> 1 or pg_temp.anchor_count(def, a_all) <> 1
+    or pg_temp.anchor_count(def, a_valid) <> 1 or pg_temp.anchor_count(def, a_case) <> 1
+  then
     raise exception 'get_property_return_lines is not the expected definition';
   end if;
-  execute replace(def, a_filter, $n$coalesce(lc.loan_part::text, x.part, '') <> 'principal'$n$);
+  def := replace(def, a_filter, $n$coalesce(lc.loan_part::text, x.part, '') <> 'principal'$n$);
+  def := replace(def, a_all, $n$'money_in', 'deal_holding', 'irr_out', 'irr_in'];$n$);
+  def := replace(def, a_valid, $n$'financing', 'money_in', 'deal_holding', 'irr_out', 'irr_in')$n$);
+  def := replace(def, a_case, $n$        when 'irr_out' then x.amount_minor < 0 and x.line_date >= (
+          select min(q.line_date) from private.property_lines(cid, p_project_id, null, null) q
+          where q.currency = cur and q.line = 'acquisition')
+          and x.line_date <= (now() at time zone 'Asia/Jerusalem')::date
+        when 'irr_in' then x.amount_minor > 0 and x.line_date >= (
+          select min(q.line_date) from private.property_lines(cid, p_project_id, null, null) q
+          where q.currency = cur and q.line = 'acquisition')
+          and x.line_date <= (now() at time zone 'Asia/Jerusalem')::date
+$n$ || a_case);
+  execute def;
 end
 $lines$;
 
