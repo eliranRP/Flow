@@ -31,7 +31,10 @@ export function useKeyboardInset() {
       const covered = Math.max(0, fullHeight - vv.height * scale);
       root.style.setProperty("--vvh", `${String(vv.height)}px`);
       root.style.setProperty("--kb", `${String(kb)}px`);
-      const open = covered > 120;
+      // FLOW-1074: no focused field, no keyboard. iOS can close the keyboard without a visualViewport
+      // resize (the app sent to the background, a field blurred by a route change), which left
+      // data-kb "open" and the tab bar hidden on every page until the next resize.
+      const open = covered > 120 && editableFocused();
       if (open !== (root.dataset.kb === "open")) {
         if (open) root.dataset.kb = "open";
         else delete root.dataset.kb;
@@ -46,12 +49,33 @@ export function useKeyboardInset() {
         }
       }
     };
+    // Focus leaving a field, the window resizing and the app coming back from the background each
+    // re-read the keyboard. Focus moves after focusout, so that read waits a frame.
+    let frame = 0;
+    const later = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(on);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") on();
+    };
     on();
     vv.addEventListener("resize", on);
     vv.addEventListener("scroll", on);
+    document.addEventListener("focusin", later);
+    document.addEventListener("focusout", later);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("resize", on);
+    window.addEventListener("pageshow", on);
     return () => {
+      cancelAnimationFrame(frame);
       vv.removeEventListener("resize", on);
       vv.removeEventListener("scroll", on);
+      document.removeEventListener("focusin", later);
+      document.removeEventListener("focusout", later);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("resize", on);
+      window.removeEventListener("pageshow", on);
       delete root.dataset.kb;
       root.style.removeProperty("--vvh");
       root.style.removeProperty("--kb");
