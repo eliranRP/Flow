@@ -115,12 +115,12 @@ describe("the P&L", () => {
     expect(screen.getByRole("button", { name: "השנה · 2026" })).toHaveAttribute("aria-haspopup", "dialog");
   });
 
-  it("draws each row's share of its group as a bar under its line: costs of a group of several, none on income", () => {
+  it("writes each row's share of its group as a percent under its name: costs of a group of several, none on income", () => {
     renderPnl();
     const mortgage = screen.getByRole("link", { name: /ריבית משכנתא/ });
-    expect(mortgage.querySelector(".ui-rep-share")).toHaveAttribute("aria-hidden", "true");
+    expect(mortgage.querySelector(".ui-rep-hint-text")?.textContent).toMatch(/^\d{1,3}% מהקבוצה$/);
     const income = screen.getByRole("heading", { name: "הכנסות" }).closest("section");
-    expect(income?.querySelector(".ui-rep-share")).toBeNull();
+    expect(income?.querySelector(".ui-rep-hint-text")).toBeNull();
   });
 
   it("lists the categories under one-line heads with their totals, a row opening its lines", () => {
@@ -152,10 +152,9 @@ describe("the P&L", () => {
     renderPnl({}, "/reports/pnl?view=project");
     const cedar = screen.getByRole("link", { name: /Cedar St/ });
     expect(cedar.textContent).toContain("+$13,000");
-    expect(cedar.querySelector(".ui-rep-hint-text")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
-    expect(cedar.querySelector(".ui-rep-share-fill")).toHaveAttribute("data-income");
-    // The general expenses are one row alone: no bar.
-    expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest("section")?.querySelector(".ui-rep-share")).toBeNull();
+    expect(cedar.querySelector(".ui-rep-hint-text")?.textContent).toMatch(/^\d{1,3}% · הכנסות \$30,000 · הוצאות \$17,000$/);
+    // The general expenses are one row alone: no percent.
+    expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest("section")?.querySelector(".ui-rep-hint-text")?.textContent).not.toContain("%");
     expect(cedar).toHaveAttribute("href", `/reports/pnl?view=project&project=${CEDAR}`);
     expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest(".ui-group-head-line")?.textContent).toContain("−$5,800");
     expect(document.querySelector(".ui-rep-total-strong")?.textContent).toContain("$29,000");

@@ -214,8 +214,8 @@
 
 /* FLOW-1045 (board V3-Report; the owner, 2026-11-05: "too much text"): a report's row is the board's 60px: the name
    17 (it wraps once after a slash before it cuts, FLOW-358), 4px, the הכנסות · הוצאות line 13 secondary on one
-   line cut with an ellipsis, 4px, the row's share bar, the net 17. FLOW-1054: the lines at the 1.2 step, so the
-   name, the line and the bar fit the 60px as the board's do; the balance by project cuts its line the same way. */
+   line cut with an ellipsis (led by the row's share of its group, FLOW-1064), the net 17. FLOW-1054: the lines at the 1.2 step, so the
+   name and the line fit the 60px as the board's do; the balance by project cuts its line the same way. */
 .ui-rep-v3-group .ui-row {
   min-block-size: calc(var(--space-10) + var(--space-5));
   padding-block: calc(var(--space-1) + var(--space-half));
@@ -242,25 +242,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* The share bar: 4px, the hairline's colour, its fill the accent (income green). Decoration only. */
-.ui-rep-share {
-  display: block;
-  block-size: var(--space-1);
-  overflow: hidden;
-  border-radius: var(--radius-chip);
-  background: var(--color-line);
-}
-
-.ui-rep-share-fill {
-  display: block;
-  block-size: 100%;
-  background: var(--color-accent);
-}
-
-.ui-rep-share-fill[data-income] {
-  background: var(--color-income);
 }
 
 .ui-rep-v3-group .ui-row-end .ui-num {
