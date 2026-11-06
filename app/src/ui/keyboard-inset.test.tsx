@@ -269,4 +269,39 @@ describe("useKeyboardInset", () => {
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     expect(document.documentElement.dataset.kb).toBeUndefined();
   });
+
+  // FLOW-1078: iOS, back from the background, left the tab bar mid-screen until the page scrolled.
+  it("on iOS, nudges the page 1px and back when the app returns, so fixed layers are placed again", () => {
+    vi.useFakeTimers();
+    const scrollBy = vi.fn();
+    vi.stubGlobal("scrollBy", scrollBy);
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)" });
+    try {
+      mountWithViewport();
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        vi.runAllTimers();
+      });
+      expect(scrollBy.mock.calls).toEqual([[{ top: 1, behavior: "instant" }], [{ top: -1, behavior: "instant" }]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not nudge the page off iOS", () => {
+    vi.useFakeTimers();
+    const scrollBy = vi.fn();
+    vi.stubGlobal("scrollBy", scrollBy);
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (Linux; Android 14)" });
+    try {
+      mountWithViewport();
+      act(() => {
+        window.dispatchEvent(new Event("pageshow"));
+        vi.runAllTimers();
+      });
+      expect(scrollBy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

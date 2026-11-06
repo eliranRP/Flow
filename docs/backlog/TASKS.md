@@ -322,6 +322,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1075"></a>[FLOW-1075](tasks/FLOW-1075.md) | Loans summary: one month's payments | SMALL CYCLE |
 | <a id="flow-1076"></a>[FLOW-1076](tasks/FLOW-1076.md) | The loan bands' type matches Home's band | BUG |
 | <a id="flow-1077"></a>[FLOW-1077](tasks/FLOW-1077.md) | A loan's last payments: the date sits over its split | BUG |
+| <a id="flow-1078"></a>[FLOW-1078](tasks/FLOW-1078.md) | Back from the background, the tab bar sits mid-screen on iOS | BUG |
 | <a id="flow-1079"></a>[FLOW-1079](tasks/FLOW-1079.md) | Take a recurring charge out of this month's forecast | SMALL CYCLE |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
