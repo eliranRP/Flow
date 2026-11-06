@@ -1,6 +1,6 @@
 -- FLOW-1069 (decision 0261, step 4 of the plan): IRR since the purchase on get_property_returns, and the
--- review nit of FLOW-1070: the net profit's holding filter reads a line's category before its part, as
--- private.property_lines and category_in_rehab do.
+-- review nit of FLOW-1070: the net profit's holding filter, and get_property_return_lines' deal_holding,
+-- read a line's category before its part, as private.property_lines and category_in_rehab do.
 --
 -- 1. private.xirr(dates, amounts): the yearly rate that brings dated flows to a net present value of
 --    zero (actual/365), by bisection between -99.99% and 10,000%. Null when the flows do not change sign
@@ -166,6 +166,20 @@ $n$);
   execute def;
 end
 $returns$;
+
+-- FLOW-1070: deal_holding reads the category's loan part first too, so its lines still add up to the figure.
+do $lines$
+declare
+  def text;
+  a_filter constant text := $a$coalesce(x.part, lc.loan_part::text, '') <> 'principal'$a$;
+begin
+  def := pg_get_functiondef('public.get_property_return_lines(uuid,text,date,date,uuid,integer,integer)'::regprocedure);
+  if pg_temp.anchor_count(def, a_filter) <> 1 then
+    raise exception 'get_property_return_lines is not the expected definition';
+  end if;
+  execute replace(def, a_filter, $n$coalesce(lc.loan_part::text, x.part, '') <> 'principal'$n$);
+end
+$lines$;
 
 drop function pg_temp.anchor_count(text, text);
 

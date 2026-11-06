@@ -17,10 +17,10 @@ const usd = (dollars: number) => BigInt(dollars) * 100n;
 const cat = (id: string, name: string, dollars: number, count: number) => ({ id, name, minor: usd(dollars), count });
 
 /** FLOW-1068: a sample with no deal figures: no ARV, and the server's new metrics not worked out. */
-const NO_DEAL: PropertyReturns["deal"] = { sellingCostBp: 800, sellingCostDefault: true, sellingCostMinor: null, holdingMinor: 0n, netProfitMinor: null, acquiredOn: null, heldDays: null, lifeCashFlowMinor: 0n };
+const NO_DEAL: PropertyReturns["deal"] = { sellingCostBp: 800, sellingCostDefault: true, sellingCostMinor: null, holdingMinor: 0n, netProfitMinor: null, acquiredOn: null, heldDays: null, lifeCashFlowMinor: 0n, irrOutMinor: 0n, irrInMinor: 0n, irrTerminalMinor: null, irrDates: 0 };
 const NO_DEAL_METRICS = {
   roeBp: null, roiSincePurchaseBp: null, equityMultipleMilli: null, breakEvenOccupancyBp: null, expenseRatioBp: null, grmMilli: null, ltvBp: null,
-  flipRoiBp: null, flipRoiYearBp: null, arvMarginBp: null, rule70Minor: null, breakEvenSaleMinor: null,
+  flipRoiBp: null, flipRoiYearBp: null, arvMarginBp: null, rule70Minor: null, breakEvenSaleMinor: null, irrBp: null,
 } satisfies Partial<PropertyReturns["metrics"]>;
 
 export const birchLaneReturns: PropertyReturns = {
@@ -116,6 +116,10 @@ export const birchLaneReturns: PropertyReturns = {
     acquiredOn: "2026-01-10",
     heldDays: 296,
     lifeCashFlowMinor: usd(2_500),
+    irrOutMinor: usd(-266_100),
+    irrInMinor: usd(236_500),
+    irrTerminalMinor: usd(30_000),
+    irrDates: 61,
   },
   metrics: {
     cashOnCashBp: 1157,
@@ -134,6 +138,7 @@ export const birchLaneReturns: PropertyReturns = {
     arvMarginBp: 1197,
     rule70Minor: usd(-29_300),
     breakEvenSaleMinor: 26_967_391n,
+    irrBp: 1840,
   },
 };
 

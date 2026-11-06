@@ -102,6 +102,8 @@ export const CapRateFewDays: Story = { name: "Cap rate, fewer than 60 days", arg
 export const CapRateLearn: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", learn: true } };
 /* FLOW-1068 (boards V3-Calc-Roe, V3-Calc-Roi, V3-Calc-FlipProfit): the deal metrics' pages and a renovation's net profit. */
 export const ReturnOnEquity: Story = { args: { entry: "/projects/p1/investment/metric/roe" } };
+/** FLOW-1069: the IRR since the purchase, its dated flows opening where they come from. */
+export const InternalRateOfReturn: Story = { name: "IRR", args: { entry: "/projects/p1/investment/metric/irr" } };
 export const RoiSincePurchase: Story = { args: { entry: "/projects/p1/investment/metric/roi-since" } };
 export const EquityMultiple: Story = { args: { entry: "/projects/p1/investment/metric/multiple" } };
 export const BreakEvenOccupancy: Story = { args: { entry: "/projects/p1/investment/metric/break-even" } };

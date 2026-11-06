@@ -42,6 +42,7 @@ import {
  * ---------------------------------------------------------------------------------------------- */
 
 export type DealMetricKey =
+  | "irr"
   | "roi-since"
   | "roe"
   | "multiple"
@@ -59,11 +60,12 @@ export type DealMetricKey =
 export type AnyMetricKey = MetricKey | DealMetricKey;
 
 export const DEAL_METRIC_KEYS: readonly DealMetricKey[] = [
-  "roi-since", "roe", "multiple", "break-even", "ltv", "grm", "expense-ratio",
+  "irr", "roi-since", "roe", "multiple", "break-even", "ltv", "grm", "expense-ratio",
   "flip-roi", "flip-roi-year", "arv-margin", "rule-70", "break-even-sale",
 ];
 
 export const DEAL_METRIC_TITLES: Record<DealMetricKey, string> = {
+  irr: "תשואה פנימית (IRR)",
   "roi-since": "ROI מאז הקנייה",
   roe: "תשואה על ההון העצמי (ROE)",
   multiple: "מכפיל הון",
@@ -82,14 +84,14 @@ export const DEAL_METRIC_TITLES: Record<DealMetricKey, string> = {
 export type MetricGroup = { key: string; title: string; metrics: readonly AnyMetricKey[] };
 
 export const RENT_GROUPS: readonly MetricGroup[] = [
-  { key: "return", title: "תשואה", metrics: ["roi-since", "roe", "coc", "multiple"] },
+  { key: "return", title: "תשואה", metrics: ["irr", "roi-since", "roe", "coc", "multiple"] },
   { key: "risk", title: "סיכון", metrics: ["dscr", "break-even", "ltv"] },
   { key: "price", title: "מחיר", metrics: ["cap-rate", "grm", "expense-ratio", "per-unit"] },
 ];
 
 /** FLOW-1071 (the owner, 2026-11-06): a renovation keeps the four metrics of FLOW-451 beside its own. */
 export const FLIP_GROUPS: readonly MetricGroup[] = [
-  { key: "return", title: "תשואה", metrics: ["flip-roi", "flip-roi-year", "arv-margin", "coc"] },
+  { key: "return", title: "תשואה", metrics: ["flip-roi", "flip-roi-year", "irr", "arv-margin", "coc"] },
   { key: "risk", title: "סיכון", metrics: ["dscr"] },
   { key: "price", title: "מחיר", metrics: ["rule-70", "break-even-sale", "cap-rate", "per-unit"] },
 ];
@@ -135,6 +137,8 @@ export function dealMetricValue(metric: DealMetricKey, r: PropertyReturns): Figu
     return metric === "roi-since" ? bp(m.roiSincePurchaseBp, r, ["purchase", "value"]) : bp(m.equityMultipleMilli, r, ["purchase", "value"], multipleText);
   }
   if (metric === "roe") return bp(m.roeBp, r, ["value"]);
+  // FLOW-1069: with no value, the IRR's last flow is the ARV, so a renovation asks for either.
+  if (metric === "irr") return bp(m.irrBp, r, ["purchase", r.inputs.arvMinor == null ? "value" : "arv"]);
   if (metric === "break-even") return m.breakEvenOccupancyBp == null ? { kind: "text", text: NO_INCOME } : { kind: "text", text: percentText(m.breakEvenOccupancyBp) };
   if (metric === "expense-ratio") return m.expenseRatioBp == null ? { kind: "text", text: NO_INCOME } : { kind: "text", text: percentText(m.expenseRatioBp) };
   if (metric === "grm") return bp(m.grmMilli, r, ["purchase"], grmText);
@@ -170,6 +174,7 @@ function maxPrice(r: PropertyReturns): bigint | null {
 function dealFormula(metric: DealMetricKey, r: PropertyReturns): string {
   const cur = r.currency;
   switch (metric) {
+    case "irr": return r.missing.includes("value_history") && r.inputs.valueMinor != null ? "שנתי, לפי תאריכי הכסף · הערכה לפי שווי אחד" : "שנתי, לפי תאריכי הכסף";
     case "roi-since": return "מה חזר ומה שווה היום, מול מה שנכנס";
     case "roe": return "תשואה כוללת ÷ הון עצמי היום";
     case "multiple": return "מה חזר ומה שווה ÷ מה נכנס";
@@ -274,6 +279,35 @@ function dealParts(metric: DealMetricKey, r: PropertyReturns): { sections: Metri
     ? { key: "yearly", op: "", label: `${label} לשנה`, hint: `⁦${c(minor)} ÷ ${String(r.earningDays)} × 365⁩`, value: money(perYear(minor, r)) }
     : undefined);
   switch (metric) {
+    case "irr": {
+      const terminal = r.deal.irrTerminalMinor;
+      const valued = r.equity.todayMinor != null;
+      return {
+        sections: [{
+          key: "flows",
+          title: "תזרימים מתוארכים",
+          formula: {
+            rows: [
+              // FLOW-1069: what went in and what came back, each opening its lines; the last flow its source.
+              { key: "out", op: "", label: "מה נכנס לעסקה", hint: "רכישה, שיפוץ, החזקה ותשלומי הלוואה", value: money(r.deal.irrOutMinor), target: { kind: "part", part: "money-in" } },
+              { key: "in", op: "+", label: "מה חזר", hint: "שכירות ותקבולי הלוואות", value: money(r.deal.irrInMinor, true), target: { kind: "statement" } },
+              {
+                key: "terminal",
+                op: "+",
+                label: valued ? "הון עצמי היום" : "ARV פחות מכירה והלוואות",
+                hint: valued ? "שווי היום פחות הלוואות" : "אם נמכר היום",
+                value: terminal == null ? missing(r.inputs.arvMinor == null ? "value" : "arv") : money(terminal),
+                target: valued ? { kind: "metric", metric: "roe" } : { kind: "part", part: "profit" },
+              },
+            ],
+            result: null,
+          },
+        }],
+        division: r.metrics.irrBp == null
+          ? null
+          : `XIRR · ${String(r.deal.irrDates)}`,
+      };
+    }
     case "roi-since":
     case "multiple": {
       const back = cashBack(r);
