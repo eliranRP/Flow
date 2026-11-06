@@ -56,8 +56,29 @@ export function useKeyboardInset() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(on);
     };
+    // FLOW-1078: back from the background, iOS can leave fixed layers (the tab bar) placed on a stale
+    // viewport, mid-screen, until the page scrolls (the owner, 2026-11-06). A 1px scroll and back,
+    // a frame apart, makes it place them again; nobody sees it.
+    let nudge = 0;
+    const renudge = () => {
+      cancelAnimationFrame(nudge);
+      if (!IPHONE_IPAD.test(navigator.userAgent)) return;
+      nudge = requestAnimationFrame(() => {
+        const step = window.scrollY > 0 ? -1 : 1;
+        window.scrollBy({ top: step, behavior: "instant" });
+        nudge = requestAnimationFrame(() => {
+          window.scrollBy({ top: -step, behavior: "instant" });
+        });
+      });
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible") on();
+      if (document.visibilityState !== "visible") return;
+      on();
+      renudge();
+    };
+    const onShow = () => {
+      on();
+      renudge();
     };
     on();
     vv.addEventListener("resize", on);
@@ -66,16 +87,17 @@ export function useKeyboardInset() {
     document.addEventListener("focusout", later);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("resize", on);
-    window.addEventListener("pageshow", on);
+    window.addEventListener("pageshow", onShow);
     return () => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(nudge);
       vv.removeEventListener("resize", on);
       vv.removeEventListener("scroll", on);
       document.removeEventListener("focusin", later);
       document.removeEventListener("focusout", later);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("resize", on);
-      window.removeEventListener("pageshow", on);
+      window.removeEventListener("pageshow", onShow);
       delete root.dataset.kb;
       root.style.removeProperty("--vvh");
       root.style.removeProperty("--kb");
