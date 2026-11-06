@@ -128,6 +128,18 @@ export const JUNIPER_NEXT_EDITED: NextMonthSample = {
   ],
 };
 
+/**
+ * A second line in a category the forecast already counts (FLOW-1063, decision 0259): the rent category has
+ * the two tenants' recurring charges, and the owner added a third rent, 1,000 every month, next to them.
+ */
+export const JUNIPER_NEXT_SECOND_RENT: NextMonthSample = {
+  ...JUNIPER_NEXT,
+  edits: [{
+    id: "e-rent-2", kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "income",
+    amount_minor: 100_000, pace: "month", start_month: "2026-11",
+  }],
+};
+
 /** The sample loan's terms (invented): 238,000 at 6.25% over 30 years from 1/9/2026, escrow 612.40. */
 const LOAN_PRINCIPAL = 23_800_000n;
 const LOAN_RATE_PPM = 62_500;

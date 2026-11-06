@@ -1,11 +1,12 @@
+import { formatAmountText } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "./dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN, JUNIPER_NEXT_SECOND_RENT } from "./dev/project-next-month-sample";
 import {
   addMonths,
   categoryChoices,
   currencyMark,
   draftOf,
-  forecastCategoryIds,
+  forecastCategoryAmounts,
   formatDraft,
   historyBars,
   historyDiff,
@@ -14,7 +15,7 @@ import {
   paceSummary,
   savedToast,
 } from "./project-next-edit";
-import { nextMonthForecast } from "./project-next-month";
+import { applyForecastEdits, nextMonthForecast, type ProjectForecastEdit } from "./project-next-month";
 import { loanOutlook } from "./screens/loan-outlook";
 
 const base = nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT.today, recurring: JUNIPER_NEXT.expected.recurring, categoryMonths: JUNIPER_NEXT.categoryMonths });
@@ -27,7 +28,7 @@ function choices(query: string) {
     projectId: "juniper-ct",
     currency: "USD",
     divisor: base.averageMonths,
-    inForecast: forecastCategoryIds(base),
+    inForecast: forecastCategoryAmounts(base),
     query,
   });
 }
@@ -99,23 +100,68 @@ describe("historyBars", () => {
 });
 
 describe("categoryChoices", () => {
-  it("suggests the project's categories the forecast leaves out, with a hint each, and lists the rest", () => {
+  it("suggests the project's categories with a hint each, and lists the rest", () => {
     const { suggested, rest } = choices("");
     expect(suggested.map((choice) => [choice.name, choice.hint])).toEqual([
       ["ביטוח", "כל שנה · $1,240"],
       ["הדברה", "כל רבעון · $65"],
+      ["חשמל ומים", "כבר בצפי · $95"],
+      ["מסים וביטוח", "כבר בצפי · $280"],
       ["ניהול נכס", "כל חודש · $305"],
+      ["ריבית הלוואות", "כבר בצפי · $1,180"],
+      ["שכירות", "כבר בצפי · $4,150"],
+      ["תיקונים ותחזוקה", "כבר בצפי · $310"],
     ]);
-    // The forecast's own categories, the principal and income rent are not offered twice.
+    // The principal is never offered; the rest have no months in the project.
     const names = rest.map((choice) => choice.name);
-    for (const name of ["תיקונים ותחזוקה", "ריבית הלוואות", "קרן הלוואות", "מסים וביטוח", "חשמל ומים"]) expect(names).not.toContain(name);
+    expect(names).not.toContain("קרן הלוואות");
     expect(rest.find((choice) => choice.name === "גז")?.hint).toBe("אין תנועות בפרויקט");
     expect(rest.find((choice) => choice.name === "החזר ביטוח")?.hint).toBe("הכנסה");
   });
 
+  it("offers a category the forecast already counts, in its own list, with the forecast's amount (decision 0259)", () => {
+    // The rent category has two tenants' charges in the forecast: it stays suggested, and its kind stays income.
+    const rent = choices("שכירות").suggested.find((choice) => choice.id === "rent");
+    expect(rent).toEqual({ id: "rent", name: "שכירות", kind: "income", hint: "כבר בצפי · $4,150" });
+    // An added line in a category the project never used: it stays in the rest, its hint says it is in.
+    const result = categoryChoices({
+      categories: JUNIPER_NEXT.categories ?? [],
+      categoryMonths: JUNIPER_NEXT.categoryMonths,
+      recurring: [],
+      projectId: "juniper-ct",
+      currency: "USD",
+      divisor: 6,
+      inForecast: new Map([["c-3", 4_000n], ["deposit", 0n]]),
+      query: "",
+    });
+    expect(result.rest.find((choice) => choice.id === "c-3")?.hint).toBe("כבר בצפי · $40");
+    expect(result.rest.find((choice) => choice.id === "deposit")?.hint).toBe("כבר בצפי");
+    expect(result.suggested.find((choice) => choice.id === "c-3")).toBeUndefined();
+  });
+
+  it("still leaves out the hidden, the loan principal and the kept-out-of-profit categories", () => {
+    const categories = [
+      ...(JUNIPER_NEXT.categories ?? []),
+      { id: "hidden", name: "מוסתרת", kind: "expense" as const, hidden: true, is_default: false, loan_part: null },
+      { id: "owner-draw", name: "משיכת בעלים", kind: "expense" as const, hidden: false, is_default: false, loan_part: null, excluded_from_pnl: true },
+    ];
+    const result = categoryChoices({
+      categories,
+      categoryMonths: JUNIPER_NEXT.categoryMonths,
+      recurring: [],
+      projectId: "juniper-ct",
+      currency: "USD",
+      divisor: 6,
+      inForecast: new Map([["hidden", 100n], ["owner-draw", 100n], ["loan-principal", 100n]]),
+      query: "",
+    });
+    const ids = [...result.suggested, ...result.rest].map((choice) => choice.id);
+    for (const id of ["hidden", "owner-draw", "loan-principal"]) expect(ids).not.toContain(id);
+  });
+
   it("keeps the names a search contains, and nothing for a name the company lacks", () => {
     const { suggested, rest } = choices("ביטוח");
-    expect(suggested.map((choice) => choice.name)).toEqual(["ביטוח"]);
+    expect(suggested.map((choice) => choice.name)).toEqual(["ביטוח", "מסים וביטוח"]);
     expect(rest.map((choice) => choice.name)).toEqual(["ביטוח עסק", "החזר ביטוח"]);
     expect(choices("שמירה")).toEqual({ suggested: [], rest: [] });
   });
@@ -131,7 +177,7 @@ describe("categoryChoices", () => {
       projectId: "juniper-ct",
       currency: "USD",
       divisor: 6,
-      inForecast: new Set(["repairs", "power", "loan-interest"]),
+      inForecast: new Map([["repairs", 31_000n], ["power", 9_500n], ["loan-interest", 118_000n]]),
       query: "",
     });
     expect(result.suggested.find((choice) => choice.name === "ביטוח")?.hint).toBe("פעם אחת · $1,240 באפריל");
@@ -150,9 +196,9 @@ describe("the edit page's figures with a loan row (decision 0190)", () => {
     categories: JUNIPER_NEXT_LOAN.categories,
   });
 
-  it("counts the loan rows' categories as in the forecast, so the category sheet leaves them out", () => {
-    const inForecast = forecastCategoryIds(loanForecast);
-    expect([...inForecast].sort()).toEqual(["loan-interest", "power", "rent", "repairs", "taxes"]);
+  it("counts the loan rows' categories as in the forecast, so the category sheet says so", () => {
+    const inForecast = forecastCategoryAmounts(loanForecast);
+    expect([...inForecast.keys()].sort()).toEqual(["loan-interest", "power", "rent", "repairs", "taxes"]);
     const result = categoryChoices({
       categories: JUNIPER_NEXT_LOAN.categories ?? [],
       categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths,
@@ -163,9 +209,10 @@ describe("the edit page's figures with a loan row (decision 0190)", () => {
       inForecast,
       query: "",
     });
-    const names = [...result.suggested, ...result.rest].map((choice) => choice.name);
-    expect(names).not.toContain("ריבית הלוואות");
-    expect(names).not.toContain("מסים וביטוח");
+    const choices = [...result.suggested, ...result.rest];
+    const escrow = loanForecast.rows.find((row) => row.categoryId === "taxes")?.minor ?? 0n;
+    expect(choices.find((choice) => choice.id === "taxes")?.hint).toBe(`כבר בצפי · ${formatAmountText(-escrow, "USD")}`);
+    expect(choices.map((choice) => choice.id)).not.toContain("loan-principal");
   });
 
   it("shows the interest category's own months next to the loan row's amount", () => {
@@ -177,5 +224,29 @@ describe("the edit page's figures with a loan row (decision 0190)", () => {
     expect(next?.dueDate).toBe("2026-11-01");
     expect(loanForecast.rows.find((row) => row.key === "avg:loan-interest")?.minor).toBe(-(next?.interestMinor ?? 0n));
     expect(next?.interestMinor).not.toBe(september);
+  });
+});
+
+describe("many added lines in one category (FLOW-1063, decision 0259)", () => {
+  const rentBase = nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT.today, recurring: JUNIPER_NEXT.expected.recurring, categoryMonths: JUNIPER_NEXT.categoryMonths });
+  const added = JUNIPER_NEXT_SECOND_RENT.edits ?? [];
+  const rentKeys = (edits: readonly ProjectForecastEdit[]) => applyForecastEdits(rentBase, edits).rows.filter((row) => row.categoryId === "rent").map((row) => row.key);
+
+  it("lists an added line next to the recurring incomes of its category, each its own row, as an income", () => {
+    const result = applyForecastEdits(rentBase, added);
+    expect(rentKeys(added)).toEqual(["rec:income:c-ortiz", "rec:income:c-kim", "add:e-rent-2"]);
+    expect(result.rows.find((row) => row.key === "add:e-rent-2")).toMatchObject({ direction: "income", minor: 100_000n, name: "שכירות" });
+    expect(result.incomeMinor).toBe(rentBase.incomeMinor + 100_000n);
+    expect(forecastCategoryAmounts(result).get("rent")).toBe(515_000n);
+  });
+
+  it("keeps two added lines in one category apart, and removing one leaves the other", () => {
+    const third: ProjectForecastEdit = { ...added[0] as ProjectForecastEdit, id: "e-rent-3", amount_minor: 50_000, pace: "once" };
+    expect(rentKeys([...added, third])).toEqual(["rec:income:c-ortiz", "rec:income:c-kim", "add:e-rent-2", "add:e-rent-3"]);
+    const removeAdded: ProjectForecastEdit = { id: "e-off", kind: "remove", row_key: "add:e-rent-2", category_id: null, direction: null, amount_minor: null, pace: "once", start_month: "2026-11" };
+    expect(rentKeys([...added, third, removeAdded])).toEqual(["rec:income:c-ortiz", "rec:income:c-kim", "add:e-rent-3"]);
+    // Taking out a tenant's charge leaves the added line.
+    const removeCharge: ProjectForecastEdit = { ...removeAdded, id: "e-off-kim", row_key: "rec:income:c-kim" };
+    expect(rentKeys([...added, removeCharge])).toEqual(["rec:income:c-ortiz", "add:e-rent-2"]);
   });
 });

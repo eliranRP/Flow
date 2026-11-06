@@ -57,3 +57,15 @@ export const ProjectNextPace: Story = {
   name: "Project, next month forecast, pace",
   render: () => page({ categoryId: "pest", draft: "65", pace: "quarter", sheet: "pace" }, true),
 };
+
+/** FLOW-1063 (decision 0259): the category sheet offers the forecast's own categories too, "כבר בצפי · $4,150" on rent. */
+export const ProjectNextAddInForecast: Story = {
+  name: "Project, next month forecast, category already in the forecast",
+  render: () => page({ sheet: "category", query: "שכירות" }, true),
+};
+
+/** FLOW-1063: a second rent line picked, an income every month next to the tenants' rents. */
+export const ProjectNextAddSecondIncome: Story = {
+  name: "Project, next month forecast, a second income line",
+  render: () => page({ categoryId: "rent", draft: "1000", pace: "month" }, true),
+};

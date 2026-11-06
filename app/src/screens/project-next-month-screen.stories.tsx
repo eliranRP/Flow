@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN, JUNIPER_NEXT_SECOND_RENT } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { ProjectNextMonthScreen } from "./project-next-month-screen";
 import { StoryRoute } from "../ui/story-route";
@@ -42,6 +42,17 @@ export const ProjectNextMonthLoan: Story = {
     <StoryRoute entry="/projects/juniper-ct/profit/next" tabs>
       <ExampleBar />
       <ProjectNextMonthScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_LOAN }} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-1063 (decision 0259): a third rent the owner added, next to the two tenants' recurring rents in the same category. */
+export const ProjectNextMonthSecondLine: Story = {
+  name: "Project, next month forecast, a second line in a category",
+  render: () => (
+    <StoryRoute entry="/projects/juniper-ct/profit/next" tabs>
+      <ExampleBar />
+      <ProjectNextMonthScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_SECOND_RENT }} />
     </StoryRoute>
   ),
 };

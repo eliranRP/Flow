@@ -313,6 +313,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1060"></a>[FLOW-1060](tasks/FLOW-1060.md) | v3 review nits in code: a duplicate CSS rule, Projects' line height, a token's indent, a slow test, the attention card's restore | BACKLOG NIT |
 | <a id="flow-1061"></a>[FLOW-1061](tasks/FLOW-1061.md) | v3 pixel checks the passes left: clip-check on main, the example strips, the review bar, the P&L band label, the empty frame, the month cell's border | BACKLOG NIT (UI) |
 | <a id="flow-1062"></a>[FLOW-1062](tasks/FLOW-1062.md) | v3 board items the build left for the owner: Add's drill-in rows, Search's scope chips, the investment page's reads, the reports hub's stepper | UI (the owner decides each item first) |
+| <a id="flow-1063"></a>[FLOW-1063](tasks/FLOW-1063.md) | A project's forecast takes as many added lines in one category as the owner wants | UI |
 | <a id="flow-1064"></a>[FLOW-1064](tasks/FLOW-1064.md) | Reports: a row's share of its group as a percent, not a bar | SMALL UI |
 | <a id="flow-1065"></a>[FLOW-1065](tasks/FLOW-1065.md) | A refund in an expense category's lines shows as money in | BUG |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
