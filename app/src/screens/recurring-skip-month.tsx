@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { forecastKeyOf, useForecastSkip } from "../forecast-skip";
-import { useMonthForecastQuery } from "../month-forecast-query";
+import { forecastKeyOf, useForecastOverrides, useForecastSkip } from "../forecast-skip";
 import { shiftMonthKey } from "../period";
 import type { ScheduleRow } from "../recurring-schedule";
 import { HEBREW_MONTHS } from "../ui/date-math";
@@ -11,10 +10,25 @@ function monthWord(key: string): string {
   return HEBREW_MONTHS[Number(key.slice(5, 7)) - 1] ?? key;
 }
 
+/** The forecast's reach: this month and the 12 after it (decision 0260). */
+const HORIZON_MONTHS = 12;
+
+/**
+ * The month the charge is next expected in, while the forecast reaches it: this month while it is still due (soon
+ * or late), else its next due month. Null once nothing is expected within the forecast.
+ */
+export function skipMonthOf(row: Pick<ScheduleRow, "state" | "next_due_month">, today: string): string | null {
+  const current = today.slice(0, 7);
+  if (row.state === "soon" || row.state === "late") return current;
+  const next = row.next_due_month.slice(0, 7);
+  if (next === "" || next <= current || next > shiftMonthKey(current, HORIZON_MONTHS)) return null;
+  return next;
+}
+
 /**
  * FLOW-1079 (the owner's pick, concept B): on the charge's page, "לא צפוי ב<month>": a switch that takes the charge
- * out of this month's forecast, or puts it back. Only while the charge is still expected this month (soon or late);
- * once it arrived, or when it is due in a later month, there is nothing to take out. A dev sample keeps it local.
+ * out of the forecast of the month it is next expected in (this month while due, else its next one), or puts it
+ * back; Home's months take any month of the forecast. A dev sample keeps it local.
  */
 export function ChargeSkipMonth({ row, split, live, today, disabled, blocked }: {
   row: ScheduleRow;
@@ -27,24 +41,23 @@ export function ChargeSkipMonth({ row, split, live, today, disabled, blocked }: 
   /** A preview: the write is refused with its own toast. */
   blocked: () => boolean;
 }) {
-  const month = today.slice(0, 7);
+  const due = skipMonthOf(row, today);
+  const month = due ?? today.slice(0, 7);
   const name = monthWord(month);
-  const expected = row.state === "soon" || row.state === "late";
-  const forecast = useMonthForecastQuery(month, live && expected);
-  const skip = useForecastSkip(month, name, forecast.data?.overrides ?? null);
+  const overrides = useForecastOverrides(month, live && due != null);
+  const skip = useForecastSkip(month, name, overrides.data ?? null);
   const [sampleOn, setSampleOn] = useState(false);
-  if (!expected) return null;
+  if (due == null) return null;
   const key = forecastKeyOf(row, split);
   const on = live ? skip.skipped.has(key) : sampleOn;
-  const next = monthWord(shiftMonthKey(month, 1));
   return (
     <div className="ui-charge-skip">
       <Toggle
         icon={<CalendarIcon />}
         label={`לא צפוי ב${name}`}
-        hint={on ? `לא נספר בצפי של ${name}. ב${next} הוא צפוי שוב.` : `מוציא רק את ${name} מהצפי. ${next} נשאר כרגיל.`}
+        hint={on ? `לא נספר בצפי של ${name}. בשאר החודשים הוא צפוי כרגיל.` : `מוציא רק את ${name} מהצפי. שאר החודשים נשארים.`}
         checked={on}
-        disabled={disabled || (live && forecast.data == null)}
+        disabled={disabled || (live && overrides.data == null)}
         busy={skip.busy}
         onChange={(out) => {
           if (live && blocked()) return;

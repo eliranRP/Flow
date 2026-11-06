@@ -315,8 +315,8 @@
   background: var(--color-bg);
 }
 
-/* FLOW-1079: a charge taken out of this month's forecast: its name and amount crossed out and muted, its line
-   ("לא צפוי ב<month>") in the accent, as the way back. */
+/* FLOW-1079: a charge taken out of this month's forecast: its name and amount crossed out and muted; its line
+   says "לא צפוי ב<month>". */
 .ui-home-act-skipped .ui-row-title,
 .ui-home-act-skipped .ui-num {
   color: var(--color-text-muted);

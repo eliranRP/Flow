@@ -1,7 +1,7 @@
-import { formatAmountText, type CashLine } from "@flow/shared";
+import { formatAmountText, type CashLine, type ForecastOverrideRow } from "@flow/shared";
 import { Fragment, useEffect, type ReactNode } from "react";
 import { chargeHref } from "../recurring-charge";
-import { forecastKeyOf } from "../forecast-skip";
+import { forecastKeyOf, useForecastSkip } from "../forecast-skip";
 import { isSplitParty, rowId, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
@@ -88,6 +88,8 @@ export type HomeFuture = {
   /** Null until the forecast is read. */
   figures: HomeFutureFigureRows | null;
   groups: ActivityGroup[];
+  /** FLOW-1079: the month's forecast overrides (what a skip's ביטול writes back); null while read. */
+  overrides?: readonly ForecastOverrideRow[] | null;
 };
 
 /** What Home has read for the activity: null while a read is out. */
@@ -122,7 +124,15 @@ export function scheduleActivity(
   search: string,
   skipped: ReadonlySet<string> = new Set(),
   monthLabel = "",
+  /** The forecast's currency: a charge in another one is not in the forecast, so it has no item to take out. */
+  base: string | null = null,
 ): { left: ActivityRow[]; skipped: ActivityRow[]; paid: ActivityRow[] } {
+  // The month forecast's key: split when the party has another charge in the same currency (month-forecast.ts).
+  const keyOf = (item: ScheduleRow): string | undefined => {
+    if (base != null && item.currency !== base) return undefined;
+    const split = schedule.filter((other) => other.direction === item.direction && other.party_id === item.party_id && other.currency === item.currency).length > 1;
+    return forecastKeyOf(item, split);
+  };
   const row = (item: ScheduleRow, mark: StatusMarkKind, meta: string, minor: number): ActivityRow => ({
     key: rowId(schedule, item),
     title: item.party_name,
@@ -132,12 +142,15 @@ export function scheduleActivity(
     currency: item.currency,
     income: item.direction === "income",
     href: chargeHref(item.direction, item.party_id, search, isSplitParty(schedule, item) ? item.project_id : null),
-    forecastKey: forecastKeyOf(item, isSplitParty(schedule, item)),
+    forecastKey: keyOf(item),
   });
   const due = schedule
     .filter((item) => item.state === "late" || item.state === "soon")
     .sort((a, b) => Number(b.state === "late") - Number(a.state === "late") || a.typical_day - b.typical_day);
-  const out = (item: ScheduleRow) => skipped.has(forecastKeyOf(item, isSplitParty(schedule, item)));
+  const out = (item: ScheduleRow) => {
+    const key = keyOf(item);
+    return key != null && skipped.has(key);
+  };
   const left = due.filter((item) => !out(item)).map((item) =>
     item.state === "late" ? row(item, "late", "איחר", item.typical_amount_minor) : row(item, "due", `צפוי ב־${String(item.typical_day)}`, item.typical_amount_minor),
   );
@@ -241,7 +254,7 @@ export function activityGroups({ schedule, lines, filter, base, search, skipped,
   skipped?: ReadonlySet<string>;
   monthLabel?: string;
 }): ActivityGroup[] {
-  const fixed = schedule == null ? { left: [], skipped: [], paid: [] } : scheduleActivity(schedule, search, skipped, monthLabel);
+  const fixed = schedule == null ? { left: [], skipped: [], paid: [] } : scheduleActivity(schedule, search, skipped, monthLabel, base);
   const once = lines == null ? null : onceActivity(lines, search);
   // FLOW-1079: what was taken out sits right under what is still due, under the filters that show נותר לשלם.
   const groups = [group("left", fixed.left, base), group("skipped", fixed.skipped, base)];
@@ -455,8 +468,24 @@ function ActivityLine({ row, skipped }: { row: ActivityRow; skipped: boolean }) 
  * page's parts, in the Projects tab's order, the general costs last), each due. No filter: הכול, קבועים and
  * נותר לשלם sort what has moved, and nothing has yet. Loading, failed (the band stays) and nothing expected.
  */
-export function HomeFutureActivity({ monthKey, future, base }: { monthKey: string; future: HomeFuture; base: string }) {
+export function HomeFutureActivity({ monthKey, future, base, canSkip = false }: {
+  monthKey: string;
+  future: HomeFuture;
+  base: string;
+  /** FLOW-1079: the rows swipe out of this month's forecast and back (not for a viewer or a preview). */
+  canSkip?: boolean;
+}) {
   const name = monthName(monthKey);
+  const forecastSkip = useForecastSkip(monthKey, name, future.overrides ?? null);
+  const skip: ActivitySkip | undefined = !canSkip || future.overrides == null ? undefined : {
+    skipped: forecastSkip.skipped,
+    monthLabel: name,
+    onSkip: (row) => { if (row.forecastKey != null) forecastSkip.set(row.forecastKey, true, row.title); },
+    onRestore: (row) => { if (row.forecastKey != null) forecastSkip.set(row.forecastKey, false, row.title); },
+    peek: false,
+    onPeeked: () => undefined,
+  };
+  const groups = skip == null ? future.groups : regroupSkipped(future.groups, skip.skipped, name, base);
   return (
     <section className="ui-home-act" aria-labelledby="home-act-title" aria-busy={future.phase === "loading" || undefined}>
       <h2 id="home-act-title" className="ui-home-act-title t-section">{`הצפוי ב${name}`}</h2>
@@ -471,8 +500,26 @@ export function HomeFutureActivity({ monthKey, future, base }: { monthKey: strin
       ) : future.groups.length === 0 ? (
         <EmptyState icon={<CalendarIcon />} title={`אין עוד צפי ל${name}`} body="קבועים, ממוצעים ותשלומי הלוואות יופיעו כאן כשיהיו." />
       ) : (
-        <ActivityGroups groups={future.groups} base={base} />
+        <ActivityGroups groups={groups} base={base} skip={skip} />
       )}
     </section>
   );
+}
+
+/**
+ * FLOW-1079: a month to come's groups with this page's answers drawn at once: a row just taken out moves under
+ * הוצא מהצפי, one just put back leaves it (it returns to its project when the forecast is read again).
+ */
+export function regroupSkipped(groups: readonly ActivityGroup[], skipped: ReadonlySet<string>, monthLabel: string, base: string): ActivityGroup[] {
+  const out = (row: ActivityRow) => row.forecastKey != null && skipped.has(row.forecastKey);
+  const moved = groups.flatMap((item) => (item.id === "skipped" ? [] : item.rows.filter(out).map((row) => ({ ...row, meta: `לא צפוי ב${monthLabel}` }))));
+  const kept = groups.map((item) => ({
+    ...item,
+    rows: item.id === "skipped" ? item.rows.filter((row) => row.forecastKey == null || skipped.has(row.forecastKey)) : item.rows.filter((row) => !out(row)),
+  }));
+  const held = kept.find((item) => item.id === "skipped");
+  const all = held == null
+    ? [...kept, { id: "skipped", title: GROUP_TITLES.skipped, rows: moved, outMinor: 0n, inMinor: 0n, due: true }]
+    : kept.map((item) => (item.id === "skipped" ? { ...item, rows: [...item.rows, ...moved] } : item));
+  return all.map((item) => ({ ...item, ...groupSums(item.rows, base) })).filter((item) => item.rows.length > 0);
 }

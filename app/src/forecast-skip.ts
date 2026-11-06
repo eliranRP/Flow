@@ -1,6 +1,10 @@
 import type { ForecastOverrideRow } from "@flow/shared";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { priorPatch, useSetForecastItem } from "./forecast-month";
+import { getSupabase } from "./lib/supabase";
+import { useHomePreview } from "./preview";
+import { waitForAccessToken } from "./wait-for-session";
 import type { ScheduleRow } from "./recurring-schedule";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
@@ -20,6 +24,26 @@ export function forecastKeyOf(row: Pick<ScheduleRow, "direction" | "party_id" | 
 /** The keys of the month's items taken out of the forecast. */
 export function skippedKeys(overrides: readonly ForecastOverrideRow[]): Set<string> {
   return new Set(overrides.filter((row) => row.moved_out).map((row) => row.item_key));
+}
+
+/**
+ * A month's overrides alone (forecast_overrides_for), for a month the month forecast's own read does not cover: a
+ * month to come on Home and the charge's page. Under "month-forecast", so the skip's write refreshes it.
+ */
+export function useForecastOverrides(month: string, enabled: boolean) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["month-forecast", preview, "overrides", month],
+    enabled: enabled && preview === "off",
+    queryFn: async (): Promise<ForecastOverrideRow[]> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("forecast_overrides_for", { p_month: month });
+      if (error) throw error;
+      return (data ?? []) as ForecastOverrideRow[];
+    },
+  });
 }
 
 const PEEK_SEEN_KEY = "flow.skip-swipe-peek-seen";
@@ -73,14 +97,16 @@ export function useForecastSkip(month: string, monthLabel: string, overrides: re
   };
   const set = (key: string, out: boolean, name: string) => {
     const prior = overrides?.find((row) => row.item_key === key) ?? null;
+    const before = skipped.has(key);
     answer(key, out);
-    write.mutate({ key, patch: { moved_out: out }, undo: false, prior });
+    // A failed write takes the answer back (its toast says so), so the row returns to where the forecast counts it.
+    write.mutate({ key, patch: { moved_out: out }, undo: false, prior }, { onError: () => { answer(key, before); } });
     toast.show(topToast({
       message: out ? `${name} הוצא מהצפי של ${monthLabel}` : `${name} חזר לצפי של ${monthLabel}`,
       action: "ביטול",
       onAction: () => {
-        answer(key, !out);
-        write.mutate({ key, patch: priorPatch(prior), undo: true, prior });
+        answer(key, before);
+        write.mutate({ key, patch: priorPatch(prior), undo: true, prior }, { onError: () => { answer(key, out); } });
       },
     }));
   };

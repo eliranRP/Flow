@@ -1,3 +1,4 @@
+import type { ForecastOverrideRow } from "@flow/shared";
 import type { CashMonths } from "@flow/shared";
 import { useMemo } from "react";
 import { cashMonthKey } from "../cash";
@@ -21,6 +22,8 @@ export type CompanyCashNextMonth = {
   /** FLOW-1000: reads the forecast again. */
   refetch: () => Promise<unknown>;
   categories: readonly RentCategory[];
+  /** FLOW-1079: the month's forecast overrides (null without a month, or while read), for a skip's undo. */
+  overrides: readonly ForecastOverrideRow[] | null;
   /**
    * FLOW-1066 (owner, 2026-11-06: "Expected profit"): the month's expected profit, the profit-basis net (income
    * less expenses, no loan principal); null with the forecast.
@@ -35,7 +38,7 @@ export type HomeNextMonthSample = { next: CompanyNextMonthSample; cash: NonNulla
 export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string): CompanyCashNextMonth {
   const next = useCompanyNextMonth(currency, today, enabled, sample, month);
   const forecast = useMemo(() => (next.forecast == null ? null : companyCashForecast(next.forecast)), [next.forecast]);
-  return { forecast, loading: next.pending, failed: next.failed, paused: next.paused, refetch: next.refetch, categories: next.categories, profitMinor: next.forecast?.netMinor ?? null };
+  return { forecast, loading: next.pending, failed: next.failed, paused: next.paused, refetch: next.refetch, categories: next.categories, profitMinor: next.forecast?.netMinor ?? null, overrides: next.overrides };
 }
 
 /**

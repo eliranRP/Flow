@@ -214,6 +214,9 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   };
   // The hint shows once per phone: stored at once, and dropped from the row after its slide (about a second).
   const peekTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (peekTimer.current != null) window.clearTimeout(peekTimer.current);
+  }, []);
   function markPeek() {
     if (peekTimer.current != null) return;
     markSkipPeekSeen();
@@ -350,6 +353,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       activity={activity}
       skip={skip}
+      canSkipFuture={!previewing && !holdForecast}
       withForecast={withForecast}
       future={future}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
@@ -401,6 +405,7 @@ export function CashHome({
   offlineSince = null,
   activity = null,
   skip,
+  canSkipFuture = false,
   withForecast = false,
   future = null,
   initialFilter = "all",
@@ -430,6 +435,8 @@ export function CashHome({
   activity?: HomeActivityData | null;
   /** FLOW-1079: the current month's swipes out of the forecast and back. */
   skip?: ActivitySkip;
+  /** FLOW-1079: a month to come's rows swipe out of its forecast too (not for a viewer or a preview). */
+  canSkipFuture?: boolean;
   /** FLOW-1056, FLOW-1066: the forecast's months are months to step to (the band's arrows, the drawer's cells); not in a preview. */
   withForecast?: boolean;
   /** FLOW-1056: the month's forecast, when `monthKey` is a month to come: the band's figures and the activity. */
@@ -594,7 +601,7 @@ export function CashHome({
       {isFuture ? (
         future == null ? null : (
           <div className="ui-page-pad m-page-enter" style={pageEnterStyle(2)}>
-            <HomeFutureActivity monthKey={monthKey} future={future} base={base} />
+            <HomeFutureActivity monthKey={monthKey} future={future} base={base} canSkip={canSkipFuture} />
           </div>
         )
       ) : activity == null ? null : (
