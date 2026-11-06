@@ -262,7 +262,8 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
 
 /**
  * FLOW-1065: a line's amount and sign. The read gives each line as its share of the side's total, so on the expense
- * side a refund (money in under an expense category, החזר) comes negative: it is money in, "+", as its own page shows.
+ * side a refund (money in under an expense category, החזר) comes negative: it is money in, "+", as its own page shows
+ * and as the cash lines show a refund (green, the hidden word זיכוי).
  * On the income side a negative line is money out and keeps its minus.
  */
 export function lineAmount(amount: bigint, side: "income" | "expense"): { agorot: bigint; sign: "in" | "out" } {
@@ -290,6 +291,7 @@ const LineGroups = memo(function LineGroups({ rows, query, side, search }: { row
               titleFull={text.full ?? undefined}
               hint={text.hint}
               {...lineAmount(row.amount_minor, side)}
+              inWord={side === "expense" ? "זיכוי" : undefined}
               currency={row.currency}
               source={rowSource(row.source)}
               initials={lineInitials(row.supplier_name ?? row.description)}

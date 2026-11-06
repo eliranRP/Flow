@@ -91,11 +91,13 @@ describe("ReportLinesScreen", () => {
     expect(lineAmount(-5_115n, "expense")).toEqual({ agorot: 5_115n, sign: "in" });
     expect(lineAmount(7_875n, "expense")).toEqual({ agorot: 7_875n, sign: "out" });
     expect(lineAmount(-5_115n, "income")).toEqual({ agorot: -5_115n, sign: "in" });
-    const refund = { ...line("0009", "2026-10-20", 0, "Cedar St", "Water Utility Refund"), amount_minor: -5_115n };
+    expect(lineAmount(5_115n, "income")).toEqual({ agorot: 5_115n, sign: "in" });
+    const refund = { ...line("0009", "2026-10-20", 1, "Cedar St", "Water Utility Refund"), amount_minor: -5_115n };
     renderWithProviders(<ReportLinesScreen sample={{ rows: [...ROWS, refund] }} />, { route: ROUTE });
     const row = screen.getByRole("link", { name: /Water Utility Refund/ });
     expect(row.textContent).toContain("+$51.15");
     expect(row.textContent).not.toContain("−");
+    expect(row.querySelector(".sr-only")?.textContent).toBe("זיכוי ");
     expect(screen.getByRole("link", { name: /Quick Fix Plumbing/ }).textContent).toContain("−$1,250");
   });
 
