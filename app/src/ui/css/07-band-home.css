@@ -490,8 +490,8 @@ html[data-kb="open"] .ui-sheet-body {
   font-weight: var(--type-btn-2-weight);
 }
 
-/* FLOW-1051 (V3-Home): Home's two rows. The label is 17/1.45; the amount is LTR, 20/600, at the chip's side
-   (the cell's left edge); the label keeps the row's end. Scoped here: other bands keep their rows. */
+/* FLOW-1051 (V3-Home): Home's two rows, at btn 2's size: the label at the body's weight, the amount LTR at btn 2's
+   weight, at the chip's side (the cell's left edge); the label keeps the row's end. The loan bands match it (FLOW-1076). */
 .ui-band-rows .ui-band-row-link {
   font-size: var(--type-btn-2-size);
 }

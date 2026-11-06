@@ -100,6 +100,7 @@
   gap: calc(var(--space-2) + var(--space-half));
 }
 
+/* FLOW-1076: as Home's band rows (.ui-band-rows): one size (btn 2), the label at the body's weight, the amount at btn 2's. */
 .ui-loans-band-row {
   display: flex;
   align-items: baseline;
@@ -108,12 +109,13 @@
   margin: 0;
   color: var(--color-on-band);
   font-size: var(--type-btn-2-size);
-  font-weight: var(--type-btn-2-weight);
+  font-weight: var(--type-body-weight);
   line-height: var(--type-btn-2-line);
 }
 
 .ui-loans-band-row bdi {
   flex: none;
+  font-weight: var(--type-btn-2-weight);
 }
 
 .ui-loans-band-row-label {
