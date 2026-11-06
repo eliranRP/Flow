@@ -544,8 +544,19 @@ Deno.test("FLOW-1072: the card's name matches a property by its own words, a num
   // Street kinds and purposes alone never match; a finished project is no candidate.
   assertEquals(cardProject({ cardName: "Rd Utilities" }, props), null);
   assertEquals(cardProject({ cardName: "Old Place 10" }, props), null);
-  // The account's name is read when the card has none.
-  assertEquals(cardProject({ accountName: "Sample Checking" }, props), "44444444-4444-4444-8444-444444444444");
+  // Generic account words never match ("Main", "Business").
+  assertEquals(cardProject({ cardName: "Main Business Card" }, [{ id: PROJECT, name: "Main St 1200" }]), null);
   // A Hebrew name matches the same way.
   assertEquals(cardProject({ cardName: "הרצל חשמל" }, [{ id: PROJECT, name: "הרצל 12" }]), PROJECT);
+});
+
+Deno.test("FLOW-1072: the bank account's name never decides the project (the review of #1015)", () => {
+  const props = [{ id: PROJECT, name: "Maple Ct 1450" }, { id: OTHER, name: "Oak Ave 300" }];
+  const guessed = { ...answers(0.95, 0.95), project: { type: "choice", choice: OTHER, confidence: 0.95, probabilities: { [OTHER]: 0.95 } } };
+  // An operating account named after the company, which is named after its first property.
+  for (const named of [expense({ accountName: "Maple Court LLC Operating" }), expense({ cardName: "Ops Card", accountName: "Maple Court LLC Operating" })]) {
+    const plan = planTag(named, "auto", 0.9, props, categories, guessed);
+    assertEquals((plan.answers.project as { choice: string }).choice, OTHER);
+    assertEquals(plan.write?.projectId, OTHER);
+  }
 });

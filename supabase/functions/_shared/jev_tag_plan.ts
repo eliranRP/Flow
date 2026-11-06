@@ -409,6 +409,7 @@ const GENERIC_NAME_WORDS = new Set([
   "way", "pl", "place", "ter", "terrace", "cir", "circle", "hwy", "pkwy", "trl", "sq", "north", "south", "east", "west",
   "utilities", "utility", "card", "account", "checking", "savings", "ops", "operating", "rent", "rental", "flip",
   "rehab", "renovation", "property", "project", "llc", "inc", "the", "and", "of", "unit", "apt",
+  "main", "business", "primary", "personal", "joint", "general", "company",
   "רחוב", "שדרות", "דרך", "כרטיס", "חשבון", "שיפוץ", "פרויקט", "דירה", "נכס",
 ]);
 
@@ -427,28 +428,27 @@ function nameKeys(name: string): { words: Set<string>; numbers: Set<string> } {
 }
 
 /**
- * FLOW-1072: the project the paying card's or account's own name names, when exactly one does. The owner
+ * FLOW-1072: the project the paying card's own name names, when exactly one does. The owner
  * names cards by property ("Example Rd Utilities" for the "Example Rd 1234" project): every word of the
  * project's name, street kinds left out, is in the card's name, and a number on both must agree. Overhead
- * and finished projects are not candidates. Null when no project, or more than one, matches.
+ * and finished projects are not candidates. Null when no project, or more than one, matches. The bank
+ * account's name is not read: an operating account is often named after the company, and the company after
+ * its first property, so it would send every property's lines to that one (the review of #1015).
  */
-export function cardProject(expense: Pick<TagExpense, "cardName" | "accountName">, projects: readonly TagProject[]): string | null {
-  for (const label of [expense.cardName, expense.accountName]) {
-    if (!label) continue;
-    const card = nameKeys(label);
-    const matches = projects.filter((project) => {
-      if (project.overhead || project.finished) return false;
-      const own = nameKeys(project.name);
-      if (own.words.size === 0) return false;
-      for (const word of own.words) if (!card.words.has(word)) return false;
-      // "Example Rd 1234 Utilities" names the 1234 project, not the 1300 one on the same street.
-      if (card.numbers.size > 0 && own.numbers.size > 0 && ![...own.numbers].some((number) => card.numbers.has(number))) return false;
-      return true;
-    });
-    if (matches.length === 1) return matches[0].id;
-    if (matches.length > 1) return null;
-  }
-  return null;
+export function cardProject(expense: Pick<TagExpense, "cardName">, projects: readonly TagProject[]): string | null {
+  const label = expense.cardName;
+  if (!label) return null;
+  const card = nameKeys(label);
+  const matches = projects.filter((project) => {
+    if (project.overhead || project.finished) return false;
+    const own = nameKeys(project.name);
+    if (own.words.size === 0) return false;
+    for (const word of own.words) if (!card.words.has(word)) return false;
+    // "Example Rd 1234 Utilities" names the 1234 project, not the 1300 one on the same street.
+    if (card.numbers.size > 0 && own.numbers.size > 0 && ![...own.numbers].some((number) => card.numbers.has(number))) return false;
+    return true;
+  });
+  return matches.length === 1 ? matches[0].id : null;
 }
 
 function readChoice(value: unknown, allowed: ReadonlySet<string>): { id: string; confidence: number } | null {
