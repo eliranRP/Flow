@@ -145,7 +145,7 @@ export function BalanceReportScreen({ sample }: { sample?: BalanceSample } = {})
                     variant="project"
                     title={row.name}
                     wrapTitle
-                    hint={reportHint(row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : `שווי ${amountText(row.assets, base)} · הלוואות ${amountText(row.liabilities, base)}`, row.equity > 0n && rows.length > 1 ? { share: barShare(row.equity, equityTotal(top)) } : undefined)}
+                    hint={reportHint(row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : `שווי ${amountText(row.assets, base)} · הלוואות ${amountText(row.liabilities, base)}`, row.equity > 0n && rows.length > 1 ? barShare(row.equity, equityTotal(top)) : undefined)}
                     {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
                     chevron={to != null}
                     chevronSpace={to == null}

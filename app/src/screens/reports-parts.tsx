@@ -278,7 +278,7 @@ function rowAmount(tone: ViewRow["tone"], amount: bigint): { agorot: bigint; amo
   return { agorot: amount };
 }
 
-/** A row's share of its group, in whole percent from 0 to 100 (the bar under a report row; 0 for an empty total). */
+/** A row's share of its group, in whole percent from 0 to 100 (the percent under a report row; 0 for an empty total). */
 export function barShare(amount: bigint, total: bigint): number {
   const whole = total < 0n ? -total : total;
   if (whole === 0n) return 0;
@@ -287,27 +287,25 @@ export function barShare(amount: bigint, total: bigint): number {
 }
 
 /**
- * FLOW-1054 (board V3-Report): a report row's line under its name. The hint on one line, cut at its end, then
- * the row's share of its group as a 4px bar (decoration: the amount is written beside it), green for income.
+ * FLOW-1064 (the owner, 2026-11-06: the bar "looks childish", a percent instead): a report row's line under its
+ * name, on one line cut at its end. The row's share of its group leads it as a whole percent, "85% · <the hint>",
+ * or alone as "85% מהקבוצה" when the row has no hint.
  */
-export function reportHint(text: string | undefined, bar?: { share: number; income?: boolean }): ReactNode {
-  if (text == null && bar == null) return undefined;
+export function reportHint(text: string | undefined, share?: number): ReactNode {
+  if (text == null && share == null) return undefined;
+  const percent = share == null ? null : <bdi dir="ltr">{`${String(share)}%`}</bdi>;
   return (
-    <>
-      {text == null ? null : <span className="ui-rep-hint-text" data-clip-ok="">{text}</span>}
-      {bar == null ? null : (
-        <span className="ui-rep-share" aria-hidden="true">
-          <span className="ui-rep-share-fill" data-income={bar.income === true || undefined} style={{ inlineSize: `${String(bar.share)}%` }} />
-        </span>
-      )}
-    </>
+    <span className="ui-rep-hint-text" data-clip-ok="">
+      {percent}
+      {percent == null ? text : text == null ? " מהקבוצה" : ` · ${text}`}
+    </span>
   );
 }
 
-/** A category row's bar: a cost in a group of several, as its share of the group (the board draws none on income). */
-function viewBar(group: ViewGroup, row: ViewRow): { share: number } | undefined {
+/** A category row's percent: a cost in a group of several, as its share of the group (none on income). */
+function viewShare(group: ViewGroup, row: ViewRow): number | undefined {
   if (group.rows.length < 2 || row.tone !== "cost" || row.amount <= 0n) return undefined;
-  return { share: barShare(row.amount, group.total) };
+  return barShare(row.amount, group.total);
 }
 
 /** Category groups, each under a one-line sticky head with its total; a row opens its lines when `href` gives one. */
@@ -316,7 +314,7 @@ export function ViewGroups({ id, groups, currency, href, bars = () => true }: {
   groups: readonly ViewGroup[];
   currency: string;
   href?: (row: ViewRow) => string | undefined;
-  /** Whether a group's rows draw their share bars (the balance sheet's equity does not). */
+  /** Whether a group's rows show their share of it (the balance sheet's equity does not). */
   bars?: (group: ViewGroup) => boolean;
 }) {
   return (
@@ -327,7 +325,7 @@ export function ViewGroups({ id, groups, currency, href, bars = () => true }: {
           <List>
             {group.rows.map((row) => {
               const to = href?.(row);
-              const hint = reportHint(row.hint, bars(group) ? viewBar(group, row) : undefined);
+              const hint = reportHint(row.hint, bars(group) ? viewShare(group, row) : undefined);
               return (
                 <ListRow
                   key={row.key}
@@ -362,7 +360,7 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
 }) {
   if (rows.length === 0) return null;
   const total = rows.reduce((sum, row) => sum + row.net, 0n);
-  // The bars share the rows' sizes, a loss as much as a profit; one row alone draws none (the board).
+  // The percents share the rows' sizes, a loss as much as a profit; one row alone shows none.
   const whole = rows.reduce((sum, row) => sum + (row.net < 0n ? -row.net : row.net), 0n);
   return (
     <section className="ui-month ui-rep-v3-group" aria-labelledby={id}>
@@ -376,7 +374,7 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
               variant="project"
               title={slashBreaks(row.name)}
               wrapTitle
-              hint={reportHint(hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`, rows.length < 2 ? undefined : { share: barShare(row.net, whole), income: row.net > 0n })}
+              hint={reportHint(hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`, rows.length < 2 ? undefined : barShare(row.net, whole))}
               {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
               chevron={to != null}
               chevronSpace={to == null}

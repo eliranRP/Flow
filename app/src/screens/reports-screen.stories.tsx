@@ -226,7 +226,7 @@ export const BalanceByProject: Story = {
   },
 };
 
-/** At 320 each row's line stays on one line, cut at its end as the board draws it, over its share bar. */
+/** At 320 each row's line stays on one line, cut at its end, led by its share of the group (FLOW-1064). */
 export const BalanceByProject320: Story = {
   name: "Balance sheet · by project at 320",
   ...phone320,
