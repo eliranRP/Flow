@@ -129,7 +129,7 @@
 }
 
 /* The next payment's card, last in the band (V3-Loan, FLOW-1055): one 64px link to the payments on הבאים, on
-   the band's 14% white. FLOW-1076: its type is Home's forecast card's: the title, its parts (13), the amount 17/600. */
+   the band's 14% white. FLOW-1076: its type is Home's forecast card's: the title at line 2, its parts (caption), the amount body size at btn 2's weight. */
 .ui-loan-next-card {
   border-radius: var(--radius-card);
   background: var(--band-card);
