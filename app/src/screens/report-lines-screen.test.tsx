@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
-import { lineMatches, lineText, linesByMonth, linesByProject, projectSplit, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
+import { lineAmount, lineMatches, lineText, linesByMonth, linesByProject, projectSplit, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -85,6 +85,20 @@ describe("ReportLinesScreen", () => {
     expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$2,830");
     expect(screen.getByRole("button", { name: /לפי פרויקט/ })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("link", { name: /Quick Fix Plumbing/ }).getAttribute("href")).toBe(`/transactions/${ROWS[0]?.transaction_id ?? ""}`);
+  });
+
+  it("shows a refund on an expense category as money in, with its plus (FLOW-1065)", () => {
+    expect(lineAmount(-5_115n, "expense")).toEqual({ agorot: 5_115n, sign: "in" });
+    expect(lineAmount(7_875n, "expense")).toEqual({ agorot: 7_875n, sign: "out" });
+    expect(lineAmount(-5_115n, "income")).toEqual({ agorot: -5_115n, sign: "in" });
+    expect(lineAmount(5_115n, "income")).toEqual({ agorot: 5_115n, sign: "in" });
+    const refund = { ...line("0009", "2026-10-20", 1, "Cedar St", "Water Utility Refund"), amount_minor: -5_115n };
+    renderWithProviders(<ReportLinesScreen sample={{ rows: [...ROWS, refund] }} />, { route: ROUTE });
+    const row = screen.getByRole("link", { name: /Water Utility Refund/ });
+    expect(row.textContent).toContain("+$51.15");
+    expect(row.textContent).not.toContain("−");
+    expect(row.querySelector(".sr-only")?.textContent).toBe("זיכוי ");
+    expect(screen.getByRole("link", { name: /Quick Fix Plumbing/ }).textContent).toContain("−$1,250");
   });
 
   it("reads one project's lines by its id, page by page, and names the project", async () => {

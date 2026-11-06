@@ -260,6 +260,17 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   );
 }
 
+/**
+ * FLOW-1065: a line's amount and sign. The read gives each line as its share of the side's total, so on the expense
+ * side a refund (money in under an expense category, החזר) comes negative: it is money in, "+", as its own page shows
+ * and as the cash lines show a refund (green, the hidden word זיכוי).
+ * On the income side a negative line is money out and keeps its minus.
+ */
+export function lineAmount(amount: bigint, side: "income" | "expense"): { agorot: bigint; sign: "in" | "out" } {
+  if (side === "expense" && amount < 0n) return { agorot: -amount, sign: "in" };
+  return { agorot: amount, sign: side === "income" ? "in" : "out" };
+}
+
 /** The lines by month. Memoized, so a keystroke the list has not caught up with does not render it again. */
 const LineGroups = memo(function LineGroups({ rows, query, side, search }: { rows: readonly LineRow[]; query: string; side: "income" | "expense"; search: string }) {
   return linesByMonth(rows).map((group) => (
@@ -279,9 +290,9 @@ const LineGroups = memo(function LineGroups({ rows, query, side, search }: { row
               wrapTitle={text.wrap}
               titleFull={text.full ?? undefined}
               hint={text.hint}
-              agorot={row.amount_minor}
+              {...lineAmount(row.amount_minor, side)}
+              inWord={side === "expense" ? "זיכוי" : undefined}
               currency={row.currency}
-              sign={side === "income" ? "in" : "out"}
               source={rowSource(row.source)}
               initials={lineInitials(row.supplier_name ?? row.description)}
               href={`/transactions/${row.transaction_id}${search}`}
