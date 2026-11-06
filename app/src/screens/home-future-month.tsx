@@ -34,7 +34,7 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
   // the part's project when the party is expected in more than one part (a split party, decision 0185).
   const recParts = new Map<string, number>();
   for (const part of forecast.parts) {
-    for (const row of [...part.forecast.rows, ...part.forecast.removed]) {
+    for (const row of [...part.forecast.rows, ...part.forecast.removed, ...(part.forecast.skipped ?? [])]) {
       if (row.key.startsWith("rec:")) recParts.set(row.key, (recParts.get(row.key) ?? 0) + 1);
     }
   }
@@ -64,8 +64,7 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
           href,
           forecastKey: forecastKey(item.row.key, part.projectId),
         }));
-    const taken = new Set(part.skipped ?? []);
-    for (const row of part.forecast.removed.filter((item) => taken.has(item.key))) {
+    for (const row of part.forecast.skipped ?? []) {
       skipped.push({
         key: `${part.projectId ?? "general"}:${row.key}`,
         title: row.name,

@@ -27,6 +27,7 @@ import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import type { ProjectProfitSample } from "./project-profit-screen";
 import { SummaryRow } from "./profit-summary";
+import { ProjectNextSkipped } from "./project-next-skipped";
 
 type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 
@@ -221,6 +222,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   ))}
                 </section>
               )}
+              <ProjectNextSkipped forecast={forecast} overrides={next.overrides} currency={currency} disabled={hold} />
               {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
               {next.edits.some((edit) => edit.start_month === forecast.month) ? (
                 <Button

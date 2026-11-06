@@ -61,6 +61,8 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     recurring: general?.recurring ?? [],
     categoryMonths: general?.categoryMonths ?? null,
     categories: company.categories,
+    /** FLOW-1079: the month's forecast overrides, what a skipped row's החזרה writes back. */
+    overrides: company.overrides,
     pending: !currencyFailed && (currencyRead.data == null || company.pending),
     failed: currencyFailed || company.failed,
     paused: company.paused,

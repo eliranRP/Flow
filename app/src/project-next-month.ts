@@ -103,6 +103,11 @@ export type NextMonthForecast = {
   /** Rows the user took out of the month, with the amount they would have. */
   removed: NextMonthRow[];
   /**
+   * FLOW-1079: rows taken out of this month only from Home or a charge's page (the month forecast's "לא החודש", edits
+   * with ids `skip:`), apart from `removed`: they come back from there, not through restore_project_forecast_row.
+   */
+  skipped?: NextMonthRow[];
+  /**
    * Lines the user added whose bank line already came in the month (decision 0187). Like a recurring
    * charge seen this month, they are no longer expected: they leave the totals.
    */
@@ -321,7 +326,7 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
     const amount = BigInt(change.amount_minor);
     return { ...row, minor: row.direction === "income" ? amount : -amount, wasMinor: row.minor };
   });
-  return withTotals(
+  const totals = withTotals(
     month,
     rows.filter((row) => !removedKeys.has(row.key) && !arrivedKeys.has(row.key)),
     forecast.averageMonths,
@@ -329,6 +334,13 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
     rows.filter((row) => removedKeys.has(row.key)),
     rows.filter((row) => !removedKeys.has(row.key) && arrivedKeys.has(row.key)),
   );
+  // FLOW-1079: a row only a skip took out is listed apart; one the project page also removed stays its removal.
+  const pageRemoved = new Set(applying.filter((edit) => edit.kind === "remove" && !edit.id.startsWith("skip:")).flatMap((edit) => (edit.row_key == null ? [] : [edit.row_key])));
+  return {
+    ...totals,
+    removed: totals.removed.filter((row) => pageRemoved.has(row.key)),
+    skipped: totals.removed.filter((row) => !pageRemoved.has(row.key)),
+  };
 }
 
 /**

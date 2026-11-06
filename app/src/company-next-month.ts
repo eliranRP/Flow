@@ -125,9 +125,8 @@ export function skipEdits(skips: readonly string[] | undefined, projectId: strin
 }
 
 /** The row keys a part's skips took out. */
-function skippedRows(forecast: NextMonthForecast, skips: readonly ProjectForecastEdit[]): string[] {
-  const keys = new Set(skips.map((edit) => edit.row_key));
-  return forecast.removed.filter((row) => keys.has(row.key)).map((row) => row.key);
+function skippedRows(forecast: NextMonthForecast): string[] {
+  return (forecast.skipped ?? []).map((row) => row.key);
 }
 
 export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNextMonth {
@@ -154,10 +153,10 @@ export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNe
         build(projectId, input.inputs.projects.find((project) => project.project_id === projectId)?.categories ?? [], input.recurring, input.loans),
         [...input.inputs.edits.filter((edit) => edit.project_id === projectId), ...skips],
       );
-      return { projectId, forecast, skipped: skippedRows(forecast, skips) };
+      return { projectId, forecast, skipped: skippedRows(forecast) };
     });
   const general = companyGeneralForecast(input, month);
-  parts.push({ projectId: null, forecast: general, skipped: skippedRows(general, skipEdits(input.skips, null, overhead, month)) });
+  parts.push({ projectId: null, forecast: general, skipped: skippedRows(general) });
   const kept = parts.filter((part) => part.forecast.rows.length > 0);
   const incomeMinor = kept.reduce((sum, part) => sum + part.forecast.incomeMinor, 0n);
   const expenseMinor = kept.reduce((sum, part) => sum + part.forecast.expenseMinor, 0n);
