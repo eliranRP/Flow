@@ -222,7 +222,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   ))}
                 </section>
               )}
-              <ProjectNextSkipped forecast={forecast} overrides={next.overrides} currency={currency} disabled={hold} />
+              <ProjectNextSkipped forecast={forecast} overrides={next.overrides} currency={currency} projectId={projectId} general={next.general} disabled={hold} />
               {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
               {next.edits.some((edit) => edit.start_month === forecast.month) ? (
                 <Button

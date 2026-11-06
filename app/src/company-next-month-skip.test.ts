@@ -59,13 +59,24 @@ describe("applyForecastEdits with skips", () => {
 });
 
 describe("overrideKeyFor", () => {
-  it("finds the moved-out item a skipped row came from, with or without its project", () => {
-    const overrides = [
-      { item_key: "party:expense:power:USD:p1", amount_minor: null, due_on: null, moved_out: true },
-      { item_key: "party:expense:hoa:USD", amount_minor: 5_000, due_on: null, moved_out: false },
-    ];
-    expect(overrideKeyFor("rec:expense:power", overrides)).toBe("party:expense:power:USD:p1");
-    expect(overrideKeyFor("rec:expense:hoa", overrides)).toBeNull();
-    expect(overrideKeyFor("avg:cat", overrides)).toBeNull();
+  const off = (item_key: string, moved_out = true) => ({ item_key, amount_minor: null, due_on: null, moved_out });
+
+  it("finds this page's own moved-out item, never another project's (a split party, both skipped)", () => {
+    const overrides = [off("party:expense:power:USD:p2"), off("party:expense:power:USD:p1")];
+    expect(overrideKeyFor("rec:expense:power", overrides, "p1", "USD", false)).toBe("party:expense:power:USD:p1");
+    expect(overrideKeyFor("rec:expense:power", overrides, "p2", "USD", false)).toBe("party:expense:power:USD:p2");
+    expect(overrideKeyFor("rec:expense:power", overrides, "p3", "USD", false)).toBeNull();
+  });
+
+  it("falls back to the party's plain key in the page's currency, and :none on the general costs' page only", () => {
+    expect(overrideKeyFor("rec:expense:power", [off("party:expense:power:USD")], "p1", "USD", false)).toBe("party:expense:power:USD");
+    expect(overrideKeyFor("rec:expense:power", [off("party:expense:power:EUR")], "p1", "USD", false)).toBeNull();
+    expect(overrideKeyFor("rec:expense:hoa", [off("party:expense:hoa:USD:none")], "oh", "USD", true)).toBe("party:expense:hoa:USD:none");
+    expect(overrideKeyFor("rec:expense:hoa", [off("party:expense:hoa:USD:none")], "p1", "USD", false)).toBeNull();
+  });
+
+  it("ignores an item only changed, and a row that is not a charge", () => {
+    expect(overrideKeyFor("rec:expense:hoa", [off("party:expense:hoa:USD", false)], "p1", "USD", false)).toBeNull();
+    expect(overrideKeyFor("avg:cat", [off("party:expense:hoa:USD")], "p1", "USD", false)).toBeNull();
   });
 });

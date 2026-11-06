@@ -4,11 +4,18 @@ import type { NextMonthForecast } from "../project-next-month";
 import { Button } from "../ui/button";
 import { HEBREW_MONTHS } from "../ui/date-math";
 
-/** The override a skipped row came from: its party's moved-out item for the month (with or without its project). */
-export function overrideKeyFor(rowKey: string, overrides: readonly ForecastOverrideRow[]): string | null {
+/**
+ * The override a skipped row on this page came from: its party's moved-out item for the month in the page's currency,
+ * this page's own (`:<project>`, or `:none` on the general costs' page) before the party's plain key. Never another
+ * project's, so החזרה brings back this page's charge and no other.
+ */
+export function overrideKeyFor(rowKey: string, overrides: readonly ForecastOverrideRow[], projectId: string, currency: string, general: boolean): string | null {
   const [kind, direction, party] = rowKey.split(":");
   if (kind !== "rec" || direction == null || party == null) return null;
-  return overrides.find((row) => row.moved_out && row.item_key.startsWith(`party:${direction}:${party}:`))?.item_key ?? null;
+  const base = `party:${direction}:${party}:${currency}`;
+  const out = new Set(overrides.filter((row) => row.moved_out).map((row) => row.item_key));
+  const own = [`${base}:${projectId}`, ...(general ? [`${base}:none`] : []), base];
+  return own.find((key) => out.has(key)) ?? null;
 }
 
 /**
@@ -16,16 +23,19 @@ export function overrideKeyFor(rowKey: string, overrides: readonly ForecastOverr
  * "לא צפוי ב<month>", each with החזרה, which puts the month forecast's item back (not the project page's own
  * restore, which is for its removals). A row put back leaves at once; the next read draws it in the forecast.
  */
-export function ProjectNextSkipped({ forecast, overrides, currency, disabled }: {
+export function ProjectNextSkipped({ forecast, overrides, currency, projectId, general, disabled }: {
   forecast: NextMonthForecast;
   overrides: readonly ForecastOverrideRow[] | null;
   currency: string;
+  projectId: string;
+  /** The overhead project's page: the general costs, whose charges may carry no project (`:none`). */
+  general: boolean;
   disabled: boolean;
 }) {
   const name = HEBREW_MONTHS[Number(forecast.month.slice(5, 7)) - 1] ?? forecast.month;
   const skip = useForecastSkip(forecast.month, name, overrides);
   const rows = (forecast.skipped ?? []).flatMap((row) => {
-    const key = overrideKeyFor(row.key, overrides ?? []);
+    const key = overrideKeyFor(row.key, overrides ?? [], projectId, currency, general);
     return key != null && !skip.skipped.has(key) ? [] : [{ row, key }];
   });
   if (rows.length === 0) return null;
