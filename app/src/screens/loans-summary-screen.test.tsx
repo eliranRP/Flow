@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from "@testing-library/react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { sampleLoanStore, sampleLoans } from "../dev/loan-detail-sample";
 import { renderWithProviders } from "../test-render";
@@ -24,7 +24,7 @@ describe("loans summary (FLOW-142)", () => {
   it("leads with the debt since the loans started, what was paid by part, and each open loan", () => {
     renderSummary(sampleLoanStore());
     expect(screen.getByRole("heading", { level: 1, name: "סיכום הלוואות" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "מתחילת ההלוואות" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "מההתחלה" })).toHaveAttribute("aria-checked", "true");
     // FLOW-1046: the band holds what was paid, the debt at the start and what is left.
     const band = screen.getByRole("banner");
     expect(within(band).getByText("שולם מתחילת ההלוואות")).toBeInTheDocument();
@@ -42,6 +42,58 @@ describe("loans summary (FLOW-142)", () => {
     expect(screen.getByText("החוב ב־01/01/2026")).toBeInTheDocument();
     expect(screen.getByText("שולם ב־2026")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "2026" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  // FLOW-1075: the third option, one month, stepped in the band.
+  it("shows one month: its total, the change from the month before, its parts and its payments", () => {
+    renderSummary(sampleLoanStore());
+    fireEvent.click(screen.getByRole("radio", { name: "חודש" }));
+    const band = screen.getByRole("banner");
+    expect(within(band).getByText("אוקטובר 2026")).toBeInTheDocument();
+    expect(within(band).getByText("שולם באוקטובר 2026")).toBeInTheDocument();
+    expect(within(band).getByText("לעומת ספטמבר")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "תשלומי אוקטובר 2026" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "לפי הלוואה" })).toBeNull();
+    // This month is the last one: the later chevron is off, the earlier one steps back.
+    expect(within(band).getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(within(band).getByRole("button", { name: "חודש קודם" }));
+    expect(within(band).getByText("ספטמבר 2026")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "תשלומי ספטמבר 2026" })).toBeInTheDocument();
+  });
+
+  it("opens a month's payment as its transaction", () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/loans/summary" element={<LoansSummaryScreen store={sampleLoanStore()} currency="USD" today="2026-10-17" period="month" month="2026-08" />} />
+        <Route path="/transactions/:id" element={<p>עמוד התנועה</p>} />
+      </Routes>,
+      { route: "/loans/summary" },
+    );
+    const rows = within(screen.getByRole("region", { name: /תשלומי אוגוסט 2026/ })).getAllByRole("link");
+    expect(rows.length).toBeGreaterThan(0);
+    fireEvent.click(rows[0] as HTMLElement);
+    expect(screen.getByText("עמוד התנועה")).toBeInTheDocument();
+  });
+
+  it("keeps the month when Back returns from a payment", () => {
+    function Txn() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => { void navigate(-1); }}>חזרה</button>;
+    }
+    renderWithProviders(
+      <Routes>
+        <Route path="/loans/summary" element={<LoansSummaryScreen store={sampleLoanStore()} currency="USD" today="2026-10-17" />} />
+        <Route path="/transactions/:id" element={<Txn />} />
+      </Routes>,
+      { route: "/loans/summary" },
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "חודש" }));
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "חודש קודם" }));
+    const rows = within(screen.getByRole("region", { name: /תשלומי ספטמבר 2026/ })).getAllByRole("link");
+    fireEvent.click(rows[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(screen.getByRole("radio", { name: "חודש" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("heading", { name: "תשלומי ספטמבר 2026" })).toBeInTheDocument();
   });
 
   it("leaves the loans that ended out of the sums and names them in one line", () => {

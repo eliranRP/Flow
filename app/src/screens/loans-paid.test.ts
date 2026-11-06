@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_AMORTIZING, SAMPLE_CLOSED, SAMPLE_INTEREST_ONLY } from "../dev/loan-detail-sample";
 import type { LoanDetail, LoanPayment } from "./loan-detail-data";
-import { loanPaidCard, loanPaidParts, loansPaid, paidMoney, percentOf } from "./loans-paid";
+import { loanMonthRange, loanPaidCard, loanPaidParts, loansMonth, loansPaid, paidMoney, percentOf } from "./loans-paid";
 
 const TODAY = "2026-10-17";
 
@@ -117,5 +117,48 @@ describe("paidMoney and percentOf", () => {
   it("rounds a share to whole percent, 0 with no whole", () => {
     expect(percentOf(6_350_000n, 24_000_000n)).toBe(26);
     expect(percentOf(1n, 0n)).toBe(0);
+  });
+});
+
+// FLOW-1075: one month of the open loans' payments.
+describe("loansMonth", () => {
+  const OTHER: LoanDetail = { ...SAMPLE_INTEREST_ONLY, id: "loan-b", name: "ברוש", currency: LOAN.currency };
+  const entries = [
+    { loan: LOAN, payments: PAYMENTS },
+    { loan: OTHER, payments: [pay("2026-02-15", { interest: 30_000n, fees: 5_000n }), pay("2026-01-15", { interest: 30_000n })] },
+  ];
+
+  it("sums the month's parts over the open loans and lists each payment, newest first", () => {
+    const month = loansMonth(entries, LOAN.currency, "2026-02");
+    expect(month.title).toBe("פברואר 2026");
+    expect(month.totalLabel).toBe("שולם בפברואר 2026");
+    expect(month.totals).toEqual({ principal: 50_000n, interest: 70_000n, escrow: 10_000n, fees: 5_000n });
+    expect(month.totalMinor).toBe(135_000n);
+    expect(month.payments.map((row) => [row.loanName, row.date])).toEqual([["ברוש", "15/02"], ["אלון", "01/02"]]);
+    expect(month.payments[1]?.hint).toContain("נאמנות");
+  });
+
+  it("compares with the month before, naming the year when it changes", () => {
+    expect(loansMonth(entries, LOAN.currency, "2026-02")).toMatchObject({ compareLabel: "לעומת ינואר", deltaMinor: 5_000n });
+    expect(loansMonth(entries, LOAN.currency, "2026-01")).toMatchObject({ compareLabel: "לעומת דצמבר 2025", deltaMinor: 29_000n });
+    // The first month with a payment has nothing to compare with.
+    expect(loansMonth(entries, LOAN.currency, "2025-12").deltaMinor).toBeNull();
+  });
+
+  it("says so for a month with no payments", () => {
+    const month = loansMonth(entries, LOAN.currency, "2026-05");
+    expect(month.totalMinor).toBe(0n);
+    expect(month.payments).toEqual([]);
+    expect(month.note).toBe("אין תשלומים במאי 2026.");
+  });
+
+  it("steps from the first month with a payment to this month, opening on the latest month with one", () => {
+    expect(loanMonthRange(entries, LOAN.currency, TODAY)).toEqual({ first: "2025-12", last: "2026-10", start: "2026-02" });
+    expect(loanMonthRange([], LOAN.currency, TODAY)).toEqual({ first: "2026-10", last: "2026-10", start: "2026-10" });
+  });
+
+  it("leaves closed loans out", () => {
+    const closed = { loan: { ...SAMPLE_CLOSED, currency: LOAN.currency }, payments: [pay("2026-02-20", { principal: 99_000n })] };
+    expect(loansMonth([...entries, closed], LOAN.currency, "2026-02").totalMinor).toBe(135_000n);
   });
 });
