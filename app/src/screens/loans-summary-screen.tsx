@@ -21,7 +21,11 @@ import { useMemoryLoanStore, type MemoryLoanStore } from "./loan-detail-store";
 import { LOAN_PART_BOARD_LABEL, wholeMoney } from "./loan-detail-view-data";
 import { readCompanyLoanCurrency, type LoanCurrency } from "./loan-form";
 import { readLoanList } from "./loan-list";
-import { loansPaid, PAID_PARTS, type LoanPaidEntry, type PaidPeriod } from "./loans-paid";
+import { loanMonthRange, loansMonth, loansPaid, PAID_PARTS, type LoanPaidEntry, type PaidPeriod } from "./loans-paid";
+import { shiftMonthKey } from "../period";
+import { List, ListRow } from "../ui/list-row";
+import { MonthStepper } from "../ui/month-stepper";
+import { StatusMark } from "../ui/status-mark";
 import { Amount } from "../ui/amount";
 import { BackButton, useGoBack } from "../ui/back";
 import { CompactBar } from "../ui/compact-bar";
@@ -40,6 +44,9 @@ import { TopBand } from "../ui/top-band";
 
 /** FLOW-1046: the band bar's height (6 + 52 + 6). */
 const BAND_BAR = 64;
+
+/** The switch: since the start, this year, or one month (FLOW-1075). */
+export type SummaryPeriod = PaidPeriod | "month";
 
 type SummaryRead =
   | { phase: "loading" }
@@ -112,6 +119,7 @@ export function LoansSummaryScreen({
   today: givenToday,
   phase,
   period: initialPeriod = "all",
+  month: initialMonth,
 }: {
   /** Stories, tests and the dev route pass a memory store. Live omits it. */
   store?: MemoryLoanStore;
@@ -124,7 +132,9 @@ export function LoansSummaryScreen({
   /** A story pins the page to loading or error. */
   phase?: "loading" | "error";
   /** The period the switch opens on (the dev route's ?period=year). Default: since the start. */
-  period?: PaidPeriod;
+  period?: SummaryPeriod;
+  /** The month the month view opens on ("2026-10"). Default: the latest month with a payment. */
+  month?: string;
 } = {}) {
   const location = useLocation();
   const search = usePreviewSearch();
@@ -159,7 +169,7 @@ export function LoansSummaryScreen({
             : dashboard.data?.company_id == null ? { phase: "ready", entries: [], currency: "ILS" } : live;
   return (
     <ViewerScope>
-      <LoansSummaryBody read={read} period={initialPeriod} back={back} loanHref={(id) => `${listBase}/${encodeURIComponent(id)}${search}`} today={givenToday ?? israelToday()} />
+      <LoansSummaryBody read={read} period={initialPeriod} month={initialMonth} back={back} search={search} loanHref={(id) => `${listBase}/${encodeURIComponent(id)}${search}`} today={givenToday ?? israelToday()} />
     </ViewerScope>
   );
 }
@@ -169,20 +179,36 @@ export function LoansSummaryScreen({
  * the start and what is left; the period segment (since the start, or this year), which docks into the band bar;
  * what the payments were made of; then one row per loan with its bar.
  */
-function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }: { read: SummaryRead; period: PaidPeriod; back: string; loanHref: (id: string) => string; today: string }) {
+function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, back, search, loanHref, today }: {
+  read: SummaryRead;
+  period: SummaryPeriod;
+  month: string | undefined;
+  back: string;
+  search: string;
+  loanHref: (id: string) => string;
+  today: string;
+}) {
   const navigate = useNavigate();
   const goBack = useGoBack();
-  const [period, setPeriod] = useState<PaidPeriod>(initialPeriod);
+  const [period, setPeriod] = useState<SummaryPeriod>(initialPeriod);
+  const [pickedMonth, setPickedMonth] = useState<string | null>(initialMonth ?? null);
   const [bandMark, setBandMark] = useState<HTMLElement | null>(null);
   const barShown = useScrolledPast(bandMark, true, BAND_BAR);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
   const year = today.slice(0, 4);
-  const summary = read.phase === "ready" ? loansPaid(read.entries, read.currency, period, today) : null;
+  const summary = read.phase === "ready" ? loansPaid(read.entries, read.currency, period === "year" ? "year" : "all", today) : null;
+  // FLOW-1075 (board V3-LoansSummary-MonthA): one month, stepped from the first month with a payment to this one.
+  const range = read.phase === "ready" ? loanMonthRange(read.entries, read.currency, today) : null;
+  const monthKey = range == null ? null : clampMonth(pickedMonth ?? range.start, range.first, range.last);
+  const month = read.phase === "ready" && period === "month" && monthKey != null ? loansMonth(read.entries, read.currency, monthKey) : null;
   const money = (minor: bigint) => (read.phase === "ready" ? wholeMoney(minor, read.currency) : "");
-  const shown = summary == null ? [] : PAID_PARTS.filter(({ part }) => summary.totals[part] > 0n);
+  const totals = month?.totals ?? summary?.totals;
+  const totalMinor = month?.totalMinor ?? summary?.totalMinor ?? 0n;
+  const totalLabel = month?.totalLabel ?? summary?.totalLabel ?? "";
+  const shown = totals == null ? [] : PAID_PARTS.filter(({ part }) => totals[part] > 0n);
   const hasLoans = summary != null && summary.openCount > 0;
   const control = (
-    <SegmentedControl<PaidPeriod>
+    <SegmentedControl<SummaryPeriod>
       label="תקופה"
       showLabel={false}
       tone="band"
@@ -191,7 +217,7 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
         setPeriod(next);
         scrollUnderBar();
       }}
-      options={[{ value: "all", label: "מתחילת ההלוואות" }, { value: "year", label: year, numeric: true }]}
+      options={[{ value: "all", label: "מההתחלה" }, { value: "year", label: year, numeric: true }, { value: "month", label: "חודש" }]}
     />
   );
   return (
@@ -212,17 +238,34 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
                 <DockSlot docked={docked}>{control}</DockSlot>
               </div>
             ) : null}
+            {hasLoans && month != null && range != null ? (
+              <MonthStepper
+                earlier={month.key > range.first ? "חודש קודם" : null}
+                later={month.key < range.last ? "חודש הבא" : null}
+                onBand
+                onStep={(delta) => { setPickedMonth(clampMonth(shiftMonthKey(month.key, delta), range.first, range.last)); }}
+              >
+                <span className="ui-band-month-name" aria-live="polite">{month.title}</span>
+              </MonthStepper>
+            ) : null}
             {hasLoans ? (
               <div className="ui-band-fade ui-loans-band-figures">
                 <div className="ui-loan-band-balance">
-                  <p className="ui-loan-band-label">{summary.totalLabel}</p>
-                  <p className="ui-loans-band-figure"><Amount agorot={summary.totalMinor} currency={read.phase === "ready" ? read.currency : "ILS"} size="hero" /></p>
+                  <p className="ui-loan-band-label">{totalLabel}</p>
+                  <p className="ui-loans-band-figure"><Amount agorot={totalMinor} currency={read.phase === "ready" ? read.currency : "ILS"} size="hero" /></p>
                 </div>
                 <div className="ui-loans-band-rows">
-                  <p className="ui-loans-band-row">
-                    <span className="ui-loans-band-row-label" data-clip-ok="">{summary.startLabel}</span>
-                    <bdi dir="ltr">{money(summary.startMinor)}</bdi>
-                  </p>
+                  {month == null ? (
+                    <p className="ui-loans-band-row">
+                      <span className="ui-loans-band-row-label" data-clip-ok="">{summary.startLabel}</span>
+                      <bdi dir="ltr">{money(summary.startMinor)}</bdi>
+                    </p>
+                  ) : (
+                    <p className="ui-loans-band-row">
+                      <span className="ui-loans-band-row-label" data-clip-ok="">{month.compareLabel}</span>
+                      <bdi dir="ltr">{month.deltaMinor === 0n ? "אותו סכום" : `${month.deltaMinor > 0n ? "+" : "−"}${money(month.deltaMinor > 0n ? month.deltaMinor : -month.deltaMinor)}`}</bdi>
+                    </p>
+                  )}
                   <p className="ui-loans-band-row">
                     <span className="ui-loans-band-row-label" data-clip-ok="">נשאר לשלם היום</span>
                     <bdi dir="ltr">{money(summary.leftMinor)}</bdi>
@@ -245,8 +288,8 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
         )}
         centre={(
           <span className="ui-compact-bar-centre">
-            <span className="ui-compact-bar-centre-title">{summary == null ? "סיכום הלוואות" : `סיכום · ${summary.totalLabel}`}</span>
-            <span className="ui-compact-bar-centre-net"><bdi dir="ltr">{summary == null ? "" : money(summary.totalMinor)}</bdi></span>
+            <span className="ui-compact-bar-centre-title">{summary == null ? "סיכום הלוואות" : `סיכום · ${totalLabel}`}</span>
+            <span className="ui-compact-bar-centre-net"><bdi dir="ltr">{summary == null ? "" : money(totalMinor)}</bdi></span>
           </span>
         )}
         end={<span className="ui-loans-bar-slot" aria-hidden="true" />}
@@ -280,54 +323,82 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
           <>
             <Card as="section" className="ui-loan-summary ui-loans-sum-paid" aria-label="שולם">
               <h2 className="ui-loans-sum-title">ממה הורכבו התשלומים</h2>
-              {shown.length === 0 ? null : (
+              {shown.length === 0 || totals == null ? null : (
                 <PartsBar
-                  parts={shown.map(({ part, tone }) => ({ key: part, value: summary.totals[part], tone }))}
-                  label={summary.totalLabel}
+                  parts={shown.map(({ part, tone }) => ({ key: part, value: totals[part], tone }))}
+                  label={totalLabel}
                   height={8}
                   gap={2}
-                  legend={shown.map(({ part }) => ({ key: part, label: LOAN_PART_BOARD_LABEL[part], value: <bdi dir="ltr">{money(summary.totals[part])}</bdi> }))}
+                  legend={shown.map(({ part }) => ({ key: part, label: LOAN_PART_BOARD_LABEL[part], value: <bdi dir="ltr">{money(totals[part])}</bdi> }))}
                 />
               )}
-              <p className="ui-loans-sum-note">{summary.note}</p>
+              <p className="ui-loans-sum-note">{month?.note ?? summary.note}</p>
             </Card>
-            <section className="ui-month ui-loans-group" aria-labelledby="loans-sum-per-loan">
-              <GroupHead id="loans-sum-per-loan" title="לפי הלוואה" summary={`${String(summary.loans.length)} · ${money(summary.totalMinor)}`} />
-              <ul className="ui-loans-list">
-                {summary.loans.map((loan) => (
-                  <li key={loan.id}>
-                    <button
-                      type="button"
-                      className="ui-loans-row ui-loans-sum-row m-press"
-                      onClick={() => { void navigate(loanHref(loan.id)); }}
-                      aria-label={[loan.name, money(loan.paidMinor), loan.meta].join(", ")}
-                    >
-                      <span className="ui-loans-text">
-                        <span className="ui-loans-sum-top">
-                          <span className="ui-loans-name">{loan.name}</span>
-                          <bdi className="ui-loans-amount" dir="ltr">{money(loan.paidMinor)}</bdi>
+            {month == null || month.payments.length === 0 ? null : (
+              <section className="ui-month ui-loans-group" aria-labelledby="loans-sum-month-payments">
+                <GroupHead id="loans-sum-month-payments" title={`תשלומי ${month.title}`} summary={`${String(month.payments.length)} · ${money(month.totalMinor)}`} />
+                <List layout="flat">
+                  {month.payments.map((payment) => (
+                    <ListRow
+                      key={payment.transactionId}
+                      variant="project"
+                      layout="flat"
+                      href={`/transactions/${payment.transactionId}${search}`}
+                      icon={<StatusMark kind="paid" />}
+                      title={payment.loanName}
+                      hint={`${payment.date} · ${payment.hint}`}
+                      tone={payment.needsReview ? "warning" : undefined}
+                      agorot={payment.totalMinor}
+                      currency={read.currency}
+                    />
+                  ))}
+                </List>
+              </section>
+            )}
+            {month != null ? null : (
+              <section className="ui-month ui-loans-group" aria-labelledby="loans-sum-per-loan">
+                <GroupHead id="loans-sum-per-loan" title="לפי הלוואה" summary={`${String(summary.loans.length)} · ${money(summary.totalMinor)}`} />
+                <ul className="ui-loans-list">
+                  {summary.loans.map((loan) => (
+                    <li key={loan.id}>
+                      <button
+                        type="button"
+                        className="ui-loans-row ui-loans-sum-row m-press"
+                        onClick={() => { void navigate(loanHref(loan.id)); }}
+                        aria-label={[loan.name, money(loan.paidMinor), loan.meta].join(", ")}
+                      >
+                        <span className="ui-loans-text">
+                          <span className="ui-loans-sum-top">
+                            <span className="ui-loans-name">{loan.name}</span>
+                            <bdi className="ui-loans-amount" dir="ltr">{money(loan.paidMinor)}</bdi>
+                          </span>
+                          <span className="ui-loans-sum-bar" aria-hidden="true">
+                            <span style={{ inlineSize: `${String(Math.max(2, loan.percent))}%` }} />
+                          </span>
+                          <span className="ui-loans-meta">{loan.meta}</span>
                         </span>
-                        <span className="ui-loans-sum-bar" aria-hidden="true">
-                          <span style={{ inlineSize: `${String(Math.max(2, loan.percent))}%` }} />
-                        </span>
-                        <span className="ui-loans-meta">{loan.meta}</span>
-                      </span>
-                      <span className="ui-loan-term-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-            {summary.closed == null ? null : (
+                        <span className="ui-loan-term-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {summary.closed == null || month != null ? null : (
               <div className="ui-loans-sum-closed">
                 <span className="ui-loans-sum-closed-title">{summary.closed.title}</span>
                 <span className="ui-loans-sum-closed-note">{summary.closed.note}</span>
               </div>
             )}
-            <p className="ui-loans-sum-foot">הסכום ששולם בכל הלוואה כולל קרן, ריבית ונאמנות. ההתקדמות היא כמה מהקרן נפרע.</p>
+            {month != null ? null : <p className="ui-loans-sum-foot">הסכום ששולם בכל הלוואה כולל קרן, ריבית ונאמנות. ההתקדמות היא כמה מהקרן נפרע.</p>}
           </>
         )}
       </div>
     </div>
   );
+}
+
+/** A month key held inside the range the stepper can reach. */
+function clampMonth(key: string, first: string, last: string): string {
+  return key < first ? first : key > last ? last : key;
 }

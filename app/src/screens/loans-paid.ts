@@ -3,7 +3,9 @@ import { LOAN_STATUS_LABEL } from "./loan-copy";
 import type { LoanDetail, LoanPayment } from "./loan-detail-data";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import { paidInPeriod, type PartTotals } from "./loan-outlook";
-import { monthYear, wholeMoney } from "./loan-detail-view-data";
+import { dayMonth, monthYear, wholeMoney } from "./loan-detail-view-data";
+import { HEBREW_MONTHS } from "../ui/date-math";
+import { shiftMonthKey } from "../period";
 
 /**
  * What was paid on the loans, since they started or in this calendar year: the loan page's שולם card
@@ -189,5 +191,110 @@ export function loanPaidCard(loan: Pick<LoanDetail, "startDate" | "principalMino
     totalMinor: partsTotal(paid.totals),
     payments: paid.payments,
     note,
+  };
+}
+
+/** "אוקטובר 2026" for a month key ("2026-10"). */
+export function monthKeyTitle(key: string): string {
+  return `${HEBREW_MONTHS[Number(key.slice(5, 7)) - 1] ?? ""} ${key.slice(0, 4)}`;
+}
+
+/** The open loans of one currency, the ones the summary sums. */
+function openOf(entries: readonly LoanPaidEntry[], currency: LoanCurrency): LoanPaidEntry[] {
+  return entries
+    .filter((entry) => entry.loan.currency === currency && entry.loan.status === "open")
+    .sort((a, b) => a.loan.name.localeCompare(b.loan.name, "he") || a.loan.id.localeCompare(b.loan.id));
+}
+
+export type LoanMonthRange = {
+  /** The first month with a payment on an open loan, or this month when there is none. */
+  first: string;
+  /** This month (today's). */
+  last: string;
+  /** Where the stepper opens: the latest month with a payment, else this month. */
+  start: string;
+};
+
+/** FLOW-1075: the months the summary's month view can step through. */
+export function loanMonthRange(entries: readonly LoanPaidEntry[], currency: LoanCurrency, today: string): LoanMonthRange {
+  const last = today.slice(0, 7);
+  const months = openOf(entries, currency).flatMap((entry) => entry.payments.map((payment) => payment.docDate.slice(0, 7))).filter((key) => key <= last).sort();
+  return { first: months[0] ?? last, last, start: months[months.length - 1] ?? last };
+}
+
+export type LoansMonthPayment = {
+  transactionId: string;
+  loanName: string;
+  /** "12/10". */
+  date: string;
+  /** "קרן $1,062 · ריבית $6,118 · נאמנות $1,552", or "ממתין לבדיקה". */
+  hint: string;
+  needsReview: boolean;
+  totalMinor: bigint;
+};
+
+export type LoansMonth = {
+  key: string;
+  /** "אוקטובר 2026". */
+  title: string;
+  /** "שולם באוקטובר 2026". */
+  totalLabel: string;
+  totals: PartTotals;
+  totalMinor: bigint;
+  /** "לעומת ספטמבר" (with the year when it differs). */
+  compareLabel: string;
+  /** This month less the month before. */
+  deltaMinor: bigint;
+  /** Newest first. */
+  payments: LoansMonthPayment[];
+  note: string;
+};
+
+function monthSplitText(payment: LoanPayment, currency: LoanCurrency): string {
+  const parts: string[] = [];
+  if (payment.principalMinor !== 0n) parts.push(`קרן ${wholeMoney(payment.principalMinor, currency)}`);
+  if (payment.interestMinor !== 0n) parts.push(`ריבית ${wholeMoney(payment.interestMinor, currency)}`);
+  if (payment.escrowMinor !== 0n) parts.push(`נאמנות ${wholeMoney(payment.escrowMinor, currency)}`);
+  if (payment.feesMinor !== 0n) parts.push(`עמלות ${wholeMoney(payment.feesMinor, currency)}`);
+  return parts.join(" · ");
+}
+
+/**
+ * FLOW-1075 (board V3-LoansSummary-MonthA): what the open loans paid in one month, by the payments'
+ * dates: the parts, the change from the month before, and each payment, so a row can open its transaction.
+ */
+export function loansMonth(entries: readonly LoanPaidEntry[], currency: LoanCurrency, key: string): LoansMonth {
+  const open = openOf(entries, currency);
+  const totals = sumParts(open.map((entry) => paidInPeriod(entry.payments, key).totals));
+  const totalMinor = partsTotal(totals);
+  const before = shiftMonthKey(key, -1);
+  const beforeMinor = partsTotal(sumParts(open.map((entry) => paidInPeriod(entry.payments, before).totals)));
+  const payments = open
+    .flatMap((entry) => entry.payments
+      .filter((payment) => payment.docDate.startsWith(`${key}-`))
+      .map((payment) => ({ payment, name: entry.loan.name })))
+    .sort((a, b) => b.payment.docDate.localeCompare(a.payment.docDate) || a.name.localeCompare(b.name, "he"))
+    .map(({ payment, name }): LoansMonthPayment => ({
+      transactionId: payment.transactionId,
+      loanName: name,
+      date: dayMonth(payment.docDate),
+      hint: payment.needsReview ? "ממתין לבדיקה" : monthSplitText(payment, currency),
+      needsReview: payment.needsReview,
+      totalMinor: payment.totalMinor,
+    }));
+  const title = monthKeyTitle(key);
+  const beforeName = before.slice(0, 4) === key.slice(0, 4) ? (HEBREW_MONTHS[Number(before.slice(5, 7)) - 1] ?? "") : monthKeyTitle(before);
+  return {
+    key,
+    title,
+    totalLabel: `שולם ב${title}`,
+    totals,
+    totalMinor,
+    compareLabel: `לעומת ${beforeName}`,
+    deltaMinor: totalMinor - beforeMinor,
+    payments,
+    note: payments.length === 0
+      ? `אין תשלומים ב${title}.`
+      : `החודש לפי תאריך התשלום.${totals.escrow > 0n ? " נאמנות (escrow) הולכת למסים ולביטוח של הנכס." : ""}`,
   };
 }

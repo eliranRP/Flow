@@ -36,7 +36,7 @@ export const AllTime: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("heading", { level: 1, name: "סיכום הלוואות" })).toBeInTheDocument();
-    await expect(canvas.getByRole("radio", { name: "מתחילת ההלוואות" })).toHaveAttribute("aria-checked", "true");
+    await expect(canvas.getByRole("radio", { name: "מההתחלה" })).toHaveAttribute("aria-checked", "true");
     await expect(canvas.getByText("החוב בהתחלה")).toBeInTheDocument();
   },
 };
@@ -50,6 +50,19 @@ export const ThisYear: Story = {
     await userEvent.click(canvas.getByRole("radio", { name: "2026" }));
     await expect(canvas.getByText("החוב ב־01/01/2026")).toBeInTheDocument();
     await expect(canvas.getByText("שולם ב־2026")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1075 (board V3-LoansSummary-MonthA): one month, stepped in the band; the card and the payments follow it. */
+export const OneMonth: Story = {
+  name: "One month",
+  args: { store: () => sampleLoanStore() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("radio", { name: "חודש" }));
+    await expect(canvas.getByText("שולם באוקטובר 2026")).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "חודש קודם" }));
+    await expect(canvas.getByRole("heading", { name: "תשלומי ספטמבר 2026" })).toBeInTheDocument();
   },
 };
 
