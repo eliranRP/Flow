@@ -1,0 +1,1 @@
+The 2026-11-06 daily perf report is in `docs/qa/perf/`. FLOW-1023 (#1008) is in production: Review's Jev reads for a card start together. Home v3 makes 23 reads on a cold load, and its figures show in about 1.9 to 2.0 s. Round trips from the cloud agent were slow and uneven today.
