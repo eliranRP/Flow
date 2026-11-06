@@ -8,7 +8,8 @@ import { ChevronDownIcon } from "../ui/icons";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { DelayedSkeleton } from "../ui/skeleton";
-import { ALL_TIME, METRIC_KEYS, PART_KEYS, metricPage, partPage, type MetricKey, type PartKey } from "./project-returns-info";
+import { ALL_TIME, METRIC_KEYS, PART_KEYS, partPage, type PartKey } from "./project-returns-info";
+import { DEAL_METRIC_KEYS, anyMetricPage, type AnyMetricKey } from "./project-returns-deal";
 import { AllCashOutMeta, CalcSection, FigureText, FormulaList, ReturnLinesSection, ReturnsHero, pageResolver } from "./project-returns-parts";
 import { RETURNS_EMPTY, useReturnsPage, type RehabRead, type ReturnsSample } from "./project-returns-screen";
 import type { PropertyReturns, RehabRow } from "./project-returns-data";
@@ -21,16 +22,16 @@ import { LearnButton } from "./project-returns-learn-sheet";
  * opening where it comes from, a typed figure its edit sheet), and a part's transactions.
  * ---------------------------------------------------------------------------------------------- */
 
-function isMetric(value: string | undefined): value is MetricKey {
-  return value != null && (METRIC_KEYS as readonly string[]).includes(value);
+function isMetric(value: string | undefined): value is AnyMetricKey {
+  return value != null && ([...METRIC_KEYS, ...DEAL_METRIC_KEYS] as readonly string[]).includes(value);
 }
 
 function isPart(value: string | undefined): value is PartKey {
   return value != null && (PART_KEYS as readonly string[]).includes(value);
 }
 
-function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: PropertyReturns; base: string; search: string }) {
-  const page = metricPage(metric, r);
+function MetricBody({ metric, r, base, search }: { metric: AnyMetricKey; r: PropertyReturns; base: string; search: string }) {
+  const page = anyMetricPage(metric, r);
   const resolve = pageResolver(base, search);
   const negative = page.value.kind === "text" && page.value.text.startsWith("−");
   return (
@@ -64,13 +65,13 @@ function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: Propert
   );
 }
 
-/** A metric: cash-on-cash, cap rate, DSCR or cash flow per unit, with what it is made of. */
+/** A metric (the four of FLOW-451 and the deal metrics of FLOW-1068), with what it is made of. */
 export function PropertyMetricScreen({ sample, base: baseProp, learnOpen = false }: { sample?: ReturnsSample; base?: string; learnOpen?: boolean } = {}) {
   const page = useReturnsPage(sample, baseProp);
   const { metric: named, key } = useParams();
   const metric = named ?? key;
   if (!isMetric(metric)) return <Navigate replace to={`${page.base}${page.search}`} />;
-  const title = page.returns == null ? "מדד" : metricPage(metric, page.returns).title;
+  const title = page.returns == null ? "מדד" : anyMetricPage(metric, page.returns).title;
   return (
     <ScreenState
       headerClassName="ui-ret-head"
@@ -100,7 +101,8 @@ function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey;
       <CalcSection title="החישוב" total={figure == null ? null : <FigureText value={figure} currency={r.currency} />}>
         <FormulaList formula={page.formula} currency={r.currency} resolve={pageResolver(base, search)} label={page.title} />
       </CalcSection>
-      <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} sample={sample?.lines} />
+      {/* The net profit's rows each open their own lines; its page has no list of its own. */}
+      {part === "profit" ? null : <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} sample={sample?.lines} />}
     </div>
   );
 }

@@ -74,7 +74,10 @@ function payload(inv: Record<string, unknown> = {}, extra: Record<string, unknow
   return { ...base, investment: { ...investment, ...inv }, ...extra };
 }
 
-/** The returns read on the same invented figures: equity ₪850,000, השבחה ₪337,600, money in ₪762,400. */
+/**
+ * The returns read on the same invented figures: equity ₪850,000, השבחה ₪337,600, money in ₪762,400,
+ * and a net profit of ₪185,600 (₪1,900,000 less 8% to sell, the purchase and the renovation).
+ */
 function returnsOf(over: Partial<PropertyReturns["equity"]> = {}, inputs: Partial<PropertyReturns["inputs"]> = {}): Record<string, unknown> {
   const r: PropertyReturns = {
     ...birchLaneReturns,
@@ -101,6 +104,13 @@ function returnsOf(over: Partial<PropertyReturns["equity"]> = {}, inputs: Partia
       ...over,
     },
   };
+  // FLOW-1068: the net profit as the server works it out: 8% of the ARV to sell, no holding costs.
+  const arv = r.inputs.arvMinor;
+  const selling = arv == null ? null : arv * 800n / 10_000n;
+  const net = arv == null || selling == null || r.inputs.purchaseMinor == null || r.inputs.rehabMinor == null ? null : arv - selling - r.inputs.purchaseMinor - r.inputs.rehabMinor;
+  const moneyIn = r.equity.moneyInMinor;
+  r.deal = { ...r.deal, holdingMinor: 0n, sellingCostMinor: selling, netProfitMinor: net };
+  r.metrics = { ...r.metrics, flipRoiBp: net == null || moneyIn == null ? null : Number(net * 10_000n / moneyIn) };
   return toReturnsJson(r);
 }
 
@@ -164,11 +174,13 @@ describe("the page", () => {
     serve();
     renderPage();
     await ready();
-    // FLOW-1047: a project with an ARV is a renovation: its band is the profit at the ARV, with the ARV and the total cost.
-    expect(await within(band()).findByText("רווח צפוי במכירה")).toBeInTheDocument();
-    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("₪338K");
+    // FLOW-1047, FLOW-1068: a project with an ARV is a renovation: its band is the net profit at the ARV, its ROI on
+    // the money in the deal under it, then the ARV and the money in.
+    expect(await within(band()).findByText("רווח נקי צפוי במכירה")).toBeInTheDocument();
+    expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("₪186K");
+    expect(band()).toHaveTextContent("ROI 24.3% על הכסף בעסקה");
     expect(within(band()).getByRole("button", { name: /^שווי אחרי שיפוץ \(ARV\)/ })).toHaveTextContent("₪1,900,000");
-    expect(within(band()).getByRole("link", { name: /^עלות כוללת/ })).toHaveTextContent("₪1,562,400");
+    expect(within(band()).getByRole("link", { name: /^כסף בעסקה/ })).toHaveTextContent("₪762,400");
     expect(figures().getByText("₪1,250,000")).toBeInTheDocument();
     expect(figures().getByText("₪1,650,000")).toBeInTheDocument();
     expect(figures().getByText("₪312,400")).toBeInTheDocument();
@@ -182,10 +194,16 @@ describe("the page", () => {
     serve();
     renderPage();
     const card = await screen.findByRole("region", { name: "מאיפה הרווח" });
-    expect(within(card).getByRole("img")).toHaveAccessibleName(/^מחיר קנייה \d+%, שיפוץ עד היום \d+%, רווח צפוי \d+%$/);
+    // FLOW-1068: the four cost buckets; no holding costs here, so no holding part.
+    expect(within(card).getByRole("img")).toHaveAccessibleName(/^מחיר קנייה \d+%, שיפוץ עד היום \d+%, עלויות מכירה \d+%, רווח נקי צפוי \d+%$/);
     expect(within(card).getByRole("button", { name: /^מחיר קנייה/ })).toHaveTextContent("−₪1,250,000");
     expect(within(card).getByRole("link", { name: /^שיפוץ עד היום/ })).toHaveAttribute("href", "/projects/p1/investment/part/rehab");
-    expect(within(card).getByRole("link", { name: /^רווח צפוי/ })).toHaveAttribute("href", "/projects/p1/investment/part/forced");
+    const selling = within(card).getByRole("button", { name: /^עלויות מכירה/ });
+    expect(selling).toHaveTextContent("−₪152,000");
+    expect(selling).toHaveTextContent("8% מה־ARV · הערכה · עריכה");
+    expect(within(card).getByRole("link", { name: /^רווח נקי צפוי/ })).toHaveAttribute("href", "/projects/p1/investment/part/profit");
+    fireEvent.click(selling);
+    expect(await screen.findByRole("dialog", { name: "עלויות מכירה" })).toBeInTheDocument();
   });
 
   it("opens איך מחושב with the profit in numbers", async () => {
@@ -193,8 +211,8 @@ describe("the page", () => {
     renderPage();
     await ready();
     fireEvent.click(await screen.findByRole("button", { name: "איך מחושב" }));
-    const dialog = await screen.findByRole("dialog", { name: "איך מחושב הרווח הצפוי" });
-    expect(within(dialog).getByRole("list", { name: "השבחה צפויה" })).toHaveTextContent("₪337,600");
+    const dialog = await screen.findByRole("dialog", { name: "איך מחושב הרווח הנקי" });
+    expect(within(dialog).getByRole("list", { name: "רווח נקי צפוי" })).toHaveTextContent("₪185,600");
     fireEvent.click(within(dialog).getByRole("button", { name: "הבנתי" }));
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
   });
@@ -391,7 +409,8 @@ describe("the equity formulas", () => {
     fireEvent.click(figures().getByRole("button", { name: /^שווי אחרי שיפוץ/ }));
     fireEvent.change(await screen.findByRole("textbox", { name: "סכום" }), { target: { value: "2000000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
-    expect(await screen.findByText("₪437,600")).toBeInTheDocument();
+    // ₪2,000,000 less 8% to sell, the purchase and the renovation.
+    expect(await screen.findByText("₪277,600")).toBeInTheDocument();
     // The returns are read again after the save.
     expect(rpc.calls.filter((call) => call.name === "get_property_returns").length).toBeGreaterThan(1);
   });

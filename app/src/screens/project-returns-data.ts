@@ -58,6 +58,9 @@ const SERVER_LINES: Record<StatementLine, readonly string[]> = {
   not_counted: ["acquisition", "financing"],
 };
 
+/** FLOW-1068 (decision 0260): the costs of selling until the owner sets them, 8% of the ARV. */
+export const SELLING_COST_DEFAULT_BP = 800;
+
 export const MISSING_INPUTS = ["purchase", "value", "value_history", "land", "tax_bracket"] as const;
 export type MissingInput = (typeof MISSING_INPUTS)[number];
 
@@ -141,11 +144,37 @@ const returnsSchema = z.object({
     all_cash_out: z.boolean().nullable().optional().transform((value) => value === true),
     cash_out_cover_months: intOrNull,
   }),
+  // FLOW-1068: the deal as a whole. Optional, so a read from before it parses with the defaults.
+  deal: z
+    .object({
+      selling_cost_bp: z.number().int().nullable().optional().transform((value) => value ?? SELLING_COST_DEFAULT_BP),
+      selling_cost_default: z.boolean().nullable().optional().transform((value) => value !== false),
+      selling_cost_minor: minorOrNull,
+      holding_minor: minor.nullable().optional().transform((value) => value ?? 0n),
+      net_profit_minor: minorOrNull,
+      acquired_on: dateOrNull,
+      held_days: intOrNull,
+      life_cash_flow_minor: minor.nullable().optional().transform((value) => value ?? 0n),
+    })
+    .optional()
+    .default({ selling_cost_bp: SELLING_COST_DEFAULT_BP, selling_cost_default: true, selling_cost_minor: null, holding_minor: 0n, net_profit_minor: null, acquired_on: null, held_days: null, life_cash_flow_minor: 0n }),
   metrics: z.object({
     cash_on_cash_bp: intOrNull,
     cap_rate_bp: intOrNull,
     dscr_milli: intOrNull,
     cash_flow_per_unit_month_minor: minor,
+    roe_bp: intOrNull,
+    roi_since_purchase_bp: intOrNull,
+    equity_multiple_milli: intOrNull,
+    break_even_occupancy_bp: intOrNull,
+    expense_ratio_bp: intOrNull,
+    grm_milli: intOrNull,
+    ltv_bp: intOrNull,
+    flip_roi_bp: intOrNull,
+    flip_roi_year_bp: intOrNull,
+    arv_margin_bp: intOrNull,
+    rule_70_minor: minorOrNull,
+    break_even_sale_minor: minorOrNull,
   }),
 });
 
@@ -232,7 +261,37 @@ export type PropertyReturns = {
     /** FLOW-1025: with all the cash out and a negative cash flow, the whole months the cash still out covers. */
     coverMonths: number | null;
   };
-  metrics: { cashOnCashBp: number | null; capRateBp: number | null; dscrMilli: number | null; perUnitMonthMinor: bigint };
+  /** FLOW-1068: the deal as a whole: the costs of selling, a renovation's net profit, how long it is held. */
+  deal: {
+    sellingCostBp: number;
+    sellingCostDefault: boolean;
+    sellingCostMinor: bigint | null;
+    /** The holding costs, all time, that rehab does not already count (negative). */
+    holdingMinor: bigint;
+    netProfitMinor: bigint | null;
+    acquiredOn: string | null;
+    heldDays: number | null;
+    /** The cash flow since the first rent, all time (negative: what the owner added). */
+    lifeCashFlowMinor: bigint;
+  };
+  metrics: {
+    cashOnCashBp: number | null;
+    capRateBp: number | null;
+    dscrMilli: number | null;
+    perUnitMonthMinor: bigint;
+    roeBp: number | null;
+    roiSincePurchaseBp: number | null;
+    equityMultipleMilli: number | null;
+    breakEvenOccupancyBp: number | null;
+    expenseRatioBp: number | null;
+    grmMilli: number | null;
+    ltvBp: number | null;
+    flipRoiBp: number | null;
+    flipRoiYearBp: number | null;
+    arvMarginBp: number | null;
+    rule70Minor: bigint | null;
+    breakEvenSaleMinor: bigint | null;
+  };
 };
 
 /** `shortfallMinor` (FLOW-1025): the running cash flow since the first rent when below zero, else 0. */
@@ -340,11 +399,33 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       allCashOut: raw.equity.all_cash_out,
       coverMonths: raw.equity.cash_out_cover_months,
     },
+    deal: {
+      sellingCostBp: raw.deal.selling_cost_bp,
+      sellingCostDefault: raw.deal.selling_cost_default,
+      sellingCostMinor: raw.deal.selling_cost_minor,
+      holdingMinor: raw.deal.holding_minor,
+      netProfitMinor: raw.deal.net_profit_minor,
+      acquiredOn: raw.deal.acquired_on,
+      heldDays: raw.deal.held_days,
+      lifeCashFlowMinor: raw.deal.life_cash_flow_minor,
+    },
     metrics: {
       cashOnCashBp: raw.metrics.cash_on_cash_bp,
       capRateBp: raw.metrics.cap_rate_bp,
       dscrMilli: raw.metrics.dscr_milli,
       perUnitMonthMinor: raw.metrics.cash_flow_per_unit_month_minor,
+      roeBp: raw.metrics.roe_bp,
+      roiSincePurchaseBp: raw.metrics.roi_since_purchase_bp,
+      equityMultipleMilli: raw.metrics.equity_multiple_milli,
+      breakEvenOccupancyBp: raw.metrics.break_even_occupancy_bp,
+      expenseRatioBp: raw.metrics.expense_ratio_bp,
+      grmMilli: raw.metrics.grm_milli,
+      ltvBp: raw.metrics.ltv_bp,
+      flipRoiBp: raw.metrics.flip_roi_bp,
+      flipRoiYearBp: raw.metrics.flip_roi_year_bp,
+      arvMarginBp: raw.metrics.arv_margin_bp,
+      rule70Minor: raw.metrics.rule_70_minor,
+      breakEvenSaleMinor: raw.metrics.break_even_sale_minor,
     },
   };
 }
@@ -487,4 +568,14 @@ export function dscrText(milli: number): string {
 export function bracketText(bp: number): string {
   const whole = bp % 100 === 0;
   return `${whole ? String(bp / 100) : String(Number((bp / 100).toFixed(2)))}%`;
+}
+
+/** FLOW-1068: 2450 → "2.45x", the equity multiplier. */
+export function multipleText(milli: number): string {
+  return `${signed((Math.abs(milli) / 1000).toFixed(2), milli < 0)}x`;
+}
+
+/** FLOW-1068: 7650 → "7.7", the gross rent multiplier (years of rent the price is). */
+export function grmText(milli: number): string {
+  return signed((Math.abs(milli) / 1000).toFixed(1), milli < 0);
 }

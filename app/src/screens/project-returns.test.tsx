@@ -60,7 +60,8 @@ import {
 import { INFO_LEARN, LEARN, LEARN_ENGLISH, LEARN_TITLES, PAGE_LEARN } from "./project-returns-learn";
 import { signedRow } from "./project-returns-parts";
 import { PropertyReturnLineScreen, PropertyStatementScreen } from "./project-returns-screen";
-import { BRACKET_RANGE, bracketVerdict, rawToBp } from "./project-returns-sheets";
+import { BRACKET_RANGE, percentVerdict, rawToBp } from "./project-returns-sheets";
+import { DEAL_METRIC_KEYS } from "./project-returns-deal";
 import { toReturnsJson } from "./project-returns-test-support";
 
 type Call = { name: string; args: unknown };
@@ -421,9 +422,9 @@ describe("the edit and tax inputs", () => {
   it("reads the bracket as basis points, up to two decimals, at most 100", () => {
     expect(rawToBp("24")).toBe(2400);
     expect(rawToBp("24.75")).toBe(2475);
-    expect(bracketVerdict(null, "24")).toEqual({ kind: "save", bp: 2400 });
-    expect(bracketVerdict(2400, "24")).toEqual({ kind: "clean" });
-    expect(bracketVerdict(null, "120")).toEqual({ kind: "hold", message: BRACKET_RANGE });
+    expect(percentVerdict(null, "24")).toEqual({ kind: "save", bp: 2400 });
+    expect(percentVerdict(2400, "24")).toEqual({ kind: "clean" });
+    expect(percentVerdict(null, "120")).toEqual({ kind: "hold", message: BRACKET_RANGE });
   });
 });
 
@@ -431,9 +432,10 @@ describe("the edit and tax inputs", () => {
 const band = () => document.querySelector(".ui-band") as HTMLElement;
 const parts = () => screen.getByRole("region", { name: "ממה מורכבת התשואה" });
 
+/** FLOW-1068: the metrics tab's groups (return, risk, price), all of them: the first group's parent. */
 async function metricsTab(): Promise<HTMLElement> {
   fireEvent.click(await screen.findByRole("radio", { name: "מדדים" }));
-  return screen.findByRole("region", { name: "מדדים" });
+  return (await screen.findByRole("region", { name: "תשואה" })).parentElement as HTMLElement;
 }
 
 describe("the investment page's returns cards", () => {
@@ -593,9 +595,9 @@ describe("the investment page's returns cards", () => {
     const purchase = within(card).getByRole("link", { name: /מחיר רכישה/ });
     expect(purchase).toHaveTextContent("מהתנועות + הלוואה שנלקחה · לפירוט ולתיקון");
     expect(purchase).toHaveTextContent("$331,600");
-    // FLOW-1047: the band's figure is the expected profit, and איך מחושב opens its calculation.
+    // FLOW-1047, FLOW-1068: the band's figure is the net profit, and איך מחושב opens its calculation.
     fireEvent.click(screen.getByRole("button", { name: "איך מחושב" }));
-    const dialog = await screen.findByRole("dialog", { name: "איך מחושב הרווח הצפוי" });
+    const dialog = await screen.findByRole("dialog", { name: "איך מחושב הרווח הנקי" });
     expect(within(dialog).getByRole("link", { name: /רכישה וסגירה \(מהתנועות\)/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
     const loan = within(dialog).getByRole("link", { name: new RegExp(TAKEN_OVER_LABEL) });
     expect(loan).toHaveAttribute("href", "/loans/loan-maple");
@@ -607,6 +609,42 @@ describe("the investment page's returns cards", () => {
     const card = await metricsTab();
     expect(within(card).getByRole("link", { name: /תשואה על המזומן/ })).toHaveAttribute("href", "/projects/p1/investment/metric/coc");
     expect(within(card).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent("1.63");
+  });
+
+  it("groups a rental's metrics by return, risk and price, the new ones with their figures (FLOW-1068)", async () => {
+    renderInvestment();
+    await metricsTab();
+    const titles = (name: string) => [...screen.getByRole("region", { name }).querySelectorAll(".ui-pinv-row-title")].map((node) => node.textContent);
+    expect(titles("תשואה")).toEqual(["ROI מאז הקנייה", "תשואה על ההון העצמי (ROE)", "תשואה על המזומן", "מכפיל הון"]);
+    expect(titles("סיכון")).toEqual(["כיסוי חוב (DSCR)", "תפוסת איזון", "מינוף (LTV)"]);
+    expect(titles("מחיר")).toEqual(["Cap rate", "מכפיל שכירות (GRM)", "יחס הוצאות", "תזרים ליחידה"]);
+    const row = (name: RegExp) => screen.getByRole("link", { name });
+    expect(row(/תשואה על ההון העצמי/)).toHaveTextContent("65.8%");
+    expect(row(/תשואה על ההון העצמי/)).toHaveAttribute("href", "/projects/p1/investment/metric/roe");
+    // A loss since the purchase reads with its minus, in the loss colour.
+    expect(row(/ROI מאז הקנייה/)).toHaveTextContent("−10.5%");
+    expect(row(/ROI מאז הקנייה/).querySelector(".ui-loss")).not.toBeNull();
+    expect(row(/מכפיל הון/)).toHaveTextContent("0.90x");
+    expect(row(/תפוסת איזון/)).toHaveTextContent("75.0%");
+    expect(row(/מינוף/)).toHaveTextContent("87.5%");
+    expect(row(/מכפיל שכירות/)).toHaveTextContent("7.7");
+    expect(row(/יחס הוצאות/)).toHaveTextContent("35.0%");
+  });
+
+  it("leads a renovation's metrics with its ROI, and the price it leaves room for (FLOW-1068)", async () => {
+    renderInvestment(birchLaneReturns, "/projects/p1/investment", true);
+    await metricsTab();
+    const titles = (name: string) => [...screen.getByRole("region", { name }).querySelectorAll(".ui-pinv-row-title")].map((node) => node.textContent);
+    expect(titles("תשואה")).toEqual(["ROI על הכסף בעסקה", "ROI שנתי", "מרווח מה־ARV"]);
+    expect(titles("מחיר")).toEqual(["כלל ה־70%", "מחיר איזון במכירה"]);
+    expect(screen.queryByRole("region", { name: "סיכון" })).toBeNull();
+    expect(screen.getByRole("link", { name: /ROI על הכסף בעסקה/ })).toHaveTextContent("102.2%");
+    expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("126.0%");
+    expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("10 חודשים · מהקנייה עד היום");
+    const rule = screen.getByRole("link", { name: /כלל ה־70%/ });
+    expect(rule).toHaveTextContent("−$29,300");
+    expect(rule).toHaveTextContent("מחיר מקסימלי $155,700 · שולם $185,000");
+    expect(screen.getByRole("link", { name: /מחיר איזון במכירה/ })).toHaveTextContent("$269,674");
   });
 });
 
@@ -826,7 +864,7 @@ describe("the renovation's page (FLOW-460)", () => {
 
 describe("the ⓘ beside a returns page's title (FLOW-462)", () => {
   it("has a reading guide for every page key", () => {
-    const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...METRIC_KEYS.map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key]), ...Object.values(INFO_LEARN), "total" as const];
+    const keys = [PAGE_LEARN.statement, ...Object.values(PAGE_LEARN.line), ...[...METRIC_KEYS, ...DEAL_METRIC_KEYS].map((key) => PAGE_LEARN.metric[key]), ...PART_KEYS.map((key) => PAGE_LEARN.part[key]), ...Object.values(INFO_LEARN), "total" as const];
     // Every guide is shown somewhere: on a page, at the end of a figure's ⓘ sheet, or beside the total.
     expect(new Set(keys)).toEqual(new Set(Object.keys(LEARN)));
     expect(new Set(Object.keys(LEARN_ENGLISH))).toEqual(new Set(Object.keys(LEARN)));

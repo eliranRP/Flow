@@ -177,6 +177,7 @@ $n$ || a_return);
       'selling_cost_bp', selling_bp,
       'selling_cost_default', p.selling_cost_bp is null,
       'selling_cost_minor', selling,
+      'holding_minor', holding_out,
       'net_profit_minor', net_profit,
       'acquired_on', acquired_on,
       'held_days', held_days,

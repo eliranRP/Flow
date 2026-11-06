@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(27);
+select plan(28);
 
 do $users$
 begin
@@ -91,6 +91,7 @@ select is((pg_temp.ret('flip')->'deal'->>'held_days')::integer, 361, 'held from 
 select public.set_project_investment(pg_temp.id('flip'), '{"arv_minor": 25000000}'::jsonb);
 
 select is((pg_temp.ret('flip')->'deal'->>'selling_cost_minor')::bigint, 2000000::bigint, 'selling costs: 8% of the ARV');
+select is((pg_temp.ret('flip')->'deal'->>'holding_minor')::bigint, -200000::bigint, 'the holding costs rehab does not count');
 select is((pg_temp.ret('flip')->'deal'->>'net_profit_minor')::bigint, 4800000::bigint,
   'net profit = ARV - selling - purchase - rehab - holding');
 select is((pg_temp.ret('flip')->'equity'->>'forced_equity_minor')::bigint, 7000000::bigint,

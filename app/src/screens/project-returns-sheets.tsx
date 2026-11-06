@@ -13,7 +13,7 @@ import {
   beforeFirstRent,
   fewDays,
   firstMissing,
-  forcedFormula,
+  profitFormula,
   infiniteTotal,
   infoFigure,
   returnInfo,
@@ -111,7 +111,7 @@ export function totalRateFormula(r: PropertyReturns): Formula {
 
 const HOW = {
   rent: { learn: "total", title: "איך מחושבת התשואה הכוללת", body: "תזרים, החזר קרן, עליית ערך וחיסכון מס ב־12 החודשים האחרונים, חלקי הכסף שעדיין בעסקה." },
-  flip: { learn: "forced", title: "איך מחושב הרווח הצפוי", body: "השווי אחרי השיפוץ, פחות מחיר הקנייה והשיפוץ עד היום. עלויות ההחזקה כבר ברווח השוטף." },
+  flip: { learn: "profit", title: "איך מחושב הרווח הנקי", body: "השווי אחרי השיפוץ, פחות עלויות המכירה, מחיר הקנייה, השיפוץ עד היום וההחזקה." },
 } as const;
 
 /** "איך מחושב" from the band: the figure's calculation, each row opening its source, and הבנתי. */
@@ -125,7 +125,7 @@ export function HowSheet({ kind, open, onOpenChange, returns, resolve, readOnly,
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const how = HOW[kind];
-  const formulas = kind === "rent" ? [totalSumFormula(returns), totalRateFormula(returns)] : [forcedFormula(returns)];
+  const formulas = kind === "rent" ? [totalSumFormula(returns), totalRateFormula(returns)] : [profitFormula(returns)];
   return (
     <Sheet
       open={open}
@@ -148,12 +148,31 @@ export function HowSheet({ kind, open, onOpenChange, returns, resolve, readOnly,
 }
 
 /* ------------------------------------------------------------------------------------------------
- * The tax bracket: the owner's marginal income tax, a percent from 0 to 100 with up to two decimals,
- * one for the company (set_tax_bracket, in basis points). Saved on שמירה or when the sheet closes.
+ * A percent the owner types (FLOW-1068): the tax bracket (the owner's marginal income tax, 0 to 100,
+ * one for the company, set_tax_bracket) and a property's costs of selling (0 to 30% of the ARV,
+ * set_project_investment). Up to two decimals, in basis points; saved on שמירה or when the sheet closes.
  * ---------------------------------------------------------------------------------------------- */
 
 export const BRACKET_RANGE = "המדרגה היא בין 0 ל־100.";
 export const BRACKET_EMPTY = "האחוז ריק. כדי למחוק אותו, הקישו מחיקה.";
+export const SELLING_RANGE = "עלויות המכירה הן בין 0 ל־30%.";
+export const SELLING_EMPTY = "האחוז ריק. כדי לחזור ל־8%, הקישו ברירת מחדל.";
+
+/** What one percent sheet says and allows. */
+export type PercentKind = { title: string; help: string; layer: string; maxBp: number; range: string; empty: string; clear: string };
+
+export const PERCENT_KINDS = {
+  tax: { title: "מדרגת המס", help: "מדרגת מס ההכנסה השולית שלך. משמשת להערכת החיסכון מהפחת, בכל הנכסים.", layer: "investment-tax", maxBp: 10_000, range: BRACKET_RANGE, empty: BRACKET_EMPTY, clear: "מחיקה" },
+  selling: {
+    title: "עלויות מכירה",
+    help: "תיווך, עלויות סגירה ומסים במכירה, באחוזים מה־ARV. נכנסות לרווח הנקי הצפוי. בלי ערך משלך, 8%.",
+    layer: "investment-selling",
+    maxBp: 3_000,
+    range: SELLING_RANGE,
+    empty: SELLING_EMPTY,
+    clear: "ברירת מחדל",
+  },
+} as const satisfies Record<string, PercentKind>;
 
 /** 2450 → "24.5". */
 export function bpToRaw(bp: number | null): string {
@@ -168,27 +187,30 @@ export function rawToBp(raw: string): number | null {
   return Number(parseDecimalHalfEven(clean.startsWith(".") ? `0${clean}` : clean, 2));
 }
 
-type BracketVerdict = { kind: "clean" } | { kind: "hold"; message: string } | { kind: "save"; bp: number };
+type PercentVerdict = { kind: "clean" } | { kind: "hold"; message: string } | { kind: "save"; bp: number };
 
-export function bracketVerdict(base: number | null, raw: string): BracketVerdict {
+export function percentVerdict(base: number | null, raw: string, kind: PercentKind = PERCENT_KINDS.tax): PercentVerdict {
   const bp = rawToBp(raw);
   if (bp === base) return { kind: "clean" };
-  if (bp == null) return { kind: "hold", message: BRACKET_EMPTY };
-  if (bp > 10_000) return { kind: "hold", message: BRACKET_RANGE };
+  if (bp == null) return { kind: "hold", message: kind.empty };
+  if (bp > kind.maxBp) return { kind: "hold", message: kind.range };
   return { kind: "save", bp };
 }
 
-export function TaxBracketSheet({
+export function PercentSheet({
+  kind,
   open,
   onOpenChange,
   bp: baseBp,
   onSave,
   returnFocusRef,
 }: {
+  kind: PercentKind;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The owner's figure; null when none is set (the selling cost then reads its default). */
   bp: number | null;
-  /** Resolves true once saved; null clears the bracket. */
+  /** Resolves true once saved; null clears the figure. */
   onSave: (bp: number | null) => Promise<boolean>;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
@@ -231,7 +253,7 @@ export function TaxBracketSheet({
 
   const guard = useCallback(async (): Promise<boolean> => {
     if (saving.current) return await saving.current;
-    const verdict = bracketVerdict(base.current, draft.current);
+    const verdict = percentVerdict(base.current, draft.current, kind);
     if (verdict.kind === "clean") return true;
     if (verdict.kind === "hold") {
       if (holdShown.current) {
@@ -243,13 +265,13 @@ export function TaxBracketSheet({
       return false;
     }
     return run(verdict.bp);
-  }, [run]);
+  }, [run, kind]);
 
-  const setSheet = useSheetHistory("investment-tax", open, onOpenChange, guard);
+  const setSheet = useSheetHistory(kind.layer, open, onOpenChange, guard);
 
   async function submit() {
     if (busy) return;
-    const verdict = bracketVerdict(base.current, draft.current);
+    const verdict = percentVerdict(base.current, draft.current, kind);
     if (verdict.kind === "hold") {
       holdShown.current = true;
       setHold(verdict.message);
@@ -263,7 +285,7 @@ export function TaxBracketSheet({
     <Sheet
       open={open}
       onOpenChange={setSheet}
-      title="מדרגת המס"
+      title={kind.title}
       returnFocusRef={returnFocusRef}
       panelClassName="ui-sheet-wide ui-sheet-g14 ui-pinv-edit"
       onBeforeClose={guard}
@@ -273,13 +295,13 @@ export function TaxBracketSheet({
           <Button full busy={busy} onClick={() => { void submit(); }}>שמירה</Button>
           {base.current != null ? (
             <Button variant="danger-link" disabled={busy} onClick={() => { void (async () => { if (!busy && (await run(null))) setSheet(false); })(); }}>
-              מחיקה
+              {kind.clear}
             </Button>
           ) : null}
         </div>
       )}
     >
-      <p className="ui-pinv-help">מדרגת מס ההכנסה השולית שלך. משמשת להערכת החיסכון מהפחת, בכל הנכסים.</p>
+      <p className="ui-pinv-help">{kind.help}</p>
       <MoneyField
         label="אחוז"
         value={raw}

@@ -2,6 +2,7 @@
 // Split out of tools.ts (FLOW-807). Decision 0080.
 
 import { ACCOUNT_WRITES, accountWrite } from "./tools_accounts.ts";
+import { INVESTMENT_KEYS, setProjectInvestmentSchema } from "./tools_investment_schema.ts";
 import { PREPAID_WRITES, prepaidWrite } from "./tools_prepaid.ts";
 import {
   argsOf,
@@ -34,7 +35,6 @@ import {
   hideCategorySchema,
   invalid,
   invalidFields,
-  INVESTMENT_KEYS,
   moveCategoryLinesSchema,
   renameCategorySchema,
   renameCompanySchema,
@@ -64,7 +64,6 @@ import {
   setLoanRateSchema,
   setOverheadProjectSchema,
   setProjectGroupSchema,
-  setProjectInvestmentSchema,
   syncBankSchema,
   undoBatchSchema,
   undoJevPrefillSchema,
