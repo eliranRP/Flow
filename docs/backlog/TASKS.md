@@ -318,6 +318,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1065"></a>[FLOW-1065](tasks/FLOW-1065.md) | A refund in an expense category's lines shows as money in | BUG |
 | <a id="flow-1066"></a>[FLOW-1066](tasks/FLOW-1066.md) | The forecast on any month a year ahead | UI (owner's ask) |
 | <a id="flow-1067"></a>[FLOW-1067](tasks/FLOW-1067.md) | The Reports tab's head sits under the status bar on an iPhone | BUG (UI) |
+| <a id="flow-1074"></a>[FLOW-1074](tasks/FLOW-1074.md) | The tab bar stays hidden after the keyboard closes | BUG |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |

@@ -61,9 +61,10 @@ describe("useKeyboardInset", () => {
       configurable: true,
       value: 800,
     });
-    render(<KeyboardHarness />);
+    render(<><KeyboardHarness /><input data-testid="open-field" /></>);
     expect(document.documentElement.style.getPropertyValue("--vvh")).toBe("800px");
     expect(document.documentElement.dataset.kb).toBeUndefined();
+    document.querySelector<HTMLInputElement>("[data-testid=open-field]")?.focus();
 
     viewport.height = 500;
     act(() => {
@@ -118,7 +119,8 @@ describe("useKeyboardInset", () => {
   }
 
   it("keeps the keyboard open when iOS pans the visual viewport (offsetTop) with the keyboard up", () => {
-    mountWithViewport();
+    mountWithViewport(<><KeyboardHarness /><input data-testid="pan-field" /></>);
+    document.querySelector<HTMLInputElement>("[data-testid=pan-field]")?.focus();
     viewport.height = 500;
     act(() => { viewport.emit("resize"); });
     expect(document.documentElement.dataset.kb).toBe("open");
@@ -208,7 +210,8 @@ describe("useKeyboardInset", () => {
   });
 
   it("removes its listeners and resets the root on unmount", () => {
-    const view = mountWithViewport();
+    const view = mountWithViewport(<><KeyboardHarness /><input data-testid="gone-field" /></>);
+    document.querySelector<HTMLInputElement>("[data-testid=gone-field]")?.focus();
     viewport.height = 500;
     act(() => { viewport.emit("resize"); });
     expect(document.documentElement.dataset.kb).toBe("open");
@@ -223,5 +226,47 @@ describe("useKeyboardInset", () => {
     });
     expect(document.documentElement.dataset.kb).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--vvh")).toBe("");
+  });
+
+  // FLOW-1074: iOS can close the keyboard without a visualViewport resize; the tab bar came back
+  // only on the next resize, so it was missing on every page meanwhile.
+  it("a covered screen with no field focused is not a keyboard", () => {
+    mountWithViewport();
+    viewport.height = 500;
+    act(() => { viewport.emit("resize"); });
+    expect(document.documentElement.dataset.kb).toBeUndefined();
+  });
+
+  it("brings the tab bar back when the field loses focus, though the viewport never resized", () => {
+    vi.useFakeTimers();
+    try {
+      mountWithViewport(<><KeyboardHarness /><input data-testid="blur-field" /></>);
+      const input = document.querySelector<HTMLInputElement>("[data-testid=blur-field]");
+      input?.focus();
+      viewport.height = 500;
+      act(() => { viewport.emit("resize"); });
+      expect(document.documentElement.dataset.kb).toBe("open");
+      // The keyboard went with the app to the background: no resize, only the field's blur.
+      act(() => {
+        input?.blur();
+        vi.runAllTimers();
+      });
+      expect(document.documentElement.dataset.kb).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("re-reads the keyboard when the app comes back to the foreground", () => {
+    mountWithViewport(<><KeyboardHarness /><input data-testid="back-field" /></>);
+    const input = document.querySelector<HTMLInputElement>("[data-testid=back-field]");
+    input?.focus();
+    viewport.height = 500;
+    act(() => { viewport.emit("resize"); });
+    expect(document.documentElement.dataset.kb).toBe("open");
+    // Back from the background with the keyboard gone and no resize: the viewport is full again.
+    viewport.height = 800;
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(document.documentElement.dataset.kb).toBeUndefined();
   });
 });
