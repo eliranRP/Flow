@@ -335,10 +335,17 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
   for (let start = 0; start < ids.length; start += JEV_SUGGESTION_CHUNK) {
     chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
   }
-  const reads = await Promise.all(chunks.map((chunk) => signalled(
-    supabase.from("tag_suggestions").select("id,transaction_id,answers").in("transaction_id", chunk).order("created_at", { ascending: false }),
-    signal,
-  )));
+  // FLOW-1023: the names and the fills need only the ids, so they go out with the suggestions, not after them.
+  const [reads, projects, categories, reasons, fills] = await Promise.all([
+    Promise.all(chunks.map((chunk) => signalled(
+      supabase.from("tag_suggestions").select("id,transaction_id,answers").in("transaction_id", chunk).order("created_at", { ascending: false }),
+      signal,
+    ))),
+    signalled(supabase.from("projects").select("id,name,status"), signal),
+    signalled(supabase.from("categories").select("id,name,hidden"), signal),
+    reasonsRead,
+    loadJevFills(ids, signal),
+  ]);
   const newest = new Map<string, { id: string; transaction_id: string; answers: unknown }>();
   for (const suggestions of reads) {
     if (suggestions.error) throw new Error(suggestions.error.message);
@@ -347,12 +354,6 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
       if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
     }
   }
-  const [projects, categories, reasons, fills] = await Promise.all([
-    signalled(supabase.from("projects").select("id,name,status"), signal),
-    signalled(supabase.from("categories").select("id,name,hidden"), signal),
-    reasonsRead,
-    loadJevFills(ids, signal),
-  ]);
   if (projects.error) throw new Error(projects.error.message);
   if (categories.error) throw new Error(categories.error.message);
   const projectNames = nameMap(projects.data, "project");
