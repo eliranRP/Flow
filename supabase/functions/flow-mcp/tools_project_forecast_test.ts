@@ -75,6 +75,22 @@ Deno.test("remove, restore and reset forward to their functions; a read token ca
   assertEquals(calls.length, 4);
 });
 
+Deno.test("the four writes take a month up to the forecast's last and refuse a later one before any call (FLOW-1066)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_forecast" } } }));
+  const last = forecastLastMonth(israelMonthKey());
+  const after = forecastMonths(last)[0] ?? "";
+  const set = (month: string) => callTool("set_project_forecast_edit", { idempotency_key: `pf-${month}`, project_id: PROJECT, month, row_key: "avg:repairs", amount_minor: 1 }, ["write"], rpc);
+  assertEquals((await set(last)).isError, false);
+  const refused = [
+    await set(after),
+    await callTool("remove_project_forecast_row", { idempotency_key: "pf-x1", project_id: PROJECT, month: after, row_key: "avg:power" }, ["write"], rpc),
+    await callTool("restore_project_forecast_row", { idempotency_key: "pf-x2", project_id: PROJECT, month: after, row_key: "avg:power" }, ["write"], rpc),
+    await callTool("reset_project_forecast", { idempotency_key: "pf-x3", project_id: PROJECT, month: after }, ["write"], rpc),
+  ];
+  assertEquals(refused.map((result) => result.isError), [true, true, true, true]);
+  assertEquals(calls.map((call) => call.body.p_month), [last]);
+});
+
 Deno.test("undo takes the project_forecast kind to mcp_undo", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { kind: "project_forecast" } } }));
   const id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";

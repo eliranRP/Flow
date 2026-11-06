@@ -290,7 +290,7 @@ export function FutureForecastRow({ monthKey, currentKey, search, profitMinor, c
       <div className="ui-home-forecast ui-band-fade">
         <div className="ui-home-forecast-text">
           <p className="ui-home-forecast-title">פירוט ועריכה</p>
-          <p className="ui-home-forecast-sub">{`רווח צפוי · הצפי של כל פרויקט ל${name}`}</p>
+          <p className="ui-home-forecast-sub">{`רווח צפוי ב${name}`}</p>
         </div>
         {failed && profitMinor == null ? null : (
           <span className="ui-home-forecast-value">

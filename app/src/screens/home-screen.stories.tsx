@@ -358,7 +358,7 @@ export const HomeNextMonth: Story = {
     await expect(canvas.getByText("צפוי לצאת")).toBeInTheDocument();
     const details = canvas.getByRole("link", { name: /^פירוט ועריכה, רווח צפוי בנובמבר /u });
     await expect(details).toHaveAttribute("href", "/forecast/next");
-    await expect(within(details).getByText("רווח צפוי · הצפי של כל פרויקט לנובמבר")).toBeInTheDocument();
+    await expect(within(details).getByText("רווח צפוי בנובמבר")).toBeInTheDocument();
     await expect(details.querySelector(".ui-home-forecast-value")?.textContent).toMatch(/\$/u);
     await expect(canvas.queryByText("הערכה · לפי קבועים, הלוואות וממוצע 6 חודשים")).toBeNull();
     await expect(canvas.getByRole("heading", { name: "הצפוי בנובמבר" })).toBeInTheDocument();
@@ -446,7 +446,7 @@ export const HomeFarMonth: Story = {
     await expect(canvas.getByRole("heading", { name: "הצפוי במרץ" })).toBeInTheDocument();
     const details = canvas.getByRole("link", { name: /^פירוט ועריכה, רווח צפוי במרץ /u });
     await expect(details).toHaveAttribute("href", "/forecast/next?month=2027-03");
-    await expect(within(details).getByText("רווח צפוי · הצפי של כל פרויקט למרץ")).toBeInTheDocument();
+    await expect(within(details).getByText("רווח צפוי במרץ")).toBeInTheDocument();
     await userEvent.click(canvas.getAllByRole("button", { name: "חודש קודם" })[0] as HTMLElement);
     await waitFor(() => expect(canvas.getByText("תזרים צפוי · פברואר")).toBeInTheDocument());
     await userEvent.click(canvas.getAllByRole("button", { name: "חודש הבא" })[0] as HTMLElement);
