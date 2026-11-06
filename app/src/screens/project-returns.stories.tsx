@@ -100,6 +100,21 @@ export const CapRateAnnualized: Story = { args: { entry: "/projects/p1/investmen
 /** FLOW-473: rented 21 days back: no figure scaled from so few days; the caption says from when. */
 export const CapRateFewDays: Story = { name: "Cap rate, fewer than 60 days", args: { entry: "/projects/p1/investment/metric/cap-rate", returns: "fewDays" } };
 export const CapRateLearn: Story = { args: { entry: "/projects/p1/investment/metric/cap-rate", learn: true } };
+/* FLOW-1068 (boards V3-Calc-Roe, V3-Calc-Roi, V3-Calc-FlipProfit): the deal metrics' pages and a renovation's net profit. */
+export const ReturnOnEquity: Story = { args: { entry: "/projects/p1/investment/metric/roe" } };
+export const RoiSincePurchase: Story = { args: { entry: "/projects/p1/investment/metric/roi-since" } };
+export const EquityMultiple: Story = { args: { entry: "/projects/p1/investment/metric/multiple" } };
+export const BreakEvenOccupancy: Story = { args: { entry: "/projects/p1/investment/metric/break-even" } };
+export const LoanToValue: Story = { args: { entry: "/projects/p1/investment/metric/ltv" } };
+export const GrossRentMultiplier: Story = { args: { entry: "/projects/p1/investment/metric/grm" } };
+export const ExpenseRatio: Story = { args: { entry: "/projects/p1/investment/metric/expense-ratio" } };
+export const FlipRoi: Story = { name: "Flip ROI", args: { entry: "/projects/p1/investment/metric/flip-roi" } };
+export const FlipRoiYear: Story = { name: "Flip ROI per year", args: { entry: "/projects/p1/investment/metric/flip-roi-year" } };
+export const ArvMargin: Story = { name: "Margin on the ARV", args: { entry: "/projects/p1/investment/metric/arv-margin" } };
+export const RuleOf70: Story = { name: "The 70% rule", args: { entry: "/projects/p1/investment/metric/rule-70" } };
+export const BreakEvenSale: Story = { args: { entry: "/projects/p1/investment/metric/break-even-sale" } };
+export const RoeBeforeFirstRent: Story = { args: { entry: "/projects/p1/investment/metric/roe", returns: "beforeRent" } };
+export const NetProfitPart: Story = { name: "Net profit part", args: { entry: "/projects/p1/investment/part/profit", lines: "rehab" } };
 export const AcquisitionLoansAtClosing: Story = {
   name: "Acquisition, loans paid out at closing",
   args: { entry: "/projects/p1/investment/returns/acquisition", lines: "maple", returns: "closingPaid" },

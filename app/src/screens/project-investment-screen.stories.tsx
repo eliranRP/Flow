@@ -63,7 +63,7 @@ type Args = {
   data?: keyof typeof DATA;
   returns?: keyof typeof RETURNS;
   rent?: boolean;
-  sheet?: "purchase" | "arv" | "value" | "land" | "units" | "tax" | null;
+  sheet?: "purchase" | "arv" | "value" | "land" | "units" | "tax" | "selling" | null;
   info?: InfoKey | null;
   how?: boolean;
   tab?: InvestmentTab;
@@ -138,6 +138,8 @@ export const CashFlowInfoSheet: Story = { args: { rent: true, info: "cash_flow" 
 export const EquityInfoSheet: Story = { args: { rent: true, info: "equity_today" } };
 export const EditUnits: Story = { args: { rent: true, sheet: "units" } };
 export const TaxBracketSheet: Story = { args: { rent: true, sheet: "tax", returns: "missing" } };
+/** FLOW-1068: a renovation's costs of selling, the default 8% until the owner sets them. */
+export const SellingCostSheet: Story = { args: { sheet: "selling" } };
 export const AllCashOut: Story = { args: { rent: true, returns: "cashOut" } };
 /** FLOW-1025: all the cash out but losing money: the loss, not ∞, and how long the cash out lasts. */
 export const AllCashOutLosing: Story = { args: { rent: true, returns: "cashOutLosing" } };

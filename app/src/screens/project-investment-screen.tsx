@@ -42,10 +42,10 @@ import {
   rentBandFigure,
   type InvestmentKind,
 } from "./project-returns-cards";
-import { usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
+import { SELLING_COST_DEFAULT_BP, usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
 import type { EditField, InfoKey } from "./project-returns-info";
 import { editFieldOf, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
-import { HowSheet, ReturnInfoSheet, TaxBracketSheet } from "./project-returns-sheets";
+import { HowSheet, PERCENT_KINDS, PercentSheet, ReturnInfoSheet } from "./project-returns-sheets";
 
 /** The segment under the parts: the property's figures, the metrics, the loans. */
 export type InvestmentTab = "property" | "metrics" | "loans";
@@ -125,7 +125,13 @@ function restorePatch(field: InvestmentField, before: InvestmentFigures, extras:
   return { value_minor: toNumber(before.valueMinor), value_date: before.valueMinor == null ? null : before.valueDate };
 }
 
-type OpenSheet = InvestmentField | "tax" | null;
+/** `tax` and `selling` are the two percent sheets (FLOW-1068). */
+type OpenSheet = InvestmentField | "tax" | "selling" | null;
+
+/** The sheet an input opens: a figure's own, or one of the percent sheets. */
+function sheetOf(field: EditField): Exclude<OpenSheet, null> {
+  return field === "tax_bracket" ? "tax" : field === "selling_cost" ? "selling" : field;
+}
 
 const INFO_LAYER = "investment-info-";
 const INVESTMENT_FIELDS: readonly string[] = ["purchase", "arv", "value", "land", "units"];
@@ -152,6 +158,41 @@ function landFromSuggestion(r: PropertyReturns): PropertyReturns {
     inputs: { ...r.inputs, landMinor: s.minor, landSource: "books", landAccount: { id: s.accountId, name: s.name }, landSuggestion: null },
     missing: r.missing.filter((input) => input !== "land"),
   };
+}
+
+/**
+ * Sample mode sets the costs of selling the way the server reads them (decision 0261): a percent of
+ * the ARV, half to even, out of the net profit, and the renovation's figures that rest on it; null is
+ * the default 8%.
+ */
+export function sellingSample(r: PropertyReturns, bp: number | null): PropertyReturns {
+  const sellingBp = bp ?? SELLING_COST_DEFAULT_BP;
+  const arv = r.inputs.arvMinor;
+  const selling = arv == null ? null : divHalfEven(arv * BigInt(sellingBp), 10_000n);
+  const before = r.deal.sellingCostMinor;
+  const net = r.deal.netProfitMinor == null || selling == null || before == null ? r.deal.netProfitMinor : r.deal.netProfitMinor + before - selling;
+  const moneyIn = r.equity.moneyInMinor;
+  const costs = r.inputs.purchaseMinor == null || r.inputs.rehabMinor == null ? null : r.inputs.purchaseMinor + r.inputs.rehabMinor - r.deal.holdingMinor;
+  const roi = net == null || moneyIn == null || moneyIn <= 0n ? null : Number(net * 10_000n / moneyIn);
+  const days = r.deal.heldDays;
+  return {
+    ...r,
+    deal: { ...r.deal, sellingCostBp: sellingBp, sellingCostDefault: bp == null, sellingCostMinor: selling, netProfitMinor: net },
+    metrics: {
+      ...r.metrics,
+      flipRoiBp: roi,
+      flipRoiYearBp: roi == null || days == null || days <= 0 ? null : Math.round((roi * 365) / days),
+      arvMarginBp: net == null || arv == null || arv <= 0n ? null : Number(net * 10_000n / arv),
+      breakEvenSaleMinor: costs == null ? null : divHalfEven(costs * 10_000n, BigInt(10_000 - sellingBp)),
+    },
+  };
+}
+
+/** a ÷ b rounded half to even, for amounts at or above zero. */
+function divHalfEven(a: bigint, b: bigint): bigint {
+  const q = a / b;
+  const twice = (a % b) * 2n;
+  return twice > b || (twice === b && q % 2n === 1n) ? q + 1n : q;
 }
 
 /** The figures of a project with no investment read: its loans only (an overhead project, an older payload). */
@@ -236,7 +277,7 @@ export function ProjectInvestmentScreen({
   const [sheet, setSheet] = useState<OpenSheet>(() => {
     if (readOnly) return null;
     if (initialSheet != null) return initialSheet;
-    if (linked != null) return linked === "tax_bracket" ? "tax" : linked;
+    if (linked != null) return sheetOf(linked);
     return null;
   });
   const [editField, setEditField] = useState<InvestmentField>(isInvestmentField(sheet) ? sheet : "purchase");
@@ -270,12 +311,9 @@ export function ProjectInvestmentScreen({
     arrived.current = location.key;
     const field = editFieldOf(new URLSearchParams(location.search).get("edit"));
     if (field == null || readOnly) return;
-    if (field === "tax_bracket") {
-      setSheet("tax");
-      return;
-    }
-    setEditField(field);
-    setSheet(field);
+    const next = sheetOf(field);
+    if (isInvestmentField(next)) setEditField(next);
+    setSheet(next);
   }, [location.key, location.search, readOnly]);
   // The key is consumed on arrival and leaves the URL (a replace), so Back to this page's entry URL, the way the
   // sheet came back, does not open it again (the owner, 2026-11-05: "every time I return to this page the drawer
@@ -407,6 +445,37 @@ export function ProjectInvestmentScreen({
     return true;
   }, [commitBracket, toast]);
 
+  // FLOW-1068: the costs of selling, a percent of the ARV; null goes back to the default 8%.
+  const sellingRef = useRef<number | null>(null);
+  const saveSelling = useWrite<number | null>({
+    failure: (error) => ((error as { code?: string }).code === "42501" ? { message: INVESTMENT_REFUSED, retry: false } : "לא הצלחנו לשמור את עלויות המכירה."),
+    keys: ["project"],
+    run: async (bp) => {
+      const supabase = getSupabase();
+      if (!supabase || projectId === "") throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_project_investment", { p_project_id: projectId, p_patch: { selling_cost_bp: bp } }));
+    },
+  });
+  const commitSelling = useCallback(async (bp: number | null): Promise<boolean> => {
+    if (sampled) {
+      setSampleRet((current) => (current == null ? current : sellingSample(current, bp)));
+      return true;
+    }
+    try {
+      await saveSelling.mutateAsync(bp);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [sampled, saveSelling]);
+  const onSaveSelling = useCallback(async (bp: number | null): Promise<boolean> => {
+    const before = sellingRef.current;
+    if (!(await commitSelling(bp))) return false;
+    toast.show({ message: "עלויות המכירה עודכנו", action: "ביטול", onAction: () => { void commitSelling(before); } });
+    return true;
+  }, [commitSelling, toast]);
+  sellingRef.current = returns == null || returns.deal.sellingCostDefault ? null : returns.deal.sellingCostBp;
+
   const currency = data?.figures?.currency ?? data?.loans[0]?.currency ?? companyCurrency;
   const figures = data == null ? null : (hasFigures ? data.figures : loansOnly(currency, data));
   const extras: PropertyExtras | null = returns == null ? null : {
@@ -430,12 +499,9 @@ export function ProjectInvestmentScreen({
     : editField === "land" ? (extras?.landMinor ?? null)
     : (extras == null ? null : BigInt(extras.units));
   const openEdit = (field: EditField) => {
-    if (field === "tax_bracket") {
-      setSheet("tax");
-      return;
-    }
-    setEditField(field);
-    setSheet(field);
+    const next = sheetOf(field);
+    if (isInvestmentField(next)) setEditField(next);
+    setSheet(next);
   };
   const links = pageResolver(base, search);
   const resolve: Resolve = (target) => (target.kind === "edit" ? { onClick: () => { openEdit(target.field); } } : links(target));
@@ -569,7 +635,7 @@ export function ProjectInvestmentScreen({
               landBusy={saveLand.isPending}
             />
           ) : shownTab === "metrics" ? (
-            returns == null ? <ListSkeleton /> : <MetricsGroup returns={returns} base={base} search={search} onAdd={onAdd} />
+            returns == null ? <ListSkeleton /> : <MetricsGroup kind={kind} returns={returns} base={base} search={search} onAdd={onAdd} />
           ) : loansGroup}
         </div>
       </div>
@@ -599,11 +665,19 @@ export function ProjectInvestmentScreen({
             returnFocusRef={rows[editField]}
             onSave={onSave}
           />
-          <TaxBracketSheet
+          <PercentSheet
+            kind={PERCENT_KINDS.tax}
             open={sheet === "tax"}
             onOpenChange={(next) => { setSheet(next ? "tax" : null); }}
             bp={returns?.inputs.taxBracketBp ?? null}
             onSave={onSaveBracket}
+          />
+          <PercentSheet
+            kind={PERCENT_KINDS.selling}
+            open={sheet === "selling"}
+            onOpenChange={(next) => { setSheet(next ? "selling" : null); }}
+            bp={returns == null || returns.deal.sellingCostDefault ? null : returns.deal.sellingCostBp}
+            onSave={onSaveSelling}
           />
         </>
       )}

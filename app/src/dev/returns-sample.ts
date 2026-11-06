@@ -16,6 +16,13 @@ const usd = (dollars: number) => BigInt(dollars) * 100n;
 
 const cat = (id: string, name: string, dollars: number, count: number) => ({ id, name, minor: usd(dollars), count });
 
+/** FLOW-1068: a sample with no deal figures: no ARV, and the server's new metrics not worked out. */
+const NO_DEAL: PropertyReturns["deal"] = { sellingCostBp: 800, sellingCostDefault: true, sellingCostMinor: null, holdingMinor: 0n, netProfitMinor: null, acquiredOn: null, heldDays: null, lifeCashFlowMinor: 0n };
+const NO_DEAL_METRICS = {
+  roeBp: null, roiSincePurchaseBp: null, equityMultipleMilli: null, breakEvenOccupancyBp: null, expenseRatioBp: null, grmMilli: null, ltvBp: null,
+  flipRoiBp: null, flipRoiYearBp: null, arvMarginBp: null, rule70Minor: null, breakEvenSaleMinor: null,
+} satisfies Partial<PropertyReturns["metrics"]>;
+
 export const birchLaneReturns: PropertyReturns = {
   currency: "USD",
   from: "2025-11-02",
@@ -98,7 +105,36 @@ export const birchLaneReturns: PropertyReturns = {
     allCashOut: false,
     coverMonths: null,
   },
-  metrics: { cashOnCashBp: 1157, capRateBp: 650, dscrMilli: 1625, perUnitMonthMinor: usd(175) },
+  // FLOW-1068: a renovation at an ARV of $310,000 nets $37,100 after 8% selling costs ($24,800), the
+  // purchase, the renovation and $1,800 of holding; as a rental, the deal metrics of the same figures.
+  deal: {
+    sellingCostBp: 800,
+    sellingCostDefault: true,
+    sellingCostMinor: usd(24_800),
+    holdingMinor: usd(-1_800),
+    netProfitMinor: usd(37_100),
+    acquiredOn: "2026-01-10",
+    heldDays: 296,
+    lifeCashFlowMinor: usd(2_500),
+  },
+  metrics: {
+    cashOnCashBp: 1157,
+    capRateBp: 650,
+    dscrMilli: 1625,
+    perUnitMonthMinor: usd(175),
+    roeBp: 6582,
+    roiSincePurchaseBp: -1047,
+    equityMultipleMilli: 895,
+    breakEvenOccupancyBp: 7500,
+    expenseRatioBp: 3500,
+    grmMilli: 7708,
+    ltvBp: 8750,
+    flipRoiBp: 10220,
+    flipRoiYearBp: 12602,
+    arvMarginBp: 1197,
+    rule70Minor: usd(-29_300),
+    breakEvenSaleMinor: 26_967_391n,
+  },
 };
 
 /**
@@ -141,7 +177,7 @@ export const birchLaneReturnsNegative: PropertyReturns = {
     counts: { ...birchLaneReturns.statement.counts, opex: 29 },
   },
   sources: { ...birchLaneReturns.sources, cashFlowMinor: usd(-3_400), totalMinor: 1_214_545n, totalBp: 3346 },
-  metrics: { cashOnCashBp: -937, capRateBp: 333, dscrMilli: 833, perUnitMonthMinor: -14_167n },
+  metrics: { ...birchLaneReturns.metrics, cashOnCashBp: -937, capRateBp: 333, dscrMilli: 833, perUnitMonthMinor: -14_167n },
 };
 
 /**
@@ -223,7 +259,7 @@ export const birchLaneReturnsBeforeRent: PropertyReturns = {
     byCategory: { ...birchLaneReturns.statement.byCategory, income: [], opex: [], debt_service: [], capex: [] },
   },
   sources: { ...birchLaneReturns.sources, cashFlowMinor: 0n, principalMinor: usd(600), totalMinor: 1_434_545n, totalBp: 3952 },
-  metrics: { cashOnCashBp: 0, capRateBp: 0, dscrMilli: null, perUnitMonthMinor: 0n },
+  metrics: { ...birchLaneReturns.metrics, cashOnCashBp: 0, capRateBp: 0, dscrMilli: null, perUnitMonthMinor: 0n },
 };
 
 /**
@@ -306,7 +342,8 @@ export const mapleCourtSub2Returns: PropertyReturns = {
     allCashOut: false,
     coverMonths: null,
   },
-  metrics: { cashOnCashBp: 317, capRateBp: 389, dscrMilli: 1167, perUnitMonthMinor: 16_667n },
+  deal: NO_DEAL,
+  metrics: { ...NO_DEAL_METRICS, cashOnCashBp: 317, capRateBp: 389, dscrMilli: 1167, perUnitMonthMinor: 16_667n },
 };
 
 function row(id: string, supplier: string, date: string, dollars: number, categoryId: string, categoryName: string, source = "mercury"): ReturnLineRow {
@@ -444,7 +481,7 @@ export const birchLaneReturnsAnnualized: PropertyReturns = {
   ...birchLaneReturns,
   annualizedFrom: "2026-04-01",
   earningDays: 215,
-  metrics: { cashOnCashBp: 1964, capRateBp: 1104, dscrMilli: null, perUnitMonthMinor: usd(594) },
+  metrics: { ...birchLaneReturns.metrics, cashOnCashBp: 1964, capRateBp: 1104, dscrMilli: null, perUnitMonthMinor: usd(594) },
 };
 
 /**

@@ -9,13 +9,12 @@ import { ChevronIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { formatDisplay } from "../ui/date-math";
 import { percentText, type PropertyReturns } from "./project-returns-data";
+import { FLIP_GROUPS, RENT_GROUPS, anyMetricCaption, anyMetricTitle, anyMetricValue, type AnyMetricKey, type MetricGroup } from "./project-returns-deal";
 import {
   BEFORE_FIRST_RENT,
   FEW_DAYS,
   HISTORY_HINT,
   LOSS_YEAR,
-  METRIC_KEYS,
-  METRIC_TITLES,
   MISSING_HISTORY,
   beforeFirstRent,
   cashOutMinor,
@@ -24,14 +23,12 @@ import {
   fewDaysText,
   firstMissing,
   infiniteTotal,
-  metricCaption,
-  metricValue,
   missingHint,
   purchaseRows,
+  sellingText,
   type EditField,
   type FigureValue,
   type InfoKey,
-  type MetricKey,
   type Target,
 } from "./project-returns-info";
 import { AllCashOutMeta, FigureText, InfinityFigure, withParam, type Resolve, type RowAction } from "./project-returns-parts";
@@ -104,12 +101,16 @@ export function rentParts(r: PropertyReturns): Part[] {
   ];
 }
 
-/** A renovation's profit: what it cost (the purchase, the renovation so far), and what is left at the ARV. */
+/**
+ * A renovation's profit (FLOW-1068): what it cost (the purchase, the renovation so far, the holding
+ * costs and the costs of selling), and what is left at the ARV, the net profit.
+ */
 export function flipParts(r: PropertyReturns): Part[] {
   const [purchase] = purchaseRows(r, "", true);
   const rehab = r.inputs.rehabMinor;
-  const forced = r.equity.forcedMinor;
-  const profit: FigureValue = forced != null ? { kind: "money", minor: forced, income: forced > 0n } : sourceValue(null, r, ["arv", "purchase"]);
+  const net = r.deal.netProfitMinor;
+  const selling = r.deal.sellingCostMinor;
+  const profit: FigureValue = net != null ? { kind: "money", minor: net, income: net > 0n } : sourceValue(null, r, ["arv", "purchase"]);
   return [
     {
       key: "purchase",
@@ -121,16 +122,31 @@ export function flipParts(r: PropertyReturns): Part[] {
       shade: 1,
     },
     { key: "rehab", label: "שיפוץ עד היום", hint: "מחושב מההוצאות", value: rehab == null ? { kind: "text", text: "לא מחושב" } : { kind: "money", minor: -rehab }, open: { kind: "target", target: { kind: "part", part: "rehab" } }, shade: 2 },
-    { key: "profit", label: "רווח צפוי", hint: missingNote(profit) ?? "ARV פחות קנייה ושיפוץ", value: profit, open: { kind: "target", target: { kind: "part", part: "forced" } }, shade: 3 },
+    // No holding costs (all of them counted in the renovation): no part of ₪0.
+    ...(r.deal.holdingMinor === 0n ? [] : [
+      // Only the holding costs rehab does not count: no list of its own adds up to it (the review of #1012).
+      { key: "holding", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: { kind: "money", minor: r.deal.holdingMinor }, open: null, shade: 3 } satisfies Part,
+    ]),
+    {
+      key: "selling",
+      label: "עלויות מכירה",
+      hint: `${sellingText(r)} מה־ARV · ${r.deal.sellingCostDefault ? "הערכה" : "שלך"} · עריכה`,
+      value: selling == null ? { kind: "missing", add: "arv" } : { kind: "money", minor: -selling },
+      // With no ARV the costs of selling wait for it: the part opens the ARV's sheet.
+      open: { kind: "target", target: { kind: "edit", field: selling == null ? "arv" : "selling_cost" } },
+      shade: 4,
+    },
+    { key: "profit", label: "רווח נקי צפוי", hint: missingNote(profit) ?? "מה שנשאר אחרי כל העלויות", value: profit, open: { kind: "target", target: { kind: "part", part: "profit" } }, shade: 5 },
   ];
 }
 
 /** The bar's shares for a renovation: each part's size against the ARV (the costs drawn as their size). */
 function flipShares(parts: readonly Part[]): number[] {
   const sizes = parts.map((part) => (part.value.kind === "money" ? Number(part.value.minor < 0n ? -part.value.minor : part.value.minor) : 0));
-  const profit = parts[2]?.value;
+  const last = parts.length - 1;
+  const profit = parts[last]?.value;
   // A loss draws no profit part: the costs alone fill the bar.
-  if (profit?.kind === "money" && profit.minor < 0n) sizes[2] = 0;
+  if (profit?.kind === "money" && profit.minor < 0n) sizes[last] = 0;
   const sum = sizes.reduce((total, size) => total + size, 0);
   return sizes.map((size) => (sum === 0 ? 0 : Math.round((size / sum) * 100)));
 }
@@ -232,20 +248,24 @@ export function rentBandFigure(r: PropertyReturns): BandFigure {
   return { label: "תשואה כוללת · שנה · על הכסף בעסקה", short: "תשואה כוללת", figure, sub, partial, bar };
 }
 
-/** A renovation: what the sale at the ARV leaves after the purchase and the renovation so far. */
+/** A renovation (FLOW-1068): the net profit the sale at the ARV leaves, and its ROI on the cash in the deal. */
 export function flipBandFigure(r: PropertyReturns): BandFigure {
-  const forced = r.equity.forcedMinor;
+  const net = r.deal.netProfitMinor;
   const missing = firstMissing(r, ["arv", "purchase"]);
-  const figure: ReactNode = forced != null
-    ? <Amount agorot={forced} currency={r.currency} loss={forced < 0n} size="hero" compact />
+  const figure: ReactNode = net != null
+    ? <Amount agorot={net} currency={r.currency} loss={net < 0n} size="hero" compact />
     : <span className="ui-pinv-band-note t-name">{missing == null ? "לא מחושב" : "חסר"}</span>;
+  const roi = anyMetricValue("flip-roi", r);
+  const sub: ReactNode = net == null
+    ? (missing == null ? "ARV פחות כל העלויות" : missingHint(missing))
+    : roi.kind === "text" ? <>{/* An isolate, so the line stays right to left though it starts with Latin. */}<bdi dir="ltr">ROI</bdi>{" "}<bdi dir="ltr" className="ui-num">{roi.text}</bdi>{" על הכסף בעסקה"}</> : "ARV פחות כל העלויות";
   return {
-    label: "רווח צפוי במכירה",
-    short: "רווח צפוי",
+    label: "רווח נקי צפוי במכירה",
+    short: "רווח נקי צפוי",
     figure,
-    sub: missing == null ? "ARV פחות קנייה ושיפוץ" : missingHint(missing),
+    sub,
     partial: null,
-    bar: forced == null ? null : <Amount agorot={forced} currency={r.currency} loss={forced < 0n} presentation="detail" />,
+    bar: net == null ? null : <Amount agorot={net} currency={r.currency} loss={net < 0n} presentation="detail" />,
   };
 }
 
@@ -259,11 +279,9 @@ export function bandRows(kind: InvestmentKind, r: PropertyReturns): BandRow[] {
       { key: "equity", label: "הון עצמי היום", value: sourceValue(r.equity.todayMinor, r, ["value"]), open: { kind: "info", key: "equity_today" } },
     ];
   }
-  const purchase = r.inputs.purchaseMinor;
-  const rehab = r.inputs.rehabMinor;
   return [
     { key: "arv", label: "שווי אחרי שיפוץ (ARV)", value: r.inputs.arvMinor == null ? { kind: "missing", add: "arv" } : { kind: "money", minor: r.inputs.arvMinor }, open: { kind: "target", target: { kind: "edit", field: "arv" } } },
-    { key: "cost", label: "עלות כוללת", value: purchase == null || rehab == null ? sourceValue(null, r, ["purchase"]) : { kind: "money", minor: purchase + rehab }, open: { kind: "target", target: { kind: "part", part: "rehab" } } },
+    { key: "money-in", label: "כסף בעסקה", value: sourceValue(r.equity.moneyInMinor, r, ["purchase"]), open: { kind: "target", target: { kind: "part", part: "money-in" } } },
   ];
 }
 
@@ -294,6 +312,7 @@ const MISSING_TITLES: Record<EditField, string> = {
   tax_bracket: "חסרה מדרגת מס לחיסכון מס",
   arv: "חסר ARV לחישוב הרווח הצפוי",
   units: "חסר מספר יחידות",
+  selling_cost: "חסרות עלויות מכירה",
 };
 
 /**
@@ -333,18 +352,19 @@ export function investmentAttentionRows(kind: InvestmentKind, r: PropertyReturns
   return rows;
 }
 
-function MetricRow({ metric, r, href, onAdd }: { metric: MetricKey; r: PropertyReturns; href: string; onAdd: ((field: EditField) => void) | undefined }) {
-  const value = metricValue(metric, r);
+function MetricRow({ metric, r, href, onAdd }: { metric: AnyMetricKey; r: PropertyReturns; href: string; onAdd: ((field: EditField) => void) | undefined }) {
+  const value = anyMetricValue(metric, r);
   // FLOW-459: a missing input shows only הוספה; the hint says what is missing.
   const add = value.kind === "missing" && onAdd != null ? value.add : null;
+  const negative = (value.kind === "money" && value.minor < 0n) || (value.kind === "text" && value.text.startsWith("−"));
   const body: ReactNode = (
     <>
       <span className="ui-pinv-row-text">
-        <span className="ui-pinv-row-title">{METRIC_TITLES[metric]}</span>
-        <span className="ui-pinv-hint">{add == null ? metricCaption(metric, r) : missingHint(add)}</span>
+        <span className="ui-pinv-row-title">{anyMetricTitle(metric)}</span>
+        <span className="ui-pinv-hint">{add == null ? anyMetricCaption(metric, r) : missingHint(add)}</span>
       </span>
-      <span className="ui-pinv-value ui-ret-fixed-metric">
-        {add == null ? <FigureText value={value} currency={r.currency} /> : <span className="ui-ret-add">הוספה</span>}
+      <span className={negative ? "ui-pinv-value ui-ret-fixed-metric ui-loss" : "ui-pinv-value ui-ret-fixed-metric"}>
+        {add == null ? <FigureText value={value} currency={r.currency} loss /> : <span className="ui-ret-add">הוספה</span>}
       </span>
       <span className="ui-pinv-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
     </>
@@ -356,16 +376,29 @@ function MetricRow({ metric, r, href, onAdd }: { metric: MetricKey; r: PropertyR
   return <Link to={href} className="ui-pinv-row m-press">{body}</Link>;
 }
 
-/** "מדדים": today's numbers only, no targets. Each opens its calculation page. */
-export function MetricsGroup({ returns: r, base, search, onAdd }: { returns: PropertyReturns; base: string; search: string; onAdd: ((field: EditField) => void) | undefined }) {
+function MetricSection({ group, r, base, search, onAdd }: { group: MetricGroup; r: PropertyReturns; base: string; search: string; onAdd: ((field: EditField) => void) | undefined }) {
   const titleId = useId();
   return (
     <section className="ui-month ui-pinv-group" aria-labelledby={titleId}>
-      <GroupHead id={titleId} title="מדדים" summary={<bdi dir="ltr">{String(METRIC_KEYS.length)}</bdi>} />
-      {METRIC_KEYS.map((metric) => (
+      <GroupHead id={titleId} title={group.title} summary="" />
+      {group.metrics.map((metric) => (
         <MetricRow key={metric} metric={metric} r={r} href={`${base}/metric/${metric}${search}`} onAdd={onAdd} />
       ))}
     </section>
+  );
+}
+
+/**
+ * "מדדים" (FLOW-1068, boards V3-Investment and V3-Investment-Rent): today's numbers, no targets, in
+ * groups by kind: a rental's return, risk and price, a renovation's return and price. Each opens its
+ * calculation page.
+ */
+export function MetricsGroup({ kind, returns: r, base, search, onAdd }: { kind: InvestmentKind; returns: PropertyReturns; base: string; search: string; onAdd: ((field: EditField) => void) | undefined }) {
+  const groups = kind === "rent" ? RENT_GROUPS : FLIP_GROUPS;
+  return (
+    <>
+      {groups.map((group) => <MetricSection key={group.key} group={group} r={r} base={base} search={search} onAdd={onAdd} />)}
+    </>
   );
 }
 

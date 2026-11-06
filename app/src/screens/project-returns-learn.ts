@@ -1,5 +1,6 @@
 import type { ReturnLine } from "./project-returns-data";
-import type { InfoKey, MetricKey, PartKey } from "./project-returns-info";
+import type { AnyMetricKey } from "./project-returns-deal";
+import type { InfoKey, PartKey } from "./project-returns-info";
 
 /**
  * FLOW-462: the ⓘ beside each returns page's title. For every figure an investor reads on its own
@@ -21,7 +22,20 @@ export type LearnKey =
   | "equity"
   | "forced"
   | "building"
-  | "rehab";
+  | "rehab"
+  | "profit"
+  | "roi-since"
+  | "roe"
+  | "multiple"
+  | "break-even"
+  | "ltv"
+  | "grm"
+  | "expense-ratio"
+  | "flip-roi"
+  | "flip-roi-year"
+  | "arv-margin"
+  | "rule-70"
+  | "break-even-sale";
 
 export type Learn = {
   /** One line: what the figure is. */
@@ -53,6 +67,19 @@ export const LEARN_ENGLISH: Record<LearnKey, string | null> = {
   forced: "Forced appreciation",
   building: "Depreciable basis",
   rehab: "Rehab costs",
+  profit: "Net profit",
+  "roi-since": "Return on investment (ROI)",
+  roe: "Return on equity (ROE)",
+  multiple: "Equity multiple",
+  "break-even": "Break-even occupancy",
+  ltv: "Loan to value (LTV)",
+  grm: "Gross rent multiplier (GRM)",
+  "expense-ratio": "Operating expense ratio",
+  "flip-roi": "Return on investment (ROI)",
+  "flip-roi-year": "Annualized ROI",
+  "arv-margin": "Profit margin",
+  "rule-70": "The 70% rule",
+  "break-even-sale": "Break-even sale price",
 };
 
 /** The English name for the sheet's subtitle, in an LTR isolate so its brackets read right in a Hebrew sheet. */
@@ -132,6 +159,71 @@ export const LEARN: Record<LearnKey, Learn> = {
     read: "נכנס לעלות הבניין ולפחת. שיפוץ לפני השכירות הראשונה נכנס לכסף בעסקה, ואחריו מוריד את התזרים של אותה שנה.",
     goal: "עונה על: כמה השקעתי בשיפור הנכס. בהשוואה ל־ARV מראה אם השיפוץ השתלם.",
   },
+  profit: {
+    what: "מה שיישאר במכירה אחרי כל העלויות: הקנייה, השיפוץ, ההחזקה (ריבית, ביטוח, ארנונה) ועלויות המכירה (תיווך וסגירה).",
+    read: "עלויות המכירה הן הערכה של 8% מה־ARV עד שמשנים אותן. רווח שנראה טוב רק בלי עלויות המכירה וההחזקה הוא עסקה צפופה.",
+    goal: "עונה על: כמה כסף העסקה תשאיר לי בסוף. הבסיס ל־ROI של העסקה.",
+  },
+  "roi-since": {
+    what: "כמה הרווחת על הכסף שהכנסת, מאז הקנייה: התזרים שחזר והון עצמי היום, פחות הכסף בעסקה, חלקי הכסף בעסקה.",
+    read: "כולל את מה שעוד נעול בנכס (ההון), לא רק מזומן. 100% אומר שהכסף הוכפל. לא מחולק לשנים, ולכן נכס שמוחזק הרבה זמן יראה מספר גבוה יותר.",
+    goal: "עונה על: כמה התעשרתי מהעסקה הזאת עד היום, ביחס למה שהכנסתי.",
+  },
+  roe: {
+    what: "התשואה הכוללת של השנה חלקי ההון העצמי בנכס היום (שווי פחות הלוואות).",
+    read: "ההון גדל עם עליית הערך והחזר הקרן, ולכן ROE יורד עם השנים. כשהוא נמוך ממה שהכסף היה מרוויח במקום אחר, ההון לא עובד מספיק: שווה לבדוק מיחזור או מכירה.",
+    goal: "עונה על: האם ההון שתקוע בנכס עדיין עובד בשבילי.",
+  },
+  multiple: {
+    what: "התזרים שחזר והון עצמי היום, חלקי הכסף שהכנסת לעסקה.",
+    read: "1.0x: יצאת באפס. 2.0x: הכסף הוכפל. לא מתחשב בזמן, ולכן כדאי לקרוא אותו לצד התשואה השנתית.",
+    goal: "עונה על: כמה דולרים חזרו או נבנו על כל דולר שהשקעתי.",
+  },
+  "break-even": {
+    what: "הוצאות התפעול ותשלומי ההלוואה חלקי ההכנסות: איזה חלק מהשכירות צריך כדי לא להפסיד.",
+    read: "ככל שנמוך יותר, יש יותר מרווח לחודשים ריקים. מעל 85% בערך: כל חודש ריק כמעט מוריד את התזרים מתחת לאפס.",
+    goal: "עונה על: כמה ריקנות הנכס יכול לספוג לפני שאני משלים מהכיס.",
+  },
+  ltv: {
+    what: "יתרת ההלוואות חלקי שווי הנכס היום.",
+    read: "ככל שגבוה יותר, יש פחות הון בנכס ויותר סיכון אם המחירים יורדים. מלווים למשקיעים מממנים לרוב עד 70% עד 80%. מתחת לזה יש מקום למיחזור.",
+    goal: "עונה על: כמה ממונף הנכס, והאם אפשר להוציא ממנו הון.",
+  },
+  grm: {
+    what: "מחיר הרכישה חלקי השכירות של שנה.",
+    read: "כמה שנות שכירות (לפני הוצאות) המחיר שווה. נמוך יותר: הנכס זול ביחס לשכירות. טוב להשוואה מהירה בין נכסים באותו אזור, לא במקום NOI.",
+    goal: "עונה על: האם שילמתי מחיר סביר ביחס לשכירות.",
+  },
+  "expense-ratio": {
+    what: "הוצאות התפעול חלקי ההכנסות.",
+    read: "כלל אצבע של משקיעים: בסביבות 35% עד 50% לבית להשכרה. נמוך מאוד יכול לרמוז שחסרות הוצאות בספרים, גבוה מאוד שהנכס יקר לתחזוקה.",
+    goal: "עונה על: כמה מהשכירות הולך להחזקת הנכס.",
+  },
+  "flip-roi": {
+    what: "הרווח הנקי הצפוי חלקי הכסף שלך בעסקה.",
+    read: "ככל שהמימון מכסה יותר, הכסף בעסקה קטן וה־ROI עולה, אבל גם הסיכון. כשכל הכסף בעסקה חזר מהמימון, אין על מה לחלק.",
+    goal: "עונה על: כמה הכסף שלי מרוויח בעסקה הזאת.",
+  },
+  "flip-roi-year": {
+    what: "ה־ROI של העסקה, מחולק לשנה לפי הזמן מהקנייה עד היום.",
+    read: "עסקה של 20% בחצי שנה שווה כ־40% בשנה. ככל שהעסקה נמשכת, ה־ROI השנתי יורד, גם אם הרווח לא משתנה.",
+    goal: "עונה על: איך העסקה משתווה לעסקאות באורך אחר או להשקעה אחרת.",
+  },
+  "arv-margin": {
+    what: "הרווח הנקי הצפוי חלקי השווי אחרי שיפוץ.",
+    read: "המרווח לטעויות: אם המחיר במכירה יורד ביותר מזה, העסקה בהפסד. משקיעים מחפשים לרוב 10% ומעלה.",
+    goal: "עונה על: כמה מקום יש לטעות בהערכת ה־ARV.",
+  },
+  "rule-70": {
+    what: "כלל אצבע של משקיעים בשיפוץ: לא לשלם יותר מ־70% מה־ARV פחות עלות השיפוץ.",
+    read: "חיובי: קנית מתחת לכלל ויש מקום לעלויות ולרווח. שלילי: שילמת מעליו, וכל טעות בשיפוץ או במכירה יורדת ישר מהרווח.",
+    goal: "עונה על: האם המחיר ששולם השאיר מרווח ביטחון.",
+  },
+  "break-even-sale": {
+    what: "המחיר שבו המכירה מכסה בדיוק את כל העלויות ואת עלויות המכירה, בלי רווח.",
+    read: "ככל שרחוק יותר מה־ARV, יש יותר מקום לירידת מחיר. מכירה מתחת לזה היא הפסד.",
+    goal: "עונה על: עד כמה המחיר יכול לרדת לפני שאני מפסיד.",
+  },
 };
 
 /** The figure ⓘ sheets on the total-return card: each ends with how to read the figure. */
@@ -149,11 +241,15 @@ export const INFO_LEARN: Record<InfoKey, LearnKey> = {
 export const PAGE_LEARN = {
   statement: "cash-flow",
   line: { principal: "principal" },
-  metric: { coc: "coc", "cap-rate": "cap-rate", dscr: "dscr", "per-unit": "per-unit" },
-  part: { building: "building", "money-in": "money-in", forced: "forced", rehab: "rehab" },
+  metric: {
+    coc: "coc", "cap-rate": "cap-rate", dscr: "dscr", "per-unit": "per-unit",
+    "roi-since": "roi-since", roe: "roe", multiple: "multiple", "break-even": "break-even", ltv: "ltv", grm: "grm", "expense-ratio": "expense-ratio",
+    "flip-roi": "flip-roi", "flip-roi-year": "flip-roi-year", "arv-margin": "arv-margin", "rule-70": "rule-70", "break-even-sale": "break-even-sale",
+  },
+  part: { building: "building", "money-in": "money-in", rehab: "rehab", profit: "profit" },
 } as const satisfies {
   statement: LearnKey;
   line: Partial<Record<ReturnLine, LearnKey>>;
-  metric: Record<MetricKey, LearnKey>;
+  metric: Record<AnyMetricKey, LearnKey>;
   part: Record<PartKey, LearnKey>;
 };

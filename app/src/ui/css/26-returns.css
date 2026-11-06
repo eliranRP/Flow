@@ -36,6 +36,11 @@
   background: var(--color-text-muted);
 }
 
+/* FLOW-1068 (board V3-Investment, a renovation): the net profit, the fifth part, in the income green. */
+.ui-ret-shade-5 {
+  background: var(--color-income);
+}
+
 .ui-ret-swatch {
   flex: none;
   inline-size: var(--space-2);
@@ -57,6 +62,11 @@
   min-inline-size: calc(var(--space-10) + var(--space-4));
   font-variant-numeric: var(--font-numerals);
   text-align: end;
+}
+
+/* FLOW-1068: a metric under zero (ROI since the purchase, the 70% rule) reads in the loss colour. */
+.ui-pinv-value.ui-ret-fixed-metric.ui-loss {
+  color: var(--color-bad);
 }
 
 /* The ⓘ: a 44px target around an 18px icon, pulled in so the row keeps its height. */

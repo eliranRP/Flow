@@ -280,6 +280,6 @@ export function ReturnLinesSection({ projectId, line, categoryId, currency, sear
 
 /** Which input an edit link names, from `?edit=`; null for anything else. */
 export function editFieldOf(value: string | null): EditField | null {
-  if (value === "purchase" || value === "arv" || value === "value" || value === "land" || value === "units" || value === "tax_bracket") return value;
+  if (value === "purchase" || value === "arv" || value === "value" || value === "land" || value === "units" || value === "tax_bracket" || value === "selling_cost") return value;
   return null;
 }

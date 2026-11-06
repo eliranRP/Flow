@@ -462,6 +462,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1044"></a>[FLOW-1044](tasks/FLOW-1044.md) | Projects v3: the list, the project page by kind, the actions and new-project sheets, project profit, and the lines with no project | UI (design approved) |
 | <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
+| <a id="flow-1068"></a>[FLOW-1068](tasks/FLOW-1068.md) | Investment page: ROI, the flip's net profit, and new deal metrics | PLAN FIRST (approved) |
+| <a id="flow-1069"></a>[FLOW-1069](tasks/FLOW-1069.md) | Investment page: IRR since purchase | SMALL CYCLE |
 | <a id="flow-1053"></a>[FLOW-1053](tasks/FLOW-1053.md) | v3 pixel pass: Projects on its boards | UI (design approved) |
 | <a id="flow-1054"></a>[FLOW-1054](tasks/FLOW-1054.md) | v3 pixel pass: Reports on its boards | UI (design approved) |
 | <a id="flow-1057"></a>[FLOW-1057](tasks/FLOW-1057.md) | FLOW-1053b: the project page's month and its month-end forecast | UI (a feature; the owner decides first) |

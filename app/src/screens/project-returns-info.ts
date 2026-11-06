@@ -10,9 +10,11 @@ import { bracketText, dscrText, percentText, type PropertyReturns, type RehabRow
  * ---------------------------------------------------------------------------------------------- */
 
 /** The figures the owner types: the project's own, and the company's tax bracket. */
-export type EditField = InvestmentField | "tax_bracket";
-export type PartKey = "building" | "money-in" | "forced" | "rehab";
-export const PART_KEYS: readonly PartKey[] = ["building", "money-in", "forced", "rehab"];
+/** FLOW-1068: `selling_cost` is the costs of selling, a percent of the ARV (8% until set). */
+export type EditField = InvestmentField | "tax_bracket" | "selling_cost";
+/** FLOW-1068: `profit` is a renovation's net profit at the sale. */
+export type PartKey = "building" | "money-in" | "rehab" | "profit";
+export const PART_KEYS: readonly PartKey[] = ["building", "money-in", "rehab", "profit"];
 export type MetricKey = "coc" | "cap-rate" | "dscr" | "per-unit";
 export const METRIC_KEYS: readonly MetricKey[] = ["coc", "cap-rate", "dscr", "per-unit"];
 
@@ -55,18 +57,18 @@ export const UNITS_DEFAULT_HINT = "ברירת מחדל · עריכה";
 export const TAKEN_OVER_LABEL = "הלוואה שנלקחה בסגירה";
 
 /** Each input's one name, on its row, its sheet and a "חסר · …" hint (FLOW-457). */
-export const FIELD_NAMES: Record<EditField, string> = { ...INVESTMENT_LABELS, tax_bracket: "מדרגת המס" };
+export const FIELD_NAMES: Record<EditField, string> = { ...INVESTMENT_LABELS, tax_bracket: "מדרגת המס", selling_cost: "עלויות מכירה" };
 
 /** "חסר · שווי היום": why a figure is missing, on its hint line. */
 export function missingHint(field: EditField): string {
   return `חסר · ${FIELD_NAMES[field]}`;
 }
 
-const money = (minor: bigint, income = false): FigureValue => ({ kind: "money", minor, income });
-const missing = (add: EditField | null, note?: string): FigureValue => ({ kind: "missing", add, note });
+export const money = (minor: bigint, income = false): FigureValue => ({ kind: "money", minor, income });
+export const missing = (add: EditField | null, note?: string): FigureValue => ({ kind: "missing", add, note });
 
 /** A typed figure, or "חסר · הוספה" for it. */
-function typed(minor: bigint | null, field: EditField, negate = false): FigureValue {
+export function typed(minor: bigint | null, field: EditField, negate = false): FigureValue {
   if (minor == null) return missing(field);
   return money(negate ? -minor : minor);
 }
@@ -84,7 +86,7 @@ export function firstMissing(r: PropertyReturns, needs: readonly EditField[]): E
 }
 
 /** A computed figure; when it is null, "חסר · הוספה" for the first input it needs, else "לא מחושב". */
-function computed(minor: bigint | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
+export function computed(minor: bigint | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
   if (minor != null) return money(minor);
   const add = firstMissing(r, needs);
   return add == null ? { kind: "text", text: "לא מחושב" } : missing(add);
@@ -266,7 +268,7 @@ export function acquisitionFormula(r: PropertyReturns): Formula | null {
 }
 
 /** The renovation so far, opening its own page (FLOW-460). */
-function rehabRow(r: PropertyReturns, op: Op, negate: boolean): FormulaRow {
+export function rehabRow(r: PropertyReturns, op: Op, negate: boolean): FormulaRow {
   const rehab = r.inputs.rehabMinor;
   return {
     key: "rehab",
@@ -286,6 +288,34 @@ export function forcedFormula(r: PropertyReturns): Formula {
       rehabRow(r, "−", true),
     ],
     result: { key: "forced", op: "=", label: "השבחה צפויה", value: computed(r.equity.forcedMinor, r, ["arv", "purchase"]) },
+  };
+}
+
+/** "8%": the costs of selling, as a percent of the ARV. */
+export function sellingText(r: PropertyReturns): string {
+  return bracketText(r.deal.sellingCostBp);
+}
+
+export const NET_PROFIT_BODY = "מה שיישאר אחרי המכירה: השווי אחרי השיפוץ, פחות עלויות המכירה, הקנייה, השיפוץ וההחזקה.";
+
+/**
+ * FLOW-1068 (decision 0261): a renovation's net profit at the sale, the four cost buckets of Real
+ * Estate by the Numbers Ch 42: the ARV, less the costs of selling (8% until the owner sets them), the
+ * purchase, the renovation so far, and the holding costs the renovation does not already count.
+ */
+export function profitFormula(r: PropertyReturns): Formula {
+  const selling = r.deal.sellingCostMinor;
+  const sellingHint = `${sellingText(r)} מה־ARV · ${r.deal.sellingCostDefault ? "הערכה" : "שלך"} · עריכה`;
+  return {
+    rows: [
+      { key: "arv", op: "", label: "שווי אחרי שיפוץ (ARV)", hint: "הערכה שלך", value: typed(r.inputs.arvMinor, "arv"), target: { kind: "edit", field: "arv" } },
+      { key: "selling", op: "−", label: FIELD_NAMES.selling_cost, hint: sellingHint, value: selling == null ? missing("arv") : money(-selling), target: { kind: "edit", field: "selling_cost" } },
+      ...purchaseRows(r, "−", true),
+      rehabRow(r, "−", true),
+      // The review of #1012: the figure is only what rehab does not count, so it opens no list that adds up to more.
+      { key: "holding", op: "−", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(r.deal.holdingMinor) },
+    ],
+    result: { key: "profit", op: "=", label: "רווח נקי צפוי", value: computed(r.deal.netProfitMinor, r, ["arv", "purchase"]) },
   };
 }
 
@@ -401,7 +431,7 @@ export function partPage(part: PartKey, r: PropertyReturns, rehab: readonly Reha
   if (part === "money-in") {
     return { title: "כסף בעסקה", meta: MONEY_IN_CAPTION, body: MONEY_IN_BODY, back: "השקעה", formula: moneyInFormula(r) };
   }
-  return { title: "השבחה צפויה", meta: "ARV פחות קנייה ושיפוץ", body: INFO.forced.body, back: "השקעה", formula: forcedFormula(r) };
+  return { title: "רווח נקי צפוי", meta: "ARV פחות מכירה, קנייה, שיפוץ והחזקה", body: NET_PROFIT_BODY, back: "השקעה", formula: profitFormula(r) };
 }
 
 /* -- the metrics ---------------------------------------------------------------------------------- */
@@ -420,7 +450,7 @@ export type MetricPage = {
 
 const PERIOD = "12 חודשים";
 
-function cents(minor: bigint, currency: string): string {
+export function cents(minor: bigint, currency: string): string {
   return formatAmount(minor, "summary", currency);
 }
 
