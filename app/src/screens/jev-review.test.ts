@@ -39,6 +39,9 @@ const connectorDb = vi.hoisted(() => ({
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
   fills: [] as Array<{ transaction_id: string; project_id: string | null; category_id: string | null; undone_at: string | null }>,
   fillsError: false,
+  // FLOW-1023: holds the tag_suggestions answer, and names each table as its read is sent.
+  suggestionsHeld: null as Promise<void> | null,
+  sent: [] as string[],
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -64,10 +67,13 @@ vi.mock("../lib/supabase", () => ({
           return builder;
         },
         order: () => builder,
-        then: (onFulfilled: (value: { data: unknown; error: { message: string } | null }) => unknown) =>
-          Promise.resolve(name === "jev_prefills" && connectorDb.fillsError
+        then: (onFulfilled: (value: { data: unknown; error: { message: string } | null }) => unknown) => {
+          connectorDb.sent.push(name);
+          const held = name === "tag_suggestions" && connectorDb.suggestionsHeld != null ? connectorDb.suggestionsHeld : Promise.resolve();
+          return held.then(() => (name === "jev_prefills" && connectorDb.fillsError
             ? { data: null, error: { message: "jev_prefills down" } }
-            : { data: rows(), error: null }).then(onFulfilled),
+            : { data: rows(), error: null })).then(onFulfilled);
+        },
         abortSignal: (next: AbortSignal) => {
           linked = next;
           return builder;
@@ -404,6 +410,23 @@ describe("loadJevSuggestions", () => {
     expect(queue.byId.t0?.suggestionId).toBe("s-first");
     expect(queue.byId[lastId]?.category?.name).toBe("חומרים");
     expect(queue.byId.t1).toBeNull();
+  });
+
+  it("sends the names and the fills with the suggestions, not after them (FLOW-1023)", async () => {
+    connectorDb.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 } } }];
+    let release: () => void = () => undefined;
+    connectorDb.suggestionsHeld = new Promise<void>((resolve) => { release = resolve; });
+    connectorDb.sent = [];
+    try {
+      const queue = loadJevSuggestions(["t1"]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      // The suggestions have not answered, and every other read is already out.
+      expect(connectorDb.sent).toEqual(expect.arrayContaining(["tag_suggestions", "projects", "categories", "jev_prefills"]));
+      release();
+      expect((await queue).byId.t1?.project?.name).toBe("וילה רעננה");
+    } finally {
+      connectorDb.suggestionsHeld = null;
+    }
   });
 
   it("fails closed when the fill read fails, so an undone line is not filled again (#231 r1)", async () => {
