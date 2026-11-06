@@ -23,6 +23,8 @@ export type Target =
   | { kind: "line"; line: ReturnLine; categoryId?: string }
   | { kind: "statement" }
   | { kind: "part"; part: PartKey }
+  /** FLOW-1071: a metric's own page (`/metric/<key>`), one metric made of another. */
+  | { kind: "metric"; metric: string }
   | { kind: "edit"; field: EditField }
   /** One loan's page, or the loans list with no id. */
   | { kind: "loans"; loanId?: string };
@@ -313,7 +315,7 @@ export function profitFormula(r: PropertyReturns): Formula {
       ...purchaseRows(r, "−", true),
       rehabRow(r, "−", true),
       // The review of #1012: the figure is only what rehab does not count, so it opens no list that adds up to more.
-      { key: "holding", op: "−", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(r.deal.holdingMinor) },
+      { key: "holding", op: "−", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(r.deal.holdingMinor), target: { kind: "line", line: "deal_holding" } },
     ],
     result: { key: "profit", op: "=", label: "רווח נקי צפוי", value: computed(r.deal.netProfitMinor, r, ["arv", "purchase"]) },
   };
@@ -666,6 +668,7 @@ export const LINE_TITLES: Record<ReturnLine, string> = {
   financing: "תקבולי הלוואות והחזרים",
   money_in: "כסף בעסקה",
   rehab: "שיפוץ עד היום",
+  deal_holding: "החזקה",
 };
 
 /**
@@ -687,6 +690,7 @@ export function lineMinor(line: ReturnLine, r: PropertyReturns): bigint | null {
   if (line === "financing") return parts.financingMinor;
   if (line === "money_in") return r.equity.moneyInMinor == null ? null : -r.equity.moneyInMinor;
   if (line === "rehab") return r.inputs.rehabMinor == null ? null : -r.inputs.rehabMinor;
+  if (line === "deal_holding") return r.deal.holdingMinor;
   return r.sources.principalMinor;
 }
 

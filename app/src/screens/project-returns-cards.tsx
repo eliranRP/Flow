@@ -124,8 +124,8 @@ export function flipParts(r: PropertyReturns): Part[] {
     { key: "rehab", label: "שיפוץ עד היום", hint: "מחושב מההוצאות", value: rehab == null ? { kind: "text", text: "לא מחושב" } : { kind: "money", minor: -rehab }, open: { kind: "target", target: { kind: "part", part: "rehab" } }, shade: 2 },
     // No holding costs (all of them counted in the renovation): no part of ₪0.
     ...(r.deal.holdingMinor === 0n ? [] : [
-      // Only the holding costs rehab does not count: no list of its own adds up to it (the review of #1012).
-      { key: "holding", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: { kind: "money", minor: r.deal.holdingMinor }, open: null, shade: 3 } satisfies Part,
+      // FLOW-1071: the holding costs rehab does not count, opening their own lines (deal_holding), which add up to it.
+      { key: "holding", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: { kind: "money", minor: r.deal.holdingMinor }, open: { kind: "target", target: { kind: "line", line: "deal_holding" } }, shade: 3 } satisfies Part,
     ]),
     {
       key: "selling",

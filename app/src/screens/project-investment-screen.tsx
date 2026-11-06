@@ -140,6 +140,12 @@ function isInvestmentField(value: unknown): value is InvestmentField {
   return typeof value === "string" && INVESTMENT_FIELDS.includes(value);
 }
 
+/** FLOW-1071: the tab the URL names (`?tab=metrics`), or null. */
+export function tabFromSearch(search: string): InvestmentTab | null {
+  const value = new URLSearchParams(search).get("tab");
+  return value === "property" || value === "metrics" || value === "loans" ? value : null;
+}
+
 /** The ⓘ sheet that was open under a page it opened, from the history entry Back lands on. */
 function infoFromHistory(state: unknown): InfoKey | null {
   const layer = sheetStack(state).find((name) => name.startsWith(INFO_LAYER));
@@ -297,7 +303,8 @@ export function ProjectInvestmentScreen({
   const [how, setHow] = useState(initialHow);
   const howOpener = useRef<HTMLElement | null>(null);
   const setHowSheet = useSheetHistory("investment-how", how, setHow);
-  const [tab, setTab] = useState<InvestmentTab>(initialTab);
+  // FLOW-1071: the tab is kept in the page's URL (`?tab=`, a replace), so Back from a metric or a loan lands on it.
+  const [tab, setTab] = useState<InvestmentTab>(() => tabFromSearch(location.search) ?? initialTab);
   const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
   const markPast = useScrolledPast(titleEnd, true, DETAIL_BAR);
   const atEnd = usePageAtEnd();
@@ -532,6 +539,11 @@ export function ProjectInvestmentScreen({
       options={tabs}
       onChange={(next) => {
         setTab(next);
+        const params = new URLSearchParams(location.search);
+        if (next === "property") params.delete("tab");
+        else params.set("tab", next);
+        const rest = params.toString();
+        void navigate({ pathname: location.pathname, search: rest === "" ? "" : `?${rest}`, hash: location.hash }, { replace: true, state: location.state as unknown });
         scrollUnderBar();
       }}
     />

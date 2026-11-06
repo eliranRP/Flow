@@ -38,7 +38,8 @@ const lineCategorySchema = z.object({
 export const STATEMENT_LINES = ["income", "opex", "debt_service", "capex", "before_rent", "not_counted"] as const;
 export type StatementLine = (typeof STATEMENT_LINES)[number];
 /** The money in the deal by part, the four together, and the renovation so far (FLOW-460): all time, no period. */
-export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in", "rehab"] as const;
+/** FLOW-1071: `deal_holding` is the holding costs a renovation's net profit counts (deal.holdingMinor). */
+export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in", "rehab", "deal_holding"] as const;
 export type AllTimeLine = (typeof ALL_TIME_LINES)[number];
 /** The lines a line page opens: the statement's, the principal parts alone, and the money in's. */
 export type ReturnLine = StatementLine | "principal" | AllTimeLine;

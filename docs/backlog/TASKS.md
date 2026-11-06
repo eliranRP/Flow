@@ -465,6 +465,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1068"></a>[FLOW-1068](tasks/FLOW-1068.md) | Investment page: ROI, the flip's net profit, and new deal metrics | PLAN FIRST (approved) |
 | <a id="flow-1069"></a>[FLOW-1069](tasks/FLOW-1069.md) | Investment page: IRR since purchase | SMALL CYCLE |
 | <a id="flow-1070"></a>[FLOW-1070](tasks/FLOW-1070.md) | ROI review follow-ups (#1012 review) | BACKLOG NIT |
+| <a id="flow-1071"></a>[FLOW-1071](tasks/FLOW-1071.md) | Investment metrics: a renovation keeps the four metrics, every part drills down, Back keeps the tab | SMALL UI (owner's ask) |
 | <a id="flow-1072"></a>[FLOW-1072](tasks/FLOW-1072.md) | Jev takes the property from the card's name | BUG (owner's ask) |
 | <a id="flow-1053"></a>[FLOW-1053](tasks/FLOW-1053.md) | v3 pixel pass: Projects on its boards | UI (design approved) |
 | <a id="flow-1054"></a>[FLOW-1054](tasks/FLOW-1054.md) | v3 pixel pass: Reports on its boards | UI (design approved) |

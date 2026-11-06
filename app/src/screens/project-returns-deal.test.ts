@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { birchLaneReturns, birchLaneReturnsBeforeRent, birchLaneReturnsCashOut } from "../dev/returns-sample";
 import type { PropertyReturns } from "./project-returns-data";
-import { DEAL_METRIC_KEYS, FLIP_GROUPS, RENT_GROUPS, anyMetricPage, anyMetricValue, dealMetricCaption, dealMetricPage, dealMetricValue } from "./project-returns-deal";
+import { DEAL_METRIC_KEYS, FLIP_GROUPS, RENT_GROUPS, anyMetricPage, anyMetricValue, dealAllTime, dealMetricCaption, dealMetricPage, dealMetricValue } from "./project-returns-deal";
 import { METRIC_KEYS, partPage, profitFormula } from "./project-returns-info";
 import { PERCENT_KINDS, SELLING_EMPTY, SELLING_RANGE, percentVerdict } from "./project-returns-sheets";
 import { sellingSample } from "./project-investment-screen";
@@ -16,11 +16,34 @@ const noArv: PropertyReturns = {
 };
 
 describe("the deal metrics", () => {
-  it("groups every metric once: a rental's return, risk and price, a renovation's return and price", () => {
+  it("groups every metric: a rental's return, risk and price; a renovation's own beside the four of FLOW-451 (FLOW-1071)", () => {
     const rent = RENT_GROUPS.flatMap((group) => group.metrics);
     const flip = FLIP_GROUPS.flatMap((group) => group.metrics);
     expect(new Set([...rent, ...flip])).toEqual(new Set([...METRIC_KEYS, ...DEAL_METRIC_KEYS]));
-    expect(rent.length + flip.length).toBe(METRIC_KEYS.length + DEAL_METRIC_KEYS.length);
+    // No metric twice in one kind's tab, and a renovation keeps cash on cash, cap rate, DSCR and the cash flow per unit.
+    expect(new Set(rent).size).toBe(rent.length);
+    expect(new Set(flip).size).toBe(flip.length);
+    for (const metric of METRIC_KEYS) expect(flip).toContain(metric);
+  });
+
+  it("opens what each part of a page is made of, down to its lines (FLOW-1071)", () => {
+    const year = dealMetricPage("flip-roi-year", birchLaneReturns).sections.flatMap((section) => section.formula.rows);
+    expect(year.find((row) => row.key === "roi")?.target).toEqual({ kind: "metric", metric: "flip-roi" });
+    expect(year.find((row) => row.key === "held")?.target).toEqual({ kind: "line", line: "acquisition" });
+    const holding = profitFormula(birchLaneReturns).rows.find((row) => row.key === "holding");
+    expect(holding?.target).toEqual({ kind: "line", line: "deal_holding" });
+    // Every row of every deal metric's page opens something, but a constant (the 70%).
+    for (const metric of DEAL_METRIC_KEYS) {
+      for (const row of dealMetricPage(metric, birchLaneReturns).sections.flatMap((section) => section.formula.rows)) {
+        if (row.key !== "seventy") expect(row.target, `${metric}: ${row.key}`).toBeDefined();
+      }
+    }
+  });
+
+  it("says since the purchase once, in the subtitle, not again in the caption (FLOW-1071)", () => {
+    expect(dealAllTime("flip-roi-year")).toBe(true);
+    expect(dealAllTime("roe")).toBe(false);
+    expect(dealMetricPage("flip-roi-year", birchLaneReturns).caption).toBe("10 חודשים · מהקנייה");
   });
 
   it("reads each figure as the server worked it out", () => {

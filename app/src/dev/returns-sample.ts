@@ -390,6 +390,8 @@ const rows: Record<ReturnLine, ReturnLineRow[]> = {
     row("t-hold-int", "Northfield Lending", "2026-03-01", -400, "cat-interest", "ריבית"),
   ],
   financing: [row("t-loan-in", "Northfield Lending", "2026-02-02", 210_000, "cat-loan-in", "תקבולי הלוואה")],
+  // FLOW-1071: the holding costs the net profit counts (the insurance counts in rehab, so only the interest).
+  deal_holding: [row("t-hold-int", "Northfield Lending", "2026-03-01", -400, "cat-interest", "ריבית")],
   money_in: [
     row("t-hold-ins", "Harbor Insurance", "2026-03-20", -600, "cat-insurance", "ביטוח", "invoice"),
     row("t-roof", "Lone Star Roofing", "2026-03-14", -9_800, "cat-contractors", "קבלני משנה"),
@@ -423,6 +425,7 @@ const counts: Record<ReturnLine, number> = {
   holding: 4,
   financing: 1,
   money_in: 27,
+  deal_holding: 3,
 };
 
 /** One page of a figure's lines (the first few), with the figure's whole count. */
