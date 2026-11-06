@@ -43,6 +43,7 @@ export function pageResolver(base: string, search: string): Resolve {
     }
     if (target.kind === "statement") return { href: `${base}/returns${search}` };
     if (target.kind === "part") return { href: `${base}/part/${target.part}${search}` };
+    if (target.kind === "metric") return { href: `${base}/metric/${target.metric}${search}` };
     if (target.kind === "loans") return { href: target.loanId == null ? `/loans${search}` : `/loans/${target.loanId}${search}` };
     return { href: `${base}${withParam(search, "edit", target.field)}` };
   };

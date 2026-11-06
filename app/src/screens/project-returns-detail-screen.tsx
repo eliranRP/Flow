@@ -9,7 +9,7 @@ import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { ALL_TIME, METRIC_KEYS, PART_KEYS, partPage, type PartKey } from "./project-returns-info";
-import { DEAL_METRIC_KEYS, anyMetricPage, type AnyMetricKey } from "./project-returns-deal";
+import { DEAL_METRIC_KEYS, anyMetricPage, dealAllTime, type AnyMetricKey } from "./project-returns-deal";
 import { AllCashOutMeta, CalcSection, FigureText, FormulaList, ReturnLinesSection, ReturnsHero, pageResolver } from "./project-returns-parts";
 import { RETURNS_EMPTY, useReturnsPage, type RehabRead, type ReturnsSample } from "./project-returns-screen";
 import type { PropertyReturns, RehabRow } from "./project-returns-data";
@@ -67,9 +67,10 @@ function MetricBody({ metric, r, base, search }: { metric: AnyMetricKey; r: Prop
 
 /** A metric (the four of FLOW-451 and the deal metrics of FLOW-1068), with what it is made of. */
 export function PropertyMetricScreen({ sample, base: baseProp, learnOpen = false }: { sample?: ReturnsSample; base?: string; learnOpen?: boolean } = {}) {
-  const page = useReturnsPage(sample, baseProp);
   const { metric: named, key } = useParams();
   const metric = named ?? key;
+  // FLOW-1071: a renovation's figures run since the purchase, and the subtitle says so, not the last 12 months.
+  const page = useReturnsPage(sample, baseProp, metric != null && dealAllTime(metric));
   if (!isMetric(metric)) return <Navigate replace to={`${page.base}${page.search}`} />;
   const title = page.returns == null ? "מדד" : anyMetricPage(metric, page.returns).title;
   return (

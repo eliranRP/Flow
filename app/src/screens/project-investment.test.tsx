@@ -10,7 +10,7 @@ import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { loanNote } from "./project-investment-cards";
 import { toProjectInvestment } from "./project-investment-data";
-import { ProjectInvestmentScreen, INVESTMENT_REFUSED, applySample } from "./project-investment-screen";
+import { ProjectInvestmentScreen, INVESTMENT_REFUSED, applySample, tabFromSearch } from "./project-investment-screen";
 import { EMPTY_HOLD, editVerdict, rawToMinor } from "./project-investment-sheets";
 import { birchLaneReturns } from "../dev/returns-sample";
 import { percentText, toPropertyReturns, type PropertyReturns } from "./project-returns-data";
@@ -168,6 +168,23 @@ async function openTab(name: "נכס" | "מדדים" | "הלוואות"): Promis
   fireEvent.click(await screen.findByRole("radio", { name }));
   return screen.findByRole("region", { name: name === "נכס" ? "נתוני הנכס" : name });
 }
+
+describe("the tab in the URL (FLOW-1071)", () => {
+  it("reads only a tab it knows", () => {
+    expect(tabFromSearch("?tab=metrics")).toBe("metrics");
+    expect(tabFromSearch("?preview=on&tab=loans")).toBe("loans");
+    expect(tabFromSearch("?tab=other")).toBeNull();
+    expect(tabFromSearch("")).toBeNull();
+  });
+
+  it("opens on the tab Back lands on, and a tap keeps it in the URL", async () => {
+    serve();
+    renderPage({ entry: "/projects/p1/investment?tab=metrics" });
+    expect(await screen.findByRole("radio", { name: "מדדים" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואות" }));
+    expect(screen.getByRole("radio", { name: "הלוואות" })).toHaveAttribute("aria-checked", "true");
+  });
+});
 
 describe("the page", () => {
   it("leads a renovation with the expected profit, then the figures the project read", async () => {
