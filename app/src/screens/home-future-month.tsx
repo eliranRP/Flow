@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import type { CashMonths, ProjectCashRow } from "@flow/shared";
+import type { CashMonths, ForecastOverrideRow, ProjectCashRow } from "@flow/shared";
 import { useMemo, type ReactNode } from "react";
 import { NOT_IN_PROFIT_LABEL } from "../cash";
 import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type CompanyNextMonth } from "../company-next-month";
@@ -11,7 +11,7 @@ import { LOAN_SOURCE, nextMonthKey } from "../project-next-month";
 import { nothingExpected, thisMonthCashOut, useCompanyCashNextMonth } from "./company-cash-next-month";
 import { orderParts, partHint, partRows } from "./company-next-month-screen";
 import { groupSums, type ActivityGroup, type ActivityRow, type HomeFuture } from "./home-activity";
-import type { HomeFutureFigureRows } from "./home-parts";
+import { monthName, type HomeFutureFigureRows } from "./home-parts";
 
 /**
  * FLOW-1056 (owner, 2026-11-05: "Click on a future month should take me to the main screen in a future date with
@@ -27,10 +27,25 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
   currency: string;
   search: string;
 }): ActivityGroup[] {
-  if (nothingExpected(forecast)) return [];
+  if (nothingExpected(forecast) && !forecast.parts.some((part) => (part.skipped ?? []).length > 0)) return [];
   const names = new Map(projects.map((row) => [row.id, row.name]));
   const overhead = projects.find((row) => row.is_overhead) ?? null;
-  return orderParts(forecast.parts, projects, currency).flatMap((part) => {
+  // FLOW-1079: a recurring row's forecast item, which a swipe takes out of this month only: the party's key, with
+  // the part's project when the party is expected in more than one part (a split party, decision 0185).
+  const recParts = new Map<string, number>();
+  for (const part of forecast.parts) {
+    for (const row of [...part.forecast.rows, ...part.forecast.removed, ...(part.forecast.skipped ?? [])]) {
+      if (row.key.startsWith("rec:")) recParts.set(row.key, (recParts.get(row.key) ?? 0) + 1);
+    }
+  }
+  const forecastKey = (rowKey: string, projectId: string | null): string | undefined => {
+    const [kind, direction, party] = rowKey.split(":");
+    if (kind !== "rec" || direction == null || party == null) return undefined;
+    const base = `party:${direction}:${party}:${currency}`;
+    return (recParts.get(rowKey) ?? 0) > 1 ? `${base}:${projectId ?? "none"}` : base;
+  };
+  const skipped: ActivityRow[] = [];
+  const groups = orderParts(forecast.parts, projects, currency).flatMap((part) => {
     const general = part.projectId == null;
     // Each row opens its project's צפי page; a general row the overhead project's (FLOW-1002: its צפי page is the
     // general costs), and none when the company has none. Editing is פירוט ועריכה's (the band's foot row).
@@ -47,11 +62,27 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
           currency,
           income: item.row.minor >= 0n,
           href,
+          forecastKey: forecastKey(item.row.key, part.projectId),
         }));
+    for (const row of part.forecast.skipped ?? []) {
+      skipped.push({
+        key: `${part.projectId ?? "general"}:${row.key}`,
+        title: row.name,
+        meta: `לא צפוי ב${monthName(forecast.month)}`,
+        mark: "due",
+        minor: row.minor < 0n ? -row.minor : row.minor,
+        currency,
+        income: row.minor >= 0n,
+        href,
+        forecastKey: forecastKey(row.key, part.projectId),
+      });
+    }
     if (rows.length === 0) return [];
     const title = general ? "כללי" : names.get(part.projectId ?? "") ?? "פרויקט";
     return [{ id: part.projectId ?? "general", title, rows, ...groupSums(rows, currency), due: true }];
   });
+  // FLOW-1079: what was taken out of this month sits last, under the same head as on the current month.
+  return skipped.length === 0 ? groups : [...groups, { id: "skipped", title: "הוצא מהצפי", rows: skipped, ...groupSums(skipped, currency), due: true }];
 }
 
 /** FLOW-1066 (mockup): a month after next says what its estimate is built from, in the caption's place. */
@@ -82,7 +113,7 @@ export function homeFutureFigures(forecast: CompanyNextMonth, categories: readon
  * What Home draws for a month to come from the reads; stories and the dev route call it with a sample. FLOW-1066:
  * the month is the forecast's; its rows open their project's צפי page for that month.
  */
-export function homeFutureView({ forecast, profitMinor, categories, projects, cash, today, currency, search, loading, failed, offline, onRetry }: {
+export function homeFutureView({ forecast, profitMinor, categories, projects, cash, today, currency, search, loading, failed, offline, onRetry, overrides = null }: {
   /** The month's forecast in cash terms (companyCashForecast). */
   forecast: CompanyNextMonth | null;
   /** The same month's expected profit (the profit-basis net); null with the forecast. */
@@ -99,6 +130,8 @@ export function homeFutureView({ forecast, profitMinor, categories, projects, ca
   failed: boolean;
   offline: boolean;
   onRetry: () => void;
+  /** FLOW-1079: the month's forecast overrides, for a skip's undo. */
+  overrides?: readonly ForecastOverrideRow[] | null;
 }): HomeFuture {
   if (failed) return { phase: "failed", offline, onRetry, figures: null, groups: [] };
   if (loading || forecast == null || profitMinor == null) return { phase: "loading", offline, onRetry, figures: null, groups: [] };
@@ -106,6 +139,7 @@ export function homeFutureView({ forecast, profitMinor, categories, projects, ca
     phase: "ready",
     offline,
     onRetry,
+    overrides,
     figures: homeFutureFigures(forecast, categories, thisMonthCashOut(cash, today, currency), today, currency, profitMinor),
     groups: homeFutureGroups({ forecast, projects, currency, search: forecastMonthSearch(search, forecast.month, today) }),
   };
@@ -128,7 +162,7 @@ export function HomeFutureReads({ today, month, currency, cash, search, children
   const loading = next.loading || (list.isPending && !list.isError);
   // A read waiting for the network says so, with its retry, as a failed one does.
   const failed = next.failed || next.paused;
-  const { forecast, profitMinor, categories, paused, refetch } = next;
+  const { forecast, profitMinor, categories, paused, refetch, overrides } = next;
   const { isError: listFailed, refetch: refetchList } = list;
   // FLOW-1052: the groups and figures are built once per read, not on every render of Home (a scroll, a dock).
   const future = useMemo(() => homeFutureView({
@@ -147,6 +181,7 @@ export function HomeFutureReads({ today, month, currency, cash, search, children
       void refetch();
       if (listFailed) void refetchList();
     },
-  }), [forecast, profitMinor, categories, projects, cash, today, currency, search, loading, failed, paused, refetch, listFailed, refetchList]);
+    overrides,
+  }), [forecast, profitMinor, categories, projects, cash, today, currency, search, loading, failed, paused, refetch, listFailed, refetchList, overrides]);
   return children(future);
 }

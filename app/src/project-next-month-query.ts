@@ -1,3 +1,6 @@
+import { skipEdits } from "./company-next-month";
+import { skippedKeys, useForecastOverrides } from "./forecast-skip";
+import type { ForecastOverrideRow } from "@flow/shared";
 import type { CategoryRow, ExpectedMonths, ProjectCategoryMonths } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -111,6 +114,7 @@ function useForecastEditsQuery(projectId: string, month: string) {
 }
 
 /** Stable empties, so the memoized forecast and the screens' memos keep their inputs while a read loads. */
+const NO_OVERRIDES: readonly ForecastOverrideRow[] = [];
 const NO_LOANS: readonly ForecastLoan[] = [];
 const NO_CATEGORIES: readonly CategoryRow[] = [];
 
@@ -130,6 +134,9 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   const categories = useProjectCategoryMonthsQuery(live, monthPeriod(today.slice(0, 7)));
   const editsRead = useForecastEditsQuery(live, month);
   const loansRead = useProjectLoansQuery(live);
+  // FLOW-1079: what Home or a charge's page took out of this month only (the month forecast's overrides).
+  const overridesRead = useForecastOverrides(month, live !== "");
+  const overrides = sample == null ? overridesRead.data : NO_OVERRIDES;
   const companyCategories = useCategoriesQuery(live !== "");
   const recurring = sample?.expected.recurring ?? expected.data?.recurring;
   const categoryMonths = sample == null ? categories.data : sample.categoryMonths;
@@ -137,7 +144,7 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   const loans = sample == null ? loansRead.data : sample.loans ?? NO_LOANS;
   const categoryList = sample == null ? companyCategories.data : sample.categories ?? NO_CATEGORIES;
   const ready = sample != null
-    || (expected.data != null && categories.data !== undefined && editsRead.data != null && loansRead.data != null && companyCategories.data != null);
+    || (expected.data != null && categories.data !== undefined && editsRead.data != null && loansRead.data != null && companyCategories.data != null && overridesRead.data != null);
   // Each loan's schedule is built here, so the forecast is rebuilt only when what it reads changes.
   const base: NextMonthForecast | null = useMemo(
     () => (ready && recurring != null
@@ -145,9 +152,12 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
       : null),
     [ready, recurring, projectId, currency, today, categoryMonths, loans, categoryList, month],
   );
-  const reads = [expected, categories, editsRead, loansRead, companyCategories];
+  const reads = [expected, categories, editsRead, loansRead, companyCategories, overridesRead];
+  const skips = useMemo(() => skipEdits([...skippedKeys(overrides ?? [])], projectId, null, month), [overrides, projectId, month]);
   return {
-    forecast: base == null ? null : applyForecastEdits(base, edits ?? []),
+    forecast: base == null ? null : applyForecastEdits(base, [...(edits ?? []), ...skips]),
+    /** FLOW-1079: the month's forecast overrides, what a skipped row's החזרה writes back. */
+    overrides: overrides ?? null,
     month,
     /** yyyy-mm-dd: the day the forecast is from (the sample's, else Israel's today). */
     today,

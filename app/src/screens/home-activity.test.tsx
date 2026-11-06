@@ -5,7 +5,7 @@ import { RECURRING_FIXTURE } from "../recurring-sample";
 import type { ScheduleRow } from "../recurring-schedule";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { activityGroups, HomeActivity, monthFilter, onceActivity, pastActivityGroups, scheduleActivity, type ActivityFilter, type HomeActivityData } from "./home-activity";
+import { activityGroups, HomeActivity, monthFilter, onceActivity, pastActivityGroups, regroupSkipped, scheduleActivity, type ActivityFilter, type ActivityGroup, type HomeActivityData } from "./home-activity";
 
 // This year's October, so the line dates read without a year.
 const MONTH = `${israelToday().slice(0, 4)}-10`;
@@ -23,6 +23,33 @@ describe("the month's activity groups (FLOW-1036)", () => {
     expect(paid.map((row) => row.title)).toEqual(["Bayside Water Utility", "Signalpoint Mobile", "Brightside Pest", "Birch Lane rent", "Juniper Ct rent"]);
     // An arrived charge shows what came, not its usual amount; it opens the charge's page.
     expect(paid[0]).toMatchObject({ mark: "paid", minor: 14_200n, href: "/recurring/expense/water", meta: "Elm Row · חשמל ומים" });
+  });
+
+  // FLOW-1079: a charge taken out of this month's forecast.
+  it("moves a charge out of the forecast from נותר לשלם to הוצא מהצפי, which no total counts", () => {
+    const keystone = "party:expense:insurance:USD";
+    const { left, skipped } = scheduleActivity(RECURRING_FIXTURE, "", new Set([keystone]), "נובמבר");
+    expect(left.some((row) => row.title === "Keystone Mutual")).toBe(false);
+    expect(skipped).toEqual([expect.objectContaining({ title: "Keystone Mutual", meta: "לא צפוי בנובמבר", forecastKey: keystone })]);
+    const groups = activityGroups({ schedule: RECURRING_FIXTURE, lines: LINES, filter: "all", base: "USD", search: "", skipped: new Set([keystone]), monthLabel: "נובמבר" });
+    expect(groups.map((group) => group.id)).toEqual(["left", "skipped", "paid", "once"]);
+    expect(groups[0]?.outMinor).toBe((groupsFor("all")[0]?.outMinor ?? 0n) - 21_200n);
+  });
+
+  it("gives a charge in another currency no key to take out (the forecast never counted it)", () => {
+    const euro = RECURRING_FIXTURE.map((row) => (row.party_id === "insurance" ? { ...row, currency: "EUR" } : row));
+    expect(scheduleActivity(euro, "", new Set(), "", "USD").left.find((row) => row.title === "Keystone Mutual")?.forecastKey).toBeUndefined();
+  });
+
+  it("on a month to come, moves a row just taken out under הוצא מהצפי and drops one just put back", () => {
+    const row = (key: string, forecastKey: string, minor: bigint) => ({ key, title: key, meta: "", mark: "due" as const, minor, currency: "USD", income: false, forecastKey });
+    const groups: ActivityGroup[] = [
+      { id: "p1", title: "Elm Row", rows: [row("a", "party:expense:a:USD", 100n), row("b", "party:expense:b:USD", 50n)], outMinor: 150n, inMinor: 0n, due: true },
+      { id: "skipped", title: "הוצא מהצפי", rows: [row("c", "party:expense:c:USD", 20n)], outMinor: 20n, inMinor: 0n, due: true },
+    ];
+    const next = regroupSkipped(groups, new Set(["party:expense:a:USD"]), "ינואר", "USD");
+    expect(next.map((group) => [group.id, group.rows.map((item) => item.key), group.outMinor])).toEqual([["p1", ["b"], 50n], ["skipped", ["a"], 100n]]);
+    expect(next[1]?.rows[0]?.meta).toBe("לא צפוי בינואר");
   });
 
   it("leaves a charge due in a later month out", () => {

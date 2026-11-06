@@ -17,7 +17,9 @@ import { homeMonthKey, homeMonthPath, homeMonthState, homeMonthSteps } from "../
 import { useAfterFirstPaint } from "../after-paint";
 import { useMonthForecastQuery } from "../month-forecast-query";
 import { FutureForecastRow, HomeBandActions, HomeCompactBar, HomeFigures, HomeFutureFigures, HomeMonthPill, HomeSwipeFigures, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
-import { ActivityFilterControl, HomeActivity, HomeFutureActivity, type ActivityFilter, type HomeActivityData, type HomeFuture } from "./home-activity";
+import { ActivityFilterControl, HomeActivity, HomeFutureActivity, type ActivityFilter, type ActivitySkip, type HomeActivityData, type HomeFuture } from "./home-activity";
+import { markSkipPeekSeen, skipPeekSeen, useForecastSkip } from "../forecast-skip";
+import { useHoldWrites } from "../use-is-viewer";
 import { useRecurringScheduleQuery } from "../recurring-schedule";
 import { AttentionCards } from "../ui/attention-cards";
 import { useDockedFilter } from "../ui/dock-filter";
@@ -198,6 +200,28 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   // FLOW-1019 (owner, 2026-11-03): the forecast row and החודש הבא read once Home has drawn its figures.
   const afterPaint = useAfterFirstPaint(showBooks);
   const monthForecast = useMonthForecastQuery(currentKey, isCurrent && afterPaint);
+  // FLOW-1079: a charge in נותר לשלם swipes out of this month's forecast (the forecast's own "לא החודש"). An editor may; a viewer not.
+  const holdForecast = useHoldWrites();
+  const forecastSkip = useForecastSkip(currentKey, monthName(currentKey), monthForecast.data?.overrides ?? null);
+  const [peekSeen, setPeekSeen] = useState(skipPeekSeen);
+  const skip: ActivitySkip | undefined = !isCurrent || previewing || holdForecast || monthForecast.data == null ? undefined : {
+    skipped: forecastSkip.skipped,
+    monthLabel: monthName(currentKey),
+    onSkip: (row) => { if (row.forecastKey != null) forecastSkip.set(row.forecastKey, true, row.title); },
+    onRestore: (row) => { if (row.forecastKey != null) forecastSkip.set(row.forecastKey, false, row.title); },
+    peek: !peekSeen,
+    onPeeked: markPeek,
+  };
+  // The hint shows once per phone: stored at once, and dropped from the row after its slide (about a second).
+  const peekTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (peekTimer.current != null) window.clearTimeout(peekTimer.current);
+  }, []);
+  function markPeek() {
+    if (peekTimer.current != null) return;
+    markSkipPeekSeen();
+    peekTimer.current = window.setTimeout(() => { setPeekSeen(true); }, 1600);
+  }
   // FLOW-1036: the month's activity: the recurring schedule, and the current month's lines for the one-off group
   // (after first paint, like the forecast). Both on the current month only.
   const schedule = useRecurringScheduleQuery(isCurrent && !previewing);
@@ -328,6 +352,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       activity={activity}
+      skip={skip}
+      canSkipFuture={!previewing && !holdForecast}
       withForecast={withForecast}
       future={future}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
@@ -378,6 +404,8 @@ export function CashHome({
   syncing = null,
   offlineSince = null,
   activity = null,
+  skip,
+  canSkipFuture = false,
   withForecast = false,
   future = null,
   initialFilter = "all",
@@ -405,6 +433,10 @@ export function CashHome({
   weekly?: ReactNode;
   /** FLOW-1036: the month's activity reads (the current month only); null draws no activity. */
   activity?: HomeActivityData | null;
+  /** FLOW-1079: the current month's swipes out of the forecast and back. */
+  skip?: ActivitySkip;
+  /** FLOW-1079: a month to come's rows swipe out of its forecast too (not for a viewer or a preview). */
+  canSkipFuture?: boolean;
   /** FLOW-1056, FLOW-1066: the forecast's months are months to step to (the band's arrows, the drawer's cells); not in a preview. */
   withForecast?: boolean;
   /** FLOW-1056: the month's forecast, when `monthKey` is a month to come: the band's figures and the activity. */
@@ -569,7 +601,7 @@ export function CashHome({
       {isFuture ? (
         future == null ? null : (
           <div className="ui-page-pad m-page-enter" style={pageEnterStyle(2)}>
-            <HomeFutureActivity monthKey={monthKey} future={future} base={base} />
+            <HomeFutureActivity monthKey={monthKey} future={future} base={base} canSkip={canSkipFuture} />
           </div>
         )
       ) : activity == null ? null : (
@@ -583,6 +615,7 @@ export function CashHome({
             base={base}
             search={search}
             recurringHref={`${recurringTo ?? "/recurring"}${search}`}
+            skip={skip}
             close={isPast ? {
               name: monthName(monthKey),
               inMinor: baseRow?.in_minor ?? 0n,

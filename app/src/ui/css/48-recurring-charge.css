@@ -264,3 +264,8 @@
   line-height: var(--type-title-line);
   color: var(--color-text-muted);
 }
+
+/* FLOW-1079: "לא צפוי ב<month>" sits in the card as its other rows do: the same inset, so its icon lines up. */
+.ui-charge-skip .ui-row.ui-switch-row {
+  padding: var(--space-inset-row);
+}

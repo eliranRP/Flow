@@ -24,6 +24,7 @@ import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
+import { ChargeSkipMonth } from "./recurring-skip-month";
 import { BackButton } from "../ui/back";
 import { CompactBar } from "../ui/compact-bar";
 import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
@@ -345,6 +346,7 @@ function ChargeBody({
             blocked={() => blocked()}
             openSheet={openSheet === "amount"}
           />
+          <ChargeSkipMonth row={row} split={data.split} live={live} today={today} disabled={holdWrites} blocked={() => blocked()} />
           {charges != null ? (
             <PartyChargesHistory
               plain

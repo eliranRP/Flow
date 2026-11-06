@@ -51,9 +51,11 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     const edits: ProjectForecastEdit[] = input.inputs.edits.filter((edit) => edit.project_id === projectId);
     return { forecast: companyGeneralForecast(input), recurring, categoryMonths, edits };
   }, [isOverhead, input, projectId]);
-  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true, currency } : { ...own, currency };
+  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true, currency, general: false } : { ...own, currency, general: false };
   return {
     currency: companyCurrency,
+    /** FLOW-1079: the general costs' page (the overhead project's): a charge with no project is its own. */
+    general: true,
     forecast: general?.forecast ?? null,
     month: forMonth,
     today,
@@ -61,6 +63,8 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     recurring: general?.recurring ?? [],
     categoryMonths: general?.categoryMonths ?? null,
     categories: company.categories,
+    /** FLOW-1079: the month's forecast overrides, what a skipped row's החזרה writes back. */
+    overrides: company.overrides,
     pending: !currencyFailed && (currencyRead.data == null || company.pending),
     failed: currencyFailed || company.failed,
     paused: company.paused,

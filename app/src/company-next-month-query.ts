@@ -12,6 +12,7 @@ import { useHomePreview } from "./preview";
 import type { ForecastLoan } from "./project-next-loans";
 import { nextMonthKey } from "./project-next-month";
 import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-next-month-query";
+import { skippedKeys, useForecastOverrides } from "./forecast-skip";
 import { useCategoriesQuery } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -87,6 +88,10 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
     },
   });
   const categories = useCategoriesQuery(live);
+  // FLOW-1079: a month of the forecast counts what was taken out of it for that month only.
+  const overrides = useForecastOverrides(month ?? "", live && month != null);
+  const skipList = overrides.data;
+  const skips = useMemo(() => (skipList == null ? undefined : [...skippedKeys(skipList)]), [skipList]);
   const recurring = sample?.recurring ?? expected.data?.recurring;
   const loanList = sample?.loans ?? loans.data ?? (sample == null ? undefined : NO_LOANS);
   const categoryList = sample?.categories ?? categories.data;
@@ -96,9 +101,9 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const forMonth = month ?? nextMonthKey(today);
   const input: CompanyForecastInput | null = useMemo(
     () => (recurring != null && loanList != null && categoryList != null && inputData != null
-      ? companyMonthInput({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData }, forMonth)
+      ? { ...companyMonthInput({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData }, forMonth), skips }
       : null),
-    [recurring, loanList, categoryList, inputData, currency, today, forMonth],
+    [recurring, loanList, categoryList, inputData, currency, today, forMonth, skips],
   );
   const forecast: CompanyNextMonth | null = useMemo(() => (input == null ? null : companyNextMonthForecast(input)), [input]);
   // The year view's rest of the year (decision 0200): the same reads, built again for each month left.
@@ -108,11 +113,13 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
       : null),
     [recurring, loanList, categoryList, inputData, currency, today],
   );
-  const reads = [expected, loans, inputs, categories];
+  const reads = month == null || sample != null ? [expected, loans, inputs, categories] : [expected, loans, inputs, categories, overrides];
   return {
     forecast,
     input,
     rest,
+    /** FLOW-1079: `month`'s overrides (null without a month, or while read), for the skip's undo. */
+    overrides: skipList ?? null,
     categories: categoryList ?? [],
     pending: live && reads.some((read) => read.isPending) && !reads.some((read) => read.isPaused),
     failed: live && reads.some((read) => read.isError),

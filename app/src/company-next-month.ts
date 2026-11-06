@@ -44,7 +44,8 @@ export type CompanyNextMonthInputs = {
 export type RestOfYearEdit = Omit<CompanyForecastEdit, "matched_transaction_id"> & { matches?: Record<string, string> };
 
 /** One part of the sum: a project's forecast, or the general costs' (`projectId` null). */
-export type CompanyForecastPart = { projectId: string | null; forecast: NextMonthForecast };
+/** `skipped` (FLOW-1079): the part's rows taken out of this month only from Home or a charge's page, by row key. */
+export type CompanyForecastPart = { projectId: string | null; forecast: NextMonthForecast; skipped?: readonly string[] };
 
 export type CompanyNextMonth = {
   /** yyyy-mm */
@@ -101,7 +102,32 @@ export type CompanyForecastInput = {
   inputs: CompanyNextMonthInputs;
   /** yyyy-mm, a later month of the forecast (decision 0200, FLOW-1066: companyMonthInput); default next month. */
   month?: string;
+  /**
+   * FLOW-1079: the month's forecast items taken out for that month only (forecast_overrides with moved_out, keys
+   * `party:<direction>:<party>:<currency>[:<project|none>]`). Each takes the charge's row out of its part.
+   */
+  skips?: readonly string[];
 };
+
+/**
+ * FLOW-1079: a month's skips as one-month removals of a part's recurring rows (`rec:<direction>:<party>`). A key
+ * with no project is the party's in every part; with one, only in that project's part (`none` or the overhead
+ * project: the general costs). Ids start `skip:`, so the part can tell them from the project page's own removals.
+ */
+export function skipEdits(skips: readonly string[] | undefined, projectId: string | null, overhead: string | null, month: string): ProjectForecastEdit[] {
+  return (skips ?? []).flatMap((key): ProjectForecastEdit[] => {
+    const [kind, direction, party, , project] = key.split(":");
+    if (kind !== "party" || (direction !== "income" && direction !== "expense") || party == null || party === "") return [];
+    const general = projectId == null;
+    if (project != null && !(general ? project === "none" || project === overhead : project === projectId)) return [];
+    return [{ id: `skip:${key}`, kind: "remove", row_key: `rec:${direction}:${party}`, category_id: null, direction: null, amount_minor: null, pace: "once", start_month: month }];
+  });
+}
+
+/** The row keys a part's skips took out. */
+function skippedRows(forecast: NextMonthForecast): string[] {
+  return (forecast.skipped ?? []).map((row) => row.key);
+}
 
 export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNextMonth {
   const month = input.month ?? nextMonthKey(input.today);
@@ -121,14 +147,16 @@ export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNe
     .filter((project) => project.project_id !== overhead)
     .map((project) => project.project_id)
     .sort()
-    .map((projectId) => ({
-      projectId,
-      forecast: applyForecastEdits(
+    .map((projectId) => {
+      const skips = skipEdits(input.skips, projectId, overhead, month);
+      const forecast = applyForecastEdits(
         build(projectId, input.inputs.projects.find((project) => project.project_id === projectId)?.categories ?? [], input.recurring, input.loans),
-        input.inputs.edits.filter((edit) => edit.project_id === projectId),
-      ),
-    }));
-  parts.push({ projectId: null, forecast: companyGeneralForecast(input, month) });
+        [...input.inputs.edits.filter((edit) => edit.project_id === projectId), ...skips],
+      );
+      return { projectId, forecast, skipped: skippedRows(forecast) };
+    });
+  const general = companyGeneralForecast(input, month);
+  parts.push({ projectId: null, forecast: general, skipped: skippedRows(general) });
   const kept = parts.filter((part) => part.forecast.rows.length > 0);
   const incomeMinor = kept.reduce((sum, part) => sum + part.forecast.incomeMinor, 0n);
   const expenseMinor = kept.reduce((sum, part) => sum + part.forecast.expenseMinor, 0n);
@@ -176,7 +204,7 @@ export function companyGeneralForecast(input: CompanyForecastInput, month = inpu
       categories: input.categories,
       month,
     }),
-    input.inputs.edits.filter((edit) => overhead != null && edit.project_id === overhead),
+    [...input.inputs.edits.filter((edit) => overhead != null && edit.project_id === overhead), ...skipEdits(input.skips, null, overhead, month)],
   );
 }
 
