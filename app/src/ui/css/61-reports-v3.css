@@ -273,9 +273,10 @@
 }
 
 /* FLOW-1054 (V3-Reports): the title row is 56px (12 over a 44px row), the period an outlined pill: 44px, 14px
-   inside, 15/500, the hairline, its 14px chevron. */
+   inside, 15/500, the hairline, its 14px chevron. FLOW-1067: the 12 is under the status bar (--safe-top), as
+   every page's head is, so on an iPhone the title and the pill do not sit under the clock. */
 .ui-rep-hub .ui-page-stacked {
-  padding-block-start: var(--space-3);
+  padding-block-start: calc(var(--safe-top) + var(--space-3));
 }
 
 .ui-rep-hub-period {
