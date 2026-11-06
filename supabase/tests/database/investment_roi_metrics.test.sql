@@ -1,10 +1,10 @@
--- FLOW-1068 (decision 0260). The selling cost input (set_project_investment, undo kind
+-- FLOW-1068 (decision 0261). The selling cost input (set_project_investment, undo kind
 -- project_investment), a renovation's net profit and ROI, and a rental's new metrics on
 -- get_property_returns. Invented data only; amounts are cents of an invented company's dollars.
 
 begin;
 
-select plan(28);
+select plan(32);
 
 do $users$
 begin
@@ -116,6 +116,25 @@ select is(pg_temp.ret('flip')->'deal'->>'selling_cost_default', 'false', 'the se
 select is(public.mcp_undo('roi-undo-1', 'project_investment', pg_temp.id('flip'))->>'ok', 'true', 'undo puts it back');
 select is(pg_temp.ret('flip')->'deal'->>'selling_cost_default', 'true', 'back to the default 8%');
 select tests.authenticate_as('roi_owner');
+
+-- The review of #1012: a loan's principal paid before the sale pays back the loan that funded the
+-- price, so it is no holding cost; its interest is.
+reset role;
+insert into roi (label, id)
+select 'f_principal', tests.fixture_line(pg_temp.id('co'), 'roi:f_principal', 1000000, p_project => pg_temp.id('flip'),
+  p_category => c.id, p_doc_date => '2026-03-05', p_currency => 'USD')
+from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'principal';
+select tests.authenticate_as('roi_owner');
+select is((pg_temp.ret('flip')->'deal'->>'holding_minor')::bigint, -200000::bigint, 'a principal payment is no holding cost');
+select is((pg_temp.ret('flip')->'deal'->>'net_profit_minor')::bigint, 4800000::bigint, 'nor does it come off the net profit');
+reset role;
+insert into roi (label, id)
+select 'f_interest', tests.fixture_line(pg_temp.id('co'), 'roi:f_interest', 50000, p_project => pg_temp.id('flip'),
+  p_category => c.id, p_doc_date => '2026-03-05', p_currency => 'USD')
+from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'interest';
+select tests.authenticate_as('roi_owner');
+select is((pg_temp.ret('flip')->'deal'->>'holding_minor')::bigint, -250000::bigint, 'the interest paid before the sale is a holding cost');
+select is((pg_temp.ret('flip')->'deal'->>'net_profit_minor')::bigint, 4750000::bigint, 'and comes off the net profit');
 
 -- The rental's new metrics. Income 12,000.00, operating expenses 2,000.00, no loan; the value is
 -- 120,000.00 with no loan, so the equity today is 120,000.00. The first rent is 214 days back.

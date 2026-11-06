@@ -1,4 +1,4 @@
--- FLOW-1068 (decision 0260): ROI, a renovation's net profit, and more of the book's deal metrics on
+-- FLOW-1068 (decision 0261): ROI, a renovation's net profit, and more of the book's deal metrics on
 -- get_property_returns.
 --
 -- 1. A new input, projects.selling_cost_bp: the costs of selling (agent, closing, transfer taxes) as
@@ -14,6 +14,7 @@
 --    price (a renovation). Each is null when an input it needs is missing.
 --
 -- forced_equity_minor (ARV - purchase - rehab) stays as it was: a rental's forced appreciation.
+-- A return on a few cents of money in is clamped to the integer range rather than failing the read.
 
 begin;
 
@@ -79,7 +80,7 @@ $n$);
 end
 $set_inv$;
 comment on function public.set_project_investment(uuid, jsonb) is
-  'Sets a project''s investment currency, purchase, ARV, value, units, land and selling cost (owner only); a key left out keeps its figure, a null clears it. Decisions 0143, 0244 and 0260.';
+  'Sets a project''s investment currency, purchase, ARV, value, units, land and selling cost (owner only); a key left out keeps its figure, a null clears it. Decisions 0143, 0244 and 0261.';
 
 -- mcp_undo project_investment puts the selling cost back too. A write made before this migration has
 -- no selling_cost_bp in its figures: its undo leaves the selling cost as it is and compares the rest.
@@ -158,10 +159,14 @@ $n$);
     selling := private.div_half_even(p.arv_minor::numeric * selling_bp, 10000);
   end if;
   -- The holding costs that rehab does not already count (a category counts in rehab unless it is
-  -- switched off, so a line can be both), signed as the lines: a cost is negative.
+  -- switched off, so a line can be both), signed as the lines: a cost is negative. A loan's principal
+  -- paid before the first rent is holding in property_lines, but it pays back the loan that funded the
+  -- price, which the purchase already counts: it is no cost of the deal (the review of #1012).
   select coalesce(sum(a.amount_minor), 0)::bigint into holding_out
   from private.property_lines(cid, p_project_id, null, null) a
-  where a.currency = cur and a.line = 'holding' and not a.in_rehab;
+  left join public.categories c on c.id = a.category_id and c.company_id = cid
+  where a.currency = cur and a.line = 'holding' and not a.in_rehab
+    and coalesce(a.part, c.loan_part::text, '') <> 'principal';
   if purchase is not null and rehab is not null then
     costs := purchase + rehab - holding_out;
     if p.arv_minor is not null then
@@ -185,19 +190,19 @@ $n$ || a_return);
     ),
 $n$ || a_metrics);
   def := replace(def, a_per_unit, $n$      'cash_flow_per_unit_month_minor', round(cash_flow * 365.0 / (units * earning_days * 12))::bigint,
-      'roe_bp', case when equity > 0 then round(total * earn_annual * 10000 / equity)::integer end,
+      'roe_bp', case when equity > 0 then least(greatest(round(total * earn_annual * 10000 / equity), -2147483647), 2147483647)::integer end,
       'roi_since_purchase_bp', case when money_in > 0 and equity is not null
-        then round((greatest(life_cf, 0) + equity - money_in) * 10000.0 / money_in)::integer end,
+        then least(greatest(round((greatest(life_cf, 0) + equity - money_in) * 10000.0 / money_in), -2147483647), 2147483647)::integer end,
       'equity_multiple_milli', case when money_in > 0 and equity is not null
-        then round((greatest(life_cf, 0) + equity) * 1000.0 / money_in)::integer end,
+        then least(greatest(round((greatest(life_cf, 0) + equity) * 1000.0 / money_in), -2147483647), 2147483647)::integer end,
       'break_even_occupancy_bp', case when income > 0 then round((-opex - debt) * 10000.0 / income)::integer end,
       'expense_ratio_bp', case when income > 0 then round(-opex * 10000.0 / income)::integer end,
       'grm_milli', case when income > 0 and purchase is not null
         then round(purchase * 1000.0 / (income * earn_annual))::integer end,
       'ltv_bp', case when p.value_minor > 0 and loan_bal is not null
         then round(loan_bal * 10000.0 / p.value_minor)::integer end,
-      'flip_roi_bp', round(flip_roi)::integer,
-      'flip_roi_year_bp', case when held_days > 0 then round(flip_roi * 365 / held_days)::integer end,
+      'flip_roi_bp', least(greatest(round(flip_roi), -2147483647), 2147483647)::integer,
+      'flip_roi_year_bp', case when held_days > 0 then least(greatest(round(flip_roi * 365 / held_days), -2147483647), 2147483647)::integer end,
       'arv_margin_bp', case when p.arv_minor > 0 and net_profit is not null
         then round(net_profit * 10000.0 / p.arv_minor)::integer end,
       'rule_70_minor', case when p.arv_minor is not null and costs is not null

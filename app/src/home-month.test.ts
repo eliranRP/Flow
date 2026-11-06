@@ -73,23 +73,30 @@ describe("canStepYear", () => {
   });
 });
 
-describe("Home on next month (FLOW-1056)", () => {
-  it("reads ?month= as next month only with next month on, never a month beyond it", () => {
+describe("Home on a month to come (FLOW-1056, FLOW-1066)", () => {
+  // TODAY is October 2026: the forecast runs from November 2026 to October 2027.
+  it("reads ?month= as any month of the forecast with it on, clamped to its last month", () => {
     expect(homeMonthKey("?month=2026-11", TODAY, "2025-03", true)).toBe("2026-11");
+    expect(homeMonthKey("?month=2027-03", TODAY, "2025-03", true)).toBe("2027-03");
+    expect(homeMonthKey("?month=2027-10", TODAY, "2025-03", true)).toBe("2027-10");
+    expect(homeMonthKey("?month=2027-11", TODAY, "2025-03", true)).toBe("2027-10");
+    expect(homeMonthKey("?month=2030-01", TODAY, "2025-03", true)).toBe("2027-10");
     expect(homeMonthKey("?month=2026-11", TODAY, "2025-03")).toBe("2026-10");
-    expect(homeMonthKey("?month=2026-12", TODAY, "2025-03", true)).toBe("2026-10");
   });
 
   it("names the three month states", () => {
     expect(homeMonthState("2026-07", "2026-10")).toBe("past");
     expect(homeMonthState("2026-10", "2026-10")).toBe("current");
     expect(homeMonthState("2026-11", "2026-10")).toBe("future");
+    expect(homeMonthState("2027-05", "2026-10")).toBe("future");
   });
 
-  it("steps from the current month to next month, back to the current month, and no later", () => {
+  it("steps through the forecast's months, one back from each, and no later than its last", () => {
     expect(homeMonthSteps("2026-10", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2026-09", laterKey: "2026-11" });
-    expect(homeMonthSteps("2026-11", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2026-10", laterKey: null });
-    // Without next month (a preview), the current month has no later arrow; a past month always has one.
+    expect(homeMonthSteps("2026-11", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2026-10", laterKey: "2026-12" });
+    expect(homeMonthSteps("2027-03", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2027-02", laterKey: "2027-04" });
+    expect(homeMonthSteps("2027-10", "2026-10", "2025-03", true)).toEqual({ earlierKey: "2027-09", laterKey: null });
+    // Without the forecast (a preview), the current month has no later arrow; a past month always has one.
     expect(homeMonthSteps("2026-10", "2026-10", "2025-03", false)).toEqual({ earlierKey: "2026-09", laterKey: null });
     expect(homeMonthSteps("2025-03", "2026-10", "2025-03", false)).toEqual({ earlierKey: null, laterKey: "2025-04" });
   });
@@ -99,11 +106,26 @@ describe("Home on next month (FLOW-1056)", () => {
     expect(homeMonthSteps("2027-01", "2026-12", "2025-03", true).earlierKey).toBe("2026-12");
   });
 
-  it("marks next month as next in the drawer, and as selected with no net once picked", () => {
+  it("marks every month of the forecast in the drawer, and a picked one as selected with no net", () => {
     const net = { "2026-10": 100_00n };
-    expect(drawerCells(2026, net, "2026-01", TODAY, "2026-10", true).find((cell) => cell.index === 10)?.state).toBe("next");
+    const cells = drawerCells(2026, net, "2026-01", TODAY, "2026-10", true);
+    expect(cells.find((cell) => cell.index === 10)?.state).toBe("forecast");
+    expect(cells.find((cell) => cell.index === 11)?.state).toBe("forecast");
     const picked = drawerCells(2026, net, "2026-01", TODAY, "2026-11", true);
     expect(picked.find((cell) => cell.index === 10)).toEqual({ key: "2026-11", index: 10, state: "selected", netMinor: null });
-    expect(picked.find((cell) => cell.index === 11)?.state).toBe("future");
+  });
+
+  it("reaches past December: next year's months to the last are forecast, the ones after it disabled", () => {
+    const cells = drawerCells(2027, {}, "2026-01", TODAY, "2026-10", true);
+    expect(cells.slice(0, 10).every((cell) => cell.state === "forecast")).toBe(true);
+    expect(cells[10]?.state).toBe("future");
+    expect(cells[11]?.state).toBe("future");
+    expect(drawerCells(2027, {}, "2026-01", TODAY, "2027-10", true)[9]).toEqual({ key: "2027-10", index: 9, state: "selected", netMinor: null });
+  });
+
+  it("steps the drawer's year to the forecast's last year and no further", () => {
+    expect(canStepYear(2026, 1, "2025-03", TODAY, true)).toBe(true);
+    expect(canStepYear(2027, 1, "2025-03", TODAY, true)).toBe(false);
+    expect(canStepYear(2026, 1, "2025-03", "2026-01-15", true)).toBe(true);
   });
 });

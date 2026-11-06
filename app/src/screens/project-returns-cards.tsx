@@ -124,14 +124,16 @@ export function flipParts(r: PropertyReturns): Part[] {
     { key: "rehab", label: "שיפוץ עד היום", hint: "מחושב מההוצאות", value: rehab == null ? { kind: "text", text: "לא מחושב" } : { kind: "money", minor: -rehab }, open: { kind: "target", target: { kind: "part", part: "rehab" } }, shade: 2 },
     // No holding costs (all of them counted in the renovation): no part of ₪0.
     ...(r.deal.holdingMinor === 0n ? [] : [
-      { key: "holding", label: "החזקה", hint: "ריבית, ביטוח, ארנונה ושאר ההוצאות", value: { kind: "money", minor: r.deal.holdingMinor }, open: { kind: "target", target: { kind: "line", line: "holding" } }, shade: 3 } satisfies Part,
+      // Only the holding costs rehab does not count: no list of its own adds up to it (the review of #1012).
+      { key: "holding", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: { kind: "money", minor: r.deal.holdingMinor }, open: null, shade: 3 } satisfies Part,
     ]),
     {
       key: "selling",
       label: "עלויות מכירה",
       hint: `${sellingText(r)} מה־ARV · ${r.deal.sellingCostDefault ? "הערכה" : "שלך"} · עריכה`,
       value: selling == null ? { kind: "missing", add: "arv" } : { kind: "money", minor: -selling },
-      open: { kind: "target", target: { kind: "edit", field: "selling_cost" } },
+      // With no ARV the costs of selling wait for it: the part opens the ARV's sheet.
+      open: { kind: "target", target: { kind: "edit", field: selling == null ? "arv" : "selling_cost" } },
       shade: 4,
     },
     { key: "profit", label: "רווח נקי צפוי", hint: missingNote(profit) ?? "מה שנשאר אחרי כל העלויות", value: profit, open: { kind: "target", target: { kind: "part", part: "profit" } }, shade: 5 },

@@ -38,6 +38,7 @@ import { formatDayMonth, israelToday } from "../ui/date-math";
 import { ForecastAmountField, ForecastBars } from "../ui/forecast-edit-parts";
 import { IconRow } from "../ui/icon-row";
 import { ProjectsIcon, RepeatIcon, TagIcon } from "../ui/icons";
+import { forecastMonthSearch, useForecastMonth } from "../forecast-page-month";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { useToast } from "../ui/toast";
@@ -99,7 +100,11 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const [searchParams] = useSearchParams();
   const backParam = add ? searchParams.get("back") : null;
   // FLOW-1011: קבועים adds a line too (?back=recurring), starting at כל חודש (?pace=month).
-  const backTo = backParam === "forecast" ? `/forecast${search}` : backParam === "recurring" ? `/recurring${search}` : `/projects/${projectId}/profit/next${search}`;
+  // FLOW-1066: the page is for a month of the forecast (?month=, next month by default), and goes back to that
+  // month's צפי page.
+  const today = sample?.next.today ?? israelToday();
+  const forMonth = useForecastMonth(today);
+  const backTo = backParam === "forecast" ? `/forecast${search}` : backParam === "recurring" ? `/recurring${search}` : `/projects/${projectId}/profit/next${forecastMonthSearch(search, forMonth, today)}`;
   const askedPace = add && searchParams.get("pace") === "month" ? "month" : null;
   const gate = useWriteGate(backTo);
   const companyCurrency = useCompanyCurrency();
@@ -107,13 +112,11 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const project = sample?.project ?? detail.data ?? null;
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
   // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
-  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null);
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth);
   const currency = next.currency;
-  const askedMonth = add ? searchParams.get("month") : null;
-  // Only this month or the forecast's own (next) month: a month that has ended is not forecast.
-  const month = askedMonth != null && /^\d{4}-(0[1-9]|1[0-2])$/.test(askedMonth) && askedMonth >= israelToday().slice(0, 7) && askedMonth <= next.month
-    ? askedMonth
-    : next.month;
+  // FLOW-1006: a line added from the תזרים צפוי screen is for this month; every other write is for the page's
+  // forecast month. A month that has ended is not forecast.
+  const month = add && searchParams.get("month") === today.slice(0, 7) ? today.slice(0, 7) : next.month;
   const writes = useProjectForecastWrites(projectId, month);
   const create = useCreateForecastCategory();
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));

@@ -1,4 +1,4 @@
-# 0260 · ROI, a renovation's net profit, and the deal metrics on the investment page
+# 0261 · ROI, a renovation's net profit, and the deal metrics on the investment page
 
 **Date:** 2026-11-06
 **Status:** Accepted

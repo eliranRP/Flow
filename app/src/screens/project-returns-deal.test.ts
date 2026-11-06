@@ -6,7 +6,7 @@ import { METRIC_KEYS, partPage, profitFormula } from "./project-returns-info";
 import { PERCENT_KINDS, SELLING_EMPTY, SELLING_RANGE, percentVerdict } from "./project-returns-sheets";
 import { sellingSample } from "./project-investment-screen";
 
-/* FLOW-1068 (decision 0260): the deal metrics, the net profit and the costs of selling. Invented figures. */
+/* FLOW-1068 (decision 0261): the deal metrics, the net profit and the costs of selling. Invented figures. */
 
 const noArv: PropertyReturns = {
   ...birchLaneReturns,
@@ -75,6 +75,9 @@ describe("the net profit", () => {
   it("sets the costs of selling in sample mode as the server does, and null goes back to 8%", () => {
     const six = sellingSample(birchLaneReturns, 600);
     expect(six.deal).toMatchObject({ sellingCostBp: 600, sellingCostDefault: false, sellingCostMinor: 1_860_000n, netProfitMinor: 4_330_000n });
+    // The figures that rest on the net profit follow it: $43,300 on $36,300 in the deal.
+    expect(six.metrics.flipRoiBp).toBe(11_928);
+    expect(six.metrics.breakEvenSaleMinor).toBe(26_393_617n);
     expect(sellingSample(six, null).deal).toMatchObject({ sellingCostBp: 800, sellingCostDefault: true, netProfitMinor: 3_710_000n });
   });
 

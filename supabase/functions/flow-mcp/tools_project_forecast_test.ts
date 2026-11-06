@@ -1,7 +1,9 @@
 // Flow MCP tools tests: a project's next-month forecast edits. The read forwards project_forecast_edits_for;
 // the four writes forward to their mcp_* functions, need a write token, and refuse a bad body before any call.
 import { assertEquals } from "jsr:@std/assert@1";
+import { forecastLastMonth, forecastMonths } from "../../../packages/shared/src/forecast-horizon.ts";
 import { callTool } from "./tools.ts";
+import { forecastReadMonth, israelMonthKey } from "./tools_reports.ts";
 import { CATEGORY, PROJECT, rpcOf } from "./tools_test_support.ts";
 
 const EDIT = { id: "e-1", kind: "change", row_key: "avg:repairs", category_id: null, direction: null, amount_minor: 120000, pace: "once", start_month: "2026-11" };
@@ -15,6 +17,30 @@ Deno.test("get_project_forecast_edits reads the month's edits of the project", a
   const bad = await callTool("get_project_forecast_edits", { project_id: "juniper", month: "2026-11" }, ["read"], rpc);
   assertEquals(bad.isError, true);
   assertEquals(calls.length, 1);
+});
+
+Deno.test("get_project_forecast_edits takes any month to the forecast's last, and refuses a later one before any read (FLOW-1066)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: [] }));
+  const last = forecastLastMonth(israelMonthKey());
+  const after = forecastMonths(last)[0] ?? "";
+  const ok = await callTool("get_project_forecast_edits", { project_id: PROJECT, month: last }, ["read"], rpc);
+  assertEquals(ok.isError, false);
+  assertEquals(calls, [{ name: "project_forecast_edits_for", body: { p_project_id: PROJECT, p_month: last } }]);
+  const refused = await callTool("get_project_forecast_edits", { project_id: PROJECT, month: after }, ["read"], rpc);
+  assertEquals(refused.isError, true);
+  assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+  assertEquals(calls.length, 1);
+});
+
+Deno.test("forecastReadMonth: up to 12 months after this one in Israel time", () => {
+  const now = new Date("2026-11-06T09:00:00Z");
+  assertEquals(forecastReadMonth("2027-11", now), true);
+  assertEquals(forecastReadMonth("2026-09", now), true);
+  assertEquals(forecastReadMonth("2027-12", now), false);
+  assertEquals(forecastReadMonth("2027-13", now), false);
+  assertEquals(forecastReadMonth(202711, now), false);
+  // 23:30 UTC on 31 December is already January in Israel: the last month is January a year on.
+  assertEquals(forecastReadMonth("2027-01", new Date("2025-12-31T23:30:00Z")), true);
 });
 
 Deno.test("set_project_forecast_edit forwards a change or an added line, and refuses both or neither", async () => {
@@ -47,6 +73,22 @@ Deno.test("remove, restore and reset forward to their functions; a read token ca
   const denied = await callTool("remove_project_forecast_row", { idempotency_key: "pf-v", project_id: PROJECT, month: "2026-11", row_key: "avg:power" }, ["read"], rpc);
   assertEquals(denied.isError, true);
   assertEquals(calls.length, 4);
+});
+
+Deno.test("the four writes take a month up to the forecast's last and refuse a later one before any call (FLOW-1066)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_forecast" } } }));
+  const last = forecastLastMonth(israelMonthKey());
+  const after = forecastMonths(last)[0] ?? "";
+  const set = (month: string) => callTool("set_project_forecast_edit", { idempotency_key: `pf-${month}`, project_id: PROJECT, month, row_key: "avg:repairs", amount_minor: 1 }, ["write"], rpc);
+  assertEquals((await set(last)).isError, false);
+  const refused = [
+    await set(after),
+    await callTool("remove_project_forecast_row", { idempotency_key: "pf-x1", project_id: PROJECT, month: after, row_key: "avg:power" }, ["write"], rpc),
+    await callTool("restore_project_forecast_row", { idempotency_key: "pf-x2", project_id: PROJECT, month: after, row_key: "avg:power" }, ["write"], rpc),
+    await callTool("reset_project_forecast", { idempotency_key: "pf-x3", project_id: PROJECT, month: after }, ["write"], rpc),
+  ];
+  assertEquals(refused.map((result) => result.isError), [true, true, true, true]);
+  assertEquals(calls.map((call) => call.body.p_month), [last]);
 });
 
 Deno.test("undo takes the project_forecast kind to mcp_undo", async () => {

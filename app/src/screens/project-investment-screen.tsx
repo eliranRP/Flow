@@ -161,8 +161,9 @@ function landFromSuggestion(r: PropertyReturns): PropertyReturns {
 }
 
 /**
- * Sample mode sets the costs of selling the way the server reads them (decision 0260): a percent of
- * the ARV, half to even, out of the net profit; null is the default 8%. The deal metrics stay as read.
+ * Sample mode sets the costs of selling the way the server reads them (decision 0261): a percent of
+ * the ARV, half to even, out of the net profit, and the renovation's figures that rest on it; null is
+ * the default 8%.
  */
 export function sellingSample(r: PropertyReturns, bp: number | null): PropertyReturns {
   const sellingBp = bp ?? SELLING_COST_DEFAULT_BP;
@@ -170,7 +171,21 @@ export function sellingSample(r: PropertyReturns, bp: number | null): PropertyRe
   const selling = arv == null ? null : divHalfEven(arv * BigInt(sellingBp), 10_000n);
   const before = r.deal.sellingCostMinor;
   const net = r.deal.netProfitMinor == null || selling == null || before == null ? r.deal.netProfitMinor : r.deal.netProfitMinor + before - selling;
-  return { ...r, deal: { ...r.deal, sellingCostBp: sellingBp, sellingCostDefault: bp == null, sellingCostMinor: selling, netProfitMinor: net } };
+  const moneyIn = r.equity.moneyInMinor;
+  const costs = r.inputs.purchaseMinor == null || r.inputs.rehabMinor == null ? null : r.inputs.purchaseMinor + r.inputs.rehabMinor - r.deal.holdingMinor;
+  const roi = net == null || moneyIn == null || moneyIn <= 0n ? null : Number(net * 10_000n / moneyIn);
+  const days = r.deal.heldDays;
+  return {
+    ...r,
+    deal: { ...r.deal, sellingCostBp: sellingBp, sellingCostDefault: bp == null, sellingCostMinor: selling, netProfitMinor: net },
+    metrics: {
+      ...r.metrics,
+      flipRoiBp: roi,
+      flipRoiYearBp: roi == null || days == null || days <= 0 ? null : Math.round((roi * 365) / days),
+      arvMarginBp: net == null || arv == null || arv <= 0n ? null : Number(net * 10_000n / arv),
+      breakEvenSaleMinor: costs == null ? null : divHalfEven(costs * 10_000n, BigInt(10_000 - sellingBp)),
+    },
+  };
 }
 
 /** a ÷ b rounded half to even, for amounts at or above zero. */

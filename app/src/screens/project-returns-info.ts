@@ -13,8 +13,8 @@ import { bracketText, dscrText, percentText, type PropertyReturns, type RehabRow
 /** FLOW-1068: `selling_cost` is the costs of selling, a percent of the ARV (8% until set). */
 export type EditField = InvestmentField | "tax_bracket" | "selling_cost";
 /** FLOW-1068: `profit` is a renovation's net profit at the sale. */
-export type PartKey = "building" | "money-in" | "forced" | "rehab" | "profit";
-export const PART_KEYS: readonly PartKey[] = ["building", "money-in", "forced", "rehab", "profit"];
+export type PartKey = "building" | "money-in" | "rehab" | "profit";
+export const PART_KEYS: readonly PartKey[] = ["building", "money-in", "rehab", "profit"];
 export type MetricKey = "coc" | "cap-rate" | "dscr" | "per-unit";
 export const METRIC_KEYS: readonly MetricKey[] = ["coc", "cap-rate", "dscr", "per-unit"];
 
@@ -291,7 +291,7 @@ export function forcedFormula(r: PropertyReturns): Formula {
   };
 }
 
-/** "8%", "8% · ברירת מחדל": the costs of selling, and whether the owner set them. */
+/** "8%": the costs of selling, as a percent of the ARV. */
 export function sellingText(r: PropertyReturns): string {
   return bracketText(r.deal.sellingCostBp);
 }
@@ -299,7 +299,7 @@ export function sellingText(r: PropertyReturns): string {
 export const NET_PROFIT_BODY = "מה שיישאר אחרי המכירה: השווי אחרי השיפוץ, פחות עלויות המכירה, הקנייה, השיפוץ וההחזקה.";
 
 /**
- * FLOW-1068 (decision 0260): a renovation's net profit at the sale, the four cost buckets of Real
+ * FLOW-1068 (decision 0261): a renovation's net profit at the sale, the four cost buckets of Real
  * Estate by the Numbers Ch 42: the ARV, less the costs of selling (8% until the owner sets them), the
  * purchase, the renovation so far, and the holding costs the renovation does not already count.
  */
@@ -312,7 +312,8 @@ export function profitFormula(r: PropertyReturns): Formula {
       { key: "selling", op: "−", label: FIELD_NAMES.selling_cost, hint: sellingHint, value: selling == null ? missing("arv") : money(-selling), target: { kind: "edit", field: "selling_cost" } },
       ...purchaseRows(r, "−", true),
       rehabRow(r, "−", true),
-      { key: "holding", op: "−", label: "החזקה", hint: "ריבית, ביטוח, ארנונה ושאר ההוצאות", value: money(r.deal.holdingMinor), target: { kind: "line", line: "holding" } },
+      // The review of #1012: the figure is only what rehab does not count, so it opens no list that adds up to more.
+      { key: "holding", op: "−", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(r.deal.holdingMinor) },
     ],
     result: { key: "profit", op: "=", label: "רווח נקי צפוי", value: computed(r.deal.netProfitMinor, r, ["arv", "purchase"]) },
   };
@@ -430,10 +431,7 @@ export function partPage(part: PartKey, r: PropertyReturns, rehab: readonly Reha
   if (part === "money-in") {
     return { title: "כסף בעסקה", meta: MONEY_IN_CAPTION, body: MONEY_IN_BODY, back: "השקעה", formula: moneyInFormula(r) };
   }
-  if (part === "profit") {
-    return { title: "רווח נקי צפוי", meta: "ARV פחות מכירה, קנייה, שיפוץ והחזקה", body: NET_PROFIT_BODY, back: "השקעה", formula: profitFormula(r) };
-  }
-  return { title: "השבחה צפויה", meta: "ARV פחות קנייה ושיפוץ", body: INFO.forced.body, back: "השקעה", formula: forcedFormula(r) };
+  return { title: "רווח נקי צפוי", meta: "ARV פחות מכירה, קנייה, שיפוץ והחזקה", body: NET_PROFIT_BODY, back: "השקעה", formula: profitFormula(r) };
 }
 
 /* -- the metrics ---------------------------------------------------------------------------------- */

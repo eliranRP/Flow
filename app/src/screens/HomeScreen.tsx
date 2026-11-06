@@ -137,7 +137,8 @@ export function CashEmptyHome({
  * holds the company, +, search and the avatar, the month pill, its figures and the forecast row.
  * FLOW-1036 (v3, pattern Overview): under it the דורש טיפול cards, then the month's activity with
  * its filter, which docks into the compact bar. A past month reads the same way in the darker band.
- * FLOW-1056: next month is a third state, its forecast as the month's data (home-future-month.tsx).
+ * FLOW-1056: next month is a third state, its forecast as the month's data (home-future-month.tsx); FLOW-1066: so is every
+ * month of the forecast, 12 months ahead.
  * The month comes from `?month=`.
  */
 export function HomeScreen({ example }: { example?: ReactNode } = {}) {
@@ -168,9 +169,10 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const today = israelToday();
   const currentKey = today.slice(0, 7);
   const firstKey = years.data?.first_month ? cashMonthKey(years.data.first_month) : null;
-  // FLOW-1056: next month is a month Home shows (its forecast); a preview has no forecast, so it stops at this one.
-  const withNext = !previewing;
-  const monthKey = homeMonthKey(location.search, today, firstKey, withNext);
+  // FLOW-1056, FLOW-1066: the forecast's months (next month to 12 ahead) are months Home shows; a preview has no
+  // forecast, so it stops at this one.
+  const withForecast = !previewing;
+  const monthKey = homeMonthKey(location.search, today, firstKey, withForecast);
   const isCurrent = monthKey === currentKey;
   const isFuture = homeMonthState(monthKey, currentKey) === "future";
   const older = useCashMonthData(monthKey);
@@ -326,7 +328,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       activity={activity}
-      withNext={withNext}
+      withForecast={withForecast}
       future={future}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
       recurringTip={recurringOwner}
@@ -342,7 +344,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const recent = cash.data;
   return withWeekly(
     <Suspense fallback={home(FUTURE_LOADING)}>
-      <HomeFutureReads today={today} currency={base} cash={recent} search={search}>
+      <HomeFutureReads today={today} month={monthKey} currency={base} cash={recent} search={search}>
         {home}
       </HomeFutureReads>
     </Suspense>,
@@ -376,7 +378,7 @@ export function CashHome({
   syncing = null,
   offlineSince = null,
   activity = null,
-  withNext = false,
+  withForecast = false,
   future = null,
   initialFilter = "all",
   lateRecurring = 0,
@@ -403,9 +405,9 @@ export function CashHome({
   weekly?: ReactNode;
   /** FLOW-1036: the month's activity reads (the current month only); null draws no activity. */
   activity?: HomeActivityData | null;
-  /** FLOW-1056: next month is a month to step to (the band's later arrow, the drawer's cell); not in a preview. */
-  withNext?: boolean;
-  /** FLOW-1056: next month's forecast, when `monthKey` is next month: the band's figures and the activity. */
+  /** FLOW-1056, FLOW-1066: the forecast's months are months to step to (the band's arrows, the drawer's cells); not in a preview. */
+  withForecast?: boolean;
+  /** FLOW-1056: the month's forecast, when `monthKey` is a month to come: the band's figures and the activity. */
   future?: HomeFuture | null;
   /** Stories start on a filter. */
   initialFilter?: ActivityFilter;
@@ -476,9 +478,9 @@ export function CashHome({
       window.scrollTo({ top: 0 });
     });
   }, [drawerOpen, onStepMonth]);
-  // FLOW-1056: the later arrow on the current month steps to next month, like any month; next month has no later one.
+  // FLOW-1056, FLOW-1066: the later arrow steps through the forecast's months, like any month, to its last.
   const nav: HomeMonthNav = {
-    ...homeMonthSteps(monthKey, currentKey, firstKey, withNext),
+    ...homeMonthSteps(monthKey, currentKey, firstKey, withForecast),
     onStep: onStepMonth,
     onOpenDrawer: () => {
       setDrawer(true);
@@ -519,7 +521,14 @@ export function CashHome({
               )}
             </HomeSwipeFigures>
             {isPast ? null : isFuture ? (
-              <FutureForecastRow monthKey={monthKey} search={search} />
+              <FutureForecastRow
+                monthKey={monthKey}
+                currentKey={currentKey}
+                search={search}
+                profitMinor={future?.figures?.profitMinor ?? null}
+                currency={base}
+                failed={future?.phase === "failed"}
+              />
             ) : forecast != null ? (
               <Link to="/forecast" className="ui-home-forecast-link" aria-label="תזרים צפוי לסוף החודש">
                 <ForecastRow monthKey={monthKey} minor={forecast} currency={base} />
@@ -602,7 +611,7 @@ export function CashHome({
         firstKey={firstKey}
         base={base}
         yearMonths={drawerYearMonths}
-        withNext={withNext}
+        withForecast={withForecast}
         currentKey={currentKey}
         onPick={(key) => {
           pendingMonth.current = key;

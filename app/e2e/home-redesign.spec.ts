@@ -41,9 +41,25 @@ test("the later arrow on the current month lands on Home for next month, and the
   await expect(page.getByText("צפוי להיכנס")).toBeVisible();
   await expect(page.getByRole("link", { name: /פירוט ועריכה/u })).toHaveAttribute("href", "/forecast/next?preview=1");
   await expect(page.getByRole("heading", { name: /^הצפוי ב/u })).toBeVisible();
-  await expect(page.locator(".ui-band").getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
   await page.locator(".ui-band").getByRole("button", { name: "חודש קודם" }).click();
   await expect(page.getByText("תזרים · עד היום")).toBeVisible();
+});
+
+test("the later arrow goes on through the forecast's months, to its last and no further (FLOW-1066)", async ({ page }) => {
+  // The fixture's current month is October 2026: its forecast runs from November 2026 to October 2027.
+  await page.goto("/e2e/cash?preview=1&future=2026-11");
+  const band = page.locator(".ui-band");
+  await band.getByRole("button", { name: "חודש הבא" }).click();
+  await expect(page.getByText("תזרים צפוי · דצמבר")).toBeVisible();
+  // A month after next: the estimate's note, its own פירוט ועריכה, with the month's expected profit in its name.
+  await expect(page.getByText("הערכה · לפי קבועים, הלוואות וממוצע 6 חודשים")).toBeVisible();
+  const details = page.getByRole("link", { name: /^פירוט ועריכה, רווח צפוי בדצמבר /u });
+  await expect(details).toHaveAttribute("href", "/forecast/next?preview=1&month=2026-12");
+  await page.goto("/e2e/cash?preview=1&future=2027-10");
+  await expect(page.getByText("תזרים צפוי · אוקטובר")).toBeVisible();
+  await expect(band.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+  await band.getByRole("button", { name: "חודש קודם" }).click();
+  await expect(page.getByText("תזרים צפוי · ספטמבר")).toBeVisible();
 });
 
 test("next month in the drawer picks like any month: the drawer closes on Home for next month (FLOW-1056)", async ({ page }) => {
@@ -51,10 +67,10 @@ test("next month in the drawer picks like any month: the drawer closes on Home f
   await page.locator(".ui-band-month-name").click();
   const drawer = page.getByRole("dialog", { name: "בחירת חודש" });
   await expect(drawer).toBeVisible();
-  const next = drawer.locator(".ui-month-cell-next");
+  const next = drawer.locator(".ui-month-cell-forecast");
   // December's drawer reaches January's forecast a year on.
   if ((await next.count()) === 0) await drawer.getByRole("button", { name: "שנה הבאה" }).click();
-  await drawer.locator(".ui-month-cell-next").click();
+  await drawer.locator(".ui-month-cell-forecast").click();
   await expect(drawer).toHaveCount(0);
   await expect(page.getByText(/^תזרים צפוי · /u)).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);

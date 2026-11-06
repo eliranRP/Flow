@@ -640,7 +640,7 @@ describe("the investment page's returns cards", () => {
     expect(screen.queryByRole("region", { name: "סיכון" })).toBeNull();
     expect(screen.getByRole("link", { name: /ROI על הכסף בעסקה/ })).toHaveTextContent("102.2%");
     expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("126.0%");
-    expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("10 חודשים · מהקנייה עד היום");
+    expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("10 חודשים · מהקנייה");
     const rule = screen.getByRole("link", { name: /כלל ה־70%/ });
     expect(rule).toHaveTextContent("−$29,300");
     expect(rule).toHaveTextContent("מחיר מקסימלי $155,700 · שולם $185,000");

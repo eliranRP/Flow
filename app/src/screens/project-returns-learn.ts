@@ -246,7 +246,7 @@ export const PAGE_LEARN = {
     "roi-since": "roi-since", roe: "roe", multiple: "multiple", "break-even": "break-even", ltv: "ltv", grm: "grm", "expense-ratio": "expense-ratio",
     "flip-roi": "flip-roi", "flip-roi-year": "flip-roi-year", "arv-margin": "arv-margin", "rule-70": "rule-70", "break-even-sale": "break-even-sale",
   },
-  part: { building: "building", "money-in": "money-in", forced: "forced", rehab: "rehab", profit: "profit" },
+  part: { building: "building", "money-in": "money-in", rehab: "rehab", profit: "profit" },
 } as const satisfies {
   statement: LearnKey;
   line: Partial<Record<ReturnLine, LearnKey>>;

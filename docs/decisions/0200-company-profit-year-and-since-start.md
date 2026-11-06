@@ -35,3 +35,5 @@ The company profit page showed one month: its profit, the year to date as one li
 - A company older than twenty years would lose its first years from מההתחלה; the read's 240-month cap sets that.
 - **flow-mcp (0095).** These are reads, not user actions. An agent gets the same figures from `get_profit_months` (every month, by year) and `get_breakdown` by project; the rest-of-year forecast is next month's recipe run per month, which [FLOW-216](../backlog/tasks/FLOW-216.md) documents with the inputs read.
 - Coming back from a project's profit page opens the month view: the project page's back link carries only the preview flag.
+
+**Amended by [0260](0260-forecast-any-month.md) (2026-11-06, FLOW-1066):** `company_next_month_inputs`' `rest_edits` covers every month of the forecast, 12 months after this one, not only the rest of the year; the rest-of-the-year card still sums this year's months only.

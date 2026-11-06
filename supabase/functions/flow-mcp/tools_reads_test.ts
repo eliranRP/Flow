@@ -946,12 +946,13 @@ Deno.test("get_expected_months checks months and project_id", async () => {
   };
   const project = "11111111-1111-4111-8111-111111111111";
   assertEquals((await callTool("get_expected_months", {}, ["read"], rpc)).structuredContent, { ok: true, data: report });
-  assertEquals((await callTool("get_expected_months", { months: 12, project_id: project }, ["read"], rpc)).isError, false);
+  // FLOW-1066: up to 13 months, this one and the forecast's 12.
+  assertEquals((await callTool("get_expected_months", { months: 13, project_id: project }, ["read"], rpc)).isError, false);
   assertEquals(calls, [
     ["expected_months", { p_months: 3, p_project_id: null }],
-    ["expected_months", { p_months: 12, p_project_id: project }],
+    ["expected_months", { p_months: 13, p_project_id: project }],
   ]);
-  for (const bad of [{ months: 0 }, { months: 13 }, { months: 2.5 }, { months: "3" }, { project_id: "x" }, { from: "2026-01-01" }]) {
+  for (const bad of [{ months: 0 }, { months: 14 }, { months: 2.5 }, { months: "3" }, { project_id: "x" }, { from: "2026-01-01" }]) {
     assertEquals((await callTool("get_expected_months", bad, ["read"], rpc)).isError, true);
   }
   assertEquals(calls.length, 2);

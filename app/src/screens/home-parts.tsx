@@ -5,6 +5,7 @@ import { addTriggerRef } from "../add-trigger";
 import { markRecurringTipSeen, recurringTipSeen, useTipDismiss } from "../recurring-tip";
 import { Link } from "react-router-dom";
 import { cashLinesPath } from "../cash";
+import { forecastMonthSearch } from "../forecast-page-month";
 import { changeTone } from "../home-month";
 import type { PeriodChoice } from "../period";
 import { anchorOf, monthPeriod } from "../period";
@@ -221,10 +222,15 @@ export type HomeFutureFigureRows = {
   expenseMinor: bigint;
   /** Under צפוי להיכנס: "6 שכירויות ו־2 הכנסות". */
   incomeNote: string;
-  /** Under צפוי לצאת: "מול $11,490 בנובמבר". */
+  /** Under צפוי לצאת: "מול $11,490 בנובמבר"; FLOW-1066: "קבועים וממוצעים" on a month after next. */
   expenseNote: string;
-  /** What the sum covers: "4 פרויקטים וכללי". */
+  /**
+   * After "הערכה · ": what the sum covers, "4 פרויקטים וכללי"; FLOW-1066 (mockup): on a month after next, what it
+   * is built from, "לפי קבועים, הלוואות וממוצע 6 חודשים".
+   */
   caption: string;
+  /** FLOW-1066 (owner, 2026-11-06): the month's expected profit, income less expenses (no loan principal). */
+  profitMinor: bigint;
 };
 
 /**
@@ -262,17 +268,35 @@ export function HomeFutureFigures({ monthKey, figures, failed = false, animate }
 }
 
 /**
- * FLOW-1056: on next month the band's forecast row is the way to פירוט ועריכה, the company's צפי page
- * (`/forecast/next`, FLOW-1000), in the forecast row's box.
+ * FLOW-1056: on a month to come the band's forecast row is the way to פירוט ועריכה, the company's צפי page
+ * (`/forecast/next`, FLOW-1000), in the forecast row's box. FLOW-1066: for that month (`?month=` after next
+ * month), and (owner, 2026-11-06: "Expected profit") with the month's expected profit where the current month's
+ * row has its figure: a bar while the read is out (`profitMinor` null), nothing once it failed. The link's name
+ * says the amount.
  */
-export function FutureForecastRow({ monthKey, search }: { monthKey: string; search: string }) {
+export function FutureForecastRow({ monthKey, currentKey, search, profitMinor, currency, failed = false }: {
+  monthKey: string;
+  /** This month (YYYY-MM): next month's link needs no `?month=`. */
+  currentKey: string;
+  search: string;
+  profitMinor: bigint | null;
+  currency: string;
+  failed?: boolean;
+}) {
+  const name = monthName(monthKey);
+  const label = profitMinor == null ? "פירוט ועריכה" : `פירוט ועריכה, רווח צפוי ב${name} ${formatAmountText(profitMinor, currency)}`;
   return (
-    <Link to={`/forecast/next${search}`} className="ui-home-forecast-link">
+    <Link to={`/forecast/next${forecastMonthSearch(search, monthKey, currentKey)}`} className="ui-home-forecast-link" aria-label={label}>
       <div className="ui-home-forecast ui-band-fade">
         <div className="ui-home-forecast-text">
           <p className="ui-home-forecast-title">פירוט ועריכה</p>
-          <p className="ui-home-forecast-sub">{`הצפי של כל פרויקט ל${monthName(monthKey)}`}</p>
+          <p className="ui-home-forecast-sub">{`רווח צפוי ב${name}`}</p>
         </div>
+        {failed && profitMinor == null ? null : (
+          <span className="ui-home-forecast-value">
+            {profitMinor == null ? <Skeleton tone="band" className="ui-skel-forecast-value" /> : <Amount agorot={profitMinor} currency={currency} size="list" />}
+          </span>
+        )}
         <span className="ui-home-forecast-chevron" aria-hidden="true">
           <OutwardChevron side="end" />
         </span>

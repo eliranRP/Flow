@@ -45,7 +45,7 @@ import { companyNextMonthInputsRead, projectForecastRead } from "./tools_project
 import { bankRead } from "./tools_bank.ts";
 import { moreRead } from "./tools_reads_more.ts";
 import { LEDGER_READS, ledgerRead } from "./tools_ledger.ts";
-import { dashboard, filterReviews, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
+import { dashboard, EXPECTED_MONTHS_MAX, filterReviews, forecastReadMonth, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
 import { callWrite } from "./tools_write.ts";
 
@@ -252,7 +252,7 @@ export async function callTool(
   // FLOW-141: the month-end forecast, its reads (FLOW-1005: the projects' edits too), one builder; writes in tools_write.ts.
   if (name === "get_forecast") {
     const month = args.month ?? israelMonthKey();
-    if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return fail("validation", "validation");
+    if (!forecastReadMonth(month)) return fail("validation", "validation"); // FLOW-1066: up to the forecast's last month.
     const [expected, unpaid, overrides, edits, cash, currency] = await Promise.all([
       rpc("expected_months", { p_months: 1, p_project_id: null }),
       rpc("list_unpaid", {}),
@@ -274,7 +274,7 @@ export async function callTool(
 
   if (name === "get_expected_months") {
     const months = args.months == null ? 3 : args.months;
-    if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 12) {
+    if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > EXPECTED_MONTHS_MAX) {
       return fail("validation", "validation");
     }
     const projectId = args.project_id ?? null;

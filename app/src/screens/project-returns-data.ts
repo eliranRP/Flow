@@ -58,7 +58,7 @@ const SERVER_LINES: Record<StatementLine, readonly string[]> = {
   not_counted: ["acquisition", "financing"],
 };
 
-/** FLOW-1068 (decision 0260): the costs of selling until the owner sets them, 8% of the ARV. */
+/** FLOW-1068 (decision 0261): the costs of selling until the owner sets them, 8% of the ARV. */
 export const SELLING_COST_DEFAULT_BP = 800;
 
 export const MISSING_INPUTS = ["purchase", "value", "value_history", "land", "tax_bracket"] as const;

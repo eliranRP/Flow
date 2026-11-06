@@ -34,7 +34,7 @@ import {
 } from "./project-returns-info";
 
 /* ------------------------------------------------------------------------------------------------
- * FLOW-1068 (decision 0260; boards V3-Investment, V3-Calc-Roi, V3-Calc-Roe, V3-Calc-FlipProfit): the
+ * FLOW-1068 (decision 0261; boards V3-Investment, V3-Calc-Roi, V3-Calc-Roe, V3-Calc-FlipProfit): the
  * deal metrics of Real Estate by the Numbers that the מדדים tab adds to the four of FLOW-451. The
  * server works each one out (get_property_returns `metrics`); this file names them, says what each
  * is made of, and groups them by kind. A rental reads return, risk and price; a renovation reads its
@@ -142,7 +142,7 @@ export function dealMetricValue(metric: DealMetricKey, r: PropertyReturns): Figu
   return computed(m.breakEvenSaleMinor, r, ["purchase"]);
 }
 
-/** "ROI × 12 ÷ 7 חודשים": how long the renovation has been held, in months, at least one. */
+/** How long the renovation has been held, in whole months, at least one. */
 function heldMonths(r: PropertyReturns): number {
   return Math.max(1, Math.round((r.deal.heldDays ?? 0) / 30.44));
 }
@@ -171,7 +171,7 @@ function dealFormula(metric: DealMetricKey, r: PropertyReturns): string {
     case "grm": return "מחיר ÷ שכירות שנתית";
     case "expense-ratio": return "הוצאות תפעול ÷ הכנסות";
     case "flip-roi": return "רווח נקי ÷ כסף בעסקה";
-    case "flip-roi-year": return r.deal.heldDays == null ? "ROI לשנה, מהקנייה עד היום" : `${heldText(r)} · מהקנייה עד היום`;
+    case "flip-roi-year": return r.deal.heldDays == null ? "ROI לשנה, מהקנייה" : `${heldText(r)} · מהקנייה`;
     case "arv-margin": return "רווח נקי ÷ ARV";
     case "rule-70": {
       const paid = r.inputs.purchaseMinor;
@@ -377,7 +377,7 @@ function dealParts(metric: DealMetricKey, r: PropertyReturns): { sections: Metri
           title: "כל העלויות",
           total: costs == null ? undefined : money(costs),
           formula: {
-            rows: [...purchaseRows(r, "", false), rehabRow(r, "+", false), { key: "holding", op: "+", label: "החזקה", value: money(-r.deal.holdingMinor), target: { kind: "line", line: "holding" } }],
+            rows: [...purchaseRows(r, "", false), rehabRow(r, "+", false), { key: "holding", op: "+", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(-r.deal.holdingMinor) }],
             result: { key: "costs", op: "=", label: "כל העלויות", value: costs == null ? missing("purchase") : money(costs) },
           },
         }, oneRow("selling", "עלויות מכירה", { key: "selling", op: "", label: "עלויות מכירה", hint: "מה־ARV · עריכה", value: text(percentText(r.deal.sellingCostBp)), target: { kind: "edit", field: "selling_cost" } })],
@@ -390,7 +390,7 @@ function dealParts(metric: DealMetricKey, r: PropertyReturns): { sections: Metri
 export function dealMetricPage(metric: DealMetricKey, r: PropertyReturns): MetricPage {
   const value = dealMetricValue(metric, r);
   const { sections, division, yearly } = dealParts(metric, r);
-  const period = AFTER_RENT.includes(metric) ? (r.annualizedFrom == null ? "12 חודשים" : `מהשכירות הראשונה ב־${formatDisplay(r.annualizedFrom)}`) : "מאז הקנייה";
+  const period = AFTER_RENT.includes(metric) ? (r.annualizedFrom == null ? "12 חודשים" : `מהשכירות הראשונה ב־${formatDisplay(r.annualizedFrom)}`) : metric === "ltv" ? "היום" : "מאז הקנייה";
   const result = division == null || value.kind === "missing" || value.kind === "note" ? null : { text: `⁦${division}⁩`, value, yearly };
   return { title: DEAL_METRIC_TITLES[metric], caption: `${dealFormula(metric, r)} · ${period}`, cashOut: null, value, sections, result };
 }

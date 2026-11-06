@@ -3,9 +3,11 @@ import type { CashMonths, ProjectCashRow } from "@flow/shared";
 import { useMemo, type ReactNode } from "react";
 import { NOT_IN_PROFIT_LABEL } from "../cash";
 import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type CompanyNextMonth } from "../company-next-month";
+import { restExpenseNote } from "../company-year-forecast";
+import { forecastMonthSearch } from "../forecast-page-month";
 import type { RentCategory } from "../next-month-chart";
 import { useProjectsCashMonth } from "../project-cash";
-import { LOAN_SOURCE } from "../project-next-month";
+import { LOAN_SOURCE, nextMonthKey } from "../project-next-month";
 import { nothingExpected, thisMonthCashOut, useCompanyCashNextMonth } from "./company-cash-next-month";
 import { orderParts, partHint, partRows } from "./company-next-month-screen";
 import { groupSums, type ActivityGroup, type ActivityRow, type HomeFuture } from "./home-activity";
@@ -52,23 +54,39 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
   });
 }
 
-/** The band's figures: the expected net, in and out, and their lines, as the drawer's card wrote them. */
-export function homeFutureFigures(forecast: CompanyNextMonth, categories: readonly RentCategory[], thisMonthOut: bigint | null, today: string, currency: string): HomeFutureFigureRows {
+/** FLOW-1066 (mockup): a month after next says what its estimate is built from, in the caption's place. */
+export const FAR_MONTH_CAPTION = "לפי קבועים, הלוואות וממוצע 6 חודשים";
+
+/**
+ * The band's figures: the expected net, in and out, and their lines, as the drawer's card wrote them. FLOW-1066:
+ * a month after next compares its expenses with nothing (קבועים וממוצעים) and its caption is FAR_MONTH_CAPTION;
+ * `profitMinor` is the month's expected profit, for the פירוט ועריכה row.
+ */
+export function homeFutureFigures(forecast: CompanyNextMonth, categories: readonly RentCategory[], thisMonthOut: bigint | null, today: string, currency: string, profitMinor: bigint): HomeFutureFigureRows {
+  const far = forecast.month !== nextMonthKey(today);
+  // "מול $0" never shows: until this month's cash is read the line waits.
+  const nextNote = thisMonthOut == null ? "" : companyExpenseNote(forecast, today.slice(0, 7), thisMonthOut, currency);
   return {
     currency,
     netMinor: forecast.netMinor,
     incomeMinor: forecast.incomeMinor,
     expenseMinor: forecast.expenseMinor,
     incomeNote: companyIncomeNote(forecast, categories),
-    // "מול $0" never shows: until this month's cash is read the line waits.
-    expenseNote: thisMonthOut == null ? "" : companyExpenseNote(forecast, today.slice(0, 7), thisMonthOut, currency),
-    caption: companyForecastCaption(forecast),
+    expenseNote: far ? restExpenseNote(forecast) : nextNote,
+    caption: far ? FAR_MONTH_CAPTION : companyForecastCaption(forecast),
+    profitMinor,
   };
 }
 
-/** What Home draws for next month from the reads; stories and the dev route call it with a sample. */
-export function homeFutureView({ forecast, categories, projects, cash, today, currency, search, loading, failed, offline, onRetry }: {
+/**
+ * What Home draws for a month to come from the reads; stories and the dev route call it with a sample. FLOW-1066:
+ * the month is the forecast's; its rows open their project's צפי page for that month.
+ */
+export function homeFutureView({ forecast, profitMinor, categories, projects, cash, today, currency, search, loading, failed, offline, onRetry }: {
+  /** The month's forecast in cash terms (companyCashForecast). */
   forecast: CompanyNextMonth | null;
+  /** The same month's expected profit (the profit-basis net); null with the forecast. */
+  profitMinor: bigint | null;
   categories: readonly RentCategory[];
   projects: readonly ProjectCashRow[];
   /** Home's cash months: this month's cash out, which the expense line compares with. */
@@ -83,36 +101,39 @@ export function homeFutureView({ forecast, categories, projects, cash, today, cu
   onRetry: () => void;
 }): HomeFuture {
   if (failed) return { phase: "failed", offline, onRetry, figures: null, groups: [] };
-  if (loading || forecast == null) return { phase: "loading", offline, onRetry, figures: null, groups: [] };
+  if (loading || forecast == null || profitMinor == null) return { phase: "loading", offline, onRetry, figures: null, groups: [] };
   return {
     phase: "ready",
     offline,
     onRetry,
-    figures: homeFutureFigures(forecast, categories, thisMonthCashOut(cash, today, currency), today, currency),
-    groups: homeFutureGroups({ forecast, projects, currency, search }),
+    figures: homeFutureFigures(forecast, categories, thisMonthCashOut(cash, today, currency), today, currency, profitMinor),
+    groups: homeFutureGroups({ forecast, projects, currency, search: forecastMonthSearch(search, forecast.month, today) }),
   };
 }
 
-/** The reads for next month on Home; `children` draws Home with them. */
-export function HomeFutureReads({ today, currency, cash, search, children }: {
+/** The reads for a month to come on Home (`month`, FLOW-1066: any month of the forecast); `children` draws Home with them. */
+export function HomeFutureReads({ today, month, currency, cash, search, children }: {
   today: string;
+  /** yyyy-mm, a month of the forecast. */
+  month: string;
   currency: string;
   cash: NonNullable<CashMonths> | null;
   search: string;
   children: (future: HomeFuture) => ReactNode;
 }) {
-  const next = useCompanyCashNextMonth(currency, today, true);
+  const next = useCompanyCashNextMonth(currency, today, true, undefined, month);
   // The Projects tab's rows, for the groups' names and order; a failed read leaves the names as פרויקט.
   const list = useProjectsCashMonth();
   const projects = list.data?.projects;
   const loading = next.loading || (list.isPending && !list.isError);
   // A read waiting for the network says so, with its retry, as a failed one does.
   const failed = next.failed || next.paused;
-  const { forecast, categories, paused, refetch } = next;
+  const { forecast, profitMinor, categories, paused, refetch } = next;
   const { isError: listFailed, refetch: refetchList } = list;
   // FLOW-1052: the groups and figures are built once per read, not on every render of Home (a scroll, a dock).
   const future = useMemo(() => homeFutureView({
     forecast,
+    profitMinor,
     categories,
     projects: projects ?? [],
     cash,
@@ -126,6 +147,6 @@ export function HomeFutureReads({ today, currency, cash, search, children }: {
       void refetch();
       if (listFailed) void refetchList();
     },
-  }), [forecast, categories, projects, cash, today, currency, search, loading, failed, paused, refetch, listFailed, refetchList]);
+  }), [forecast, profitMinor, categories, projects, cash, today, currency, search, loading, failed, paused, refetch, listFailed, refetchList]);
   return children(future);
 }
