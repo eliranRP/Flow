@@ -467,6 +467,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1070"></a>[FLOW-1070](tasks/FLOW-1070.md) | ROI review follow-ups (#1012 review) | BACKLOG NIT |
 | <a id="flow-1071"></a>[FLOW-1071](tasks/FLOW-1071.md) | Investment metrics: a renovation keeps the four metrics, every part drills down, Back keeps the tab | SMALL UI (owner's ask) |
 | <a id="flow-1072"></a>[FLOW-1072](tasks/FLOW-1072.md) | Jev takes the property from the card's name | BUG (owner's ask) |
+| <a id="flow-1073"></a>[FLOW-1073](tasks/FLOW-1073.md) | Returns and Jev review follow-ups (#1014, #1015, #1016 reviews) | BACKLOG NIT |
 | <a id="flow-1053"></a>[FLOW-1053](tasks/FLOW-1053.md) | v3 pixel pass: Projects on its boards | UI (design approved) |
 | <a id="flow-1054"></a>[FLOW-1054](tasks/FLOW-1054.md) | v3 pixel pass: Reports on its boards | UI (design approved) |
 | <a id="flow-1057"></a>[FLOW-1057](tasks/FLOW-1057.md) | FLOW-1053b: the project page's month and its month-end forecast | UI (a feature; the owner decides first) |
