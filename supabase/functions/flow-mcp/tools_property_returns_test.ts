@@ -125,6 +125,24 @@ Deno.test("set_project_investment takes units and land", async () => {
   assertEquals(zero.isError, true);
 });
 
+Deno.test("set_project_investment takes the selling cost in basis points, null for the default", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_investment" } } }));
+  const set = await callTool("set_project_investment", { idempotency_key: "sc-1", project_id: PROJECT, selling_cost_bp: 600 }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_project_investment",
+    body: { p_idempotency_key: "sc-1", p_project_id: PROJECT, p_patch: { selling_cost_bp: 600 } },
+  });
+  await callTool("set_project_investment", { idempotency_key: "sc-2", project_id: PROJECT, selling_cost_bp: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body, { p_idempotency_key: "sc-2", p_project_id: PROJECT, p_patch: { selling_cost_bp: null } });
+  const before = calls.length;
+  for (const bad of [3001, -1, 5.5, "8%"]) {
+    const result = await callTool("set_project_investment", { idempotency_key: "sc-3", project_id: PROJECT, selling_cost_bp: bad }, ["write"], rpc);
+    assertEquals(result.isError, true, String(bad));
+  }
+  assertEquals(calls.length, before);
+});
+
 Deno.test("set_land_account sends the account, null unlinks, undo takes land_account", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "land_account" } } }));
   const set = await callTool("set_land_account", { idempotency_key: "la-1", account_id: CATEGORY }, ["write"], rpc);
