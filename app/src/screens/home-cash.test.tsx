@@ -184,7 +184,8 @@ describe("Home on next month (FLOW-1056)", () => {
     // This sample's reads come back empty: the list says the forecast did not load, with its retry; the band stays.
     expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
-    expect(within(bandOf()).getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+    // FLOW-1066: the forecast runs 12 months on, so next month's later arrow is on.
+    expect(within(bandOf()).getByRole("button", { name: "חודש הבא" })).not.toHaveAttribute("aria-disabled", "true");
     fireEvent.click(within(bandOf()).getByRole("button", { name: "חודש קודם" }));
     expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();
   });
@@ -197,9 +198,12 @@ describe("Home on next month (FLOW-1056)", () => {
     expect(screen.getByRole("heading", { name: `הפעילות ב${homeMonthLabel(month(1)).split(" ")[0] ?? ""}` })).toBeInTheDocument();
   });
 
-  it("goes no further than next month: a later ?month= is the current month", async () => {
-    wrap(0, `/?month=${shiftMonthKey(current, 2)}`);
-    expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();
+  it("goes no further than the forecast's last month (FLOW-1066): a later ?month= is that month, its later arrow off", async () => {
+    const last = shiftMonthKey(current, 12);
+    wrap(0, `/?month=${shiftMonthKey(current, 13)}`);
+    expect(await screen.findByText(`תזרים צפוי · ${homeMonthLabel(last).split(" ")[0] ?? ""}`)).toBeInTheDocument();
+    expect(within(bandOf()).getByText(homeMonthLabel(last))).toBeInTheDocument();
+    expect(within(bandOf()).getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("reads the forecast from the first render when Home is opened again with its data cached", async () => {

@@ -3,13 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
-import { companyRestOfYear, type RestOfYear } from "./company-year-forecast";
+import { companyMonthInput, companyRestOfYear, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { shiftMonthKey } from "./period";
 import { useHomePreview } from "./preview";
 import type { ForecastLoan } from "./project-next-loans";
+import { nextMonthKey } from "./project-next-month";
 import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-next-month-query";
 import { useCategoriesQuery } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
@@ -58,9 +59,10 @@ const NO_LOANS: readonly ForecastLoan[] = [];
 /**
  * The company's forecast for next month in its currency: every project's (as its צפי page builds it, the edits
  * on top) and the general costs', summed; and the same for each month left in the year (`rest`, null in
- * December). Null until the reads are in; `enabled` false reads nothing.
+ * December). Null until the reads are in; `enabled` false reads nothing. FLOW-1066: with `month` (a month of the
+ * forecast, inForecastHorizon), `forecast` and `input` are that month's, from the same reads.
  */
-export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample) {
+export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string) {
   const preview = useHomePreview();
   const live = enabled && sample == null && preview === "off";
   const expected = useQuery({
@@ -90,11 +92,13 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const categoryList = sample?.categories ?? categories.data;
   const inputData = sample?.inputs ?? inputs.data;
   // FLOW-1002: what the forecast is built from, so the overhead project's page can build the general costs alone.
+  // FLOW-1066: built for `month` (a month of the forecast; next month by default), its own edits in place of next month's.
+  const forMonth = month ?? nextMonthKey(today);
   const input: CompanyForecastInput | null = useMemo(
     () => (recurring != null && loanList != null && categoryList != null && inputData != null
-      ? { currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData }
+      ? companyMonthInput({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData }, forMonth)
       : null),
-    [recurring, loanList, categoryList, inputData, currency, today],
+    [recurring, loanList, categoryList, inputData, currency, today, forMonth],
   );
   const forecast: CompanyNextMonth | null = useMemo(() => (input == null ? null : companyNextMonthForecast(input)), [input]);
   // The year view's rest of the year (decision 0200): the same reads, built again for each month left.

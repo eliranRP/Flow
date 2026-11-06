@@ -1,6 +1,7 @@
 // Flow MCP tools tests: the month-end forecast (FLOW-141). get_forecast builds the items and the
 // totals from its reads (the company currency among them); set_forecast_item and reset_forecast forward to their RPCs.
 import { assertEquals } from "jsr:@std/assert@1";
+import { forecastLastMonth, forecastMonths } from "../../../packages/shared/src/forecast-horizon.ts";
 import { callTool } from "./tools.ts";
 import { rpcOf } from "./tools_test_support.ts";
 import { israelMonthKey } from "./tools_reports.ts";
@@ -121,6 +122,18 @@ Deno.test("get_forecast defaults to this month in Israel time and refuses a bad 
   assertEquals(/^\d{4}-\d{2}$/.test(israelMonthKey()), true);
   await callTool("get_forecast", {}, ["read"], rpc);
   assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: israelMonthKey() });
+});
+
+Deno.test("get_forecast takes a month up to the forecast's last, and refuses a later one before any read (FLOW-1066)", async () => {
+  const { calls, rpc } = rpcOf(reads);
+  const last = forecastLastMonth(israelMonthKey());
+  const ok = await callTool("get_forecast", { month: last }, ["read"], rpc);
+  assertEquals(ok.isError, false);
+  assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: last });
+  const count = calls.length;
+  const refused = await callTool("get_forecast", { month: forecastMonths(last)[0] }, ["read"], rpc);
+  assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+  assertEquals(calls.length, count);
 });
 
 Deno.test("get_forecast refuses when a read fails", async () => {

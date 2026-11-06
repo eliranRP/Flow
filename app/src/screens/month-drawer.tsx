@@ -14,8 +14,9 @@ import { cx } from "../ui/cx";
 /**
  * FLOW-364: the month drawer, opened from the band's month name and the compact bar's centre. A
  * year's twelve months, each with its net; a pick goes to that month on Home (`onPick`). FLOW-1036: with
- * `withNext`, the month after today is a cell too, dashed and marked צפי. FLOW-1056 (owner): it picks like any
- * month, and Home shows that month's forecast. Months beyond it stay "עוד לא". FLOW-1052 (V3-Home): the year row,
+ * `withForecast`, the month after today is a cell too, dashed and marked צפי. FLOW-1056 (owner): it picks like any
+ * month, and Home shows that month's forecast. FLOW-1066: so does every month of the forecast, 12 months ahead,
+ * the year arrows reaching next year; months past it stay "עוד לא", faded and disabled. FLOW-1052 (V3-Home): the year row,
  * Home's month in a tinted figure box (`figure`), the grid, and a סגירה pill; the sheet's own head is for the
  * screen reader only, as the board draws none.
  */
@@ -32,7 +33,7 @@ export function MonthDrawer({
   returnFocusRef,
   initialYear,
   yearMonths,
-  withNext = false,
+  withForecast = false,
   currentKey,
   figure = null,
 }: {
@@ -49,9 +50,9 @@ export function MonthDrawer({
   initialYear?: number;
   /** Stories and the dev route pass the year's months; the live drawer reads them. */
   yearMonths?: NonNullable<CashMonths>;
-  /** Next month is a cell to pick (not in a preview, which has no forecast). */
-  withNext?: boolean;
-  /** Home's current month (YYYY-MM), so the drawer's next month is Home's; today's month by default. */
+  /** The forecast's months are cells to pick, next month to 12 ahead (not in a preview, which has no forecast). */
+  withForecast?: boolean;
+  /** Home's current month (YYYY-MM), so the drawer's forecast months are Home's; today's month by default. */
   currentKey?: string;
   /** Home's month in the box over the grid; null draws no box. */
   figure?: DrawerFigure | null;
@@ -67,9 +68,9 @@ export function MonthDrawer({
   }
   const months = useCashYearMonthsQuery(year, open && yearMonths == null);
   const netByMonth = netsOf((yearMonths ?? months.data)?.months ?? [], base);
-  const cells = drawerCells(year, netByMonth, firstKey, today, selectedKey, withNext);
-  const canEarlier = canStepYear(year, -1, firstKey, today, withNext);
-  const canLater = canStepYear(year, 1, firstKey, today, withNext);
+  const cells = drawerCells(year, netByMonth, firstKey, today, selectedKey, withForecast);
+  const canEarlier = canStepYear(year, -1, firstKey, today, withForecast);
+  const canLater = canStepYear(year, 1, firstKey, today, withForecast);
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="בחירת חודש" returnFocusRef={returnFocusRef} panelClassName="ui-sheet-wide ui-sheet-g16 ui-sheet-compact ui-month-drawer-panel" closeButton={false}>
       <div className="ui-month-drawer">
@@ -130,8 +131,8 @@ function YearStep({ label, side, disabled, onClick }: { label: string; side: "st
 function MonthCell({ cell, base, onPick }: { cell: DrawerCell; base: string; onPick: (key: string) => void }) {
   const name = HEBREW_MONTHS[cell.index] ?? "";
   const off = cell.state === "future" || cell.state === "before";
-  // FLOW-1056: next month, picked or not, is a forecast: צפי, never a net.
-  const forecast = cell.state === "next" || (cell.state === "selected" && cell.netMinor == null);
+  // FLOW-1056, FLOW-1066: a month of the forecast, picked or not, is צפי, never a net.
+  const forecast = cell.state === "forecast" || (cell.state === "selected" && cell.netMinor == null);
   const label =
     cell.state === "future" ? `${name}, עוד לא הגיע`
     : cell.state === "before" ? `${name}, לפני הנתונים`

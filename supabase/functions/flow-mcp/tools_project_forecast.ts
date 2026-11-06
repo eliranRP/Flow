@@ -5,12 +5,16 @@
 // get_project_categories.
 import { z } from "zod";
 import { envelopeOf, fail, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID, WRITE_REFUSED } from "./tools_args.ts";
+import { forecastReadMonth } from "./tools_reports.ts";
 
 const IDEMPOTENCY_KEY = z.string().min(1).max(128);
 const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const PROJECT = z.string().regex(UUID);
 const ROW_KEY = z.string().min(1).max(200);
 const PACE = z.enum(["once", "month", "2months", "quarter", "year"]);
+// FLOW-1066: a write's month stops where the forecast does (12 months after this one), as the reads do; the
+// SQL still refuses a past month.
+const WRITE_MONTH = MONTH.refine((month) => forecastReadMonth(month));
 
 const readSchema = z.object({ project_id: PROJECT, month: MONTH }).strict();
 const companyReadSchema = z.object({ today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).strict();
@@ -18,7 +22,7 @@ const companyReadSchema = z.object({ today: z.string().regex(/^\d{4}-\d{2}-\d{2}
 const setSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   project_id: PROJECT,
-  month: MONTH,
+  month: WRITE_MONTH,
   row_key: ROW_KEY.optional(),
   category_id: z.string().regex(UUID).optional(),
   direction: z.enum(["income", "expense"]).optional(),
@@ -30,8 +34,8 @@ const setSchema = z.object({
   if (change === add) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "row_key or category_id" });
   if (change && body.direction !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "direction goes with category_id" });
 });
-const rowSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: MONTH, row_key: ROW_KEY }).strict();
-const resetSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: MONTH.optional() }).strict();
+const rowSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: WRITE_MONTH, row_key: ROW_KEY }).strict();
+const resetSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: WRITE_MONTH.optional() }).strict();
 
 /** The tools' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const PROJECT_FORECAST_ALLOWED: Record<string, Set<string>> = {
@@ -45,10 +49,10 @@ export const PROJECT_FORECAST_ALLOWED: Record<string, Set<string>> = {
 
 export const PROJECT_FORECAST_WRITES = ["set_project_forecast_edit", "remove_project_forecast_row", "restore_project_forecast_row", "reset_project_forecast"] as const;
 
-/** get_project_forecast_edits: project_forecast_edits_for. */
+/** get_project_forecast_edits: project_forecast_edits_for. FLOW-1066: any month up to the forecast's last. */
 export async function projectForecastRead(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = readSchema.safeParse(args);
-  if (!parsed.success) return fail("validation", "validation");
+  if (!parsed.success || !forecastReadMonth(parsed.data.month)) return fail("validation", "validation");
   const result = await rpc("project_forecast_edits_for", { p_project_id: parsed.data.project_id, p_month: parsed.data.month });
   if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
   return ok({ project_id: parsed.data.project_id, month: parsed.data.month, edits: result.json });

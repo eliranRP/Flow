@@ -4,7 +4,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleCashToDay, sampleQuietCashMonths } from "../dev/cash-sample";
 import { homeActivityLines } from "../dev/home-activity-sample";
-import { FUTURE_CURRENT_KEY, FUTURE_MONTH_KEY, sampleHomeFuture } from "../dev/home-future-sample";
+import { FAR_MONTH_KEY, FUTURE_CURRENT_KEY, FUTURE_MONTH_KEY, sampleHomeFuture } from "../dev/home-future-sample";
 import { HOME_NEXT_MONTH_SAMPLE } from "../dev/home-next-month-sample";
 import type { ActivityFilter, HomeActivityData, HomeFuture } from "./home-activity";
 import { RECURRING_FIXTURE } from "../recurring-sample";
@@ -164,7 +164,7 @@ function CashHomeStory({
         attention={attention ? attentionRows({ pending: review ? 7 : 0, transfers: 2, unpaidCount: 3, unpaidGross: 460_000n, missingCount: late, search: "" }) : []}
         activity={monthBack > 0 ? pastActivity ?? samplePastActivity(shiftMonthKey(currentKey, -monthBack)) : activity}
         initialFilter={filter}
-        withNext
+        withForecast
         example={example ? exampleOnBand : undefined}
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
@@ -333,10 +333,10 @@ function NextMonthStory({ start = FUTURE_MONTH_KEY, drawer = false, phase = "rea
         attention={monthKey === FUTURE_CURRENT_KEY ? attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, currency: "USD", search: "" }) : []}
         example={exampleOnBand}
         onStepMonth={setMonthKey}
-        withNext
+        withForecast
         initialDrawerOpen={drawer}
         drawerYearMonths={HOME_NEXT_MONTH_SAMPLE.cash}
-        future={monthKey === FUTURE_MONTH_KEY ? sampleHomeFuture("", { phase, empty }) : null}
+        future={monthKey > FUTURE_CURRENT_KEY ? sampleHomeFuture("", { phase, empty, month: monthKey }) : null}
       />
     </StoryRoute>
   );
@@ -345,7 +345,8 @@ function NextMonthStory({ start = FUTURE_MONTH_KEY, drawer = false, phase = "rea
 /**
  * FLOW-1056 (owner): Home on next month: the band keeps its shape with the forecast's figures (תזרים צפוי, צפוי להיכנס
  * and צפוי לצאת with their lines), its foot row opens פירוט ועריכה, and the expected rows follow by project. No
- * דורש טיפול and no filter; the earlier arrow goes back to this month, and there is no later one.
+ * דורש טיפול and no filter; the earlier arrow goes back to this month. FLOW-1066: the later one goes on to December,
+ * and the foot row names the month's expected profit.
  */
 export const HomeNextMonth: Story = {
   name: "Home on next month",
@@ -355,13 +356,17 @@ export const HomeNextMonth: Story = {
     await expect(canvas.getByText("תזרים צפוי · נובמבר")).toBeInTheDocument();
     await expect(canvas.getByText("צפוי להיכנס")).toBeInTheDocument();
     await expect(canvas.getByText("צפוי לצאת")).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /פירוט ועריכה/u })).toHaveAttribute("href", "/forecast/next");
+    const details = canvas.getByRole("link", { name: /^פירוט ועריכה, רווח צפוי בנובמבר /u });
+    await expect(details).toHaveAttribute("href", "/forecast/next");
+    await expect(within(details).getByText("רווח צפוי בנובמבר")).toBeInTheDocument();
+    await expect(details.querySelector(".ui-home-forecast-value")?.textContent).toMatch(/\$/u);
+    await expect(canvas.queryByText("הערכה · לפי קבועים, הלוואות וממוצע 6 חודשים")).toBeNull();
     await expect(canvas.getByRole("heading", { name: "הצפוי בנובמבר" })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "כללי" })).toBeInTheDocument();
     await expect(canvas.queryByRole("radiogroup", { name: "סינון תנועות" })).toBeNull();
     await expect(canvas.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
     await expect(canvasElement.querySelector(".ui-band .ui-band-month-name")?.textContent).toBe("נובמבר 2026");
-    await expect(canvas.getAllByRole("button", { name: "חודש הבא" })[0]).toHaveAttribute("aria-disabled", "true");
+    await expect(canvas.getAllByRole("button", { name: "חודש הבא" })[0]).not.toHaveAttribute("aria-disabled");
     await userEvent.click(canvas.getAllByRole("button", { name: "חודש קודם" })[0] as HTMLElement);
     await waitFor(() => expect(canvasElement.querySelector(".ui-band .ui-band-month-name")?.textContent).toBe("אוקטובר 2026"));
     await userEvent.click(canvas.getAllByRole("button", { name: "חודש הבא" })[0] as HTMLElement);
@@ -418,10 +423,66 @@ export const HomeDrawerNextMonth: Story = {
     const doc = within(canvasElement.ownerDocument.body);
     const dialog = await doc.findByRole("dialog", { name: "בחירת חודש" });
     const next = within(dialog).getByRole("button", { name: "נובמבר, תחזית" });
-    await expect(next).toHaveClass("ui-month-cell-next");
+    await expect(next).toHaveClass("ui-month-cell-forecast");
     await userEvent.click(next);
     await waitFor(() => expect(doc.queryByRole("dialog", { name: "בחירת חודש" })).toBeNull());
     await waitFor(() => expect(within(canvasElement).getByText("תזרים צפוי · נובמבר")).toBeInTheDocument());
+  },
+};
+
+/**
+ * FLOW-1066 (owner, 2026-11-06: "I want to see the forecast revenue on any future month"): Home on a month after
+ * next, March 2027: the same band, rows and פירוט ועריכה as next month, built for March, with the estimate's note in
+ * the caption's place and the month's expected profit on the foot row. The arrows step on to the forecast's last
+ * month (October 2027) and back one month at a time.
+ */
+export const HomeFarMonth: Story = {
+  name: "Home on a month after next",
+  render: () => <NextMonthStory start={FAR_MONTH_KEY} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("תזרים צפוי · מרץ")).toBeInTheDocument();
+    await expect(canvas.getByText("הערכה · לפי קבועים, הלוואות וממוצע 6 חודשים")).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "הצפוי במרץ" })).toBeInTheDocument();
+    const details = canvas.getByRole("link", { name: /^פירוט ועריכה, רווח צפוי במרץ /u });
+    await expect(details).toHaveAttribute("href", "/forecast/next?month=2027-03");
+    await expect(within(details).getByText("רווח צפוי במרץ")).toBeInTheDocument();
+    await userEvent.click(canvas.getAllByRole("button", { name: "חודש קודם" })[0] as HTMLElement);
+    await waitFor(() => expect(canvas.getByText("תזרים צפוי · פברואר")).toBeInTheDocument());
+    await userEvent.click(canvas.getAllByRole("button", { name: "חודש הבא" })[0] as HTMLElement);
+    await waitFor(() => expect(canvas.getByText("תזרים צפוי · מרץ")).toBeInTheDocument());
+  },
+};
+
+/** FLOW-1066: the forecast's last month: the later arrow is off. */
+export const HomeLastForecastMonth: Story = {
+  name: "Home on the forecast's last month",
+  render: () => <NextMonthStory start="2027-10" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("תזרים צפוי · אוקטובר")).toBeInTheDocument();
+    await expect(canvas.getAllByRole("button", { name: "חודש הבא" })[0]).toHaveAttribute("aria-disabled", "true");
+  },
+};
+
+/**
+ * FLOW-1066: the drawer reaches past December: next year's months up to the forecast's last are dashed צפי cells to
+ * pick, and the ones after it are faded and disabled.
+ */
+export const HomeDrawerNextYear: Story = {
+  name: "Home, the drawer past December",
+  render: () => <NextMonthStory start={FAR_MONTH_KEY} drawer />,
+  play: async ({ canvasElement }) => {
+    const doc = within(canvasElement.ownerDocument.body);
+    const dialog = await doc.findByRole("dialog", { name: "בחירת חודש" });
+    await expect(within(dialog).getByText("2027")).toBeInTheDocument();
+    await expect(within(dialog).getByRole("button", { name: "ינואר, תחזית" })).toHaveClass("ui-month-cell-forecast");
+    await expect(within(dialog).getByRole("button", { name: "מרץ, תחזית" })).toHaveAttribute("aria-current", "date");
+    await expect(within(dialog).getByRole("button", { name: "נובמבר, עוד לא הגיע" })).toBeDisabled();
+    await expect(within(dialog).getByRole("button", { name: "שנה הבאה" })).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(within(dialog).getByRole("button", { name: "יוני, תחזית" }));
+    await waitFor(() => expect(doc.queryByRole("dialog", { name: "בחירת חודש" })).toBeNull());
+    await waitFor(() => expect(within(canvasElement).getByText("תזרים צפוי · יוני")).toBeInTheDocument());
   },
 };
 

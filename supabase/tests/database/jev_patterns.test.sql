@@ -269,7 +269,7 @@ select is(
   'one project counts the parties whose usual project it is'
 );
 select throws_ok(
-  $$select public.expected_months(13)$$, 'P0001', 'validation', 'more than 12 months is refused'
+  $$select public.expected_months(14)$$, 'P0001', 'validation', 'more than 13 months is refused (FLOW-1066: this month and the forecast''s 12)'
 );
 
 -- Tenant isolation and grants.

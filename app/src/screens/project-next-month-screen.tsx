@@ -19,7 +19,8 @@ import { Amount } from "../ui/amount";
 import { forecastWords } from "../ui/forecast-words";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { formatDayMonth } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
+import { forecastMonthSearch, useForecastMonth } from "../forecast-page-month";
 import { PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
@@ -83,7 +84,11 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const monthRows = sample?.months.months ?? months.data?.months ?? [];
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
   // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
-  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null);
+  // FLOW-1066: any month of the forecast (?month=), next month by default; the rows' links carry it.
+  const today = sample?.next.today ?? israelToday();
+  const forMonth = useForecastMonth(today);
+  const monthSearch = forecastMonthSearch(search, forMonth, today);
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth);
   const currency = next.currency;
   const holdRole = useHoldWrites();
   const hold = sample == null && holdRole;
@@ -168,7 +173,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   sign={row.minor < 0n ? "out" : "in"}
                   source="bank"
                   initials={lineInitials(row.name)}
-                  href={hold ? undefined : `${editPath(projectId, row.key)}${search}`}
+                  href={hold ? undefined : `${editPath(projectId, row.key)}${monthSearch}`}
                 />
               ))}
               {keptOut === 0n ? null : (
@@ -188,7 +193,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
           )}
           {hold ? null : (
             <div className="ui-pn-edits">
-              <Link to={`/projects/${projectId}/profit/next/add${search}`} className="ui-pn-add ui-hit m-press">
+              <Link to={`/projects/${projectId}/profit/next/add${monthSearch}`} className="ui-pn-add ui-hit m-press">
                 <span className="ui-pn-add-mark" aria-hidden="true"><PlusIcon size={18} /></span>
                 הוספת קטגוריה לצפי
               </Link>

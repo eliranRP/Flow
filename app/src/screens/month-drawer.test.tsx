@@ -86,10 +86,10 @@ describe("MonthDrawer (FLOW-364)", () => {
   it("picks next month like any month, and shows it as צפי once picked (FLOW-1056)", async () => {
     const nextKey = shiftMonthKey(currentKey, 1);
     const nextName = HEBREW_MONTHS[Number(nextKey.slice(5, 7)) - 1] ?? "";
-    const { onPick } = renderDrawer({ withNext: true, selectedKey: currentKey, initialYear: Number(nextKey.slice(0, 4)) });
+    const { onPick } = renderDrawer({ withForecast: true, selectedKey: currentKey, initialYear: Number(nextKey.slice(0, 4)) });
     await screen.findByRole("dialog", { name: "בחירת חודש" });
     const next = screen.getByRole("button", { name: `${nextName}, תחזית` });
-    expect(next).toHaveClass("ui-month-cell-next");
+    expect(next).toHaveClass("ui-month-cell-forecast");
     expect(next).not.toBeDisabled();
     fireEvent.click(next);
     expect(onPick).toHaveBeenCalledWith(nextKey);
@@ -98,7 +98,7 @@ describe("MonthDrawer (FLOW-364)", () => {
   it("marks next month selected when Home shows it, with no net", async () => {
     const nextKey = shiftMonthKey(currentKey, 1);
     const nextName = HEBREW_MONTHS[Number(nextKey.slice(5, 7)) - 1] ?? "";
-    renderDrawer({ withNext: true, selectedKey: nextKey });
+    renderDrawer({ withForecast: true, selectedKey: nextKey });
     await screen.findByRole("dialog", { name: "בחירת חודש" });
     const cell = screen.getByRole("button", { name: `${nextName}, תחזית` });
     expect(cell).toHaveAttribute("aria-current", "date");

@@ -22,6 +22,8 @@ import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { useCompanyCashNextMonth } from "./company-cash-next-month";
+import { forecastMonthSearch, useForecastMonth } from "../forecast-page-month";
+import { monthWord } from "../project-next-edit";
 import { SummaryRow } from "./profit-summary";
 import { editPath, rowSource } from "./project-next-month-screen";
 
@@ -63,7 +65,8 @@ export function orderParts(parts: readonly CompanyForecastPart[], projects: read
  * project), its first three rows, and "עוד N בצפי של …" to that project's צפי page; the general costs list
  * every row (FLOW-1001), since no other page holds them. A project's row opens its
  * existing edit page; a general row the overhead project's (FLOW-1002: its צפי page is the general costs), and
- * none when the company has no overhead project.
+ * none when the company has no overhead project. FLOW-1066: `?month=` picks any month of the forecast (next
+ * month by default); the title names it, and the rows' links carry it, so an edit is saved for that month.
  */
 export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: sampleProjects, currency: sampleCurrency }: {
   sample?: CompanyNextMonthSample;
@@ -85,7 +88,10 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   const projects = sampleProjects ?? list.data?.projects ?? [];
   const currency = sampleCurrency ?? list.data?.base_currency ?? companyCurrency;
   const today = sampleToday ?? israelToday();
-  const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample);
+  // FLOW-1066: any month of the forecast (?month=), next month by default.
+  const month = useForecastMonth(today);
+  const monthSearch = forecastMonthSearch(search, month, today);
+  const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample, month);
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const forecast = next.forecast;
   // The list (names, order, currency) first, then the forecast's reads; a paused read is offline, not a skeleton.
@@ -123,7 +129,7 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
     >
       {forecast == null || forecast.parts.length === 0 ? (
         <div className="ui-pm-month">
-          <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הבא.</p>
+          <p className="ui-pp-note t-caption t-muted">{`אין תנועות צפויות ב${monthWord(month)}.`}</p>
         </div>
       ) : (
         <div className="ui-pm-month">
@@ -190,12 +196,12 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
                       source="bank"
                       initials={lineInitials(item.row.name)}
                       // FLOW-1002: a general row opens the overhead project's edit page, whose forecast is the general costs.
-                      href={hold || projectId == null ? undefined : `${editPath(projectId, item.row.key)}${search}`}
+                      href={hold || projectId == null ? undefined : `${editPath(projectId, item.row.key)}${monthSearch}`}
                     />
                   )))}
                 </List>
                 {more <= 0 || projectId == null || general ? null : (
-                  <Link to={`/projects/${projectId}/profit/next${search}`} className="ui-cn-more ui-page-pad ui-hit">
+                  <Link to={`/projects/${projectId}/profit/next${monthSearch}`} className="ui-cn-more ui-page-pad ui-hit">
                     {`עוד ${String(more)} בצפי של ${name}`}
                     <ChevronIcon size={16} />
                   </Link>

@@ -1,7 +1,7 @@
 import type { ExpectedParty } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { companyNextMonthForecast, type CompanyNextMonthInputs, type RestOfYearEdit } from "./company-next-month";
-import { companyRestOfYear, restExpenseNote, restIncomeNote, restMonthsCaption, restOfYearMonths } from "./company-year-forecast";
+import { companyMonthForecast, companyMonthInput, companyRestOfYear, restExpenseNote, restIncomeNote, restMonthsCaption, restOfYearMonths } from "./company-year-forecast";
 
 /**
  * FLOW-145: the rest of the year is next month's company forecast built again for each month left, by the same
@@ -134,5 +134,44 @@ describe("the rest of the year's own edits (rest_edits)", () => {
     };
     const result = companyRestOfYear({ ...input, inputs: matchedDecember });
     expect(result?.months.map((month) => month.incomeMinor)).toEqual([105_000n, 100_000n]);
+  });
+});
+
+// FLOW-1066: any month of the forecast, 12 months ahead, from next month's reads.
+describe("companyMonthForecast", () => {
+  // A once edit for March 2027 sets its repairs to $200, matched nowhere; the added income line came in April.
+  const march: RestOfYearEdit = { id: "e-march", project_id: "p1", kind: "change", row_key: "avg:c-repairs", category_id: null, direction: null, amount_minor: 20_000, pace: "once", start_month: "2027-03" };
+  const far: CompanyNextMonthInputs = {
+    ...INPUTS,
+    rest_edits: [
+      ...INPUTS.edits.map(({ matched_transaction_id: matched, ...edit }): RestOfYearEdit => ({ ...edit, matches: edit.id === "e-extra" ? { "2027-04": "t-extra-04" } : matched == null ? {} : { "2026-11": matched } })),
+      march,
+    ],
+  };
+  const farInput = { ...input, inputs: far };
+
+  it("next month is next month's forecast, exactly", () => {
+    expect(companyMonthForecast(farInput, "2026-11")).toEqual(companyNextMonthForecast(farInput));
+  });
+
+  it("a month next year: its charges by their pace, its own edits, its own matches", () => {
+    // March 2027: the quarterly insurance (due Dec, Mar, ...), repairs as edited, the extra income expected.
+    expect(companyMonthForecast(farInput, "2027-03")).toMatchObject({ month: "2027-03", incomeMinor: 105_000n, expenseMinor: 20_000n + 30_000n + 200_000n + 10_000n });
+    // April 2027: no insurance, repairs back to the average, the extra income already came.
+    expect(companyMonthForecast(farInput, "2027-04")).toMatchObject({ month: "2027-04", incomeMinor: 100_000n, expenseMinor: 60_000n + 200_000n + 10_000n });
+  });
+
+  it("the horizon's last month builds too; the year card still stops in December", () => {
+    expect(companyMonthForecast(farInput, "2027-10").month).toBe("2027-10");
+    expect(companyRestOfYear(farInput)?.months.map((month) => month.month)).toEqual(["2026-11", "2026-12"]);
+    expect(restOfYearMonths("2026-11-06")).toEqual(["2026-12"]);
+  });
+
+  it("companyMonthInput carries the month and its edits for the general costs' builder", () => {
+    const set = companyMonthInput(farInput, "2027-03");
+    expect(set.month).toBe("2027-03");
+    expect(set.inputs.edits.map((edit) => edit.id)).toEqual(["e-repairs", "e-extra", "e-march"]);
+    expect(set.inputs.edits.find((edit) => edit.id === "e-extra")?.matched_transaction_id).toBeNull();
+    expect(companyMonthInput(farInput, "2026-11").inputs.edits).toBe(INPUTS.edits);
   });
 });

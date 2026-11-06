@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { expectedMonthsSchema } from "../../../packages/shared/src/forecast.ts";
+import { FORECAST_HORIZON_MONTHS, forecastLastMonth } from "../../../packages/shared/src/forecast-horizon.ts";
 import { unpaidRowSchema } from "../../../packages/shared/src/dashboard.ts";
 import { buildMonthForecast, forecastTotal, type ForecastItem, type ForecastOverrideRow, parseMonthEdits } from "../../../packages/shared/src/month-forecast.ts";
 import { fail, READ_REFUSED, type ToolResult, type ToolRpc } from "./tools_args.ts";
@@ -163,6 +164,17 @@ export async function dashboard(rpc: ToolRpc, from: string | null, to: string | 
 export function israelMonthKey(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit" }).format(now);
 }
+
+/**
+ * FLOW-1066 (decision 0260): a month a forecast read takes: YYYY-MM, no later than the forecast's last month
+ * (12 after this month in Israel time). A later one is refused as a validation error, before any read.
+ */
+export function forecastReadMonth(month: unknown, now: Date = new Date()): month is string {
+  return typeof month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(month) && month <= forecastLastMonth(israelMonthKey(now));
+}
+
+/** FLOW-1066: get_expected_months' most months: this month and the forecast's 12. */
+export const EXPECTED_MONTHS_MAX = FORECAST_HORIZON_MONTHS + 1;
 
 function forecastItemJson(item: ForecastItem) {
   return {

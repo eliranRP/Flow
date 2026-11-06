@@ -310,3 +310,32 @@ describe("the next-month page with a loan (decision 0190)", () => {
     expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(formatAmountText(-forecast.cashOnlyMinor, "USD"));
   });
 });
+
+describe("a project's צפי page on any month of the forecast (FLOW-1066)", () => {
+  function renderMonth(query: string) {
+    return renderWithProviders(
+      <Routes>
+        <Route path="/projects/:projectId/profit/next" element={<ProjectNextMonthScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT }} />} />
+      </Routes>,
+      { route: `/projects/juniper-ct/profit/next${query}` },
+    );
+  }
+
+  it("builds ?month= for that month, names it, and its links carry it", () => {
+    const sample = JUNIPER_NEXT;
+    const march = cashForecast(nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: sample.today, recurring: sample.expected.recurring, categoryMonths: sample.categoryMonths, loans: sample.loans ?? [], categories: sample.categories ?? [], month: "2027-03" }));
+    const { container } = renderMonth("?month=2027-03");
+    expect(screen.getByRole("heading", { level: 1, name: /^צפי מרץ/u })).toBeInTheDocument();
+    expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(formatAmountText(march.netMinor, "USD", { plus: march.netMinor > 0n, direction: march.netMinor > 0n ? "income" : undefined }));
+    const edits = Array.from(container.querySelectorAll<HTMLAnchorElement>("a[href*='/profit/next/edit/']"));
+    expect(edits.length).toBeGreaterThan(0);
+    expect(edits.every((link) => link.getAttribute("href")?.endsWith("?month=2027-03"))).toBe(true);
+    expect(screen.getByRole("link", { name: "הוספת קטגוריה לצפי" })).toHaveAttribute("href", "/projects/juniper-ct/profit/next/add?month=2027-03");
+  });
+
+  it("is next month with no month, or one past the forecast", () => {
+    renderMonth("?month=2027-11");
+    expect(screen.getByRole("heading", { level: 1, name: /^צפי נובמבר/u })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "הוספת קטגוריה לצפי" })).toHaveAttribute("href", "/projects/juniper-ct/profit/next/add");
+  });
+});
