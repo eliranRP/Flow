@@ -456,7 +456,10 @@ button.ui-loan-paid-part {
   min-inline-size: 0;
 }
 
+/* FLOW-1077: the date is an LTR bdi; as a stretched flex item its text sat at the column's left, away from the
+   split under it. It keeps its own width at the row's start, so both lines start on the same edge. */
 .ui-loan-row-title {
+  align-self: flex-start;
   font-size: var(--type-body-size);
   line-height: var(--line-board);
   color: var(--color-text);
