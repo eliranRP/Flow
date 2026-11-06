@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from "@testing-library/react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { sampleLoanStore, sampleLoans } from "../dev/loan-detail-sample";
 import { renderWithProviders } from "../test-render";
@@ -73,6 +73,27 @@ describe("loans summary (FLOW-142)", () => {
     expect(rows.length).toBeGreaterThan(0);
     fireEvent.click(rows[0] as HTMLElement);
     expect(screen.getByText("עמוד התנועה")).toBeInTheDocument();
+  });
+
+  it("keeps the month when Back returns from a payment", () => {
+    function Txn() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => { void navigate(-1); }}>חזרה</button>;
+    }
+    renderWithProviders(
+      <Routes>
+        <Route path="/loans/summary" element={<LoansSummaryScreen store={sampleLoanStore()} currency="USD" today="2026-10-17" />} />
+        <Route path="/transactions/:id" element={<Txn />} />
+      </Routes>,
+      { route: "/loans/summary" },
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "חודש" }));
+    fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "חודש קודם" }));
+    const rows = within(screen.getByRole("region", { name: /תשלומי ספטמבר 2026/ })).getAllByRole("link");
+    fireEvent.click(rows[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(screen.getByRole("radio", { name: "חודש" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("heading", { name: "תשלומי ספטמבר 2026" })).toBeInTheDocument();
   });
 
   it("leaves the loans that ended out of the sums and names them in one line", () => {

@@ -141,6 +141,8 @@ describe("loansMonth", () => {
   it("compares with the month before, naming the year when it changes", () => {
     expect(loansMonth(entries, LOAN.currency, "2026-02")).toMatchObject({ compareLabel: "לעומת ינואר", deltaMinor: 5_000n });
     expect(loansMonth(entries, LOAN.currency, "2026-01")).toMatchObject({ compareLabel: "לעומת דצמבר 2025", deltaMinor: 29_000n });
+    // The first month with a payment has nothing to compare with.
+    expect(loansMonth(entries, LOAN.currency, "2025-12").deltaMinor).toBeNull();
   });
 
   it("says so for a month with no payments", () => {

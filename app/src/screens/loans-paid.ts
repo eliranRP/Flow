@@ -224,6 +224,8 @@ export function loanMonthRange(entries: readonly LoanPaidEntry[], currency: Loan
 
 export type LoansMonthPayment = {
   transactionId: string;
+  /** A transaction split across two loans has a row for each. */
+  loanId: string;
   loanName: string;
   /** "12/10". */
   date: string;
@@ -243,8 +245,8 @@ export type LoansMonth = {
   totalMinor: bigint;
   /** "לעומת ספטמבר" (with the year when it differs). */
   compareLabel: string;
-  /** This month less the month before. */
-  deltaMinor: bigint;
+  /** This month less the month before; null when no open loan paid before this month. */
+  deltaMinor: bigint | null;
   /** Newest first. */
   payments: LoansMonthPayment[];
   note: string;
@@ -272,10 +274,11 @@ export function loansMonth(entries: readonly LoanPaidEntry[], currency: LoanCurr
   const payments = open
     .flatMap((entry) => entry.payments
       .filter((payment) => payment.docDate.startsWith(`${key}-`))
-      .map((payment) => ({ payment, name: entry.loan.name })))
+      .map((payment) => ({ payment, name: entry.loan.name, loanId: entry.loan.id })))
     .sort((a, b) => b.payment.docDate.localeCompare(a.payment.docDate) || a.name.localeCompare(b.name, "he"))
-    .map(({ payment, name }): LoansMonthPayment => ({
+    .map(({ payment, name, loanId }): LoansMonthPayment => ({
       transactionId: payment.transactionId,
+      loanId,
       loanName: name,
       date: dayMonth(payment.docDate),
       hint: payment.needsReview ? "ממתין לבדיקה" : monthSplitText(payment, currency),
@@ -291,7 +294,7 @@ export function loansMonth(entries: readonly LoanPaidEntry[], currency: LoanCurr
     totals,
     totalMinor,
     compareLabel: `לעומת ${beforeName}`,
-    deltaMinor: totalMinor - beforeMinor,
+    deltaMinor: open.some((entry) => entry.payments.some((payment) => payment.docDate < `${key}-01`)) ? totalMinor - beforeMinor : null,
     payments,
     note: payments.length === 0
       ? `אין תשלומים ב${title}.`

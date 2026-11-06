@@ -189,9 +189,21 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
   today: string;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const goBack = useGoBack();
-  const [period, setPeriod] = useState<SummaryPeriod>(initialPeriod);
-  const [pickedMonth, setPickedMonth] = useState<string | null>(initialMonth ?? null);
+  // FLOW-1075: the period and the month live in the URL (?period=month&month=2026-09), so Back from a payment restores them.
+  const query = new URLSearchParams(location.search);
+  const urlPeriod = query.get("period");
+  const urlMonth = query.get("month");
+  const period: SummaryPeriod = urlPeriod === "all" || urlPeriod === "year" || urlPeriod === "month" ? urlPeriod : initialPeriod;
+  const pickedMonth = urlMonth != null && /^\d{4}-\d{2}$/.test(urlMonth) ? urlMonth : initialMonth ?? null;
+  const setView = (next: { period: SummaryPeriod; month: string | null }) => {
+    const params = new URLSearchParams(location.search);
+    params.set("period", next.period);
+    if (next.period === "month" && next.month != null) params.set("month", next.month);
+    else params.delete("month");
+    void navigate({ pathname: location.pathname, search: `?${params.toString()}`, hash: location.hash }, { replace: true, state: location.state as unknown });
+  };
   const [bandMark, setBandMark] = useState<HTMLElement | null>(null);
   const barShown = useScrolledPast(bandMark, true, BAND_BAR);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
@@ -214,7 +226,7 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
       tone="band"
       value={period}
       onChange={(next) => {
-        setPeriod(next);
+        setView({ period: next, month: pickedMonth });
         scrollUnderBar();
       }}
       options={[{ value: "all", label: "מההתחלה" }, { value: "year", label: year, numeric: true }, { value: "month", label: "חודש" }]}
@@ -243,7 +255,7 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
                 earlier={month.key > range.first ? "חודש קודם" : null}
                 later={month.key < range.last ? "חודש הבא" : null}
                 onBand
-                onStep={(delta) => { setPickedMonth(clampMonth(shiftMonthKey(month.key, delta), range.first, range.last)); }}
+                onStep={(delta) => { setView({ period: "month", month: clampMonth(shiftMonthKey(month.key, delta), range.first, range.last) }); }}
               >
                 <span className="ui-band-month-name" aria-live="polite">{month.title}</span>
               </MonthStepper>
@@ -263,7 +275,7 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
                   ) : (
                     <p className="ui-loans-band-row">
                       <span className="ui-loans-band-row-label" data-clip-ok="">{month.compareLabel}</span>
-                      <bdi dir="ltr">{month.deltaMinor === 0n ? "אותו סכום" : `${month.deltaMinor > 0n ? "+" : "−"}${money(month.deltaMinor > 0n ? month.deltaMinor : -month.deltaMinor)}`}</bdi>
+                      <bdi dir="ltr">{month.deltaMinor == null ? "—" : month.deltaMinor === 0n ? "אותו סכום" : `${month.deltaMinor > 0n ? "+" : "−"}${money(month.deltaMinor > 0n ? month.deltaMinor : -month.deltaMinor)}`}</bdi>
                     </p>
                   )}
                   <p className="ui-loans-band-row">
@@ -340,7 +352,7 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
                 <List layout="flat">
                   {month.payments.map((payment) => (
                     <ListRow
-                      key={payment.transactionId}
+                      key={`${payment.transactionId}:${payment.loanId}`}
                       variant="project"
                       layout="flat"
                       href={`/transactions/${payment.transactionId}${search}`}
