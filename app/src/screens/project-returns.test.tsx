@@ -615,7 +615,7 @@ describe("the investment page's returns cards", () => {
     renderInvestment();
     await metricsTab();
     const titles = (name: string) => [...screen.getByRole("region", { name }).querySelectorAll(".ui-pinv-row-title")].map((node) => node.textContent);
-    expect(titles("תשואה")).toEqual(["ROI מאז הקנייה", "תשואה על ההון העצמי (ROE)", "תשואה על המזומן", "מכפיל הון"]);
+    expect(titles("תשואה")).toEqual(["תשואה פנימית (IRR)", "ROI מאז הקנייה", "תשואה על ההון העצמי (ROE)", "תשואה על המזומן", "מכפיל הון"]);
     expect(titles("סיכון")).toEqual(["כיסוי חוב (DSCR)", "תפוסת איזון", "מינוף (LTV)"]);
     expect(titles("מחיר")).toEqual(["Cap rate", "מכפיל שכירות (GRM)", "יחס הוצאות", "תזרים ליחידה"]);
     const row = (name: RegExp) => screen.getByRole("link", { name });
@@ -636,7 +636,7 @@ describe("the investment page's returns cards", () => {
     await metricsTab();
     const titles = (name: string) => [...screen.getByRole("region", { name }).querySelectorAll(".ui-pinv-row-title")].map((node) => node.textContent);
     // FLOW-1071: the renovation's own metrics, with the four of FLOW-451 beside them.
-    expect(titles("תשואה")).toEqual(["ROI על הכסף בעסקה", "ROI שנתי", "מרווח מה־ARV", "תשואה על המזומן"]);
+    expect(titles("תשואה")).toEqual(["ROI על הכסף בעסקה", "ROI שנתי", "תשואה פנימית (IRR)", "מרווח מה־ARV", "תשואה על המזומן"]);
     expect(titles("סיכון")).toEqual(["כיסוי חוב (DSCR)"]);
     expect(titles("מחיר")).toEqual(["כלל ה־70%", "מחיר איזון במכירה", "Cap rate", "תזרים ליחידה"]);
     expect(screen.getByRole("link", { name: /ROI על הכסף בעסקה/ })).toHaveTextContent("102.2%");
@@ -740,7 +740,7 @@ describe("the returns pages", () => {
 
   it("sends an unknown metric back to the investment page", async () => {
     serve();
-    renderAt("/projects/p1/investment/metric/irr");
+    renderAt("/projects/p1/investment/metric/npv");
     expect(await screen.findByTestId("where")).toHaveTextContent("/projects/p1/investment");
   });
 

@@ -24,6 +24,7 @@ export type LearnKey =
   | "building"
   | "rehab"
   | "profit"
+  | "irr"
   | "roi-since"
   | "roe"
   | "multiple"
@@ -68,6 +69,7 @@ export const LEARN_ENGLISH: Record<LearnKey, string | null> = {
   building: "Depreciable basis",
   rehab: "Rehab costs",
   profit: "Net profit",
+  irr: "Internal rate of return (IRR)",
   "roi-since": "Return on investment (ROI)",
   roe: "Return on equity (ROE)",
   multiple: "Equity multiple",
@@ -164,6 +166,11 @@ export const LEARN: Record<LearnKey, Learn> = {
     read: "עלויות המכירה הן הערכה של 8% מה־ARV עד שמשנים אותן. רווח שנראה טוב רק בלי עלויות המכירה וההחזקה הוא עסקה צפופה.",
     goal: "עונה על: כמה כסף העסקה תשאיר לי בסוף. הבסיס ל־ROI של העסקה.",
   },
+  irr: {
+    what: "התשואה השנתית על הכסף שלך, לפי התאריך של כל שקל שנכנס ויצא מהעסקה, עם ההון בנכס היום כאילו נמכר.",
+    read: "שקל שחזר מוקדם שווה יותר משקל שחוזר בסוף, וה־IRR מתחשב בזה, בניגוד ל־ROI. אפשר להשוות אותו לתשואה של השקעה אחרת לאותה תקופה. עם שווי אחד בלבד הוא הערכה.",
+    goal: "עונה על: כמה בשנה הכסף שלי הרוויח בעסקה הזאת, כשהזמן בחשבון.",
+  },
   "roi-since": {
     what: "כמה הרווחת על הכסף שהכנסת, מאז הקנייה: התזרים שחזר והון עצמי היום, פחות הכסף בעסקה, חלקי הכסף בעסקה.",
     read: "כולל את מה שעוד נעול בנכס (ההון), לא רק מזומן. 100% אומר שהכסף הוכפל. לא מחולק לשנים, ולכן נכס שמוחזק הרבה זמן יראה מספר גבוה יותר.",
@@ -243,7 +250,7 @@ export const PAGE_LEARN = {
   line: { principal: "principal" },
   metric: {
     coc: "coc", "cap-rate": "cap-rate", dscr: "dscr", "per-unit": "per-unit",
-    "roi-since": "roi-since", roe: "roe", multiple: "multiple", "break-even": "break-even", ltv: "ltv", grm: "grm", "expense-ratio": "expense-ratio",
+    irr: "irr", "roi-since": "roi-since", roe: "roe", multiple: "multiple", "break-even": "break-even", ltv: "ltv", grm: "grm", "expense-ratio": "expense-ratio",
     "flip-roi": "flip-roi", "flip-roi-year": "flip-roi-year", "arv-margin": "arv-margin", "rule-70": "rule-70", "break-even-sale": "break-even-sale",
   },
   part: { building: "building", "money-in": "money-in", rehab: "rehab", profit: "profit" },

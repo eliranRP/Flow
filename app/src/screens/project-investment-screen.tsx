@@ -179,7 +179,7 @@ export function sellingSample(r: PropertyReturns, bp: number | null): PropertyRe
   const net = r.deal.netProfitMinor == null || selling == null || before == null ? r.deal.netProfitMinor : r.deal.netProfitMinor + before - selling;
   const moneyIn = r.equity.moneyInMinor;
   const costs = r.inputs.purchaseMinor == null || r.inputs.rehabMinor == null ? null : r.inputs.purchaseMinor + r.inputs.rehabMinor - r.deal.holdingMinor;
-  const roi = net == null || moneyIn == null || moneyIn <= 0n ? null : Number(net * 10_000n / moneyIn);
+  const roi = net == null || moneyIn == null || moneyIn <= 0n ? null : Number(divRound(net * 10_000n, moneyIn));
   const days = r.deal.heldDays;
   return {
     ...r,
@@ -187,11 +187,18 @@ export function sellingSample(r: PropertyReturns, bp: number | null): PropertyRe
     metrics: {
       ...r.metrics,
       flipRoiBp: roi,
-      flipRoiYearBp: roi == null || days == null || days <= 0 ? null : Math.round((roi * 365) / days),
-      arvMarginBp: net == null || arv == null || arv <= 0n ? null : Number(net * 10_000n / arv),
+      // From the unrounded ROI, as the server works it out (the review of #1016).
+      flipRoiYearBp: net == null || moneyIn == null || moneyIn <= 0n || days == null || days <= 0 ? null : Number(divRound(net * 10_000n * 365n, moneyIn * BigInt(days))),
+      arvMarginBp: net == null || arv == null || arv <= 0n ? null : Number(divRound(net * 10_000n, arv)),
       breakEvenSaleMinor: costs == null ? null : divHalfEven(costs * 10_000n, BigInt(10_000 - sellingBp)),
     },
   };
+}
+
+/** FLOW-1070: a ÷ b (b above zero) rounded half away from zero, as the server's round() does. */
+export function divRound(a: bigint, b: bigint): bigint {
+  const twice = a * 2n;
+  return (twice + (a < 0n ? -b : b)) / (2n * b);
 }
 
 /** a ÷ b rounded half to even, for amounts at or above zero. */

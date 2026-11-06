@@ -4,7 +4,7 @@ import type { PropertyReturns } from "./project-returns-data";
 import { DEAL_METRIC_KEYS, FLIP_GROUPS, RENT_GROUPS, anyMetricPage, anyMetricValue, dealAllTime, dealMetricCaption, dealMetricPage, dealMetricValue } from "./project-returns-deal";
 import { METRIC_KEYS, partPage, profitFormula } from "./project-returns-info";
 import { PERCENT_KINDS, SELLING_EMPTY, SELLING_RANGE, percentVerdict } from "./project-returns-sheets";
-import { sellingSample } from "./project-investment-screen";
+import { divRound, sellingSample } from "./project-investment-screen";
 
 /* FLOW-1068 (decision 0261): the deal metrics, the net profit and the costs of selling. Invented figures. */
 
@@ -109,5 +109,44 @@ describe("the net profit", () => {
     expect(percentVerdict(null, "6", kind)).toEqual({ kind: "save", bp: 600 });
     expect(percentVerdict(null, "31", kind)).toEqual({ kind: "hold", message: SELLING_RANGE });
     expect(percentVerdict(600, "", kind)).toEqual({ kind: "hold", message: SELLING_EMPTY });
+  });
+});
+
+describe("the IRR (FLOW-1069)", () => {
+  it("reads the server's rate, and says what is missing without one", () => {
+    expect(dealMetricValue("irr", birchLaneReturns)).toEqual({ kind: "text", text: "18.4%" });
+    const none: PropertyReturns = { ...noArv, inputs: { ...noArv.inputs, valueMinor: null }, metrics: { ...noArv.metrics, irrBp: null } };
+    expect(dealMetricValue("irr", none)).toEqual({ kind: "missing", add: "value", note: undefined });
+  });
+
+  it("shows its flows, each opening lines or a formula that add up to it (the review of #1016)", () => {
+    const page = dealMetricPage("irr", birchLaneReturns);
+    const [flows, terminal] = page.sections;
+    expect(flows?.formula.rows.map((row) => [row.key, row.target])).toEqual([
+      ["out", { kind: "line", line: "irr_out" }],
+      ["in", { kind: "line", line: "irr_in" }],
+    ]);
+    // With a value, the last flow is today's equity, its own formula (value less the loans).
+    expect(terminal?.title).toBe("הון עצמי היום");
+    expect(terminal?.formula.result?.key).toBe("equity");
+    // With none, a sale at the ARV: the ARV less the selling costs and the loans.
+    const noValue: PropertyReturns = { ...birchLaneReturns, equity: { ...birchLaneReturns.equity, todayMinor: null } };
+    expect(dealMetricPage("irr", noValue).sections[1]?.formula.rows.map((row) => row.key)).toEqual(["arv", "selling", "loans"]);
+    expect(page.result?.text).toBe("\u2066XIRR · 61 תאריכים\u2069");
+    expect(dealMetricCaption("irr", birchLaneReturns)).toBe("שנתי, לפי תאריכי הכסף");
+  });
+
+  it("asks for a purchase line when the price is only typed", () => {
+    const typed: PropertyReturns = { ...birchLaneReturns, deal: { ...birchLaneReturns.deal, acquiredOn: null }, metrics: { ...birchLaneReturns.metrics, irrBp: null } };
+    expect(dealMetricValue("irr", typed)).toEqual({ kind: "missing", add: null, note: "חסרה שורת רכישה" });
+  });
+});
+
+describe("FLOW-1070: sample mode rounds as the server does", () => {
+  it("rounds half away from zero", () => {
+    expect(divRound(5n, 2n)).toBe(3n);
+    expect(divRound(-5n, 2n)).toBe(-3n);
+    expect(divRound(4n, 3n)).toBe(1n);
+    expect(divRound(-4n, 3n)).toBe(-1n);
   });
 });

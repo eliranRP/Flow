@@ -17,10 +17,10 @@ const usd = (dollars: number) => BigInt(dollars) * 100n;
 const cat = (id: string, name: string, dollars: number, count: number) => ({ id, name, minor: usd(dollars), count });
 
 /** FLOW-1068: a sample with no deal figures: no ARV, and the server's new metrics not worked out. */
-const NO_DEAL: PropertyReturns["deal"] = { sellingCostBp: 800, sellingCostDefault: true, sellingCostMinor: null, holdingMinor: 0n, netProfitMinor: null, acquiredOn: null, heldDays: null, lifeCashFlowMinor: 0n };
+const NO_DEAL: PropertyReturns["deal"] = { sellingCostBp: 800, sellingCostDefault: true, sellingCostMinor: null, holdingMinor: 0n, netProfitMinor: null, acquiredOn: null, heldDays: null, lifeCashFlowMinor: 0n, irrOutMinor: 0n, irrInMinor: 0n, irrTerminalMinor: null, irrDates: 0 };
 const NO_DEAL_METRICS = {
   roeBp: null, roiSincePurchaseBp: null, equityMultipleMilli: null, breakEvenOccupancyBp: null, expenseRatioBp: null, grmMilli: null, ltvBp: null,
-  flipRoiBp: null, flipRoiYearBp: null, arvMarginBp: null, rule70Minor: null, breakEvenSaleMinor: null,
+  flipRoiBp: null, flipRoiYearBp: null, arvMarginBp: null, rule70Minor: null, breakEvenSaleMinor: null, irrBp: null,
 } satisfies Partial<PropertyReturns["metrics"]>;
 
 export const birchLaneReturns: PropertyReturns = {
@@ -116,6 +116,10 @@ export const birchLaneReturns: PropertyReturns = {
     acquiredOn: "2026-01-10",
     heldDays: 296,
     lifeCashFlowMinor: usd(2_500),
+    irrOutMinor: usd(-266_100),
+    irrInMinor: usd(236_500),
+    irrTerminalMinor: usd(30_000),
+    irrDates: 61,
   },
   metrics: {
     cashOnCashBp: 1157,
@@ -134,6 +138,7 @@ export const birchLaneReturns: PropertyReturns = {
     arvMarginBp: 1197,
     rule70Minor: usd(-29_300),
     breakEvenSaleMinor: 26_967_391n,
+    irrBp: 1840,
   },
 };
 
@@ -392,6 +397,15 @@ const rows: Record<ReturnLine, ReturnLineRow[]> = {
   financing: [row("t-loan-in", "Northfield Lending", "2026-02-02", 210_000, "cat-loan-in", "תקבולי הלוואה")],
   // FLOW-1071: the holding costs the net profit counts (the insurance counts in rehab, so only the interest).
   deal_holding: [row("t-hold-int", "Northfield Lending", "2026-03-01", -400, "cat-interest", "ריבית")],
+  // FLOW-1069: the IRR's cash, a first page of each.
+  irr_out: [
+    row("t-roof", "Lone Star Roofing", "2026-03-14", -9_800, "cat-contractors", "קבלני משנה"),
+    row("t-hold-int", "Northfield Lending", "2026-03-01", -400, "cat-interest", "ריבית"),
+  ],
+  irr_in: [
+    row("t-rent-1", "Unit A tenant", "2026-10-01", 1_000, "cat-rent", "שכר דירה"),
+    row("t-loan-in", "Northfield Lending", "2026-02-02", 210_000, "cat-loan-in", "תקבולי הלוואה"),
+  ],
   money_in: [
     row("t-hold-ins", "Harbor Insurance", "2026-03-20", -600, "cat-insurance", "ביטוח", "invoice"),
     row("t-roof", "Lone Star Roofing", "2026-03-14", -9_800, "cat-contractors", "קבלני משנה"),
@@ -426,6 +440,8 @@ const counts: Record<ReturnLine, number> = {
   financing: 1,
   money_in: 27,
   deal_holding: 3,
+  irr_out: 118,
+  irr_in: 23,
 };
 
 /** One page of a figure's lines (the first few), with the figure's whole count. */

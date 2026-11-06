@@ -98,6 +98,10 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       acquired_on: r.deal.acquiredOn,
       held_days: r.deal.heldDays,
       life_cash_flow_minor: Number(r.deal.lifeCashFlowMinor),
+      irr_out_minor: Number(r.deal.irrOutMinor),
+      irr_in_minor: Number(r.deal.irrInMinor),
+      irr_terminal_minor: n(r.deal.irrTerminalMinor),
+      irr_dates: r.deal.irrDates,
     },
     metrics: {
       cash_on_cash_bp: r.metrics.cashOnCashBp,
@@ -116,6 +120,7 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       arv_margin_bp: r.metrics.arvMarginBp,
       rule_70_minor: n(r.metrics.rule70Minor),
       break_even_sale_minor: n(r.metrics.breakEvenSaleMinor),
+      irr_bp: r.metrics.irrBp,
     },
   };
 }

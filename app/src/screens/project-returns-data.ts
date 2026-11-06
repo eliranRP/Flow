@@ -39,7 +39,7 @@ export const STATEMENT_LINES = ["income", "opex", "debt_service", "capex", "befo
 export type StatementLine = (typeof STATEMENT_LINES)[number];
 /** The money in the deal by part, the four together, and the renovation so far (FLOW-460): all time, no period. */
 /** FLOW-1071: `deal_holding` is the holding costs a renovation's net profit counts (deal.holdingMinor). */
-export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in", "rehab", "deal_holding"] as const;
+export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in", "rehab", "deal_holding", "irr_out", "irr_in"] as const;
 export type AllTimeLine = (typeof ALL_TIME_LINES)[number];
 /** The lines a line page opens: the statement's, the principal parts alone, and the money in's. */
 export type ReturnLine = StatementLine | "principal" | AllTimeLine;
@@ -156,9 +156,13 @@ const returnsSchema = z.object({
       acquired_on: dateOrNull,
       held_days: intOrNull,
       life_cash_flow_minor: minor.nullable().optional().transform((value) => value ?? 0n),
+      irr_out_minor: minor.nullable().optional().transform((value) => value ?? 0n),
+      irr_in_minor: minor.nullable().optional().transform((value) => value ?? 0n),
+      irr_terminal_minor: minorOrNull,
+      irr_dates: z.number().int().nullable().optional().transform((value) => value ?? 0),
     })
     .optional()
-    .default({ selling_cost_bp: SELLING_COST_DEFAULT_BP, selling_cost_default: true, selling_cost_minor: null, holding_minor: 0n, net_profit_minor: null, acquired_on: null, held_days: null, life_cash_flow_minor: 0n }),
+    .default({ selling_cost_bp: SELLING_COST_DEFAULT_BP, selling_cost_default: true, selling_cost_minor: null, holding_minor: 0n, net_profit_minor: null, acquired_on: null, held_days: null, life_cash_flow_minor: 0n, irr_out_minor: 0n, irr_in_minor: 0n, irr_terminal_minor: null, irr_dates: 0 }),
   metrics: z.object({
     cash_on_cash_bp: intOrNull,
     cap_rate_bp: intOrNull,
@@ -176,6 +180,7 @@ const returnsSchema = z.object({
     arv_margin_bp: intOrNull,
     rule_70_minor: minorOrNull,
     break_even_sale_minor: minorOrNull,
+    irr_bp: intOrNull,
   }),
 });
 
@@ -274,6 +279,11 @@ export type PropertyReturns = {
     heldDays: number | null;
     /** The cash flow since the first rent, all time (negative: what the owner added). */
     lifeCashFlowMinor: bigint;
+    /** FLOW-1069: the IRR's flows: what went in (negative), what came back, and the last flow at the period's end. */
+    irrOutMinor: bigint;
+    irrInMinor: bigint;
+    irrTerminalMinor: bigint | null;
+    irrDates: number;
   };
   metrics: {
     cashOnCashBp: number | null;
@@ -292,6 +302,7 @@ export type PropertyReturns = {
     arvMarginBp: number | null;
     rule70Minor: bigint | null;
     breakEvenSaleMinor: bigint | null;
+    irrBp: number | null;
   };
 };
 
@@ -409,6 +420,10 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       acquiredOn: raw.deal.acquired_on,
       heldDays: raw.deal.held_days,
       lifeCashFlowMinor: raw.deal.life_cash_flow_minor,
+      irrOutMinor: raw.deal.irr_out_minor,
+      irrInMinor: raw.deal.irr_in_minor,
+      irrTerminalMinor: raw.deal.irr_terminal_minor,
+      irrDates: raw.deal.irr_dates,
     },
     metrics: {
       cashOnCashBp: raw.metrics.cash_on_cash_bp,
@@ -427,6 +442,7 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       arvMarginBp: raw.metrics.arv_margin_bp,
       rule70Minor: raw.metrics.rule_70_minor,
       breakEvenSaleMinor: raw.metrics.break_even_sale_minor,
+      irrBp: raw.metrics.irr_bp,
     },
   };
 }

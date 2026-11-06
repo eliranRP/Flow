@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(35);
+select plan(46);
 
 do $users$
 begin
@@ -143,6 +143,34 @@ select is((public.get_property_return_lines(pg_temp.id('flip'), 'deal_holding')-
 select throws_ok($$ select public.get_property_return_lines(pg_temp.id('flip'), 'deal_holdings') $$, '22023', 'validation',
   'an unknown line is still refused');
 
+-- FLOW-1070: a split loan payment before the sale: its interest and escrow are holding costs, its principal is
+-- not. (A part sits only in a category of its own loan part, or of none, so the category and the part agree.)
+reset role;
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor,
+  escrow_minor, currency, project_id)
+values (pg_temp.id('co'), 'Example flip loan', 11000000, 80000, 12, '2026-01-05', 100000, 0, 'USD', pg_temp.id('flip'));
+-- One payment of 120.00: interest 10.00, escrow 100.00, principal 10.00, each in its own loan category.
+insert into roi (label, id)
+select 'f_escrow', tests.fixture_line(pg_temp.id('co'), 'roi:f_escrow', 12000, p_project => pg_temp.id('flip'),
+  p_category => c.id, p_doc_date => '2026-03-06', p_currency => 'USD')
+from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'interest';
+select tests.loan_split(pg_temp.id('f_escrow'), (select id from public.loans where name = 'Example flip loan'), (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.cat::public.loan_split_part),
+    'needs_review', false) order by v.n)
+  from (values (1, 'interest', 'interest', 1000), (2, 'escrow', 'escrow', 10000), (3, 'principal', 'principal', 1000)) as v(n, part, cat, amount)));
+select tests.authenticate_as('roi_owner');
+select is((pg_temp.ret('flip')->'deal'->>'holding_minor')::bigint, -261000::bigint,
+  'a split payment''s interest and escrow are holding costs, its principal is not');
+select is((public.get_property_return_lines(pg_temp.id('flip'), 'deal_holding')->>'total_minor')::bigint, -261000::bigint,
+  'and deal_holding lists the same');
+
+-- FLOW-1069: the IRR. A year's flows of -1,000.00 then +1,100.00 are 10%.
+select is(round(private.xirr(array['2025-01-01', '2026-01-01']::date[], array[-1000, 1100]::numeric[]) * 10000)::integer, 1000,
+  'xirr: -1,000 then +1,100 a year later is 10%');
+select is(private.xirr(array['2025-01-01', '2026-01-01']::date[], array[1000, 1100]::numeric[]), null,
+  'xirr: flows that never change sign have no rate');
+
 -- The rental's new metrics. Income 12,000.00, operating expenses 2,000.00, no loan; the value is
 -- 120,000.00 with no loan, so the equity today is 120,000.00. The first rent is 214 days back.
 select public.set_project_investment(pg_temp.id('rental'), '{"value_minor": 12000000, "value_date": "2026-01-10"}'::jsonb);
@@ -154,6 +182,20 @@ select is((pg_temp.ret('rental')->'metrics'->>'roi_since_purchase_bp')::integer,
   'ROI since purchase = (cash back + equity today - money in) / money in');
 select is((pg_temp.ret('rental')->'metrics'->>'equity_multiple_milli')::integer, 1300,
   'equity multiplier = (cash back + equity today) / money in');
+
+-- The rental's IRR: -100,000.00 on 2026-01-05, +12,000.00 rent on 06-01, -2,000.00 on 07-01, and the equity
+-- of 120,000.00 at the period's end, 2026-12-31: 32.34% a year (worked out apart, by the same bisection).
+select is((pg_temp.ret('rental')->'metrics'->>'irr_bp')::integer, 3234, 'IRR since the purchase, on the dated cash and today''s equity');
+select is((pg_temp.ret('rental')->'deal'->>'irr_terminal_minor')::bigint, 12000000::bigint, 'the last flow is today''s equity');
+select is((pg_temp.ret('rental')->'deal'->>'irr_out_minor')::bigint, -10200000::bigint, 'what went in');
+select is((pg_temp.ret('rental')->'deal'->>'irr_in_minor')::bigint, 1200000::bigint, 'what came back before the end');
+select is((pg_temp.ret('rental')->'deal'->>'irr_dates')::integer, 4, 'four dates of cash');
+-- The IRR page's rows open lines that add up to them (the review of #1016). The default period ends today,
+-- so these read from the purchase line to today.
+select is((public.get_property_return_lines(pg_temp.id('rental'), 'irr_out')->>'total_minor')::bigint,
+  (public.get_property_returns(pg_temp.id('rental'))->'deal'->>'irr_out_minor')::bigint, 'irr_out lines add up to what went in');
+select is((public.get_property_return_lines(pg_temp.id('rental'), 'irr_in')->>'total_minor')::bigint,
+  (public.get_property_returns(pg_temp.id('rental'))->'deal'->>'irr_in_minor')::bigint, 'irr_in lines add up to what came back');
 
 select * from finish();
 rollback;
