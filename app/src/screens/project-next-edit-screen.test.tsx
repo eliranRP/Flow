@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN, JUNIPER_NEXT_SECOND_RENT } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import type { ForecastLoan } from "../project-next-loans";
 import { draftOf } from "../project-next-edit";
@@ -159,8 +159,8 @@ describe("ProjectNextEditScreen, a new line", () => {
     expect(within(sheet).getByText("מוצעות לפרויקט")).toBeTruthy();
     expect(within(sheet).getByText("כל הקטגוריות")).toBeTruthy();
     expect(within(sheet).getByRole("radio", { name: /ניהול נכס/ }).textContent).toContain("כל חודש · $305");
-    // A category the forecast already counts is not offered.
-    expect(within(sheet).queryByRole("radio", { name: /תיקונים ותחזוקה/ })).toBeNull();
+    // A category the forecast already counts is offered too, and says so (decision 0259).
+    expect(within(sheet).getByRole("radio", { name: /תיקונים ותחזוקה/ }).textContent).toContain("כבר בצפי · $310");
     fireEvent.click(within(sheet).getByRole("radio", { name: /ניהול נכס/ }));
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "קטגוריה" })).toBeNull(); });
     expect(screen.getByRole("heading", { level: 1, name: "ניהול נכס" })).toBeTruthy();
@@ -176,6 +176,49 @@ describe("ProjectNextEditScreen, a new line", () => {
       });
     });
     expect(await screen.findByText("נוסף לצפי: ניהול נכס")).toBeTruthy();
+  });
+
+  it("adds a second line in an income category the forecast already counts: offered with its amount, an income (decision 0259)", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "set_project_forecast_edit" ? { edit: {}, undo: UNDO } : null, error: null }));
+    renderEdit({}, true, "?pace=month");
+    fireEvent.click(screen.getByRole("button", { name: "קטגוריה בחרו קטגוריה" }));
+    const sheet = await screen.findByRole("dialog", { name: "קטגוריה" });
+    // The two tenants' rents are in the forecast: שכירות is still offered, with what the forecast has for it.
+    const rent = within(sheet).getByRole("radio", { name: /^שכירות/ });
+    expect(rent.textContent).toContain("כבר בצפי · $4,150");
+    fireEvent.click(rent);
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "קטגוריה" })).toBeNull(); });
+    // Picking it makes the new line an income: the sign, the repeat row and the meta line.
+    expect(screen.getByRole("heading", { level: 1, name: "שכירות" })).toBeTruthy();
+    expect(screen.getByText("הכנסה קבועה בצפי")).toBeTruthy();
+    expect(screen.getByText("נובמבר · הכנסה · נוסף על ידך")).toBeTruthy();
+    fireEvent.change(amountField(), { target: { value: "1000" } });
+    expect(screen.getByText("+$")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "הוספה לצפי" }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_project_forecast_edit", {
+        p_project_id: "juniper-ct",
+        p_month: "2026-11",
+        p_edit: { category_id: "rent", amount_minor: 100_000, pace: "month" },
+      });
+    });
+    expect(await screen.findByText("נוסף לצפי: שכירות")).toBeTruthy();
+  });
+
+  it("removes the added second line by its own key, leaving the category's other lines (decision 0259)", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "remove_project_forecast_row" ? { edit: null, undo: UNDO } : null, error: null }));
+    renderWithProviders(
+      <Routes>
+        <Route path="/projects/:projectId/profit/next" element={<p>the forecast page</p>} />
+        <Route path="/projects/:projectId/profit/next/edit/:rowKey" element={<ProjectNextEditScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_SECOND_RENT, rowKey: "add:e-rent-2" }} />} />
+      </Routes>,
+      { route: "/projects/juniper-ct/profit/next/edit/add:e-rent-2" },
+    );
+    expect(screen.getByText("נובמבר · הכנסה · הוספת · כל חודש")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "add:e-rent-2" });
+    });
   });
 
   it("adds a line for this month from the תזרים צפוי screen, and goes back there (FLOW-1006)", async () => {
@@ -240,7 +283,7 @@ describe("ProjectNextEditScreen, a new line", () => {
     const search = within(sheet).getByRole("searchbox", { name: "חיפוש קטגוריה" });
     fireEvent.change(search, { target: { value: "ביטוח" } });
     expect(within(sheet).getByText("תוצאות")).toBeTruthy();
-    expect(within(sheet).getAllByRole("radio").map((radio) => radio.querySelector(".ui-fe-choice-name")?.textContent)).toEqual(["ביטוח", "ביטוח עסק", "החזר ביטוח"]);
+    expect(within(sheet).getAllByRole("radio").map((radio) => radio.querySelector(".ui-fe-choice-name")?.textContent)).toEqual(["ביטוח", "מסים וביטוח", "ביטוח עסק", "החזר ביטוח"]);
     fireEvent.change(search, { target: { value: "שמירה" } });
     expect(within(sheet).getByText('אין קטגוריה בשם "שמירה"')).toBeTruthy();
     fireEvent.click(within(sheet).getByRole("button", { name: '+ יצירת קטגוריה "שמירה"' }));

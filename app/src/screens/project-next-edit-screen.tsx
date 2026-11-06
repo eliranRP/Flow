@@ -15,7 +15,7 @@ import {
   categoryChoices,
   currencyMark,
   draftOf,
-  forecastCategoryIds,
+  forecastCategoryAmounts,
   formatDraft,
   historyBars,
   historyDiff,
@@ -136,7 +136,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
     projectId,
     currency,
     divisor: forecast?.averageMonths ?? 6,
-    inForecast: forecast == null ? new Set() : forecastCategoryIds(forecast),
+    inForecast: forecast == null ? new Map<string, bigint>() : forecastCategoryAmounts(forecast),
     query,
   }), [categories, next.categoryMonths, next.recurring, projectId, currency, forecast, query]);
   // The dev route's and a story's chosen category, from the same lists the sheet shows.

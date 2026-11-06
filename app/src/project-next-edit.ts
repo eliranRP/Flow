@@ -119,16 +119,25 @@ export function historyDiff(draft: bigint | null, usual: bigint, currency: strin
 
 export type CategoryChoice = { id: string; name: string; kind: "expense" | "income"; hint: string };
 
-/** The categories the forecast already counts: an average's own, a due charge's, an added line's. */
-export function forecastCategoryIds(forecast: NextMonthForecast): Set<string> {
-  return new Set(forecast.rows.flatMap((row) => (row.categoryId == null ? [] : [row.categoryId])));
+/**
+ * The categories the forecast already counts (an average's own, a due charge's, an added line's), each with
+ * its rows' amounts together, positive: the category sheet's "כבר בצפי" hint (decision 0259).
+ */
+export function forecastCategoryAmounts(forecast: NextMonthForecast): Map<string, bigint> {
+  const amounts = new Map<string, bigint>();
+  for (const row of forecast.rows) {
+    if (row.categoryId == null) continue;
+    amounts.set(row.categoryId, (amounts.get(row.categoryId) ?? 0n) + (row.minor < 0n ? -row.minor : row.minor));
+  }
+  return amounts;
 }
 
 /**
  * The category sheet: "מוצעות לפרויקט" are the categories the project used in the window, or that one of its
- * recurring charges files to, each with a hint; "כל הקטגוריות" is the rest of the company's list. Categories
- * the forecast counts, hidden ones, the loan principal and the ones kept out of the profit are left out.
- * A query keeps the names that contain it.
+ * recurring charges files to, each with a hint; "כל הקטגוריות" is the rest of the company's list. Hidden
+ * categories, the loan principal and the ones kept out of the profit are left out. A category the forecast
+ * already counts stays in its list, a second line in it being the owner's to add (decision 0259), and its
+ * hint says so: "כבר בצפי · $2,771". A query keeps the names that contain it.
  */
 export function categoryChoices(input: {
   categories: readonly CategoryRow[];
@@ -137,19 +146,22 @@ export function categoryChoices(input: {
   projectId: string;
   currency: string;
   divisor: number;
-  inForecast: ReadonlySet<string>;
+  /** forecastCategoryAmounts: the categories the forecast counts, with their amounts. */
+  inForecast: ReadonlyMap<string, bigint>;
   query: string;
 }): { suggested: CategoryChoice[]; rest: CategoryChoice[] } {
   const query = input.query.trim();
   const usable = input.categories.filter((category) => !category.hidden && category.loan_part !== "principal" && category.excluded_from_pnl !== true
-    && !input.inForecast.has(category.id) && (query === "" || category.name.includes(query)));
+    && (query === "" || category.name.includes(query)));
   const charges = input.recurring.filter((party) => party.project_id === input.projectId && party.pays_loan !== true && party.currency === input.currency);
   const suggested: CategoryChoice[] = [];
   const rest: CategoryChoice[] = [];
   for (const category of usable) {
     const hint = suggestionHint(category.id, charges, input.categoryMonths, input.currency, input.divisor);
-    if (hint != null) suggested.push({ id: category.id, name: category.name, kind: category.kind, hint });
-    else rest.push({ id: category.id, name: category.name, kind: category.kind, hint: category.kind === "income" ? "הכנסה" : "אין תנועות בפרויקט" });
+    const counted = input.inForecast.get(category.id);
+    const already = counted == null ? null : counted === 0n ? "כבר בצפי" : `כבר בצפי · ${formatAmountText(counted, input.currency)}`;
+    if (hint != null) suggested.push({ id: category.id, name: category.name, kind: category.kind, hint: already ?? hint });
+    else rest.push({ id: category.id, name: category.name, kind: category.kind, hint: already ?? (category.kind === "income" ? "הכנסה" : "אין תנועות בפרויקט") });
   }
   const byName = (a: CategoryChoice, b: CategoryChoice) => a.name.localeCompare(b.name, "he");
   return { suggested: suggested.sort(byName), rest: rest.sort(byName) };

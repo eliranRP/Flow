@@ -2,7 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN, JUNIPER_NEXT_SECOND_RENT } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import type { ForecastLoan } from "../project-next-loans";
 import type { NextMonthSample } from "../project-next-month-query";
@@ -182,6 +182,18 @@ describe("ProjectNextMonthScreen", () => {
     const off = screen.getByRole("region", { name: "הוסרו מהצפי · 1" });
     expect(within(off).getByText("חשמל ומים")).toBeTruthy();
     expect(off.textContent).toContain("$95 · ממוצע 6 חודשים");
+  });
+
+  it("lists an added line next to the recurring incomes of its own category (FLOW-1063, decision 0259)", () => {
+    const { container } = renderNext(JUNIPER_NEXT_SECOND_RENT);
+    const rows = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row"));
+    const titles = rows.map((row) => row.querySelector(".ui-row-title")?.textContent);
+    expect(titles).toContain("M. Ortiz");
+    expect(titles).toContain("S. Kim");
+    const added = rows.find((row) => row.getAttribute("href") === "/projects/juniper-ct/profit/next/edit/add%3Ae-rent-2");
+    expect(added?.querySelector(".ui-row-title")?.textContent).toBe("שכירות");
+    expect(added?.textContent).toContain("+$1,000");
+    expect(added?.querySelector(".ui-pn-edited")?.textContent).toBe("הוספת · כל חודש");
   });
 
   it("restores a removed row, with an undo", async () => {
