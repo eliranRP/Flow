@@ -635,9 +635,10 @@ describe("the investment page's returns cards", () => {
     renderInvestment(birchLaneReturns, "/projects/p1/investment", true);
     await metricsTab();
     const titles = (name: string) => [...screen.getByRole("region", { name }).querySelectorAll(".ui-pinv-row-title")].map((node) => node.textContent);
-    expect(titles("תשואה")).toEqual(["ROI על הכסף בעסקה", "ROI שנתי", "מרווח מה־ARV"]);
-    expect(titles("מחיר")).toEqual(["כלל ה־70%", "מחיר איזון במכירה"]);
-    expect(screen.queryByRole("region", { name: "סיכון" })).toBeNull();
+    // FLOW-1071: the renovation's own metrics, with the four of FLOW-451 beside them.
+    expect(titles("תשואה")).toEqual(["ROI על הכסף בעסקה", "ROI שנתי", "מרווח מה־ARV", "תשואה על המזומן"]);
+    expect(titles("סיכון")).toEqual(["כיסוי חוב (DSCR)"]);
+    expect(titles("מחיר")).toEqual(["כלל ה־70%", "מחיר איזון במכירה", "Cap rate", "תזרים ליחידה"]);
     expect(screen.getByRole("link", { name: /ROI על הכסף בעסקה/ })).toHaveTextContent("102.2%");
     expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("126.0%");
     expect(screen.getByRole("link", { name: /ROI שנתי/ })).toHaveTextContent("10 חודשים · מהקנייה");

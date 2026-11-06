@@ -87,10 +87,17 @@ export const RENT_GROUPS: readonly MetricGroup[] = [
   { key: "price", title: "מחיר", metrics: ["cap-rate", "grm", "expense-ratio", "per-unit"] },
 ];
 
+/** FLOW-1071 (the owner, 2026-11-06): a renovation keeps the four metrics of FLOW-451 beside its own. */
 export const FLIP_GROUPS: readonly MetricGroup[] = [
-  { key: "return", title: "תשואה", metrics: ["flip-roi", "flip-roi-year", "arv-margin"] },
-  { key: "price", title: "מחיר", metrics: ["rule-70", "break-even-sale"] },
+  { key: "return", title: "תשואה", metrics: ["flip-roi", "flip-roi-year", "arv-margin", "coc"] },
+  { key: "risk", title: "סיכון", metrics: ["dscr"] },
+  { key: "price", title: "מחיר", metrics: ["rule-70", "break-even-sale", "cap-rate", "per-unit"] },
 ];
+
+/** A deal metric read since the purchase, not over the period: its page's subtitle says so. */
+export function dealAllTime(metric: string): boolean {
+  return isDealMetric(metric) && !(AFTER_RENT as readonly string[]).includes(metric) && metric !== "ltv";
+}
 
 export function isDealMetric(value: string): value is DealMetricKey {
   return (DEAL_METRIC_KEYS as readonly string[]).includes(value);
@@ -214,7 +221,7 @@ function backSection(r: PropertyReturns): MetricSection {
     formula: {
       rows: [
         { key: "cash", op: "", label: "תזרים שחזר", hint: "מהשכירות הראשונה, מאז ומעולם", value: money(back), target: { kind: "statement" } },
-        { key: "equity", op: "+", label: "הון עצמי היום", hint: "שווי היום פחות הלוואות", value: computed(equity, r, ["value"]), target: { kind: "edit", field: "value" } },
+        { key: "equity", op: "+", label: "הון עצמי היום", hint: "שווי היום פחות הלוואות", value: computed(equity, r, ["value"]), target: { kind: "metric", metric: "roe" } },
       ],
       result: { key: "back", op: "=", label: "מה חזר ומה שווה", value: equity == null ? missing("value") : money(back + equity) },
     },
@@ -231,8 +238,8 @@ function totalSection(r: PropertyReturns): MetricSection {
       rows: [
         { key: "cash", op: "", label: "תזרים", value: money(s.cashFlowMinor), target: { kind: "statement" } },
         { key: "principal", op: "+", label: "החזר קרן", value: money(s.principalMinor), target: { kind: "line", line: "principal" } },
-        { key: "appreciation", op: "+", label: "עליית ערך", value: s.appreciationMinor == null ? text("לא נספר") : money(s.appreciationMinor) },
-        { key: "tax", op: "+", label: "חיסכון מס", value: s.taxSavingsMinor == null ? text("לא נספר") : money(s.taxSavingsMinor) },
+        { key: "appreciation", op: "+", label: "עליית ערך", hint: "שווי היום מול שווי קודם · עריכה", value: s.appreciationMinor == null ? text("לא נספר") : money(s.appreciationMinor), target: { kind: "edit", field: "value" } },
+        { key: "tax", op: "+", label: "חיסכון מס", hint: "פחת × מדרגת המס", value: s.taxSavingsMinor == null ? text("לא נספר") : money(s.taxSavingsMinor), target: { kind: "part", part: "building" } },
       ],
       result: { key: "total", op: "=", label: "תשואה כוללת", value: money(s.totalMinor) },
     },
@@ -339,8 +346,9 @@ function dealParts(metric: DealMetricKey, r: PropertyReturns): { sections: Metri
       const since = r.deal.acquiredOn == null ? "אין עדיין שורת רכישה" : `מהקנייה ב־${formatDisplay(r.deal.acquiredOn)}`;
       return {
         sections: [
-          oneRow("roi", "ROI על הכסף בעסקה", { key: "roi", op: "", label: "ROI על הכסף בעסקה", hint: "רווח נקי ÷ כסף בעסקה", value: dealMetricValue("flip-roi", r) }),
-          oneRow("held", "זמן בעסקה", { key: "held", op: "", label: "זמן בעסקה", hint: since, value: r.deal.heldDays == null ? text("לא מחושב") : text(daysText(r.deal.heldDays)) }),
+          // FLOW-1071: each part opens what it is made of: the ROI its own page, the time the purchase lines.
+          oneRow("roi", "ROI על הכסף בעסקה", { key: "roi", op: "", label: "ROI על הכסף בעסקה", hint: "רווח נקי ÷ כסף בעסקה", value: dealMetricValue("flip-roi", r), target: { kind: "metric", metric: "flip-roi" } }),
+          oneRow("held", "זמן בעסקה", { key: "held", op: "", label: "זמן בעסקה", hint: since, value: r.deal.heldDays == null ? text("לא מחושב") : text(daysText(r.deal.heldDays)), target: { kind: "line", line: "acquisition" } }),
         ],
         division: roi == null || r.deal.heldDays == null ? null : `${percentText(roi)} × 365 ÷ ${String(r.deal.heldDays)}`,
       };
@@ -377,7 +385,7 @@ function dealParts(metric: DealMetricKey, r: PropertyReturns): { sections: Metri
           title: "כל העלויות",
           total: costs == null ? undefined : money(costs),
           formula: {
-            rows: [...purchaseRows(r, "", false), rehabRow(r, "+", false), { key: "holding", op: "+", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(-r.deal.holdingMinor) }],
+            rows: [...purchaseRows(r, "", false), rehabRow(r, "+", false), { key: "holding", op: "+", label: "החזקה", hint: "ריבית ועלויות שלא נספרו בשיפוץ", value: money(-r.deal.holdingMinor), target: { kind: "line", line: "deal_holding" } }],
             result: { key: "costs", op: "=", label: "כל העלויות", value: costs == null ? missing("purchase") : money(costs) },
           },
         }, oneRow("selling", "עלויות מכירה", { key: "selling", op: "", label: "עלויות מכירה", hint: "מה־ARV · עריכה", value: text(percentText(r.deal.sellingCostBp)), target: { kind: "edit", field: "selling_cost" } })],
@@ -392,7 +400,9 @@ export function dealMetricPage(metric: DealMetricKey, r: PropertyReturns): Metri
   const { sections, division, yearly } = dealParts(metric, r);
   const period = AFTER_RENT.includes(metric) ? (r.annualizedFrom == null ? "12 חודשים" : `מהשכירות הראשונה ב־${formatDisplay(r.annualizedFrom)}`) : metric === "ltv" ? "היום" : "מאז הקנייה";
   const result = division == null || value.kind === "missing" || value.kind === "note" ? null : { text: `⁦${division}⁩`, value, yearly };
-  return { title: DEAL_METRIC_TITLES[metric], caption: `${dealFormula(metric, r)} · ${period}`, cashOut: null, value, sections, result };
+  // FLOW-1071: a figure since the purchase says so once, in the page's subtitle, not again in its caption.
+  const caption = dealAllTime(metric) ? dealFormula(metric, r) : `${dealFormula(metric, r)} · ${period}`;
+  return { title: DEAL_METRIC_TITLES[metric], caption, cashOut: null, value, sections, result };
 }
 
 /* -- one entry point for every metric ------------------------------------------------------------- */

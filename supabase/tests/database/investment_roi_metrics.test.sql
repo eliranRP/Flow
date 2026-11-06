@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(32);
+select plan(35);
 
 do $users$
 begin
@@ -135,6 +135,13 @@ from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part =
 select tests.authenticate_as('roi_owner');
 select is((pg_temp.ret('flip')->'deal'->>'holding_minor')::bigint, -250000::bigint, 'the interest paid before the sale is a holding cost');
 select is((pg_temp.ret('flip')->'deal'->>'net_profit_minor')::bigint, 4750000::bigint, 'and comes off the net profit');
+-- FLOW-1071: the holding costs' own lines add up to the figure: the holding and the interest, not the principal.
+select is((public.get_property_return_lines(pg_temp.id('flip'), 'deal_holding')->>'total_minor')::bigint, -250000::bigint,
+  'deal_holding lines add up to deal.holding_minor');
+select is((public.get_property_return_lines(pg_temp.id('flip'), 'deal_holding')->>'count')::integer, 2,
+  'deal_holding lists the holding line and the interest');
+select throws_ok($$ select public.get_property_return_lines(pg_temp.id('flip'), 'deal_holdings') $$, '22023', 'validation',
+  'an unknown line is still refused');
 
 -- The rental's new metrics. Income 12,000.00, operating expenses 2,000.00, no loan; the value is
 -- 120,000.00 with no loan, so the equity today is 120,000.00. The first rent is 214 days back.
