@@ -137,13 +137,13 @@ describe("companyNextMonthForecast's skipped rows and split parties", () => {
 
   it("lists a skipped row whose project has no row left", () => {
     expect(forecast.parts.some((part) => part.projectId === "p2")).toBe(false);
-    expect(forecast.skipped?.map(({ projectId, row }) => [projectId, row.key])).toEqual([["p2", "rec:expense:s-hoa"]]);
+    expect(forecast.skipped.map(({ projectId, row }) => [projectId, row.key])).toEqual([["p2", "rec:expense:s-hoa"]]);
   });
 
   it("names the parties split by project", () => {
     const split = companyNextMonthForecast({ ...input, recurring: [...RECURRING, charge("s-payroll", "p1", "c-payroll", "expense", 1_000n, "year", "2027-05")] });
-    expect([...(split.splitKeys ?? [])]).toEqual(["party:expense:s-payroll:USD"]);
-    expect([...(forecast.splitKeys ?? [])]).toEqual([]);
+    expect([...split.splitKeys]).toEqual(["party:expense:s-payroll:USD"]);
+    expect([...forecast.splitKeys]).toEqual([]);
   });
 });
 
