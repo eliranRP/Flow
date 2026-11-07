@@ -325,6 +325,12 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1078"></a>[FLOW-1078](tasks/FLOW-1078.md) | Back from the background, the tab bar sits mid-screen on iOS | BUG |
 | <a id="flow-1079"></a>[FLOW-1079](tasks/FLOW-1079.md) | Take a recurring charge out of this month's forecast | SMALL CYCLE |
 | <a id="flow-1081"></a>[FLOW-1081](tasks/FLOW-1081.md) | Take a charge out of a month on the project page, תזרים צפוי and the other forecast lists | SMALL CYCLE |
+| <a id="flow-1084"></a>[FLOW-1084](tasks/FLOW-1084.md) | Home, past month: the "חזרה ל<חודש>" pill is 36px and wraps at 320 | SMALL UI |
+| <a id="flow-1085"></a>[FLOW-1085](tasks/FLOW-1085.md) | דורש טיפול cards cut their amount at 320 outside Home | SMALL UI |
+| <a id="flow-1086"></a>[FLOW-1086](tasks/FLOW-1086.md) | Home: skipping a forecast row is swipe-only | SMALL UI |
+| <a id="flow-1087"></a>[FLOW-1087](tasks/FLOW-1087.md) | Charge page: the "לא צפוי ב<חודש>" switch stays disabled with no reason when the forecast fails to load | SMALL UI |
+| <a id="flow-1094"></a>[FLOW-1094](tasks/FLOW-1094.md) | דורש טיפול: dismissing a card has no undo toast | PLAN FIRST |
+| <a id="flow-1095"></a>[FLOW-1095](tasks/FLOW-1095.md) | Home band at 320: the company name is cut to a few letters | PLAN FIRST |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |
@@ -466,6 +472,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1082"></a>[FLOW-1082](tasks/FLOW-1082.md) | Reports: a row's second line is cut at 320, hiding expenses or the loan amount | SMALL UI |
+| <a id="flow-1083"></a>[FLOW-1083](tasks/FLOW-1083.md) | Reports: a small non-zero row shows "0% מהקבוצה" | SMALL UI |
+| <a id="flow-1088"></a>[FLOW-1088](tasks/FLOW-1088.md) | New project: a missing name does not move focus to the field or announce the error | SMALL UI |
+| <a id="flow-1089"></a>[FLOW-1089](tasks/FLOW-1089.md) | Unassigned: ביטול in the assign toast can do nothing | SMALL UI |
+| <a id="flow-1090"></a>[FLOW-1090](tasks/FLOW-1090.md) | Unassigned rows: the שיוך pill squeezes the title at 320 | SMALL UI |
+| <a id="flow-1091"></a>[FLOW-1091](tasks/FLOW-1091.md) | Calculation pages show a bare failure line instead of the failed card | SMALL UI |
+| <a id="flow-1092"></a>[FLOW-1092](tasks/FLOW-1092.md) | Reports month drill: the pill shows the month but picking a period leaves the drill | PLAN FIRST |
+| <a id="flow-1093"></a>[FLOW-1093](tasks/FLOW-1093.md) | Unassigned picker has no "+ פרויקט חדש" | PLAN FIRST |
 | <a id="flow-1044"></a>[FLOW-1044](tasks/FLOW-1044.md) | Projects v3: the list, the project page by kind, the actions and new-project sheets, project profit, and the lines with no project | UI (design approved) |
 | <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
