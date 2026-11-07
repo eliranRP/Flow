@@ -61,6 +61,19 @@ describe("ProjectMonthProfitScreen", () => {
     expect(row?.textContent).toMatch(/זיכוי/);
   });
 
+  it("the category view shows a credit on an expense as money in too (FLOW-1104)", () => {
+    const expense = JUNIPER_MONTH_PROFIT.lines.find((line) => line.side === "out");
+    if (expense == null) throw new Error("the sample has no expense line");
+    const credit = { ...expense, transaction_id: "t-credit", supplier_name: "Water credit", description: "Water credit", category_name: "Water and sewage", amount_minor: -16_459n };
+    const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", { ...JUNIPER_MONTH_PROFIT, lines: [...JUNIPER_MONTH_PROFIT.lines, credit] });
+    const category = Array.from(container.querySelectorAll(".ui-pcat-button")).find((button) => button.textContent.includes("Water and sewage"));
+    if (category == null) throw new Error("missing the credit's category");
+    fireEvent.click(category);
+    const row = Array.from(container.querySelectorAll("a")).find((link) => link.textContent.includes("Water credit"));
+    expect(row?.textContent).toMatch(/\+\s*\$164/);
+    expect(row?.textContent).not.toMatch(/[−-]\s*\$164/);
+  });
+
   it("lists the lines by day, newest day first, under the default date order", () => {
     const { container } = renderAt("/projects/juniper-ct/profit/2026-10", JUNIPER_MONTH_PROFIT);
     const heads = Array.from(container.querySelectorAll(".ui-lines-group-title")).map((head) => head.textContent);
