@@ -42,7 +42,7 @@ Severity guide: **Critical**: one company reads or changes another company's dat
 
 | ID | Attack | Where in Flow | How to check |
 | --- | --- | --- | --- |
-| C1 | Content Security Policy gaps | `app/public/_headers`, `scripts/security-headers.mjs` (decision 0192) | The CSP is report-only today: note on the weekly scan whether the plan to enforce it moved. Flag new `unsafe-inline`, `unsafe-eval`, wildcard `connect-src` or `script-src`, and new third-party origins. |
+| C1 | Content Security Policy gaps | `app/public/_headers` (the `__FLOW_CSP__` placeholder), `scripts/security-headers.mjs` (decisions 0192 and 0242) | The CSP is enforced. Keep: `script-src` is `'self'` plus the inline scripts' hashes, and `connect-src` is `'self'` plus the Supabase origin. Flag new `unsafe-inline`, `unsafe-eval`, wildcard `connect-src` or `script-src`, and new third-party origins. On the weekly scan, compare the live header with what `security-headers.mjs` builds. |
 | C2 | Clickjacking and missing headers | `_headers` | Keep: `X-Frame-Options: DENY`, `nosniff`, HSTS, `Referrer-Policy`, `Permissions-Policy`. Every new extensionless route gets its `Content-Type` line. On the weekly scan, `curl -sI` the live Pages site (a read, nothing else) and compare. |
 | C3 | CORS misconfiguration | Edge function responses, `_shared/http.ts`, `FLOW_MCP_APP_ORIGINS` | No reflected `Origin`; no `*` with credentials; the origin check is an exact match, not `startsWith`, `includes` or an unanchored regex. |
 | C4 | Host and forwarded header trust | Any URL built from `Host`, `X-Forwarded-Host`, `Origin` or `Referer` | Invite, reset and redirect links come from config. A spoofed header must not change a link sent by email (link poisoning). |
