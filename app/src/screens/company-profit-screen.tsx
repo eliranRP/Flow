@@ -23,6 +23,7 @@ import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
 import { byDateThenSize, bySizeOnly, companyCategoryGroups, companyKeptOutCategories, companySummaryRows } from "../company-profit-rows";
+import { useAfterFirstPaint } from "../after-paint";
 import { useCompanyNextMonth, useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
 import { companyYears } from "../company-years";
 import { useCompanyYearProjects, useCompanyYears, type CompanyYearsSample } from "../company-years-query";
@@ -135,7 +136,11 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // the same reads; a past year or an earlier month reads none of them.
   const forecastYear = yearsData == null ? askedYear : viewYear;
   const wantsForecast = period === "month" ? onCurrent : period === "all" || forecastYear === currentYear;
-  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast, sample?.next);
+  // FLOW-1080 (as Home, FLOW-1019): the next-month reads start once the figures are drawn, so they do not share
+  // the link with the figures' own reads; a return with the figures cached reads them at once.
+  const afterPaint = useAfterFirstPaint(model != null);
+  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast && afterPaint, sample?.next);
+  const nextWaiting = next.pending || (wantsForecast && !afterPaint);
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   const yearProjects = useCompanyYearProjects(viewYear, today, yearByProject, sample?.years);
   const failed = live.failed || (monthByProject && overheadRead.failed) || (long && years.failed);
@@ -202,7 +207,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     today,
     currency,
     rest: next.rest,
-    restLoading: next.pending,
+    restLoading: nextWaiting,
     restFailed: next.failed,
     categories: next.categories,
     list: yearList,
@@ -275,7 +280,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const nextBlock = !onCurrent ? null : (
     <CompanyNextMonthBlock
       forecast={next.forecast}
-      loading={next.pending}
+      loading={nextWaiting}
       months={chartMonths.months}
       current={currentKey}
       thisMonthExpense={model.expense}
