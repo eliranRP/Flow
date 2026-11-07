@@ -39,6 +39,7 @@ type Story = StoryObj<typeof meta>;
 const CEDAR = REPORTS_PROJECT_IDS.cedar;
 const OAK_SHEET = REPORTS_PROJECT_SHEETS.find((sheet) => sheet.project_id === REPORTS_PROJECT_IDS.oak);
 const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
+const phone393 = { globals: { viewport: { value: "flow393", isRotated: false } } };
 
 function Hub({ entry = "/reports", sample = {} }: { entry?: string; sample?: Partial<HubSample> }) {
   return (
@@ -71,6 +72,38 @@ function Balance({ entry = "/reports/balance", sample = {} }: { entry?: string; 
 async function fits(canvasElement: HTMLElement) {
   const root = canvasElement.ownerDocument.documentElement;
   await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+}
+
+/**
+ * FLOW-1082 (the owner, 2026-11-07, option A): every report row's hint with figures is one line and whole, with no
+ * ellipsis. From 360 it shows the full figures; below 360 the short ones ($30K), on its own line under the name and
+ * the amount, across the row up to the chevron's column.
+ */
+async function hintsWhole(canvasElement: HTMLElement) {
+  const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")].filter((hint) => hint.querySelector(".ui-rep-hint-short") != null);
+  await expect(hints.length).toBeGreaterThan(0);
+  const narrow = canvasElement.ownerDocument.documentElement.clientWidth < 360;
+  for (const hint of hints) {
+    await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
+    await expect(hint.scrollWidth).toBeLessThanOrEqual(hint.clientWidth);
+    await expect(hint.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(hint).lineHeight) + 1);
+    const short = hint.querySelector<HTMLElement>(".ui-rep-hint-short");
+    await expect(short == null ? "none" : getComputedStyle(short).display).toBe(narrow ? "inline" : "none");
+    const row = hint.closest<HTMLElement>(".ui-row");
+    const line = hint.closest<HTMLElement>(".ui-row-hint");
+    const chevron = row?.querySelector<HTMLElement>(".ui-row-chevron");
+    const title = row?.querySelector<HTMLElement>(".ui-row-title");
+    if (row == null || line == null || chevron == null || title == null) throw new Error("a report row without its parts");
+    const box = line.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const chevronBox = chevron.getBoundingClientRect();
+    // Under the name and the amount, from the row's start to the chevron's column.
+    await expect(box.top).toBeGreaterThanOrEqual(title.getBoundingClientRect().bottom - 1);
+    await expect(box.top).toBeGreaterThanOrEqual(chevronBox.top);
+    await expect(Math.abs(box.right - rowBox.right)).toBeLessThanOrEqual(1);
+    await expect(box.left).toBeLessThanOrEqual(chevronBox.right + parseFloat(getComputedStyle(row).columnGap) + 1);
+    await expect(box.left).toBeGreaterThanOrEqual(chevronBox.right - 1);
+  }
 }
 
 // ---- The hub -------------------------------------------------------------------------------------
@@ -148,6 +181,64 @@ export const ByProject: Story = {
 
 export const ByMonth: Story = { name: "P&L · by month", render: () => <Pnl entry="/reports/pnl?view=month" /> };
 
+/** FLOW-1082: at 320 a row's hint stays on one line with short figures ($9.6K), none cut. */
+export const ByMonth320: Story = {
+  name: "P&L · by month at 320",
+  ...phone320,
+  render: () => <Pnl entry="/reports/pnl?view=month" />,
+  play: async ({ canvasElement }) => {
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/** A project with a $10 net: a small non-zero share reads "פחות מ־1%", never 0% (FLOW-1083). */
+const SMALL_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000180",
+  project_id: "a0000000-0000-4000-8000-000000000180",
+  name: "Ash Row",
+  currencies: [{ currency: "USD", income_minor: 100_000n, expense_minor: 99_000n, net_minor: 1_000n, income: [], expense: [], kept_out: [] }],
+};
+
+/** A $20M project, so the $130,000 row below is under 1% of its group and its amount is wide (a narrow hint column). */
+const HUGE_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000181",
+  project_id: "a0000000-0000-4000-8000-000000000181",
+  name: "Oak Ridge Estate",
+  currencies: [{ currency: "USD", income_minor: 2_000_000_000n, expense_minor: 0n, net_minor: 2_000_000_000n, income: [], expense: [], kept_out: [] }],
+};
+
+/** FLOW-1082: a small row with a wide amount leaves a narrow hint column at 320; its figures must all stay whole. */
+const WIDE_SMALL_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000182",
+  project_id: "a0000000-0000-4000-8000-000000000182",
+  name: "Birch Court",
+  currencies: [{ currency: "USD", income_minor: 14_000_000n, expense_minor: 1_000_000n, net_minor: 13_000_000n, income: [], expense: [], kept_out: [] }],
+};
+
+/** FLOW-1082, FLOW-1083: by project at 320, each hint whole, the small rows under 1%. */
+export const ByProject320: Story = {
+  name: "P&L · by project at 320",
+  ...phone320,
+  render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, SMALL_PROJECT, HUGE_PROJECT, WIDE_SMALL_PROJECT] } }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("link", { name: /Ash Row/ }).textContent).toContain("פחות מ־1%");
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1082: at 393 the same rows keep their full figures on one line under the name and the amount, none cut. */
+export const ByProject393: Story = {
+  name: "P&L · by project at 393",
+  ...phone393,
+  render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, SMALL_PROJECT, HUGE_PROJECT, WIDE_SMALL_PROJECT] } }} />,
+  play: async ({ canvasElement }) => {
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
 /** A project row drilled on the same screen: the band says its name and net, "‹ לפי פרויקט" returns. */
 export const ProjectDrill: Story = {
   name: "P&L · a project drilled",
@@ -202,7 +293,10 @@ export const ByProjectLong320: Story = {
   name: "P&L · by project, long names at 320",
   ...phone320,
   render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: EIGHT_PROJECTS } }} />,
-  play: async ({ canvasElement }) => { await fits(canvasElement); },
+  play: async ({ canvasElement }) => {
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
 };
 
 export const Empty: Story = { name: "P&L · empty period", render: () => <Pnl entry="/reports/pnl?period=last_month" sample={{ statement: REPORTS_EMPTY }} /> };
@@ -226,13 +320,24 @@ export const BalanceByProject: Story = {
   },
 };
 
-/** At 320 each row's line stays on one line, cut at its end, led by its share of the group (FLOW-1064). */
+/** At 320 each row's line, led by its share of the group (FLOW-1064), stays on one line with short figures, so no loan amount is cut (FLOW-1082). */
 export const BalanceByProject320: Story = {
   name: "Balance sheet · by project at 320",
   ...phone320,
   render: () => <Balance entry="/reports/balance?view=project" />,
   play: async ({ canvasElement }) => {
-    for (const hint of canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")) await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1082: at 393 each loan amount stays whole on the hint's own line. */
+export const BalanceByProject393: Story = {
+  name: "Balance sheet · by project at 393",
+  ...phone393,
+  render: () => <Balance entry="/reports/balance?view=project" />,
+  play: async ({ canvasElement }) => {
+    await hintsWhole(canvasElement);
     await fits(canvasElement);
   },
 };

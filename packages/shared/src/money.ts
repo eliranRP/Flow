@@ -115,7 +115,7 @@ function compactMajor(major: number): string {
   return String(major);
 }
 
-function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, keepZeroCents = false, compact = false): string {
+function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, keepZeroCents = false, compactFrom?: number): string {
   const prefix = currencyPrefix(currency);
   if (detail && (keepZeroCents || abs % 100n !== 0n)) {
     const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -124,7 +124,7 @@ function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, kee
   }
   const major = wholeShekels(abs);
   if (major === 0) return `${prefix}0`;
-  if (compact && major >= COMPACT_FROM) return `${prefix}${compactMajor(major)}`;
+  if (compactFrom != null && major >= compactFrom) return `${prefix}${compactMajor(major)}`;
   const digits = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return `${prefix}${digits}`;
 }
@@ -143,6 +143,9 @@ type FormatAmountOptions = {
   keepZeroCents?: boolean;
   /** A whole figure of 100,000 or more in K, M or B (the band's figures). Ignored with `detail`. */
   compact?: boolean;
+  /** With `compact`, the whole amount from which a figure reads in K, M or B (default 100,000); 1,000 for a report
+      row's line below 360px (FLOW-1082). */
+  compactFrom?: number;
 };
 
 /**
@@ -154,7 +157,7 @@ export function formatAmountText(minor: bigint, currency = "ILS", options?: Form
   const detail = options?.detail === true;
   const direction = options?.direction;
   const abs = minor < 0n ? -minor : minor;
-  const body = formatUnsignedMinor(abs, currency, detail, options?.keepZeroCents === true, options?.compact === true);
+  const body = formatUnsignedMinor(abs, currency, detail, options?.keepZeroCents === true, options?.compact === true ? (options.compactFrom ?? COMPACT_FROM) : undefined);
   if (shownAsZero(abs, detail)) return body;
   if (direction === "expense") return `−${body}`;
   if (direction === "income") return options?.plus === true ? `+${body}` : body;

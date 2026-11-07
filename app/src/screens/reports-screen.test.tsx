@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
@@ -17,7 +17,7 @@ import {
 import { renderWithProviders } from "../test-render";
 import { BalanceReportScreen, type BalanceSample } from "./reports-balance-screen";
 import { ReportsHubScreen, ReportsScreen } from "./reports-hub-screen";
-import { barShare } from "./reports-parts";
+import { barShare, hintFigures, reportHint, rowShare } from "./reports-parts";
 import { PnlReportScreen, reportLinesPath, type PnlSample } from "./reports-screen";
 
 function LocationProbe() {
@@ -152,7 +152,11 @@ describe("the P&L", () => {
     renderPnl({}, "/reports/pnl?view=project");
     const cedar = screen.getByRole("link", { name: /Cedar St/ });
     expect(cedar.textContent).toContain("+$13,000");
-    expect(cedar.querySelector(".ui-rep-hint-text")?.textContent).toMatch(/^\d{1,3}% · הכנסות \$30,000 · הוצאות \$17,000$/);
+    expect(cedar.querySelector(".ui-rep-hint-full")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
+    expect(cedar.querySelector(".ui-rep-hint-short")?.textContent).toBe("הכנסות $30K · הוצאות $17K");
+    // A screen reader reads the full figures once: the short line is hidden from it.
+    expect(cedar.querySelector(".ui-rep-hint-short")).toHaveAttribute("aria-hidden", "true");
+    expect(cedar.querySelector(".ui-rep-hint-text")?.firstChild?.textContent).toMatch(/^\d{1,3}%$/);
     // The general expenses are one row alone: no percent.
     expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest("section")?.querySelector(".ui-rep-hint-text")?.textContent).not.toContain("%");
     expect(cedar).toHaveAttribute("href", `/reports/pnl?view=project&project=${CEDAR}`);
@@ -292,5 +296,40 @@ describe("barShare", () => {
     expect(barShare(500n, -1_000n)).toBe(50);
     expect(barShare(2_000n, 1_000n)).toBe(100);
     expect(barShare(1_000n, 0n)).toBe(0);
+  });
+});
+
+describe("rowShare", () => {
+  it("says under 1% for a small non-zero row, 0% for a zero row (FLOW-1083)", () => {
+    expect(rowShare(1_000n, 1_000_000n)).toBe("under-1");
+    expect(rowShare(-1_000n, 1_000_000n)).toBe("under-1");
+    expect(rowShare(0n, 1_000_000n)).toBe(0);
+    expect(rowShare(1_000n, 0n)).toBe(0);
+    expect(rowShare(400_000n, 1_000_000n)).toBe(40);
+  });
+
+  it("writes the hint: a $10 row of a $10,000 group reads פחות מ־1%, a zero row 0%", () => {
+    const { container: small } = render(<>{reportHint(undefined, rowShare(1_000n, 1_000_000n))}</>);
+    expect(small.textContent).toBe("פחות מ־1% מהקבוצה");
+    const { container: zero } = render(<>{reportHint("הכנסות $0", rowShare(0n, 1_000_000n))}</>);
+    expect(zero.textContent).toBe("0% · הכנסות $0");
+  });
+});
+
+describe("reportHint", () => {
+  it("writes a line with figures in full and short, the short one hidden from a screen reader (FLOW-1082)", () => {
+    const { container } = render(<>{reportHint(hintFigures([["הכנסות", 3_000_000n], ["הוצאות", 1_700_000n]], "USD"), 37)}</>);
+    expect(container.querySelector(".ui-rep-hint-full")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
+    expect(container.querySelector(".ui-rep-hint-short")?.textContent).toBe("הכנסות $30K · הוצאות $17K");
+    expect(container.querySelector(".ui-rep-hint-short")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".ui-rep-hint-text")?.textContent.startsWith("37% · ")).toBe(true);
+    const { container: plain } = render(<>{reportHint("מזומן ושאר החשבונות")}</>);
+    expect(plain.textContent).toBe("מזומן ושאר החשבונות");
+    expect(plain.querySelector(".ui-rep-hint-short")).toBeNull();
+  });
+
+  it("keeps an amount under $1,000 whole and writes millions short", () => {
+    expect(hintFigures([["הכנסות", 100_000n], ["הוצאות", 99_000n]], "USD").short).toBe("הכנסות $1K · הוצאות $990");
+    expect(hintFigures([["שווי", 123_456_700n]], "USD").short).toBe("שווי $1.23M");
   });
 });

@@ -496,7 +496,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21
 **Rows, amounts and settings (folded at cycle 15)**
 
 - Whole amounts never show .00; agorot show only when they are not zero (FLOW-334).
-- A project's name is its identity: it wraps to two lines before the ellipsis, and a row's hint stops at two lines too (FLOW-358).
+- A project's name is its identity: it wraps to two lines before the ellipsis (FLOW-358). A row's hint is one line of its own under the name and amount, across the row; below 360 its figures are compact ($30K), the exact ones a tap away (FLOW-1082).
 - A name is cut only when it does not fit, never to protect words the row does not show (category lines).
 - A skeleton row draws the loaded row's parts in their places: an icon slot where the row has an icon, the eyebrow's short bar on top of an eyebrow row, and an end bar only where the row shows a figure (FLOW-358).
 - A search row says why it matched when the match isn't in its own name (FLOW-358).

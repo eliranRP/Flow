@@ -26,7 +26,7 @@ import type { ScreenPhase } from "../ui/screen-phase";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useBalanceAt, usePnl, useProjectBalances } from "../use-reports";
 import { ReportShareSheet } from "./report-share-sheet";
-import { BalanceWarningCard, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, barShare, reportHint, type BandFigure } from "./reports-parts";
+import { BalanceWarningCard, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, hintFigures, reportHint, rowShare, type BandFigure } from "./reports-parts";
 import { reportAccountPath } from "./reports-screen";
 import { BalanceDateSheet, useLatePick } from "./reports-sheets";
 
@@ -145,7 +145,7 @@ export function BalanceReportScreen({ sample }: { sample?: BalanceSample } = {})
                     variant="project"
                     title={row.name}
                     wrapTitle
-                    hint={reportHint(row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : `שווי ${amountText(row.assets, base)} · הלוואות ${amountText(row.liabilities, base)}`, row.equity > 0n && rows.length > 1 ? barShare(row.equity, equityTotal(top)) : undefined)}
+                    hint={reportHint(row.projectId == null ? "מזומן ושאר החשבונות, פחות מה שלא שייך לנכס" : hintFigures([["שווי", row.assets], ["הלוואות", row.liabilities]], base), row.equity > 0n && rows.length > 1 ? rowShare(row.equity, equityTotal(top)) : undefined)}
                     {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
                     chevron={to != null}
                     chevronSpace={to == null}
