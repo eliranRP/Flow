@@ -222,6 +222,9 @@
       overflow: hidden;
       content: attr(data-cut) / "";
       -webkit-text-fill-color: currentcolor;
+      /* A cut measured wider than its box (Safari can measure a part it already cuts short) would lose its
+         "…" at the clipped end, mid-letter (owner's screenshot, 2026-11-07); CSS then cuts it again, with one. */
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
