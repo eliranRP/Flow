@@ -269,34 +269,15 @@ html[data-kb="open"] .ui-sheet-body {
   align-items: center;
 }
 
-/* FLOW-1051 (V3-Home): the actions' glyphs are 24px; the avatar is a 44px disc 4px past them. */
+/* FLOW-1051 (V3-Home): the actions' glyphs are 24px. FLOW-1103 (the owner, 2026-11-07): at every width the row is
+   +, קבועים and ⋯; search and הגדרות וחשבון wait in the ⋯ sheet, so the company's name keeps its room. */
 .ui-band-action > svg {
   inline-size: var(--icon-check);
   block-size: var(--icon-check);
 }
 
-.ui-band-action:has(> .ui-band-avatar) {
-  margin-inline-start: var(--space-1);
-}
-
-/* FLOW-1095 (the owner, 2026-11-07): under 360px search and the avatar wait in the ⋯ sheet, so the company's
-   name keeps about 96px; from 360px up the row is as it was and the ⋯ is not drawn. */
-.ui-band-actions > .ui-band-more {
-  display: none;
-}
-
-@media (max-width: 359px) {
-  .ui-band-actions > .ui-band-wide {
-    display: none;
-  }
-
-  .ui-band-actions > .ui-band-more {
-    display: inline-grid;
-  }
-}
-
 /* FLOW-987: the one-time tip under the קבועים icon (board RecurringConceptB): an inverse bubble with a
-   ✕, its arrow under the icon, which sits one target and one gap in from the avatar's end. */
+   ✕, its arrow under the icon, which sits one target in from the row's end (the ⋯, FLOW-1103). */
 .ui-band-tip-anchor {
   display: inline-flex;
 }
@@ -324,7 +305,7 @@ html[data-kb="open"] .ui-sheet-body {
   content: "";
   position: absolute;
   inset-block-start: calc(var(--tip-arrow) / -2);
-  inset-inline-end: calc(var(--touch-min) + var(--band-label-gap) + var(--touch-min) / 2 - var(--tip-arrow) / 2);
+  inset-inline-end: calc(var(--touch-min) + var(--touch-min) / 2 - var(--tip-arrow) / 2);
   inline-size: var(--tip-arrow);
   block-size: var(--tip-arrow);
   background: inherit;
@@ -377,21 +358,6 @@ html[data-kb="open"] .ui-sheet-body {
   line-height: 1;
   font-weight: var(--type-name-weight);
   font-variant-numeric: tabular-nums;
-}
-
-.ui-band-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: var(--touch-min);
-  block-size: var(--touch-min);
-  border-radius: var(--radius-button);
-  background: var(--band-avatar);
-}
-
-.ui-band-avatar > svg {
-  inline-size: var(--glyph-band-step);
-  block-size: var(--glyph-band-step);
 }
 
 /* A past month's way back: the pill in the band's white, the darker band's colour. FLOW-1084: 44px tall like the

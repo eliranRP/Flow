@@ -207,7 +207,6 @@
   --gsi-disabled: 38%;
   /* FLOW-364: Home's band and month drawer (the board's values with no token of their own). */
   --band-track: rgba(255, 255, 255, 0.14);
-  --band-avatar: rgba(255, 255, 255, 0.22);
   --radius-band-row: 16px;
   --radius-month-cell: var(--radius-input); /* V3-Home: the drawer's cells are radius 12 (FLOW-1052) */
   --month-cell-border: 1.5px; /* V3-Home: the drawer's cells draw a 1.5px border (FLOW-1052) */

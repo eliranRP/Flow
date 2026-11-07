@@ -51,16 +51,15 @@ export type HomeMonthNav = {
 };
 
 /**
- * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
+ * Row 1 of the band: +, קבועים and a 44px ⋯ "עוד" on the current month; "חזרה ל…" on a past one.
  * FLOW-986 (board concept B): קבועים left the tab bar for this icon. FLOW-1017: a red count on it says how many
- * recurring bills and income are late (a number, not colour alone). FLOW-1095 (the owner, 2026-11-07): under 360px
- * search and the avatar move into a 44px ⋯ "עוד" sheet (07-band-home.css), so the company's name keeps about 96px.
+ * recurring bills and income are late (a number, not colour alone). FLOW-1095, FLOW-1103 (the owner, 2026-11-07):
+ * search and הגדרות וחשבון wait in the ⋯ sheet at every width, so the company's name keeps its room.
  */
-export function HomeBandActions({ isPast, currentName, search, avatarInitial, lateRecurring = 0, recurringTo = "/recurring", recurringTip = false }: {
+export function HomeBandActions({ isPast, currentName, search, lateRecurring = 0, recurringTo = "/recurring", recurringTip = false }: {
   isPast: boolean;
   currentName: string;
   search: string;
-  avatarInitial?: string;
   /** Recurring bills and income late for this month: their count on the קבועים icon when more than 0. */
   lateRecurring?: number;
   /** Where the icon goes (the dev fixtures' own path). */
@@ -112,10 +111,6 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
           <PlusIcon size={22} />
         </IconButton>
       ) : null}
-      {/* The search opens with its field focused, as the entry on the other screens does (FLOW-323). */}
-      <IconButton label="חיפוש" onBand to={`/search${search}`} state={SEARCH_FOCUS_STATE} className="ui-band-action ui-band-wide">
-        <SearchIcon size={22} />
-      </IconButton>
       <span className="ui-band-tip-anchor" onClickCapture={tipOpen ? closeTip : undefined}>
         <IconButton
           label={lateRecurring > 0 ? `קבועים, ${lateRecurring === 1 ? "אחד לא הגיע" : `${String(lateRecurring)} לא הגיעו`}` : "קבועים"}
@@ -140,17 +135,12 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
           </IconButton>
         </div>
       ) : null}
-      <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action ui-band-wide">
-        <span className="ui-band-avatar" aria-hidden="true">
-          {avatarInitial ?? <PersonIcon />}
-        </span>
-      </IconButton>
       <IconButton
         ref={moreButton}
         label="עוד"
         onBand
         aria-haspopup="dialog"
-        className="ui-band-action ui-band-more"
+        className="ui-band-action"
         onClick={() => {
           setMore(true);
         }}
@@ -159,6 +149,7 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
       </IconButton>
       <Sheet open={more} onOpenChange={setMore} title="עוד" returnFocusRef={moreButton}>
         <List>
+          {/* The search opens with its field focused, as the entry on the other screens does (FLOW-323). */}
           <ListRow variant="button" title="חיפוש" icon={<SearchIcon />} chevron onClick={() => { go(`/search${search}`, SEARCH_FOCUS_STATE); }} />
           <ListRow variant="button" title="הגדרות וחשבון" icon={<PersonIcon />} chevron onClick={() => { go(`/settings${search}`); }} />
         </List>

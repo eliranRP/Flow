@@ -15,7 +15,7 @@ type TabBarProps = {
 export type TabSection = "home" | "projects" | "reports" | "loans";
 
 /**
- * The tab a path belongs to. Settings is behind the avatar on Home, so Home stays current there, as
+ * The tab a path belongs to. Settings is behind Home's ⋯ (FLOW-1103), so Home stays current there, as
  * on the board; the loans page is the loans tab's (FLOW-364). FLOW-986: דוחות took קבועים's slot; קבועים
  * opens from Home (its late-bills row), so Home stays current there.
  */
