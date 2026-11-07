@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
@@ -150,6 +151,94 @@ describe("the project sheet (FLOW-445)", () => {
     expect(await screen.findByText("הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects-cash"] });
     invalidate.mockRestore();
+  });
+
+  function failFigures() {
+    rpc.impl = (name) => (name === "set_project_investment"
+      ? Promise.resolve({ data: null, error: { message: "permission denied for table project_investments" } })
+      : Promise.resolve({ data: "p9", error: null }));
+  }
+
+  /** The sheet as a screen holds it: ✕ closes it, the test reopens it. */
+  function Harness({ onCreated }: { onCreated?: (id: string, name: string) => void }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        <button type="button" onClick={() => { setOpen(true); }}>reopen</button>
+        <ProjectFormSheet open={open} onOpenChange={setOpen} onCreated={onCreated} />
+      </>
+    );
+  }
+
+  function renderHarness(onCreated?: (id: string, name: string) => void) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <Harness onCreated={onCreated} />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  async function createWithFailedFigures() {
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Lark Hill" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "185000" } });
+    fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
+    expect(await screen.findByText("הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב.")).toBeInTheDocument();
+  }
+
+  it("closed after the figures failed, the project counts as made: the picker gets it once and a toast says so (FLOW-1101)", async () => {
+    failFigures();
+    const onCreated = vi.fn();
+    renderHarness(onCreated);
+    await createWithFailedFigures();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(onCreated).toHaveBeenCalledTimes(1); });
+    expect(onCreated).toHaveBeenCalledWith("p9", "Lark Hill");
+    expect(await screen.findByText("הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בדף הפרויקט.")).toBeInTheDocument();
+    expect(upsertCalls()).toHaveLength(1);
+  });
+
+  it("a reopen after that close starts empty and makes a new project, with no id (FLOW-1101)", async () => {
+    failFigures();
+    renderHarness(vi.fn());
+    await createWithFailedFigures();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await screen.findByText("הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בדף הפרויקט.");
+    // Reopened at once, inside the close animation.
+    fireEvent.click(screen.getByText("reopen"));
+    const name = await screen.findByRole("textbox", { name: "שם הפרויקט" });
+    expect(name).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "מחיר קנייה" })).toHaveValue("");
+    rpc.impl = () => Promise.resolve({ data: "p10", error: null });
+    fireEvent.change(name, { target: { value: "Okafor" } });
+    fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
+    await waitFor(() => { expect(upsertCalls()).toHaveLength(2); });
+    expect(upsertCalls()[1]?.args).toEqual({ p_name: "Okafor", p_type: "שיפוץ", p_status: "active" });
+  });
+
+  it("a save that settles after the sheet was closed and reopened leaves the new sheet open (FLOW-1101)", async () => {
+    let finishCreate: (result: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => (name === "upsert_project"
+      ? new Promise((resolve) => { finishCreate = resolve; })
+      : Promise.resolve({ data: null, error: null }));
+    const onCreated = vi.fn();
+    renderHarness(onCreated);
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Lark Hill" } });
+    fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
+    await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).toBeNull(); });
+    fireEvent.click(screen.getByText("reopen"));
+    expect(await screen.findByRole("textbox", { name: "שם הפרויקט" })).toHaveValue("");
+    finishCreate({ data: "p9", error: null });
+    await waitFor(() => { expect(onCreated).toHaveBeenCalledTimes(1); });
+    expect(onCreated).toHaveBeenCalledWith("p9", "Lark Hill");
+    expect(screen.getByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
+    expect(upsertCalls()).toHaveLength(1);
   });
 
   it("edits an existing project under its id and keeps its own type words when the kind stays", async () => {
