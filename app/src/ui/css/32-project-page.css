@@ -402,6 +402,13 @@
   font-weight: var(--type-btn-2-weight);
 }
 
+/* FLOW-1090: under 360px the pill keeps its 44px height but tightens its sides, so the title gets the room. */
+@media (max-width: 359px) {
+  .ui-unassigned-row > .ui-btn {
+    padding-inline: var(--space-2);
+  }
+}
+
 .ui-row-dashed {
   border: 1px dashed var(--color-line);
   background: transparent;

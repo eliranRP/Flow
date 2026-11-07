@@ -1,9 +1,9 @@
 import { fireEvent, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { devProjectsCash } from "../dev/projects-sample";
 import { renderWithProviders } from "../test-render";
 import { UNASSIGNED_SAMPLE } from "./project-unassigned-sample";
-import { ProjectUnassignedScreen } from "./project-unassigned-screen";
+import { assignedToast, ProjectUnassignedScreen } from "./project-unassigned-screen";
 
 describe("the lines with no project (FLOW-1044)", () => {
   it("lists the lines by month with the count, the total and a שיוך on each", () => {
@@ -27,6 +27,15 @@ describe("the lines with no project (FLOW-1044)", () => {
     expect(screen.getByText("2 תנועות")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(await screen.findByText("3 תנועות")).toBeInTheDocument();
+  });
+
+  it("offers ביטול only when the write returned an undo id (FLOW-1089)", () => {
+    expect(assignedToast("Lark Hill", null)).toEqual({ message: "שויך לLark Hill" });
+    const undo = vi.fn();
+    const withUndo = assignedToast("Lark Hill", undo);
+    expect(withUndo.action).toBe("ביטול");
+    withUndo.onAction?.();
+    expect(undo).toHaveBeenCalledOnce();
   });
 
   it("with every line assigned, says so", () => {

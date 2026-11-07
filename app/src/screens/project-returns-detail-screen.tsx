@@ -2,6 +2,7 @@ import "../ui/lazy.css";
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { Amount } from "../ui/amount";
+import { PageLoadFailed } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { EmptyState, FailureLine } from "../ui/empty-state";
 import { ChevronDownIcon } from "../ui/icons";
@@ -84,6 +85,8 @@ export function PropertyMetricScreen({ sample, base: baseProp, learnOpen = false
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
+      // FLOW-1091: a failed or offline load shows the full failed card, as the investment page does.
+      failed={(retry, offline) => <PageLoadFailed title="החישוב לא נטען" offline={offline} onRetry={retry} />}
     >
       {page.returns == null ? null : <MetricBody metric={metric} r={page.returns} base={page.base} search={page.search} />}
     </ScreenState>
@@ -208,6 +211,8 @@ export function PropertyPartScreen({ sample, base: baseProp }: { sample?: Return
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
+      // FLOW-1091: a failed or offline load shows the full failed card, as the investment page does.
+      failed={(retry, offline) => <PageLoadFailed title="החישוב לא נטען" offline={offline} onRetry={retry} />}
     >
       {page.returns == null ? null : part === "rehab" ? (
         <RehabPartBody r={page.returns} rehab={page.rehab} base={page.base} search={page.search} projectId={page.projectId} sample={sample} />

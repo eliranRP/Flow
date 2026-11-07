@@ -61,6 +61,16 @@ describe("the project sheet (FLOW-445)", () => {
     expect(upsertCalls()).toHaveLength(0);
   });
 
+  it("puts the cursor in the name and announces why on a tap with no name (FLOW-1088)", () => {
+    renderSheet();
+    const create = screen.getByRole("button", { name: "יצירת פרויקט" });
+    create.focus();
+    fireEvent.click(create);
+    const name = screen.getByRole("textbox", { name: "שם הפרויקט" });
+    expect(name).toHaveFocus();
+    expect(screen.getByText("צריך שם כדי ליצור את הפרויקט")).toHaveAttribute("aria-live", "polite");
+  });
+
   it("creates a renovation (the first kind) with its purchase, budget and ARV, the kind stored as its type", async () => {
     renderSheet();
     expect(screen.getByRole("radio", { name: "שיפוץ" })).toHaveAttribute("aria-checked", "true");

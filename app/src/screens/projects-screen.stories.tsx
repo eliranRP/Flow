@@ -205,6 +205,8 @@ export const ProjectsNewMissingName: Story = {
     await userEvent.click(within(dialog).getByRole("button", { name: "יצירת פרויקט" }));
     // The field says it under itself (TextField: aria-invalid and its live message line, plan §3.7).
     await expect(within(dialog).getByRole("textbox", { name: "שם הפרויקט" })).toHaveAccessibleDescription("צריך שם כדי ליצור את הפרויקט");
+    // FLOW-1088: and the cursor is in the name.
+    await expect(within(dialog).getByRole("textbox", { name: "שם הפרויקט" })).toHaveFocus();
   },
 };
 
