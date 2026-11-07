@@ -73,13 +73,15 @@ describe("Home's band parts (FLOW-364)", () => {
 // --- home-skeleton.test.tsx
 
 describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
-  it("sits after search and opens קבועים, with no count when nothing is late", () => {
+  it("sits between + and ⋯ and opens קבועים, with no count when nothing is late", () => {
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="?preview=1" />);
     const icon = screen.getByRole("link", { name: "קבועים" });
     expect(icon).toHaveAttribute("href", "/recurring?preview=1");
     expect(icon.querySelector(".ui-band-count")).toBeNull();
-    const search = screen.getByRole("link", { name: "חיפוש" });
-    expect(search.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const add = screen.getByRole("link", { name: "הוספה" });
+    const more = screen.getByRole("button", { name: "עוד" });
+    expect(add.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(icon.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows how many are late on the icon, not a bare dot, and says it in its name (FLOW-1017)", () => {
@@ -93,14 +95,13 @@ describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
     expect(screen.getByRole("link", { name: "קבועים, 12 לא הגיעו" }).querySelector(".ui-band-count")?.textContent).toBe("9+");
   });
 
-  it("FLOW-1095: holds search and הגדרות וחשבון in a 44px ⋯ sheet, the band's row under 360px", async () => {
+  it("FLOW-1095, FLOW-1103: holds search and הגדרות וחשבון in a 44px ⋯ sheet at every width", async () => {
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="?preview=1" />);
-    // Both stay on the row for 360px and up; 07-band-home.css swaps them for the ⋯ under 360px.
-    expect(screen.getByRole("link", { name: "חיפוש" })).toHaveClass("ui-band-wide");
-    expect(screen.getByRole("link", { name: "הגדרות וחשבון" })).toHaveClass("ui-band-wide");
-    // vitest loads the app CSS, which hides the ⋯ at 1024px (display: none), and the role query skips hidden elements.
-    const more = screen.getByLabelText("עוד");
-    expect(more).toHaveClass("ui-band-more", "ui-icon-btn");
+    // Neither is on the band's row any more (FLOW-1103: not at 393 either); the ⋯ is shown at every width.
+    expect(screen.queryByRole("link", { name: "חיפוש" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "הגדרות וחשבון" })).toBeNull();
+    const more = screen.getByRole("button", { name: "עוד" });
+    expect(more).toHaveClass("ui-icon-btn");
     expect(more).toHaveAttribute("aria-haspopup", "dialog");
     fireEvent.click(more);
     const sheet = await screen.findByRole("dialog", { name: "עוד" });
@@ -243,7 +244,7 @@ describe("CashHomeSkeleton (FLOW-364)", () => {
     expect(band?.querySelector(".ui-band-month-static")).not.toBeNull();
     expect(band?.querySelector(".ui-band-body .ui-skel-band-hero")).not.toBeNull();
     expect(band?.querySelectorAll(".ui-skel-band-row")).toHaveLength(2);
-    expect(band?.querySelector('[aria-label="חיפוש"]')).not.toBeNull();
+    expect(band?.querySelector('[aria-label="עוד"]')).not.toBeNull();
     expect(document.querySelectorAll(".ui-skel-attention .ui-skel-row")).toHaveLength(2);
     expect(document.querySelectorAll(".ui-skel-list .ui-skel-row")).toHaveLength(3);
     expect(screen.getByText("טוען…")).toBeInTheDocument();

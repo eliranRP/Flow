@@ -194,28 +194,44 @@ function CashHomeStory({
 export const HomeCurrent: Story = { render: () => <CashHomeStory forecast={1_250_000n} example={false} /> };
 
 /**
- * FLOW-1095 (the owner, 2026-11-07): at 320 search and the avatar wait in the ⋯ "עוד" sheet, so the company's name
- * keeps about 96px; + and קבועים stay. The ⋯ opens from the keyboard and its sheet holds both.
+ * FLOW-1095, FLOW-1103 (the owner, 2026-11-07): at every width search and הגדרות וחשבון wait in the ⋯ "עוד" sheet,
+ * so the company's name keeps 96px or more; + and קבועים (with its late count) stay. The ⋯ opens from the keyboard
+ * and its sheet holds both.
  */
+async function bandMenuPlay(canvasElement: HTMLElement, width: number) {
+  await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(width);
+  const canvas = within(canvasElement);
+  const more = await canvas.findByRole("button", { name: "עוד" });
+  await expect(more.getBoundingClientRect().width).toBe(44);
+  await expect(canvas.getByRole("link", { name: "קבועים, 2 לא הגיעו" })).toBeInTheDocument();
+  await expect(canvas.queryByRole("link", { name: "חיפוש" })).toBeNull();
+  await expect(canvas.queryByRole("link", { name: "הגדרות וחשבון" })).toBeNull();
+  const name = canvasElement.querySelector(".ui-band-company-name");
+  await expect(name?.getBoundingClientRect().width ?? 0).toBeGreaterThanOrEqual(96);
+  more.focus();
+  await userEvent.keyboard("{Enter}");
+  const body = within(canvasElement.ownerDocument.body);
+  const sheet = await body.findByRole("dialog", { name: "עוד" });
+  await expect(within(sheet).getByRole("button", { name: /הגדרות וחשבון/u })).toBeInTheDocument();
+  await expect(within(sheet).getByRole("button", { name: /חיפוש/u })).toBeInTheDocument();
+}
+
 export const HomeBandMenu320: Story = {
   name: "Home band, ⋯ menu at 320",
   render: () => <CashHomeStory forecast={1_250_000n} example={false} late={2} />,
   globals: { viewport: { value: "flow320", isRotated: false } },
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
-    const canvas = within(canvasElement);
-    const more = await canvas.findByRole("button", { name: "עוד" });
-    await expect(more.getBoundingClientRect().width).toBe(44);
-    await expect(canvas.queryByRole("link", { name: "חיפוש" })).toBeNull();
-    await expect(canvas.queryByRole("link", { name: "הגדרות וחשבון" })).toBeNull();
-    const name = canvasElement.querySelector(".ui-band-company-name");
-    await expect(name?.getBoundingClientRect().width ?? 0).toBeGreaterThanOrEqual(96);
-    more.focus();
-    await userEvent.keyboard("{Enter}");
-    const body = within(canvasElement.ownerDocument.body);
-    const sheet = await body.findByRole("dialog", { name: "עוד" });
-    await expect(within(sheet).getByRole("button", { name: /הגדרות וחשבון/u })).toBeInTheDocument();
-    await expect(within(sheet).getByRole("button", { name: /חיפוש/u })).toBeInTheDocument();
+    await bandMenuPlay(canvasElement, 320);
+  },
+};
+
+/** FLOW-1103: the owner's phone width. The same row as at 320: ⋯, קבועים, + and the company's name. */
+export const HomeBandMenu393: Story = {
+  name: "Home band, ⋯ menu at 393",
+  render: () => <CashHomeStory forecast={1_250_000n} example={false} late={2} />,
+  globals: { viewport: { value: "flow393", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await bandMenuPlay(canvasElement, 393);
   },
 };
 

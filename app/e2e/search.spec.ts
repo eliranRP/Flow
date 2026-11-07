@@ -6,11 +6,12 @@ test.use({ viewport: { width: 390, height: 700 } });
 
 test("search opens from the cash Home, finds a line, opens it, and Back keeps the search", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1");
-  // The band's search icon (its label is חיפוש; the search screen names its field חיפוש תנועות).
-  await page.getByRole("link", { name: "חיפוש", exact: true }).click();
+  // The band's search is in its ⋯ "עוד" sheet (FLOW-1103; the search screen names its field חיפוש תנועות).
+  await page.getByRole("button", { name: "עוד", exact: true }).click();
+  await page.getByRole("dialog", { name: "עוד" }).getByRole("button", { name: /חיפוש/ }).click();
   await expect(page).toHaveURL(/\/search\?preview=1$/);
   const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
-  // The icon opened the screen, so the field takes focus.
+  // The sheet's row opened the screen, so the field takes focus.
   await expect(field).toBeFocused();
   // The start shows the last searches and the three checks, not the lines (FLOW-368).
   await expect(page.getByRole("heading", { name: "שווה לבדוק" })).toBeVisible();

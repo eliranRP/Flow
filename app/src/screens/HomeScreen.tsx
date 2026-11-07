@@ -69,8 +69,7 @@ function useBandMark(shown: boolean) {
 
 /**
  * FLOW-364 (board, StatesHomeEmpty): the cash first run with no books. `leading` is the company
- * (or nothing in preview); `currency` is the company's base currency; `avatarInitial` is the band's
- * initial when the company has one (the board's "N").
+ * (or nothing in preview); `currency` is the company's base currency.
  */
 export function CashEmptyHome({
   leading,
@@ -78,14 +77,12 @@ export function CashEmptyHome({
   example,
   holdWrites,
   currency = "ILS",
-  avatarInitial,
 }: {
   leading?: ReactNode;
   search: string;
   example?: ReactNode;
   holdWrites: boolean;
   currency?: string;
-  avatarInitial?: string;
 }) {
   // FLOW-364 (board, StatesHomeEmpty): the band with the month and a zero figure, then the bank card and what will show here.
   const currentKey = israelToday().slice(0, 7);
@@ -96,7 +93,7 @@ export function CashEmptyHome({
         example={example}
         wordmark={false}
         leading={leading}
-        trailing={<HomeBandActions isPast={false} currentName="" search={search} avatarInitial={avatarInitial} />}
+        trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
       >
         <div className="ui-band-body ui-band-body-empty">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
@@ -136,7 +133,7 @@ export function CashEmptyHome({
 
 /**
  * Home: the month's cash (FLOW-413, the owner's "Cash first"), redesigned in FLOW-364. The band
- * holds the company, +, search and the avatar, the month pill, its figures and the forecast row.
+ * holds the company, +, קבועים and ⋯ (FLOW-1103), the month pill, its figures and the forecast row.
  * FLOW-1036 (v3, pattern Overview): under it the דורש טיפול cards, then the month's activity with
  * its filter, which docks into the compact bar. A past month reads the same way in the darker band.
  * FLOW-1056: next month is a third state, its forecast as the month's data (home-future-month.tsx); FLOW-1066: so is every
