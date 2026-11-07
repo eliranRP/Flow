@@ -1,12 +1,12 @@
 import "../ui/lazy.css";
 import type { ProjectCashRow } from "@flow/shared";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { futureForecastKey, useForecastSkip } from "../forecast-skip";
 import { SwipeRow } from "../ui/swipe-row";
 import { Link } from "react-router-dom";
 import { cashMonthName, NOT_IN_PROFIT_LABEL } from "../cash";
 import { lineInitials } from "../cash-lines-groups";
-import { companyForecastCaption, type CompanyForecastPart } from "../company-next-month";
+import { companyCashForecast, companyForecastCaption, companyNextMonthForecast, type CompanyForecastPart } from "../company-next-month";
 import type { CompanyNextMonthSample } from "../company-next-month-query";
 import { useCompanyCurrency } from "../company-currency";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -95,7 +95,18 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   const monthSearch = forecastMonthSearch(search, month, today);
   const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample, month);
   const [figure, setFigure] = useState<HTMLElement | null>(null);
-  const forecast = next.forecast;
+  // FLOW-1081: a recurring row swipes out of this month only and back, as on Home; what was taken out is listed last.
+  const monthLabel = monthWord(month);
+  const skip = useForecastSkip(month, monthLabel, next.overrides);
+  const canSkip = !hold && sample == null && next.overrides != null;
+  // FLOW-1096: built again with the page's own answers, so a row taken out or put back moves (and the sums with it)
+  // at once, not on the read after the write.
+  const skipList = [...skip.skipped].sort().join("\n");
+  const input = next.input;
+  const forecast = useMemo(
+    () => (canSkip && input != null ? companyCashForecast(companyNextMonthForecast({ ...input, skips: skipList === "" ? [] : skipList.split("\n") })) : next.forecast),
+    [canSkip, input, skipList, next.forecast],
+  );
   // The list (names, order, currency) first, then the forecast's reads; a paused read is offline, not a skeleton.
   const phase = sample != null
     ? ({ kind: "ready" } as const)
@@ -112,16 +123,11 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   const profit = forecast == null ? 0n : forecast.netMinor + keptOut;
   const names = new Map(projects.map((row) => [row.id, row.name]));
   const overhead = projects.find((row) => row.is_overhead) ?? null;
-  // FLOW-1081: a recurring row swipes out of this month only and back, as on Home; what was taken out is listed last.
-  const monthLabel = monthWord(month);
-  const skip = useForecastSkip(month, monthLabel, next.overrides);
   const keyOf = forecast == null ? null : futureForecastKey(forecast, currency);
-  const canSkip = !hold && sample == null && next.overrides != null;
-  const isOut = (key: string | undefined) => key != null && skip.skipped.has(key);
-  const taken: { key: string; row: NextMonthRow; projectId: string | null }[] = forecast == null ? [] : forecast.parts.flatMap((part) => (part.forecast.skipped ?? []).flatMap((row) => {
-    const key = keyOf?.(row.key, part.projectId);
-    return key != null && isOut(key) ? [{ key, row, projectId: part.projectId }] : [];
-  }));
+  const taken = (forecast?.skipped ?? []).flatMap(({ row, projectId }) => {
+    const key = keyOf?.(row.key, projectId);
+    return key == null ? [] : [{ key, row, projectId }];
+  });
   const swipe = (key: string | undefined, out: boolean, name: string, row: ReactNode) => (
     !canSkip || key == null ? row : <SwipeRow key={key} label={out ? "לא החודש" : "החזרה לצפי"} onRemove={() => { skip.set(key, out, name); }}>{row}</SwipeRow>
   );
@@ -165,13 +171,7 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
             const general = part.projectId == null;
             const name = general ? "כללי" : names.get(part.projectId ?? "") ?? "פרויקט";
             const projectId = general ? overhead?.id ?? null : part.projectId;
-            const rows = partRows(part).filter((item) => {
-              if (item.kind === "kept") return true;
-              const key = keyOf?.(item.row.key, part.projectId);
-              if (!isOut(key) || key == null) return true;
-              taken.push({ key, row: item.row, projectId: part.projectId });
-              return false;
-            });
+            const rows = partRows(part);
             // FLOW-1001: the general costs have no צפי page of their own, so every row shows here.
             const shown = general ? rows : rows.slice(0, SHOWN);
             const more = rows.length - shown.length;

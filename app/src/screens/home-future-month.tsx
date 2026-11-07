@@ -28,17 +28,19 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
   currency: string;
   search: string;
 }): ActivityGroup[] {
-  if (nothingExpected(forecast) && !forecast.parts.some((part) => (part.skipped ?? []).length > 0)) return [];
+  if (nothingExpected(forecast) && (forecast.skipped ?? []).length === 0 && !forecast.parts.some((part) => (part.skipped ?? []).length > 0)) return [];
   const names = new Map(projects.map((row) => [row.id, row.name]));
   const overhead = projects.find((row) => row.is_overhead) ?? null;
   const forecastKey = futureForecastKey(forecast, currency);
-  const skipped: ActivityRow[] = [];
+  // Each row opens its project's צפי page; a general row the overhead project's (FLOW-1002: its צפי page is the
+  // general costs), and none when the company has none. Editing is פירוט ועריכה's (the band's foot row).
+  const hrefOf = (partProject: string | null) => {
+    const projectId = partProject == null ? overhead?.id ?? null : partProject;
+    return projectId == null ? undefined : `/projects/${projectId}/profit/next${search}`;
+  };
   const groups = orderParts(forecast.parts, projects, currency).flatMap((part) => {
     const general = part.projectId == null;
-    // Each row opens its project's צפי page; a general row the overhead project's (FLOW-1002: its צפי page is the
-    // general costs), and none when the company has none. Editing is פירוט ועריכה's (the band's foot row).
-    const projectId = general ? overhead?.id ?? null : part.projectId;
-    const href = projectId == null ? undefined : `/projects/${projectId}/profit/next${search}`;
+    const href = hrefOf(part.projectId);
     const rows: ActivityRow[] = partRows(part).map((item) => (item.kind === "kept"
       ? { key: "kept", title: NOT_IN_PROFIT_LABEL, meta: LOAN_SOURCE, mark: "due", minor: item.minor, currency, income: false, setAside: true, href }
       : {
@@ -52,23 +54,23 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
           href,
           forecastKey: forecastKey(item.row.key, part.projectId),
         }));
-    for (const row of part.forecast.skipped ?? []) {
-      skipped.push({
-        key: `${part.projectId ?? "general"}:${row.key}`,
-        title: row.name,
-        meta: `לא צפוי ב${monthName(forecast.month)}`,
-        mark: "due",
-        minor: row.minor < 0n ? -row.minor : row.minor,
-        currency,
-        income: row.minor >= 0n,
-        href,
-        forecastKey: forecastKey(row.key, part.projectId),
-      });
-    }
     if (rows.length === 0) return [];
     const title = general ? "כללי" : names.get(part.projectId ?? "") ?? "פרויקט";
     return [{ id: part.projectId ?? "general", title, rows, ...groupSums(rows, currency), due: true }];
   });
+  // FLOW-1096: from every part, a project left with no row included, so it can still be put back.
+  const taken = forecast.skipped ?? forecast.parts.flatMap((part) => (part.forecast.skipped ?? []).map((row) => ({ projectId: part.projectId, row })));
+  const skipped = taken.map(({ projectId, row }): ActivityRow => ({
+    key: `${projectId ?? "general"}:${row.key}`,
+    title: row.name,
+    meta: `לא צפוי ב${monthName(forecast.month)}`,
+    mark: "due",
+    minor: row.minor < 0n ? -row.minor : row.minor,
+    currency,
+    income: row.minor >= 0n,
+    href: hrefOf(projectId),
+    forecastKey: forecastKey(row.key, projectId),
+  }));
   // FLOW-1079: what was taken out of this month sits last, under the same head as on the current month.
   return skipped.length === 0 ? groups : [...groups, { id: "skipped", title: "הוצא מהצפי", rows: skipped, ...groupSums(skipped, currency), due: true }];
 }

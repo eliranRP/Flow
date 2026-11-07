@@ -107,6 +107,46 @@ describe("companyRestOfYear", () => {
   });
 });
 
+// FLOW-1096: a charge taken out of one month (FLOW-1079) leaves that month's totals only.
+describe("companyRestOfYear with each month's skips", () => {
+  const rest = companyRestOfYear({ ...input, skipsByMonth: { "2026-12": ["party:expense:s-payroll:USD"] } });
+  if (rest == null) throw new Error("two months are left");
+
+  it("takes the charge out of December only", () => {
+    expect(rest.months[0]?.expenseMinor).toBe(40_000n + 200_000n + 10_000n);
+    expect(rest.months[1]?.expenseMinor).toBe(60_000n + 30_000n + 10_000n);
+    expect(rest.expenseMinor).toBe(550_000n - 200_000n);
+  });
+
+  it("gives a month of the forecast its own skips", () => {
+    expect(companyMonthInput({ ...input, skipsByMonth: { "2026-12": ["k"] } }, "2026-12").skips).toEqual(["k"]);
+    expect(companyMonthInput({ ...input, skipsByMonth: { "2026-12": ["k"] } }, "2026-11").skips).toBeUndefined();
+  });
+});
+
+// FLOW-1096: a project whose only charge was taken out still lists it, so it can be put back; and a party with
+// more than one charge in the currency is split by project in every month, as this month's forecast keys it.
+describe("companyNextMonthForecast's skipped rows and split parties", () => {
+  const solo = {
+    ...input,
+    inputs: { ...INPUTS, projects: [...INPUTS.projects, { project_id: "p2", categories: [] }] },
+    recurring: [charge("s-hoa", "p2", "c-repairs", "expense", 9_000n, "month", "2026-11"), ...RECURRING],
+    skips: ["party:expense:s-hoa:USD"],
+  };
+  const forecast = companyNextMonthForecast(solo);
+
+  it("lists a skipped row whose project has no row left", () => {
+    expect(forecast.parts.some((part) => part.projectId === "p2")).toBe(false);
+    expect(forecast.skipped?.map(({ projectId, row }) => [projectId, row.key])).toEqual([["p2", "rec:expense:s-hoa"]]);
+  });
+
+  it("names the parties split by project", () => {
+    const split = companyNextMonthForecast({ ...input, recurring: [...RECURRING, charge("s-payroll", "p1", "c-payroll", "expense", 1_000n, "year", "2027-05")] });
+    expect([...(split.splitKeys ?? [])]).toEqual(["party:expense:s-payroll:USD"]);
+    expect([...(forecast.splitKeys ?? [])]).toEqual([]);
+  });
+});
+
 describe("the rest of the year's own edits (rest_edits)", () => {
   // The read's rest of the year: the two edits above, and a 2-month expense of $70 started in October, which lands
   // in October and December, not November, so next month's edits do not hold it. The added income line came in
