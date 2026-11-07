@@ -193,6 +193,32 @@ function CashHomeStory({
  */
 export const HomeCurrent: Story = { render: () => <CashHomeStory forecast={1_250_000n} example={false} /> };
 
+/**
+ * FLOW-1095 (the owner, 2026-11-07): at 320 search and the avatar wait in the ⋯ "עוד" sheet, so the company's name
+ * keeps about 96px; + and קבועים stay. The ⋯ opens from the keyboard and its sheet holds both.
+ */
+export const HomeBandMenu320: Story = {
+  name: "Home band, ⋯ menu at 320",
+  render: () => <CashHomeStory forecast={1_250_000n} example={false} late={2} />,
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const canvas = within(canvasElement);
+    const more = await canvas.findByRole("button", { name: "עוד" });
+    await expect(more.getBoundingClientRect().width).toBe(44);
+    await expect(canvas.queryByRole("link", { name: "חיפוש" })).toBeNull();
+    await expect(canvas.queryByRole("link", { name: "הגדרות וחשבון" })).toBeNull();
+    const name = canvasElement.querySelector(".ui-band-company-name");
+    await expect(name?.getBoundingClientRect().width ?? 0).toBeGreaterThanOrEqual(96);
+    more.focus();
+    await userEvent.keyboard("{Enter}");
+    const body = within(canvasElement.ownerDocument.body);
+    const sheet = await body.findByRole("dialog", { name: "עוד" });
+    await expect(within(sheet).getByRole("button", { name: /הגדרות וחשבון/u })).toBeInTheDocument();
+    await expect(within(sheet).getByRole("button", { name: /חיפוש/u })).toBeInTheDocument();
+  },
+};
+
 /** FLOW-1036: two cards hidden on this device; the head says so and brings them back. */
 export const HomeAttentionSomeHidden: Story = {
   name: "Home attention, some hidden",
@@ -237,6 +263,24 @@ export const HomeAttentionDismiss: Story = {
     await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "1 הוסתרו · הצגה" }));
     await expect(await canvas.findByRole("link", { name: /^3 חשבוניות פתוחות · /u })).toBeInTheDocument();
+  },
+};
+
+/**
+ * FLOW-1094 (the owner, 2026-11-07): an X shows "הוסתר" with ביטול for 4s, above the tab bar. Its ביטול brings
+ * back that card only (attention-cards.test.tsx); the head's "N הוסתרו · הצגה" stays as the way back after.
+ */
+export const HomeAttentionHideToast: Story = {
+  name: "Home attention, הוסתר with ביטול",
+  render: () => <CashHomeStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /^הסתרה: 3 חשבוניות פתוחות · /u }));
+    const toast = await canvas.findByText("הוסתר");
+    await expect(within(toast.closest(".ui-toast") ?? canvasElement).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    await expect(await canvas.findByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
+    // Held on screen for the shot: a pointer over the toast pauses its time.
+    await userEvent.hover(toast);
   },
 };
 

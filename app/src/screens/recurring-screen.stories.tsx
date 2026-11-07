@@ -5,7 +5,7 @@ import { RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../recurring-sampl
 import type { ScheduleRow } from "../recurring-schedule";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { StoryRoute } from "../ui/story-route";
-import { longHebrew } from "../ui/story-support";
+import { longHebrew, withToasts } from "../ui/story-support";
 import { RecurringScreen, recurringView } from "./recurring-screen";
 import { ForecastAddLine } from "./forecast-add-line";
 
@@ -52,6 +52,7 @@ export const Default: Story = {};
 /** FLOW-1011: הוספת קבוע, at the end of the list: a project, then its add page at כל חודש. */
 export const AddLine: Story = {
   parameters: { flowRouter: true },
+  decorators: [withToasts],
   render: () => <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11")} addLine={addLine} />,
 };
 
@@ -59,6 +60,7 @@ export const AddLine: Story = {
 /** FLOW-1081: Brightline Power taken out of October's forecast: "לא צפוי באוקטובר", off the late cards and עוד לשלם. */
 export const SkippedThisMonth: Story = {
   parameters: { flowRouter: true },
+  decorators: [withToasts],
   render: () => <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11", null, undefined, "", { skipped: new Set(["party:expense:power:USD"]), base: "USD", monthLabel: "אוקטובר" })} />,
 };
 

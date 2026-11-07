@@ -33,6 +33,17 @@ export function hideRow(storageKey: string, rowId: string, dismissKey: string, h
   return next;
 }
 
+/** FLOW-1094: the toast's ביטול: shows one hidden row again, leaving the others hidden, and returns the new map. */
+export function showRow(storageKey: string, rowId: string, hidden: HiddenRows = readHidden(storageKey)): HiddenRows {
+  const next = Object.fromEntries(Object.entries(hidden).filter(([id]) => id !== rowId));
+  try {
+    window.localStorage.setItem(PREFIX + storageKey, JSON.stringify(next));
+  } catch {
+    // Storage blocked: the row shows again for this visit only.
+  }
+  return next;
+}
+
 export function restoreAll(storageKey: string): void {
   try {
     window.localStorage.removeItem(PREFIX + storageKey);
