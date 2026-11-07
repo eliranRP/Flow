@@ -256,7 +256,7 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
         centre={
           <button type="button" className="ui-compact-bar-centre m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
             <span className="ui-compact-bar-centre-title">
-              <span className="ui-rep-bar-title" data-clip-ok="">{`${name} · ${pill.label}`}</span>
+              <span className="ui-rep-bar-title" data-clip-ok="">{pill.label === name ? name : `${name} · ${pill.label}`}</span>
               <ChevronDownIcon size={10} />
             </span>
             <span className="ui-compact-bar-centre-net">
