@@ -120,15 +120,18 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
   }, [focusBudget]);
   const fields = fieldsOf(kind, editing);
   const save = useWrite({
-    failure: "לא הצלחנו לשמור את הפרויקט.",
+    // FLOW-1101: once the project is made, only its figures are left to save.
+    failure: () => (project == null && createdId.current != null ? "הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב." : "לא הצלחנו לשמור את הפרויקט."),
     // FLOW-1093: a create the caller goes on with (an assign) leaves the toast to it.
     success: project ? "הפרטים נשמרו" : onCreated == null ? "הפרויקט נוצר" : undefined,
     keys: ["dashboard", "project", "projects-cash"],
     onSuccess: () => {
+      const created = createdId.current;
+      createdId.current = null;
       onClose();
-      if (project || createdId.current == null) return;
-      if (onCreated == null) void navigate(`/projects/${createdId.current}`);
-      else onCreated(createdId.current, trimmed);
+      if (project || created == null) return;
+      if (onCreated == null) void navigate(`/projects/${created}`);
+      else onCreated(created, trimmed);
     },
     run: async () => {
       const supabase = getSupabase();
@@ -136,15 +139,17 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
       const budget = fields.includes("budget") ? minorOf(amounts.budget) : null;
       // An edit that keeps the kind keeps the owner's own type words; a new pick stores the kind's word.
       const keepType = project != null && kind === storedKind;
+      // FLOW-1101: a retry after the figures failed updates the project the first try made, never a second one.
+      const knownId = project?.id ?? createdId.current;
       const result = await supabase.rpc("upsert_project", {
-        ...(project ? { p_id: project.id } : {}),
+        ...(knownId == null ? {} : { p_id: knownId }),
         p_name: trimmed,
         ...(keepType ? (project.type == null ? {} : { p_type: project.type }) : { p_type: kindLabel(kind) }),
         p_status: project?.status ?? "active",
         ...(budget == null ? {} : { p_budget_agorot: budget }),
       });
       assertNoError(result);
-      createdId.current = typeof result.data === "string" ? result.data : null;
+      if (project == null && createdId.current == null && typeof result.data === "string") createdId.current = result.data;
       const id = project?.id ?? createdId.current;
       const patch: Record<string, number | string> = {};
       for (const field of fields) {

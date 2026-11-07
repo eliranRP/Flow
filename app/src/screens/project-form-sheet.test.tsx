@@ -25,13 +25,13 @@ function upsertCalls() {
   return rpc.calls.filter((call) => call.name === "upsert_project");
 }
 
-function renderSheet(project?: Parameters<typeof ProjectFormSheet>[0]["project"]) {
+function renderSheet(project?: Parameters<typeof ProjectFormSheet>[0]["project"], onCreated?: (id: string, name: string) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter>
-          <ProjectFormSheet open onOpenChange={() => undefined} project={project} />
+          <ProjectFormSheet open onOpenChange={() => undefined} project={project} onCreated={onCreated} />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
@@ -107,6 +107,35 @@ describe("the project sheet (FLOW-445)", () => {
     await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
     expect(upsertCalls()[0]?.args).toEqual({ p_name: "Okafor", p_type: "לקוח", p_status: "active", p_budget_agorot: 100_000_000 });
     expect(rpc.calls.some((call) => call.name === "set_project_investment")).toBe(false);
+  });
+
+  it("a retry after the figures failed updates the project it made, never a second one, and assigns once (FLOW-1101)", async () => {
+    let investmentTries = 0;
+    rpc.impl = (name) => {
+      if (name === "set_project_investment") {
+        investmentTries += 1;
+        if (investmentTries === 1) return Promise.resolve({ data: null, error: { message: "permission denied for table project_investments" } });
+      }
+      return Promise.resolve({ data: "p9", error: null });
+    };
+    const onCreated = vi.fn();
+    renderSheet(undefined, onCreated);
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Lark Hill" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "185000" } });
+    const create = screen.getByRole("button", { name: "יצירת פרויקט" });
+    fireEvent.click(create);
+    expect(await screen.findByText("הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב.")).toBeInTheDocument();
+    expect(onCreated).not.toHaveBeenCalled();
+    fireEvent.click(create);
+    await waitFor(() => { expect(onCreated).toHaveBeenCalledTimes(1); });
+    expect(onCreated).toHaveBeenCalledWith("p9", "Lark Hill");
+    expect(upsertCalls().map((call) => call.args)).toEqual([
+      { p_name: "Lark Hill", p_type: "שיפוץ", p_status: "active" },
+      { p_id: "p9", p_name: "Lark Hill", p_type: "שיפוץ", p_status: "active" },
+    ]);
+    const investments = rpc.calls.filter((call) => call.name === "set_project_investment");
+    expect(investments).toHaveLength(2);
+    expect(investments[1]?.args).toEqual({ p_project_id: "p9", p_patch: { purchase_minor: 18_500_000 } });
   });
 
   it("edits an existing project under its id and keeps its own type words when the kind stays", async () => {
