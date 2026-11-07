@@ -2,7 +2,8 @@ import type { ForecastOverrideRow } from "@flow/shared";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-render";
-import { forecastKeyOf, futureForecastKey, projectRowForecastKey, scheduleForecastKey, skippedKeys, useForecastSkip } from "./forecast-skip";
+import { forecastKeyOf, scheduleForecastKey, skippedKeys, useForecastSkip } from "./forecast-skip";
+import { futureForecastKey, projectRowForecastKey } from "./forecast-future-keys";
 import type { ScheduleRow } from "./recurring-schedule";
 
 // The write fails: its onError runs, as useWrite's does after the server refuses.

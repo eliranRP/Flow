@@ -1,12 +1,11 @@
 import type { ForecastOverrideRow } from "@flow/shared";
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { priorPatch, useSetForecastItem } from "./forecast-month";
 import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { waitForAccessToken } from "./wait-for-session";
 import type { ScheduleRow } from "./recurring-schedule";
-import type { CompanyNextMonth } from "./company-next-month";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
 
@@ -46,7 +45,7 @@ export function useForecastOverrides(month: string, enabled: boolean) {
   return useQuery(overridesQuery(month, preview, enabled));
 }
 
-function overridesQuery(month: string, preview: string, enabled: boolean) {
+export function overridesQuery(month: string, preview: string, enabled: boolean) {
   return {
     queryKey: ["month-forecast", preview, "overrides", month],
     enabled: enabled && preview === "off",
@@ -59,64 +58,6 @@ function overridesQuery(month: string, preview: string, enabled: boolean) {
       return (data ?? []) as ForecastOverrideRow[];
     },
   };
-}
-
-/**
- * FLOW-1096: the keys taken out of each of `months` (the year view's months left), by month: the same reads as
- * useForecastOverrides, so a skip on any page refreshes them. Undefined until every month is read.
- */
-export function useSkipsByMonth(months: readonly string[], enabled: boolean): Record<string, string[]> | undefined {
-  const preview = useHomePreview();
-  const results = useQueries({ queries: months.map((month) => overridesQuery(month, preview, enabled)) });
-  // One string for what was read, so the answer keeps its identity while nothing changed.
-  const read = results.every((result) => result.data != null)
-    ? results.map((result) => [...skippedKeys(result.data)].sort().join(",")).join("|")
-    : null;
-  const at = months.join("|");
-  return useMemo(() => {
-    if (read == null) return undefined;
-    const lists = read.split("|");
-    return Object.fromEntries(at.split("|").map((month, index) => [month, (lists[index] ?? "").split(",").filter((key) => key !== "")]));
-  }, [read, at]);
-}
-
-/**
- * FLOW-1079: a month to come's recurring row as its forecast item, which a swipe takes out of that month only: the
- * party's key, with the part's project when the party is split (decision 0185). FLOW-1096: split as the month
- * forecast splits it (`splitKeys`, more than one charge in the currency), so this month, the months to come and a
- * project's צפי page give a charge one key; a forecast without them (an older sample) counts the month's parts.
- */
-export function futureForecastKey(forecast: Pick<CompanyNextMonth, "parts" | "splitKeys">, currency: string): (rowKey: string, projectId: string | null) => string | undefined {
-  const recParts = new Map<string, number>();
-  if (forecast.splitKeys == null) {
-    for (const part of forecast.parts) {
-      for (const row of [...part.forecast.rows, ...part.forecast.removed, ...(part.forecast.skipped ?? [])]) {
-        if (row.key.startsWith("rec:")) recParts.set(row.key, (recParts.get(row.key) ?? 0) + 1);
-      }
-    }
-  }
-  return (rowKey, projectId) => {
-    const [kind, direction, party] = rowKey.split(":");
-    if (kind !== "rec" || direction == null || party == null) return undefined;
-    const base = `party:${direction}:${party}:${currency}`;
-    const split = forecast.splitKeys == null ? (recParts.get(rowKey) ?? 0) > 1 : forecast.splitKeys.has(base);
-    return split ? `${base}:${projectId ?? "none"}` : base;
-  };
-}
-
-/**
- * FLOW-1081: a project צפי page's recurring row (`rec:<direction>:<party>`) as its forecast item: the party's key, with
- * the charge's project when the party has another charge in the same currency (the company schedule says so).
- */
-export function projectRowForecastKey(rowKey: string, schedule: readonly ScheduleRow[], projectId: string, general: boolean, currency: string): string | undefined {
-  const [kind, direction, party] = rowKey.split(":");
-  if (kind !== "rec" || direction == null || party == null) return undefined;
-  const base = `party:${direction}:${party}:${currency}`;
-  const charges = schedule.filter((row) => row.direction === direction && row.party_id === party && row.currency === currency);
-  if (charges.length <= 1) return base;
-  if (!general) return `${base}:${projectId}`;
-  const own = charges.find((row) => row.project_id == null || row.project_id === projectId);
-  return `${base}:${own?.project_id ?? "none"}`;
 }
 
 const PEEK_SEEN_KEY = "flow.skip-swipe-peek-seen";

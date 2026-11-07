@@ -1,7 +1,8 @@
 import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
 import { type ReactNode, useState } from "react";
-import { projectRowForecastKey, useForecastSkip } from "../forecast-skip";
+import { projectRowForecastKey } from "../forecast-future-keys";
+import { useForecastSkip } from "../forecast-skip";
 import { useRecurringScheduleQuery } from "../recurring-schedule";
 import { SwipeRow } from "../ui/swipe-row";
 import { Link, useParams } from "react-router-dom";
