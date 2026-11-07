@@ -241,9 +241,13 @@ a {
   outline-offset: 2px;
 }
 
-/* A title focused for a screen reader is not a control, so it never draws a ring. */
+/* A title focused for a screen reader is not a control, so it never draws a ring. Nor does a figure's lines
+   section, which its calculation row focuses to scroll the months into view: the ring ran down both sides of the
+   months, cut by each pinned month head (owner's screenshot, 2026-11-07). */
 .ui-focus-title:focus,
-.ui-focus-title:focus-visible {
+.ui-focus-title:focus-visible,
+.ui-ret-lines:focus,
+.ui-ret-lines:focus-visible {
   outline: none;
 }
 
