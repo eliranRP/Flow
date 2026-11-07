@@ -138,6 +138,20 @@ describe("the project sheet (FLOW-445)", () => {
     expect(investments[1]?.args).toEqual({ p_project_id: "p9", p_patch: { purchase_minor: 18_500_000 } });
   });
 
+  it("a failed figures save still refreshes the list, so the created project shows without a refetch wait (FLOW-1101)", async () => {
+    rpc.impl = (name) => (name === "set_project_investment"
+      ? Promise.resolve({ data: null, error: { message: "permission denied for table project_investments" } })
+      : Promise.resolve({ data: "p9", error: null }));
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    renderSheet();
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Lark Hill" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "מחיר קנייה" }), { target: { value: "185000" } });
+    fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
+    expect(await screen.findByText("הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב.")).toBeInTheDocument();
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects-cash"] });
+    invalidate.mockRestore();
+  });
+
   it("edits an existing project under its id and keeps its own type words when the kind stays", async () => {
     renderSheet({ id: "p1", name: "Okafor", type: "flip", budget: null, status: "active" });
     expect(screen.getByRole("dialog", { name: "עריכת פרויקט" })).toBeInTheDocument();
