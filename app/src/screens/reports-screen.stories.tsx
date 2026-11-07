@@ -39,6 +39,7 @@ type Story = StoryObj<typeof meta>;
 const CEDAR = REPORTS_PROJECT_IDS.cedar;
 const OAK_SHEET = REPORTS_PROJECT_SHEETS.find((sheet) => sheet.project_id === REPORTS_PROJECT_IDS.oak);
 const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
+const phone393 = { globals: { viewport: { value: "flow393", isRotated: false } } };
 
 function Hub({ entry = "/reports", sample = {} }: { entry?: string; sample?: Partial<HubSample> }) {
   return (
@@ -88,7 +89,6 @@ async function hintsWhole(canvasElement: HTMLElement) {
     await expect(hint.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(hint).lineHeight) + 1);
     const short = hint.querySelector<HTMLElement>(".ui-rep-hint-short");
     await expect(short == null ? "none" : getComputedStyle(short).display).toBe(narrow ? "inline" : "none");
-    if (!narrow) continue;
     const row = hint.closest<HTMLElement>(".ui-row");
     const line = hint.closest<HTMLElement>(".ui-row-hint");
     const chevron = row?.querySelector<HTMLElement>(".ui-row-chevron");
@@ -228,6 +228,17 @@ export const ByProject320: Story = {
   },
 };
 
+/** FLOW-1082: at 393 the same rows keep their full figures on one line under the name and the amount, none cut. */
+export const ByProject393: Story = {
+  name: "P&L · by project at 393",
+  ...phone393,
+  render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, SMALL_PROJECT, HUGE_PROJECT, WIDE_SMALL_PROJECT] } }} />,
+  play: async ({ canvasElement }) => {
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
 /** A project row drilled on the same screen: the band says its name and net, "‹ לפי פרויקט" returns. */
 export const ProjectDrill: Story = {
   name: "P&L · a project drilled",
@@ -313,6 +324,17 @@ export const BalanceByProject: Story = {
 export const BalanceByProject320: Story = {
   name: "Balance sheet · by project at 320",
   ...phone320,
+  render: () => <Balance entry="/reports/balance?view=project" />,
+  play: async ({ canvasElement }) => {
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1082: at 393 each loan amount stays whole on the hint's own line. */
+export const BalanceByProject393: Story = {
+  name: "Balance sheet · by project at 393",
+  ...phone393,
   render: () => <Balance entry="/reports/balance?view=project" />,
   play: async ({ canvasElement }) => {
     await hintsWhole(canvasElement);
