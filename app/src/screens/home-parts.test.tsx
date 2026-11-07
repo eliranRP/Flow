@@ -97,6 +97,11 @@ describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
     renderWithProviders(<HomeBandActions isPast currentName="אוקטובר" search="" lateRecurring={2} />);
     expect(screen.queryByRole("link", { name: /קבועים/ })).toBeNull();
   });
+
+  it("gives a past month's way back the 44px hit area (FLOW-1084)", () => {
+    renderWithProviders(<HomeBandActions isPast currentName="נובמבר" search="" />);
+    expect(screen.getByRole("link", { name: /חזרה לנובמבר/ }).classList.contains("ui-hit")).toBe(true);
+  });
 });
 
 describe("the one-time קבועים tip (FLOW-987)", () => {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { forecastKeyOf, useForecastOverrides, useForecastSkip } from "../forecast-skip";
 import { shiftMonthKey } from "../period";
 import type { ScheduleRow } from "../recurring-schedule";
+import { Button } from "../ui/button";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { CalendarIcon } from "../ui/icons";
 import { Toggle } from "../ui/toggle";
@@ -50,12 +51,18 @@ export function ChargeSkipMonth({ row, split, live, today, disabled, blocked }: 
   if (due == null) return null;
   const key = forecastKeyOf(row, split);
   const on = live ? skip.skipped.has(key) : sampleOn;
+  // FLOW-1087: the switch waits for the month's forecast, since it cannot show a state it does not know. A failed
+  // read says so in the hint and offers a retry, instead of leaving the switch disabled with no reason.
+  const failed = live && overrides.data == null && overrides.isError;
+  const hint = failed
+    ? "לא הצלחנו לטעון את הצפי."
+    : on ? `לא נספר בצפי של ${name}. בשאר החודשים הוא צפוי כרגיל.` : `מוציא רק את ${name} מהצפי. שאר החודשים נשארים.`;
   return (
     <div className="ui-charge-skip">
       <Toggle
         icon={<CalendarIcon />}
         label={`לא צפוי ב${name}`}
-        hint={on ? `לא נספר בצפי של ${name}. בשאר החודשים הוא צפוי כרגיל.` : `מוציא רק את ${name} מהצפי. שאר החודשים נשארים.`}
+        hint={hint}
         checked={on}
         disabled={disabled || (live && overrides.data == null)}
         busy={skip.busy}
@@ -65,6 +72,13 @@ export function ChargeSkipMonth({ row, split, live, today, disabled, blocked }: 
           else setSampleOn(out);
         }}
       />
+      {failed ? (
+        <div className="ui-charge-skip-retry">
+          <Button variant="link" busy={overrides.isFetching} onClick={() => { void overrides.refetch(); }}>
+            נסו שוב
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

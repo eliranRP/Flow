@@ -181,6 +181,22 @@ describe("SwipeRow", () => {
   it("keeps the delete mark out of the accessibility tree", () => {
     render(<Part onRemove={vi.fn()} />);
     expect(screen.getByText("הסרה").closest("[aria-hidden='true']")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /הסרה/ })).toBeNull();
+  });
+
+  // FLOW-1086: a row with no ✕ of its own gets its action as a named button.
+  it("runs the swipe's action from a named button a keyboard reaches, and not while disabled", () => {
+    const onRemove = vi.fn();
+    const { rerender } = render(<SwipeRow onRemove={onRemove} label="לא החודש" keyName="לא החודש: חשמל"><span>חשמל</span></SwipeRow>);
+    const button = screen.getByRole("button", { name: "לא החודש: חשמל" });
+    expect(button).toHaveTextContent("לא החודש");
+    button.focus();
+    expect(button).toHaveFocus();
+    fireEvent.click(button);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    rerender(<SwipeRow onRemove={onRemove} label="לא החודש" keyName="לא החודש: חשמל" disabled><span>חשמל</span></SwipeRow>);
+    fireEvent.click(screen.getByRole("button", { name: "לא החודש: חשמל" }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
   });
 });
 

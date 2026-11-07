@@ -17,6 +17,9 @@ import { inEdgeZone, lockAxis, reducedMotion, swipeStep } from "./period-swipe";
  *
  * FLOW-363 (3c): with `reveal`, a move toward the start past 30px opens the row over an action
  * (`--swipe-action` wide). A move back, or a tap on the row, closes it; a tap on the action runs it.
+ *
+ * FLOW-1086: a row with no ✕ of its own passes `keyName`: a button after the row, hidden until it has keyboard focus,
+ * then shown over the slid-open row like the revealed action. A screen reader finds it by that name.
  */
 
 type Track = { x: number; y: number; at: number; axis: "x" | "y" | null };
@@ -64,6 +67,7 @@ export function SwipeRow({
   peek = false,
   reveal,
   defaultOpen = false,
+  keyName,
   children,
 }: {
   onRemove: () => void;
@@ -77,6 +81,11 @@ export function SwipeRow({
   reveal?: SwipeRowReveal;
   /** FLOW-447b: a revealed row that opens over its action on mount (the dev route's swiped row). */
   defaultOpen?: boolean;
+  /**
+   * FLOW-1086: the swipe's action as a button for a keyboard and a screen reader, named this (it starts with
+   * `label`, e.g. "לא החודש: חשמל"). Only for a row that has no ✕ of its own.
+   */
+  keyName?: string;
   children: ReactNode;
 }) {
   const row = useRef<HTMLDivElement>(null);
@@ -275,6 +284,19 @@ export function SwipeRow({
       <div ref={row} className="ui-swipe-row-body">
         {children}
       </div>
+      {reveal == null && keyName != null ? (
+        <button
+          type="button"
+          className="ui-swipe-row-key"
+          aria-label={keyName}
+          disabled={disabled}
+          onClick={() => {
+            if (!off.current && leaving.current == null) onRemove();
+          }}
+        >
+          {label}
+        </button>
+      ) : null}
     </div>
   );
 }

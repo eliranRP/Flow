@@ -1,11 +1,12 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { homeActivityLines } from "../dev/home-activity-sample";
 import { RECURRING_FIXTURE } from "../recurring-sample";
 import type { ScheduleRow } from "../recurring-schedule";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { activityGroups, HomeActivity, monthFilter, onceActivity, pastActivityGroups, regroupSkipped, scheduleActivity, type ActivityFilter, type ActivityGroup, type HomeActivityData } from "./home-activity";
+import { activityGroups, HomeActivity, monthFilter, onceActivity, pastActivityGroups, regroupSkipped, scheduleActivity, type ActivityFilter, type ActivitySkip, type ActivityGroup, type HomeActivityData } from "./home-activity";
 
 // This year's October, so the line dates read without a year.
 const MONTH = `${israelToday().slice(0, 4)}-10`;
@@ -140,6 +141,46 @@ describe("HomeActivity", () => {
   it("says an empty month in words", () => {
     renderActivity({ schedule: [], lines: [] });
     expect(screen.getByText("עוד אין תנועות החודש")).toBeInTheDocument();
+  });
+
+  // FLOW-1086: the swipe has a keyboard and screen-reader path.
+  it("takes a row out of the month and puts it back with a named button a keyboard reaches", () => {
+    function Harness() {
+      const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
+      const move = (key: string | undefined, out: boolean) => {
+        if (key == null) return;
+        setSkipped((was) => {
+          const next = new Set(was);
+          if (out) next.add(key);
+          else next.delete(key);
+          return next;
+        });
+      };
+      const skip: ActivitySkip = {
+        skipped,
+        monthLabel: "נובמבר",
+        onSkip: (row) => { move(row.forecastKey, true); },
+        onRestore: (row) => { move(row.forecastKey, false); },
+        peek: false,
+        onPeeked: () => undefined,
+      };
+      const data: HomeActivityData = { schedule: RECURRING_FIXTURE, scheduleFailed: false, lines: LINES, linesFailed: false, onRetry: vi.fn() };
+      return <HomeActivity activity={data} filter="all" onFilter={vi.fn()} markRef={() => undefined} docked={false} base="USD" search="" recurringHref="/recurring" skip={skip} />;
+    }
+    renderWithProviders(<Harness />);
+    const out = screen.getByRole("button", { name: "לא החודש: Keystone Mutual" });
+    expect(out).not.toHaveAttribute("tabindex", "-1");
+    out.focus();
+    expect(out).toHaveFocus();
+    fireEvent.click(out);
+    const skippedGroup = screen.getByRole("region", { name: "הוצא מהצפי" });
+    expect(within(skippedGroup).getByText("Keystone Mutual")).toBeInTheDocument();
+    const back = within(skippedGroup).getByRole("button", { name: "החזרה לצפי: Keystone Mutual" });
+    back.focus();
+    expect(back).toHaveFocus();
+    fireEvent.click(back);
+    expect(screen.queryByRole("region", { name: "הוצא מהצפי" })).toBeNull();
+    expect(within(screen.getByRole("region", { name: "נותר לשלם" })).getByText("Keystone Mutual")).toBeInTheDocument();
   });
 });
 

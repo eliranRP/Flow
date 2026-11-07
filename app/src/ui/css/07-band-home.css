@@ -378,12 +378,15 @@ html[data-kb="open"] .ui-sheet-body {
   block-size: var(--glyph-band-step);
 }
 
-/* A past month's way back: the pill in the band's white, the darker band's colour. */
+/* A past month's way back: the pill in the band's white, the darker band's colour. FLOW-1084: 44px tall like the
+   icons it stands in for (ui-hit), and one line at 320. */
 .ui-band-back {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: var(--space-1);
-  block-size: var(--control-height-sm);
+  block-size: var(--touch-min);
+  white-space: nowrap;
   padding-inline: var(--space-3);
   border-radius: var(--radius-button);
   background: var(--color-on-band);

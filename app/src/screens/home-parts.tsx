@@ -80,7 +80,7 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
   useTipDismiss(tipOpen, tip, closeTip);
   if (isPast) {
     return (
-      <Link to={`/${search}`} replace className="ui-band-back m-press">
+      <Link to={`/${search}`} replace className="ui-band-back ui-hit m-press">
         <span>{`חזרה ל${currentName}`}</span>
         <OutwardChevron side="end" />
       </Link>

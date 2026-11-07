@@ -269,3 +269,9 @@
 .ui-charge-skip .ui-row.ui-switch-row {
   padding: var(--space-inset-row);
 }
+
+/* FLOW-1087: a failed forecast read: the retry under the switch, at the row's inset. */
+.ui-charge-skip-retry {
+  display: flex;
+  padding-inline: var(--space-inset-row);
+}
