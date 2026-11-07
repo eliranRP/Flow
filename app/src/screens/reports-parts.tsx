@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { useId, type ReactNode } from "react";
+import { Fragment, useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { balanceWarning, type BalanceCurrency } from "../reports";
 import type { NetRow, ViewGroup, ViewRow } from "../report-views";
@@ -286,26 +286,47 @@ export function barShare(amount: bigint, total: bigint): number {
   return Math.min(100, Number((part * 100n) / whole));
 }
 
+/** A row's share as the hint writes it: a whole percent, or "under 1%" when a non-zero row floors to 0 (FLOW-1083). */
+export type RowShare = number | "under-1";
+
+/** A row's share of its group for its hint: a non-zero row that floors to 0% says "פחות מ־1%", a zero row 0% (FLOW-1083). */
+export function rowShare(amount: bigint, total: bigint): RowShare {
+  const share = barShare(amount, total);
+  return share === 0 && amount !== 0n && total !== 0n ? "under-1" : share;
+}
+
 /**
  * FLOW-1064 (the owner, 2026-11-06: the bar "looks childish", a percent instead): a report row's line under its
- * name, on one line cut at its end. The row's share of its group leads it as a whole percent, "85% · <the hint>",
- * or alone as "85% מהקבוצה" when the row has no hint.
+ * name. The row's share of its group leads it as a whole percent, "85% · <the hint>", or alone as "85% מהקבוצה"
+ * when the row has no hint. FLOW-1082: the line wraps to at most two lines between its "·" parts, and a part with a
+ * figure never breaks, so no amount is cut at 320.
  */
-export function reportHint(text: string | undefined, share?: number): ReactNode {
+export function reportHint(text: string | undefined, share?: RowShare): ReactNode {
   if (text == null && share == null) return undefined;
-  const percent = share == null ? null : <bdi dir="ltr">{`${String(share)}%`}</bdi>;
+  const parts: ReactNode[] = [];
+  if (share != null) {
+    parts.push(share === "under-1" ? <>פחות מ־<bdi dir="ltr">1%</bdi></> : <bdi dir="ltr">{`${String(share)}%`}</bdi>);
+  }
+  for (const part of text?.split(" · ") ?? []) parts.push(part);
   return (
     <span className="ui-rep-hint-text" data-clip-ok="">
-      {percent}
-      {percent == null ? text : text == null ? " מהקבוצה" : ` · ${text}`}
+      {parts.map((part, index) => (
+        // The parts are fixed per row and never reorder. A part with a figure (or the percent) stays whole; the line
+        // breaks only at the " · " between parts, which sits outside them.
+        <Fragment key={index}>
+          {index === 0 ? null : " · "}
+          {typeof part === "string" && !/\d/.test(part) ? part : <span className="ui-rep-hint-part">{part}</span>}
+        </Fragment>
+      ))}
+      {text == null ? " מהקבוצה" : null}
     </span>
   );
 }
 
 /** A category row's percent: a cost in a group of several, as its share of the group (none on income). */
-function viewShare(group: ViewGroup, row: ViewRow): number | undefined {
+function viewShare(group: ViewGroup, row: ViewRow): RowShare | undefined {
   if (group.rows.length < 2 || row.tone !== "cost" || row.amount <= 0n) return undefined;
-  return barShare(row.amount, group.total);
+  return rowShare(row.amount, group.total);
 }
 
 /** Category groups, each under a one-line sticky head with its total; a row opens its lines when `href` gives one. */
@@ -374,7 +395,7 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
               variant="project"
               title={slashBreaks(row.name)}
               wrapTitle
-              hint={reportHint(hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`, rows.length < 2 ? undefined : barShare(row.net, whole))}
+              hint={reportHint(hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`, rows.length < 2 ? undefined : rowShare(row.net, whole))}
               {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
               chevron={to != null}
               chevronSpace={to == null}

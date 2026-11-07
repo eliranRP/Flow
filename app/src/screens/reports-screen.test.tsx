@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
@@ -17,7 +17,7 @@ import {
 import { renderWithProviders } from "../test-render";
 import { BalanceReportScreen, type BalanceSample } from "./reports-balance-screen";
 import { ReportsHubScreen, ReportsScreen } from "./reports-hub-screen";
-import { barShare } from "./reports-parts";
+import { barShare, reportHint, rowShare } from "./reports-parts";
 import { PnlReportScreen, reportLinesPath, type PnlSample } from "./reports-screen";
 
 function LocationProbe() {
@@ -292,5 +292,32 @@ describe("barShare", () => {
     expect(barShare(500n, -1_000n)).toBe(50);
     expect(barShare(2_000n, 1_000n)).toBe(100);
     expect(barShare(1_000n, 0n)).toBe(0);
+  });
+});
+
+describe("rowShare", () => {
+  it("says under 1% for a small non-zero row, 0% for a zero row (FLOW-1083)", () => {
+    expect(rowShare(1_000n, 1_000_000n)).toBe("under-1");
+    expect(rowShare(-1_000n, 1_000_000n)).toBe("under-1");
+    expect(rowShare(0n, 1_000_000n)).toBe(0);
+    expect(rowShare(1_000n, 0n)).toBe(0);
+    expect(rowShare(400_000n, 1_000_000n)).toBe(40);
+  });
+
+  it("writes the hint: a $10 row of a $10,000 group reads פחות מ־1%, a zero row 0%", () => {
+    const { container: small } = render(<>{reportHint(undefined, rowShare(1_000n, 1_000_000n))}</>);
+    expect(small.textContent).toBe("פחות מ־1% מהקבוצה");
+    const { container: zero } = render(<>{reportHint("הכנסות $0", rowShare(0n, 1_000_000n))}</>);
+    expect(zero.textContent).toBe("0% · הכנסות $0");
+  });
+});
+
+describe("reportHint", () => {
+  it("keeps each part with a figure whole and breaks only between parts (FLOW-1082)", () => {
+    const { container } = render(<>{reportHint("הכנסות $30,000 · הוצאות $17,000", 37)}</>);
+    expect(container.textContent).toBe("37% · הכנסות $30,000 · הוצאות $17,000");
+    expect([...container.querySelectorAll(".ui-rep-hint-part")].map((part) => part.textContent)).toEqual(["37%", "הכנסות $30,000", "הוצאות $17,000"]);
+    const { container: plain } = render(<>{reportHint("מזומן ושאר החשבונות")}</>);
+    expect(plain.querySelector(".ui-rep-hint-part")).toBeNull();
   });
 });

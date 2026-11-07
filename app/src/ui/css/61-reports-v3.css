@@ -238,9 +238,18 @@
   line-height: var(--type-title-line);
 }
 
+/* FLOW-1082: a report row's hint wraps to at most two lines between its "·" parts; a part with a figure never breaks,
+   so no amount is cut at 320. */
 .ui-rep-hint-text {
+  display: -webkit-box;
+  min-inline-size: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-rep-hint-part {
   white-space: nowrap;
 }
 
