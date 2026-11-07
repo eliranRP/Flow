@@ -48,6 +48,13 @@ export const OverRowsOnceTheBandScrollsAway: Story = {
     doc.defaultView?.scrollTo(0, 1200);
     await waitFor(() => expect(cover.hasAttribute("data-open")).toBe(false));
     await expect(getComputedStyle(cover).visibility).toBe("visible");
+    // A pull to refresh on a band page holds the screen down over its violet gap: the room stays open.
+    const gap = doc.createElement("div");
+    gap.className = "ui-pull-gap";
+    gap.dataset.tone = "band";
+    doc.body.append(gap);
+    await waitFor(() => expect(cover.hasAttribute("data-open")).toBe(true));
+    gap.remove();
     doc.defaultView?.scrollTo(0, 0);
     doc.documentElement.style.removeProperty("--safe-top");
   },

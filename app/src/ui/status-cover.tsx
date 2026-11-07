@@ -2,8 +2,12 @@ import "./lazy.css";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
-/** Whether a page's violet band (not a sheet's) is under the status bar's room. */
+/**
+ * Whether a page's violet band (not a sheet's) is under the status bar's room, or a pull to refresh's violet gap
+ * is (the screen held down while it refreshes: the band is below the room then, the gap under it).
+ */
 function bandUnder(room: number): boolean {
+  if (document.querySelector(".ui-pull-gap[data-tone^='band']") != null) return true;
   for (const band of document.querySelectorAll<HTMLElement>(".ui-band")) {
     if (band.closest("[role='dialog']") != null) continue;
     const box = band.getBoundingClientRect();
