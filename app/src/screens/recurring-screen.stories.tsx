@@ -97,7 +97,7 @@ export const LateSomeHidden: Story = {
   },
 };
 
-/** Every late card hidden: one line, "אין מה לטפל · הכול נסקר", with ביטול. */
+/** Every late card hidden: one line, "אין מה לטפל · הכול נסקר", with הצגת הכול. */
 export const LateAllHidden: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

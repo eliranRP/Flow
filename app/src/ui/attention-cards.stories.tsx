@@ -100,7 +100,7 @@ export const HideAndRestore: Story = {
   },
 };
 
-/** Every card hidden: one line, "אין מה לטפל · הכול נסקר", and ביטול. */
+/** Every card hidden: one line, "אין מה לטפל · הכול נסקר", and הצגת הכול (FLOW-1102: ביטול is only the toast's). */
 export const AllHidden: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -108,8 +108,9 @@ export const AllHidden: Story = {
       await userEvent.click(canvas.getByRole("button", { name: `הסתרה: ${title}` }));
     }
     await waitFor(() => expect(canvas.getByText("אין מה לטפל · הכול נסקר")).toBeVisible());
-    // The section's own ביטול; the "הוסתר" toast offers one too, for the last card only.
+    // The section's own button brings back every card; the "הוסתר" toast's ביטול, the last card only.
     const section = within(canvas.getByRole("region", { name: "דורש טיפול" }));
-    await expect(section.getByRole("button", { name: "ביטול" })).toBeVisible();
+    await expect(section.getByRole("button", { name: "הצגת הכול" })).toBeVisible();
+    await expect(section.queryByRole("button", { name: "ביטול" })).toBeNull();
   },
 };

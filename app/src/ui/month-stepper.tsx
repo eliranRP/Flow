@@ -16,6 +16,7 @@ export function MonthStepper({
   onStep,
   children,
   onBand = false,
+  reason = null,
 }: {
   /** The earlier month's name for the chevron ("תזרים אוגוסט"), or null for none. */
   earlier: string | null;
@@ -25,6 +26,11 @@ export function MonthStepper({
   children?: ReactNode;
   /** FLOW-364: on the colour band, white chevrons on the band's track. */
   onBand?: boolean;
+  /**
+   * FLOW-1102: why a dimmed chevron waits when it is not the end of the list (the months still loading, or not
+   * loaded), said to a screen reader in place of "זה החודש הראשון" / "זה החודש הנוכחי".
+   */
+  reason?: string | null;
 }) {
   return (
     <div className={cx("ui-month-step", onBand && "ui-month-step-band")}>
@@ -32,6 +38,7 @@ export function MonthStepper({
         label={earlier}
         side="start"
         onBand={onBand}
+        reason={reason}
         onClick={() => {
           onStep(-1);
         }}
@@ -41,6 +48,7 @@ export function MonthStepper({
         label={later}
         side="end"
         onBand={onBand}
+        reason={reason}
         onClick={() => {
           onStep(1);
         }}
@@ -57,11 +65,13 @@ function StepArrow({
   label,
   side,
   onBand,
+  reason,
   onClick,
 }: {
   label: string | null;
   side: "start" | "end";
   onBand: boolean;
+  reason: string | null;
   onClick: () => void;
 }) {
   const reasonId = useId();
@@ -80,7 +90,7 @@ function StepArrow({
       >
         <OutwardChevron side={side} />
       </IconButton>
-      {off ? <span id={reasonId} className="sr-only">{side === "start" ? "זה החודש הראשון" : "זה החודש הנוכחי"}</span> : null}
+      {off ? <span id={reasonId} className="sr-only">{reason ?? (side === "start" ? "זה החודש הראשון" : "זה החודש הנוכחי")}</span> : null}
     </>
   );
 }

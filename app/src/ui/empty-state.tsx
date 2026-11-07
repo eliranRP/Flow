@@ -27,16 +27,18 @@ export function EmptyState({ icon, title, body, action, aside }: EmptyStateProps
 type FailureLineProps = {
   offline: boolean;
   onRetry: () => void;
+  /** FLOW-1102: what did not load, when it is not the whole page ("לא הצלחנו לטעון את החודשים."). */
+  message?: string;
 };
 
 /**
  * A failure is one line and the retry (FLOW-371, REDESIGN-BUILD: "a failure shows one line with
  * נסו שוב"). Offline names the connection and says nothing was deleted. The retry is the 44px link, not a block of its own.
  */
-export function FailureLine({ offline, onRetry }: FailureLineProps) {
+export function FailureLine({ offline, onRetry, message = "לא הצלחנו לטעון." }: FailureLineProps) {
   return (
     <div className="ui-failure" role="status">
-      <span>{offline ? "אין חיבור לאינטרנט. שום דבר לא נמחק." : "לא הצלחנו לטעון."}</span>
+      <span>{offline ? "אין חיבור לאינטרנט. שום דבר לא נמחק." : message}</span>
       <Button
         variant="link"
         onClick={() => {

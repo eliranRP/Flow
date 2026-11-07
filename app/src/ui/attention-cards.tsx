@@ -37,8 +37,9 @@ export function countTag(count: number, one: string, many: string): string {
 /**
  * FLOW-1043 (BUILD-PLAN §3.5): the "דורש טיפול" row-cards. Each row is a 56px card that links to its page,
  * with an X that hides it on this device until what it counts changes (attention-dismiss.ts). The review row
- * (a row with `button`) comes first and has no X. When every row is hidden, the section is one line with ביטול.
+ * (a row with `button`) comes first and has no X. When every row is hidden, the section is one line with הצגת הכול.
  * FLOW-1094: each X shows a 4s toast "הוסתר" whose ביטול brings back that card only; the head's link stays.
+ * FLOW-1102: the section's own button brings back every card, so it is "הצגת הכול", not a second ביטול.
  */
 export function AttentionCards({ rows, storageKey, title = "דורש טיפול" }: {
   rows: readonly BannerRow[];
@@ -143,7 +144,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
           אין מה לטפל · הכול נסקר
         </span>
         <button type="button" className="ui-attn-undo t-btn m-press" onClick={restore}>
-          ביטול
+          הצגת הכול
         </button>
       </section>
     );
