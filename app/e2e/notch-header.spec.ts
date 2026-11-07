@@ -36,7 +36,9 @@ for (const route of ROUTES) {
 // The search screen's head is its own bar, not a stacked header: its field sat under the status bar.
 test("search: under a notch the search field sits below the status bar", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1");
-  await page.getByRole("link", { name: "חיפוש", exact: true }).click();
+  // FLOW-1103: the band's search is in its ⋯ "עוד" sheet.
+  await page.getByRole("button", { name: "עוד", exact: true }).click();
+  await page.getByRole("dialog", { name: "עוד" }).getByRole("button", { name: /חיפוש/ }).click();
   const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
   await expect(field).toBeVisible();
   const top = await page.locator(".ui-search").first().evaluate((node) => node.getBoundingClientRect().top);

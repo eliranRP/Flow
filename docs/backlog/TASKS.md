@@ -335,6 +335,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1094"></a>[FLOW-1094](tasks/FLOW-1094.md) | דורש טיפול: dismissing a card has no undo toast | SMALL UI |
 | <a id="flow-1095"></a>[FLOW-1095](tasks/FLOW-1095.md) | Home band at 320: the company name is cut to a few letters | SMALL UI |
 | <a id="flow-1097"></a>[FLOW-1097](tasks/FLOW-1097.md) | דורש טיפול cards at 320: one line, a short title and a tag | SMALL UI |
+| <a id="flow-1103"></a>[FLOW-1103](tasks/FLOW-1103.md) | Home band: ⋯ on every phone width, so the company's name is not cut at 393 | SMALL UI |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |
@@ -481,6 +482,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1098"></a>[FLOW-1098](tasks/FLOW-1098.md) | Report rows: a 9-digit full figure at 360–380, and two small cleanups | SMALL UI |
 | <a id="flow-1101"></a>[FLOW-1101](tasks/FLOW-1101.md) | A failed investment save after a new project's create makes a retry create a second project | BUG |
 | <a id="flow-1102"></a>[FLOW-1102](tasks/FLOW-1102.md) | Two "ביטול" with different effects when every attention card is hidden; small follow-ups | SMALL UI |
+| <a id="flow-1104"></a>[FLOW-1104](tasks/FLOW-1104.md) | A project month's profit shows a credit on an expense with a minus | BUG |
 | <a id="flow-1088"></a>[FLOW-1088](tasks/FLOW-1088.md) | New project: a missing name does not move focus to the field or announce the error | SMALL UI |
 | <a id="flow-1089"></a>[FLOW-1089](tasks/FLOW-1089.md) | Unassigned: ביטול in the assign toast can do nothing | SMALL UI |
 | <a id="flow-1090"></a>[FLOW-1090](tasks/FLOW-1090.md) | Unassigned rows: the שיוך pill squeezes the title at 320 | SMALL UI |

@@ -48,7 +48,10 @@ export function MonthLineRow({ line, hint, search }: { line: CashLine; hint: str
       hint={hint}
       agorot={minor < 0n ? -minor : minor}
       currency={line.currency}
-      sign={line.side}
+      // FLOW-1104: the row says which way the money went, not its category's side: a credit on an
+      // expense (a tenant paying back the water bill) is money in, so a plus, as its day's total counts it.
+      sign={minor < 0n ? "out" : "in"}
+      inWord={line.side === "out" ? "זיכוי" : undefined}
       wholeCents
       source={rowSource(line.source)}
       initials={lineInitials(name)}

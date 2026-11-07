@@ -187,7 +187,6 @@ export function DevCashEmpty() {
       search="?preview=1"
       holdWrites={false}
       currency="USD"
-      avatarInitial="A"
     />
   );
 }

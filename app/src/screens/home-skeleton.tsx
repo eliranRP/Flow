@@ -50,7 +50,7 @@ export function CashHomeSkeleton({ preview = false, example, company }: { previe
             </DelayedSkeleton>
           )
         }
-        trailing={<HomeBandActions isPast={false} currentName="" search={search} avatarInitial={company?.slice(0, 1) ?? ""} />}
+        trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
       >
         <div className="ui-band-body">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>

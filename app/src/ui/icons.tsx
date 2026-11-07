@@ -58,7 +58,7 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
-/** Home's band avatar (FLOW-364): the account and settings button. */
+/** A person: the הגדרות וחשבון row in Home's ⋯ sheet (FLOW-1103), and the team's members. */
 export function PersonIcon(props: IconProps) {
   return (
     <Svg size={18} stroke={2} {...props}>
