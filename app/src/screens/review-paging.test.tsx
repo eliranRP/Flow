@@ -109,6 +109,18 @@ function renderAt(path: string) {
 
 const reads = () => rpc.calls.filter((call) => call.name === "list_review_page");
 
+/**
+ * The all-items list as it shows on the page: a row is found by the name it shows, and the rows are counted.
+ * A role query by name walks every link's accessible name (about 0.8 s at 100 rows on jsdom), which ran out
+ * the wait on a loaded runner; waiting on the rows the page shows does not depend on the runner's speed.
+ */
+async function findListRow(name: string): Promise<HTMLAnchorElement> {
+  const link = (await screen.findByText(name)).closest("a");
+  if (link == null) throw new Error(`${name} is not a row link`);
+  return link;
+}
+const listRows = () => document.querySelectorAll("a.ui-review-all-row").length;
+
 /** The list's end mark is watched by an observer; the test fires it as scrolling would. */
 const watching = vi.hoisted(() => ({ callbacks: [] as Array<() => void> }));
 
@@ -163,11 +175,13 @@ describe("FLOW-984: the Review screen in pages", () => {
     renderAt("/review/all");
     expect(await screen.findByText("120 פריטים")).toBeInTheDocument();
     expect(screen.getByText(/כ־40 דקות לכולם/)).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /ספק r050/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /ספק r051/ })).not.toBeInTheDocument();
+    await findListRow("ספק r050");
+    expect(listRows()).toBe(50);
     await waitFor(() => { expect(watching.callbacks.length).toBeGreaterThan(0); });
     act(() => { watching.callbacks.at(-1)?.(); });
-    expect(await screen.findByRole("link", { name: /ספק r100/ })).toBeInTheDocument();
+    // The second page is in when the list shows its 100 rows.
+    await waitFor(() => { expect(listRows()).toBe(100); });
+    await findListRow("ספק r100");
     expect(reads()).toHaveLength(2);
     expect(reads()[1]?.args).toMatchObject({ p_limit: 50, p_after_id: "r050" });
     // The count is the same after the second page.
@@ -176,15 +190,16 @@ describe("FLOW-984: the Review screen in pages", () => {
 
   it("a list page that fails to load leaves a quiet row with a retry", async () => {
     renderAt("/review/all");
-    expect(await screen.findByRole("link", { name: /ספק r050/ })).toBeInTheDocument();
+    await findListRow("ספק r050");
     rpc.failPages = true;
     await waitFor(() => { expect(watching.callbacks.length).toBeGreaterThan(0); });
     act(() => { watching.callbacks.at(-1)?.(); });
     expect(await screen.findByText("לא הצלחנו לטעון עוד פריטים")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /ספק r050/ })).toBeInTheDocument();
+    expect(listRows()).toBe(50);
     rpc.failPages = false;
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
-    expect(await screen.findByRole("link", { name: /ספק r100/ })).toBeInTheDocument();
+    await waitFor(() => { expect(listRows()).toBe(100); });
+    await findListRow("ספק r100");
     expect(screen.queryByText("לא הצלחנו לטעון עוד פריטים")).not.toBeInTheDocument();
   });
 

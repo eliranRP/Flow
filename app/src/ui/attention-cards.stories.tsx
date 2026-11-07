@@ -114,3 +114,26 @@ export const AllHidden: Story = {
     await expect(section.queryByRole("button", { name: "ביטול" })).toBeNull();
   },
 };
+
+/**
+ * FLOW-1060: the only card hidden on an earlier visit. The section is the done line with הצגת הכול, the way back;
+ * the unit test clicks it.
+ */
+export const OnlyCardHidden: Story = {
+  args: { rows: ROWS.filter((row) => row.id === "gym") },
+  beforeEach: () => {
+    try {
+      window.localStorage.setItem("flow.attention.story", JSON.stringify({ gym: "late:gym:1" }));
+    } catch {
+      // No storage: nothing to seed.
+    }
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByText("חדר כושר לא חויב החודש")).toBeNull();
+    const section = within(canvas.getByRole("region", { name: "דורש טיפול" }));
+    // The line fades in (m-page-enter).
+    await waitFor(() => expect(section.getByText("אין מה לטפל · הכול נסקר")).toBeVisible());
+    await expect(section.getByRole("button", { name: "הצגת הכול" })).toBeVisible();
+  },
+};

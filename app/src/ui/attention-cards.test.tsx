@@ -96,6 +96,22 @@ describe("AttentionCards (FLOW-1043)", () => {
     expect(screen.queryByText("אין מה לטפל · הכול נסקר")).toBeNull();
   });
 
+  it("FLOW-1060: hiding the only card leaves הצגת הכול, which brings it back, on this visit and the next", () => {
+    const only = ROWS.filter((row) => row.id === "unpaid");
+    const { unmount } = render(cards(only));
+    dismiss("3 חשבוניות פתוחות");
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
+    unmount();
+    // The next visit reads it hidden from storage and still offers the way back.
+    render(cards(only));
+    const section = within(screen.getByRole("region", { name: "דורש טיפול" }));
+    expect(section.queryByRole("link")).toBeNull();
+    fireEvent.click(section.getByRole("button", { name: "הצגת הכול" }));
+    expect(screen.getByRole("link", { name: "3 חשבוניות פתוחות" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("flow.attention.home")).toBeNull();
+  });
+
   it("hides for the session when storage throws", () => {
     const blocked = () => {
       throw new Error("blocked");

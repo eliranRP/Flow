@@ -335,7 +335,7 @@
   min-height: calc(var(--space-10) + var(--space-2));
   border-top: 0;
   font-size: var(--type-body-size);
-  line-height: var(--type-title-line);
+  line-height: var(--line-board);
 }
 
 .ui-pp-page .ui-pp-label {
