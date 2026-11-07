@@ -996,3 +996,15 @@ describe("fewer than 60 days since a first rent inside the period (FLOW-473)", (
     expect(band().querySelector(".ui-pinv-band-figure")).toHaveTextContent("%");
   });
 });
+
+describe("a calculation page that fails to load (FLOW-1091)", () => {
+  it.each([
+    ["/projects/p1/investment/metric/coc?preview=error-server", "החישוב לא נטען"],
+    ["/projects/p1/investment/part/building?preview=error", "אין חיבור"],
+  ])("%s shows the full failed card, not the one line", (entry, title) => {
+    const { container } = renderAt(entry);
+    expect(container.querySelector(".ui-page-failed")).not.toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: title })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+  });
+});

@@ -22,6 +22,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ListSkeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
+import type { ToastInput } from "../ui/toast-layout";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A sample list (stories): the lines and the projects the picker offers. */
@@ -31,7 +32,12 @@ export type UnassignedSample = { rows: SearchRow[]; projects: ProjectCashRow[] }
 type Assign = { row: SearchRow; projectId: string; projectName: string; undo: { id: string | null } };
 
 /** The undo id reassign_transaction returns, by line, so ביטול puts the line back. */
-type Undo = { line: string; id: string | null };
+type Undo = { line: string; id: string };
+
+/** FLOW-1089: the assign toast; ביטול only with an undo that can run (reassign_transaction returned an id). */
+export function assignedToast(projectName: string, undo: (() => void) | null): ToastInput {
+  return undo == null ? { message: `שויך ל${projectName}` } : { message: `שויך ל${projectName}`, action: "ביטול", onAction: undo };
+}
 
 /**
  * FLOW-1044 (board V3-Unassigned): the lines with no project, a List screen over search_transactions with
@@ -77,20 +83,22 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
     onSuccess: (payload) => { show(payload.line, true); },
     run: async (payload) => {
       const supabase = getSupabase();
-      if (!supabase || payload.id == null) throw new Error("supabase");
+      if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("undo_reassign", { p_id: payload.id }));
     },
   });
   /** The toast after an assign: the project's name and ביטול, which puts the line back. */
-  function assigned(payload: Assign, undoIt: () => void) {
-    toast.show({ message: `שויך ל${payload.projectName}`, action: "ביטול", onAction: undoIt });
+  function assigned(payload: Assign, undoIt: (() => void) | null) {
+    toast.show(assignedToast(payload.projectName, undoIt));
   }
   const assign = useWrite<Assign>({
     failure: "לא הצלחנו לשייך את השורה.",
     keys: ["search", "dashboard", "project", "projects-cash"],
     onError: (_error, payload) => { show(payload.row.id, true); },
     onSuccess: (payload) => {
-      assigned(payload, () => { if (payload.undo.id != null) undoAssign.mutate({ line: payload.row.id, id: payload.undo.id }); });
+      // FLOW-1089: with no undo id from the write, ביטול would do nothing, so the toast offers none.
+      const id = payload.undo.id;
+      assigned(payload, id == null ? null : () => { undoAssign.mutate({ line: payload.row.id, id }); });
     },
     run: async (payload) => {
       const supabase = getSupabase();
@@ -175,7 +183,6 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
                 ) : (
                   <Button
                     variant="secondary"
-                   
                     onClick={(event) => {
                       opener.current = event.currentTarget;
                       setPicking(row);

@@ -102,6 +102,9 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
   const trimmed = name.trim();
   // Shown after a tap on the button, cleared as the name changes.
   const [nameError, setNameError] = useState<string | undefined>(undefined);
+  // FLOW-1088: each tap that stops on the name redraws its message, so a repeated tap is announced again.
+  const [nameTries, setNameTries] = useState(0);
+  const nameField = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (!focusBudget) return;
@@ -157,13 +160,20 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
     // The name is checked on the phone, so the preview says it too; only the save is the preview's to block.
     const error = projectNameError(trimmed, project != null);
     setNameError(error);
-    if (error != null || blocked()) return;
+    if (error != null) {
+      // FLOW-1088: the cursor goes to the name, which says why the save waits.
+      setNameTries((tries) => tries + 1);
+      nameField.current?.focus();
+      return;
+    }
+    if (blocked()) return;
     save.mutate();
   }
 
   return (
     <form ref={form} className="ui-stack" onSubmit={submit}>
       <TextField
+        ref={nameField}
         label="שם הפרויקט"
         value={name}
         onChange={(event) => {
@@ -172,6 +182,8 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
         }}
         placeholder={project ? undefined : "למשל: Ashby Rd"}
         error={nameError}
+        liveMessage
+        messageKey={nameTries}
       />
       <div className="ui-project-kind">
         <SegmentedControl
