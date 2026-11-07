@@ -19,6 +19,7 @@ import {
   generalStatementRow,
   groupsNet,
   isGeneralKey,
+  monthNeighbours,
   monthRange,
   monthTitleOf,
   netTotal,
@@ -45,7 +46,7 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { useCompanyMonths, usePnl } from "../use-reports";
 import { ReportShareSheet } from "./report-share-sheet";
 import { NetGroup, ReportBottomLine, ReportGoOn, ReportRowsSkeleton, ReportShell, ViewGroups, amountText, reportHint, type BandFigure } from "./reports-parts";
-import { PnlPeriodSheet, useLatePick } from "./reports-sheets";
+import { PnlMonthSheet, PnlPeriodSheet, useLatePick } from "./reports-sheets";
 
 /** A fixture: today, and the reads as they would come back (a null drill-down: the project is not found). */
 export type PnlSample = {
@@ -162,7 +163,8 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
 
   const allRead = usePnl(range, null, false, live);
   const byProjectRead = usePnl(range, null, true, live && (route.view === "project" || shareOpen));
-  const monthsRead = useCompanyMonths(range, live && route.view === "month" && drill == null);
+  // FLOW-1092: a drilled month keeps the months to step through (the by-month view's read, already in).
+  const monthsRead = useCompanyMonths(range, live && ((route.view === "month" && drill == null) || month != null));
   const drillRead = usePnl(drillRange, general ? null : projectKey, false, live && drill != null && !general);
   const statement = live ? allRead.data : sample.statement;
   const byProject = live ? byProjectRead.data : sample.byProject;
@@ -173,7 +175,16 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
     void navigate(pnlPath(next, search), { replace: true });
   };
   const period = useLatePick<PnlRoute["period"]>((next) => { go({ period: next, view: route.view, drill: null }); });
+  // FLOW-1092 (the owner, 2026-11-07: "Move between months"): in a month's drill the pill moves to another month
+  // and stays in the drill. A drill opened from the list keeps that mark, so "‹ לפי חודש" still steps back to it.
+  const fromList = typeof location.state === "object" && location.state != null && "reportDrill" in location.state;
+  const toMonth = (key: string) => {
+    void navigate(pnlPath({ ...route, drill: { kind: "month", month: key } }, search), { replace: true, ...(fromList ? { state: { reportDrill: true } } : {}) });
+  };
+  const monthPick = useLatePick<string>(toMonth);
   const base = statement?.currencies[0]?.currency ?? "ILS";
+  const monthList = month == null ? [] : monthChoices(months == null ? [] : pnlMonthRows(months, base).map((row) => row.key), month);
+  const near = month == null ? null : monthNeighbours(monthList.map((item) => item.key), month);
   const top = statement?.currencies.find((row) => row.currency === base);
   const drilledRow = drill == null ? null : general ? (byProject == null ? undefined : generalStatementRow(byProject, projectKey, base)) : drilled === undefined ? undefined : drilled === null ? null : (drilled.currencies.find((row) => row.currency === base) ?? drilled.currencies[0] ?? emptyRow(base));
   const bandRead = drill == null ? allRead : general ? byProjectRead : drillRead;
@@ -271,7 +282,13 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
       <ReportShell
         name={drillName ?? "רווח והפסד"}
         back={drill == null ? { kind: "hub", to: `/reports${search}` } : { kind: "undrill", label: month != null ? "לפי חודש" : "לפי פרויקט", onBack: undrill }}
-        pill={{ label: month != null ? monthTitleOf(month) : pnlChipLabel(route.period, today), onOpen: () => { period.setOpen(true); } }}
+        pill={month != null && near != null
+          ? {
+              label: monthTitleOf(month),
+              onOpen: () => { monthPick.setOpen(true); },
+              step: { earlier: near.earlier == null ? null : "חודש קודם", later: near.later == null ? null : "חודש הבא", onStep: (delta) => { const key = delta < 0 ? near.earlier : near.later; if (key != null) toMonth(key); } },
+            }
+          : { label: pnlChipLabel(route.period, today), onOpen: () => { period.setOpen(true); } }}
         figureLabel="רווח נקי"
         figure={figure}
         {...(drill == null ? (top == null ? {} : { figureSub: marginText(top) }) : top == null ? {} : { figureSub: `מתוך רווח נקי ${amountText(top.net_minor, top.currency)}` })}
@@ -294,10 +311,17 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
         {body}
         {phase.kind === "ready" ? <p className="ui-rep-note">{`נספר לפי ${statement == null || statement.basis === "cash" ? "מזומן" : "חשבוניות"}. דוח ניהולי, לא דוח כספי מבוקר.`}</p> : null}
       </ReportShell>
+      {month == null ? null : <PnlMonthSheet open={monthPick.open} onOpenChange={monthPick.onOpenChange} value={month} months={monthList} onPick={monthPick.pick} />}
       <PnlPeriodSheet open={period.open} onOpenChange={period.onOpenChange} value={route.period} today={today} onPick={period.pick} />
       <ReportShareSheet open={shareOpen} onOpenChange={setShareOpen} state={shareStateOf("pnl", route.period, { kind: "today" }, projectKey, route.view === "project")} today={today} projects={byProject?.projects ?? []} />
     </>
   );
+}
+
+/** The month sheet's months, newest first: the by-month view's, and the drilled month even when it has no row. */
+function monthChoices(keys: readonly string[], month: string): { key: string; name: string }[] {
+  const all = keys.includes(month) ? keys : [...keys, month];
+  return [...all].sort((a, b) => (a < b ? 1 : -1)).map((key) => ({ key, name: monthTitleOf(key) }));
 }
 
 /** A drilled statement with no line in the band's currency. */

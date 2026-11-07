@@ -236,6 +236,20 @@ export function pnlMonthRows(months: NonNullable<ProfitMonths>, currency: string
   }).sort((a, b) => (a.key < b.key ? 1 : -1));
 }
 
+/**
+ * FLOW-1092: a drilled month's neighbours among the by-month view's months (any order): the nearest earlier
+ * and later month, or null at either end. A month the list lacks still finds its neighbours.
+ */
+export function monthNeighbours(keys: readonly string[], month: string): { earlier: string | null; later: string | null } {
+  let earlier: string | null = null;
+  let later: string | null = null;
+  for (const key of keys) {
+    if (key < month && (earlier == null || key > earlier)) earlier = key;
+    if (key > month && (later == null || key < later)) later = key;
+  }
+  return { earlier, later };
+}
+
 /** A month's dates for its statement: the first to the last day, or to today in the current month. */
 export function monthRange(month: string, today: string): { from: string; to: string } {
   const year = Number(month.slice(0, 4));

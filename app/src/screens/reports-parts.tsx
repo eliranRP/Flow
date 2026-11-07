@@ -13,6 +13,7 @@ import { GroupHead } from "../ui/group-head";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, BackIcon, CheckIcon, ChevronDownIcon, ChevronIcon, ShareIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
+import { MonthStepper } from "../ui/month-stepper";
 import { Skeleton } from "../ui/skeleton";
 import { slashBreaks } from "../ui/slash-breaks";
 import { TopBand, useBandGone } from "../ui/top-band";
@@ -141,6 +142,9 @@ function UndrillButton({ label, onBack }: { label: string; onBack: () => void })
   );
 }
 
+/** The pill's chevrons: the earlier and later month's labels (null: none that way) and the step. */
+export type ReportPillStep = { earlier: string | null; later: string | null; onStep: (delta: -1 | 1) => void };
+
 /**
  * FLOW-1045 (board V3-Report, the Overview pattern): the report's violet band (the name, the period or date
  * pill that opens its sheet, the figure and its two rows), the band bar that slides in once the figures fade
@@ -151,7 +155,8 @@ function UndrillButton({ label, onBack }: { label: string; onBack: () => void })
 export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, rows, onShare, control, offlineSince, failed, top, children }: {
   name: string;
   back: ReportBack;
-  pill: { label: string; onOpen: () => void };
+  /** FLOW-1092: `step` puts the pill between the earlier and later chevrons (a drilled month, as Home's month pill). */
+  pill: { label: string; onOpen: () => void; step?: ReportPillStep | null };
   figureLabel: string;
   /** Null while the read is in: a band skeleton. */
   figure: BandFigure | null;
@@ -178,6 +183,12 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
     );
   }
   const currency = figure?.currency ?? "ILS";
+  const pillButton = (
+    <button type="button" className="ui-rep-pill m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
+      <span className="ui-rep-pill-label">{pill.label}</span>
+      <ChevronDownIcon size={14} />
+    </button>
+  );
   return (
     <div className="ui-rep-v3">
       <TopBand
@@ -188,10 +199,11 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
           <div className="ui-rep-band ui-band-fade">
             <FocusTitle className="t-name ui-rep-band-name">{name}</FocusTitle>
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
-            <button type="button" className="ui-rep-pill m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
-              <span className="ui-rep-pill-label">{pill.label}</span>
-              <ChevronDownIcon size={14} />
-            </button>
+            {pill.step == null ? pillButton : (
+              <MonthStepper earlier={pill.step.earlier} later={pill.step.later} onBand onStep={pill.step.onStep}>
+                {pillButton}
+              </MonthStepper>
+            )}
             <div className="ui-rep-band-figure">
               <p className="ui-band-title">{figureLabel}</p>
               {figure == null ? (
@@ -244,7 +256,7 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
         centre={
           <button type="button" className="ui-compact-bar-centre m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
             <span className="ui-compact-bar-centre-title">
-              <span className="ui-rep-bar-title" data-clip-ok="">{`${name} · ${pill.label}`}</span>
+              <span className="ui-rep-bar-title" data-clip-ok="">{pill.label === name ? name : `${name} · ${pill.label}`}</span>
               <ChevronDownIcon size={10} />
             </span>
             <span className="ui-compact-bar-centre-net">

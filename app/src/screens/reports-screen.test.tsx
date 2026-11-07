@@ -196,6 +196,52 @@ describe("the P&L", () => {
     expect(screen.getByRole("button", { name: "חזרה ללפי חודש" })).toBeInTheDocument();
   });
 
+  it("in a month's drill, the pill picks another month and stays in the drill (FLOW-1092)", async () => {
+    renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
+    fireEvent.click(screen.getByRole("button", { name: "אוקטובר 2026" }));
+    const sheet = screen.getByRole("dialog", { name: "חודש" });
+    expect(within(sheet).getByRole("radio", { name: "אוקטובר 2026" })).toBeChecked();
+    fireEvent.click(within(sheet).getByRole("radio", { name: "יולי 2026" }));
+    await waitFor(() => { expect(where()).toBe("/reports/pnl?view=month&month=2026-07"); });
+    expect(screen.getByRole("heading", { level: 1, name: "יולי 2026" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חזרה ללפי חודש" })).toBeInTheDocument();
+  });
+
+  it("in a month's drill, the pill's chevrons step to the next month either way, none past the last", () => {
+    renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
+    // October is the newest month: no later one.
+    expect(screen.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(screen.getByRole("button", { name: "חודש קודם" }));
+    expect(where()).toBe("/reports/pnl?view=month&month=2026-09");
+    expect(screen.getByRole("heading", { level: 1, name: "ספטמבר 2026" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חודש הבא" }));
+    expect(where()).toBe("/reports/pnl?view=month&month=2026-10");
+  });
+
+  it("in a month's drill, the compact bar names the month once; a project's drill keeps its period after it", () => {
+    const view = renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
+    expect(document.querySelector(".ui-rep-bar-title")?.textContent).toBe("אוקטובר 2026");
+    view.unmount();
+    renderPnl({ drilled: REPORTS_CEDAR }, `/reports/pnl?view=project&project=${CEDAR}`);
+    expect(document.querySelector(".ui-rep-bar-title")?.textContent).toMatch(/^Cedar St · \S/);
+  });
+
+  it("a month opened from the list, stepped to another month, still goes back to that list (FLOW-1092)", () => {
+    function KeyProbe() {
+      return <output data-testid="key">{useLocation().key}</output>;
+    }
+    renderWithProviders(<><PnlReportScreen sample={{ ...PNL, drilled: REPORTS_OCTOBER }} /><LocationProbe /><KeyProbe /></>, { route: "/reports/pnl?view=month" });
+    const listKey = screen.getByTestId("key").textContent;
+    fireEvent.click(screen.getByRole("link", { name: /אוקטובר 2026/ }));
+    expect(where()).toBe("/reports/pnl?view=month&month=2026-10");
+    fireEvent.click(screen.getByRole("button", { name: "חודש קודם" }));
+    expect(where()).toBe("/reports/pnl?view=month&month=2026-09");
+    fireEvent.click(screen.getByRole("button", { name: "חזרה ללפי חודש" }));
+    // Back to the list's own history entry, not a new one on top of it.
+    expect(where()).toBe("/reports/pnl?view=month");
+    expect(screen.getByTestId("key").textContent).toBe(listKey);
+  });
+
   it("says when the project is not found, and goes back to the projects", () => {
     renderPnl({ drilled: null }, `/reports/pnl?project=${REPORTS_PROJECT_IDS.maple}`);
     fireEvent.click(screen.getByRole("button", { name: "לפי פרויקט" }));
