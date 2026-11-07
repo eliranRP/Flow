@@ -314,6 +314,8 @@ export const CutAtALetter: Story = {
         await expect(getComputedStyle(text).webkitTextFillColor).toBe("rgba(0, 0, 0, 0)");
         const drawn = /^"(.*?)"/u.exec(getComputedStyle(text, "::after").content)?.[1] ?? "";
         await expect(drawn).toMatch(/[^\s,;:\-–]…$/u);
+        // A cut measured wider than its box still ends in "…" (Safari, owner's screenshot 2026-11-07).
+        await expect(getComputedStyle(text, "::after").textOverflow).toBe("ellipsis");
         const kept = drawn.slice(0, -1);
         const whole = text.textContent;
         await expect(whole.startsWith(kept)).toBe(true);
