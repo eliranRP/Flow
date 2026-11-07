@@ -53,6 +53,18 @@ describe("קבועים v3 (FLOW-1048, V3-Recurring)", () => {
     expect(within(late).getByText(/Elm Row unit 2 · באיחור 10 ימים/)).toBeTruthy();
   });
 
+  it("draws each late card under 360px as its charge's name and amount, one line, the link named in full (FLOW-1097)", () => {
+    renderScreen();
+    const late = screen.getByRole("region", { name: "לא הגיעו" });
+    const [power, elm] = within(late).getAllByRole("link");
+    expect(power?.classList.contains("ui-attn-link-short")).toBe(true);
+    expect(power?.querySelector(".ui-attn-short-title")?.getAttribute("data-text")).toBe("Brightline Power");
+    expect(power?.querySelector(".ui-attn-tag")?.getAttribute("data-text")).toBeTruthy();
+    expect(power?.getAttribute("aria-label")).toMatch(/^Brightline Power · אולי הגיע בשם אחר · /);
+    expect(elm?.querySelector(".ui-attn-short-title")?.getAttribute("data-text")).toBe("Elm Row unit 2");
+    expect(elm?.getAttribute("aria-label")).toMatch(/^Elm Row unit 2 · באיחור 10 ימים · /);
+  });
+
   it("hides a late card on this device with its X, and הצגה brings it back", () => {
     vi.useFakeTimers();
     renderScreen();
