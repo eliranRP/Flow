@@ -408,10 +408,12 @@ function ActivityGroups({ groups, base, skip }: { groups: readonly ActivityGroup
           if (!swipes) return <Fragment key={row.key}>{line}</Fragment>;
           const restore = item.id === "skipped";
           const peek = !restore && skip.peek && row.key === firstLeft;
+          const label = restore ? "החזרה לצפי" : "לא החודש";
           return (
             <Fragment key={row.key}>
               <SwipeRow
-                label={restore ? "החזרה לצפי" : "לא החודש"}
+                label={label}
+                keyName={`${label}: ${row.title}`}
                 peek={peek}
                 onRemove={() => {
                   if (restore) skip.onRestore(row);

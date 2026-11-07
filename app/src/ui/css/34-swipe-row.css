@@ -77,6 +77,49 @@
   transform: translateX(calc(-1 * var(--swipe-action)));
 }
 
+/* FLOW-1086: the swipe's action for a keyboard and a screen reader. Hidden from sight at rest; with keyboard focus
+   the row slides open over it, as a revealed action does. */
+.ui-swipe-row-key {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
+  cursor: pointer;
+}
+
+.ui-swipe-row-key:focus-visible {
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: var(--swipe-action);
+  block-size: auto;
+  padding-inline: var(--space-2);
+  overflow: visible;
+  clip-path: none;
+  border-radius: var(--radius-input);
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+  white-space: normal;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ui-swipe-row:has(> .ui-swipe-row-key:focus-visible) .ui-swipe-row-body:dir(rtl) {
+  transform: translateX(var(--swipe-action));
+}
+
+.ui-swipe-row:has(> .ui-swipe-row-key:focus-visible) .ui-swipe-row-body:dir(ltr) {
+  transform: translateX(calc(-1 * var(--swipe-action)));
+}
+
 /* FLOW-913: a one-time peek. The row slides toward the start side and back, showing the word under it. */
 .ui-swipe-row[data-peek] .ui-swipe-row-body {
   animation: ui-swipe-row-peek var(--motion-peek) var(--ease-standard) var(--motion-peek-delay) both;

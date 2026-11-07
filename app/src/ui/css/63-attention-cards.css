@@ -104,6 +104,18 @@
   white-space: nowrap;
 }
 
+/* At 320 an unpaid title ("3 חשבוניות פתוחות · $21,300") is longer than the card: it wraps to two lines on every
+   page that shows the cards (Home, loans, a project's cash, an investment), so the total is never cut (FLOW-1085). */
+@media (max-width: 359px) {
+  .ui-attn-text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+  }
+}
+
 .ui-attn-chevron {
   display: inline-grid;
   flex: none;

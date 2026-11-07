@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { CloseIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { SwipeRow } from "./swipe-row";
@@ -85,5 +85,28 @@ export const Revealed: Story = {
     if (!frame) throw new Error("no swipe row");
     frame.setAttribute("data-open", "");
     await expect(within(canvasElement).getByRole("button", { name: "התעלמות מההתראה" })).toBeVisible();
+  },
+};
+
+/**
+ * FLOW-1086: a row with no ✕ of its own (Home's נותר לשלם) carries its swipe as a button. Hidden at rest; with
+ * keyboard focus the row slides open over it, and Enter runs it.
+ */
+export const KeyboardAction: Story = {
+  render: () => (
+    <div className="ui-lsplit-body">
+      <SwipeRow onRemove={() => undefined} label="לא החודש" keyName="לא החודש: חשמל">
+        <div className="ui-lsplit-part">
+          <span className="ui-lsplit-name">חשמל</span>
+        </div>
+      </SwipeRow>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole("button", { name: "לא החודש: חשמל" });
+    await userEvent.tab();
+    await expect(button).toHaveFocus();
+    await expect(button).toBeVisible();
+    await expect(button.getBoundingClientRect().width).toBeGreaterThan(40);
   },
 };
