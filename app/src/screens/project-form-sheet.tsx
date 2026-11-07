@@ -81,7 +81,6 @@ export function ProjectFormSheet({
     setWasOpen(open);
     if (open) setOpens((count) => count + 1);
   }
-  // A save in flight holds the close until it settles, so a project it makes is never left behind.
   /** The form's project made without its figures, handed over (and forgotten) as the sheet closes. */
   const takeMade = useRef<(() => MadeProject | null) | null>(null);
   function close(next: boolean) {
@@ -157,6 +156,12 @@ function ProjectForm({
   const [kind, setKind] = useState<ProjectKind>(storedKind ?? "renovation");
   const [amounts, setAmounts] = useState<Record<AmountField, string>>({ purchase: "", budget: shekelsText(project?.budget ?? null), arv: "", value: "" });
   const created = useRef<MadeProject | null>(null);
+  // A save can settle after its form was replaced (the sheet closed and reopened): only the form on screen closes the sheet.
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => { live.current = false; };
+  }, []);
   const invalidate = useInvalidateBooks();
   const trimmed = name.trim();
   // Shown after a tap on the button, cleared as the name changes.
@@ -191,7 +196,7 @@ function ProjectForm({
     onSuccess: () => {
       const made = created.current;
       created.current = null;
-      onClose();
+      if (live.current) onClose();
       if (project || made == null) return;
       if (onCreated == null) void navigate(`/projects/${made.id}`);
       else onCreated(made.id, trimmed);

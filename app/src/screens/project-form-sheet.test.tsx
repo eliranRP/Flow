@@ -220,6 +220,27 @@ describe("the project sheet (FLOW-445)", () => {
     expect(upsertCalls()[1]?.args).toEqual({ p_name: "Okafor", p_type: "שיפוץ", p_status: "active" });
   });
 
+  it("a save that settles after the sheet was closed and reopened leaves the new sheet open (FLOW-1101)", async () => {
+    let finishCreate: (result: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => (name === "upsert_project"
+      ? new Promise((resolve) => { finishCreate = resolve; })
+      : Promise.resolve({ data: null, error: null }));
+    const onCreated = vi.fn();
+    renderHarness(onCreated);
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Lark Hill" } });
+    fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
+    await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).toBeNull(); });
+    fireEvent.click(screen.getByText("reopen"));
+    expect(await screen.findByRole("textbox", { name: "שם הפרויקט" })).toHaveValue("");
+    finishCreate({ data: "p9", error: null });
+    await waitFor(() => { expect(onCreated).toHaveBeenCalledTimes(1); });
+    expect(onCreated).toHaveBeenCalledWith("p9", "Lark Hill");
+    expect(screen.getByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
+    expect(upsertCalls()).toHaveLength(1);
+  });
+
   it("edits an existing project under its id and keeps its own type words when the kind stays", async () => {
     renderSheet({ id: "p1", name: "Okafor", type: "flip", budget: null, status: "active" });
     expect(screen.getByRole("dialog", { name: "עריכת פרויקט" })).toBeInTheDocument();
