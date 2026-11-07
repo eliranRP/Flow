@@ -75,6 +75,14 @@ describe("forecast skip keys by screen (FLOW-1081)", () => {
     expect(keyOf("rec:expense:power", "p2")).toBe("party:expense:power:USD:p2");
     expect(keyOf("rec:expense:hoa", "p1")).toBe("party:expense:hoa:USD");
   });
+
+  it("keys a month to come's row as this month does when the forecast names its split parties (FLOW-1096)", () => {
+    const part = (keys: string[]) => ({ forecast: { rows: keys.map((key) => ({ key })), removed: [], skipped: [] } });
+    // The party has two charges, but only one is due this month: still split, as the month forecast and the project's צפי page key it.
+    const keyOf = futureForecastKey({ parts: [part(["rec:expense:power"])], splitKeys: new Set(["party:expense:power:USD"]) } as never, "USD");
+    expect(keyOf("rec:expense:power", "p2")).toBe("party:expense:power:USD:p2");
+    expect(keyOf("rec:expense:hoa", "p1")).toBe("party:expense:hoa:USD");
+  });
 });
 
 describe("useForecastSkip", () => {

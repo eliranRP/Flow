@@ -12,7 +12,10 @@ import { HEBREW_MONTHS } from "./ui/date-math";
  * month of the forecast (companyMonthForecast), 12 months ahead, which Home and the צפי pages show.
  */
 
-export type RestOfYearInput = Omit<CompanyForecastInput, "month">;
+export type RestOfYearInput = Omit<CompanyForecastInput, "month" | "skips"> & {
+  /** FLOW-1096: each month's keys taken out of it (FLOW-1079), by yyyy-mm; a month with none counts every charge. */
+  skipsByMonth?: Readonly<Record<string, readonly string[]>>;
+};
 
 /** One month left in the year: its positive totals. */
 export type RestOfYearMonth = { month: string; incomeMinor: bigint; expenseMinor: bigint };
@@ -57,9 +60,11 @@ function monthEdits(inputs: CompanyNextMonthInputs, month: string): CompanyForec
  * its own edits in place of next month's, so companyNextMonthForecast and companyGeneralForecast build it. Next
  * month keeps the read's own `edits`, so its pages read exactly as before.
  */
-export function companyMonthInput(input: RestOfYearInput, month: string): CompanyForecastInput {
-  if (month === input.inputs.month) return { ...input, month };
-  return { ...input, inputs: { ...input.inputs, edits: monthEdits(input.inputs, month) }, month };
+export function companyMonthInput({ skipsByMonth, ...input }: RestOfYearInput, month: string): CompanyForecastInput {
+  const skips = skipsByMonth?.[month];
+  const own = skips == null ? {} : { skips };
+  if (month === input.inputs.month) return { ...input, ...own, month };
+  return { ...input, ...own, inputs: { ...input.inputs, edits: monthEdits(input.inputs, month) }, month };
 }
 
 /** FLOW-1066: the company's forecast for any month of the forecast, from next month's reads. */
@@ -69,15 +74,18 @@ export function companyMonthForecast(input: RestOfYearInput, month: string): Com
 
 /**
  * The rest of the year for the whole company, or null in December (nothing is left). A line that already came
- * against an added edit leaves that month only; in another month the edit is expected again.
+ * against an added edit leaves that month only; in another month the edit is expected again. FLOW-1096: a charge
+ * taken out of one month (skipsByMonth) leaves that month's totals only.
  */
 export function companyRestOfYear(input: RestOfYearInput): RestOfYear | null {
   const months = restOfYearMonths(input.today);
   if (months.length === 0) return null;
+  const { skipsByMonth, ...reads } = input;
   const forecasts = months.map((month) => companyNextMonthForecast({
-    ...input,
-    inputs: { ...input.inputs, edits: monthEdits(input.inputs, month) },
+    ...reads,
+    inputs: { ...reads.inputs, edits: monthEdits(reads.inputs, month) },
     month,
+    skips: skipsByMonth?.[month],
   }));
   const incomeMinor = forecasts.reduce((sum, forecast) => sum + forecast.incomeMinor, 0n);
   const expenseMinor = forecasts.reduce((sum, forecast) => sum + forecast.expenseMinor, 0n);

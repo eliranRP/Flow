@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
-import { companyMonthInput, companyRestOfYear, type RestOfYear } from "./company-year-forecast";
+import { companyMonthInput, companyRestOfYear, restOfYearMonths, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -12,7 +12,7 @@ import { useHomePreview } from "./preview";
 import type { ForecastLoan } from "./project-next-loans";
 import { nextMonthKey } from "./project-next-month";
 import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-next-month-query";
-import { skippedKeys, useForecastOverrides } from "./forecast-skip";
+import { skippedKeys, useForecastOverrides, useSkipsByMonth } from "./forecast-skip";
 import { useCategoriesQuery } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -91,7 +91,14 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   // FLOW-1079: a month of the forecast counts what was taken out of it for that month only.
   const overrides = useForecastOverrides(month ?? "", live && month != null);
   const skipList = overrides.data;
-  const skips = useMemo(() => (skipList == null ? undefined : [...skippedKeys(skipList)]), [skipList]);
+  // FLOW-1096: without a month (the profit page), next month and each month left in the year count what was taken
+  // out of them, from the same reads; until those are in, every charge.
+  const yearMonths = useMemo(() => [...new Set([nextMonthKey(today), ...restOfYearMonths(today)])], [today]);
+  const skipsByMonth = useSkipsByMonth(yearMonths, live && month == null);
+  const skips = useMemo(
+    () => (month == null ? skipsByMonth?.[nextMonthKey(today)] : skipList == null ? undefined : [...skippedKeys(skipList)]),
+    [month, skipsByMonth, today, skipList],
+  );
   const recurring = sample?.recurring ?? expected.data?.recurring;
   const loanList = sample?.loans ?? loans.data ?? (sample == null ? undefined : NO_LOANS);
   const categoryList = sample?.categories ?? categories.data;
@@ -109,9 +116,9 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   // The year view's rest of the year (decision 0200): the same reads, built again for each month left.
   const rest: RestOfYear | null = useMemo(
     () => (recurring != null && loanList != null && categoryList != null && inputData != null
-      ? companyRestOfYear({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData })
+      ? companyRestOfYear({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData, skipsByMonth })
       : null),
-    [recurring, loanList, categoryList, inputData, currency, today],
+    [recurring, loanList, categoryList, inputData, currency, today, skipsByMonth],
   );
   const reads = month == null || sample != null ? [expected, loans, inputs, categories] : [expected, loans, inputs, categories, overrides];
   return {

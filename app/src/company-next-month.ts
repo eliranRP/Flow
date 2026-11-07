@@ -58,6 +58,16 @@ export type CompanyNextMonth = {
   rows: (NextMonthRow & { projectId: string | null })[];
   /** The parts with at least one row, projects first in id order, the general costs last. */
   parts: CompanyForecastPart[];
+  /**
+   * FLOW-1096: every part's rows taken out of the month (FLOW-1079), with the part's project, a part left with no
+   * row included, so what was taken out can still be put back.
+   */
+  skipped?: { projectId: string | null; row: NextMonthRow }[];
+  /**
+   * FLOW-1096: the parties split by project (`party:<direction>:<party>:<currency>`, more than one charge in the
+   * currency, as the month forecast keys them), so a month to come keys a charge as this month does.
+   */
+  splitKeys?: ReadonlySet<string>;
 };
 
 /**
@@ -167,7 +177,19 @@ export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNe
     netMinor: incomeMinor - expenseMinor,
     rows: kept.flatMap((part) => part.forecast.rows.map((row) => ({ ...row, projectId: part.projectId }))),
     parts: kept,
+    skipped: parts.flatMap((part) => (part.forecast.skipped ?? []).map((row) => ({ projectId: part.projectId, row }))),
+    splitKeys: splitPartyKeys(input.recurring),
   };
+}
+
+/** FLOW-1096: the parties with more than one charge in a currency, as the month forecast splits them (decision 0185). */
+export function splitPartyKeys(recurring: readonly Pick<ExpectedParty, "direction" | "party_id" | "currency">[]): Set<string> {
+  const charges = new Map<string, number>();
+  for (const party of recurring) {
+    const base = `party:${party.direction}:${party.party_id}:${party.currency}`;
+    charges.set(base, (charges.get(base) ?? 0) + 1);
+  }
+  return new Set([...charges].filter(([, count]) => count > 1).map(([base]) => base));
 }
 
 /**
