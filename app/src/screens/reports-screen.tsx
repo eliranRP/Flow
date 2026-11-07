@@ -56,6 +56,8 @@ export type PnlSample = {
   /** The same by project: the project view, the general expenses' drill-down and the share sheet's projects. */
   byProject?: Statement;
   months?: NonNullable<ProfitMonths>;
+  /** FLOW-1102: the by-month read still loading or failed (a month's drill has no months to step through yet). */
+  monthsRead?: "loading" | "failed";
   /** The drilled project's or month's own statement. */
   drilled?: Statement | null;
   phase?: ScreenPhase;
@@ -168,7 +170,7 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
   const drillRead = usePnl(drillRange, general ? null : projectKey, false, live && drill != null && !general);
   const statement = live ? allRead.data : sample.statement;
   const byProject = live ? byProjectRead.data : sample.byProject;
-  const months = live ? monthsRead.data : sample.months;
+  const months = live ? monthsRead.data : sample.monthsRead == null ? sample.months : undefined;
   const drilled = live ? drillRead.data : sample.drilled;
 
   const go = (next: PnlRoute) => {
@@ -185,6 +187,8 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
   const base = statement?.currencies[0]?.currency ?? "ILS";
   const monthList = month == null ? [] : monthChoices(months == null ? [] : pnlMonthRows(months, base).map((row) => row.key), month);
   const near = month == null ? null : monthNeighbours(monthList.map((item) => item.key), month);
+  // FLOW-1102: a drilled month whose months are not in yet: the chevrons say why they wait, and a failure says so with its retry.
+  const monthsWait: "loading" | "failed" | null = month == null || months != null ? null : (live ? monthsRead.failed : sample.monthsRead === "failed") ? "failed" : "loading";
   const top = statement?.currencies.find((row) => row.currency === base);
   const drilledRow = drill == null ? null : general ? (byProject == null ? undefined : generalStatementRow(byProject, projectKey, base)) : drilled === undefined ? undefined : drilled === null ? null : (drilled.currencies.find((row) => row.currency === base) ?? drilled.currencies[0] ?? emptyRow(base));
   const bandRead = drill == null ? allRead : general ? byProjectRead : drillRead;
@@ -273,6 +277,9 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
     );
   }
 
+  const monthsFailed = monthsWait === "failed" && phase.kind === "ready"
+    ? <FailureLine offline={!online} message="לא הצלחנו לטעון את החודשים." onRetry={() => { if (live) monthsRead.refetch(); }} />
+    : null;
   const attention = drill == null && phase.kind === "ready" && statement != null && statement.review_count > 0
     ? <AttentionCards storageKey="reports" title="לבדיקה" rows={[{ id: "review", to: `/review${search}`, title: `${String(statement.review_count)} תנועות לא נכללו · לבדיקה`, short: "לא נכללו", tag: countTag(statement.review_count, "תנועה אחת", "תנועות"), dismissKey: `review:${String(statement.review_count)}` }]} />
     : null;
@@ -286,7 +293,12 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
           ? {
               label: monthTitleOf(month),
               onOpen: () => { monthPick.setOpen(true); },
-              step: { earlier: near.earlier == null ? null : "חודש קודם", later: near.later == null ? null : "חודש הבא", onStep: (delta) => { const key = delta < 0 ? near.earlier : near.later; if (key != null) toMonth(key); } },
+              step: {
+                earlier: near.earlier == null ? null : "חודש קודם",
+                later: near.later == null ? null : "חודש הבא",
+                onStep: (delta) => { const key = delta < 0 ? near.earlier : near.later; if (key != null) toMonth(key); },
+                reason: monthsWait === "loading" ? "החודשים עוד נטענים" : monthsWait === "failed" ? "החודשים לא נטענו" : null,
+              },
             }
           : { label: pnlChipLabel(route.period, today), onOpen: () => { period.setOpen(true); } }}
         figureLabel="רווח נקי"
@@ -306,7 +318,7 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
         ) : null}
         offlineSince={offlineSince}
         failed={phase.kind === "error" ? { offline: phase.offline, onRetry: bandRead.refetch } : null}
-        top={attention}
+        top={attention ?? monthsFailed}
       >
         {body}
         {phase.kind === "ready" ? <p className="ui-rep-note">{`נספר לפי ${statement == null || statement.basis === "cash" ? "מזומן" : "חשבוניות"}. דוח ניהולי, לא דוח כספי מבוקר.`}</p> : null}

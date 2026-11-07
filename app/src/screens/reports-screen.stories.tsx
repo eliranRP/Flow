@@ -278,6 +278,33 @@ export const MonthDrillSheet320: Story = {
   },
 };
 
+/** FLOW-1102 at 320: the by-month read is still in, so neither chevron steps yet; each says why to a screen reader. */
+export const MonthDrillMonthsLoading320: Story = {
+  name: "P&L · a month drilled · its months loading at 320",
+  ...phone320,
+  render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "loading" }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים עוד נטענים");
+    await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAccessibleDescription("החודשים עוד נטענים");
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1102 at 320: the by-month read failed: one line says so, with its retry, above the month's groups. */
+export const MonthDrillMonthsFailed320: Story = {
+  name: "P&L · a month drilled · its months failed at 320",
+  ...phone320,
+  render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "failed" }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("לא הצלחנו לטעון את החודשים.")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים לא נטענו");
+    await fits(canvasElement);
+  },
+};
+
 /** Scrolled: the band bar slides in, and the view control docks into it; a pick there keeps it docked. */
 export const Docked: Story = {
   name: "P&L · the view docked in the band bar",
@@ -292,7 +319,7 @@ export const Docked: Story = {
   },
 };
 
-/** The review card hidden on this device: its section folds to one line with ביטול. */
+/** The review card hidden on this device: its section folds to one line with הצגת הכול. */
 export const AttentionHidden: Story = {
   name: "P&L · the review card hidden",
   render: () => {

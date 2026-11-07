@@ -355,6 +355,12 @@ describe("MonthStepper (FLOW-362)", () => {
     fireEvent.click(next);
     expect(onStep).not.toHaveBeenCalled();
   });
+
+  it("says its own reason on each dimmed chevron when the months are not in yet (FLOW-1102)", () => {
+    render(<MonthStepper earlier={null} later={null} onStep={() => undefined} reason="החודשים עוד נטענים" />);
+    expect(screen.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים עוד נטענים");
+    expect(screen.getByRole("button", { name: "חודש הבא" })).toHaveAccessibleDescription("החודשים עוד נטענים");
+  });
 });
 
 describe("MonthStepper on the band and with a centre (FLOW-364)", () => {

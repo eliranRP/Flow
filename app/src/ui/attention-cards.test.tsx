@@ -81,15 +81,17 @@ describe("AttentionCards (FLOW-1043)", () => {
     expect(screen.queryByRole("button", { name: /הוסתרו/ })).toBeNull();
   });
 
-  it("folds the section to one line when every card is hidden, and ביטול brings them back", () => {
+  it("folds the section to one line when every card is hidden, and הצגת הכול brings them back", () => {
     const rows = ROWS.filter((row) => row.button == null);
     render(cards(rows));
     dismiss("4 חיובים קבועים השתנו");
     dismiss("3 חשבוניות פתוחות");
     expect(screen.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
     expect(screen.getByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
-    // The section's own ביטול (the toast offers one too, for the last card only).
-    fireEvent.click(within(screen.getByRole("region", { name: "דורש טיפול" })).getByRole("button", { name: "ביטול" }));
+    // FLOW-1102: the section's button is הצגת הכול; ביטול is only the toast's, which brings back the last card only.
+    const section = within(screen.getByRole("region", { name: "דורש טיפול" }));
+    expect(section.queryByRole("button", { name: "ביטול" })).toBeNull();
+    fireEvent.click(section.getByRole("button", { name: "הצגת הכול" }));
     expect(screen.getAllByRole("link")).toHaveLength(2);
     expect(screen.queryByText("אין מה לטפל · הכול נסקר")).toBeNull();
   });

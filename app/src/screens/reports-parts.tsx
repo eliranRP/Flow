@@ -142,8 +142,11 @@ function UndrillButton({ label, onBack }: { label: string; onBack: () => void })
   );
 }
 
-/** The pill's chevrons: the earlier and later month's labels (null: none that way) and the step. */
-export type ReportPillStep = { earlier: string | null; later: string | null; onStep: (delta: -1 | 1) => void };
+/**
+ * The pill's chevrons: the earlier and later month's labels (null: none that way) and the step. FLOW-1102: `reason`
+ * says why both wait while the months are not in (loading or failed), in place of the end of the list's.
+ */
+export type ReportPillStep = { earlier: string | null; later: string | null; onStep: (delta: -1 | 1) => void; reason?: string | null };
 
 /**
  * FLOW-1045 (board V3-Report, the Overview pattern): the report's violet band (the name, the period or date
@@ -200,7 +203,7 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
             <FocusTitle className="t-name ui-rep-band-name">{name}</FocusTitle>
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
             {pill.step == null ? pillButton : (
-              <MonthStepper earlier={pill.step.earlier} later={pill.step.later} onBand onStep={pill.step.onStep}>
+              <MonthStepper earlier={pill.step.earlier} later={pill.step.later} onBand onStep={pill.step.onStep} reason={pill.step.reason ?? null}>
                 {pillButton}
               </MonthStepper>
             )}

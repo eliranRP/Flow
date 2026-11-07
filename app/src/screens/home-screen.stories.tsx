@@ -246,14 +246,14 @@ export const HomeAttentionSomeHidden: Story = {
   },
 };
 
-/** FLOW-1036: with no review waiting, every card can be hidden: one line remains, with ביטול. */
+/** FLOW-1036: with no review waiting, every card can be hidden: one line remains, with הצגת הכול (FLOW-1102). */
 export const HomeAttentionAllHidden: Story = {
   name: "Home attention, all hidden",
   render: () => <CashHomeStory review={false} hidden={{ transfers: "transfers:2", unpaid: "unpaid:3:460000" }} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
-    await expect(canvas.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "הצגת הכול" })).toBeInTheDocument();
   },
 };
 

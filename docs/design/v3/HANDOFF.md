@@ -44,7 +44,7 @@ The owner liked v2's look and asked to keep it. v3 rearranges today's components
 - **Dismissable row-cards ("דורש טיפול"):**
   - 56px tall, surface fill with a line border, radius 16 (`--radius-card-tight`), icon or dot, one-line title, chevron, and a 44px X with `aria-label="הסתרה: <title>"`.
   - The X slides the card 24px toward it, then folds it: `max-height` 220ms `--ease-exit`, opacity 160ms.
-  - "N הוסתרו · הצגה" restores. When every card is hidden, the section folds to one line, "אין מה לטפל · הכול נסקר", with ביטול.
+  - "N הוסתרו · הצגה" restores. When every card is hidden, the section folds to one line, "אין מה לטפל · הכול נסקר", with הצגת הכול (FLOW-1102: brings back every card; ביטול is only the toast's).
   - A hidden card stays hidden on this device until its content changes. Key it by row kind plus what it counts. Keep it in localStorage, with every read and write in try/catch.
 - **Status marks on rows:** the same three marks on every list. Shape tells them apart, not colour alone.
   - **Dashed ring:** due or expected. It uses the signal colour when late.

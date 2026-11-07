@@ -102,7 +102,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
 ```
 
 - Each row is a 56px card: surface fill, `--color-line` border, radius `--radius-card-tight` (the existing 16px token in `implementation-tokens.css`), the row's icon, a one-line title (`t-body`, ellipsis), a chevron, and a 44px X with `aria-label="הסתרה: <title text>"`. A row with `button` (the review row) is the first card and has no X. The card body is the link.
-- The X slides the card 24px toward itself, then folds it: `max-height` over `--motion-sheet-out` with `--ease-exit`, opacity 160ms. The section head shows "N הוסתרו · הצגה" when some are hidden; when every row is hidden the section is one 44px line, "אין מה לטפל · הכול נסקר" with a check in the income colour, and ביטול. The section is `aria-live="polite"`.
+- The X slides the card 24px toward itself, then folds it: `max-height` over `--motion-sheet-out` with `--ease-exit`, opacity 160ms. The section head shows "N הוסתרו · הצגה" when some are hidden; when every row is hidden the section is one 44px line, "אין מה לטפל · הכול נסקר" with a check in the income colour, and הצגת הכול (FLOW-1102). The section is `aria-live="polite"`.
 - Persistence in `attention-dismiss.ts`: `readHidden(storageKey): Record<string, string>` (row id to dismissKey), `hideRow`, `restoreAll`. A row is hidden while its stored dismissKey equals its current one, so a changed count shows the row again. Every read and write is in try/catch; with no storage the cards work for the session.
 - `max-height` is the one property animated beyond transform and opacity (handoff §6).
 

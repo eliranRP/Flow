@@ -104,14 +104,16 @@ describe("the lines with no project (FLOW-1044)", () => {
     expect(await screen.findByText("3 תנועות")).toBeInTheDocument();
   });
 
-  it("closing the new-project sheet with ✕ puts focus back on the שיוך that opened the picker (FLOW-1093)", async () => {
+  // FLOW-1102: Escape too, not only ✕.
+  it.each(["✕", "Escape"])("closing the new-project sheet with %s puts focus back on the שיוך that opened the picker (FLOW-1093)", async (how) => {
     renderWithProviders(<ProjectUnassignedScreen sample={UNASSIGNED_SAMPLE} />);
     const opener = screen.getAllByRole("button", { name: "שיוך" })[0] as HTMLElement;
     fireEvent.click(opener);
     const picker = await screen.findByRole("dialog", { name: "לאיזה פרויקט?" });
     fireEvent.click(within(picker).getByRole("button", { name: "+ פרויקט חדש" }));
     const sheet = await screen.findByRole("dialog", { name: "פרויקט חדש" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
+    if (how === "Escape") fireEvent.keyDown(sheet, { key: "Escape" });
+    else fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).toBeNull(); });
     await waitFor(() => { expect(document.activeElement).toBe(opener); });
   });

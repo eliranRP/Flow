@@ -218,6 +218,25 @@ describe("the P&L", () => {
     expect(where()).toBe("/reports/pnl?view=month&month=2026-10");
   });
 
+  it("in a month's drill, while the months are loading, both chevrons wait and say why (FLOW-1102)", () => {
+    renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "loading" }, "/reports/pnl?view=month&month=2026-10");
+    for (const name of ["חודש קודם", "חודש הבא"]) {
+      const arrow = screen.getByRole("button", { name });
+      expect(arrow).toHaveAttribute("aria-disabled", "true");
+      expect(arrow).toHaveAccessibleDescription("החודשים עוד נטענים");
+    }
+    expect(screen.queryByText("לא הצלחנו לטעון את החודשים.")).toBeNull();
+  });
+
+  it("in a month's drill, a failed months read says so with a retry, and the chevrons say why they wait (FLOW-1102)", () => {
+    renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "failed" }, "/reports/pnl?view=month&month=2026-10");
+    const line = screen.getByText("לא הצלחנו לטעון את החודשים.").closest("[role=status]") as HTMLElement;
+    expect(within(line).getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חודש הבא" })).toHaveAccessibleDescription("החודשים לא נטענו");
+    // The month's own figures still show under it.
+    expect(screen.getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
+  });
+
   it("in a month's drill, the compact bar names the month once; a project's drill keeps its period after it", () => {
     const view = renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
     expect(document.querySelector(".ui-rep-bar-title")?.textContent).toBe("אוקטובר 2026");
