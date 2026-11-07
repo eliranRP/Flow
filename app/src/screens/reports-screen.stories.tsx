@@ -82,6 +82,8 @@ async function fits(canvasElement: HTMLElement) {
  * name and the amount, across the row up to the chevron's column. Measured in Rubik, once the fonts are in.
  */
 async function hintsWhole(canvasElement: HTMLElement) {
+  // Rubik is swapped in (font-display: swap); `ready` can resolve before the first layout asks for it.
+  await canvasElement.ownerDocument.fonts.load("400 13px Rubik");
   await canvasElement.ownerDocument.fonts.ready;
   const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")].filter((hint) => hint.querySelector(".ui-rep-hint-short") != null);
   await expect(hints.length).toBeGreaterThan(0);

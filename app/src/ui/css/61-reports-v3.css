@@ -275,8 +275,8 @@
   display: contents;
 }
 
-/* FLOW-1098: with .ui-row-main flattened, its children are the grid's. Only reportHint's rows match (ViewGroups and
-   NetGroup), and they carry the name, the hint, the amount and the chevron and nothing else. An icon or initials
+/* FLOW-1098: with .ui-row-main flattened, its children are the grid's. Only reportHint's rows match (ViewGroups,
+   NetGroup and KeptOut), and they carry the name, the hint, the amount and the chevron and nothing else. An icon or initials
    before the name takes a lead column across both lines. A mark (the project page's) is the row's own child, not
    .ui-row-main's, so the amount rule below gives it the amount's area; a report row that adds one gives it a column
    of its own. Nothing auto-places. */
