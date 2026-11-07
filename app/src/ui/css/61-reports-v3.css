@@ -238,19 +238,30 @@
   line-height: var(--type-title-line);
 }
 
-/* FLOW-1082: a report row's hint wraps to at most two lines between its "·" parts; a part with a figure never breaks,
-   so no amount is cut at 320. */
 .ui-rep-hint-text {
-  display: -webkit-box;
-  min-inline-size: 0;
   overflow: hidden;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ui-rep-hint-part {
-  white-space: nowrap;
+/* FLOW-1082 (the owner, 2026-11-07): one line; below 360px its figures are short ($30K), so none is cut. The full
+   line stays for a screen reader, the short one is hidden from it. */
+.ui-rep-hint-short {
+  display: none;
+}
+
+@media (max-width: 359px) {
+  .ui-rep-hint-full {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .ui-rep-hint-short {
+    display: inline;
+  }
 }
 
 .ui-rep-v3-group .ui-row-end .ui-num {

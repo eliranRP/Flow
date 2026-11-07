@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { Fragment, useId, type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { balanceWarning, type BalanceCurrency } from "../reports";
 import type { NetRow, ViewGroup, ViewRow } from "../report-views";
@@ -295,30 +295,40 @@ export function rowShare(amount: bigint, total: bigint): RowShare {
   return share === 0 && amount !== 0n && total !== 0n ? "under-1" : share;
 }
 
+/** A report row's line with figures, in full and with short figures for below 360px (FLOW-1082). */
+export type HintFigures = { full: string; short: string };
+
+/**
+ * FLOW-1082 (the owner, 2026-11-07: one line, short amounts): a row's labelled figures, "הכנסות $30,000 · הוצאות
+ * $17,000" in full and "הכנסות $30K · הוצאות $17K" below 360px. The exact figures are in the drill-down.
+ */
+export function hintFigures(parts: readonly (readonly [label: string, amount: bigint])[], currency: string): HintFigures {
+  const line = (compact: boolean) => parts.map(([label, amount]) => `${label} ${formatAmountText(amount, currency, compact ? { compact, compactFrom: 1_000 } : undefined)}`).join(" · ");
+  return { full: line(false), short: line(true) };
+}
+
 /**
  * FLOW-1064 (the owner, 2026-11-06: the bar "looks childish", a percent instead): a report row's line under its
- * name. The row's share of its group leads it as a whole percent, "85% · <the hint>", or alone as "85% מהקבוצה"
- * when the row has no hint. FLOW-1082: the line wraps to at most two lines between its "·" parts, and a part with a
- * figure never breaks, so no amount is cut at 320.
+ * name, on one line. The row's share of its group leads it as a whole percent, "85% · <the hint>", or alone as
+ * "85% מהקבוצה" when the row has no hint. FLOW-1082: a line with figures shows them short below 360px, so no
+ * amount is cut at 320; a screen reader reads the full figures once.
  */
-export function reportHint(text: string | undefined, share?: RowShare): ReactNode {
+export function reportHint(text: string | HintFigures | undefined, share?: RowShare): ReactNode {
   if (text == null && share == null) return undefined;
-  const parts: ReactNode[] = [];
-  if (share != null) {
-    parts.push(share === "under-1" ? <>פחות מ־<bdi dir="ltr">1%</bdi></> : <bdi dir="ltr">{`${String(share)}%`}</bdi>);
-  }
-  for (const part of text?.split(" · ") ?? []) parts.push(part);
+  const percent = share == null ? null : share === "under-1" ? <>פחות מ־<bdi dir="ltr">1%</bdi></> : <bdi dir="ltr">{`${String(share)}%`}</bdi>;
+  const rest = text == null ? " מהקבוצה" : typeof text === "string" ? (
+    text
+  ) : (
+    <>
+      <span className="ui-rep-hint-full">{text.full}</span>
+      <span className="ui-rep-hint-short" aria-hidden="true">{text.short}</span>
+    </>
+  );
   return (
     <span className="ui-rep-hint-text" data-clip-ok="">
-      {parts.map((part, index) => (
-        // The parts are fixed per row and never reorder. A part with a figure (or the percent) stays whole; the line
-        // breaks only at the " · " between parts, which sits outside them.
-        <Fragment key={index}>
-          {index === 0 ? null : " · "}
-          {typeof part === "string" && !/\d/.test(part) ? part : <span className="ui-rep-hint-part">{part}</span>}
-        </Fragment>
-      ))}
-      {text == null ? " מהקבוצה" : null}
+      {percent}
+      {percent == null || text == null ? null : " · "}
+      {rest}
     </span>
   );
 }
@@ -370,14 +380,13 @@ export function ViewGroups({ id, groups, currency, href, bars = () => true }: {
 }
 
 /** By project or by month: a group of rows, each its net with its income and expenses under it, each opening its own report. */
-export function NetGroup({ id, title, rows, currency, open, hint }: {
+export function NetGroup({ id, title, rows, currency, open }: {
   id: string;
   title: string;
   rows: readonly NetRow[];
   currency: string;
   /** The drill-down a row opens; none for a row that has nothing to open. */
   open: (row: NetRow) => string | undefined;
-  hint?: (row: NetRow) => string;
 }) {
   if (rows.length === 0) return null;
   const total = rows.reduce((sum, row) => sum + row.net, 0n);
@@ -395,7 +404,7 @@ export function NetGroup({ id, title, rows, currency, open, hint }: {
               variant="project"
               title={slashBreaks(row.name)}
               wrapTitle
-              hint={reportHint(hint?.(row) ?? `הכנסות ${amountText(row.income, currency)} · הוצאות ${amountText(row.expense, currency)}`, rows.length < 2 ? undefined : rowShare(row.net, whole))}
+              hint={reportHint(hintFigures([["הכנסות", row.income], ["הוצאות", row.expense]], currency), rows.length < 2 ? undefined : rowShare(row.net, whole))}
               {...(to == null ? {} : { href: to, state: { reportDrill: true } })}
               chevron={to != null}
               chevronSpace={to == null}

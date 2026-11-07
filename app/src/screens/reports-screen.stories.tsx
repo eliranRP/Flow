@@ -74,19 +74,18 @@ async function fits(canvasElement: HTMLElement) {
 }
 
 /**
- * FLOW-1082: every report row's hint is whole: at most two lines, never clamped, and each part with a figure inside
- * its line, so no amount is cut.
+ * FLOW-1082 (the owner, 2026-11-07: one line, short amounts): every report row's hint with figures is one line and
+ * whole, with no ellipsis; below 360px it shows the short figures ($30K), from 360 the full ones.
  */
 async function hintsWhole(canvasElement: HTMLElement) {
-  const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")];
+  const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")].filter((hint) => hint.querySelector(".ui-rep-hint-short") != null);
   await expect(hints.length).toBeGreaterThan(0);
+  const narrow = canvasElement.ownerDocument.documentElement.clientWidth < 360;
   for (const hint of hints) {
-    await expect(hint.scrollHeight).toBeLessThanOrEqual(hint.clientHeight + 1);
-    const box = hint.getBoundingClientRect();
-    for (const part of hint.querySelectorAll<HTMLElement>(".ui-rep-hint-part")) {
-      const inner = part.getBoundingClientRect();
-      await expect(inner.left >= box.left - 1 && inner.right <= box.right + 1).toBe(true);
-    }
+    await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
+    await expect(hint.scrollWidth).toBeLessThanOrEqual(hint.clientWidth);
+    const short = hint.querySelector<HTMLElement>(".ui-rep-hint-short");
+    await expect(short == null ? "none" : getComputedStyle(short).display).toBe(narrow ? "inline" : "none");
   }
 }
 
@@ -165,7 +164,7 @@ export const ByProject: Story = {
 
 export const ByMonth: Story = { name: "P&L · by month", render: () => <Pnl entry="/reports/pnl?view=month" /> };
 
-/** FLOW-1082: at 320 a row's hint wraps to a second line before any amount is cut. */
+/** FLOW-1082: at 320 a row's hint stays on one line with short figures ($9.6K), none cut. */
 export const ByMonth320: Story = {
   name: "P&L · by month at 320",
   ...phone320,
@@ -184,11 +183,27 @@ const SMALL_PROJECT = {
   currencies: [{ currency: "USD", income_minor: 100_000n, expense_minor: 99_000n, net_minor: 1_000n, income: [], expense: [], kept_out: [] }],
 };
 
-/** FLOW-1082, FLOW-1083: by project at 320, each hint whole on at most two lines, the small row under 1%. */
+/** A $20M project, so the $130,000 row below is under 1% of its group and its amount is wide (a narrow hint column). */
+const HUGE_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000181",
+  project_id: "a0000000-0000-4000-8000-000000000181",
+  name: "Oak Ridge Estate",
+  currencies: [{ currency: "USD", income_minor: 2_000_000_000n, expense_minor: 0n, net_minor: 2_000_000_000n, income: [], expense: [], kept_out: [] }],
+};
+
+/** FLOW-1082: a small row with a wide amount leaves a narrow hint column at 320; its figures must all stay whole. */
+const WIDE_SMALL_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000182",
+  project_id: "a0000000-0000-4000-8000-000000000182",
+  name: "Birch Court",
+  currencies: [{ currency: "USD", income_minor: 14_000_000n, expense_minor: 1_000_000n, net_minor: 13_000_000n, income: [], expense: [], kept_out: [] }],
+};
+
+/** FLOW-1082, FLOW-1083: by project at 320, each hint whole, the small rows under 1%. */
 export const ByProject320: Story = {
   name: "P&L · by project at 320",
   ...phone320,
-  render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, SMALL_PROJECT] } }} />,
+  render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, SMALL_PROJECT, HUGE_PROJECT, WIDE_SMALL_PROJECT] } }} />,
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("link", { name: /Ash Row/ }).textContent).toContain("פחות מ־1%");
     await hintsWhole(canvasElement);
@@ -277,7 +292,7 @@ export const BalanceByProject: Story = {
   },
 };
 
-/** At 320 each row's line, led by its share of the group (FLOW-1064), wraps to two lines before a loan amount is cut (FLOW-1082). */
+/** At 320 each row's line, led by its share of the group (FLOW-1064), stays on one line with short figures, so no loan amount is cut (FLOW-1082). */
 export const BalanceByProject320: Story = {
   name: "Balance sheet · by project at 320",
   ...phone320,

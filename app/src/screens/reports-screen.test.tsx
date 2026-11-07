@@ -17,7 +17,7 @@ import {
 import { renderWithProviders } from "../test-render";
 import { BalanceReportScreen, type BalanceSample } from "./reports-balance-screen";
 import { ReportsHubScreen, ReportsScreen } from "./reports-hub-screen";
-import { barShare, reportHint, rowShare } from "./reports-parts";
+import { barShare, hintFigures, reportHint, rowShare } from "./reports-parts";
 import { PnlReportScreen, reportLinesPath, type PnlSample } from "./reports-screen";
 
 function LocationProbe() {
@@ -152,7 +152,11 @@ describe("the P&L", () => {
     renderPnl({}, "/reports/pnl?view=project");
     const cedar = screen.getByRole("link", { name: /Cedar St/ });
     expect(cedar.textContent).toContain("+$13,000");
-    expect(cedar.querySelector(".ui-rep-hint-text")?.textContent).toMatch(/^\d{1,3}% · הכנסות \$30,000 · הוצאות \$17,000$/);
+    expect(cedar.querySelector(".ui-rep-hint-full")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
+    expect(cedar.querySelector(".ui-rep-hint-short")?.textContent).toBe("הכנסות $30K · הוצאות $17K");
+    // A screen reader reads the full figures once: the short line is hidden from it.
+    expect(cedar.querySelector(".ui-rep-hint-short")).toHaveAttribute("aria-hidden", "true");
+    expect(cedar.querySelector(".ui-rep-hint-text")?.firstChild?.textContent).toMatch(/^\d{1,3}%$/);
     // The general expenses are one row alone: no percent.
     expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest("section")?.querySelector(".ui-rep-hint-text")?.textContent).not.toContain("%");
     expect(cedar).toHaveAttribute("href", `/reports/pnl?view=project&project=${CEDAR}`);
@@ -313,11 +317,19 @@ describe("rowShare", () => {
 });
 
 describe("reportHint", () => {
-  it("keeps each part with a figure whole and breaks only between parts (FLOW-1082)", () => {
-    const { container } = render(<>{reportHint("הכנסות $30,000 · הוצאות $17,000", 37)}</>);
-    expect(container.textContent).toBe("37% · הכנסות $30,000 · הוצאות $17,000");
-    expect([...container.querySelectorAll(".ui-rep-hint-part")].map((part) => part.textContent)).toEqual(["37%", "הכנסות $30,000", "הוצאות $17,000"]);
+  it("writes a line with figures in full and short, the short one hidden from a screen reader (FLOW-1082)", () => {
+    const { container } = render(<>{reportHint(hintFigures([["הכנסות", 3_000_000n], ["הוצאות", 1_700_000n]], "USD"), 37)}</>);
+    expect(container.querySelector(".ui-rep-hint-full")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
+    expect(container.querySelector(".ui-rep-hint-short")?.textContent).toBe("הכנסות $30K · הוצאות $17K");
+    expect(container.querySelector(".ui-rep-hint-short")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".ui-rep-hint-text")?.textContent.startsWith("37% · ")).toBe(true);
     const { container: plain } = render(<>{reportHint("מזומן ושאר החשבונות")}</>);
-    expect(plain.querySelector(".ui-rep-hint-part")).toBeNull();
+    expect(plain.textContent).toBe("מזומן ושאר החשבונות");
+    expect(plain.querySelector(".ui-rep-hint-short")).toBeNull();
+  });
+
+  it("keeps an amount under $1,000 whole and writes millions short", () => {
+    expect(hintFigures([["הכנסות", 100_000n], ["הוצאות", 99_000n]], "USD").short).toBe("הכנסות $1K · הוצאות $990");
+    expect(hintFigures([["שווי", 123_456_700n]], "USD").short).toBe("שווי $1.23M");
   });
 });

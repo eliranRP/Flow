@@ -108,6 +108,16 @@ describe("formatAmountText", () => {
     expect(formatAmountText(14_241_850n, "USD", { compact: true, detail: true })).toBe("$142,418.50");
   });
 
+  it("starts the K, M or B from compactFrom when given (FLOW-1082)", () => {
+    const short = (major: number) => formatAmountText(BigInt(major) * 100n, "USD", { compact: true, compactFrom: 1_000 });
+    expect(short(990)).toBe("$990");
+    expect(short(1_000)).toBe("$1K");
+    expect(short(12_400)).toBe("$12.4K");
+    expect(short(30_000)).toBe("$30K");
+    expect(short(1_234_567)).toBe("$1.23M");
+    expect(formatAmountText(3_000_000n, "USD", { compactFrom: 1_000 })).toBe("$30,000");
+  });
+
   it("never signs a figure that rounds to zero", () => {
     expect(formatAmountText(-30n, "ILS", { direction: "expense" })).toBe("₪0");
     expect(formatAmountText(50n, "USD", { direction: "expense" })).toBe("$0");
