@@ -1,5 +1,5 @@
 import { shekelsToAgorot } from "@flow/shared";
-import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useCompanyCurrency } from "../company-currency";
@@ -56,6 +56,7 @@ export function ProjectFormSheet({
   extras,
   focusBudget = false,
   onCreated,
+  returnFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,9 +67,11 @@ export function ProjectFormSheet({
   focusBudget?: boolean;
   /** FLOW-1093: a new project goes here (its id and name) in place of opening its page and the create toast. */
   onCreated?: (id: string, name: string) => void;
+  /** FLOW-1093: ✕ and Escape put focus back on the control that opened the sheet (a removed control is skipped). */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
+    <Sheet open={open} onOpenChange={onOpenChange} returnFocusRef={returnFocusRef} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
       <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} focusBudget={focusBudget} onCreated={onCreated} onClose={() => { onOpenChange(false); }} />
     </Sheet>
   );

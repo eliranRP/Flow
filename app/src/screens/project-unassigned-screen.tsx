@@ -243,6 +243,7 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
       <ProjectFormSheet
         open={creating != null}
         onOpenChange={(open) => { if (!open) setCreating(null); }}
+        returnFocusRef={opener}
         onCreated={(projectId, projectName) => {
           if (creating != null) assignTo(creating, projectId, projectName);
         }}
