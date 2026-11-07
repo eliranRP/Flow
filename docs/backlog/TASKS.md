@@ -241,6 +241,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-172"></a>[FLOW-172](tasks/FLOW-172.md) | List rows: a cut hint part can end in a space before "…" | BACKLOG NIT |
 | <a id="flow-1100"></a>[FLOW-1100](tasks/FLOW-1100.md) | A cut hint always ends in "…", even when Safari measures it wider than its box | SMALL CYCLE |
 | <a id="flow-1106"></a>[FLOW-1106](tasks/FLOW-1106.md) | The status bar's room covers what scrolls under it | SMALL CYCLE |
+| <a id="flow-1107"></a>[FLOW-1107](tasks/FLOW-1107.md) | The months to come drop the fallbacks no forecast needs | SMALL CYCLE |
 | <a id="flow-173"></a>[FLOW-173](tasks/FLOW-173.md) | get_account_lines: drop year_start from the output after one release | BACKLOG NIT |
 | <a id="flow-174"></a>[FLOW-174](tasks/FLOW-174.md) | Correct a posted journal entry in place, with its history | MCP + DB |
 | <a id="flow-176"></a>[FLOW-176](tasks/FLOW-176.md) | Set the project of one journal entry leg | MCP |

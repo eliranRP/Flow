@@ -28,7 +28,7 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
   currency: string;
   search: string;
 }): ActivityGroup[] {
-  if (nothingExpected(forecast) && (forecast.skipped ?? []).length === 0 && !forecast.parts.some((part) => (part.skipped ?? []).length > 0)) return [];
+  if (nothingExpected(forecast) && forecast.skipped.length === 0) return [];
   const names = new Map(projects.map((row) => [row.id, row.name]));
   const overhead = projects.find((row) => row.is_overhead) ?? null;
   const forecastKey = futureForecastKey(forecast, currency);
@@ -59,8 +59,7 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
     return [{ id: part.projectId ?? "general", title, rows, ...groupSums(rows, currency), due: true }];
   });
   // FLOW-1096: from every part, a project left with no row included, so it can still be put back.
-  const taken = forecast.skipped ?? forecast.parts.flatMap((part) => (part.forecast.skipped ?? []).map((row) => ({ projectId: part.projectId, row })));
-  const skipped = taken.map(({ projectId, row }): ActivityRow => ({
+  const skipped = forecast.skipped.map(({ projectId, row }): ActivityRow => ({
     key: `${projectId ?? "general"}:${row.key}`,
     title: row.name,
     meta: `לא צפוי ב${monthName(forecast.month)}`,

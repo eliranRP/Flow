@@ -10,23 +10,14 @@ import type { ScheduleRow } from "./recurring-schedule";
  * FLOW-1079: a month to come's recurring row as its forecast item, which a swipe takes out of that month only: the
  * party's key, with the part's project when the party is split (decision 0185). FLOW-1096: split as the month
  * forecast splits it (`splitKeys`, more than one charge in the currency), so this month, the months to come and a
- * project's צפי page give a charge one key; a forecast without them (an older sample) counts the month's parts.
+ * project's צפי page give a charge one key.
  */
-export function futureForecastKey(forecast: Pick<CompanyNextMonth, "parts" | "splitKeys">, currency: string): (rowKey: string, projectId: string | null) => string | undefined {
-  const recParts = new Map<string, number>();
-  if (forecast.splitKeys == null) {
-    for (const part of forecast.parts) {
-      for (const row of [...part.forecast.rows, ...part.forecast.removed, ...(part.forecast.skipped ?? [])]) {
-        if (row.key.startsWith("rec:")) recParts.set(row.key, (recParts.get(row.key) ?? 0) + 1);
-      }
-    }
-  }
+export function futureForecastKey(forecast: Pick<CompanyNextMonth, "splitKeys">, currency: string): (rowKey: string, projectId: string | null) => string | undefined {
   return (rowKey, projectId) => {
     const [kind, direction, party] = rowKey.split(":");
     if (kind !== "rec" || direction == null || party == null) return undefined;
     const base = `party:${direction}:${party}:${currency}`;
-    const split = forecast.splitKeys == null ? (recParts.get(rowKey) ?? 0) > 1 : forecast.splitKeys.has(base);
-    return split ? `${base}:${projectId ?? "none"}` : base;
+    return forecast.splitKeys.has(base) ? `${base}:${projectId ?? "none"}` : base;
   };
 }
 

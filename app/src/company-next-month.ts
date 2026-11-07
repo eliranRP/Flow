@@ -62,12 +62,12 @@ export type CompanyNextMonth = {
    * FLOW-1096: every part's rows taken out of the month (FLOW-1079), with the part's project, a part left with no
    * row included, so what was taken out can still be put back.
    */
-  skipped?: { projectId: string | null; row: NextMonthRow }[];
+  skipped: { projectId: string | null; row: NextMonthRow }[];
   /**
    * FLOW-1096: the parties split by project (`party:<direction>:<party>:<currency>`, more than one charge in the
    * currency, as the month forecast keys them), so a month to come keys a charge as this month does.
    */
-  splitKeys?: ReadonlySet<string>;
+  splitKeys: ReadonlySet<string>;
 };
 
 /**

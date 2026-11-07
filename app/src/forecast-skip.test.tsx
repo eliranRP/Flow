@@ -70,13 +70,6 @@ describe("forecast skip keys by screen (FLOW-1081)", () => {
     expect(projectRowForecastKey("bill:1", schedule, "p1", false, "USD")).toBeUndefined();
   });
 
-  it("keys a month to come's row by its part's project when the party is expected in more than one part", () => {
-    const part = (keys: string[]) => ({ forecast: { rows: keys.map((key) => ({ key })), removed: [], skipped: [] } });
-    const keyOf = futureForecastKey({ parts: [part(["rec:expense:power", "rec:expense:hoa"]), part(["rec:expense:power"])] } as never, "USD");
-    expect(keyOf("rec:expense:power", "p2")).toBe("party:expense:power:USD:p2");
-    expect(keyOf("rec:expense:hoa", "p1")).toBe("party:expense:hoa:USD");
-  });
-
   it("keys a month to come's row as this month does when the forecast names its split parties (FLOW-1096)", () => {
     const part = (keys: string[]) => ({ forecast: { rows: keys.map((key) => ({ key })), removed: [], skipped: [] } });
     // The party has two charges, but only one is due this month: still split, as the month forecast and the project's צפי page key it.
