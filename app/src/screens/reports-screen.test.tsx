@@ -152,11 +152,11 @@ describe("the P&L", () => {
     renderPnl({}, "/reports/pnl?view=project");
     const cedar = screen.getByRole("link", { name: /Cedar St/ });
     expect(cedar.textContent).toContain("+$13,000");
-    expect(cedar.querySelector(".ui-rep-hint-full")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
-    expect(cedar.querySelector(".ui-rep-hint-short")?.textContent).toBe("הכנסות $30K · הוצאות $17K");
+    expect(cedar.querySelector(".ui-rep-hint-full")?.textContent).toMatch(/^\d{1,3}% · הכנסות \$30,000 · הוצאות \$17,000$/);
+    expect(cedar.querySelector(".ui-rep-hint-short")?.textContent).toMatch(/^\d{1,3}% · הכנסות \$30K · הוצאות \$17K$/);
     // A screen reader reads the full figures once: the short line is hidden from it.
     expect(cedar.querySelector(".ui-rep-hint-short")).toHaveAttribute("aria-hidden", "true");
-    expect(cedar.querySelector(".ui-rep-hint-text")?.firstChild?.textContent).toMatch(/^\d{1,3}%$/);
+    expect(cedar.querySelector(".ui-rep-hint-full")?.firstChild?.textContent).toMatch(/^\d{1,3}%$/);
     // The general expenses are one row alone: no percent.
     expect(screen.getByRole("heading", { name: "כלליות · לא פרויקט" }).closest("section")?.querySelector(".ui-rep-hint-text")?.textContent).not.toContain("%");
     expect(cedar).toHaveAttribute("href", `/reports/pnl?view=project&project=${CEDAR}`);
@@ -384,13 +384,24 @@ describe("rowShare", () => {
 describe("reportHint", () => {
   it("writes a line with figures in full and short, the short one hidden from a screen reader (FLOW-1082)", () => {
     const { container } = render(<>{reportHint(hintFigures([["הכנסות", 3_000_000n], ["הוצאות", 1_700_000n]], "USD"), 37)}</>);
-    expect(container.querySelector(".ui-rep-hint-full")?.textContent).toBe("הכנסות $30,000 · הוצאות $17,000");
-    expect(container.querySelector(".ui-rep-hint-short")?.textContent).toBe("הכנסות $30K · הוצאות $17K");
+    expect(container.querySelector(".ui-rep-hint-full")?.textContent).toBe("37% · הכנסות $30,000 · הוצאות $17,000");
+    expect(container.querySelector(".ui-rep-hint-short")?.textContent).toBe("37% · הכנסות $30K · הוצאות $17K");
     expect(container.querySelector(".ui-rep-hint-short")).toHaveAttribute("aria-hidden", "true");
-    expect(container.querySelector(".ui-rep-hint-text")?.textContent.startsWith("37% · ")).toBe(true);
+    expect(container.querySelector(".ui-rep-hint-fit")?.textContent.startsWith("37% · ")).toBe(true);
     const { container: plain } = render(<>{reportHint("מזומן ושאר החשבונות")}</>);
     expect(plain.textContent).toBe("מזומן ושאר החשבונות");
     expect(plain.querySelector(".ui-rep-hint-short")).toBeNull();
+  });
+
+  it("writes under 1% as <1% in the short line only, and one line when the figures are the same short (FLOW-1108)", () => {
+    const { container } = render(<>{reportHint(hintFigures([["הכנסות", 12_000_000_000n], ["הוצאות", 11_999_000_000n]], "USD"), "under-1")}</>);
+    expect(container.querySelector(".ui-rep-hint-full")?.textContent).toBe("פחות מ־1% · הכנסות $120,000,000 · הוצאות $119,990,000");
+    expect(container.querySelector(".ui-rep-hint-short")?.textContent).toBe("<1% · הכנסות $120M · הוצאות $120M");
+    const { container: small } = render(<>{reportHint(hintFigures([["הכנסות", 50_000n]], "USD"), 12)}</>);
+    expect(small.textContent).toBe("12% · הכנסות $500");
+    expect(small.querySelector(".ui-rep-hint-fit")).toBeNull();
+    const { container: under } = render(<>{reportHint(hintFigures([["הכנסות", 50_000n]], "USD"), "under-1")}</>);
+    expect(under.querySelector(".ui-rep-hint-short")?.textContent).toBe("<1% · הכנסות $500");
   });
 
   it("keeps an amount under $1,000 whole and writes millions short", () => {

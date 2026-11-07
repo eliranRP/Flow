@@ -310,7 +310,7 @@ export function rowShare(amount: bigint, total: bigint): RowShare {
   return share === 0 && amount !== 0n && total !== 0n ? "under-1" : share;
 }
 
-/** A report row's line with figures, in full and with short figures for below 374px (FLOW-1082). */
+/** A report row's line with figures, in full and with short figures for below 374px or a line too long (FLOW-1082, FLOW-1108). */
 export type HintFigures = { full: string; short: string };
 
 /**
@@ -326,24 +326,31 @@ export function hintFigures(parts: readonly (readonly [label: string, amount: bi
  * FLOW-1064 (the owner, 2026-11-06: the bar "looks childish", a percent instead): a report row's line under its
  * name, on one line. The row's share of its group leads it as a whole percent, "85% · <the hint>", or alone as
  * "85% מהקבוצה" when the row has no hint. FLOW-1082: a line with figures shows them short below 374px, so no
- * amount is cut at 320; a screen reader reads the full figures once.
+ * amount is cut at 320; a screen reader reads the full figures once. FLOW-1108: from 374 a line with figures is
+ * written twice, in full and short ("<1%" for "פחות מ־1%"), and the row shows the full one when it fits (CSS).
  */
 export function reportHint(text: string | HintFigures | undefined, share?: RowShare): ReactNode {
   if (text == null && share == null) return undefined;
-  const percent = share == null ? null : share === "under-1" ? <>פחות מ־<bdi dir="ltr">1%</bdi></> : <bdi dir="ltr">{`${String(share)}%`}</bdi>;
-  const rest = text == null ? " מהקבוצה" : typeof text === "string" ? (
-    text
-  ) : (
+  const line = (rest: ReactNode, short = false) => (
     <>
-      <span className="ui-rep-hint-full">{text.full}</span>
-      <span className="ui-rep-hint-short" aria-hidden="true">{text.short}</span>
+      {share == null ? null : share === "under-1" ? short ? <bdi dir="ltr">{"<1%"}</bdi> : <>פחות מ־<bdi dir="ltr">1%</bdi></> : <bdi dir="ltr">{`${String(share)}%`}</bdi>}
+      {share == null || text == null ? null : " · "}
+      {rest}
     </>
   );
+  if (text == null || typeof text === "string" || (text.full === text.short && share !== "under-1")) {
+    return (
+      <span className="ui-rep-hint-text" data-clip-ok="">
+        {line(text == null ? " מהקבוצה" : typeof text === "string" ? text : text.full)}
+      </span>
+    );
+  }
   return (
-    <span className="ui-rep-hint-text" data-clip-ok="">
-      {percent}
-      {percent == null || text == null ? null : " · "}
-      {rest}
+    <span className="ui-rep-hint-text ui-rep-hint-fit">
+      <span className="ui-rep-hint-full">{line(text.full)}</span>
+      <span className="ui-rep-hint-short" aria-hidden="true">
+        <span>{line(text.short, true)}</span>
+      </span>
     </span>
   );
 }
