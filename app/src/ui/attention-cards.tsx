@@ -5,7 +5,7 @@ import type { BannerRow } from "./banner";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { CheckIcon, ChevronIcon, CloseIcon, InboxIcon } from "./icons";
-import { useToastIfAny } from "./toast";
+import { useToast } from "./toast";
 
 /** The slide and fold of a dismissed card (--motion-sheet-out, 220ms), with a frame to spare. */
 const FOLD_MS = 240;
@@ -59,7 +59,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const screenKey = useRef(storageKey);
   screenKey.current = storageKey;
-  const toast = useToastIfAny();
+  const toast = useToast();
   const undoToast = useRef<number | null>(null);
   // The section is a named region ("דורש טיפול"), as the box it replaces was: the e2e specs and screen readers find it by name.
   const titleId = useId();
@@ -94,14 +94,14 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
     }, reducedMotion() ? 0 : FOLD_MS);
     timers.current.set(row.id, timer);
     const screen = storageKey;
-    undoToast.current = toast?.show({
+    undoToast.current = toast.show({
       message: "הוסתר",
       action: "ביטול",
       durationMs: HIDE_UNDO_MS,
       onAction: () => {
         unhide(screen, row.id);
       },
-    }) ?? null;
+    });
   }
 
   /** FLOW-1094: the toast's ביטול. Only this card comes back, mid-fold or folded; it works after the page is left too. */
@@ -125,7 +125,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
     for (const timer of timers.current.values()) clearTimeout(timer);
     timers.current.clear();
     // Every card is back, so the last card's ביטול has nothing left to do.
-    if (undoToast.current != null) toast?.dismiss(undoToast.current);
+    if (undoToast.current != null) toast.dismiss(undoToast.current);
     undoToast.current = null;
     setLeaving(new Set());
     restoreAll(storageKey);

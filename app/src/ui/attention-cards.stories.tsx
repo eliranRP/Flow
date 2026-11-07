@@ -3,7 +3,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AttentionCards } from "./attention-cards";
 import type { BannerRow } from "./banner";
 import { AlertIcon, CalendarIcon, InvoiceIcon, RepeatIcon, TrendUpIcon } from "./icons";
-import { longHebrew, oneLineAttention, padded } from "./story-support";
+import { longHebrew, oneLineAttention, padded, withToasts } from "./story-support";
 
 /** FLOW-1043: the "דורש טיפול" row-cards. Invented rows; each story starts with nothing hidden. */
 const ROWS: BannerRow[] = [
@@ -27,7 +27,7 @@ const meta = {
   title: "Components/AttentionCards",
   component: AttentionCards,
   tags: ["autodocs"],
-  decorators: [padded],
+  decorators: [padded, withToasts],
   args: { rows: ROWS, storageKey: "story" },
   beforeEach: () => {
     try {
@@ -108,6 +108,8 @@ export const AllHidden: Story = {
       await userEvent.click(canvas.getByRole("button", { name: `הסתרה: ${title}` }));
     }
     await waitFor(() => expect(canvas.getByText("אין מה לטפל · הכול נסקר")).toBeVisible());
-    await expect(canvas.getByRole("button", { name: "ביטול" })).toBeVisible();
+    // The section's own ביטול; the "הוסתר" toast offers one too, for the last card only.
+    const section = within(canvas.getByRole("region", { name: "דורש טיפול" }));
+    await expect(section.getByRole("button", { name: "ביטול" })).toBeVisible();
   },
 };

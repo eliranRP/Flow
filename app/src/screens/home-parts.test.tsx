@@ -98,7 +98,8 @@ describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
     // Both stay on the row for 360px and up; 07-band-home.css swaps them for the ⋯ under 360px.
     expect(screen.getByRole("link", { name: "חיפוש" })).toHaveClass("ui-band-wide");
     expect(screen.getByRole("link", { name: "הגדרות וחשבון" })).toHaveClass("ui-band-wide");
-    const more = screen.getByRole("button", { name: "עוד" });
+    // vitest loads the app CSS, which hides the ⋯ at 1024px (display: none), and the role query skips hidden elements.
+    const more = screen.getByLabelText("עוד");
     expect(more).toHaveClass("ui-band-more", "ui-icon-btn");
     expect(more).toHaveAttribute("aria-haspopup", "dialog");
     fireEvent.click(more);

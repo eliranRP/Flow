@@ -128,9 +128,11 @@ describe("the add row (FLOW-1014)", () => {
 
   it("ends the list, after the groups (V3-Recurring)", () => {
     render(
-      <MemoryRouter>
-        <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11")} addLine={add} />
-      </MemoryRouter>,
+      <ToastProvider>
+        <MemoryRouter>
+          <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11")} addLine={add} />
+        </MemoryRouter>
+      </ToastProvider>,
     );
     const button = screen.getByRole("button", { name: "הוספת קבוע" });
     expect(button.previousElementSibling?.classList.contains("ui-recurring-group")).toBe(true);

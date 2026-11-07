@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AttentionCards, HIDE_UNDO_MS } from "./attention-cards";
@@ -12,11 +12,14 @@ const ROWS: BannerRow[] = [
   { id: "unpaid", to: "/unpaid", title: "3 חשבוניות פתוחות", dismissKey: "unpaid:3:2130000" },
 ];
 
-function cards(rows: readonly BannerRow[] = ROWS) {
+/** The cards inside the app's toasts, as the app root draws them. `shown: false` leaves the page, keeping the toasts. */
+function cards(rows: readonly BannerRow[] = ROWS, shown = true) {
   return (
-    <MemoryRouter>
-      <AttentionCards rows={rows} storageKey="home" />
-    </MemoryRouter>
+    <ToastProvider>
+      <MemoryRouter>
+        {shown ? <AttentionCards rows={rows} storageKey="home" /> : null}
+      </MemoryRouter>
+    </ToastProvider>
   );
 }
 
@@ -85,7 +88,8 @@ describe("AttentionCards (FLOW-1043)", () => {
     dismiss("3 חשבוניות פתוחות");
     expect(screen.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
     expect(screen.getByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    // The section's own ביטול (the toast offers one too, for the last card only).
+    fireEvent.click(within(screen.getByRole("region", { name: "דורש טיפול" })).getByRole("button", { name: "ביטול" }));
     expect(screen.getAllByRole("link")).toHaveLength(2);
     expect(screen.queryByText("אין מה לטפל · הכול נסקר")).toBeNull();
   });
@@ -106,7 +110,7 @@ describe("AttentionCards (FLOW-1043)", () => {
 
   it("draws nothing with no rows", () => {
     const { container } = render(cards([]));
-    expect(container).toBeEmptyDOMElement();
+    expect(container.querySelector("section, ul, a")).toBeNull();
   });
 
   it("FLOW-1097: draws a short title and tag beside the title, keeping the full title as the link's name", () => {
@@ -137,19 +141,9 @@ describe("AttentionCards' הוסתר toast (FLOW-1094)", () => {
     window.localStorage.clear();
   });
 
-  function withToasts() {
-    return render(
-      <ToastProvider>
-        <MemoryRouter>
-          <AttentionCards rows={ROWS} storageKey="home" />
-        </MemoryRouter>
-      </ToastProvider>,
-    );
-  }
-
   it("says הוסתר for 4s with ביטול, which brings back only that card; the head's link stays for the other", () => {
     expect(HIDE_UNDO_MS).toBe(4000);
-    withToasts();
+    render(cards());
     dismiss("4 חיובים קבועים השתנו");
     expect(screen.getByRole("status")).toHaveTextContent("הוסתר");
     dismiss("3 חשבוניות פתוחות");
@@ -163,7 +157,7 @@ describe("AttentionCards' הוסתר toast (FLOW-1094)", () => {
   });
 
   it("stops a card's fold when ביטול comes before it ends", () => {
-    withToasts();
+    render(cards());
     fireEvent.click(screen.getByRole("button", { name: "הסתרה: 4 חיובים קבועים השתנו" }));
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     act(() => {
@@ -172,5 +166,18 @@ describe("AttentionCards' הוסתר toast (FLOW-1094)", () => {
     expect(screen.getByText("4 חיובים קבועים השתנו").closest("li")).not.toHaveAttribute("data-leaving");
     expect(screen.queryByRole("button", { name: /הוסתרו · הצגה/u })).toBeNull();
     expect(JSON.parse(window.localStorage.getItem("flow.attention.home") ?? "null")).toEqual({});
+  });
+
+  it("brings the card back when ביטול is pressed after the page is left", () => {
+    const { rerender } = render(cards());
+    dismiss("4 חיובים קבועים השתנו");
+    // The page is left; the toast lives in the provider above it and stays.
+    rerender(cards(ROWS, false));
+    expect(screen.queryByText("4 חיובים קבועים השתנו")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(JSON.parse(window.localStorage.getItem("flow.attention.home") ?? "null")).toEqual({});
+    rerender(cards());
+    expect(screen.getByRole("link", { name: "4 חיובים קבועים השתנו" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /הוסתרו · הצגה/u })).toBeNull();
   });
 });

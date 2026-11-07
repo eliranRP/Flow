@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { TxnMeta } from "../txn-meta";
 import { lineMetaQueryKey } from "../use-books";
 import { SheetSurface } from "./sheet";
+import { ToastProvider } from "./toast";
 
 export const longHebrew =
   "שיפוץ דירת הגג ברחוב הרצל שתים עשרה, כולל הריסה, חשמל, אינסטלציה, ריצוף וצבע";
@@ -15,6 +16,13 @@ export const padded: Decorator = (Story) => (
   <div className="flex w-full min-w-0 flex-col items-stretch gap-4 p-4">
     <Story />
   </div>
+);
+
+/** FLOW-1094: the app's toasts, for a component story drawn without the app's providers (the attention cards' "הוסתר"). */
+export const withToasts: Decorator = (Story) => (
+  <ToastProvider>
+    <Story />
+  </ToastProvider>
 );
 
 /**
