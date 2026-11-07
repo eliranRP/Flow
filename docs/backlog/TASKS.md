@@ -484,6 +484,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1101"></a>[FLOW-1101](tasks/FLOW-1101.md) | A failed investment save after a new project's create makes a retry create a second project | BUG |
 | <a id="flow-1102"></a>[FLOW-1102](tasks/FLOW-1102.md) | Two "ביטול" with different effects when every attention card is hidden; small follow-ups | SMALL UI |
 | <a id="flow-1104"></a>[FLOW-1104](tasks/FLOW-1104.md) | A project month's profit shows a credit on an expense with a minus | BUG |
+| <a id="flow-1105"></a>[FLOW-1105](tasks/FLOW-1105.md) | Review nits from #1044, #1045 and #1046 | SMALL UI |
 | <a id="flow-1088"></a>[FLOW-1088](tasks/FLOW-1088.md) | New project: a missing name does not move focus to the field or announce the error | SMALL UI |
 | <a id="flow-1089"></a>[FLOW-1089](tasks/FLOW-1089.md) | Unassigned: ביטול in the assign toast can do nothing | SMALL UI |
 | <a id="flow-1090"></a>[FLOW-1090](tasks/FLOW-1090.md) | Unassigned rows: the שיוך pill squeezes the title at 320 | SMALL UI |
