@@ -85,9 +85,12 @@ for (const width of [390, 320]) {
     });
 
     test("Search for a supplier and open the line", async ({ page }) => {
-      await open(page, "/e2e/cash?preview=1", page.getByRole("link", { name: "חיפוש", exact: true }));
+      // FLOW-1095: below 360 the band's search sits in the ⋯ "עוד" sheet.
+      const entry = width < 360 ? page.getByRole("button", { name: "עוד", exact: true }) : page.getByRole("link", { name: "חיפוש", exact: true });
+      await open(page, "/e2e/cash?preview=1", entry);
       const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
-      await step("open search", () => page.getByRole("link", { name: "חיפוש", exact: true }).tap(), field);
+      if (width < 360) await step("open the ⋯ sheet", () => entry.tap(), page.getByRole("dialog", { name: "עוד" }));
+      await step("open search", () => (width < 360 ? page.getByRole("dialog", { name: "עוד" }).getByRole("button", { name: /חיפוש/ }) : entry).tap(), field);
       const row = page.getByRole("link", { name: /^ספק 3(?!\d)/ });
       await step("type the supplier", () => field.fill("ספק 3"), row);
       await step("open the line", () => row.tap(), page.locator("p.ui-txn-supplier", { hasText: /^ספק 3$/ }));
