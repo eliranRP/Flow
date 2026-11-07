@@ -61,6 +61,18 @@ describe("ProjectMonthProfitScreen", () => {
     expect(row?.textContent).toMatch(/זיכוי/);
   });
 
+  it("a line of exactly $0 on an expense keeps the expense's side, not money in (FLOW-1105)", () => {
+    const expense = JUNIPER_MONTH_PROFIT.lines.find((line) => line.side === "out");
+    if (expense == null) throw new Error("the sample has no expense line");
+    const zero = { ...expense, transaction_id: "t-zero", supplier_name: "Zero fee", description: "Zero fee", amount_minor: 0n };
+    const { container } = renderAt("/projects/juniper-ct/profit/2026-10", { ...JUNIPER_MONTH_PROFIT, lines: [...JUNIPER_MONTH_PROFIT.lines, zero] });
+    const row = Array.from(container.querySelectorAll("a")).find((link) => link.textContent.includes("Zero fee"));
+    if (row == null) throw new Error("missing the $0 row");
+    expect(row.textContent).toMatch(/\$0/);
+    expect(row.textContent).not.toMatch(/\+/);
+    expect(row.textContent).not.toMatch(/זיכוי/);
+  });
+
   it("the category view shows a credit on an expense as money in too (FLOW-1104)", () => {
     const expense = JUNIPER_MONTH_PROFIT.lines.find((line) => line.side === "out");
     if (expense == null) throw new Error("the sample has no expense line");

@@ -50,7 +50,8 @@ export function MonthLineRow({ line, hint, search }: { line: CashLine; hint: str
       currency={line.currency}
       // FLOW-1104: the row says which way the money went, not its category's side: a credit on an
       // expense (a tenant paying back the water bill) is money in, so a plus, as its day's total counts it.
-      sign={minor < 0n ? "out" : "in"}
+      // A line of exactly 0 went nowhere, so it keeps its category's side (FLOW-1105).
+      sign={minor < 0n || (minor === 0n && line.side === "out") ? "out" : "in"}
       inWord={line.side === "out" ? "זיכוי" : undefined}
       wholeCents
       source={rowSource(line.source)}

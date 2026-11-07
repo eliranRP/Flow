@@ -193,11 +193,7 @@ function CashHomeStory({
  */
 export const HomeCurrent: Story = { render: () => <CashHomeStory forecast={1_250_000n} example={false} /> };
 
-/**
- * FLOW-1095, FLOW-1103 (the owner, 2026-11-07): at every width search and הגדרות וחשבון wait in the ⋯ "עוד" sheet,
- * so the company's name keeps 96px or more; + and קבועים (with its late count) stay. The ⋯ opens from the keyboard
- * and its sheet holds both.
- */
+/** The band checks both ⋯ stories share at their width; the ⋯ opens from the keyboard. */
 async function bandMenuPlay(canvasElement: HTMLElement, width: number) {
   await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(width);
   const canvas = within(canvasElement);
@@ -216,6 +212,11 @@ async function bandMenuPlay(canvasElement: HTMLElement, width: number) {
   await expect(within(sheet).getByRole("button", { name: /חיפוש/u })).toBeInTheDocument();
 }
 
+/**
+ * FLOW-1095, FLOW-1103 (the owner, 2026-11-07): at every width search and הגדרות וחשבון wait in the ⋯ "עוד" sheet,
+ * so the company's name keeps 96px or more; + and קבועים (with its late count) stay. The ⋯ opens from the keyboard
+ * and its sheet holds both.
+ */
 export const HomeBandMenu320: Story = {
   name: "Home band, ⋯ menu at 320",
   render: () => <CashHomeStory forecast={1_250_000n} example={false} late={2} />,
@@ -225,7 +226,7 @@ export const HomeBandMenu320: Story = {
   },
 };
 
-/** FLOW-1103: the owner's phone width. The same row as at 320: ⋯, קבועים, + and the company's name. */
+/** FLOW-1103: the same ⋯ band at the owner's phone width, 393. */
 export const HomeBandMenu393: Story = {
   name: "Home band, ⋯ menu at 393",
   render: () => <CashHomeStory forecast={1_250_000n} example={false} late={2} />,
