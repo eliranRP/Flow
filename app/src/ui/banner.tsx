@@ -50,6 +50,12 @@ export type BannerRow = {
   id: string;
   to: string;
   title: ReactNode;
+  /**
+   * FLOW-1097: under 360px an attention card draws, with both set, this one- or two-word title of what is needed
+   * and `tag` (a count, an amount or a time) on one line; the link's name stays `title`. Without them the title is cut.
+   */
+  short?: string;
+  tag?: string;
   hint?: ReactNode;
   icon?: ReactNode;
   /** FLOW-958: a box that draws this row as its filled button reads this label; a list ignores it. */

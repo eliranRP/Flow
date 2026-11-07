@@ -23,6 +23,14 @@ function textOf(node: ReactNode): string {
 }
 
 /**
+ * FLOW-1097: a card's tag for a count, with the Hebrew singular for one: countTag(1, "תשלום אחד", "תשלומים") is
+ * "תשלום אחד", countTag(2, …) is "2 תשלומים".
+ */
+export function countTag(count: number, one: string, many: string): string {
+  return count === 1 ? one : `${String(count)} ${many}`;
+}
+
+/**
  * FLOW-1043 (BUILD-PLAN §3.5): the "דורש טיפול" row-cards. Each row is a 56px card that links to its page,
  * with an X that hides it on this device until what it counts changes (attention-dismiss.ts). The review row
  * (a row with `button`) comes first and has no X. When every row is hidden, the section is one line with ביטול.
@@ -116,14 +124,28 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
       <ul className="ui-attn-list">
         {shown.map((row) => {
           const out = leaving.has(row.id);
+          // FLOW-1097: under 360px a row with both draws its short title and tag on one line instead of its title.
+          const short = row.short != null && row.tag != null;
           return (
             <li key={row.id} className="ui-attn-item" data-leaving={out || undefined}>
               <div className={cx("ui-attn-card", row.button == null && row.dismissKey != null && "ui-attn-card-x")}>
-                <Link to={row.to} className="ui-attn-link ui-hit m-press" inert={out || undefined}>
+                <Link
+                  to={row.to}
+                  className={cx("ui-attn-link ui-hit m-press", short && "ui-attn-link-short")}
+                  aria-label={short ? textOf(row.title) : undefined}
+                  inert={out || undefined}
+                >
                   <span className="ui-attn-icon">{row.icon ?? <InboxIcon size={20} />}</span>
                   <span className="ui-attn-text t-body" dir="rtl" data-clip-ok="">
                     {row.title}
                   </span>
+                  {short ? (
+                    // Drawn from data-text (63-attention-cards.css), so the page has the words once: the title.
+                    <span className="ui-attn-short" dir="rtl" aria-hidden="true">
+                      <span className="ui-attn-short-title t-body" data-clip-ok="" data-text={row.short} />
+                      <span className="ui-attn-tag" data-text={row.tag} />
+                    </span>
+                  ) : null}
                   <span className="ui-attn-chevron">
                     <ChevronIcon size={18} />
                   </span>

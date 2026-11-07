@@ -68,6 +68,8 @@ export function projectAttentionRows({
       id: "budget",
       to: `/projects/${projectId}${search}#budget`,
       title: percent > 100 ? "עבר את התקציב" : <>עבר <bdi dir="ltr">{`${String(BUDGET_ALERT_PERCENT)}%`}</bdi> מהתקציב</>,
+      short: "תקציב",
+      tag: percent > 100 ? "חריגה" : `מעל ${String(BUDGET_ALERT_PERCENT)}%`,
     });
   }
   // A single changed charge's row counts its amount, so a new amount brings back a hidden row.

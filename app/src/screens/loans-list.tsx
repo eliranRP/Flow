@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Amount } from "../ui/amount";
-import { AttentionCards } from "../ui/attention-cards";
+import { AttentionCards, countTag } from "../ui/attention-cards";
 import { BandOfflineLine, PageLoadFailed } from "../ui/band-states";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
@@ -71,6 +71,9 @@ export function loansAttention(rows: readonly LoanListRow[], today: string, loan
     id: `check:${row.id}`,
     to: loanHref(row.id),
     title: `${row.flaggedParts === 1 ? "תשלום אחד ממתין" : `${String(row.flaggedParts)} תשלומים ממתינים`} לבדיקה · ${row.name}`,
+    // FLOW-1097: under 360px "לבדיקה" and the count; the loan is on the page the card opens.
+    short: "לבדיקה",
+    tag: countTag(row.flaggedParts, "תשלום אחד", "תשלומים"),
     icon: <AlertIcon size={20} />,
     dismissKey: `check:${String(row.flaggedParts)}`,
   }));
@@ -83,6 +86,9 @@ export function loansAttention(rows: readonly LoanListRow[], today: string, loan
       id: `soon:${row.id}`,
       to: loanHref(row.id),
       title: `תשלום ${row.name} ${when} · ${money(row.next.amountMinor, row.currency)}`,
+      // Under 360px the loan and when; the amount is on its page.
+      short: row.name,
+      tag: when,
       icon: <CalendarIcon size={20} />,
       dismissKey: `soon:${row.next.dueDate}`,
     }];

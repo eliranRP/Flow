@@ -315,6 +315,17 @@ const MISSING_TITLES: Record<EditField, string> = {
   selling_cost: "חסרות עלויות מכירה",
 };
 
+/** FLOW-1097: what each card names under 360px, with its tag ("חסר"); what it is for is in its title. */
+const MISSING_SHORT: Record<EditField, [short: string, tag: string]> = {
+  purchase: ["מחיר רכישה", "חסר"],
+  value: ["שווי היום", "חסר"],
+  land: ["שווי הקרקע", "חסר"],
+  tax_bracket: ["מדרגת מס", "חסרה"],
+  arv: ["ARV", "חסר"],
+  units: ["מספר יחידות", "חסר"],
+  selling_cost: ["עלויות מכירה", "חסרות"],
+};
+
 /**
  * FLOW-1047: "חסר לחישוב" as attention cards, each opening its input's sheet (`?edit=`), each hidden on
  * this device until what it counts changes. A viewer adds nothing, so has none.
@@ -322,10 +333,12 @@ const MISSING_TITLES: Record<EditField, string> = {
 export function investmentAttentionRows(kind: InvestmentKind, r: PropertyReturns, base: string, search: string, readOnly: boolean): BannerRow[] {
   if (readOnly) return [];
   const icon = <span className="ui-pinv-attn-dot" aria-hidden="true" />;
-  const row = (field: EditField, dismissKey: string, title = MISSING_TITLES[field]): BannerRow => ({
+  const row = (field: EditField, dismissKey: string, title = MISSING_TITLES[field], [short, tag] = MISSING_SHORT[field]): BannerRow => ({
     id: `missing-${field}`,
     to: `${base}${withParam(search, "edit", field)}`,
     title,
+    short,
+    tag,
     icon,
     dismissKey,
   });
@@ -333,7 +346,7 @@ export function investmentAttentionRows(kind: InvestmentKind, r: PropertyReturns
   if (kind === "flip") {
     // Board V3-Investment: a typed ARV is the owner's estimate, and the profit rests on it, so the card asks to check it.
     if (r.inputs.arvMinor == null) rows.push(row("arv", "arv"));
-    else rows.push({ ...row("arv", `estimate:${String(r.inputs.arvMinor)}`, "ARV מבוסס על הערכה שלכם"), id: "arv-estimate" });
+    else rows.push({ ...row("arv", `estimate:${String(r.inputs.arvMinor)}`, "ARV מבוסס על הערכה שלכם", ["ARV", "הערכה"]), id: "arv-estimate" });
     if (r.inputs.purchaseMinor == null) rows.push(row("purchase", "purchase", "חסר מחיר רכישה לחישוב הרווח"));
     return rows;
   }
@@ -341,7 +354,7 @@ export function investmentAttentionRows(kind: InvestmentKind, r: PropertyReturns
     if (input === "value_history") {
       // One value alone: appreciation needs a second one, so the card asks to update it.
       const date = r.inputs.valueDate;
-      rows.push(row("value", `history:${date ?? ""}`, date == null ? "עדכון שווי נוסף לעליית ערך" : `שווי עודכן ב־${formatDisplay(date)} · עדכון נוסף לעליית ערך`));
+      rows.push(row("value", `history:${date ?? ""}`, date == null ? "עדכון שווי נוסף לעליית ערך" : `שווי עודכן ב־${formatDisplay(date)} · עדכון נוסף לעליית ערך`, ["עדכון שווי", date == null ? "חסר" : formatDisplay(date)]));
     } else if (input === "land") {
       // FLOW-470: a land the books suggest is taken with its השתמש on the property's figures.
       if (r.inputs.landSuggestion == null) rows.push(row("land", "land"));

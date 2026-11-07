@@ -107,4 +107,22 @@ describe("AttentionCards (FLOW-1043)", () => {
     const { container } = render(cards([]));
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("FLOW-1097: draws a short title and tag beside the title, keeping the full title as the link's name", () => {
+    const { container } = render(cards([
+      { id: "unpaid", to: "/unpaid", title: "3 חשבוניות פתוחות · $21,300", short: "לגבייה", tag: "$21,300", dismissKey: "unpaid:3" },
+      { id: "gym", to: "/recurring", title: "חדר כושר לא חויב", dismissKey: "late:gym" },
+    ]));
+    const [unpaid, gym] = screen.getAllByRole("link");
+    expect(unpaid).toHaveAccessibleName("3 חשבוניות פתוחות · $21,300");
+    expect(unpaid).toHaveClass("ui-attn-link-short");
+    const shortSet = container.querySelector(".ui-attn-short");
+    expect(shortSet).toHaveAttribute("aria-hidden", "true");
+    expect([...(shortSet?.children ?? [])].map((part) => part.getAttribute("data-text"))).toEqual(["לגבייה", "$21,300"]);
+    // The words are in the page once: the title.
+    expect(screen.getAllByText(/חשבוניות פתוחות/)).toHaveLength(1);
+    // A row without both keeps only its title, cut at its end under 360px.
+    expect(gym).not.toHaveClass("ui-attn-link-short");
+    expect(gym).not.toHaveAttribute("aria-label");
+  });
 });
