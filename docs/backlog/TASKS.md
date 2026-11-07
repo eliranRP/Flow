@@ -476,6 +476,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | --- | --- | --- |
 | <a id="flow-1082"></a>[FLOW-1082](tasks/FLOW-1082.md) | Reports: a row's second line is cut at 320, hiding expenses or the loan amount | SMALL UI |
 | <a id="flow-1083"></a>[FLOW-1083](tasks/FLOW-1083.md) | Reports: a small non-zero row shows "0% מהקבוצה" | SMALL UI |
+| <a id="flow-1098"></a>[FLOW-1098](tasks/FLOW-1098.md) | Report rows: a 9-digit full figure at 360–380, and two small cleanups | SMALL UI |
 | <a id="flow-1088"></a>[FLOW-1088](tasks/FLOW-1088.md) | New project: a missing name does not move focus to the field or announce the error | SMALL UI |
 | <a id="flow-1089"></a>[FLOW-1089](tasks/FLOW-1089.md) | Unassigned: ביטול in the assign toast can do nothing | SMALL UI |
 | <a id="flow-1090"></a>[FLOW-1090](tasks/FLOW-1090.md) | Unassigned rows: the שיוך pill squeezes the title at 320 | SMALL UI |
