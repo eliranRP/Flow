@@ -58,6 +58,7 @@ describe("ProjectMonthProfitScreen", () => {
     const row = Array.from(container.querySelectorAll("a")).find((link) => link.textContent.includes("Water credit"));
     expect(row?.textContent).toMatch(/\+\s*\$164/);
     expect(row?.textContent).not.toMatch(/[−-]\s*\$164/);
+    expect(row?.textContent).toMatch(/זיכוי/);
   });
 
   it("lists the lines by day, newest day first, under the default date order", () => {
