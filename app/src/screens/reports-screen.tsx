@@ -318,7 +318,7 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
         ) : null}
         offlineSince={offlineSince}
         failed={phase.kind === "error" ? { offline: phase.offline, onRetry: bandRead.refetch } : null}
-        top={attention ?? monthsFailed}
+        top={drill == null ? attention : monthsFailed}
       >
         {body}
         {phase.kind === "ready" ? <p className="ui-rep-note">{`נספר לפי ${statement == null || statement.basis === "cash" ? "מזומן" : "חשבוניות"}. דוח ניהולי, לא דוח כספי מבוקר.`}</p> : null}
