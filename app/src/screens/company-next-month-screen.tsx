@@ -1,7 +1,8 @@
 import "../ui/lazy.css";
 import type { ProjectCashRow } from "@flow/shared";
 import { type ReactNode, useMemo, useState } from "react";
-import { futureForecastKey, useForecastSkip } from "../forecast-skip";
+import { futureForecastKey } from "../forecast-future-keys";
+import { useForecastSkip } from "../forecast-skip";
 import { SwipeRow } from "../ui/swipe-row";
 import { Link } from "react-router-dom";
 import { cashMonthName, NOT_IN_PROFIT_LABEL } from "../cash";

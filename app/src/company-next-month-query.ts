@@ -1,5 +1,5 @@
 import type { CategoryRow, ExpectedMonths, ProfitMonths } from "@flow/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
@@ -12,7 +12,7 @@ import { useHomePreview } from "./preview";
 import type { ForecastLoan } from "./project-next-loans";
 import { nextMonthKey } from "./project-next-month";
 import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-next-month-query";
-import { skippedKeys, useForecastOverrides, useSkipsByMonth } from "./forecast-skip";
+import { overridesQuery, skippedKeys, useForecastOverrides } from "./forecast-skip";
 import { useCategoriesQuery } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -156,4 +156,23 @@ export function useCompanyProfitMonths(today: string, enabled: boolean, sample?:
     months: sample?.months ?? read.data?.months ?? null,
     failed: live && read.isError,
   };
+}
+
+/**
+ * FLOW-1096: the keys taken out of each of `months` (the year view's months left), by month: the same reads as
+ * useForecastOverrides, so a skip on any page refreshes them. Undefined until every month is read.
+ */
+function useSkipsByMonth(months: readonly string[], enabled: boolean): Record<string, string[]> | undefined {
+  const preview = useHomePreview();
+  const results = useQueries({ queries: months.map((month) => overridesQuery(month, preview, enabled)) });
+  // One string for what was read, so the answer keeps its identity while nothing changed.
+  const read = results.every((result) => result.data != null)
+    ? results.map((result) => [...skippedKeys(result.data)].sort().join(",")).join("|")
+    : null;
+  const at = months.join("|");
+  return useMemo(() => {
+    if (read == null) return undefined;
+    const lists = read.split("|");
+    return Object.fromEntries(at.split("|").map((month, index) => [month, (lists[index] ?? "").split(",").filter((key) => key !== "")]));
+  }, [read, at]);
 }

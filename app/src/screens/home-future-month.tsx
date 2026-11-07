@@ -12,7 +12,7 @@ import { nothingExpected, thisMonthCashOut, useCompanyCashNextMonth } from "./co
 import { orderParts, partHint, partRows } from "./company-next-month-screen";
 import { groupSums, type ActivityGroup, type ActivityRow, type HomeFuture } from "./home-activity";
 import { monthName, type HomeFutureFigureRows } from "./home-parts";
-import { futureForecastKey } from "../forecast-skip";
+import { futureForecastKey } from "../forecast-future-keys";
 
 /**
  * FLOW-1056 (owner, 2026-11-05: "Click on a future month should take me to the main screen in a future date with
