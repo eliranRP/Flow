@@ -253,11 +253,40 @@
 
 /* FLOW-1082 (the owner, 2026-11-07, option A): a hint is one line. The row is a grid: the name, the amount and the
    chevron on the first line, the hint under them across the row up to the chevron's column. From 374 its figures are
-   in full; below 374 they are short ($30K), so none is cut at 320 or 393. FLOW-1098: 374 is where the longest full
-   line fits, "99% · הכנסות $120,000,000 · הוצאות $100,000,000" (302px in Rubik 13, the row less 72); at 360 it was
-   cut. The full line stays for a screen reader, the short one is hidden from it. */
-.ui-rep-hint-short {
-  display: none;
+   in full when they fit (FLOW-1108); below 374 they are short ($30K), so none is cut at 320 or 393. FLOW-1098: 374
+   is where the longest full line with a percent fits, "99% · הכנסות $120,000,000 · הוצאות $100,000,000" (302px in
+   Rubik 13, the row less 72); at 360 it was cut. The full line stays for a screen reader, the short one is hidden
+   from it. */
+
+/* FLOW-1108: from 374 a line that is still too long, "פחות מ־1% · הכנסות $120,000,000 · הוצאות $119,990,000" (337px)
+   up to 408, shows its short line instead; every other row keeps its full one. No script measures: the line wraps
+   in a box one line tall. The short line (first in order) has no width of its own, so the full one goes on the
+   first line only when it fits, and the short one grows into what is left. A short line drawn 100cqi wide from the
+   box's left edge shows only when it has the whole line; beside a full line its text falls outside its own box. */
+.ui-rep-hint-fit {
+  display: flex;
+  flex-flow: row-reverse wrap;
+  block-size: 1lh;
+  container-type: inline-size;
+}
+
+.ui-rep-hint-fit > .ui-rep-hint-full {
+  flex: none;
+}
+
+.ui-rep-hint-fit > .ui-rep-hint-short {
+  order: -1;
+  flex: 1 0 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  direction: ltr;
+  user-select: none;
+}
+
+.ui-rep-hint-fit > .ui-rep-hint-short > span {
+  display: inline-block;
+  inline-size: 100cqi;
+  direction: rtl;
 }
 
 .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) {
@@ -315,10 +344,6 @@
     block-size: 1px;
     overflow: hidden;
     clip-path: inset(50%);
-  }
-
-  .ui-rep-hint-short {
-    display: inline;
   }
 }
 

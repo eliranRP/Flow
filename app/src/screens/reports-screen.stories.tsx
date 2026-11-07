@@ -76,24 +76,47 @@ async function fits(canvasElement: HTMLElement) {
   await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
 }
 
+/** Which line a row's (or a hint's) fitted hint shows: the full one while it sits on the box's one line (FLOW-1108). */
+function shownFigures(element: HTMLElement): "full" | "short" {
+  const hint = element.matches(".ui-rep-hint-fit") ? element : element.querySelector<HTMLElement>(".ui-rep-hint-fit");
+  const full = hint?.querySelector<HTMLElement>(".ui-rep-hint-full");
+  if (hint == null || full == null) throw new Error("no fitted hint");
+  return getComputedStyle(full).position !== "absolute" && full.getBoundingClientRect().top < hint.getBoundingClientRect().bottom - 1 ? "full" : "short";
+}
+
 /**
  * FLOW-1082 (the owner, 2026-11-07, option A): every report row's hint with figures is one line and whole, with no
- * ellipsis. From 374 it shows the full figures; below 374 the short ones ($30K) (FLOW-1098), on its own line under the
- * name and the amount, across the row up to the chevron's column. Measured in Rubik, once the fonts are in.
+ * ellipsis. From 374 it shows the full figures when they fit (FLOW-1108); below 374, or when they don't, the short
+ * ones ($30K) (FLOW-1098), on its own line under the name and the amount, across the row up to the chevron's column.
+ * Measured in Rubik, once the fonts are in.
  */
 async function hintsWhole(canvasElement: HTMLElement) {
   // Rubik is swapped in (font-display: swap); `ready` can resolve before the first layout asks for it.
   await canvasElement.ownerDocument.fonts.load("400 13px Rubik");
   await canvasElement.ownerDocument.fonts.ready;
-  const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")].filter((hint) => hint.querySelector(".ui-rep-hint-short") != null);
+  const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-fit")];
   await expect(hints.length).toBeGreaterThan(0);
   const narrow = canvasElement.ownerDocument.documentElement.clientWidth < 374;
   for (const hint of hints) {
     await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
-    await expect(hint.scrollWidth).toBeLessThanOrEqual(hint.clientWidth);
     await expect(hint.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(hint).lineHeight) + 1);
+    const full = hint.querySelector<HTMLElement>(".ui-rep-hint-full");
     const short = hint.querySelector<HTMLElement>(".ui-rep-hint-short");
-    await expect(short == null ? "none" : getComputedStyle(short).display).toBe(narrow ? "inline" : "none");
+    if (full == null || short == null) throw new Error("a fitted hint without its two lines");
+    const hintBox = hint.getBoundingClientRect();
+    // The full line shows when it fits, and then whole; otherwise the short one has the whole line, its text inside it.
+    const fullFits = !narrow && full.getBoundingClientRect().width <= hint.clientWidth;
+    await expect(shownFigures(hint)).toBe(fullFits ? "full" : "short");
+    if (fullFits) {
+      await expect(full.getBoundingClientRect().left).toBeGreaterThanOrEqual(hintBox.left - 1);
+      await expect(full.getBoundingClientRect().right).toBeLessThanOrEqual(hintBox.right + 1);
+    } else {
+      const text = canvasElement.ownerDocument.createRange();
+      text.selectNodeContents(short.firstElementChild ?? short);
+      await expect(short.getBoundingClientRect().width).toBeGreaterThanOrEqual(hint.clientWidth - 1);
+      await expect(text.getBoundingClientRect().left).toBeGreaterThanOrEqual(hintBox.left - 1);
+      await expect(text.getBoundingClientRect().right).toBeLessThanOrEqual(hintBox.right + 1);
+    }
     const row = hint.closest<HTMLElement>(".ui-row");
     const line = hint.closest<HTMLElement>(".ui-row-hint");
     const chevron = row?.querySelector<HTMLElement>(".ui-row-chevron");
@@ -241,8 +264,19 @@ const NINE_DIGIT_PROJECT = {
   currencies: [{ currency: "USD", income_minor: 12_000_000_000n, expense_minor: 10_000_000_000n, net_minor: 2_000_000_000n, income: [], expense: [], kept_out: [] }],
 };
 
+/**
+ * FLOW-1108: nine-digit figures and a $10,000 net, so its share reads "פחות מ־1%". "פחות מ־1% · הכנסות $120,000,000 ·
+ * הוצאות $119,990,000" is the longest line a row's hint shows; it is wider than the row's line up to 408.
+ */
+const UNDER_ONE_NINE_DIGIT_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000184",
+  project_id: "a0000000-0000-4000-8000-000000000184",
+  name: "Willow Gate",
+  currencies: [{ currency: "USD", income_minor: 12_000_000_000n, expense_minor: 11_999_000_000n, net_minor: 1_000_000n, income: [], expense: [], kept_out: [] }],
+};
+
 function NineDigits() {
-  return <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, NINE_DIGIT_PROJECT] } }} />;
+  return <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, NINE_DIGIT_PROJECT, UNDER_ONE_NINE_DIGIT_PROJECT] } }} />;
 }
 
 /** FLOW-1098: the full line "99% · הכנסות $120,000,000 · הוצאות $100,000,000" is cut at 360, so there it is short ($120M). */
@@ -265,6 +299,24 @@ export const ByProjectNineDigits374: Story = {
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("link", { name: /Elm Tower/ }).textContent).toContain("הכנסות $120,000,000 · הוצאות $100,000,000");
     await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/**
+ * FLOW-1108: at 393 (the owner's phone) Elm Tower's line fits and is in full. Willow Gate's "פחות מ־1%" line does not,
+ * so that row alone shows its short figures ($120M), whole, with no "…".
+ */
+export const ByProjectNineDigitsUnderOne393: Story = {
+  name: "P&L · by project, nine digits under 1% at 393",
+  ...phone393,
+  render: () => <NineDigits />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /Willow Gate/ }).textContent).toContain("פחות מ־1%");
+    await hintsWhole(canvasElement);
+    await expect(shownFigures(canvas.getByRole("link", { name: /Willow Gate/ }))).toBe("short");
+    await expect(shownFigures(canvas.getByRole("link", { name: /Elm Tower/ }))).toBe("full");
     await fits(canvasElement);
   },
 };

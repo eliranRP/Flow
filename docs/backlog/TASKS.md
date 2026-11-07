@@ -482,6 +482,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1082"></a>[FLOW-1082](tasks/FLOW-1082.md) | Reports: a row's second line is cut at 320, hiding expenses or the loan amount | SMALL UI |
 | <a id="flow-1083"></a>[FLOW-1083](tasks/FLOW-1083.md) | Reports: a small non-zero row shows "0% מהקבוצה" | SMALL UI |
 | <a id="flow-1098"></a>[FLOW-1098](tasks/FLOW-1098.md) | Report rows: a 9-digit full figure at 360–380, and two small cleanups | SMALL UI |
+| <a id="flow-1108"></a>[FLOW-1108](tasks/FLOW-1108.md) | Report rows: a nine-digit "פחות מ־1%" line ends in "…" from 374 to 408 | SMALL UI |
 | <a id="flow-1101"></a>[FLOW-1101](tasks/FLOW-1101.md) | A failed investment save after a new project's create makes a retry create a second project | BUG |
 | <a id="flow-1102"></a>[FLOW-1102](tasks/FLOW-1102.md) | Two "ביטול" with different effects when every attention card is hidden; small follow-ups | SMALL UI |
 | <a id="flow-1104"></a>[FLOW-1104](tasks/FLOW-1104.md) | A project month's profit shows a credit on an expense with a minus | BUG |
