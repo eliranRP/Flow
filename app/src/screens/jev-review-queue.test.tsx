@@ -17,7 +17,8 @@ import {
 
 const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 
-const db = vi.hoisted(() => ({
+/** Every mock field at its start. One place: a field added here is reset by resetDb() too. */
+const freshDb = vi.hoisted(() => () => ({
   integration: null as { enabled: boolean; mode: string } | null,
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
   holdIntegration: null as Promise<void> | null,
@@ -39,26 +40,11 @@ const db = vi.hoisted(() => ({
   undoError: null as string | null,
 }));
 
+const db = vi.hoisted(() => freshDb());
+
 /** Every field back to its start, before each test. */
 function resetDb() {
-  db.integration = null;
-  db.suggestions = [];
-  db.holdIntegration = null;
-  db.holdSuggestions = null;
-  db.failSuggestions = false;
-  db.integrationError = false;
-  db.seenIds = [];
-  db.integrationReads = 0;
-  db.writes = [];
-  db.rows = [];
-  db.closed = new Set();
-  db.reasons = [];
-  db.stallReasons = false;
-  db.flags = [];
-  db.failReopen = false;
-  db.fills = [];
-  db.failFills = false;
-  db.undoError = null;
+  Object.assign(db, freshDb());
 }
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean; failNow?: boolean }) {
