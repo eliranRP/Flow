@@ -4,8 +4,9 @@ import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
 // The page's live path for a past month (owner 21/10): the reads answer from a mocked client. Invented data only.
-type Calls = { names: string[]; answer: Record<string, unknown>; company: { data: unknown; error: unknown } };
-const calls = vi.hoisted((): Calls => ({ names: [], answer: {}, company: { data: null, error: null } }));
+// `held` (FLOW-1080) holds get_dashboard's answer until the test lets it go.
+type Calls = { names: string[]; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null };
+const calls = vi.hoisted((): Calls => ({ names: [], answer: {}, company: { data: null, error: null }, held: null }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
@@ -13,7 +14,8 @@ vi.mock("../lib/supabase", () => ({
     rpc: (name: string, args?: Record<string, unknown>) => {
       calls.names.push(name);
       const key = name === "get_breakdown" ? `${name}:${String(args?.p_group_by)}:${String(args?.p_direction)}` : name;
-      return Promise.resolve(key in calls.answer ? { data: calls.answer[key], error: null } : { data: null, error: new Error(`unmocked ${key}`) });
+      const held = name === "get_dashboard" && calls.held != null ? calls.held : Promise.resolve();
+      return held.then(() => (key in calls.answer ? { data: calls.answer[key], error: null } : { data: null, error: new Error(`unmocked ${key}`) }));
     },
     from: (table: string) => ({
       select: () => ({
@@ -48,6 +50,7 @@ const dashboard = {
 
 beforeEach(() => {
   calls.names.length = 0;
+  calls.held = null;
   calls.answer = {
     mcp_company_loan_currency: "USD",
     get_dashboard: dashboard,
@@ -117,5 +120,21 @@ describe("CompanyProfitScreen live, a past month (owner 21/10)", () => {
       return found;
     });
     expect(named[0]?.querySelector("a")?.getAttribute("href")).toBe(`/projects/${OVERHEAD}/profit?from=profit`);
+  });
+});
+
+describe("CompanyProfitScreen live, the current month's next-month reads (FLOW-1080)", () => {
+  it("starts the next-month reads only once the figures are drawn", async () => {
+    answerBreakdowns();
+    let release: () => void = () => undefined;
+    calls.held = new Promise<void>((resolve) => { release = resolve; });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    await waitFor(() => { expect(calls.names).toContain("get_dashboard"); });
+    // The figures are not drawn yet: none of the next month's reads has gone out.
+    for (const name of ["company_next_month_inputs", "expected_months"]) expect(calls.names).not.toContain(name);
+    release();
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
+    expect(calls.names).toContain("expected_months");
   });
 });
