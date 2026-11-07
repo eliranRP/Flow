@@ -141,6 +141,30 @@ export function PnlPeriodSheet({ open, onOpenChange, value, today, onPick }: {
   );
 }
 
+/**
+ * FLOW-1092 (the owner, 2026-11-07: "Move between months"): a drilled month's pill opens the report's months,
+ * as the by-month view lists them; a pick opens that month's drill-down in its place.
+ */
+export function PnlMonthSheet({ open, onOpenChange, value, months, onPick }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** The drilled month, "2026-10". */
+  value: string;
+  months: readonly { key: string; name: string }[];
+  onPick: (month: string) => void;
+}) {
+  const setOpen = useSheetHistory("report-month", open, onOpenChange);
+  return (
+    <Sheet open={open} onOpenChange={setOpen} title="חודש" panelClassName="ui-sheet-choice ui-rep-sheet">
+      <div role="radiogroup" aria-label="חודש" className="ui-choice-sheet">
+        {months.map((month) => (
+          <ListRow control="radio" key={month.key} value={month.key} title={month.name} selected={month.key === value} onSelect={() => { onPick(month.key); setOpen(false); }} />
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
 /** Why the balance sheet has no "from the start": every date already is (FLOW-170). */
 const BALANCE_FROM_START = "המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים";
 

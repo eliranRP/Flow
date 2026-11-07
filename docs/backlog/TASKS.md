@@ -239,6 +239,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-170"></a>[FLOW-170](tasks/FLOW-170.md) | Reports drill-down search: a snippet placed by layout, and the balance date sheet's "from the start" caption | BACKLOG NIT |
 | <a id="flow-171"></a>[FLOW-171](tasks/FLOW-171.md) | Reports: an account's movements from the start, any year, and a long Latin title that wraps | MCP + UI |
 | <a id="flow-172"></a>[FLOW-172](tasks/FLOW-172.md) | List rows: a cut hint part can end in a space before "…" | BACKLOG NIT |
+| <a id="flow-1100"></a>[FLOW-1100](tasks/FLOW-1100.md) | A cut hint always ends in "…", even when Safari measures it wider than its box | SMALL CYCLE |
 | <a id="flow-173"></a>[FLOW-173](tasks/FLOW-173.md) | get_account_lines: drop year_start from the output after one release | BACKLOG NIT |
 | <a id="flow-174"></a>[FLOW-174](tasks/FLOW-174.md) | Correct a posted journal entry in place, with its history | MCP + DB |
 | <a id="flow-176"></a>[FLOW-176](tasks/FLOW-176.md) | Set the project of one journal entry leg | MCP |
@@ -326,6 +327,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1079"></a>[FLOW-1079](tasks/FLOW-1079.md) | Take a recurring charge out of this month's forecast | SMALL CYCLE |
 | <a id="flow-1081"></a>[FLOW-1081](tasks/FLOW-1081.md) | Take a charge out of a month on the project page, תזרים צפוי and the other forecast lists | SMALL CYCLE |
 | <a id="flow-1096"></a>[FLOW-1096](tasks/FLOW-1096.md) | A month taken out of the forecast: the year view, one key per charge, and an instant put-back | SMALL CYCLE |
+| <a id="flow-1099"></a>[FLOW-1099](tasks/FLOW-1099.md) | A figure's lines draw no focus ring when its calculation row moves the focus to them | SMALL CYCLE |
 | <a id="flow-1084"></a>[FLOW-1084](tasks/FLOW-1084.md) | Home, past month: the "חזרה ל<חודש>" pill is 36px and wraps at 320 | SMALL UI |
 | <a id="flow-1085"></a>[FLOW-1085](tasks/FLOW-1085.md) | דורש טיפול cards cut their amount at 320 outside Home | SMALL UI |
 | <a id="flow-1086"></a>[FLOW-1086](tasks/FLOW-1086.md) | Home: skipping a forecast row is swipe-only | SMALL UI |
@@ -481,7 +483,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1089"></a>[FLOW-1089](tasks/FLOW-1089.md) | Unassigned: ביטול in the assign toast can do nothing | SMALL UI |
 | <a id="flow-1090"></a>[FLOW-1090](tasks/FLOW-1090.md) | Unassigned rows: the שיוך pill squeezes the title at 320 | SMALL UI |
 | <a id="flow-1091"></a>[FLOW-1091](tasks/FLOW-1091.md) | Calculation pages show a bare failure line instead of the failed card | SMALL UI |
-| <a id="flow-1092"></a>[FLOW-1092](tasks/FLOW-1092.md) | Reports month drill: the pill shows the month but picking a period leaves the drill | PLAN FIRST |
+| <a id="flow-1092"></a>[FLOW-1092](tasks/FLOW-1092.md) | Reports month drill: the pill shows the month but picking a period leaves the drill | SMALL CYCLE |
 | <a id="flow-1093"></a>[FLOW-1093](tasks/FLOW-1093.md) | Unassigned picker has no "+ פרויקט חדש" | SMALL CYCLE |
 | <a id="flow-1044"></a>[FLOW-1044](tasks/FLOW-1044.md) | Projects v3: the list, the project page by kind, the actions and new-project sheets, project profit, and the lines with no project | UI (design approved) |
 | <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |

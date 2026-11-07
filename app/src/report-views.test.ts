@@ -17,6 +17,7 @@ import {
   generalStatementRow,
   groupsNet,
   legacyReportsTarget,
+  monthNeighbours,
   monthRange,
   netTotal,
   pnlMonthRows,
@@ -130,6 +131,16 @@ describe("the P&L's views", () => {
   it("reads a month to its last day, or to today in the current month", () => {
     expect(monthRange("2026-02", "2026-10-31")).toEqual({ from: "2026-02-01", to: "2026-02-28" });
     expect(monthRange("2026-10", "2026-10-15")).toEqual({ from: "2026-10-01", to: "2026-10-15" });
+  });
+
+  it("finds a drilled month's neighbours among the listed months, or none at either end (FLOW-1092)", () => {
+    const keys = ["2026-10", "2026-09", "2026-07"];
+    expect(monthNeighbours(keys, "2026-09")).toEqual({ earlier: "2026-07", later: "2026-10" });
+    expect(monthNeighbours(keys, "2026-10")).toEqual({ earlier: "2026-09", later: null });
+    expect(monthNeighbours(keys, "2026-07")).toEqual({ earlier: null, later: "2026-09" });
+    // A month with no row of its own (August) still steps to the months around it.
+    expect(monthNeighbours(keys, "2026-08")).toEqual({ earlier: "2026-07", later: "2026-09" });
+    expect(monthNeighbours([], "2026-08")).toEqual({ earlier: null, later: null });
   });
 });
 

@@ -253,11 +253,28 @@ export const ProjectDrill: Story = {
 
 export const GeneralDrill: Story = { name: "P&L · the general expenses drilled", render: () => <Pnl entry="/reports/pnl?view=project&project=overhead" /> };
 
+/** FLOW-1092: the pill sits between the month's chevrons; October is the newest, so the later one is off. */
 export const MonthDrill: Story = {
   name: "P&L · a month drilled",
   render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER }} />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "חודש קודם" })).not.toHaveAttribute("aria-disabled");
+    await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+  },
+};
+
+/** FLOW-1092 at 320: the month's pill opens the report's months; a pick stays in the drill, on that month. */
+export const MonthDrillSheet320: Story = {
+  name: "P&L · a month drilled · its months at 320",
+  ...phone320,
+  render: () => <Pnl entry="/reports/pnl?view=month&month=2026-09" sample={{ drilled: REPORTS_OCTOBER }} />,
+  play: async ({ canvasElement }) => {
+    await fits(canvasElement);
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "ספטמבר 2026" }));
+    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "חודש" });
+    await expect(within(sheet).getByRole("radio", { name: "ספטמבר 2026" })).toBeChecked();
   },
 };
 

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Route, Routes } from "react-router-dom";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   birchLaneRehab,
   birchLaneRehabMany,
@@ -120,6 +121,24 @@ export const NetProfitPart: Story = { name: "Net profit part", args: { entry: "/
 export const AcquisitionLoansAtClosing: Story = {
   name: "Acquisition, loans paid out at closing",
   args: { entry: "/projects/p1/investment/returns/acquisition", lines: "maple", returns: "closingPaid" },
+};
+
+/**
+ * The bank row opens the lines below and moves the focus to them, with no ring: a ring around the section ran down
+ * both sides of the months, cut by each pinned month head (owner's screenshot, 2026-11-07).
+ */
+export const AcquisitionBankRowFocusesLines: Story = {
+  name: "Acquisition, the bank row focuses the lines",
+  args: { entry: "/projects/p1/investment/returns/acquisition", lines: "maple", returns: "closingPaid" },
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByRole("button", { name: /מהתנועות/ });
+    row.focus();
+    await userEvent.keyboard("{Enter}");
+    const lines = canvasElement.querySelector<HTMLElement>(".ui-ret-lines");
+    await waitFor(() => { void expect(document.activeElement).toBe(lines); });
+    if (lines == null) throw new Error("no lines section");
+    await expect(getComputedStyle(lines).outlineStyle).toBe("none");
+  },
 };
 
 /** FLOW-1047 (V3-States): a calculation page with no sample, in a preview state. */

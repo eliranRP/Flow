@@ -52,6 +52,13 @@
   cursor: pointer;
 }
 
+/* FLOW-1092: a drilled month's pill sits between the chevrons, on the stepper's own track. */
+.ui-month-step-band .ui-rep-pill {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  background: transparent;
+}
+
 .ui-rep-pill-label {
   min-inline-size: 0;
   overflow: hidden;
