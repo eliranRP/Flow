@@ -317,6 +317,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1078
 - FLOW-1079
 - FLOW-1081
+- FLOW-1084
+- FLOW-1085
+- FLOW-1086
+- FLOW-1087
+- FLOW-1094
+- FLOW-1095
 - FLOW-311
 - FLOW-133
 - FLOW-137
@@ -456,6 +462,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Projects and reports
 
+- FLOW-1082
+- FLOW-1083
+- FLOW-1088
+- FLOW-1089
+- FLOW-1090
+- FLOW-1091
+- FLOW-1092
+- FLOW-1093
 - FLOW-1044
 - FLOW-1045
 - FLOW-1047
