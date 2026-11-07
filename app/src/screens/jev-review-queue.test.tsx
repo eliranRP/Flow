@@ -17,7 +17,8 @@ import {
 
 const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 
-const db = vi.hoisted(() => ({
+/** Every mock field at its start. One place: a field added here is reset by resetDb() too. */
+const freshDb = vi.hoisted(() => () => ({
   integration: null as { enabled: boolean; mode: string } | null,
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
   holdIntegration: null as Promise<void> | null,
@@ -38,6 +39,13 @@ const db = vi.hoisted(() => ({
   failFills: false,
   undoError: null as string | null,
 }));
+
+const db = vi.hoisted(() => freshDb());
+
+/** Every field back to its start, before each test. */
+function resetDb() {
+  Object.assign(db, freshDb());
+}
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean; failNow?: boolean }) {
   const failed = options?.hold === "integration" ? db.integrationError : Boolean(options?.fail && db.failSuggestions) || options?.failNow === true;
@@ -167,24 +175,7 @@ function renderQueue(rows: ReviewRow[] = [open], prepare?: (client: QueryClient)
 
 describe("Jev review one tap", () => {
   beforeEach(() => {
-    db.integration = null;
-    db.suggestions = [];
-    db.holdIntegration = null;
-    db.holdSuggestions = null;
-    db.failSuggestions = false;
-    db.integrationError = false;
-    db.seenIds = [];
-    db.integrationReads = 0;
-    db.writes = [];
-    db.rows = [];
-    db.closed = new Set();
-    db.reasons = [];
-    db.stallReasons = false;
-    db.failReopen = false;
-    db.flags = [];
-    db.fills = [];
-    db.failFills = false;
-    db.undoError = null;
+    resetDb();
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
@@ -949,10 +940,8 @@ describe("Jev review one tap", () => {
 
 describe("review card pin (prod QA: אישור approved another line)", () => {
   beforeEach(() => {
-    db.integration = null;
-    db.suggestions = [];
-    db.writes = [];
-    db.closed = new Set();
+    // FLOW-845: every field, so a flag one test sets (failReopen) can't fail the next one under --sequence.shuffle.
+    resetDb();
     bindJevConnectorScope(scope);
   });
 
@@ -1031,8 +1020,6 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     };
     beforeEach(() => {
       vi.useFakeTimers();
-      db.writes = [];
-      db.failReopen = false;
     });
     afterEach(() => {
       vi.useRealTimers();
