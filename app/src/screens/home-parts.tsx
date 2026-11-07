@@ -3,7 +3,7 @@ import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
 import { addTriggerRef } from "../add-trigger";
 import { markRecurringTipSeen, recurringTipSeen, useTipDismiss } from "../recurring-tip";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cashLinesPath } from "../cash";
 import { forecastMonthSearch } from "../forecast-page-month";
 import { changeTone } from "../home-month";
@@ -17,9 +17,11 @@ import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
-import { ChevronDownIcon, CloseIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
+import { ChevronDownIcon, CloseIcon, MoreIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
+import { List, ListRow } from "../ui/list-row";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
+import { Sheet } from "../ui/sheet";
 import { Skeleton } from "../ui/skeleton";
 
 /**
@@ -51,7 +53,8 @@ export type HomeMonthNav = {
 /**
  * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
  * FLOW-986 (board concept B): קבועים left the tab bar for this icon. FLOW-1017: a red count on it says how many
- * recurring bills and income are late (a number, not colour alone).
+ * recurring bills and income are late (a number, not colour alone). FLOW-1095 (the owner, 2026-11-07): under 360px
+ * search and the avatar move into a 44px ⋯ "עוד" sheet (07-band-home.css), so the company's name keeps about 96px.
  */
 export function HomeBandActions({ isPast, currentName, search, avatarInitial, lateRecurring = 0, recurringTo = "/recurring", recurringTip = false }: {
   isPast: boolean;
@@ -78,6 +81,13 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
   }, []);
   // FLOW-1015: a hint never blocks what is under it: a tap outside the bubble, or a scroll, closes it.
   useTipDismiss(tipOpen, tip, closeTip);
+  const navigate = useNavigate();
+  const [more, setMore] = useState(false);
+  const moreButton = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  const go = (to: string, state?: unknown) => {
+    setMore(false);
+    void navigate(to, state == null ? undefined : { state });
+  };
   if (isPast) {
     return (
       <Link to={`/${search}`} replace className="ui-band-back ui-hit m-press">
@@ -103,7 +113,7 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
         </IconButton>
       ) : null}
       {/* The search opens with its field focused, as the entry on the other screens does (FLOW-323). */}
-      <IconButton label="חיפוש" onBand to={`/search${search}`} state={SEARCH_FOCUS_STATE} className="ui-band-action">
+      <IconButton label="חיפוש" onBand to={`/search${search}`} state={SEARCH_FOCUS_STATE} className="ui-band-action ui-band-wide">
         <SearchIcon size={22} />
       </IconButton>
       <span className="ui-band-tip-anchor" onClickCapture={tipOpen ? closeTip : undefined}>
@@ -130,11 +140,29 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
           </IconButton>
         </div>
       ) : null}
-      <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action">
+      <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action ui-band-wide">
         <span className="ui-band-avatar" aria-hidden="true">
           {avatarInitial ?? <PersonIcon />}
         </span>
       </IconButton>
+      <IconButton
+        ref={moreButton}
+        label="עוד"
+        onBand
+        aria-haspopup="dialog"
+        className="ui-band-action ui-band-more"
+        onClick={() => {
+          setMore(true);
+        }}
+      >
+        <MoreIcon />
+      </IconButton>
+      <Sheet open={more} onOpenChange={setMore} title="עוד" returnFocusRef={moreButton}>
+        <List>
+          <ListRow variant="button" title="חיפוש" icon={<SearchIcon />} chevron onClick={() => { go(`/search${search}`, SEARCH_FOCUS_STATE); }} />
+          <ListRow variant="button" title="הגדרות וחשבון" icon={<PersonIcon />} chevron onClick={() => { go(`/settings${search}`); }} />
+        </List>
+      </Sheet>
     </div>
   );
 }

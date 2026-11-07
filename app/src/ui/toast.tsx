@@ -37,6 +37,11 @@ export function useToast(): ToastContextValue {
   return value;
 }
 
+/** FLOW-1094: the toasts, or null where no provider is mounted (a component drawn on its own, in a story or a test). */
+export function useToastIfAny(): ToastContextValue | null {
+  return useContext(ToastContext);
+}
+
 /** One toast above the floor (decision 0182). A new show replaces it. The host does not catch taps. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);

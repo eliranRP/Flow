@@ -330,8 +330,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1085"></a>[FLOW-1085](tasks/FLOW-1085.md) | דורש טיפול cards cut their amount at 320 outside Home | SMALL UI |
 | <a id="flow-1086"></a>[FLOW-1086](tasks/FLOW-1086.md) | Home: skipping a forecast row is swipe-only | SMALL UI |
 | <a id="flow-1087"></a>[FLOW-1087](tasks/FLOW-1087.md) | Charge page: the "לא צפוי ב<חודש>" switch stays disabled with no reason when the forecast fails to load | SMALL UI |
-| <a id="flow-1094"></a>[FLOW-1094](tasks/FLOW-1094.md) | דורש טיפול: dismissing a card has no undo toast | PLAN FIRST |
-| <a id="flow-1095"></a>[FLOW-1095](tasks/FLOW-1095.md) | Home band at 320: the company name is cut to a few letters | PLAN FIRST |
+| <a id="flow-1094"></a>[FLOW-1094](tasks/FLOW-1094.md) | דורש טיפול: dismissing a card has no undo toast | SMALL UI |
+| <a id="flow-1095"></a>[FLOW-1095](tasks/FLOW-1095.md) | Home band at 320: the company name is cut to a few letters | SMALL UI |
 | <a id="flow-1097"></a>[FLOW-1097](tasks/FLOW-1097.md) | דורש טיפול cards at 320: one line, a short title and a tag | SMALL UI |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |

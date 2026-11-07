@@ -1,13 +1,17 @@
 import { isValidElement, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { hideRow, isRowHidden, readHidden, restoreAll, type HiddenRows } from "./attention-dismiss";
+import { hideRow, isRowHidden, readHidden, restoreAll, showRow, type HiddenRows } from "./attention-dismiss";
 import type { BannerRow } from "./banner";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { CheckIcon, ChevronIcon, CloseIcon, InboxIcon } from "./icons";
+import { useToastIfAny } from "./toast";
 
 /** The slide and fold of a dismissed card (--motion-sheet-out, 220ms), with a frame to spare. */
 const FOLD_MS = 240;
+
+/** FLOW-1094 (the owner, 2026-11-07): how long the "הוסתר" toast offers ביטול. */
+export const HIDE_UNDO_MS = 4000;
 
 function reducedMotion(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -34,6 +38,7 @@ export function countTag(count: number, one: string, many: string): string {
  * FLOW-1043 (BUILD-PLAN §3.5): the "דורש טיפול" row-cards. Each row is a 56px card that links to its page,
  * with an X that hides it on this device until what it counts changes (attention-dismiss.ts). The review row
  * (a row with `button`) comes first and has no X. When every row is hidden, the section is one line with ביטול.
+ * FLOW-1094: each X shows a 4s toast "הוסתר" whose ביטול brings back that card only; the head's link stays.
  */
 export function AttentionCards({ rows, storageKey, title = "דורש טיפול" }: {
   rows: readonly BannerRow[];
@@ -50,13 +55,18 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
   }
   // What is kept, cards still folding included, so two quick dismissals both stay hidden.
   const kept = useRef<{ key: string; rows: HiddenRows } | null>(null);
-  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  // Each card's fold, by row id, so the toast's ביטול can stop that one.
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const screenKey = useRef(storageKey);
+  screenKey.current = storageKey;
+  const toast = useToastIfAny();
+  const undoToast = useRef<number | null>(null);
   // The section is a named region ("דורש טיפול"), as the box it replaces was: the e2e specs and screen readers find it by name.
   const titleId = useId();
   useEffect(() => {
     const pending = timers.current;
     return () => {
-      for (const timer of pending) clearTimeout(timer);
+      for (const timer of pending.values()) clearTimeout(timer);
     };
   }, []);
 
@@ -74,7 +84,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
     kept.current = { key: storageKey, rows: hideRow(storageKey, row.id, key, before) };
     setLeaving((current) => new Set(current).add(row.id));
     const timer = setTimeout(() => {
-      timers.current.delete(timer);
+      timers.current.delete(row.id);
       setHidden((current) => ({ ...current, [row.id]: key }));
       setLeaving((current) => {
         const rest = new Set(current);
@@ -82,13 +92,41 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
         return rest;
       });
     }, reducedMotion() ? 0 : FOLD_MS);
-    timers.current.add(timer);
+    timers.current.set(row.id, timer);
+    const screen = storageKey;
+    undoToast.current = toast?.show({
+      message: "הוסתר",
+      action: "ביטול",
+      durationMs: HIDE_UNDO_MS,
+      onAction: () => {
+        unhide(screen, row.id);
+      },
+    }) ?? null;
+  }
+
+  /** FLOW-1094: the toast's ביטול. Only this card comes back, mid-fold or folded; it works after the page is left too. */
+  function unhide(screen: string, id: string) {
+    const fold = timers.current.get(id);
+    if (fold != null) clearTimeout(fold);
+    timers.current.delete(id);
+    const before = kept.current?.key === screen ? kept.current.rows : readHidden(screen);
+    kept.current = { key: screen, rows: showRow(screen, id, before) };
+    if (screenKey.current !== screen) return;
+    setLeaving((current) => {
+      const rest = new Set(current);
+      rest.delete(id);
+      return rest;
+    });
+    setHidden((current) => Object.fromEntries(Object.entries(current).filter(([rowId]) => rowId !== id)));
   }
 
   function restore() {
     // A fold still running would hide its card again once storage is cleared: end the folds first.
-    for (const timer of timers.current) clearTimeout(timer);
+    for (const timer of timers.current.values()) clearTimeout(timer);
     timers.current.clear();
+    // Every card is back, so the last card's ביטול has nothing left to do.
+    if (undoToast.current != null) toast?.dismiss(undoToast.current);
+    undoToast.current = null;
     setLeaving(new Set());
     restoreAll(storageKey);
     kept.current = null;

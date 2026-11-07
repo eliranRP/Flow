@@ -1,6 +1,6 @@
 import { type CashCurrencyRow } from "@flow/shared";
 import { QueryClient } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ForecastRow, HomeBandActions, HomeFigures, homeMonthLabel, HomeMonthPill, type HomeFigureRows } from "./home-parts";
@@ -91,6 +91,22 @@ describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
     again.unmount();
     renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={12} />);
     expect(screen.getByRole("link", { name: "קבועים, 12 לא הגיעו" }).querySelector(".ui-band-count")?.textContent).toBe("9+");
+  });
+
+  it("FLOW-1095: holds search and הגדרות וחשבון in a 44px ⋯ sheet, the band's row under 360px", async () => {
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="?preview=1" />);
+    // Both stay on the row for 360px and up; 07-band-home.css swaps them for the ⋯ under 360px.
+    expect(screen.getByRole("link", { name: "חיפוש" })).toHaveClass("ui-band-wide");
+    expect(screen.getByRole("link", { name: "הגדרות וחשבון" })).toHaveClass("ui-band-wide");
+    const more = screen.getByRole("button", { name: "עוד" });
+    expect(more).toHaveClass("ui-band-more", "ui-icon-btn");
+    expect(more).toHaveAttribute("aria-haspopup", "dialog");
+    fireEvent.click(more);
+    const sheet = await screen.findByRole("dialog", { name: "עוד" });
+    expect(within(sheet).getByRole("button", { name: /חיפוש/u })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: /הגדרות וחשבון/u })).toBeInTheDocument();
+    // קבועים and + stay on the band.
+    expect(within(sheet).queryByRole("button", { name: /קבועים/u })).toBeNull();
   });
 
   it("is not on a past month's band", () => {

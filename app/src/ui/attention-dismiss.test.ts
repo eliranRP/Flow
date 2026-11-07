@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { hideRow, isRowHidden, readHidden, restoreAll } from "./attention-dismiss";
+import { hideRow, isRowHidden, readHidden, restoreAll, showRow } from "./attention-dismiss";
 
 describe("attention-dismiss (FLOW-1043)", () => {
   afterEach(() => {
@@ -56,5 +56,17 @@ describe("attention-dismiss (FLOW-1043)", () => {
     expect(() => {
       restoreAll("home");
     }).not.toThrow();
+  });
+});
+
+describe("showRow (FLOW-1094)", () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("shows one hidden row again and keeps the others hidden", () => {
+    const hidden = hideRow("home", "unpaid", "unpaid:3:2130000", hideRow("home", "changes", "changes:4"));
+    expect(showRow("home", "changes", hidden)).toEqual({ unpaid: "unpaid:3:2130000" });
+    expect(readHidden("home")).toEqual({ unpaid: "unpaid:3:2130000" });
   });
 });

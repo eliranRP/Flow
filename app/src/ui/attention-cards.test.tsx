@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AttentionCards } from "./attention-cards";
+import { AttentionCards, HIDE_UNDO_MS } from "./attention-cards";
 import type { BannerRow } from "./banner";
 import { expectRtl, expectTarget } from "./test-support";
+import { ToastProvider } from "./toast";
 
 const ROWS: BannerRow[] = [
   { id: "changes", to: "/recurring/changes", title: "4 חיובים קבועים השתנו", dismissKey: "changes:4" },
@@ -124,5 +125,52 @@ describe("AttentionCards (FLOW-1043)", () => {
     // A row without both keeps only its title, cut at its end under 360px.
     expect(gym).not.toHaveClass("ui-attn-link-short");
     expect(gym).not.toHaveAttribute("aria-label");
+  });
+});
+
+describe("AttentionCards' הוסתר toast (FLOW-1094)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
+  });
+
+  function withToasts() {
+    return render(
+      <ToastProvider>
+        <MemoryRouter>
+          <AttentionCards rows={ROWS} storageKey="home" />
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+  }
+
+  it("says הוסתר for 4s with ביטול, which brings back only that card; the head's link stays for the other", () => {
+    expect(HIDE_UNDO_MS).toBe(4000);
+    withToasts();
+    dismiss("4 חיובים קבועים השתנו");
+    expect(screen.getByRole("status")).toHaveTextContent("הוסתר");
+    dismiss("3 חשבוניות פתוחות");
+    expect(screen.getByRole("button", { name: "2 הוסתרו · הצגה" })).toBeInTheDocument();
+    // The second X's toast replaced the first: its ביטול brings back the invoices card, not the charges card.
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(screen.getByRole("link", { name: "3 חשבוניות פתוחות" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "4 חיובים קבועים השתנו" })).toBeNull();
+    expect(screen.getByRole("button", { name: "1 הוסתרו · הצגה" })).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("flow.attention.home") ?? "null")).toEqual({ changes: "changes:4" });
+  });
+
+  it("stops a card's fold when ביטול comes before it ends", () => {
+    withToasts();
+    fireEvent.click(screen.getByRole("button", { name: "הסתרה: 4 חיובים קבועים השתנו" }));
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByText("4 חיובים קבועים השתנו").closest("li")).not.toHaveAttribute("data-leaving");
+    expect(screen.queryByRole("button", { name: /הוסתרו · הצגה/u })).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem("flow.attention.home") ?? "null")).toEqual({});
   });
 });

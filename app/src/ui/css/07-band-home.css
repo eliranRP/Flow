@@ -279,6 +279,22 @@ html[data-kb="open"] .ui-sheet-body {
   margin-inline-start: var(--space-1);
 }
 
+/* FLOW-1095 (the owner, 2026-11-07): under 360px search and the avatar wait in the ⋯ sheet, so the company's
+   name keeps about 96px; from 360px up the row is as it was and the ⋯ is not drawn. */
+.ui-band-actions > .ui-band-more {
+  display: none;
+}
+
+@media (max-width: 359px) {
+  .ui-band-actions > .ui-band-wide {
+    display: none;
+  }
+
+  .ui-band-actions > .ui-band-more {
+    display: inline-grid;
+  }
+}
+
 /* FLOW-987: the one-time tip under the קבועים icon (board RecurringConceptB): an inverse bubble with a
    ✕, its arrow under the icon, which sits one target and one gap in from the avatar's end. */
 .ui-band-tip-anchor {
