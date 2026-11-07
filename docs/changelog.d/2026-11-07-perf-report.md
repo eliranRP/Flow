@@ -1,0 +1,1 @@
+The 2026-11-07 daily perf report is in `docs/qa/perf/`. FLOW-1080 (#1025) is in production: Company profit shows its figures sooner (a median 1.1 s from Home, against 1.4 s), and its next-month card after them. `company_next_month_inputs` grew to 174 KB. A short slowdown on the backend, from about 02:00 to 02:07 UTC, is noted.
