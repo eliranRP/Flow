@@ -244,13 +244,47 @@
   white-space: nowrap;
 }
 
-/* FLOW-1082 (the owner, 2026-11-07): one line; below 360px its figures are short ($30K), so none is cut. The full
+/* FLOW-1082 (the owner, 2026-11-07, option A): a hint is one line. From 360 it sits under the name beside the amount,
+   its figures in full. Below 360 the row is a grid: the name, the amount and the chevron on the first line, the hint
+   under them across the row up to the chevron's column, its figures short ($30K), so none is cut at 320. The full
    line stays for a screen reader, the short one is hidden from it. */
 .ui-rep-hint-short {
   display: none;
 }
 
 @media (max-width: 359px) {
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name amount chevron"
+      "hint hint .";
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) > .ui-row-main,
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) .ui-row-text {
+    display: contents;
+  }
+
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) .ui-row-title {
+    grid-area: name;
+  }
+
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) > :not(.ui-row-main, .ui-row-chevron) {
+    grid-area: amount;
+  }
+
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) > .ui-row-chevron {
+    grid-area: chevron;
+  }
+
+  .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) .ui-row-hint {
+    grid-area: hint;
+    min-inline-size: 0;
+  }
+
   .ui-rep-hint-full {
     position: absolute;
     inline-size: 1px;

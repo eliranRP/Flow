@@ -74,8 +74,9 @@ async function fits(canvasElement: HTMLElement) {
 }
 
 /**
- * FLOW-1082 (the owner, 2026-11-07: one line, short amounts): every report row's hint with figures is one line and
- * whole, with no ellipsis; below 360px it shows the short figures ($30K), from 360 the full ones.
+ * FLOW-1082 (the owner, 2026-11-07, option A): every report row's hint with figures is one line and whole, with no
+ * ellipsis. From 360 it shows the full figures; below 360 the short ones ($30K), on its own line under the name and
+ * the amount, across the row up to the chevron's column.
  */
 async function hintsWhole(canvasElement: HTMLElement) {
   const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")].filter((hint) => hint.querySelector(".ui-rep-hint-short") != null);
@@ -84,8 +85,24 @@ async function hintsWhole(canvasElement: HTMLElement) {
   for (const hint of hints) {
     await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
     await expect(hint.scrollWidth).toBeLessThanOrEqual(hint.clientWidth);
+    await expect(hint.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(hint).lineHeight) + 1);
     const short = hint.querySelector<HTMLElement>(".ui-rep-hint-short");
     await expect(short == null ? "none" : getComputedStyle(short).display).toBe(narrow ? "inline" : "none");
+    if (!narrow) continue;
+    const row = hint.closest<HTMLElement>(".ui-row");
+    const line = hint.closest<HTMLElement>(".ui-row-hint");
+    const chevron = row?.querySelector<HTMLElement>(".ui-row-chevron");
+    const title = row?.querySelector<HTMLElement>(".ui-row-title");
+    if (row == null || line == null || chevron == null || title == null) throw new Error("a report row without its parts");
+    const box = line.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const chevronBox = chevron.getBoundingClientRect();
+    // Under the name and the amount, from the row's start to the chevron's column.
+    await expect(box.top).toBeGreaterThanOrEqual(title.getBoundingClientRect().bottom - 1);
+    await expect(box.top).toBeGreaterThanOrEqual(chevronBox.top);
+    await expect(Math.abs(box.right - rowBox.right)).toBeLessThanOrEqual(1);
+    await expect(box.left).toBeLessThanOrEqual(chevronBox.right + parseFloat(getComputedStyle(row).columnGap) + 1);
+    await expect(box.left).toBeGreaterThanOrEqual(chevronBox.right - 1);
   }
 }
 
