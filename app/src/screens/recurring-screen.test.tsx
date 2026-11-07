@@ -3,6 +3,28 @@ import { RECURRING_FIXTURE as FIXTURE, RECURRING_MISSING_FIXTURE as MISSING } fr
 import { alertState } from "../recurring-schedule";
 import { recurringView } from "./recurring-screen";
 
+describe("recurringView with a month skip (FLOW-1081)", () => {
+  const skip = { skipped: new Set(["party:expense:power:USD", "party:expense:internet:USD"]), base: "USD", monthLabel: "אוקטובר" };
+  const view = recurringView(FIXTURE, "2026-10-11", null, undefined, "", skip);
+  const rows = view.groups.flatMap((group) => group.rows);
+
+  it("says the charge is not expected this month, and takes it off the late cards", () => {
+    expect(rows.find((item) => item.name === "Brightline Power")?.status).toBe("לא צפוי באוקטובר");
+    expect(rows.find((item) => item.name === "Harborlink Internet")?.status).toBe("לא צפוי באוקטובר");
+    expect(view.late.map((item) => item.name)).toEqual(["Elm Row unit 2"]);
+  });
+
+  it("leaves it out of what is still to come this month", () => {
+    expect(view.outflow.toCome).toBe(96200n - 18600n - 13000n);
+    expect(view.outflow.paid).toBe(29100n);
+  });
+
+  it("ignores a skip in another currency than the forecast's", () => {
+    const other = recurringView(FIXTURE, "2026-10-11", null, undefined, "", { ...skip, base: "ILS" });
+    expect(other.outflow.toCome).toBe(96200n);
+  });
+});
+
 describe("recurringView (rule-25 fixture)", () => {
   const view = recurringView(FIXTURE, "2026-10-11");
 

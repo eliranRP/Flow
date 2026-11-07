@@ -36,6 +36,7 @@ import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NO_CATEGORY } from "../recurring-layout";
 import { cx } from "../ui/cx";
 import { topToast } from "../ui/top-toast";
+import { useHoldWrites } from "../use-is-viewer";
 
 /**
  * A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units.
@@ -88,6 +89,7 @@ function ForecastSection({
   today,
   onOpen,
   leavingKey,
+  onSkip,
 }: {
   title: string;
   total: ReactNode;
@@ -95,6 +97,8 @@ function ForecastSection({
   today: string;
   onOpen: (item: ForecastItem) => void;
   leavingKey: string | null;
+  /** FLOW-1081: a row swipes out of this month's forecast; none for a viewer. */
+  onSkip?: (item: ForecastItem) => void;
 }) {
   return (
     <section className="ui-forecast-section">
@@ -104,7 +108,7 @@ function ForecastSection({
       </h2>
       <ul className="ui-forecast-list">
         {items.map((item) => (
-          <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpen} leaving={leavingKey === item.key} />
+          <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpen} leaving={leavingKey === item.key} onSkip={onSkip} />
         ))}
       </ul>
     </section>
@@ -118,6 +122,8 @@ function ForecastSection({
 export function ForecastScreen({ sample, openWhen = false }: { sample?: ForecastSample; openWhen?: boolean } = {}) {
   const toast = useToast();
   const live = sample == null;
+  // FLOW-1081: rows swipe out of the month and back; a viewer reads the page.
+  const holdWrites = useHoldWrites();
   const today = sample?.today ?? israelToday();
   const month = today.slice(0, 7);
   const query = useMonthForecastQuery(month, live);
@@ -243,7 +249,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       if (openKey == null) fold();
       else pendingLeave.current = fold;
       toast.show(topToast({
-        message: `${item.name} הועבר לחודש הבא`,
+        // FLOW-1081: an invoice is still due after the month; a recurring charge is out of this month only.
+        message: item.kind === "invoice" ? `${item.name} הועבר לחודש הבא` : `${item.name} הוצא מהצפי של ${monthName(month)}`,
         action: "ביטול",
         onAction: () => {
           if (move.sent) {
@@ -270,6 +277,19 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       },
     }));
   }
+
+  /** FLOW-1081: an item taken out goes back into the month's forecast (its override's moved_out off); ביטול takes it out again. */
+  function putBack(item: ForecastItem) {
+    const prior = data?.overrides.find((row) => row.item_key === item.key) ?? null;
+    write.mutate({ key: item.key, patch: { moved_out: false }, undo: false, prior });
+    toast.show(topToast({
+      message: `${item.name === "" ? "ללא שם" : item.name} חזר לצפי של ${monthName(month)}`,
+      action: "ביטול",
+      onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
+    }));
+  }
+  const skipItem = holdWrites || !live ? undefined : (item: ForecastItem) => { save(item, { moved_out: true }); };
+  const restoreItem = holdWrites || !live ? undefined : putBack;
 
   /** The reset clears every override; the undo sends the captured ones back (FLOW-141b). */
   function resetAll() {
@@ -440,6 +460,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               today={today}
               onOpen={openItem}
               leavingKey={leavingKey}
+              onSkip={skipItem}
             />
             <section className="ui-forecast-section">
               <h2 className="ui-forecast-section-head">
@@ -448,7 +469,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               </h2>
               <ul className="ui-forecast-list">
                 {expense.map((item) => (
-                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={leavingKey === item.key} />
+                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={leavingKey === item.key} onSkip={skipItem} />
                 ))}
                 {build.small.length > 0 ? (
                   <li className="ui-forecast-li ui-forecast-li-group">
@@ -473,10 +494,10 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             </section>
             {moved.length > 0 ? (
               <section className="ui-forecast-section ui-forecast-section-moved">
-                <h2 className="ui-forecast-section-head ui-forecast-head-moved">לא החודש</h2>
+                <h2 className="ui-forecast-section-head ui-forecast-head-moved">הוצא מהצפי</h2>
                 <ul className="ui-forecast-list">
                   {moved.map((item) => (
-                    <MovedRow key={item.key} item={item} onOpen={openItem} />
+                    <MovedRow key={item.key} item={item} monthLabel={monthName(month)} onOpen={openItem} onRestore={restoreItem} />
                   ))}
                 </ul>
               </section>

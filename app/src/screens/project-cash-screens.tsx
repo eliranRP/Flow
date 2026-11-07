@@ -1,3 +1,5 @@
+import { scheduleForecastKey } from "../forecast-skip";
+import { SwipeRow } from "../ui/swipe-row";
 import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } from "@flow/shared";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -68,18 +70,38 @@ function magnitude(minor: number | bigint): bigint {
   return value < 0n ? -value : value;
 }
 
+/**
+ * FLOW-1081: the project page's swipes out of this month's forecast, as on Home: the keys taken out, the forecast's
+ * currency (a charge in another one has no item) and the write (useForecastSkip's).
+ */
+export type ProjectSkip = {
+  skipped: ReadonlySet<string>;
+  base: string;
+  monthLabel: string;
+  set: (key: string, out: boolean, name: string) => void;
+};
+
+/** A row that swipes out of this month's forecast ("לא החודש") or back ("החזרה לצפי"), or the row alone. */
+function Swipeable({ swipe, children }: { swipe: { label: string; act: () => void } | null; children: ReactNode }) {
+  if (swipe == null) return <>{children}</>;
+  return <SwipeRow label={swipe.label} onRemove={swipe.act}>{children}</SwipeRow>;
+}
+
 /** A recurring charge of the project this month: its mark, its day or arrival in words, and its amount. */
-function ChargeRow({ row, search }: { row: ScheduleRow; search: string }) {
+function ChargeRow({ row, search, skippedIn }: { row: ScheduleRow; search: string; /** FLOW-1081: taken out of this month ("נובמבר"). */ skippedIn?: string }) {
   const arrived = row.state === "arrived";
   const late = row.state === "late";
   const minor = magnitude(arrived && row.amount_minor != null ? row.amount_minor : row.typical_amount_minor);
   const day = String(row.typical_day);
-  const hint = arrived
-    ? row.direction === "income" ? "התקבל החודש" : "שולם החודש"
-    : late ? `איחר · צפוי ב-${day}` : `צפוי ב-${day}`;
+  const hint = skippedIn != null
+    ? `לא צפוי ב${skippedIn}`
+    : arrived
+      ? row.direction === "income" ? "התקבל החודש" : "שולם החודש"
+      : late ? `איחר · צפוי ב-${day}` : `צפוי ב-${day}`;
   return (
     <ListRow
       variant="project"
+      className={skippedIn != null ? "ui-home-act-skipped" : undefined}
       title={row.party_name}
       hint={row.category_name == null ? hint : `${hint} · ${row.category_name}`}
       icon={<StatusMark kind={arrived ? "paid" : late ? "late" : "due"} />}
@@ -141,6 +163,7 @@ export function ProjectCashOverview({
   offlineSince = null,
   example,
   now,
+  skip,
 }: {
   project: Project;
   /** Null while the cash read is still out: the band paints the project's name from its own read. */
@@ -168,6 +191,8 @@ export function ProjectCashOverview({
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
+  /** FLOW-1081: the month's charges swipe out of the forecast and back; none for a viewer or a preview. */
+  skip?: ProjectSkip;
 }) {
   const month = data?.months[0];
   const key = month == null ? null : cashMonthKey(month.month);
@@ -186,6 +211,19 @@ export function ProjectCashOverview({
   const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);
   const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
   const groups = projectLineGroups(schedule, lines, project.id, filter);
+  // FLOW-1081: a charge taken out of this month's forecast moves from נותר לשלם to הוצא מהצפי, out of its total.
+  const keyOf = (row: ScheduleRow) => (skip == null ? undefined : scheduleForecastKey(schedule, row, skip.base));
+  const isSkipped = (row: ScheduleRow) => {
+    const key = keyOf(row);
+    return key != null && skip != null && skip.skipped.has(key);
+  };
+  const left = groups.left.filter((row) => !isSkipped(row));
+  const skippedRows = groups.left.filter(isSkipped);
+  const swipeOf = (row: ScheduleRow, out: boolean) => {
+    const key = keyOf(row);
+    if (skip == null || key == null) return null;
+    return { label: out ? "לא החודש" : "החזרה לצפי", act: () => { skip.set(key, out, row.party_name); } };
+  };
   const control = (
     <SegmentedControl
       label="סינון תנועות החודש"
@@ -279,10 +317,28 @@ export function ProjectCashOverview({
           </div>
           {linesRetry == null ? null : <FailureLine offline={!navigator.onLine} onRetry={linesRetry} />}
           {hasLines || linesRetry != null ? null : <p className="ui-page-pad ui-project-lines-none t-line2">{filter === "left" ? "אין מה לשלם עוד החודש." : "אין עדיין תנועות החודש."}</p>}
-          {groups.left.length === 0 ? null : (
+          {left.length === 0 ? null : (
             <section className="ui-month" aria-labelledby={`project-left-${project.id}`}>
-              <GroupHead id={`project-left-${project.id}`} title="נותר לשלם" summary={summaryOf(groups.left.length, groups.left[0]?.currency, chargeTotal(groups.left))} />
-              <List>{groups.left.map((row) => <ChargeRow key={`${row.direction}:${row.party_id}`} row={row} search={search} />)}</List>
+              <GroupHead id={`project-left-${project.id}`} title="נותר לשלם" summary={summaryOf(left.length, left[0]?.currency, chargeTotal(left))} />
+              <List>
+                {left.map((row) => (
+                  <Swipeable key={`${row.direction}:${row.party_id}:${row.currency}`} swipe={swipeOf(row, true)}>
+                    <ChargeRow row={row} search={search} />
+                  </Swipeable>
+                ))}
+              </List>
+            </section>
+          )}
+          {skip == null || skippedRows.length === 0 ? null : (
+            <section className="ui-month" aria-labelledby={`project-skipped-${project.id}`}>
+              <GroupHead id={`project-skipped-${project.id}`} title="הוצא מהצפי" summary={<><bdi dir="ltr">{String(skippedRows.length)}</bdi> · לא בצפי של החודש</>} />
+              <List>
+                {skippedRows.map((row) => (
+                  <Swipeable key={`${row.direction}:${row.party_id}:${row.currency}`} swipe={swipeOf(row, false)}>
+                    <ChargeRow row={row} search={search} skippedIn={skip.monthLabel} />
+                  </Swipeable>
+                ))}
+              </List>
             </section>
           )}
           {groups.paid.length === 0 ? null : (

@@ -56,6 +56,12 @@ export const AddLine: Story = {
 };
 
 /** While the schedule loads. */
+/** FLOW-1081: Brightline Power taken out of October's forecast: "לא צפוי באוקטובר", off the late cards and עוד לשלם. */
+export const SkippedThisMonth: Story = {
+  parameters: { flowRouter: true },
+  render: () => <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11", null, undefined, "", { skipped: new Set(["party:expense:power:USD"]), base: "USD", monthLabel: "אוקטובר" })} />,
+};
+
 export const Loading: Story = { render: () => <RecurringSkeleton /> };
 
 /** FLOW-1014: no recurring charge yet: the empty screen's one action is the add row. */

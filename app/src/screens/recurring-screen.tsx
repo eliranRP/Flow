@@ -13,6 +13,9 @@ import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useDashboardQuery } from "../use-books";
 import { useOverheadProject } from "../overhead-project";
 import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
+import { useCompanyCurrency } from "../company-currency";
+import { scheduleForecastKey, skippedKeys, useForecastOverrides } from "../forecast-skip";
+import { HEBREW_MONTHS } from "../ui/date-math";
 
 /** "אוקטובר 2026" for the day's month. */
 function monthTitle(today: string): string {
@@ -58,7 +61,14 @@ export function RecurringScreen({
   const today = israelToday(now);
   const alerts = useMemo(() => (rows == null ? undefined : alertState(rows, bills)), [rows, bills]);
   const search = usePreviewSearch();
-  const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts, search)), [rows, today, project, alerts, search]);
+  // FLOW-1081: a charge taken out of this month's forecast says so, and leaves the month's sums and the late cards.
+  const overrides = useForecastOverrides(today.slice(0, 7), live);
+  const base = useCompanyCurrency();
+  const skip = useMemo(
+    () => (overrides.data == null ? undefined : { skipped: skippedKeys(overrides.data), base, monthLabel: HEBREW_MONTHS[Number(today.slice(5, 7)) - 1] ?? "" }),
+    [overrides.data, base, today],
+  );
+  const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts, search, skip)), [rows, today, project, alerts, search, skip]);
   const online = useOnline();
 
   const failedNow = live ? query.isError && query.data == null : failed;
@@ -82,23 +92,35 @@ export function RecurringScreen({
   return <RecurringList {...view} offlineSince={since} addLine={addLine} />;
 }
 
+/** This month's forecast items taken out of it (FLOW-1081), keyed as the month forecast keys them. */
+export type RecurringSkip = { skipped: ReadonlySet<string>; base: string; monthLabel: string };
+
 /**
  * The list's props from the server rows, for the project when one is named. The outflow counts every charge;
- * a late charge that still alerts leads the list as a card and keeps its place in its group (V3-Recurring).
+ * a late charge that still alerts leads the list as a card and keeps its place in its group (V3-Recurring). A charge
+ * still due this month that was taken out of its forecast (FLOW-1081) says "לא צפוי ב<month>", is not late, and is
+ * left out of the month's sums still to come.
  */
-export function recurringView(allRows: readonly ScheduleRow[], today: string, project: string | null = null, alerts?: AlertState, search = "") {
+export function recurringView(allRows: readonly ScheduleRow[], today: string, project: string | null = null, alerts?: AlertState, search = "", skip?: RecurringSkip) {
   const rows = project == null ? allRows : allRows.filter((row) => row.project_id === project);
   const projectName = project == null ? undefined : allRows.find((row) => row.project_id === project)?.project_name ?? undefined;
-  const lines = scheduleLines(rows, allRows);
+  const isSkipped = (row: ScheduleRow): boolean => {
+    if (skip == null || (row.state !== "soon" && row.state !== "late")) return false;
+    const key = scheduleForecastKey(allRows, row, skip.base);
+    return key != null && skip.skipped.has(key);
+  };
+  const skippedIds = new Set(rows.filter(isSkipped).map((row) => rowId(allRows, row)));
+  const lines = scheduleLines(rows, allRows).map((line) => (skippedIds.has(line.id) ? { ...line, due: false } : line));
   const byId = new Map(rows.map((row) => [rowId(allRows, row), row] as const));
   // A late charge that still alerts leads the list; one the user ignored is an ordinary row again.
   const state = alerts ?? alertState(allRows, undefined);
-  const lateIds = new Set(rows.filter((row) => row.state === "late" && state.active.has(rowId(allRows, row))).map((row) => rowId(allRows, row)));
+  const lateIds = new Set(rows.filter((row) => row.state === "late" && state.active.has(rowId(allRows, row)) && !skippedIds.has(rowId(allRows, row))).map((row) => rowId(allRows, row)));
   const toRow = (line: RecurringLine): RecurringListRow => {
     const row = byId.get(line.id);
     if (row == null) throw new Error("recurring row");
-    const alert: RecurringAlert | undefined = state.active.get(line.id);
-    const hint = hintFor(row, line, today, state.dismissed.has(line.id));
+    const skipped = skippedIds.has(line.id);
+    const alert: RecurringAlert | undefined = skipped ? undefined : state.active.get(line.id);
+    const hint = skipped ? {} : hintFor(row, line, today, state.dismissed.has(line.id));
     const late = lateIds.has(line.id);
     return {
       id: line.id,
@@ -109,7 +131,7 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
       paid: line.arrived,
       minor: line.minor,
       mark: line.arrived ? "paid" : late ? "late" : "due",
-      status: statusWords(row, hint.hint, late),
+      status: skipped ? `לא צפוי ב${skip?.monthLabel ?? ""}` : statusWords(row, hint.hint, late),
       ...hint,
       ...(alert == null ? {} : { alertKey: alert.alertKey, suggestion: alert.suggestion == null ? null : suggestionRow(alert.suggestion) }),
       href: chargeHref(row.direction, row.party_id, search, isSplitParty(allRows, row) ? row.project_id : null),

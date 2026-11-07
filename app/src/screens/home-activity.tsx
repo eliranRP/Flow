@@ -1,7 +1,7 @@
 import { formatAmountText, type CashLine, type ForecastOverrideRow } from "@flow/shared";
 import { Fragment, useEffect, type ReactNode } from "react";
 import { chargeHref } from "../recurring-charge";
-import { forecastKeyOf, useForecastSkip } from "../forecast-skip";
+import { scheduleForecastKey, useForecastSkip } from "../forecast-skip";
 import { isSplitParty, rowId, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
@@ -127,12 +127,7 @@ export function scheduleActivity(
   /** The forecast's currency: a charge in another one is not in the forecast, so it has no item to take out. */
   base: string | null = null,
 ): { left: ActivityRow[]; skipped: ActivityRow[]; paid: ActivityRow[] } {
-  // The month forecast's key: split when the party has another charge in the same currency (month-forecast.ts).
-  const keyOf = (item: ScheduleRow): string | undefined => {
-    if (base != null && item.currency !== base) return undefined;
-    const split = schedule.filter((other) => other.direction === item.direction && other.party_id === item.party_id && other.currency === item.currency).length > 1;
-    return forecastKeyOf(item, split);
-  };
+  const keyOf = (item: ScheduleRow): string | undefined => scheduleForecastKey(schedule, item, base);
   const row = (item: ScheduleRow, mark: StatusMarkKind, meta: string, minor: number): ActivityRow => ({
     key: rowId(schedule, item),
     title: item.party_name,

@@ -324,6 +324,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1077"></a>[FLOW-1077](tasks/FLOW-1077.md) | A loan's last payments: the date sits over its split | BUG |
 | <a id="flow-1078"></a>[FLOW-1078](tasks/FLOW-1078.md) | Back from the background, the tab bar sits mid-screen on iOS | BUG |
 | <a id="flow-1079"></a>[FLOW-1079](tasks/FLOW-1079.md) | Take a recurring charge out of this month's forecast | SMALL CYCLE |
+| <a id="flow-1081"></a>[FLOW-1081](tasks/FLOW-1081.md) | Take a charge out of a month on the project page, תזרים צפוי and the other forecast lists | SMALL CYCLE |
 | <a id="flow-311"></a>[FLOW-311](tasks/FLOW-311.md) | Split one bank line across several categories | MCP |
 | <a id="flow-133"></a>[FLOW-133](tasks/FLOW-133.md) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT |
 | <a id="flow-137"></a>[FLOW-137](tasks/FLOW-137.md) | Prime-linked loan rates (Flow MCP agent request) | SMALL CYCLE |
