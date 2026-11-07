@@ -331,9 +331,15 @@ export function hintFigures(parts: readonly (readonly [label: string, amount: bi
  */
 export function reportHint(text: string | HintFigures | undefined, share?: RowShare): ReactNode {
   if (text == null && share == null) return undefined;
+  // The short line writes "פחות מ־1%" as "<1%" (FLOW-1108): a bdi keeps the "<" from mirroring in RTL.
+  const percent = (short: boolean): ReactNode => {
+    if (share == null) return null;
+    if (share !== "under-1") return <bdi dir="ltr">{`${String(share)}%`}</bdi>;
+    return short ? <bdi dir="ltr">{"<1%"}</bdi> : <>פחות מ־<bdi dir="ltr">1%</bdi></>;
+  };
   const line = (rest: ReactNode, short = false) => (
     <>
-      {share == null ? null : share === "under-1" ? short ? <bdi dir="ltr">{"<1%"}</bdi> : <>פחות מ־<bdi dir="ltr">1%</bdi></> : <bdi dir="ltr">{`${String(share)}%`}</bdi>}
+      {percent(short)}
       {share == null || text == null ? null : " · "}
       {rest}
     </>

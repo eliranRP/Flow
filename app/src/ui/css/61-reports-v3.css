@@ -280,6 +280,7 @@
   min-inline-size: 0;
   overflow: hidden;
   direction: ltr;
+  user-select: none;
 }
 
 .ui-rep-hint-fit > .ui-rep-hint-short > span {
