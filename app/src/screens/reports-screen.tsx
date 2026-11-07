@@ -32,7 +32,7 @@ import {
   type PnlView,
   type ViewRow,
 } from "../report-views";
-import { AttentionCards } from "../ui/attention-cards";
+import { AttentionCards, countTag } from "../ui/attention-cards";
 import { useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { israelToday } from "../ui/date-math";
@@ -263,7 +263,7 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
   }
 
   const attention = drill == null && phase.kind === "ready" && statement != null && statement.review_count > 0
-    ? <AttentionCards storageKey="reports" title="לבדיקה" rows={[{ id: "review", to: `/review${search}`, title: `${String(statement.review_count)} תנועות לא נכללו · לבדיקה`, dismissKey: `review:${String(statement.review_count)}` }]} />
+    ? <AttentionCards storageKey="reports" title="לבדיקה" rows={[{ id: "review", to: `/review${search}`, title: `${String(statement.review_count)} תנועות לא נכללו · לבדיקה`, short: "לא נכללו", tag: countTag(statement.review_count, "תנועה אחת", "תנועות"), dismissKey: `review:${String(statement.review_count)}` }]} />
     : null;
   const ready = phase.kind === "ready" && !empty;
   return (

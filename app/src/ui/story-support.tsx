@@ -63,3 +63,28 @@ export function storyMeta(transactionId: string, fields: Partial<Omit<TxnMeta, "
     ...fields,
   };
 }
+
+/**
+ * FLOW-1097: at 320 every דורש טיפול card with a short title draws it and its tag on one line, nothing cut, and
+ * its link keeps the full title as its name. Returns each card's "<short> · <tag>", for the story to compare.
+ */
+export function oneLineAttention(canvasElement: HTMLElement): string[] {
+  const cards = [...canvasElement.querySelectorAll<HTMLElement>(".ui-attn-link-short")];
+  return cards.map((link) => {
+    const title = link.querySelector<HTMLElement>(".ui-attn-short-title");
+    const tag = link.querySelector<HTMLElement>(".ui-attn-tag");
+    const full = link.querySelector<HTMLElement>(".ui-attn-text");
+    if (title == null || tag == null || full == null) throw new Error("A short card without its parts");
+    if (getComputedStyle(full).display !== "none") throw new Error("The full title still shows under 360px");
+    const lineHeight = Number.parseFloat(getComputedStyle(title).lineHeight);
+    for (const part of [title, tag]) {
+      const box = part.getBoundingClientRect();
+      if (part.scrollWidth > part.clientWidth + 1) throw new Error(`Cut: ${part.dataset.text ?? ""} ${String(part.scrollWidth)}/${String(part.clientWidth)}`);
+      if (box.width === 0 || (part === title && box.height > lineHeight * 1.5)) throw new Error(`Not one line: ${part.dataset.text ?? ""}`);
+    }
+    const middle = (box: DOMRect) => box.top + box.height / 2;
+    if (Math.abs(middle(tag.getBoundingClientRect()) - middle(title.getBoundingClientRect())) > lineHeight / 2) throw new Error("The tag is on its own line");
+    if (link.getAttribute("aria-label") !== full.textContent) throw new Error("The link lost its full title");
+    return `${title.dataset.text ?? ""} · ${tag.dataset.text ?? ""}`;
+  });
+}

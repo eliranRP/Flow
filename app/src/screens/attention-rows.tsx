@@ -1,5 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
+import { countTag } from "../ui/attention-cards";
 import type { BannerRow } from "../ui/banner";
 import { reviewItems, reviewMinutes } from "../weekly-summary";
 import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
@@ -53,6 +54,8 @@ export function attentionRows({
       id: "review",
       to: `/review${search}`,
       title: pending === 1 ? "פריט אחד ממתין לאישור" : <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>,
+      short: "לאישור",
+      tag: countTag(pending, "פריט אחד", "פריטים"),
       // FLOW-958, FLOW-961: Home and the project page draw this row as their one filled button
       // (ReviewButton), worded as the weekly sheet's; the time is drawn smaller so the label holds one line at 320.
       button: { label: reviewItems(pending), hint: reviewMinutes(pending) },
@@ -66,6 +69,8 @@ export function attentionRows({
       // The bank icon Home already loads (between two bank accounts), not one more icon in its first load.
       icon: <BankIcon size={24} stroke={1.9} />,
       title: transfers === 1 ? "העברה אחת לבדיקה" : <><bdi dir="ltr">{String(transfers)}</bdi> העברות לבדיקה</>,
+      short: "לבדיקה",
+      tag: countTag(transfers, "העברה אחת", "העברות"),
       hint: "בין חשבונות Mercury",
     });
   }
@@ -79,6 +84,10 @@ export function attentionRows({
       title: unpaidOther.length === 0 && unpaidGross !== 0n ? (
         <>{unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>} · <bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi></>
       ) : unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
+      // FLOW-1097: under 360px "לגבייה" and the one total ("חשבוניות פתוחות" and a total do not fit at 320); with no
+      // one total, the invoices' count.
+      short: "לגבייה",
+      tag: unpaidOther.length === 0 && unpaidGross !== 0n ? formatAmountText(unpaidGross, currency) : countTag(unpaidCount, "חשבונית אחת", "חשבוניות"),
       // The title carries the one total (above), so a list that draws the hint (the project page's rows) does not repeat it.
       hint: unpaidOther.length === 0 ? (
         unpaidGross !== 0n ? "לגבייה" : <><bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi> · לגבייה</>
@@ -100,10 +109,10 @@ export function attentionRows({
   const count = (n: number, income: boolean) =>
     n === 1 ? missingBillsTitle(1, income) : <><bdi dir="ltr">{String(n)}</bdi> {income ? "תנועות קבועות לא הגיעו" : "חשבונות לא הגיעו"}</>;
   if (missingCount > 0) {
-    rows.push({ id: "missing", dismissKey: `missing:${String(missingCount)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false) });
+    rows.push({ id: "missing", dismissKey: `missing:${String(missingCount)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false), short: "לא הגיעו", tag: countTag(missingCount, "חשבון אחד", "חשבונות") });
   }
   if (missingIncome > 0) {
-    rows.push({ id: "missing-income", dismissKey: `missing-income:${String(missingIncome)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true) });
+    rows.push({ id: "missing-income", dismissKey: `missing-income:${String(missingIncome)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true), short: "לא הגיעו", tag: countTag(missingIncome, "הכנסה אחת", "הכנסות") });
   }
   // FLOW-415: one changed charge opens its payment. FLOW-1021: two or more share a row that opens
   // חיובים שהשתנו, the list of just those charges, each with its amount and its usual one.
@@ -119,6 +128,8 @@ export function attentionRows({
       // All drops draw the down arrow; any rise draws the up one.
       icon: changes.every((change) => change.down) ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: <><bdi dir="ltr">{String(changes.length)}</bdi> חיובים קבועים השתנו</>,
+      short: "חיובים קבועים השתנו",
+      tag: String(changes.length),
     });
   }
   return rows;
@@ -135,6 +146,9 @@ export function changeRow(change: ChargeChangeView, { saysRecurring = true }: { 
     to: change.href,
     icon: change.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
     title: change.title,
+    // FLOW-1097: under 360px "חשמל עלה" and its new amount; the usual one is on the payment.
+    short: change.title,
+    tag: change.now,
     // One line, cut at its end only when it does not fit (43-home.css).
     hint: <><bdi dir="ltr">{change.now}</bdi> במקום <bdi dir="ltr">{change.usual}</bdi>{saysRecurring ? " · חיוב קבוע" : null}</>,
   };

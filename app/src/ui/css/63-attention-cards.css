@@ -104,15 +104,64 @@
   white-space: nowrap;
 }
 
-/* At 320 an unpaid title ("3 חשבוניות פתוחות · $21,300") is longer than the card: it wraps to two lines on every
-   page that shows the cards (Home, loans, a project's cash, an investment), so the total is never cut (FLOW-1085). */
+/* FLOW-1097 (the owner's choice B, replacing FLOW-1085's two lines): under 360px a card with a short title draws it
+   and a tag on one line, the tag 13/500 in the accent on the tint. Both are drawn from data-text, so the words are
+   in the page once (the title, hidden here); the link's aria-label keeps the full title as its name. */
+.ui-attn-short {
+  display: none;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* The title fills the line, so the tag sits by the chevron, as on the mock. */
+.ui-attn-short-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-attn-tag {
+  flex: none;
+  padding: calc(var(--space-1) - 1px) calc(var(--space-2) + 1px);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-chip-weight);
+  white-space: nowrap;
+}
+
+.ui-attn-short-title::before,
+.ui-attn-tag::before {
+  content: attr(data-text);
+}
+
 @media (max-width: 359px) {
-  .ui-attn-text {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow-wrap: anywhere;
+  /* The parts sit 8px apart, the icon 12px in, so a short title and its tag fit beside the chevron and the X. */
+  .ui-attn-card {
+    padding-inline-start: 0;
+  }
+
+  .ui-attn-link {
+    gap: var(--space-2);
+    padding-inline-start: var(--space-3);
+  }
+
+  .ui-attn-short {
+    gap: var(--space-1);
+  }
+
+  .ui-attn-link-short .ui-attn-text {
+    display: none;
+  }
+
+  .ui-attn-link-short .ui-attn-short {
+    display: flex;
   }
 }
 

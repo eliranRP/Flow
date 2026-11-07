@@ -11,6 +11,7 @@ import { RECURRING_FIXTURE } from "../recurring-sample";
 import { shiftMonthKey } from "../period";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
+import { oneLineAttention } from "../ui/story-support";
 import { BandCompany } from "../ui/top-band";
 import { exampleOnBand } from "../ui/screen-stories-support";
 
@@ -211,6 +212,18 @@ export const HomeAttentionAllHidden: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("אין מה לטפל · הכול נסקר")).toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1097 (the owner's choice B): at 320 each card is a short title and a tag on one line, the full title its name. */
+export const HomeAttention320: Story = {
+  name: "Home attention, one line at 320",
+  render: () => <CashHomeStory late={2} />,
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    await within(canvasElement).findByRole("link", { name: /^3 חשבוניות פתוחות · /u });
+    await expect(oneLineAttention(canvasElement)).toEqual(["לאישור · 7 פריטים", "לבדיקה · 2 העברות", "לגבייה · ₪4,600", "לא הגיעו · 2 חשבונות"]);
   },
 };
 

@@ -3,7 +3,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LOAN_SUMMARY_SAMPLE } from "../dev/loan-summary-sample";
 import { sampleLoanStore } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
-import { longHebrew } from "../ui/story-support";
+import { longHebrew, oneLineAttention } from "../ui/story-support";
 import { ViewerPreview } from "../use-is-viewer";
 import { ExampleBar, pagesBusiness, storyBody } from "../ui/screen-stories-support";
 import type { LoanListRow } from "./loan-list";
@@ -118,6 +118,19 @@ export const Docked: Story = {
 export const Attention: Story = {
   name: "Loans, attention",
   args: { data: "pages" },
+};
+
+/** FLOW-1097 (the owner's choice B): at 320 "לבדיקה" with the count, and the loan with when; one line each. */
+export const Attention320: Story = {
+  name: "Loans, attention, one line at 320",
+  args: { data: "pages" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    await within(canvasElement).findByRole("link", { name: "2 תשלומים ממתינים לבדיקה · משכנתא אלון" });
+    // A payment due soon adds its card, as the date the story runs on allows.
+    await expect(oneLineAttention(canvasElement).slice(0, 2)).toEqual(["לבדיקה · תשלום אחד", "לבדיקה · 2 תשלומים"]);
+  },
 };
 
 /** One card hidden: the head offers "1 הוסתרו · הצגה". */

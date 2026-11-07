@@ -126,6 +126,9 @@ function lateCard(row: RecurringListRow, money: (minor: bigint) => string): Bann
     to: row.href,
     icon: <StatusMark kind="late" />,
     title: <>{row.name} · {words} · <bdi dir="ltr">{money(row.minor)}</bdi></>,
+    // FLOW-1097: under 360px the charge and its amount; how late is on its page.
+    short: row.name,
+    tag: money(row.minor),
   };
 }
 
