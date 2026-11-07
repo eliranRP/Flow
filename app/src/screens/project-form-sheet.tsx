@@ -5,6 +5,7 @@ import { getSupabase } from "../lib/supabase";
 import { useCompanyCurrency } from "../company-currency";
 import { kindLabel, PROJECT_KINDS, resolveProjectKind, type ProjectKind } from "../project-list";
 import { useHoldWrites } from "../use-is-viewer";
+import { useInvalidateBooks } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
 import { Button } from "../ui/button";
 import { israelToday } from "../ui/date-math";
@@ -105,6 +106,7 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
   const [kind, setKind] = useState<ProjectKind>(storedKind ?? "renovation");
   const [amounts, setAmounts] = useState<Record<AmountField, string>>({ purchase: "", budget: shekelsText(project?.budget ?? null), arv: "", value: "" });
   const createdId = useRef<string | null>(null);
+  const invalidate = useInvalidateBooks();
   const trimmed = name.trim();
   // Shown after a tap on the button, cleared as the name changes.
   const [nameError, setNameError] = useState<string | undefined>(undefined);
@@ -125,6 +127,8 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
     // FLOW-1093: a create the caller goes on with (an assign) leaves the toast to it.
     success: project ? "הפרטים נשמרו" : onCreated == null ? "הפרויקט נוצר" : undefined,
     keys: ["dashboard", "project", "projects-cash"],
+    // The project exists once its create worked, so a failed figures save still refreshes the list (no refetch wait).
+    onError: () => { if (createdId.current != null) void invalidate(["dashboard", "project", "projects-cash"]); },
     onSuccess: () => {
       const created = createdId.current;
       createdId.current = null;
