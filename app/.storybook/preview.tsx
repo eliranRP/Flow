@@ -61,6 +61,17 @@ const preview: Preview = {
           styles: { width: "320px", height: "844px" },
           type: "mobile",
         },
+        flow360: {
+          name: "Flow 360",
+          styles: { width: "360px", height: "800px" },
+          type: "mobile",
+        },
+        // FLOW-1098: a report row's hint shows its full figures from here.
+        flow374: {
+          name: "Flow 374",
+          styles: { width: "374px", height: "800px" },
+          type: "mobile",
+        },
         "flow375-se": {
           name: "Flow 375 SE",
           styles: { width: "375px", height: "667px" },

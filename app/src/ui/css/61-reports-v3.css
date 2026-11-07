@@ -252,9 +252,10 @@
 }
 
 /* FLOW-1082 (the owner, 2026-11-07, option A): a hint is one line. The row is a grid: the name, the amount and the
-   chevron on the first line, the hint under them across the row up to the chevron's column. From 360 its figures are
-   in full; below 360 they are short ($30K), so none is cut at 320 or 393. The full line stays for a screen reader,
-   the short one is hidden from it. */
+   chevron on the first line, the hint under them across the row up to the chevron's column. From 374 its figures are
+   in full; below 374 they are short ($30K), so none is cut at 320 or 393. FLOW-1098: 374 is where the longest full
+   line fits, "99% · הכנסות $120,000,000 · הוצאות $100,000,000" (302px in Rubik 13, the row less 72); at 360 it was
+   cut. The full line stays for a screen reader, the short one is hidden from it. */
 .ui-rep-hint-short {
   display: none;
 }
@@ -274,6 +275,22 @@
   display: contents;
 }
 
+/* FLOW-1098: with .ui-row-main flattened, its children are the grid's. Only reportHint's rows match (ViewGroups and
+   NetGroup), and they carry the name, the hint, the amount and the chevron and nothing else. An icon or initials
+   before the name takes a lead column across both lines. A mark (the project page's) is the row's own child, not
+   .ui-row-main's, so the amount rule below gives it the amount's area; a report row that adds one gives it a column
+   of its own. Nothing auto-places. */
+.ui-rep-v3-group .ui-row:has(.ui-rep-hint-text):has(> .ui-row-main > :not(.ui-row-text)) {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "lead name amount chevron"
+    "lead hint hint .";
+}
+
+.ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) > .ui-row-main > :not(.ui-row-text) {
+  grid-area: lead;
+}
+
 .ui-rep-v3-group .ui-row:has(.ui-rep-hint-text) .ui-row-title {
   grid-area: name;
 }
@@ -291,7 +308,7 @@
   min-inline-size: 0;
 }
 
-@media (max-width: 359px) {
+@media (max-width: 373px) {
   .ui-rep-hint-full {
     position: absolute;
     inline-size: 1px;

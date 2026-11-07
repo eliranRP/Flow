@@ -39,6 +39,8 @@ type Story = StoryObj<typeof meta>;
 const CEDAR = REPORTS_PROJECT_IDS.cedar;
 const OAK_SHEET = REPORTS_PROJECT_SHEETS.find((sheet) => sheet.project_id === REPORTS_PROJECT_IDS.oak);
 const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
+const phone360 = { globals: { viewport: { value: "flow360", isRotated: false } } };
+const phone374 = { globals: { viewport: { value: "flow374", isRotated: false } } };
 const phone393 = { globals: { viewport: { value: "flow393", isRotated: false } } };
 
 function Hub({ entry = "/reports", sample = {} }: { entry?: string; sample?: Partial<HubSample> }) {
@@ -76,13 +78,14 @@ async function fits(canvasElement: HTMLElement) {
 
 /**
  * FLOW-1082 (the owner, 2026-11-07, option A): every report row's hint with figures is one line and whole, with no
- * ellipsis. From 360 it shows the full figures; below 360 the short ones ($30K), on its own line under the name and
- * the amount, across the row up to the chevron's column.
+ * ellipsis. From 374 it shows the full figures; below 374 the short ones ($30K) (FLOW-1098), on its own line under the
+ * name and the amount, across the row up to the chevron's column. Measured in Rubik, once the fonts are in.
  */
 async function hintsWhole(canvasElement: HTMLElement) {
+  await canvasElement.ownerDocument.fonts.ready;
   const hints = [...canvasElement.querySelectorAll<HTMLElement>(".ui-rep-v3-group .ui-rep-hint-text")].filter((hint) => hint.querySelector(".ui-rep-hint-short") != null);
   await expect(hints.length).toBeGreaterThan(0);
-  const narrow = canvasElement.ownerDocument.documentElement.clientWidth < 360;
+  const narrow = canvasElement.ownerDocument.documentElement.clientWidth < 374;
   for (const hint of hints) {
     await expect(getComputedStyle(hint).whiteSpace).toBe("nowrap");
     await expect(hint.scrollWidth).toBeLessThanOrEqual(hint.clientWidth);
@@ -223,6 +226,42 @@ export const ByProject320: Story = {
   render: () => <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, SMALL_PROJECT, HUGE_PROJECT, WIDE_SMALL_PROJECT] } }} />,
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("link", { name: /Ash Row/ }).textContent).toContain("פחות מ־1%");
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1098: a project with nine-digit figures, the longest full line a row's hint shows. */
+const NINE_DIGIT_PROJECT = {
+  key: "a0000000-0000-4000-8000-000000000183",
+  project_id: "a0000000-0000-4000-8000-000000000183",
+  name: "Elm Tower",
+  currencies: [{ currency: "USD", income_minor: 12_000_000_000n, expense_minor: 10_000_000_000n, net_minor: 2_000_000_000n, income: [], expense: [], kept_out: [] }],
+};
+
+function NineDigits() {
+  return <Pnl entry="/reports/pnl?view=project" sample={{ byProject: { ...REPORTS_BY_PROJECT, projects: [...REPORTS_BY_PROJECT.projects, NINE_DIGIT_PROJECT] } }} />;
+}
+
+/** FLOW-1098: the full line "99% · הכנסות $120,000,000 · הוצאות $100,000,000" is cut at 360, so there it is short ($120M). */
+export const ByProjectNineDigits360: Story = {
+  name: "P&L · by project, nine-digit figures at 360",
+  ...phone360,
+  render: () => <NineDigits />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("link", { name: /Elm Tower/ }).textContent).toContain("הכנסות $120M · הוצאות $100M");
+    await hintsWhole(canvasElement);
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1098: from 374, the narrowest width it fits, the same line is in full and whole. */
+export const ByProjectNineDigits374: Story = {
+  name: "P&L · by project, nine-digit figures at 374",
+  ...phone374,
+  render: () => <NineDigits />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("link", { name: /Elm Tower/ }).textContent).toContain("הכנסות $120,000,000 · הוצאות $100,000,000");
     await hintsWhole(canvasElement);
     await fits(canvasElement);
   },
