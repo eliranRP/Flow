@@ -121,8 +121,10 @@ describe("CompanyProfitScreen live, a past month (owner 21/10)", () => {
     });
     expect(named[0]?.querySelector("a")?.getAttribute("href")).toBe(`/projects/${OVERHEAD}/profit?from=profit`);
   });
+});
 
-  it("starts the next-month reads only once the figures are drawn (FLOW-1080)", async () => {
+describe("CompanyProfitScreen live, the current month's next-month reads (FLOW-1080)", () => {
+  it("starts the next-month reads only once the figures are drawn", async () => {
     answerBreakdowns();
     let release: () => void = () => undefined;
     calls.held = new Promise<void>((resolve) => { release = resolve; });

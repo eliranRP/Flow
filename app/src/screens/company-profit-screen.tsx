@@ -140,7 +140,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // the link with the figures' own reads; a return with the figures cached reads them at once.
   const afterPaint = useAfterFirstPaint(model != null);
   const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast && afterPaint, sample?.next);
-  const nextWaiting = next.pending || (wantsForecast && !afterPaint);
+  // Data already cached (from Home, or an earlier visit) shows at once; only a read not yet started waits.
+  const nextWaiting = next.pending || (wantsForecast && !afterPaint && next.input == null);
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   const yearProjects = useCompanyYearProjects(viewYear, today, yearByProject, sample?.years);
   const failed = live.failed || (monthByProject && overheadRead.failed) || (long && years.failed);
