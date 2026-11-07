@@ -143,8 +143,8 @@ type FormatAmountOptions = {
   keepZeroCents?: boolean;
   /** A whole figure of 100,000 or more in K, M or B (the band's figures). Ignored with `detail`. */
   compact?: boolean;
-  /** With `compact`, the whole amount from which a figure reads in K, M or B (default 100,000); 1,000 for a report
-      row's line below 360px (FLOW-1082). */
+  /** The whole amount from which a figure reads in K, M or B (default 100,000); 1,000 for a report row's line below
+      374px (FLOW-1082, FLOW-1098). Ignored without `compact`: the figure is then in full. */
   compactFrom?: number;
 };
 

@@ -310,12 +310,12 @@ export function rowShare(amount: bigint, total: bigint): RowShare {
   return share === 0 && amount !== 0n && total !== 0n ? "under-1" : share;
 }
 
-/** A report row's line with figures, in full and with short figures for below 360px (FLOW-1082). */
+/** A report row's line with figures, in full and with short figures for below 374px (FLOW-1082). */
 export type HintFigures = { full: string; short: string };
 
 /**
  * FLOW-1082 (the owner, 2026-11-07: one line, short amounts): a row's labelled figures, "הכנסות $30,000 · הוצאות
- * $17,000" in full and "הכנסות $30K · הוצאות $17K" below 360px. The exact figures are in the drill-down.
+ * $17,000" in full and "הכנסות $30K · הוצאות $17K" below 374px. The exact figures are in the drill-down.
  */
 export function hintFigures(parts: readonly (readonly [label: string, amount: bigint])[], currency: string): HintFigures {
   const line = (compact: boolean) => parts.map(([label, amount]) => `${label} ${formatAmountText(amount, currency, compact ? { compact, compactFrom: 1_000 } : undefined)}`).join(" · ");
@@ -325,7 +325,7 @@ export function hintFigures(parts: readonly (readonly [label: string, amount: bi
 /**
  * FLOW-1064 (the owner, 2026-11-06: the bar "looks childish", a percent instead): a report row's line under its
  * name, on one line. The row's share of its group leads it as a whole percent, "85% · <the hint>", or alone as
- * "85% מהקבוצה" when the row has no hint. FLOW-1082: a line with figures shows them short below 360px, so no
+ * "85% מהקבוצה" when the row has no hint. FLOW-1082: a line with figures shows them short below 374px, so no
  * amount is cut at 320; a screen reader reads the full figures once.
  */
 export function reportHint(text: string | HintFigures | undefined, share?: RowShare): ReactNode {
