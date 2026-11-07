@@ -5,6 +5,7 @@ import { SessionProviders } from "../session-providers";
 import { ViewerPreview } from "../use-is-viewer";
 import { BooksProvider } from "../use-books";
 import { TabBar } from "./tab-bar";
+import { StatusCover } from "./status-cover";
 
 export function StoryRoute({
   entry,
@@ -34,6 +35,7 @@ export function StoryRoute({
         <SessionProviders>
           <BooksProvider>
             <div className="flex min-h-dvh w-full min-w-0 flex-col">
+              {tabs ? <StatusCover /> : null}
               <div className={tabs ? "below-tabbar flex min-h-0 min-w-0 flex-1 flex-col" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
                 {viewer ? <ViewerPreview>{children}</ViewerPreview> : children}
               </div>

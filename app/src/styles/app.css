@@ -254,6 +254,22 @@ a {
   padding-bottom: calc(var(--tabbar-height) + var(--space-4));
 }
 
+/* The status bar's room over what scrolls under it (ui/status-cover.tsx); open while a violet band is there. The
+   bars and sheets are higher. */
+.ui-status-cover {
+  position: fixed;
+  z-index: 1;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--safe-top);
+  background: var(--color-bg);
+  pointer-events: none;
+}
+
+.ui-status-cover[data-open] {
+  visibility: hidden;
+}
+
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
