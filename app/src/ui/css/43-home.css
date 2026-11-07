@@ -311,7 +311,8 @@
 
 /* FLOW-1079: Home's rows swipe on the page's own background (the swipe's default is the card surface of a split
    part); the word under them shows only while one slides. */
-.ui-home-act .ui-swipe-row-body {
+.ui-home-act .ui-swipe-row-body,
+.ui-project-lines .ui-swipe-row-body {
   background: var(--color-bg);
 }
 

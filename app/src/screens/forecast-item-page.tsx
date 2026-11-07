@@ -132,7 +132,8 @@ function whenSheetCopy(item: ForecastItem, today: string, monthEndChoice: string
     choices: [
       { value: "week", label: "השבוע", description: item.late_days > 0 ? "עבר המועד. נניח שיגיע עד סוף השבוע" : "בשבוע הקרוב" },
       { value: "monthEnd", label: `עד ${dayMonth(monthEndChoice)}`, description: ownDate ? "לפי מועד התשלום" : "עד סוף החודש" },
-      { value: "moved", label: "לא החודש", description: `יוצא מהצפי של ${monthName(month)} ועובר ל${monthName(nextMonth(month))}` },
+      // FLOW-1081: an open invoice is still due after the month; a recurring charge is out of this month only.
+      { value: "moved", label: "לא החודש", description: item.kind === "invoice" ? `יוצא מהצפי של ${monthName(month)} ועובר ל${monthName(nextMonth(month))}` : `רק ${monthName(month)} יוצא מהצפי. ב${monthName(nextMonth(month))} הוא צפוי כרגיל` },
     ],
   };
 }

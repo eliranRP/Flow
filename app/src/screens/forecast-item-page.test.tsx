@@ -464,7 +464,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
       fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
       await sheetGone();
       fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
-      await screen.findByText("הכנסות שכירות הועבר לחודש הבא");
+      await screen.findByText(/^הכנסות שכירות הוצא מהצפי של /);
       await waitFor(() => { expect(sent()).toEqual([["set_forecast_item", { moved_out: true }]]); });
       expect(screen.queryByText("הכנסות שכירות: כל חודש")).toBeNull();
       expect(screen.getAllByRole("button", { name: "ביטול" })).toHaveLength(1);

@@ -1,6 +1,9 @@
 import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { projectRowForecastKey, useForecastSkip } from "../forecast-skip";
+import { useRecurringScheduleQuery } from "../recurring-schedule";
+import { SwipeRow } from "../ui/swipe-row";
 import { Link, useParams } from "react-router-dom";
 import { projectRows } from "../by-currency";
 import { cashMonthName, NOT_IN_PROFIT_LABEL } from "../cash";
@@ -94,6 +97,12 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const holdRole = useHoldWrites();
   const hold = sample == null && holdRole;
   const writes = useProjectForecastWrites(projectId, next.month);
+  // FLOW-1081: a recurring row swipes out of this month only (the month forecast's item), as on Home.
+  const skipName = monthWord(next.month);
+  const skip = useForecastSkip(next.month, skipName, next.overrides ?? null);
+  const schedule = useRecurringScheduleQuery(sample == null && !hold);
+  const canSkip = sample == null && !hold && next.overrides != null && schedule.data != null;
+  const rowKeyOf = (rowKey: string) => (schedule.data == null ? undefined : projectRowForecastKey(rowKey, schedule.data, projectId, next.general, currency));
   const phase = sample
     ? ({ kind: "ready" } as const)
     : screenPhase(preview, {
@@ -116,6 +125,15 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const keptOut = forecast?.cashOnlyMinor ?? 0n;
   const after = monthShare == null ? null : net - monthShare;
   const title = forecast == null ? "צפי" : `צפי ${cashMonthName(forecast.month)}`;
+  // A row just swiped out leaves the list at once; the forecast read after the write draws it under לא צפוי.
+  const isOutNow = (rowKey: string) => {
+    const key = rowKeyOf(rowKey);
+    return key != null && skip.skipped.has(key);
+  };
+  const swipeRow = (rowKey: string, name: string, row: ReactNode) => {
+    const key = rowKeyOf(rowKey);
+    return !canSkip || key == null ? row : <SwipeRow key={rowKey} label="לא החודש" onRemove={() => { skip.set(key, true, name); }}>{row}</SwipeRow>;
+  };
   const sub = project == null || forecast == null
     ? undefined
     : `${project.name} · עוד לא התחיל · ${String(forecast.rows.length)} צפויות`;
@@ -162,7 +180,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
           <p className="ui-pp-note t-caption t-muted">{forecast.loanCount > 0 ? LOAN_NOTE : NOTE}</p>
           {forecast.rows.length === 0 && keptOut === 0n ? <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הזה.</p> : (
             <List layout="flat" className="ui-pn-rows">
-              {forecast.rows.map((row) => (
+              {forecast.rows.filter((row) => !isOutNow(row.key)).map((row) => swipeRow(row.key, row.name, (
                 <ListRow
                   key={row.key}
                   layout="flat"
@@ -176,7 +194,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   initials={lineInitials(row.name)}
                   href={hold ? undefined : `${editPath(projectId, row.key)}${monthSearch}`}
                 />
-              ))}
+              )))}
               {keptOut === 0n ? null : (
                 <ListRow
                   layout="flat"
@@ -222,7 +240,19 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   ))}
                 </section>
               )}
-              <ProjectNextSkipped forecast={forecast} overrides={next.overrides} currency={currency} projectId={projectId} general={next.general} disabled={hold} />
+              <ProjectNextSkipped
+                forecast={forecast}
+                overrides={next.overrides}
+                currency={currency}
+                projectId={projectId}
+                general={next.general}
+                disabled={hold}
+                skip={skip}
+                moved={forecast.rows.flatMap((row) => {
+                  const key = rowKeyOf(row.key);
+                  return key != null && isOutNow(row.key) ? [{ row, key }] : [];
+                })}
+              />
               {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
               {next.edits.some((edit) => edit.start_month === forecast.month) ? (
                 <Button

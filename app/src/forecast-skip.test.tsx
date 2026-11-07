@@ -2,7 +2,8 @@ import type { ForecastOverrideRow } from "@flow/shared";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-render";
-import { forecastKeyOf, skippedKeys, useForecastSkip } from "./forecast-skip";
+import { forecastKeyOf, futureForecastKey, projectRowForecastKey, scheduleForecastKey, skippedKeys, useForecastSkip } from "./forecast-skip";
+import type { ScheduleRow } from "./recurring-schedule";
 
 // The write fails: its onError runs, as useWrite's does after the server refuses.
 const writes = vi.hoisted(() => ({ fail: true }));
@@ -48,6 +49,34 @@ describe("forecast skip keys", () => {
 });
 
 // FLOW-1079 r1: a failed write takes the answer back, so the row returns to where the forecast counts it.
+describe("forecast skip keys by screen (FLOW-1081)", () => {
+  const charge = (party: string, project: string | null, currency = "USD") => ({ direction: "expense", party_id: party, currency, project_id: project }) as unknown as ScheduleRow;
+  const power = charge("power", "p1");
+  const hoa = charge("hoa", "p1");
+  const fx = charge("fx", null, "EUR");
+  const schedule = [power, charge("power", "p2"), hoa, fx];
+
+  it("keys a schedule row split only when its party has another charge in the currency, and not at all in another currency", () => {
+    expect(scheduleForecastKey(schedule, power, "USD")).toBe("party:expense:power:USD:p1");
+    expect(scheduleForecastKey(schedule, hoa, "USD")).toBe("party:expense:hoa:USD");
+    expect(scheduleForecastKey(schedule, fx, "USD")).toBeUndefined();
+  });
+
+  it("keys a project page's row by the page's project, and the general page's by the party's own charge", () => {
+    expect(projectRowForecastKey("rec:expense:power", schedule, "p2", false, "USD")).toBe("party:expense:power:USD:p2");
+    expect(projectRowForecastKey("rec:expense:hoa", schedule, "p1", false, "USD")).toBe("party:expense:hoa:USD");
+    expect(projectRowForecastKey("rec:expense:power", [charge("power", null), charge("power", "p1")], "overhead", true, "USD")).toBe("party:expense:power:USD:none");
+    expect(projectRowForecastKey("bill:1", schedule, "p1", false, "USD")).toBeUndefined();
+  });
+
+  it("keys a month to come's row by its part's project when the party is expected in more than one part", () => {
+    const part = (keys: string[]) => ({ forecast: { rows: keys.map((key) => ({ key })), removed: [], skipped: [] } });
+    const keyOf = futureForecastKey({ parts: [part(["rec:expense:power", "rec:expense:hoa"]), part(["rec:expense:power"])] } as never, "USD");
+    expect(keyOf("rec:expense:power", "p2")).toBe("party:expense:power:USD:p2");
+    expect(keyOf("rec:expense:hoa", "p1")).toBe("party:expense:hoa:USD");
+  });
+});
+
 describe("useForecastSkip", () => {
   it("puts the charge back when the write fails", () => {
     renderWithProviders(<Probe />);

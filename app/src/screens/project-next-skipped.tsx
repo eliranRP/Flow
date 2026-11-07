@@ -1,6 +1,6 @@
 import { formatAmountText, type ForecastOverrideRow } from "@flow/shared";
-import { useForecastSkip } from "../forecast-skip";
-import type { NextMonthForecast } from "../project-next-month";
+import type { ForecastSkip } from "../forecast-skip";
+import type { NextMonthForecast, NextMonthRow } from "../project-next-month";
 import { Button } from "../ui/button";
 import { HEBREW_MONTHS } from "../ui/date-math";
 
@@ -23,7 +23,7 @@ export function overrideKeyFor(rowKey: string, overrides: readonly ForecastOverr
  * "לא צפוי ב<month>", each with החזרה, which puts the month forecast's item back (not the project page's own
  * restore, which is for its removals). A row put back leaves at once; the next read draws it in the forecast.
  */
-export function ProjectNextSkipped({ forecast, overrides, currency, projectId, general, disabled }: {
+export function ProjectNextSkipped({ forecast, overrides, currency, projectId, general, disabled, skip, moved = [] }: {
   forecast: NextMonthForecast;
   overrides: readonly ForecastOverrideRow[] | null;
   currency: string;
@@ -31,13 +31,16 @@ export function ProjectNextSkipped({ forecast, overrides, currency, projectId, g
   /** The overhead project's page: the general costs, whose charges may carry no project (`:none`). */
   general: boolean;
   disabled: boolean;
+  /** FLOW-1081: the page's skips, shared with its rows' swipes. */
+  skip: ForecastSkip;
+  /** FLOW-1081: rows just swiped out, until the forecast is read again. */
+  moved?: readonly { row: NextMonthRow; key: string }[];
 }) {
   const name = HEBREW_MONTHS[Number(forecast.month.slice(5, 7)) - 1] ?? forecast.month;
-  const skip = useForecastSkip(forecast.month, name, overrides);
-  const rows = (forecast.skipped ?? []).flatMap((row) => {
+  const rows = [...(forecast.skipped ?? []).flatMap((row) => {
     const key = overrideKeyFor(row.key, overrides ?? [], projectId, currency, general);
     return key != null && !skip.skipped.has(key) ? [] : [{ row, key }];
-  });
+  }), ...moved];
   if (rows.length === 0) return null;
   return (
     <section className="ui-pn-off" aria-labelledby="pn-skip-title">

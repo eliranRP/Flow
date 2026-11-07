@@ -289,9 +289,9 @@ describe("ForecastScreen", () => {
     expect(today?.textContent.startsWith("−₪")).toBe(true);
   });
 
-  it("lists a moved item under לא החודש and counts it in the reset line", () => {
+  it("lists a moved item under הוצא מהצפי and counts it in the reset line", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastSample("moved")} />, { route: "/forecast" });
-    expect(screen.getByText("לא החודש")).toBeTruthy();
+    expect(screen.getByText("הוצא מהצפי")).toBeTruthy();
     expect(screen.getByText("שינית פריט אחד בצפי")).toBeTruthy();
     expect(screen.getByRole("button", { name: "איפוס" })).toBeTruthy();
   });
@@ -304,16 +304,17 @@ describe("ForecastScreen", () => {
     expect(screen.getByText("שינית 2 פריטים בצפי")).toBeTruthy();
   });
 
-  it("draws a moved item as one muted button with its name and amount, and no total on the head", () => {
+  it("draws a moved item as one muted button with its name, its status and amount, and no total on the head", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("changed")} />, { route: "/forecast" });
-    const head = screen.getByText("לא החודש");
+    const head = screen.getByText("הוצא מהצפי");
     const section = head.closest("section");
     expect(section).toBeTruthy();
     expect(head.parentElement?.querySelector(".ui-forecast-section-total")).toBeNull();
-    const row = within(section as HTMLElement).getByRole("button", { name: "Northgate Co, +$12,500" });
+    // FLOW-1081: the row says why it is out: an invoice moved to next month, a recurring charge out of this month.
+    const row = within(section as HTMLElement).getByRole("button", { name: /^Northgate Co, \+\$12,500, (הועבר לחודש הבא|לא צפוי ב.+)$/ });
     expect(row.querySelector(".ui-forecast-initial")).toBeNull();
     expect(row.querySelector("bdi")?.getAttribute("dir")).toBe("ltr");
-    expect(row.textContent).toBe("Northgate Co+$12,500");
+    expect(row.querySelector(".ui-forecast-moved-name")?.textContent).toBe("Northgate Co");
   });
 
   it("keeps the reset row in place with no changes: hidden, and its button disabled", () => {

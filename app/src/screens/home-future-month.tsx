@@ -12,6 +12,7 @@ import { nothingExpected, thisMonthCashOut, useCompanyCashNextMonth } from "./co
 import { orderParts, partHint, partRows } from "./company-next-month-screen";
 import { groupSums, type ActivityGroup, type ActivityRow, type HomeFuture } from "./home-activity";
 import { monthName, type HomeFutureFigureRows } from "./home-parts";
+import { futureForecastKey } from "../forecast-skip";
 
 /**
  * FLOW-1056 (owner, 2026-11-05: "Click on a future month should take me to the main screen in a future date with
@@ -30,20 +31,7 @@ export function homeFutureGroups({ forecast, projects, currency, search }: {
   if (nothingExpected(forecast) && !forecast.parts.some((part) => (part.skipped ?? []).length > 0)) return [];
   const names = new Map(projects.map((row) => [row.id, row.name]));
   const overhead = projects.find((row) => row.is_overhead) ?? null;
-  // FLOW-1079: a recurring row's forecast item, which a swipe takes out of this month only: the party's key, with
-  // the part's project when the party is expected in more than one part (a split party, decision 0185).
-  const recParts = new Map<string, number>();
-  for (const part of forecast.parts) {
-    for (const row of [...part.forecast.rows, ...part.forecast.removed, ...(part.forecast.skipped ?? [])]) {
-      if (row.key.startsWith("rec:")) recParts.set(row.key, (recParts.get(row.key) ?? 0) + 1);
-    }
-  }
-  const forecastKey = (rowKey: string, projectId: string | null): string | undefined => {
-    const [kind, direction, party] = rowKey.split(":");
-    if (kind !== "rec" || direction == null || party == null) return undefined;
-    const base = `party:${direction}:${party}:${currency}`;
-    return (recParts.get(rowKey) ?? 0) > 1 ? `${base}:${projectId ?? "none"}` : base;
-  };
+  const forecastKey = futureForecastKey(forecast, currency);
   const skipped: ActivityRow[] = [];
   const groups = orderParts(forecast.parts, projects, currency).flatMap((part) => {
     const general = part.projectId == null;

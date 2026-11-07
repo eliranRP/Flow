@@ -32,7 +32,8 @@ import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
-import { israelToday } from "../ui/date-math";
+import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
+import { useForecastOverrides, useForecastSkip } from "../forecast-skip";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { investmentLoansRow, ProjectCashOverview, ProjectReportsLink } from "./project-cash-screens";
@@ -179,6 +180,11 @@ export function ProjectDetailScreen({
   // FLOW-1044: the month's lines in groups: the project's recurring charges (Home's schedule read, usually
   // cached) and the month's lines, for the one-off group once they say which are recurring (FLOW-1035).
   const schedule = useRecurringScheduleQuery(sample == null && preview === "off");
+  // FLOW-1081: this month's charges swipe out of the forecast and back, as on Home (the forecast's per-month item).
+  const thisMonth = israelToday().slice(0, 7);
+  const skipMonth = HEBREW_MONTHS[Number(thisMonth.slice(5, 7)) - 1] ?? thisMonth;
+  const overrides = useForecastOverrides(thisMonth, sample == null && preview === "off");
+  const forecastSkip = useForecastSkip(thisMonth, skipMonth, overrides.data ?? null);
   const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? "";
   const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? "", sample == null && linesMonth !== "");
   const blocked = useBlockedPreview();
@@ -340,6 +346,7 @@ export function ProjectDetailScreen({
       offlineSince={sample ? sampleOfflineSince ?? null : offlineSinceOf(online || preview !== "off", cash.dataUpdatedAt, detail.dataUpdatedAt)}
       example={example}
       now={now}
+      skip={sample != null || holdWrites || overrides.data == null ? undefined : { skipped: forecastSkip.skipped, base: companyCurrency, monthLabel: skipMonth, set: forecastSkip.set }}
     />
   );
 }

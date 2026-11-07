@@ -6,6 +6,7 @@ import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { waitForAccessToken } from "./wait-for-session";
 import type { ScheduleRow } from "./recurring-schedule";
+import type { CompanyNextMonth } from "./company-next-month";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
 
@@ -19,6 +20,16 @@ import { topToast } from "./ui/top-toast";
 export function forecastKeyOf(row: Pick<ScheduleRow, "direction" | "party_id" | "currency" | "project_id">, split: boolean): string {
   const base = `party:${row.direction}:${row.party_id}:${row.currency}`;
   return split ? `${base}:${row.project_id ?? "none"}` : base;
+}
+
+/**
+ * A schedule row's forecast item key, as the month forecast keys it: none for a charge in another currency than the
+ * forecast's (it was never counted), split by project when the party has another charge in the same currency.
+ */
+export function scheduleForecastKey(schedule: readonly ScheduleRow[], item: ScheduleRow, base: string | null): string | undefined {
+  if (base != null && item.currency !== base) return undefined;
+  const split = schedule.filter((other) => other.direction === item.direction && other.party_id === item.party_id && other.currency === item.currency).length > 1;
+  return forecastKeyOf(item, split);
 }
 
 /** The keys of the month's items taken out of the forecast. */
@@ -44,6 +55,40 @@ export function useForecastOverrides(month: string, enabled: boolean) {
       return (data ?? []) as ForecastOverrideRow[];
     },
   });
+}
+
+/**
+ * FLOW-1079: a month to come's recurring row as its forecast item, which a swipe takes out of that month only: the
+ * party's key, with the part's project when the party is expected in more than one part (a split party, 0185).
+ */
+export function futureForecastKey(forecast: Pick<CompanyNextMonth, "parts">, currency: string): (rowKey: string, projectId: string | null) => string | undefined {
+  const recParts = new Map<string, number>();
+  for (const part of forecast.parts) {
+    for (const row of [...part.forecast.rows, ...part.forecast.removed, ...(part.forecast.skipped ?? [])]) {
+      if (row.key.startsWith("rec:")) recParts.set(row.key, (recParts.get(row.key) ?? 0) + 1);
+    }
+  }
+  return (rowKey, projectId) => {
+    const [kind, direction, party] = rowKey.split(":");
+    if (kind !== "rec" || direction == null || party == null) return undefined;
+    const base = `party:${direction}:${party}:${currency}`;
+    return (recParts.get(rowKey) ?? 0) > 1 ? `${base}:${projectId ?? "none"}` : base;
+  };
+}
+
+/**
+ * FLOW-1081: a project צפי page's recurring row (`rec:<direction>:<party>`) as its forecast item: the party's key, with
+ * the charge's project when the party has another charge in the same currency (the company schedule says so).
+ */
+export function projectRowForecastKey(rowKey: string, schedule: readonly ScheduleRow[], projectId: string, general: boolean, currency: string): string | undefined {
+  const [kind, direction, party] = rowKey.split(":");
+  if (kind !== "rec" || direction == null || party == null) return undefined;
+  const base = `party:${direction}:${party}:${currency}`;
+  const charges = schedule.filter((row) => row.direction === direction && row.party_id === party && row.currency === currency);
+  if (charges.length <= 1) return base;
+  if (!general) return `${base}:${projectId}`;
+  const own = charges.find((row) => row.project_id == null || row.project_id === projectId);
+  return `${base}:${own?.project_id ?? "none"}`;
 }
 
 const PEEK_SEEN_KEY = "flow.skip-swipe-peek-seen";

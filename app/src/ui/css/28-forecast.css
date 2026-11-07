@@ -202,6 +202,32 @@
   cursor: pointer;
 }
 
+/* FLOW-1081: an item taken out of the month: its name crossed out over its status ("לא צפוי ב<month>"). */
+.ui-forecast-moved-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-forecast-moved-name {
+  text-decoration: line-through;
+}
+
+.ui-forecast-moved-status {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-forecast-moved-row bdi {
+  text-decoration: line-through;
+}
+
+/* The rows swipe on the page's background (the swipe's default surface is a split part's card). */
+.ui-forecast-list .ui-swipe-row-body {
+  background: var(--color-bg);
+}
+
 @keyframes ui-forecast-drop {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
