@@ -13,6 +13,7 @@ import { MoneyField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
+import { useToast } from "../ui/toast";
 import { LOAN_CURRENCY_MARK } from "./loan-form";
 import { useBlockedPreview } from "./screen-shared";
 
@@ -71,12 +72,50 @@ export function ProjectFormSheet({
   /** FLOW-1093: ✕ and Escape put focus back on the control that opened the sheet (a removed control is skipped). */
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  // FLOW-1101: each open is a fresh form, also when it reopens during the close animation.
+  const [opens, setOpens] = useState(0);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setOpens((count) => count + 1);
+  }
+  // A save in flight holds the close until it settles, so a project it makes is never left behind.
+  const [saving, setSaving] = useState(false);
+  /** The form's project made without its figures, handed over (and forgotten) as the sheet closes. */
+  const takeMade = useRef<(() => MadeProject | null) | null>(null);
+  function close(next: boolean) {
+    if (next) {
+      onOpenChange(true);
+      return;
+    }
+    const made = project == null ? (takeMade.current?.() ?? null) : null;
+    onOpenChange(false);
+    if (made == null) return;
+    // FLOW-1101: closed after the figures failed, the project still counts as made, without them.
+    toast.show({ tone: "info", message: "הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בעמוד הפרויקט." });
+    if (onCreated == null) void navigate(`/projects/${made.id}`);
+    else onCreated(made.id, made.name);
+  }
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} returnFocusRef={returnFocusRef} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
-      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} focusBudget={focusBudget} onCreated={onCreated} onClose={() => { onOpenChange(false); }} />
+    <Sheet open={open} onOpenChange={close} busy={saving} returnFocusRef={returnFocusRef} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
+      <ProjectForm
+        key={project == null ? `new:${String(opens)}` : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`}
+        project={project}
+        extras={extras}
+        focusBudget={focusBudget}
+        onCreated={onCreated}
+        onSaving={setSaving}
+        takeMade={takeMade}
+        onClose={() => { close(false); }}
+      />
     </Sheet>
   );
 }
+
+/** A new project whose create worked; its figures are what is left to save. */
+type MadeProject = { id: string; name: string };
 
 function shekelsText(agorot: bigint | null): string {
   return agorot == null ? "" : String(Number(agorot) / 100);
@@ -93,7 +132,23 @@ function minorOf(text: string): number | null {
   return text.trim() === "" ? null : Number(shekelsToAgorot(text));
 }
 
-function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { project?: ProjectFormValues; extras?: ReactNode; focusBudget: boolean; onCreated?: (id: string, name: string) => void; onClose: () => void }) {
+function ProjectForm({
+  project,
+  extras,
+  focusBudget,
+  onCreated,
+  onSaving,
+  takeMade,
+  onClose,
+}: {
+  project?: ProjectFormValues;
+  extras?: ReactNode;
+  focusBudget: boolean;
+  onCreated?: (id: string, name: string) => void;
+  onSaving: (saving: boolean) => void;
+  takeMade: RefObject<(() => MadeProject | null) | null>;
+  onClose: () => void;
+}) {
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
   // The amounts are in the company currency, so each field shows that currency's mark.
@@ -105,7 +160,7 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
   const [name, setName] = useState(project?.name ?? "");
   const [kind, setKind] = useState<ProjectKind>(storedKind ?? "renovation");
   const [amounts, setAmounts] = useState<Record<AmountField, string>>({ purchase: "", budget: shekelsText(project?.budget ?? null), arv: "", value: "" });
-  const createdId = useRef<string | null>(null);
+  const created = useRef<MadeProject | null>(null);
   const invalidate = useInvalidateBooks();
   const trimmed = name.trim();
   // Shown after a tap on the button, cleared as the name changes.
@@ -120,22 +175,30 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
     const timer = window.setTimeout(() => { form.current?.querySelector<HTMLInputElement>(".ui-money-field input")?.focus(); }, 0);
     return () => { window.clearTimeout(timer); };
   }, [focusBudget]);
+  useEffect(() => {
+    takeMade.current = () => {
+      const made = created.current;
+      created.current = null;
+      return made;
+    };
+    return () => { takeMade.current = null; };
+  }, [takeMade]);
   const fields = fieldsOf(kind, editing);
   const save = useWrite({
     // FLOW-1101: once the project is made, only its figures are left to save.
-    failure: () => (project == null && createdId.current != null ? "הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב." : "לא הצלחנו לשמור את הפרויקט."),
+    failure: () => (project == null && created.current != null ? "הפרויקט נוצר, אבל הנתונים לא נשמרו. נסו שוב." : "לא הצלחנו לשמור את הפרויקט."),
     // FLOW-1093: a create the caller goes on with (an assign) leaves the toast to it.
     success: project ? "הפרטים נשמרו" : onCreated == null ? "הפרויקט נוצר" : undefined,
     keys: ["dashboard", "project", "projects-cash"],
     // The project exists once its create worked, so a failed figures save still refreshes the list (no refetch wait).
-    onError: () => { if (createdId.current != null) void invalidate(["dashboard", "project", "projects-cash"]); },
+    onError: () => { if (created.current != null) void invalidate(["dashboard", "project", "projects-cash"]); },
     onSuccess: () => {
-      const created = createdId.current;
-      createdId.current = null;
+      const made = created.current;
+      created.current = null;
       onClose();
-      if (project || created == null) return;
-      if (onCreated == null) void navigate(`/projects/${created}`);
-      else onCreated(created, trimmed);
+      if (project || made == null) return;
+      if (onCreated == null) void navigate(`/projects/${made.id}`);
+      else onCreated(made.id, trimmed);
     },
     run: async () => {
       const supabase = getSupabase();
@@ -144,7 +207,7 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
       // An edit that keeps the kind keeps the owner's own type words; a new pick stores the kind's word.
       const keepType = project != null && kind === storedKind;
       // FLOW-1101: a retry after the figures failed updates the project the first try made, never a second one.
-      const knownId = project?.id ?? createdId.current;
+      const knownId = project?.id ?? created.current?.id ?? null;
       const result = await supabase.rpc("upsert_project", {
         ...(knownId == null ? {} : { p_id: knownId }),
         p_name: trimmed,
@@ -153,8 +216,8 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
         ...(budget == null ? {} : { p_budget_agorot: budget }),
       });
       assertNoError(result);
-      if (project == null && createdId.current == null && typeof result.data === "string") createdId.current = result.data;
-      const id = project?.id ?? createdId.current;
+      if (project == null && typeof result.data === "string") created.current = { id: created.current?.id ?? result.data, name: trimmed };
+      const id = project?.id ?? created.current?.id ?? null;
       const patch: Record<string, number | string> = {};
       for (const field of fields) {
         const minor = field === "budget" ? null : minorOf(amounts[field]);
@@ -171,6 +234,12 @@ function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { pro
       }
     },
   });
+
+  const pending = save.isPending;
+  useEffect(() => {
+    onSaving(pending);
+    return () => { onSaving(false); };
+  }, [pending, onSaving]);
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
