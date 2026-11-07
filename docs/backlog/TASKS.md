@@ -648,6 +648,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1020"></a>[FLOW-1020](tasks/FLOW-1020.md) | Review's first page is read on the tap, not after its code loads | SMALL CYCLE (perf) |
 | <a id="flow-1023"></a>[FLOW-1023](tasks/FLOW-1023.md) | Review's first card does not wait on its follow-up reads | SMALL CYCLE (perf) |
 | <a id="flow-1029"></a>[FLOW-1029](tasks/FLOW-1029.md) | The Flow QA seed adds lines to split when the split parts or legs fall short | SMALL CYCLE (perf) |
+| <a id="flow-1080"></a>[FLOW-1080](tasks/FLOW-1080.md) | Company profit's next-month reads start after its figures appear | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
 | <a id="flow-1027"></a>[FLOW-1027](tasks/FLOW-1027.md) | Jev labels the lines a manual Mercury sync brings in right away | SMALL CYCLE |
