@@ -82,7 +82,6 @@ export function ProjectFormSheet({
     if (open) setOpens((count) => count + 1);
   }
   // A save in flight holds the close until it settles, so a project it makes is never left behind.
-  const [saving, setSaving] = useState(false);
   /** The form's project made without its figures, handed over (and forgotten) as the sheet closes. */
   const takeMade = useRef<(() => MadeProject | null) | null>(null);
   function close(next: boolean) {
@@ -94,19 +93,18 @@ export function ProjectFormSheet({
     onOpenChange(false);
     if (made == null) return;
     // FLOW-1101: closed after the figures failed, the project still counts as made, without them.
-    toast.show({ tone: "info", message: "הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בעמוד הפרויקט." });
+    toast.show({ tone: "info", message: "הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בדף הפרויקט." });
     if (onCreated == null) void navigate(`/projects/${made.id}`);
     else onCreated(made.id, made.name);
   }
   return (
-    <Sheet open={open} onOpenChange={close} busy={saving} returnFocusRef={returnFocusRef} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
+    <Sheet open={open} onOpenChange={close} returnFocusRef={returnFocusRef} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
       <ProjectForm
         key={project == null ? `new:${String(opens)}` : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`}
         project={project}
         extras={extras}
         focusBudget={focusBudget}
         onCreated={onCreated}
-        onSaving={setSaving}
         takeMade={takeMade}
         onClose={() => { close(false); }}
       />
@@ -137,7 +135,6 @@ function ProjectForm({
   extras,
   focusBudget,
   onCreated,
-  onSaving,
   takeMade,
   onClose,
 }: {
@@ -145,7 +142,6 @@ function ProjectForm({
   extras?: ReactNode;
   focusBudget: boolean;
   onCreated?: (id: string, name: string) => void;
-  onSaving: (saving: boolean) => void;
   takeMade: RefObject<(() => MadeProject | null) | null>;
   onClose: () => void;
 }) {
@@ -234,12 +230,6 @@ function ProjectForm({
       }
     },
   });
-
-  const pending = save.isPending;
-  useEffect(() => {
-    onSaving(pending);
-    return () => { onSaving(false); };
-  }, [pending, onSaving]);
 
   function submit(event: SubmitEvent) {
     event.preventDefault();

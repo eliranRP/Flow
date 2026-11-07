@@ -198,7 +198,7 @@ describe("the project sheet (FLOW-445)", () => {
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(onCreated).toHaveBeenCalledTimes(1); });
     expect(onCreated).toHaveBeenCalledWith("p9", "Lark Hill");
-    expect(await screen.findByText("הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בעמוד הפרויקט.")).toBeInTheDocument();
+    expect(await screen.findByText("הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בדף הפרויקט.")).toBeInTheDocument();
     expect(upsertCalls()).toHaveLength(1);
   });
 
@@ -207,7 +207,7 @@ describe("the project sheet (FLOW-445)", () => {
     renderHarness(vi.fn());
     await createWithFailedFigures();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    await screen.findByText("הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בעמוד הפרויקט.");
+    await screen.findByText("הפרויקט נוצר בלי הנתונים. אפשר להוסיף אותם בדף הפרויקט.");
     // Reopened at once, inside the close animation.
     fireEvent.click(screen.getByText("reopen"));
     const name = await screen.findByRole("textbox", { name: "שם הפרויקט" });
