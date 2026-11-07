@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { lazy, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { useAuth } from "./auth";
@@ -37,6 +37,8 @@ import { SetupRoutes } from "./routes/setup";
 import { SettingsRoutes } from "./routes/settings";
 import { TransfersRoute, UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
 
+// The status bar's cover loads after the first paint: nothing scrolls under the clock before then.
+const StatusCover = lazy(() => import("./ui/status-cover").then((m) => ({ default: m.StatusCover })));
 const CompanyProfitScreen = lazy(() => screenLoaders.companyProfit().then((m) => ({ default: m.CompanyProfitScreen })));
 const ReportsScreen = lazy(() => screenLoaders.reports().then((m) => ({ default: m.ReportsScreen })));
 const PnlReportScreen = lazy(() => screenLoaders.reportPnl().then((m) => ({ default: m.PnlReportScreen })));
@@ -314,6 +316,9 @@ function TransactionRoute() {
 function Shell() {
   return (
     <div className="flex min-h-dvh flex-col">
+      <Suspense fallback={null}>
+        <StatusCover />
+      </Suspense>
       <SetupResume />
       <PrefetchProjects />
       <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">
