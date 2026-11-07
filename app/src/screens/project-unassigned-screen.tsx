@@ -23,6 +23,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ListSkeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import type { ToastInput } from "../ui/toast-layout";
+import { ProjectFormSheet } from "./project-form-sheet";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A sample list (stories): the lines and the projects the picker offers. */
@@ -58,6 +59,8 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
   const month = useProjectsCashMonth();
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [picking, setPicking] = useState<SearchRow | null>(null);
+  /** FLOW-1093: the line the new-project sheet is open for. */
+  const [creating, setCreating] = useState<SearchRow | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const pages = query.data?.pages ?? [];
   const all = sample?.rows ?? uniqueSearchRows(pages);
@@ -108,6 +111,13 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
       payload.undo.id = typeof result.data === "string" ? result.data : null;
     },
   });
+  /** The row folds, then the assign write (a sample list writes nothing; its toast's ביטול brings the row back). */
+  function assignTo(row: SearchRow, projectId: string, projectName: string) {
+    show(row.id, false);
+    const payload = { row, projectId, projectName, undo: { id: null } };
+    if (sample != null) assigned(payload, () => { show(row.id, true); });
+    else assign.mutate(payload);
+  }
   const header = (
     <ScreenHeader
       layout="stacked"
@@ -205,6 +215,7 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
         copy={{
           historyKey: "unassigned-assign",
           title: "לאיזה פרויקט?",
+          empty: "אין עדיין פרויקט לשייך אליו",
           subtitle: picked == null ? undefined : `${searchRowTitle(picked)} · ${formatAmountText(picked.amount_net < 0n ? -picked.amount_net : picked.amount_net, picked.currency)}`,
           choices,
         }}
@@ -217,12 +228,23 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
           const row = picking;
           close();
           if (row == null || (sample == null && blocked())) return;
-          const project = projects.find((item) => item.id === projectId);
-          show(row.id, false);
-          const payload = { row, projectId, projectName: project?.name ?? "", undo: { id: null } };
-          // A sample list writes nothing: the row folds and the toast's ביטול brings it back.
-          if (sample != null) assigned(payload, () => { show(row.id, true); });
-          else assign.mutate(payload);
+          assignTo(row, projectId, projects.find((item) => item.id === projectId)?.name ?? "");
+        }}
+        // FLOW-1093 (board V3-Unassigned; the owner, 2026-11-07: create, then assign): the new-project sheet,
+        // and the line goes to the project once it is saved.
+        action={{
+          label: "+ פרויקט חדש",
+          onSelect: (close) => {
+            setCreating(picking);
+            close();
+          },
+        }}
+      />
+      <ProjectFormSheet
+        open={creating != null}
+        onOpenChange={(open) => { if (!open) setCreating(null); }}
+        onCreated={(projectId, projectName) => {
+          if (creating != null) assignTo(creating, projectId, projectName);
         }}
       />
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { useSheetHistory } from "./back";
+import { Button } from "./button";
 import { cx } from "./cx";
 import { ListRow } from "./list-row";
 import { Sheet } from "./sheet";
@@ -11,6 +12,8 @@ export type ChoiceSheetCopy<T extends string> = {
   /** Under the title, in its column (the board's "רק בטלפון הזה"). */
   subtitle?: string;
   note?: string;
+  /** FLOW-1093: said in place of the rows when there are none. */
+  empty?: string;
   choices: ReadonlyArray<{ value: T; label: string; description?: string }>;
 };
 
@@ -30,6 +33,8 @@ export type ChoiceSheetProps<T extends string, V extends string = T> = {
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** A caller's class on the sheet's panel, for a sheet whose board frame differs (the pace sheet). */
   panelClassName?: string;
+  /** FLOW-1093: a last row that is not a choice (the board's "+ פרויקט חדש"); `close` closes the sheet. */
+  action?: { label: string; onSelect: (close: () => void) => void };
 };
 
 /**
@@ -45,6 +50,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
   onPick,
   returnFocusRef,
   panelClassName,
+  action,
 }: ChoiceSheetProps<T, V>) {
   // Set by `close`: the save has settled, so Back's popstate must not wait on a stale `saving`.
   const closing = useRef(false);
@@ -66,6 +72,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
       onRequestClose={requestSheetClose}
       panelClassName={cx("ui-sheet-choice", panelClassName)}
     >
+      {copy.choices.length === 0 && copy.empty != null ? <p className="ui-muted ui-choice-empty">{copy.empty}</p> : (
       <div role="radiogroup" aria-label={copy.title} className="ui-choice-sheet">
         {copy.choices.map((choice) => (
           <ListRow control="radio"
@@ -89,6 +96,12 @@ export function ChoiceSheet<T extends string, V extends string = T>({
           />
         ))}
       </div>
+      )}
+      {action == null ? null : (
+        <Button variant="link" className="ui-choice-action" disabled={saving != null} onClick={() => { action.onSelect(() => { requestSheetClose.current?.(); }); }}>
+          {action.label}
+        </Button>
+      )}
       {copy.note ? <p className="t-caption t-muted ui-pick-note">{copy.note}</p> : null}
     </Sheet>
   );
