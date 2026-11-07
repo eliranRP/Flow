@@ -455,6 +455,23 @@
   font-size: 0;
 }
 
+/* FLOW-1093 (board V3-Unassigned): the sheet's last row, "+ פרויקט חדש", a 48px accent link at the row's start,
+   and the line said in place of the rows when there are none. */
+.ui-sheet-choice .ui-choice-action {
+  min-block-size: var(--field-height);
+  padding-inline: var(--space-inset-row);
+  font-size: var(--type-btn-size);
+  line-height: var(--type-btn-line);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-sheet-choice .ui-choice-empty {
+  margin: 0;
+  padding-inline: var(--space-inset-row);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
 /* The board keeps a disabled choice's circle as drawn; only its words dim. */
 .ui-choice-sheet .ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) .ui-radio {
   border-color: var(--color-control-border);

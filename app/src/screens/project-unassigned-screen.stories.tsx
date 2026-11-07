@@ -39,13 +39,34 @@ export const UnassignedAssigned: Story = {
   },
 };
 
-/** The picker, open on a line, with the project its category names first. */
+/** The picker, open on a line, with the project its category names first and "+ פרויקט חדש" last (FLOW-1093). */
 export const UnassignedPicker: Story = {
   name: "Lines with no project, the project picker",
   render: UnassignedRows.render,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getAllByRole("button", { name: "שיוך" })[0] as HTMLElement);
-    await expect(await within(document.body).findByRole("dialog", { name: "לאיזה פרויקט?" })).toBeInTheDocument();
+    const sheet = await within(document.body).findByRole("dialog", { name: "לאיזה פרויקט?" });
+    const create = within(sheet).getByRole("button", { name: "+ פרויקט חדש" });
+    // Eight projects run past a phone's sheet, so the shot scrolls to the last row.
+    create.scrollIntoView({ block: "end" });
+    await expect(create).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1093: with no active project, the picker says so and keeps "+ פרויקט חדש". */
+export const UnassignedPickerNoProjects: Story = {
+  name: "Lines with no project, the picker with no projects",
+  render: () => (
+    <StoryRoute entry="/projects/unassigned" tabs>
+      <ExampleBar />
+      <ProjectUnassignedScreen sample={{ rows: UNASSIGNED_SAMPLE.rows, projects: [] }} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getAllByRole("button", { name: "שיוך" })[0] as HTMLElement);
+    const sheet = await within(document.body).findByRole("dialog", { name: "לאיזה פרויקט?" });
+    await expect(within(sheet).getByText("אין עדיין פרויקט לשייך אליו")).toBeInTheDocument();
+    await expect(within(sheet).getByRole("button", { name: "+ פרויקט חדש" })).toBeInTheDocument();
   },
 };
 

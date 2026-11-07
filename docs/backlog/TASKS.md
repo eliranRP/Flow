@@ -484,7 +484,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1090"></a>[FLOW-1090](tasks/FLOW-1090.md) | Unassigned rows: the שיוך pill squeezes the title at 320 | SMALL UI |
 | <a id="flow-1091"></a>[FLOW-1091](tasks/FLOW-1091.md) | Calculation pages show a bare failure line instead of the failed card | SMALL UI |
 | <a id="flow-1092"></a>[FLOW-1092](tasks/FLOW-1092.md) | Reports month drill: the pill shows the month but picking a period leaves the drill | SMALL CYCLE |
-| <a id="flow-1093"></a>[FLOW-1093](tasks/FLOW-1093.md) | Unassigned picker has no "+ פרויקט חדש" | PLAN FIRST |
+| <a id="flow-1093"></a>[FLOW-1093](tasks/FLOW-1093.md) | Unassigned picker has no "+ פרויקט חדש" | SMALL CYCLE |
 | <a id="flow-1044"></a>[FLOW-1044](tasks/FLOW-1044.md) | Projects v3: the list, the project page by kind, the actions and new-project sheets, project profit, and the lines with no project | UI (design approved) |
 | <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |

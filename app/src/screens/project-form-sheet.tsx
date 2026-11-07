@@ -1,5 +1,5 @@
 import { shekelsToAgorot } from "@flow/shared";
-import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useCompanyCurrency } from "../company-currency";
@@ -55,6 +55,8 @@ export function ProjectFormSheet({
   project,
   extras,
   focusBudget = false,
+  onCreated,
+  returnFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,10 +65,14 @@ export function ProjectFormSheet({
   extras?: ReactNode;
   /** FLOW-961: opened from הוספת תקציב, the sheet puts the cursor in the budget. */
   focusBudget?: boolean;
+  /** FLOW-1093: a new project goes here (its id and name) in place of opening its page and the create toast. */
+  onCreated?: (id: string, name: string) => void;
+  /** FLOW-1093: ✕ and Escape put focus back on the control that opened the sheet (a removed control is skipped). */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
-      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} focusBudget={focusBudget} onClose={() => { onOpenChange(false); }} />
+    <Sheet open={open} onOpenChange={onOpenChange} returnFocusRef={returnFocusRef} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
+      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} focusBudget={focusBudget} onCreated={onCreated} onClose={() => { onOpenChange(false); }} />
     </Sheet>
   );
 }
@@ -86,7 +92,7 @@ function minorOf(text: string): number | null {
   return text.trim() === "" ? null : Number(shekelsToAgorot(text));
 }
 
-function ProjectForm({ project, extras, focusBudget, onClose }: { project?: ProjectFormValues; extras?: ReactNode; focusBudget: boolean; onClose: () => void }) {
+function ProjectForm({ project, extras, focusBudget, onCreated, onClose }: { project?: ProjectFormValues; extras?: ReactNode; focusBudget: boolean; onCreated?: (id: string, name: string) => void; onClose: () => void }) {
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
   // The amounts are in the company currency, so each field shows that currency's mark.
@@ -115,11 +121,14 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
   const fields = fieldsOf(kind, editing);
   const save = useWrite({
     failure: "לא הצלחנו לשמור את הפרויקט.",
-    success: project ? "הפרטים נשמרו" : "הפרויקט נוצר",
+    // FLOW-1093: a create the caller goes on with (an assign) leaves the toast to it.
+    success: project ? "הפרטים נשמרו" : onCreated == null ? "הפרויקט נוצר" : undefined,
     keys: ["dashboard", "project", "projects-cash"],
     onSuccess: () => {
       onClose();
-      if (!project && createdId.current != null) void navigate(`/projects/${createdId.current}`);
+      if (project || createdId.current == null) return;
+      if (onCreated == null) void navigate(`/projects/${createdId.current}`);
+      else onCreated(createdId.current, trimmed);
     },
     run: async () => {
       const supabase = getSupabase();
