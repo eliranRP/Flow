@@ -421,26 +421,27 @@ describe("cold review scope", () => {
     });
     db.integration = { enabled: false, mode: "off" };
     db.review = [stored];
-    const started = Date.now();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderReview(client);
     expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
-    const releaseAt = window.setTimeout(() => {
-      releaseCompany();
-    }, 1500);
+    // FLOW-846: the order of events, not the clock. The cap runs out first: the lookup gives up on the
+    // company (a miss that follows the live read) and the card is usable, with nothing bound yet.
+    await waitFor(() => {
+      expect(jevScopeFollowsLive()).toBe(true);
+    });
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
-    }, { timeout: 1800 });
+    });
+    expect(boundJevConnectorScope()).toBeNull();
+    // Then the company row arrives, after the cap, and binds.
+    releaseCompany();
     await waitFor(() => {
       expect(boundJevConnectorScope()).toEqual(scope);
-    }, { timeout: 2500 });
-    expect(Date.now() - started).toBeGreaterThanOrEqual(1400);
-    expect(Date.now() - started).toBeLessThan(2500);
+    });
     expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
     expect(document.querySelector("[data-jev-pending]")).toBeNull();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
-    window.clearTimeout(releaseAt);
   });
 
   it("reads the connector once when the company binds after a live read said on (FLOW-704)", async () => {
