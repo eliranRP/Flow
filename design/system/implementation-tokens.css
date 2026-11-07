@@ -365,7 +365,7 @@
     --color-band-past: #5A2DB0;
     --color-pill-helps: #4A4458;
     --color-pill-hurts: #C3302B;
-  --color-pill-helps-ink: #1D1728; /* V3-Home: a helping change on Home's white band chip, both themes (FLOW-1052) */
+    --color-pill-helps-ink: #1D1728; /* V3-Home: a helping change on Home's white band chip, both themes (FLOW-1052) */
     --color-outline-secondary: var(--color-tint-strong);
     --color-outline-forecast: #8F879F;
     --color-chart-expense: #D9D2E9;

@@ -272,7 +272,7 @@
 .ui-projects-body .ui-row-project .ui-row-title,
 .ui-unassigned .ui-row-project .ui-row-title,
 .ui-project-lines .ui-row-project .ui-row-title {
-  line-height: var(--type-title-line);
+  line-height: var(--line-board);
 }
 
 .ui-projects-body .ui-row-project .ui-row-hint,
@@ -280,13 +280,13 @@
 .ui-project-lines .ui-row-project .ui-row-hint {
   color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
-  line-height: var(--type-title-line);
+  line-height: var(--line-board);
 }
 
 .ui-projects-body .ui-row-project .t-body,
 .ui-unassigned .ui-row-project .t-body,
 .ui-project-lines .ui-row-project .t-body {
-  line-height: var(--type-title-line);
+  line-height: var(--line-board);
 }
 
 /* The project page's month lines (V3-Project): 64px rows led by the 24px status mark. */
@@ -501,6 +501,8 @@
 
 .ui-project-new .ui-stack {
   flex: 1;
+  gap: var(--space-4);
+  margin-block-start: var(--space-2);
 }
 
 .ui-project-new .ui-stack > .ui-btn:last-child {
@@ -511,11 +513,6 @@
   font-size: var(--type-sheet-size);
   line-height: var(--type-sheet-line);
   font-weight: var(--type-sheet-weight);
-}
-
-.ui-project-new .ui-stack {
-  gap: var(--space-4);
-  margin-block-start: var(--space-2);
 }
 
 .ui-project-new .ui-field {
