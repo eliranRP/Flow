@@ -50,6 +50,16 @@ describe("ProjectMonthProfitScreen", () => {
     expect(total).toBe(379_560n);
   });
 
+  it("a credit on an expense shows as money in, a plus, not a minus (FLOW-1104)", () => {
+    const expense = JUNIPER_MONTH_PROFIT.lines.find((line) => line.side === "out");
+    if (expense == null) throw new Error("the sample has no expense line");
+    const credit = { ...expense, transaction_id: "t-credit", supplier_name: "Water credit", description: "Water credit", amount_minor: -16_459n };
+    const { container } = renderAt("/projects/juniper-ct/profit/2026-10", { ...JUNIPER_MONTH_PROFIT, lines: [...JUNIPER_MONTH_PROFIT.lines, credit] });
+    const row = Array.from(container.querySelectorAll("a")).find((link) => link.textContent.includes("Water credit"));
+    expect(row?.textContent).toMatch(/\+\s*\$164/);
+    expect(row?.textContent).not.toMatch(/[−-]\s*\$164/);
+  });
+
   it("lists the lines by day, newest day first, under the default date order", () => {
     const { container } = renderAt("/projects/juniper-ct/profit/2026-10", JUNIPER_MONTH_PROFIT);
     const heads = Array.from(container.querySelectorAll(".ui-lines-group-title")).map((head) => head.textContent);
