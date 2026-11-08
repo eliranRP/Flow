@@ -302,6 +302,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | --- | --- | --- |
 | <a id="flow-1043"></a>[FLOW-1043](tasks/FLOW-1043.md) | v3 shared parts: the docking compact bar, the sliding segment, one-line group heads, attention row-cards, status marks | UI (design approved) |
 | <a id="flow-1035"></a>[FLOW-1035](tasks/FLOW-1035.md) | Month lines say which are recurring (Home v3 data) | SMALL CYCLE |
+| <a id="flow-1110"></a>[FLOW-1110](tasks/FLOW-1110.md) | A project page lists its month's one-off lines | SMALL CYCLE |
 | <a id="flow-1036"></a>[FLOW-1036](tasks/FLOW-1036.md) | Home v3: the month's activity on Home, dismissable attention rows | UI (design approved) |
 | <a id="flow-1048"></a>[FLOW-1048](tasks/FLOW-1048.md) | v3 lists and details under Home: קבועים, changed charges, the charge page, month lines, the transaction page, the forecast | UI (design approved) |
 | <a id="flow-1049"></a>[FLOW-1049](tasks/FLOW-1049.md) | v3 queues and sheets: open invoices and the invoice, the review queue, transfers, search, add, settings, the company switcher | UI (design approved) |
