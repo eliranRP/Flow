@@ -197,6 +197,15 @@ export function suggestedProject<T extends { id: string; name: string }>(categor
   return named.length === 1 ? (named[0] ?? null) : null;
 }
 
+/**
+ * FLOW-1112: a month line's key on the project page. The page lists the counted and the kept-out reads together,
+ * and a line split between a part counted in profit and one kept out comes back in both on the same side, so
+ * whether the row counts in profit is part of its key.
+ */
+export function monthLineKey(line: Pick<CashLine, "transaction_id" | "part" | "side" | "in_pnl">): string {
+  return `${line.transaction_id}:${line.part ?? ""}:${line.side}:${line.in_pnl === false ? "kept" : "counted"}`;
+}
+
 /** The project page's filter, as on Home: הכול, קבועים, נותר לשלם. */
 export type ProjectLinesFilter = "all" | "fixed" | "left";
 
@@ -205,13 +214,17 @@ export type ProjectLineGroups = {
   left: ScheduleRow[];
   /** Recurring charges that arrived this month. */
   paid: ScheduleRow[];
-  /** The month's lines that belong to no recurring charge; null while the server does not say (FLOW-1035). */
-  once: CashLine[] | null;
+  /**
+   * FLOW-1112 (owner, 2026-11-08: "under all we need to see recurring payments and any transactions that occurred
+   * this month"): under הכול, every line of the month, in and out, newest first; empty under the other filters.
+   */
+  lines: CashLine[];
 };
 
 /**
  * FLOW-1044: the project page's month in groups, from the schedule's rows for the project and the month's
- * lines. Without the lines' recurring flag the one-off group is left out (plan §5), never guessed.
+ * lines. FLOW-1112: הכול lists every line of the month under the recurring groups, a recurring charge's own
+ * lines included, so a payer's other line (a recurring tenant's water payment) is never hidden.
  */
 export function projectLineGroups(schedule: readonly ScheduleRow[], lines: readonly CashLine[], projectId: string, filter: ProjectLinesFilter): ProjectLineGroups {
   const own = schedule.filter((row) => row.project_id === projectId);
@@ -219,7 +232,6 @@ export function projectLineGroups(schedule: readonly ScheduleRow[], lines: reado
     .filter((row) => row.state === "late" || row.state === "soon")
     .sort((a, b) => Number(b.state === "late") - Number(a.state === "late") || a.typical_day - b.typical_day);
   const paid = filter === "left" ? [] : own.filter((row) => row.state === "arrived");
-  const flagged = lines.some((line) => line.recurring != null);
-  const once = filter !== "all" || !flagged ? null : lines.filter((line) => line.recurring === false);
-  return { left, paid, once };
+  const month = filter !== "all" ? [] : [...lines].sort((a, b) => b.cash_month_date.localeCompare(a.cash_month_date) || b.doc_date.localeCompare(a.doc_date));
+  return { left, paid, lines: month };
 }

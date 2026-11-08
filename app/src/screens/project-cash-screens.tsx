@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cashMonthKey, cashTitle, shownCashRows } from "../cash";
 import { projectCashSummaryRows } from "../project-cash";
-import { projectLineGroups, type ProjectLinesFilter } from "../project-list";
+import { monthLineKey, projectLineGroups, type ProjectLinesFilter } from "../project-list";
 import { chargeHref } from "../recurring-charge";
 import type { ScheduleRow } from "../recurring-schedule";
 import { BackButton } from "../ui/back";
@@ -113,9 +113,9 @@ function ChargeRow({ row, search, skippedIn }: { row: ScheduleRow; search: strin
   );
 }
 
-/** A month line that belongs to no recurring charge: a dot, its date and category, and its amount. */
-function OnceRow({ line, search }: { line: CashLine; search: string }) {
-  const date = `${line.doc_date.slice(8, 10)}/${line.doc_date.slice(5, 7)}`;
+/** FLOW-1112: one line of the month: a dot, its cash date and category, and its amount, "+" on money in. */
+function MonthLineRow({ line, search }: { line: CashLine; search: string }) {
+  const date = `${line.cash_month_date.slice(8, 10)}/${line.cash_month_date.slice(5, 7)}`;
   return (
     <ListRow
       variant="project"
@@ -127,6 +127,16 @@ function OnceRow({ line, search }: { line: CashLine; search: string }) {
       amountDirection={line.side === "in" ? "income" : undefined}
       href={`/transactions/${line.transaction_id}${search}`}
     />
+  );
+}
+
+/** The month's lines' head: the count, and the net in its first line's currency, "+" when more came in. */
+function netSummary(count: number, currency: string | undefined, net: bigint): ReactNode {
+  return (
+    <>
+      <bdi dir="ltr">{String(count)}</bdi>
+      {currency == null ? null : <> · <bdi dir="ltr">{`${net > 0n ? "+" : net < 0n ? "−" : ""}${formatAmountText(net < 0n ? -net : net, currency)}`}</bdi></>}
+    </>
   );
 }
 
@@ -239,10 +249,11 @@ export function ProjectCashOverview({
   const chargeTotal = (charges: readonly ScheduleRow[]) => charges
     .filter((row) => row.currency === charges[0]?.currency)
     .reduce((sum, row) => sum + magnitude(row.state === "arrived" && row.amount_minor != null ? row.amount_minor : row.typical_amount_minor), 0n);
-  const lineTotal = (once: readonly CashLine[]) => once
-    .filter((line) => line.currency === once[0]?.currency)
-    .reduce((sum, line) => sum + magnitude(line.amount_minor), 0n);
-  const hasLines = groups.left.length > 0 || groups.paid.length > 0 || (groups.once?.length ?? 0) > 0;
+  // The month's net in its first line's currency: money in less money out.
+  const lineNet = (lines: readonly CashLine[]) => lines
+    .filter((line) => line.currency === lines[0]?.currency)
+    .reduce((sum, line) => sum + (line.side === "in" ? magnitude(line.amount_minor) : -magnitude(line.amount_minor)), 0n);
+  const hasLines = groups.left.length > 0 || groups.paid.length > 0 || groups.lines.length > 0;
   return (
     <div className="ui-project-cash ui-project-page flex min-h-full flex-1 flex-col">
       <TopBand
@@ -347,10 +358,10 @@ export function ProjectCashOverview({
               <List>{groups.paid.map((row) => <ChargeRow key={`${row.direction}:${row.party_id}`} row={row} search={search} />)}</List>
             </section>
           )}
-          {groups.once == null || groups.once.length === 0 ? null : (
-            <section className="ui-month" aria-labelledby={`project-once-${project.id}`}>
-              <GroupHead id={`project-once-${project.id}`} title="חד-פעמי" summary={summaryOf(groups.once.length, groups.once[0]?.currency, lineTotal(groups.once))} />
-              <List>{groups.once.map((line) => <OnceRow key={`${line.transaction_id}:${line.part ?? ""}`} line={line} search={search} />)}</List>
+          {groups.lines.length === 0 ? null : (
+            <section className="ui-month" aria-labelledby={`project-month-lines-${project.id}`}>
+              <GroupHead id={`project-month-lines-${project.id}`} title="תנועות החודש" summary={netSummary(groups.lines.length, groups.lines[0]?.currency, lineNet(groups.lines))} />
+              <List>{groups.lines.map((line) => <MonthLineRow key={monthLineKey(line)} line={line} search={search} />)}</List>
             </section>
           )}
         </div>
