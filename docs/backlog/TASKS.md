@@ -303,6 +303,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1043"></a>[FLOW-1043](tasks/FLOW-1043.md) | v3 shared parts: the docking compact bar, the sliding segment, one-line group heads, attention row-cards, status marks | UI (design approved) |
 | <a id="flow-1035"></a>[FLOW-1035](tasks/FLOW-1035.md) | Month lines say which are recurring (Home v3 data) | SMALL CYCLE |
 | <a id="flow-1110"></a>[FLOW-1110](tasks/FLOW-1110.md) | A project page lists its month's one-off lines | SMALL CYCLE |
+| <a id="flow-1111"></a>[FLOW-1111](tasks/FLOW-1111.md) | A project's נכנס and יצא open the project's lines of that side | SMALL CYCLE |
 | <a id="flow-1112"></a>[FLOW-1112](tasks/FLOW-1112.md) | A project's הכול lists every line of the month under its recurring groups | SMALL CYCLE |
 | <a id="flow-1036"></a>[FLOW-1036](tasks/FLOW-1036.md) | Home v3: the month's activity on Home, dismissable attention rows | UI (design approved) |
 | <a id="flow-1048"></a>[FLOW-1048](tasks/FLOW-1048.md) | v3 lists and details under Home: קבועים, changed charges, the charge page, month lines, the transaction page, the forecast | UI (design approved) |
