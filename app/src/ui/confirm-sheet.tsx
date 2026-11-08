@@ -1,6 +1,6 @@
 import type { ReactNode, RefObject } from "react";
 import { Button } from "./button";
-import { TrashIcon } from "./icons";
+import { TrashIcon } from "./icons-later";
 import { Sheet } from "./sheet";
 
 type ConfirmSheetProps = {

@@ -24,7 +24,8 @@ import {
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { Button } from "../ui/button";
-import { CloseIcon, DocumentIcon, PaperclipIcon, PencilIcon, TrashIcon } from "../ui/icons";
+import { CloseIcon, DocumentIcon } from "../ui/icons";
+import { PaperclipIcon, PencilIcon, TrashIcon } from "../ui/icons-later";
 import "../ui/css/58-transaction-thread.css";
 
 const THREAD_KEYS = [THREAD_KEY, THREAD_COUNTS_KEY] as const;

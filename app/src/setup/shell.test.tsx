@@ -2,7 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "../ui/button";
 import { OnboardingFrame } from "./shell";
-import { SKIP_SHEET_CONFIRM, SKIP_ALL, SETUP_TOTAL } from "./copy";
+import { SKIP_SHEET_CONFIRM, SKIP_ALL } from "./copy";
+import { SETUP_TOTAL } from "./model";
 import "./setup.css";
 
 describe("onboarding frame (FLOW-514 §1)", () => {

@@ -3,7 +3,8 @@ import { useRefreshingNow } from "../israel-clock";
 import { israelUsePhrase } from "../sumit-copy";
 import { Button } from "../ui/button";
 import { ConnectionFacts, ConnectionHead, ConnectionNote } from "../ui/connection-page";
-import { BackIcon, KeyIcon } from "../ui/icons";
+import { BackIcon } from "../ui/icons";
+import { KeyIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { activeKeys, clientLabel, keyDate, keyName, scopeChoice, scopeLabel, type AssistantKey } from "./assistant-keys";
 

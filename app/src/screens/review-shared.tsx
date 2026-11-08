@@ -9,7 +9,8 @@ import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { ReviewPushPrompt } from "./review-push-prompt";
 import type { NotificationPrefs, PushSupport } from "../push";
-import { CheckIcon, ReviewIcon } from "../ui/icons";
+import { CheckIcon } from "../ui/icons";
+import { ReviewIcon } from "../ui/icons-later";
 import { ScreenHeader } from "../ui/screen-header";
 
 export const EMPTY_REVIEW: ReviewRow[] = [];

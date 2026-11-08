@@ -1,5 +1,6 @@
 import { useId } from "react";
-import { MinusIcon, PlusIcon } from "./icons";
+import { PlusIcon } from "./icons";
+import { MinusIcon } from "./icons-later";
 
 /**
  * FLOW-106: a whole number from `min` to `max` with − and + (44px targets). The value is read as a

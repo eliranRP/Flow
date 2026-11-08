@@ -1,7 +1,5 @@
 /** Hebrew for the first-time setup (FLOW-514). Strings match the board. Invented sample names only. */
 
-export const SETUP_TOTAL = 7;
-
 export const SAVE_ERROR = "לא הצלחנו לשמור.";
 
 /** The name the business gets when the skip-all sheet creates it (board: "העסק שלי"). */
@@ -121,6 +119,5 @@ export const SKIP_SHEET_STAY = "המשך בהגדרה";
 
 export const SETUP_ERROR_RETRY = "לא הצלחנו לשמור. נסו שוב.";
 
-/** Still used by the Home card and the old review path until FLOW-365/FLOW-514 step C. */
-export const COMPLETED_TOAST = "ההגדרה הושלמה.";
+/** Still used by the old review path until FLOW-365/FLOW-514 step C. */
 export const SAMPLE_TOAST = "אישור ראשון. אפשר להמשיך בהגדרה.";

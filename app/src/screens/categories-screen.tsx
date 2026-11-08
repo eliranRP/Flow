@@ -12,7 +12,8 @@ import { CATEGORY_NAME_MAX, categoryNameError, mergeFailureText, pnlFailureText 
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
-import { PlusIcon, TagIcon } from "../ui/icons";
+import { PlusIcon } from "../ui/icons";
+import { TagIcon } from "../ui/icons-later";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";

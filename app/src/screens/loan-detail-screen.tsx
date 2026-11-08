@@ -8,7 +8,7 @@ import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { LoanIcon } from "../ui/icons";
+import { LoanIcon } from "../ui/icons-later";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";

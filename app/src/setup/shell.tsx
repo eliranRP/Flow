@@ -2,9 +2,9 @@ import { useState, type ReactNode } from "react";
 import { FocusTitle } from "../ui/focus-title";
 import { ProgressBar } from "../ui/progress-bar";
 import { Button } from "../ui/button";
-import { BACK, SETUP_TOTAL, SKIP_ALL } from "./copy";
+import { BACK, SKIP_ALL } from "./copy";
+import { SETUP_TOTAL, type StepNumber } from "./model";
 import { SkipSheet } from "./skip-sheet";
-import type { StepNumber } from "./model";
 
 /**
  * OnboardingFrame (FLOW-514 §1): the page of every setup screen. Steps 1 to 7 get the top block

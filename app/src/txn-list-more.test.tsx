@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { grownIds, resetTxnListMore, useTxnListMore, type TxnMoreLoad } from "./txn-list-more";
-import { TxnStepNav, usePrefetchNextPage, useTxnNav } from "./txn-nav";
+import { TxnStepNav, usePrefetchNextPage, useTxnNav } from "./txn-step-nav";
 
 function Card({ prefetch }: { prefetch: boolean }) {
   const { transactionId = "" } = useParams();

@@ -7,7 +7,8 @@ import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupStepScreen, SetupWelcomeScreen } from "./route-screens";
-import { SETUP_TOTAL, SKIP_ALL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
+import { SKIP_ALL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
+import { SETUP_TOTAL } from "./model";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";

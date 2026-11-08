@@ -1,7 +1,8 @@
 import "./lazy.css";
 import type { ReactNode } from "react";
 import { FocusTitle } from "./focus-title";
-import { AppIcon, CloseIcon, DownloadIcon, HomeIcon } from "./icons";
+import { CloseIcon, HomeIcon } from "./icons";
+import { AppIcon, DownloadIcon } from "./icons-later";
 import { IconButton } from "./icon-button";
 import { Button } from "./button";
 import { ANDROID_INSTALL_STEPS, iosBrowser, iosInstallLead, iosInstallSteps, type InstallStepCopy, type IosBrowser } from "./install-copy";

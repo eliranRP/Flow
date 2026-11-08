@@ -8,7 +8,7 @@ import {
   moveTitle,
 } from "../category-copy";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { LockIcon } from "../ui/icons";
+import { LockIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";

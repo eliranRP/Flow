@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
 import { EmptyState, FailureLine } from "./empty-state";
-import { CalendarIcon, CheckIcon, ChartIcon, LoanIcon, PeopleIcon, ProjectsIcon, RepeatIcon } from "./icons";
+import { CalendarIcon, CheckIcon, PeopleIcon, ProjectsIcon, RepeatIcon } from "./icons";
+import { ChartIcon, LoanIcon } from "./icons-later";
 import { longHebrew, padded } from "./story-support";
 
 const meta = {

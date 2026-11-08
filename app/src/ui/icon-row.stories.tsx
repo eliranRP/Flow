@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IconRow } from "./icon-row";
-import { ChartIcon, ProjectsIcon, TagIcon } from "./icons";
+import { ProjectsIcon } from "./icons";
+import { ChartIcon, TagIcon } from "./icons-later";
 import { forceReducedMotion } from "./reduced-motion";
 import { padded } from "./story-support";
 

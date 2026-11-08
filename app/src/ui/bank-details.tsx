@@ -1,5 +1,6 @@
 import { type MethodIconKind } from "../txn-meta";
-import { CardIcon, DocumentIcon, TransferIcon } from "./icons";
+import { DocumentIcon } from "./icons";
+import { CardIcon, TransferIcon } from "./icons-later";
 
 /** The payment-method icon. Decorative: the label next to it carries the meaning. */
 export function MethodIcon({ kind, size = 16 }: { kind: MethodIconKind; size?: number }) {

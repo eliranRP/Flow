@@ -20,7 +20,8 @@ import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyS
 import { type LoanCurrency } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
-import { BellIcon, BuildingIcon, DownloadIcon, PeopleIcon, PlugIcon, SparkIcon, TagIcon, ThemeIcon, TransferIcon } from "../ui/icons";
+import { PeopleIcon } from "../ui/icons";
+import { BellIcon, BuildingIcon, DownloadIcon, PlugIcon, SparkIcon, TagIcon, ThemeIcon, TransferIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";

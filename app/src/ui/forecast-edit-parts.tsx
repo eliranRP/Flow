@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { cx } from "./cx";
-import { PencilIcon } from "./icons";
+import { PencilIcon } from "./icons-later";
 // The pace sheet takes the recurring pace sheet's board rows (ui-pace-sheet).
 import "./css/38-related-charges.css";
 import "./css/50-forecast-edit.css";
