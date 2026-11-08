@@ -1,4 +1,5 @@
-import { ChevronIcon, PencilIcon, ProjectsIcon, RepeatIcon, TagIcon } from "./icons";
+import { ChevronIcon, ProjectsIcon, RepeatIcon } from "./icons";
+import { PencilIcon, TagIcon } from "./icons-later";
 import { IconRow } from "./icon-row";
 import { cx } from "./cx";
 import { PACE_LABEL } from "./pace";

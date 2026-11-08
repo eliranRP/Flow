@@ -2,7 +2,8 @@ import { formatAmountText } from "@flow/shared";
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { HintParts } from "./hint-parts";
-import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon, EyeOffIcon, JournalIcon } from "./icons";
+import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon } from "./icons";
+import { EyeOffIcon, JournalIcon } from "./icons-later";
 import "./css/55-journal.css";
 
 /** One leg as the card draws it: a magnitude on its side, with its account's words. */

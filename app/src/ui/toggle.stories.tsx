@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { padded } from "./story-support";
-import { SplitIcon } from "./icons";
+import { SplitIcon } from "./icons-later";
 import { List } from "./list-row";
 import { Toggle } from "./toggle";
 

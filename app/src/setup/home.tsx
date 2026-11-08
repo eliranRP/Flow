@@ -3,11 +3,13 @@ import { useAuth } from "../auth";
 import { useHomePreview } from "../preview";
 import { useToast } from "../ui/toast";
 import { useDashboardQuery } from "../use-books";
-import { COMPLETED_TOAST } from "./copy";
 import { useSetupFacts } from "./facts";
 import { shouldShowCompletedToast, withPatch } from "./model";
 import { useSetupStore } from "./store";
 import { useSetupViewer } from "./viewer";
+
+/** Here, not in copy.ts, so Home's first load doesn't carry the setup screens' copy (FLOW-1109). */
+const COMPLETED_TOAST = "ההגדרה הושלמה.";
 
 /** Home checklist. Hidden until this user has started a run, and hidden in preview. */
 // HomeScreen still passes emptyHome; the card it fed is gone, so the prop is unread until #622.

@@ -26,7 +26,7 @@ import { EmptyState, FailureLine } from "../ui/empty-state";
 import { FocusTitle } from "../ui/focus-title";
 import { GroupHead } from "../ui/group-head";
 import { HEBREW_MONTHS } from "../ui/date-math";
-import { BarsIcon } from "../ui/icons";
+import { BarsIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader, useScrolledPast } from "../ui/screen-header";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";

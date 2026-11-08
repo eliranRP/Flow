@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { KeptOutIcon } from "./icons";
+import { KeptOutIcon } from "./icons-later";
 
 /**
  * FLOW-124 and FLOW-125 (decision 0135): what a transaction row shows of the line itself. A line

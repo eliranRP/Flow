@@ -1,7 +1,7 @@
 import { useId, type ReactNode, type RefObject, type SubmitEvent } from "react";
 import { Button } from "./button";
 import { List, ListRow } from "./list-row";
-import { LogoutIcon } from "./icons";
+import { LogoutIcon } from "./icons-later";
 import { Sheet } from "./sheet";
 
 export function ConnectSheet({

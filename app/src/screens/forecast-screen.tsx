@@ -20,7 +20,7 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
-import { CalendarCheckIcon } from "../ui/icons";
+import { CalendarCheckIcon } from "../ui/icons-later";
 import { useToast } from "../ui/toast";
 import { ChangedLine, dayMonth, FORECAST_TITLE, ForecastFootnote, ForecastRowButton, MovedRow, signed } from "./forecast-parts";
 import { ForecastProjectView } from "./forecast-project-view";

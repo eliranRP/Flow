@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Banner, Notice } from "./banner";
-import { ReviewIcon } from "./icons";
+import { ReviewIcon } from "./icons-later";
 import { padded } from "./story-support";
 import { Button } from "./button";
 

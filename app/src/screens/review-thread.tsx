@@ -14,7 +14,8 @@ import {
   type ThreadNote,
 } from "../transaction-thread";
 import { Button } from "../ui/button";
-import { CameraIcon, CheckIcon, DocumentIcon, NoteIcon, PaperclipIcon } from "../ui/icons";
+import { CheckIcon, DocumentIcon } from "../ui/icons";
+import { CameraIcon, NoteIcon, PaperclipIcon } from "../ui/icons-later";
 import { Sheet } from "../ui/sheet";
 import { useWrite } from "../use-write";
 import { DraftFiles, mercuryNoteStatus, saveThreadDraft, ThreadFileChip, usePickFiles, type ThreadDraft } from "./transaction-thread";

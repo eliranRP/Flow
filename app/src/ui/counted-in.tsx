@@ -1,5 +1,5 @@
 import { type RefObject } from "react";
-import { ChartIcon } from "./icons";
+import { ChartIcon } from "./icons-later";
 import { IconRow } from "./icon-row";
 import { Sheet } from "./sheet";
 import { Toggle } from "./toggle";

@@ -1,4 +1,5 @@
-import { SETUP_TOTAL } from "./copy";
+/** The number of setup steps. It lives here, not in copy.ts, so Home's first load doesn't carry the setup screens' copy (FLOW-1109). */
+export const SETUP_TOTAL = 7;
 import type { SetupStore } from "./storage";
 import { emptySetupStore } from "./storage";
 

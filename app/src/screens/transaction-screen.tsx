@@ -13,7 +13,16 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { type TxnMeta } from "../txn-meta";
-import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
+import { txnParty } from "../txn-nav";
+import {
+  TxnStepNav,
+  usePrefetchNeighbours,
+  usePrefetchNextPage,
+  useAnnounceTxn,
+  useNeighbourParty,
+  useTxnNav,
+  useTxnNavKeys,
+} from "../txn-step-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
@@ -23,7 +32,8 @@ import { IconButton } from "../ui/icon-button";
 import { IconRow } from "../ui/icon-row";
 import { DocumentCard } from "../ui/document-card";
 import { unpaidDocumentUrl } from "../unpaid";
-import { MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { MoreIcon, ProjectsIcon } from "../ui/icons";
+import { SplitIcon, TagIcon, TrashIcon } from "../ui/icons-later";
 import { List } from "../ui/list-row";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
 import { CountedInRow, CountedInSheet, COUNTED_REASON_LOAN, COUNTED_REASON_RENO } from "../ui/counted-in";

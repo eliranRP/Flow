@@ -1,4 +1,5 @@
-import { BackIcon, ClockIcon } from "../ui/icons";
+import { BackIcon } from "../ui/icons";
+import { ClockIcon } from "../ui/icons-later";
 
 export type QuickCheck = {
   key: string;

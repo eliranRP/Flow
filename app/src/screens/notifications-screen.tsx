@@ -22,7 +22,8 @@ import {
 import { addedLabel, deviceName, PUSH_DEVICES_KEY, usePushDevicesQuery, type PushDevice } from "../push-devices";
 import { sendTestPush, TEST_PUSH_COPY } from "../push-test";
 import { List, ListRow } from "../ui/list-row";
-import { CalendarIcon, BellIcon, DocumentIcon } from "../ui/icons";
+import { CalendarIcon, DocumentIcon } from "../ui/icons";
+import { BellIcon } from "../ui/icons-later";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";

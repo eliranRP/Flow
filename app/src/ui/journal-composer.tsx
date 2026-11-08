@@ -4,7 +4,8 @@ import { ACCOUNT_GROUPS, type ComposerAccount, type ComposerHold, type ComposerS
 import { useSheetHistory } from "./back";
 import { Picker } from "./change-picker";
 import type { ChangeChoice } from "./change-sheet-copy";
-import { CardIcon, CheckIcon, ChevronDownIcon } from "./icons";
+import { CheckIcon, ChevronDownIcon } from "./icons";
+import { CardIcon } from "./icons-later";
 import { AccountName } from "./journal-card";
 import { ListRow } from "./list-row";
 import { MoneyField } from "./money-field";

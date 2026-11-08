@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { transactionQueryOptions } from "./use-books";
-import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnStepNav, txnListState, txnParty, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "./txn-nav";
+import { dropTxnEnter, readTxnList, TxnAnnouncer, txnListState, txnParty } from "./txn-nav";
+import { TxnStepNav, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "./txn-step-nav";
 
 const rpc = vi.fn(() => Promise.resolve({ data: null, error: { message: "no read in this test" } }));
 

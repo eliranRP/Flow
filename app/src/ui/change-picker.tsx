@@ -1,5 +1,6 @@
 import { useId } from "react";
-import { PlusIcon, SplitIcon, TagIcon } from "./icons";
+import { PlusIcon } from "./icons";
+import { SplitIcon, TagIcon } from "./icons-later";
 import { ListRow } from "./list-row";
 import { SearchField } from "./search-field";
 import { Skeleton } from "./skeleton";
