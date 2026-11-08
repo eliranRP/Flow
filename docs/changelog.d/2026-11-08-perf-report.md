@@ -1,0 +1,1 @@
+The 2026-11-08 daily perf report is in `docs/qa/perf/`. Every read was slower than yesterday while the database was not, so the cause is likely the link from the cloud agent; no fix shipped. FLOW-1109 is filed: trim Home's code back under 248 KB, per the owner's "trim first".
