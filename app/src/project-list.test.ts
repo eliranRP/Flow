@@ -10,7 +10,7 @@ import {
   kindLabel,
   netIn,
   orderActiveProjects,
-  monthLineKey,
+  monthPayments,
   projectLineGroups,
   projectMeta,
   projectsMonthTotals,
@@ -195,24 +195,41 @@ describe("the project page's month lines (FLOW-1044)", () => {
     charge({ party_id: "other", state: "soon", project_id: "p2" }),
   ];
 
-  it("left holds the project's late then soon charges by day; paid the arrived ones", () => {
-    const groups = projectLineGroups(schedule, [], "p1", "all");
+  it("left holds the project's late then soon charges by day; paid the arrived ones (under קבועים)", () => {
+    const groups = projectLineGroups(schedule, [], "p1", "fixed");
     expect(groups.left.map((row) => row.party_id)).toEqual(["late", "soon5", "soon20"]);
     expect(groups.paid.map((row) => row.party_id)).toEqual(["paid"]);
   });
 
-  it("הכול lists every line of the month, a recurring charge's too, newest first; the other filters none (FLOW-1112)", () => {
-    const lines = [{ ...cashLine("a", true), cash_month_date: "2026-11-02" }, { ...cashLine("b", false), cash_month_date: "2026-11-05" }, cashLine("c")];
-    expect(projectLineGroups(schedule, lines, "p1", "all").lines.map((line) => line.transaction_id)).toEqual(["b", "a", "c"]);
-    expect(projectLineGroups(schedule, lines, "p1", "fixed").lines).toEqual([]);
-    expect(projectLineGroups(schedule, lines, "p1", "left").lines).toEqual([]);
+  it("הכול lists each payment of the month once, newest first, and the paid charges only under קבועים (FLOW-1113)", () => {
+    const lines = [{ ...cashLine("a", true), cash_month_date: "2026-11-02" }, { ...cashLine("b", false), cash_month_date: "2026-11-05" }];
+    const all = projectLineGroups(schedule, lines, "p1", "all");
+    expect(all.payments.map((payment) => payment.transactionId)).toEqual(["b", "a"]);
+    expect(all.paid).toEqual([]);
+    expect(projectLineGroups(schedule, lines, "p1", "fixed").payments).toEqual([]);
+    expect(projectLineGroups(schedule, lines, "p1", "fixed").paid.map((row) => row.party_id)).toEqual(["paid"]);
+    expect(projectLineGroups(schedule, lines, "p1", "left").payments).toEqual([]);
   });
 
-  it("keys a line split between a counted and a kept-out part apart in the two reads (FLOW-1112)", () => {
-    const counted = { ...cashLine("s"), in_pnl: true };
-    const kept = { ...cashLine("s"), in_pnl: false };
-    expect(monthLineKey(counted)).not.toBe(monthLineKey(kept));
-    expect(monthLineKey({ ...cashLine("s"), part: "principal" })).toBe("s:principal:out:counted");
+  it("merges a loan payment's parts into one payment, and the counted and kept reads of a split line (FLOW-1113)", () => {
+    const parts = [
+      { ...cashLine("loan", true), part: "interest", category_name: "ריבית", amount_minor: 297_881n },
+      { ...cashLine("loan", true), part: "escrow", category_name: "פיקדון", amount_minor: 91_550n, in_pnl: false },
+      { ...cashLine("loan", true), part: "principal", category_name: "קרן", amount_minor: 40_700n, in_pnl: false },
+    ];
+    const [loan] = monthPayments(parts);
+    expect(loan).toMatchObject({ transactionId: "loan", signedMinor: -430_131n, categories: ["ריבית", "פיקדון", "קרן"], recurring: true });
+  });
+
+  it("reads money in on an expense category (a credit) as money in, so the net matches the band (FLOW-1113)", () => {
+    const payments = monthPayments([
+      { ...cashLine("rent", true), side: "in", amount_minor: 400_000n },
+      { ...cashLine("water", true), side: "out", amount_minor: -16_459n },
+      { ...cashLine("loan", true), amount_minor: 430_131n },
+    ]);
+    const signed = Object.fromEntries(payments.map((payment) => [payment.transactionId, payment.signedMinor]));
+    expect(signed).toEqual({ rent: 400_000n, water: 16_459n, loan: -430_131n });
+    expect(payments.reduce((sum, payment) => sum + payment.signedMinor, 0n)).toBe(-13_672n);
   });
 
   it("נותר לשלם keeps only what is left", () => {

@@ -198,12 +198,55 @@ export function suggestedProject<T extends { id: string; name: string }>(categor
 }
 
 /**
- * FLOW-1112: a month line's key on the project page. The page lists the counted and the kept-out reads together,
- * and a line split between a part counted in profit and one kept out comes back in both on the same side, so
- * whether the row counts in profit is part of its key.
+ * FLOW-1113: one payment of the month on the project page: a transaction once, whatever its parts (a loan payment's
+ * interest, principal and escrow, a line split by category, a part counted in profit and one kept out). Its amount
+ * is signed as money moved: positive in, negative out (a credit on an expense category is money in).
  */
-export function monthLineKey(line: Pick<CashLine, "transaction_id" | "part" | "side" | "in_pnl">): string {
-  return `${line.transaction_id}:${line.part ?? ""}:${line.side}:${line.in_pnl === false ? "kept" : "counted"}`;
+export type MonthPayment = {
+  key: string;
+  transactionId: string;
+  name: string;
+  /** yyyy-mm-dd, its cash date (the latest of its parts). */
+  date: string;
+  /** Its parts' categories, each once, in the order the lines came. */
+  categories: string[];
+  currency: string;
+  signedMinor: bigint;
+  /** Any of its parts belongs to a recurring charge (FLOW-1035). */
+  recurring: boolean;
+};
+
+/** A line's amount as money moved: the read's amount is positive on its own side, so a refund on יצא is negative. */
+function signedLineMinor(line: Pick<CashLine, "side" | "amount_minor">): bigint {
+  return line.side === "in" ? line.amount_minor : -line.amount_minor;
+}
+
+/** FLOW-1113: the month's lines as payments, each transaction once (per currency), newest first. */
+export function monthPayments(lines: readonly CashLine[]): MonthPayment[] {
+  const byKey = new Map<string, MonthPayment>();
+  for (const line of lines) {
+    const key = `${line.transaction_id}:${line.currency}`;
+    const held = byKey.get(key);
+    const category = line.category_name ?? null;
+    if (held == null) {
+      byKey.set(key, {
+        key,
+        transactionId: line.transaction_id,
+        name: line.supplier_name ?? line.description,
+        date: line.cash_month_date,
+        categories: category == null ? [] : [category],
+        currency: line.currency,
+        signedMinor: signedLineMinor(line),
+        recurring: line.recurring === true,
+      });
+      continue;
+    }
+    held.signedMinor += signedLineMinor(line);
+    if (line.cash_month_date > held.date) held.date = line.cash_month_date;
+    if (category != null && !held.categories.includes(category)) held.categories.push(category);
+    held.recurring ||= line.recurring === true;
+  }
+  return [...byKey.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /** The project page's filter, as on Home: הכול, קבועים, נותר לשלם. */
@@ -212,26 +255,25 @@ export type ProjectLinesFilter = "all" | "fixed" | "left";
 export type ProjectLineGroups = {
   /** Recurring charges not in yet this month: the late ones first, then by their day. */
   left: ScheduleRow[];
-  /** Recurring charges that arrived this month. */
+  /** Recurring charges that arrived this month: under קבועים only (FLOW-1113: הכול lists their payments instead). */
   paid: ScheduleRow[];
   /**
-   * FLOW-1112 (owner, 2026-11-08: "under all we need to see recurring payments and any transactions that occurred
-   * this month"): under הכול, every line of the month, in and out, newest first; empty under the other filters.
+   * FLOW-1112, FLOW-1113 (owner, 2026-11-08: "it is confusing to see same transaction in different places"): under
+   * הכול, every payment of the month once, in and out, newest first, a recurring charge's marked; empty otherwise.
    */
-  lines: CashLine[];
+  payments: MonthPayment[];
 };
 
 /**
  * FLOW-1044: the project page's month in groups, from the schedule's rows for the project and the month's
- * lines. FLOW-1112: הכול lists every line of the month under the recurring groups, a recurring charge's own
- * lines included, so a payer's other line (a recurring tenant's water payment) is never hidden.
+ * lines. FLOW-1112: הכול lists every payment of the month, a recurring charge's included, so a payer's other line
+ * (a recurring tenant's water payment) is never hidden; FLOW-1113: each once, and the paid charges only under קבועים.
  */
 export function projectLineGroups(schedule: readonly ScheduleRow[], lines: readonly CashLine[], projectId: string, filter: ProjectLinesFilter): ProjectLineGroups {
   const own = schedule.filter((row) => row.project_id === projectId);
   const left = own
     .filter((row) => row.state === "late" || row.state === "soon")
     .sort((a, b) => Number(b.state === "late") - Number(a.state === "late") || a.typical_day - b.typical_day);
-  const paid = filter === "left" ? [] : own.filter((row) => row.state === "arrived");
-  const month = filter !== "all" ? [] : [...lines].sort((a, b) => b.cash_month_date.localeCompare(a.cash_month_date) || b.doc_date.localeCompare(a.doc_date));
-  return { left, paid, lines: month };
+  const paid = filter === "fixed" ? own.filter((row) => row.state === "arrived") : [];
+  return { left, paid, payments: filter === "all" ? monthPayments(lines) : [] };
 }
