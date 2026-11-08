@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cashMonthKey, cashTitle, shownCashRows } from "../cash";
 import { projectCashSummaryRows } from "../project-cash";
-import { monthLineKey, projectLineGroups, type ProjectLinesFilter } from "../project-list";
+import { type MonthPayment, projectLineGroups, type ProjectLinesFilter } from "../project-list";
 import { chargeHref } from "../recurring-charge";
 import type { ScheduleRow } from "../recurring-schedule";
 import { BackButton } from "../ui/back";
@@ -113,19 +113,22 @@ function ChargeRow({ row, search, skippedIn }: { row: ScheduleRow; search: strin
   );
 }
 
-/** FLOW-1112: one line of the month: a dot, its cash date and category, and its amount, "+" on money in. */
-function MonthLineRow({ line, search }: { line: CashLine; search: string }) {
-  const date = `${line.cash_month_date.slice(8, 10)}/${line.cash_month_date.slice(5, 7)}`;
+/**
+ * FLOW-1113: one payment of the month: its cash date and categories, its amount "+" and green when money came in.
+ * A recurring charge's payment carries the paid mark; any other the dot.
+ */
+function MonthPaymentRow({ payment, search }: { payment: MonthPayment; search: string }) {
+  const date = `${payment.date.slice(8, 10)}/${payment.date.slice(5, 7)}`;
   return (
     <ListRow
       variant="project"
-      title={line.supplier_name ?? line.description}
-      hint={line.category_name == null ? date : `${date} · ${line.category_name}`}
-      icon={<StatusMark kind="once" />}
-      agorot={magnitude(line.amount_minor)}
-      currency={line.currency}
-      amountDirection={line.side === "in" ? "income" : undefined}
-      href={`/transactions/${line.transaction_id}${search}`}
+      title={payment.name}
+      hint={[date, ...payment.categories].join(" · ")}
+      icon={<StatusMark kind={payment.recurring ? "paid" : "once"} />}
+      agorot={magnitude(payment.signedMinor)}
+      currency={payment.currency}
+      amountDirection={payment.signedMinor > 0n ? "income" : undefined}
+      href={`/transactions/${payment.transactionId}${search}`}
     />
   );
 }
@@ -249,11 +252,11 @@ export function ProjectCashOverview({
   const chargeTotal = (charges: readonly ScheduleRow[]) => charges
     .filter((row) => row.currency === charges[0]?.currency)
     .reduce((sum, row) => sum + magnitude(row.state === "arrived" && row.amount_minor != null ? row.amount_minor : row.typical_amount_minor), 0n);
-  // The month's net in its first line's currency: money in less money out.
-  const lineNet = (lines: readonly CashLine[]) => lines
-    .filter((line) => line.currency === lines[0]?.currency)
-    .reduce((sum, line) => sum + (line.side === "in" ? magnitude(line.amount_minor) : -magnitude(line.amount_minor)), 0n);
-  const hasLines = groups.left.length > 0 || groups.paid.length > 0 || groups.lines.length > 0;
+  // The month's net in its first payment's currency: money in less money out (a credit on an expense is money in).
+  const paymentsNet = (payments: readonly MonthPayment[]) => payments
+    .filter((payment) => payment.currency === payments[0]?.currency)
+    .reduce((sum, payment) => sum + payment.signedMinor, 0n);
+  const hasLines = groups.left.length > 0 || groups.paid.length > 0 || groups.payments.length > 0;
   return (
     <div className="ui-project-cash ui-project-page flex min-h-full flex-1 flex-col">
       <TopBand
@@ -358,10 +361,10 @@ export function ProjectCashOverview({
               <List>{groups.paid.map((row) => <ChargeRow key={`${row.direction}:${row.party_id}`} row={row} search={search} />)}</List>
             </section>
           )}
-          {groups.lines.length === 0 ? null : (
+          {groups.payments.length === 0 ? null : (
             <section className="ui-month" aria-labelledby={`project-month-lines-${project.id}`}>
-              <GroupHead id={`project-month-lines-${project.id}`} title="תנועות החודש" summary={netSummary(groups.lines.length, groups.lines[0]?.currency, lineNet(groups.lines))} />
-              <List>{groups.lines.map((line) => <MonthLineRow key={monthLineKey(line)} line={line} search={search} />)}</List>
+              <GroupHead id={`project-month-lines-${project.id}`} title="תנועות החודש" summary={netSummary(groups.payments.length, groups.payments[0]?.currency, paymentsNet(groups.payments))} />
+              <List>{groups.payments.map((payment) => <MonthPaymentRow key={payment.key} payment={payment} search={search} />)}</List>
             </section>
           )}
         </div>

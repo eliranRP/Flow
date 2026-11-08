@@ -44,9 +44,21 @@ export const ProjectCash: Story = {
     await expect(canvas.getByRole("link", { name: /^השקעה והלוואות/ })).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /^רווח מתחילת הפרויקט/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "נותר לשלם" })).toBeInTheDocument();
-    await expect(canvas.getByRole("heading", { name: "קבועים ששולמו" })).toBeInTheDocument();
-    // FLOW-1112: every line of the month, under the recurring groups.
+    // FLOW-1113: each payment of the month once; the paid charges are listed under קבועים only.
     await expect(canvas.getByRole("heading", { name: "תנועות החודש" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "קבועים ששולמו" })).toBeNull();
+  },
+};
+
+/** קבועים: the charges, those still to come and those paid; not the month's payments. */
+export const ProjectCashFixed: Story = {
+  name: "Project, renovation, קבועים",
+  render: ProjectCash.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(within(canvas.getByRole("radiogroup", { name: "סינון תנועות החודש" })).getByRole("radio", { name: "קבועים" }));
+    await expect(canvas.getByRole("heading", { name: "קבועים ששולמו" })).toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "תנועות החודש" })).toBeNull();
   },
 };
 
