@@ -1,9 +1,9 @@
 import { Svg, type IconProps } from "./icons";
 
 /**
- * FLOW-1109: the icons only screens after Home draw. Home's first load carries every export of a module it
- * imports that any screen uses, so these live apart from icons.tsx; a module Home draws at first paint
- * imports from icons.tsx, never from here.
+ * FLOW-1109: icons that only the screens opened after Home draw. Home's first load carries every export of a
+ * module it imports that any screen uses, so these live apart from icons.tsx. A module Home draws at first
+ * paint imports from icons.tsx, never from here.
  */
 
 export function ReviewIcon(props: IconProps) {

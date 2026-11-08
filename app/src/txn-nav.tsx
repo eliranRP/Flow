@@ -7,7 +7,6 @@ import { createContext, useState, type ReactNode } from "react";
  */
 export type TxnList = { ids: readonly string[]; from: string; total?: number };
 
-
 /** Ids on each side of the opened row. A longer list sends a window around it. */
 const SIDE = 250;
 
@@ -32,7 +31,6 @@ export function readTxnList(state: unknown): TxnList | null {
   if (!ids.every((id): id is string => typeof id === "string" && id !== "")) return null;
   return typeof total === "number" && Number.isInteger(total) && total > 0 ? { ids, from, total } : { ids, from };
 }
-
 
 /**
  * FLOW-314: a swiped-to card slides in once. The browser entry drops `txnEnter` after

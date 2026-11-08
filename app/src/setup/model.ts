@@ -1,7 +1,8 @@
-/** The number of setup steps. It lives here, not in copy.ts, so Home's first load doesn't carry the setup screens' copy (FLOW-1109). */
-export const SETUP_TOTAL = 7;
 import type { SetupStore } from "./storage";
 import { emptySetupStore } from "./storage";
+
+/** The number of setup steps. It lives here, not in copy.ts, so Home's first load doesn't carry the setup screens' copy (FLOW-1109). */
+export const SETUP_TOTAL = 7;
 
 /** FLOW-514: the seven steps, in order. Welcome and done are not steps. */
 export const STEP_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
