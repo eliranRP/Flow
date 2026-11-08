@@ -86,24 +86,30 @@ export function useCashMonthData(monthKey: string, active = true) {
 /** The server's cap per call (FLOW-366: the lines page loads every page). */
 const CASH_LINES_PAGE = 200;
 
-/** One month's נכנס, יצא or לא נספר ברווח lines in one currency, newest first. */
-export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true) {
+/**
+ * One month's נכנס, יצא or לא נספר ברווח lines in one currency, newest first. FLOW-1111: with a project, that
+ * project's lines (project_cash_month_lines, the same rows; a shared line at the project's share).
+ */
+export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true, projectId: string | null = null) {
   const preview = useHomePreview();
   return useInfiniteQuery({
-    queryKey: ["breakdown-lines", "cash", preview, month, side, currency],
+    queryKey: ["breakdown-lines", "cash", preview, month, side, currency, projectId],
     enabled: active && preview === "off",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<CashLinesPage> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("cash_month_lines", {
+      const range = {
         p_month: `${month}-01`,
         p_side: side === "kept" ? "not_in_profit" : side,
         p_currency: currency,
         p_limit: CASH_LINES_PAGE,
         p_offset: pageParam,
-      });
+      };
+      const { data, error } = projectId == null
+        ? await supabase.rpc("cash_month_lines", range)
+        : await supabase.rpc("project_cash_month_lines", { ...range, p_project: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).cashLinesSchema.parse(data);
     },

@@ -74,6 +74,7 @@ function wrap(path: string) {
     <Routes>
       <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
       <Route path="/" element={<p>בית</p>} />
+      <Route path="/projects/:projectId" element={<p>דף הפרויקט</p>} />
     </Routes>,
     { route: path },
   );
@@ -86,6 +87,33 @@ beforeEach(() => {
     if (name === "cash_month_lines") return Promise.resolve({ data: lines, error: null });
     return Promise.resolve({ data: null, error: null });
   };
+});
+
+// FLOW-1111: a project page's נכנס and יצא open its own lines, with its month's figures.
+describe("Cash lines of one project", () => {
+  beforeEach(() => {
+    rpc.impl = (name) => {
+      if (name === "project_cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "project_cash_month_lines") return Promise.resolve({ data: lines, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+  });
+
+  it("reads the project's lines and month, keeps the project on a side switch, and goes Back to its page", async () => {
+    wrap(`/cash/${earlier}/out/ILS?project=p1`);
+    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
+    expect(rpc.calls.find((c) => c.name === "project_cash_month_lines")?.args).toMatchObject({ p_project: "p1", p_month: `${earlier}-01`, p_side: "out" });
+    expect(rpc.calls.some((c) => c.name === "project_cash_months")).toBe(true);
+    expect(rpc.calls.some((c) => c.name === "cash_month_lines" || c.name === "cash_months")).toBe(false);
+    // The rows need not name the project.
+    expect(screen.queryByText(/בית לדוגמה/)).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "נכנס" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((c) => c.name === "project_cash_month_lines" && (c.args as { p_side: string }).p_side === "in")).toBe(true);
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: /חזרה|חזור|back/i })[0] as HTMLElement);
+    expect(await screen.findByText("דף הפרויקט")).toBeInTheDocument();
+  });
 });
 
 describe("Cash lines", () => {

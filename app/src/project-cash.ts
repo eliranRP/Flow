@@ -1,6 +1,6 @@
 import type { CashCurrencyRow, CashLine, CashMonths, ProjectsCashMonth } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { cashSummaryRows } from "./cash";
+import { cashLinesPath, cashSummaryRows } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { CHART_MONTHS } from "./month-figures";
@@ -33,7 +33,28 @@ function projectKeptSearchPath(projectId: string, monthSearch: string): string {
   return `/search?${params.toString()}`;
 }
 
-/** Home's rows under a month's figure, opening the project's month page (the kept row opens search). */
+/** A project's name from any projects-cash read already in the cache (no read of its own); null when none has it. */
+export function useCachedProjectName(projectId: string | null): string | null {
+  const client = useQueryClient();
+  if (projectId == null) return null;
+  for (const [, data] of client.getQueriesData<ProjectsCashMonth>({ queryKey: ["projects-cash"] })) {
+    const name = data?.projects.find((row) => row.id === projectId)?.name;
+    if (name != null) return name;
+  }
+  return null;
+}
+
+/** The search with the project, so the month's נכנס and יצא pages list the project's lines (FLOW-1111). */
+export function withProjectSearch(search: string, projectId: string): string {
+  const params = new URLSearchParams(search);
+  params.set("project", projectId);
+  return `?${params.toString()}`;
+}
+
+/**
+ * Home's rows under a month's figure: נכנס and יצא open the project's lines of that side (FLOW-1111), as Home's
+ * open the company's; the profit row opens the project's month page; the kept row opens search.
+ */
 export function projectCashSummaryRows(
   projectId: string,
   key: string,
@@ -46,6 +67,7 @@ export function projectCashSummaryRows(
   return cashSummaryRows(key, rows, search, now).map((row) => {
     // The month page lists counted lines only: what profit leaves out is found in search, for this project and month.
     if (row.id === "kept") return { ...row, href: projectKeptSearchPath(projectId, monthSearch) };
+    if (row.id === "in" || row.id === "out") return { ...row, href: cashLinesPath(key, row.id, rows[0]?.currency ?? "ILS", withProjectSearch(search, projectId)) };
     return { ...row, href: projectProfitMonthPath(projectId, key, monthSearch) };
   });
 }
