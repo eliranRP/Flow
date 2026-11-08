@@ -30,6 +30,7 @@ import { useHeldOrder } from "../list-hold";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCashLinesQuery, useCashMonthData } from "../use-cash";
+import { useCachedProjectName, useProjectCashMonthsQuery, withProjectSearch } from "../project-cash";
 import { BandOfflineLine, PageLoadFailed, ReviewButton, useOnline } from "../ui/band-states";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { lineTagText, rowSource } from "../ui/line-marks";
@@ -119,9 +120,16 @@ function CashLinesBody({
   const preview = useHomePreview();
   const navigate = useNavigate();
   const online = useOnline();
-  const monthData = useCashMonthData(monthKey, sample == null);
-  const months = monthData.query;
-  const lines = useCashLinesQuery(monthKey, side, currency, sample == null);
+  const [locationParams] = useSearchParams();
+  // FLOW-1111: ?project= lists one project's lines (its page's נכנס and יצא), with its month's figures, and
+  // the page's own links keep it.
+  const projectId = locationParams.get("project");
+  const scoped = projectId == null ? search : withProjectSearch(search, projectId);
+  const monthData = useCashMonthData(monthKey, sample == null && projectId == null);
+  const projectMonths = useProjectCashMonthsQuery(projectId ?? "", sample == null && projectId != null);
+  const projectName = useCachedProjectName(projectId);
+  const months = projectId == null ? monthData.query : projectMonths;
+  const lines = useCashLinesQuery(monthKey, side, currency, sample == null, projectId);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = lines;
   // FLOW-366: every page loads up front; the totals and the groups need all of them.
   // A page that failed stops the loop here: a failed fetch leaves hasNextPage set, so it would retry forever.
@@ -132,18 +140,17 @@ function CashLinesBody({
   const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
   const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
   const allLoaded = sample != null || !hasNextPage;
-  const [locationParams] = useSearchParams();
   const requested = linesOrder(locationParams.get("order"));
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);
   const data = sample?.months ?? months.data ?? null;
   const isThisMonth = monthKey === israelToday().slice(0, 7);
-  // Back goes to Home on this month (Home is the month's cash page).
-  const back = homeMonthPath(monthKey, search, israelToday().slice(0, 7));
+  // Back goes to Home on this month (Home is the month's cash page), or to the project's page.
+  const back = projectId == null ? homeMonthPath(monthKey, search, israelToday().slice(0, 7)) : `/projects/${projectId}${search}`;
   // The board draws the month with its year, even in the current year ("אוקטובר 2026 • עד היום").
   const monthName = cashMonthName(monthKey);
   const monthTitle = /\d{4}$/.test(monthName) ? monthName : `${monthName} ${monthKey.slice(0, 4)}`;
-  const subtitle = `${monthTitle}${isThisMonth ? " • עד היום" : ""}`;
+  const subtitle = `${projectName == null ? "" : `${projectName} • `}${monthTitle}${isThisMonth ? " • עד היום" : ""}`;
   // FLOW-1048 (V3-Lines): the 56px bar comes down once the head has gone under it; the side and currency segments dock into it.
   const [headEnd, setHeadEnd] = useState<HTMLElement | null>(null);
   const barShown = useScrolledPast(headEnd, true, DETAIL_BAR);
@@ -183,7 +190,7 @@ function CashLinesBody({
   const order: LinesOrder = requested === "recurring" && !knowsRecurring ? "date" : requested;
   const groups = groupLines(rows, order, side, sample?.today ?? israelToday());
   const shownIds = groups.flatMap((group) => group.rows.map((row) => row.transaction_id));
-  const from = cashLinesPath(monthKey, side, currency, searchWith(search, order));
+  const from = cashLinesPath(monthKey, side, currency, searchWith(scoped, order));
   const sideSwitch = (
     <SegmentedControl<"out" | "in">
       label="כיוון"
@@ -193,7 +200,7 @@ function CashLinesBody({
       options={SIDE_OPTIONS}
       onChange={(next) => {
         scrollUnderBar();
-        void navigate(cashLinesPath(monthKey, next, currency, searchWith(search, order)), { replace: true });
+        void navigate(cashLinesPath(monthKey, next, currency, searchWith(scoped, order)), { replace: true });
       }}
     />
   );
@@ -203,7 +210,7 @@ function CashLinesBody({
       value={order}
       options={knowsRecurring ? ORDER_OPTIONS : ORDER_OPTIONS.filter((option) => option.value !== "recurring")}
       onChange={(value) => {
-        void navigate(cashLinesPath(monthKey, side, currency, searchWith(search, value)), { replace: true });
+        void navigate(cashLinesPath(monthKey, side, currency, searchWith(scoped, value)), { replace: true });
       }}
     />
   );
@@ -213,7 +220,7 @@ function CashLinesBody({
       currency={currency}
       onChange={(next) => {
         scrollUnderBar();
-        void navigate(cashLinesPath(monthKey, side, next, search), { replace: true });
+        void navigate(cashLinesPath(monthKey, side, next, scoped), { replace: true });
       }}
     />
   );
@@ -233,7 +240,7 @@ function CashLinesBody({
   );
   // FLOW-965: offline, the page keeps the lines it read and says from when.
   const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online ? (lines.dataUpdatedAt || null) : null;
-  const backText = isThisMonth ? "בית" : kicker;
+  const backText = projectId != null ? projectName ?? "פרויקט" : isThisMonth ? "בית" : kicker;
   return (
     <div className="ui-lines">
       <CompactBar
@@ -268,7 +275,7 @@ function CashLinesBody({
           month={monthName}
           current={isThisMonth}
           onOther={() => {
-            void navigate(cashLinesPath(monthKey, side === "in" ? "out" : "in", currency, searchWith(search, order)), { replace: true });
+            void navigate(cashLinesPath(monthKey, side === "in" ? "out" : "in", currency, searchWith(scoped, order)), { replace: true });
           }}
         />
       ) : (
@@ -284,7 +291,8 @@ function CashLinesBody({
                 // FLOW-432: a split line names the parts this list counts, out of the whole line.
                 const split = cashLineSplit(row);
                 const name = row.supplier_name ?? row.description;
-                const hint = [row.project_name ?? "בלי פרויקט", row.category_name].filter((part): part is string => part != null && part !== "").join(" · ");
+                // One project's lines need not name it on every row.
+                const hint = [projectId == null ? row.project_name ?? "בלי פרויקט" : null, row.category_name].filter((part): part is string => part != null && part !== "").join(" · ");
                 return (
                   <ListRow
                     key={`${row.transaction_id}:${row.part ?? ""}`}

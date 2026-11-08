@@ -69,14 +69,13 @@ function row(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "USD"
 }
 
 describe("FLOW-419 project cash rows", () => {
-  it("opens the project's month page, and search for the kept row", () => {
+  it("opens the project's lines for נכנס and יצא (FLOW-1111), its month page for profit, and search for the kept row", () => {
     const rows = projectCashSummaryRows("p1", "2026-10", [row(310_000n, 75_000n, 128_000n)], "?preview=1", NOW);
     // Net $2,350 less profit $1,280: Home's לא נספר ברווח row: the month page lists counted lines only, so it opens search.
     expect(rows.map((r) => r.label)).toEqual(["נכנס", "יצא", "רווח החודש", "לא נספר ברווח"]);
-    const monthPage = /^\/projects\/p1\/profit\/2026-10\?preview=1&period=month&at=2026-10/;
     expect(rows[3]?.href).toMatch(/^\/search\?preview=1&period=month&at=2026-10&project=p1$/);
-    expect(rows[0]?.href).toMatch(monthPage);
-    expect(rows[1]?.href).toMatch(monthPage);
+    expect(rows[0]?.href).toBe("/cash/2026-10/in/USD?preview=1&project=p1");
+    expect(rows[1]?.href).toBe("/cash/2026-10/out/USD?preview=1&project=p1");
     expect(rows[2]?.href).toMatch(/^\/projects\/p1\/profit\/2026-10\?preview=1&period=month&at=2026-10/);
   });
 
