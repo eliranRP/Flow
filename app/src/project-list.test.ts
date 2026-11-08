@@ -10,6 +10,7 @@ import {
   kindLabel,
   netIn,
   orderActiveProjects,
+  monthLineKey,
   projectLineGroups,
   projectMeta,
   projectsMonthTotals,
@@ -205,6 +206,13 @@ describe("the project page's month lines (FLOW-1044)", () => {
     expect(projectLineGroups(schedule, lines, "p1", "all").lines.map((line) => line.transaction_id)).toEqual(["b", "a", "c"]);
     expect(projectLineGroups(schedule, lines, "p1", "fixed").lines).toEqual([]);
     expect(projectLineGroups(schedule, lines, "p1", "left").lines).toEqual([]);
+  });
+
+  it("keys a line split between a counted and a kept-out part apart in the two reads (FLOW-1112)", () => {
+    const counted = { ...cashLine("s"), in_pnl: true };
+    const kept = { ...cashLine("s"), in_pnl: false };
+    expect(monthLineKey(counted)).not.toBe(monthLineKey(kept));
+    expect(monthLineKey({ ...cashLine("s"), part: "principal" })).toBe("s:principal:out:counted");
   });
 
   it("נותר לשלם keeps only what is left", () => {

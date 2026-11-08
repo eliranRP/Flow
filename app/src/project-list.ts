@@ -197,6 +197,15 @@ export function suggestedProject<T extends { id: string; name: string }>(categor
   return named.length === 1 ? (named[0] ?? null) : null;
 }
 
+/**
+ * FLOW-1112: a month line's key on the project page. The page lists the counted and the kept-out reads together,
+ * and a line split between a part counted in profit and one kept out comes back in both on the same side, so
+ * whether the row counts in profit is part of its key.
+ */
+export function monthLineKey(line: Pick<CashLine, "transaction_id" | "part" | "side" | "in_pnl">): string {
+  return `${line.transaction_id}:${line.part ?? ""}:${line.side}:${line.in_pnl === false ? "kept" : "counted"}`;
+}
+
 /** The project page's filter, as on Home: הכול, קבועים, נותר לשלם. */
 export type ProjectLinesFilter = "all" | "fixed" | "left";
 

@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cashMonthKey, cashTitle, shownCashRows } from "../cash";
 import { projectCashSummaryRows } from "../project-cash";
-import { projectLineGroups, type ProjectLinesFilter } from "../project-list";
+import { monthLineKey, projectLineGroups, type ProjectLinesFilter } from "../project-list";
 import { chargeHref } from "../recurring-charge";
 import type { ScheduleRow } from "../recurring-schedule";
 import { BackButton } from "../ui/back";
@@ -361,7 +361,7 @@ export function ProjectCashOverview({
           {groups.lines.length === 0 ? null : (
             <section className="ui-month" aria-labelledby={`project-month-lines-${project.id}`}>
               <GroupHead id={`project-month-lines-${project.id}`} title="תנועות החודש" summary={netSummary(groups.lines.length, groups.lines[0]?.currency, lineNet(groups.lines))} />
-              <List>{groups.lines.map((line) => <MonthLineRow key={`${line.transaction_id}:${line.part ?? ""}:${line.side}`} line={line} search={search} />)}</List>
+              <List>{groups.lines.map((line) => <MonthLineRow key={monthLineKey(line)} line={line} search={search} />)}</List>
             </section>
           )}
         </div>
