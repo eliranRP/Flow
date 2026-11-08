@@ -200,11 +200,11 @@ describe("the project page's month lines (FLOW-1044)", () => {
     expect(groups.paid.map((row) => row.party_id)).toEqual(["paid"]);
   });
 
-  it("the one-off group shows only when the lines carry the flag, and only under הכול", () => {
-    expect(projectLineGroups(schedule, [cashLine("a"), cashLine("b")], "p1", "all").once).toBeNull();
-    const flagged = [cashLine("a", true), cashLine("b", false)];
-    expect(projectLineGroups(schedule, flagged, "p1", "all").once?.map((line) => line.transaction_id)).toEqual(["b"]);
-    expect(projectLineGroups(schedule, flagged, "p1", "fixed").once).toBeNull();
+  it("הכול lists every line of the month, a recurring charge's too, newest first; the other filters none (FLOW-1112)", () => {
+    const lines = [{ ...cashLine("a", true), cash_month_date: "2026-11-02" }, { ...cashLine("b", false), cash_month_date: "2026-11-05" }, cashLine("c")];
+    expect(projectLineGroups(schedule, lines, "p1", "all").lines.map((line) => line.transaction_id)).toEqual(["b", "a", "c"]);
+    expect(projectLineGroups(schedule, lines, "p1", "fixed").lines).toEqual([]);
+    expect(projectLineGroups(schedule, lines, "p1", "left").lines).toEqual([]);
   });
 
   it("נותר לשלם keeps only what is left", () => {

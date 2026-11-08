@@ -45,7 +45,8 @@ export const ProjectCash: Story = {
     await expect(canvas.getByRole("link", { name: /^רווח מתחילת הפרויקט/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "נותר לשלם" })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "קבועים ששולמו" })).toBeInTheDocument();
-    await expect(canvas.getByRole("heading", { name: "חד-פעמי" })).toBeInTheDocument();
+    // FLOW-1112: every line of the month, under the recurring groups.
+    await expect(canvas.getByRole("heading", { name: "תנועות החודש" })).toBeInTheDocument();
   },
 };
 
@@ -57,7 +58,7 @@ export const ProjectCashLeft: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(within(canvas.getByRole("radiogroup", { name: "סינון תנועות החודש" })).getByRole("radio", { name: "נותר לשלם" }));
     await expect(canvas.queryByRole("heading", { name: "קבועים ששולמו" })).toBeNull();
-    await expect(canvas.queryByRole("heading", { name: "חד-פעמי" })).toBeNull();
+    await expect(canvas.queryByRole("heading", { name: "תנועות החודש" })).toBeNull();
   },
 };
 
