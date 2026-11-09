@@ -122,6 +122,8 @@
 /projects/:projectId/investment/ /projects/:projectId/investment 301
 /projects/:projectId/utilities /app-shell 200
 /projects/:projectId/utilities/ /projects/:projectId/utilities 301
+/projects/:projectId/utilities/months /app-shell 200
+/projects/:projectId/utilities/months/ /projects/:projectId/utilities/months 301
 /projects/:projectId/investment/:section /app-shell 200
 /projects/:projectId/investment/:section/ /projects/:projectId/investment/:section 301
 /projects/:projectId/investment/:section/:key /app-shell 200

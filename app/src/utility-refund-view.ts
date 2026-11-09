@@ -1,11 +1,11 @@
 import { formatAmountText } from "@flow/shared";
-import { formatDayMonth } from "./ui/date-math";
-import type { UtilityBill, UtilityPayment } from "./utility-refunds";
+import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
+import type { UtilityBill, UtilityMonth, UtilityPayment } from "./utility-refunds";
 
 /**
- * FLOW-1135 (V3-UtilityRefunds): the list's cards, worked out from list_utility_refunds. A payment Flow suggests
- * for one bill, or for several of the property's bills together (rules 2 and 3), is one card; a payment the owner
- * matched that sits in another category is the same card with the "may be filed wrong" note.
+ * FLOW-1135 (V3-UtilityRefunds), FLOW-1143: the list's cards, worked out from list_utility_refunds. Flow suggests
+ * nothing (the owner, 2026-11-09): a card is a payment the owner matched to a bill (or to the month's bills) that
+ * sits in another category, with the "may be filed wrong" note, its one-tap fix and להשאיר.
  */
 export type RefundCard = {
   /** The payment: one card per payment and property. */
@@ -13,11 +13,6 @@ export type RefundCard = {
   projectId: string;
   bills: UtilityBill[];
   payment: UtilityPayment;
-  rule: UtilityBill["rule"];
-  /** The owner said yes and the payment sits in another category: the one-tap fix. */
-  fix: boolean;
-  /** The payment is not filed to the bills' category (the fix's note after a yes). */
-  wrongCategory: boolean;
 };
 
 export type RefundGroup = {
@@ -27,13 +22,8 @@ export type RefundGroup = {
   open: UtilityBill[];
 };
 
-export type RefundFilter = "all" | "review" | "open";
-
-/** What the screen did before the next read: a card or a row answered here, or a card waiting for the fix. */
-export type LocalAnswer = "hidden" | "fix";
-
-/** The suggestions and the fixes first, then the bills not refunded, per property in the server's order. */
-export function refundGroups(bills: readonly UtilityBill[], local: ReadonlyMap<string, LocalAnswer> = new Map()): RefundGroup[] {
+/** The fix cards first, then the bills not refunded, per property in the server's order. `hidden`: answered here. */
+export function refundGroups(bills: readonly UtilityBill[], hidden: ReadonlySet<string> = new Set()): RefundGroup[] {
   const groups = new Map<string, RefundGroup>();
   const group = (bill: UtilityBill) => {
     const found = groups.get(bill.project_id);
@@ -44,11 +34,11 @@ export function refundGroups(bills: readonly UtilityBill[], local: ReadonlyMap<s
   };
   for (const bill of bills) {
     if (bill.state === "not_refunded") {
-      if (local.get(bill.bill_transaction_id) !== "hidden") group(bill).open.push(bill);
+      if (!hidden.has(bill.bill_transaction_id)) group(bill).open.push(bill);
       continue;
     }
     const payment = bill.payment;
-    const card = bill.state === "suggested" || (bill.state === "refunded" && bill.source === "owner" && bill.wrong_category && !bill.keep_category && !bill.refiled);
+    const card = bill.state === "refunded" && bill.source === "owner" && bill.wrong_category && !bill.keep_category && !bill.refiled;
     if (payment == null || !card) continue;
     const key = `${bill.project_id}:${payment.transaction_id}`;
     const into = group(bill);
@@ -57,21 +47,14 @@ export function refundGroups(bills: readonly UtilityBill[], local: ReadonlyMap<s
       found.bills.push(bill);
       continue;
     }
-    into.cards.push({ key, projectId: bill.project_id, bills: [bill], payment, rule: bill.rule, fix: bill.state === "refunded", wrongCategory: bill.wrong_category });
+    into.cards.push({ key, projectId: bill.project_id, bills: [bill], payment });
   }
   return [...groups.values()]
     .map((item) => ({
       ...item,
-      cards: item.cards
-        .filter((card) => local.get(card.key) !== "hidden")
-        .map((card) => (local.get(card.key) === "fix" ? { ...card, fix: true } : card)),
+      cards: item.cards.filter((card) => !hidden.has(card.key)),
     }))
     .filter((item) => item.cards.length + item.open.length > 0);
-}
-
-/** The cards waiting for a yes or a no. */
-export function askingCards(groups: readonly RefundGroup[]): RefundCard[] {
-  return groups.flatMap((item) => item.cards.filter((card) => !card.fix));
 }
 
 /** The sum of the bills not refunded, per currency in the order they first appear. */
@@ -124,22 +107,11 @@ function cardBillTotal(card: RefundCard): bigint {
   return card.bills.reduce((sum, bill) => sum + bill.amount_minor, 0n);
 }
 
-/** Why Flow suggests it: the same amount, the month's bills together, or the usual rent plus the bill. */
-export function cardWhy(card: RefundCard): string {
-  const bills = cardBillTotal(card);
-  const currency = card.payment.currency;
-  if (card.rule === "rent_and_bills") {
-    const rent = card.payment.amount_minor - bills;
-    return `השכירות ${formatAmountText(rent, currency, { detail: true })} + ${card.bills.length === 1 ? "החשבון" : "החשבונות"} ${formatAmountText(bills, currency, { detail: true })}`;
-  }
-  const what = card.rule === "bills" ? `${String(card.bills.length)} חשבונות של אותו חודש יחד` : "אותו סכום";
-  return card.payment.project_id == null ? `${what} · התשלום בלי פרויקט` : what;
-}
-
 /** Where the fix files it, and what the note says it will do. The books do not change until the tap. */
 export function fixCopy(card: RefundCard): { label: string; hint: string } {
   const category = card.bills[0]?.category_name ?? "החשבונות";
-  const split = card.rule === "rent_and_bills";
+  // A payment over the bills by more than one unit (rent and the bills): the fix splits their part off it.
+  const split = card.payment.amount_minor - cardBillTotal(card) > 100n;
   const filed = card.payment.category_name ?? "הכנסה";
   return {
     label: split ? `פיצול והחזר ל${category}` : `העברה ל${category} כהחזר`,
@@ -156,21 +128,18 @@ export function openMeta(bill: UtilityBill): string {
     .join(" · ");
 }
 
-/** The group head's line: "1 לבדיקה · 2 לא הוחזרו". */
+/** The group head's line: "2 לא הוחזרו", or "הכול נבדק" when only a fix card is left. */
 export function groupSummary(group: RefundGroup): string {
-  const asking = group.cards.filter((card) => !card.fix).length;
-  const parts = [asking > 0 ? `${String(asking)} לבדיקה` : null, group.open.length > 0 ? `${String(group.open.length)} לא הוחזרו` : null];
-  return parts.filter((part): part is string => part != null).join(" · ") || "הכול נבדק";
+  return group.open.length > 0 ? `${String(group.open.length)} לא הוחזרו` : "הכול נבדק";
 }
 
 /** A property's row on its page: the same count and totals Home's row reads, from the property's list. */
-export function refundCount(bills: readonly UtilityBill[]): { notRefunded: number; suggested: number; totals: { currency: string; minor: bigint }[] } {
+export function refundCount(bills: readonly UtilityBill[]): { notRefunded: number; totals: { currency: string; minor: bigint }[] } {
   const open = bills.filter((bill) => bill.state === "not_refunded");
   const totals = new Map<string, bigint>();
   for (const bill of open) totals.set(bill.currency, (totals.get(bill.currency) ?? 0n) + bill.amount_minor);
   return {
     notRefunded: open.length,
-    suggested: bills.filter((bill) => bill.state === "suggested").length,
     totals: [...totals].map(([currency, minor]) => ({ currency, minor })),
   };
 }
@@ -202,4 +171,27 @@ export function paymentParts(payment: UtilityPayment): { key: string; text: stri
     ].filter((item): item is string => item != null).join(" · "),
     amount: formatAmountText(part.amount_minor, payment.currency, { detail: true }),
   }));
+}
+
+/** FLOW-1144: "אוקטובר 2026", a month of list_utility_months (YYYY-MM-01). */
+export function utilityMonthLabel(month: string): string {
+  const name = HEBREW_MONTHS[Number(month.slice(5, 7)) - 1];
+  return name == null ? month : `${name} ${month.slice(0, 4)}`;
+}
+
+/** The month's currency: its first line's, else the company's. */
+export function utilityMonthCurrency(month: UtilityMonth, fallback: string): string {
+  return month.rent_lines[0]?.currency ?? month.bills[0]?.currency ?? fallback;
+}
+
+/**
+ * FLOW-1144: a month's status. No rent came in ("לא נכנסה שכירות"); or bills are not refunded ("חסר $X", their sum,
+ * a bill still waiting included); or every bill is back ("כל החשבונות הוחזרו"), or closed with ראיתי
+ * ("כל החשבונות נבדקו": the owner's word is closed, not refunded).
+ */
+export function utilityMonthStatus(month: UtilityMonth, currency: string): { ok: boolean; text: string } {
+  if (month.rent_lines.length === 0 && month.rent_in === 0n) return { ok: false, text: "לא נכנסה שכירות" };
+  if (month.not_refunded > 0n) return { ok: false, text: `חסר ${formatAmountText(month.not_refunded, currency, { detail: true })}` };
+  if (month.bills.some((bill) => bill.state === "seen")) return { ok: true, text: "כל החשבונות נבדקו" };
+  return { ok: true, text: "כל החשבונות הוחזרו" };
 }

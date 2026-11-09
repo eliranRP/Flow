@@ -593,6 +593,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1135"></a>[FLOW-1135](tasks/FLOW-1135.md) | Utility refunds: Home's row, the screen and the property's bills section | SMALL UI |
 | <a id="flow-1141"></a>[FLOW-1141](tasks/FLOW-1141.md) | Utility refunds: rent and bills found by part of the category name; a ראיתי row folds away; dates with the year | BUG (owner's ask) |
 | <a id="flow-1142"></a>[FLOW-1142](tasks/FLOW-1142.md) | Utility refunds: each bill and payment opens its transaction page | SMALL UI (owner's ask) |
+| <a id="flow-1143"></a>[FLOW-1143](tasks/FLOW-1143.md) | Utility refunds: exact matches only, and no suggestions | SMALL UI (owner's decision) |
+| <a id="flow-1144"></a>[FLOW-1144](tasks/FLOW-1144.md) | Utility refunds: a property's bills by month, with a drawer per month | SMALL UI (owner's ask) |
 | <a id="flow-1136"></a>[FLOW-1136](tasks/FLOW-1136.md) | Member report תחזית: a skeleton while the forecast loads, not "טוען…" | SMALL UI |
 | <a id="flow-1137"></a>[FLOW-1137](tasks/FLOW-1137.md) | Skeletons in the content's shape: review, forms, sheets and settings | SMALL UI |
 | <a id="flow-1138"></a>[FLOW-1138](tasks/FLOW-1138.md) | Skeletons in the content's shape: projects and property returns | SMALL UI |

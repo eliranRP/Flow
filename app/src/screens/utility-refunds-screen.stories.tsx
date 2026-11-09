@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
-import { PINE, storyUtilityClient, utilityFixSample, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
+import { PINE, storyUtilityClient, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { UtilityClientProvider, type UtilityBill } from "../utility-refunds";
@@ -26,15 +26,12 @@ function RefundsStory({ entry = "/utility-refunds", bills = utilityRefundsSample
   );
 }
 
-/** FLOW-1135 (V3-UtilityRefunds): two properties, each with a suggested refund and its bills not refunded. */
+/**
+ * FLOW-1135, FLOW-1143: two properties, each with a refund the owner matched that is filed elsewhere (הוחזר, "ייתכן
+ * שסווג לא נכון", the fix and להשאיר), then its bills not refunded. No suggestions and no filter.
+ */
 export const UtilityRefundsList: Story = {
   render: () => <RefundsStory />,
-};
-
-/** After כן on a payment filed under שכירות: הוחזר, "ייתכן שסווג לא נכון" and the fix with להשאיר. */
-export const UtilityRefundsFix: Story = {
-  name: "UtilityRefunds, may be filed wrong",
-  render: () => <RefundsStory bills={utilityFixSample()} />,
 };
 
 /** FLOW-1142: the rent payment is split by category: its parts under its leg, the project named where it differs. */
@@ -81,8 +78,8 @@ export const UtilityRefundsViewer: Story = {
   render: () => <RefundsStory viewer />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findAllByRole("region", { name: /החזר אפשרי/ });
-    await expect(canvas.queryByRole("button", { name: "כן, זה ההחזר" })).toBeNull();
+    await canvas.findAllByRole("region", { name: /החזר לתיקון/ });
+    await expect(canvas.queryByRole("button", { name: "להשאיר" })).toBeNull();
     await expect(canvas.queryByRole("button", { name: /^ראיתי:/ })).toBeNull();
   },
 };
@@ -145,13 +142,13 @@ export const UtilityRefundsFold: Story = {
   },
 };
 
-/** לא takes the card away and the toast offers ביטול. */
+/** להשאיר keeps the payment's category: the card folds away and the toast offers ביטול. */
 export const UtilityRefundsAnswered: Story = {
   name: "UtilityRefunds, answered",
   render: () => <RefundsStory />,
   play: async ({ canvasElement }) => {
-    const [no] = await within(canvasElement).findAllByRole("button", { name: "לא" });
-    await userEvent.click(no as HTMLElement);
-    await expect(await within(document.body).findByText("לא נציע את התשלום הזה שוב")).toBeInTheDocument();
+    const [keep] = await within(canvasElement).findAllByRole("button", { name: "להשאיר" });
+    await userEvent.click(keep as HTMLElement);
+    await expect(await within(document.body).findByText("נשאר כמו שהוא")).toBeInTheDocument();
   },
 };

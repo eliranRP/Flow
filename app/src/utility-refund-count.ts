@@ -3,11 +3,10 @@ import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { waitForAccessToken } from "./wait-for-session";
 
-/** Home's row: the bills not refunded (count and sum per currency) and the suggested refunds. */
+/** Home's row: the bills not refunded, a count and a sum per currency (FLOW-1143: Flow suggests nothing). */
 export type UtilityRefundCount = {
   notRefunded: number;
   totals: { currency: string; minor: bigint }[];
-  suggested: number;
 };
 
 function count(value: unknown): number {
@@ -22,7 +21,6 @@ export function parseUtilityRefundCount(data: unknown): UtilityRefundCount {
   const totals = Array.isArray(body.not_refunded_by_currency) ? body.not_refunded_by_currency : [];
   return {
     notRefunded: count(body.not_refunded_count),
-    suggested: count(body.suggested_count),
     totals: totals.map((row: unknown) => {
       const item = (row ?? {}) as { currency?: unknown; amount_minor?: unknown };
       if (typeof item.currency !== "string" || (typeof item.amount_minor !== "number" && typeof item.amount_minor !== "string")) {

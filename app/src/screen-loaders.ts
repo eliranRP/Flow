@@ -42,6 +42,7 @@ export const screenLoaders = {
   projectProfit: () => import("./screens/project-profit-screen"),
   projectUnassigned: () => import("./screens/project-unassigned-screen"),
   projectUtilities: () => import("./screens/project-utilities-screen"),
+  projectUtilityMonths: () => import("./screens/project-utility-months-screen"),
   projectMonthProfit: () => import("./screens/project-month-profit-screen"),
   projectNextMonth: () => import("./screens/project-next-month-screen"),
   projectNextEdit: () => import("./screens/project-next-edit-screen"),

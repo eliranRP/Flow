@@ -37,7 +37,7 @@ export function attentionRows({
   pending: number;
   /** FLOW-941: suggested transfers between two Mercury connections. */
   transfers?: number;
-  /** FLOW-1135: the utility bills not refunded and the suggested refunds (count_utility_refunds). */
+  /** FLOW-1135: the utility bills not refunded (count_utility_refunds). */
   utilities?: UtilityRefundCount;
   unpaidCount: number;
   unpaidGross: bigint;
@@ -162,30 +162,18 @@ export function changeRow(change: ChargeChangeView, { saysRecurring = true }: { 
 }
 
 /**
- * FLOW-1135 (V3-Home-UtilityRefunds, V3-Project-Rent-Utilities): "N חשבונות לא הוחזרו · $X", only when there is one;
- * with only suggestions left, "N החזרים לבדיקה". One currency shows its total; several show the count alone. The
- * suggestions count in its dismissKey, so a new one brings back a hidden row. Home and the property page share it.
+ * FLOW-1135 (V3-Home-UtilityRefunds, V3-Project-Rent-Utilities): "N חשבונות לא הוחזרו · $X", only when there is one.
+ * One currency shows its total; several show the count alone. Home and the property page share it. FLOW-1143: Flow
+ * suggests no refund, so there is no "לבדיקה" variant.
  */
-export function utilityRefundsRow({ notRefunded, totals, suggested }: UtilityRefundCount, to: string): BannerRow | null {
-  if (notRefunded === 0 && suggested === 0) return null;
+export function utilityRefundsRow({ notRefunded, totals }: UtilityRefundCount, to: string): BannerRow | null {
+  if (notRefunded === 0) return null;
   const [only] = totals.length === 1 ? totals : [];
   const total = only == null ? null : formatAmountText(only.minor, only.currency, { detail: true });
-  const dismissKey = `utility-refunds:${String(notRefunded)}:${String(suggested)}:${totals.map((row) => `${row.currency}${String(row.minor)}`).join("+")}`;
-  if (notRefunded === 0) {
-    return {
-      id: "utility-refunds",
-      dismissKey,
-      to,
-      icon: <InvoiceIcon />,
-      title: suggested === 1 ? "החזר אחד לבדיקה" : <><bdi dir="ltr">{String(suggested)}</bdi> החזרים לבדיקה</>,
-      short: "החזרים לבדיקה",
-      tag: String(suggested),
-    };
-  }
   const count = notRefunded === 1 ? "חשבון אחד לא הוחזר" : <><bdi dir="ltr">{String(notRefunded)}</bdi> חשבונות לא הוחזרו</>;
   return {
     id: "utility-refunds",
-    dismissKey,
+    dismissKey: `utility-refunds:${String(notRefunded)}:${totals.map((row) => `${row.currency}${String(row.minor)}`).join("+")}`,
     to,
     icon: <InvoiceIcon />,
     title: total == null ? count : <>{count} · <bdi dir="ltr">{total}</bdi></>,

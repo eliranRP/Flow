@@ -16,7 +16,7 @@ const LISTED = {
   bills: [{
     bill_transaction_id: BILL, project_id: PROJECT, project_name: "Example Oak House", supplier_id: SUPPLIER,
     supplier_name: "Example Power Co", currency: "ILS", category_id: null, category_name: null, amount_minor: 10000,
-    doc_date: "2026-03-05", days: 117, state: "suggested", source: null, rule: "bill", group_bill_transaction_ids: [BILL],
+    doc_date: "2026-03-05", days: 117, state: "refunded", source: "owner", rule: null, group_bill_transaction_ids: [BILL],
     no_rent: false, wrong_category: true, keep_category: false, refiled: false,
     payment: {
       transaction_id: PAYMENT, doc_date: "2026-03-20", amount_minor: 10000, currency: "ILS", description: "Example refund",
@@ -175,7 +175,7 @@ Deno.test("the writes need write scope; another company's ids and an expired key
 Deno.test("the tools are listed for their scope, and undo takes the four kinds", async () => {
   const reads = toolsFor(["read"]).map((tool) => tool.name);
   const writes = toolsFor(["write"]).map((tool) => tool.name);
-  for (const name of ["list_utility_refunds", "count_utility_refunds", "list_utility_payers"]) assertEquals(reads.includes(name), true, name);
+  for (const name of ["list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months"]) assertEquals(reads.includes(name), true, name);
   for (const name of ["set_utility_payer", "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund"]) {
     assertEquals(writes.includes(name), true, name);
   }
@@ -186,4 +186,31 @@ Deno.test("the tools are listed for their scope, and undo takes the four kinds",
   assertEquals(calls.map((call) => [call.name, call.body.p_kind]), [
     ["mcp_undo", "utility_payer"], ["mcp_undo", "utility_refund"], ["mcp_undo", "utility_refunds_seen"], ["mcp_undo", "utility_refile"],
   ]);
+});
+
+Deno.test("list_utility_months reads a property's months, checks its arguments, and refuses another company's", async () => {
+  const MONTHS = {
+    project_id: PROJECT, as_of: "2026-06-30",
+    months: [{
+      month: "2026-06-01", rent_in: 200000, bills_paid: 7000, not_refunded: 7000,
+      rent_lines: [{ transaction_id: PAYMENT, doc_date: "2026-06-01", amount_minor: 200000, currency: "ILS", party: null, category_name: "Example rent" }],
+      bills: [{ bill_transaction_id: BILL, doc_date: "2026-06-10", amount_minor: 7000, currency: "ILS", supplier_name: "Example Power Co", category_name: null, state: "waiting" }],
+    }],
+  };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: MONTHS }));
+  const read = await callTool("list_utility_months", { project_id: PROJECT, as_of: "2026-06-30" }, ["read"], rpc);
+  if (read.structuredContent.ok) assertEquals(read.structuredContent.data, MONTHS);
+  await callTool("list_utility_months", { project_id: PROJECT }, ["read"], rpc);
+  assertEquals(calls, [
+    { name: "list_utility_months", body: { p_project: PROJECT, p_today: "2026-06-30" } },
+    { name: "list_utility_months", body: { p_project: PROJECT, p_today: null } },
+  ]);
+  assertEquals(codeOf(await callTool("list_utility_months", {}, ["read"], rpc)), "validation");
+  assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT, as_of: "june" }, ["read"], rpc)), "validation");
+  assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT }, ["write"], rpc)), "forbidden");
+  assertEquals(calls.length, 2);
+  const other = rpcOf(() => ({ status: 400, json: { message: "project not found" } }));
+  assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT }, ["read"], other.rpc)), "refused");
+  const malformed = rpcOf(() => ({ status: 200, json: { months: "nope" } }));
+  assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT }, ["read"], malformed.rpc)), "refused");
 });

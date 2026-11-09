@@ -49,7 +49,7 @@ export function projectAttentionRows({
   search: string;
   /** FLOW-1044: the budget and what is spent of it, for the "עבר 80% מהתקציב" row. */
   budget?: { budget_minor: number | null; spent_minor: number } | null;
-  /** FLOW-1135: the property's utility bills not refunded and its suggested refunds. */
+  /** FLOW-1135: the property's utility bills not refunded. */
   utilities?: UtilityRefundCount;
 }): BannerRow[] {
   const counts = lateCounts(late.filter((row) => row.project_id === projectId));

@@ -1,6 +1,6 @@
 import type { RpcClient } from "../recurring-actions";
 import type { ScheduleRow } from "../recurring-schedule";
-import type { UtilityBill, UtilityPayer, UtilityPayment } from "../utility-refunds";
+import type { UtilityBill, UtilityMonth, UtilityPayer, UtilityPayment } from "../utility-refunds";
 
 /**
  * FLOW-1135: the V3-UtilityRefunds board's sample, for the stories and the tests. Invented properties, suppliers,
@@ -25,8 +25,6 @@ function bill(over: Partial<UtilityBill> & Pick<UtilityBill, "bill_transaction_i
     category_id: "c-power-water",
     category_name: "חשמל ומים",
     source: null,
-    rule: null,
-    group_bill_transaction_ids: [],
     no_rent: false,
     payment: null,
     wrong_category: false,
@@ -36,16 +34,20 @@ function bill(over: Partial<UtilityBill> & Pick<UtilityBill, "bill_transaction_i
   };
 }
 
+/**
+ * Two refunds the owner matched that are filed elsewhere (the fix cards: the rent with the bill, and a payment on
+ * no project), and four bills not refunded.
+ */
 export function utilityRefundsSample(): UtilityBill[] {
   return [
     bill({
       bill_transaction_id: "b-water-gefen", project_id: GEFEN, supplier_name: "City Water", amount_minor: 8_420n, doc_date: "2026-09-14", days: 56,
-      state: "suggested", rule: "rent_and_bills", wrong_category: true,
+      state: "refunded", source: "owner", wrong_category: true,
       payment: payment("pay-zelle-a", "2026-10-02", 188_420n, "Tenant A", "שכירות", GEFEN),
     }),
     bill({
       bill_transaction_id: "b-power-pine", project_id: PINE, supplier_name: "Power Co", amount_minor: 9_710n, doc_date: "2026-09-05", days: 65,
-      state: "suggested", rule: "bill", wrong_category: true,
+      state: "refunded", source: "owner", wrong_category: true,
       payment: payment("pay-zelle-b", "2026-09-12", 9_710n, "Tenant B", "הכנסה אחרת", null),
     }),
     bill({ bill_transaction_id: "b-power-gefen", project_id: GEFEN, supplier_name: "Power Co", amount_minor: 12_840n, doc_date: "2026-09-03", days: 67, state: "not_refunded" }),
@@ -53,12 +55,6 @@ export function utilityRefundsSample(): UtilityBill[] {
     bill({ bill_transaction_id: "b-water-pine", project_id: PINE, supplier_name: "City Water", amount_minor: 6_100n, doc_date: "2026-08-11", days: 90, state: "not_refunded", no_rent: true }),
     bill({ bill_transaction_id: "b-net-pine", project_id: PINE, supplier_name: "Net Co", amount_minor: 5_999n, doc_date: "2026-09-30", days: 40, state: "not_refunded", category_name: "אינטרנט" }),
   ];
-}
-
-/** A suggestion the owner already said yes to: the payment sits under שכירות, so the fix shows. */
-export function utilityFixSample(): UtilityBill[] {
-  const [first] = utilityRefundsSample();
-  return first == null ? [] : [{ ...first, state: "refunded", source: "owner" }];
 }
 
 function payer(name: string, usual: bigint | null, over: Partial<UtilityPayer> = {}): UtilityPayer {
@@ -96,12 +92,17 @@ function asJson(value: unknown): unknown {
  * A stand-in for Flow's server in the stories (UtilityClientProvider): the utility reads answer from the sample
  * (one property's with p_project_id), and every write succeeds, so a story's answer shows its toast with ביטול.
  */
-export function storyUtilityClient(bills: UtilityBill[] = utilityRefundsSample(), utilities: UtilityPayer[] = utilityPayersSample()): RpcClient {
+export function storyUtilityClient(
+  bills: UtilityBill[] = utilityRefundsSample(),
+  utilities: UtilityPayer[] = utilityPayersSample(),
+  months: UtilityMonth[] = utilityMonthsSample(),
+): RpcClient {
   const rpc = (name: string, args: Record<string, unknown> = {}) => {
     const project = typeof args.p_project_id === "string" ? args.p_project_id : null;
     const own = bills.filter((bill) => project == null || bill.project_id === project);
     const data = name === "list_utility_refunds" ? { as_of: "2026-11-09", bills: asJson(own) }
       : name === "list_utility_payers" ? { project_id: project, utilities: asJson(utilities) }
+        : name === "list_utility_months" ? { project_id: args.p_project, as_of: "2026-11-09", months: asJson(months) }
         : name === "mark_utility_refunds_seen" ? { bill_transaction_ids: own.filter((bill) => bill.state === "not_refunded").map((bill) => bill.bill_transaction_id) }
           : name === "set_utility_payer" ? { prior: null }
             : null;
@@ -124,4 +125,24 @@ export function utilitySplitSample(): UtilityBill[] {
       ],
     },
   }));
+}
+
+/**
+ * FLOW-1144 (the V3-Project-UtilityMonths board's months): November all back, October with Gas Co not refunded, September
+ * all back, and July with no rent. Newest first, as the read sends them.
+ */
+export function utilityMonthsSample(): UtilityMonth[] {
+  const rent = (id: string, date: string, minor: bigint) => ({ transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", party: "RentRedi", category_name: "הכנסות שכירות" });
+  const bill = (id: string, date: string, minor: bigint, supplier: string, category: string, state: string) => ({
+    bill_transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", supplier_name: supplier, category_name: category, state,
+  });
+  return [
+    { month: "2026-11-01", rent_in: 183_660n, bills_paid: 8_660n, not_refunded: 0n, rent_lines: [rent("m-rent-11", "2026-11-06", 183_660n)], bills: [bill("m-water-11", "2026-11-02", 8_660n, "City Water", "חשמל ומים", "refunded")] },
+    {
+      month: "2026-10-01", rent_in: 205_486n, bills_paid: 30_486n, not_refunded: 8_036n, rent_lines: [rent("m-rent-10", "2026-10-07", 205_486n)],
+      bills: [bill("m-water-10", "2026-10-04", 22_450n, "City Water", "חשמל ומים", "refunded"), bill("m-gas-10", "2026-10-03", 8_036n, "Gas Co", "גז", "waiting")],
+    },
+    { month: "2026-09-01", rent_in: 195_000n, bills_paid: 26_333n, not_refunded: 0n, rent_lines: [rent("m-rent-09", "2026-09-10", 195_000n)], bills: [bill("m-water-09", "2026-09-05", 26_333n, "City Water", "חשמל ומים", "refunded")] },
+    { month: "2026-07-01", rent_in: 0n, bills_paid: 6_100n, not_refunded: 6_100n, rent_lines: [], bills: [bill("m-water-07", "2026-07-08", 6_100n, "City Water", "חשמל ומים", "not_refunded")] },
+  ];
 }

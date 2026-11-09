@@ -25,8 +25,8 @@ with made as (
 )
 insert into up (label, id) select 'electric', id from made;
 
--- An unsplit payment, and one split into two category parts; both filed as other income on Maple, so each is
--- a suggestion for its bill.
+-- An unsplit payment, and one split into two category parts; both filed as other income on Maple. Flow
+-- suggests nothing (FLOW-1143), so the owner picks each as its bill's refund.
 create temp table up_lines (label text, direction text, category text, doc_date date, amount bigint);
 insert into up_lines values
   ('bill1', 'expense', 'power', '2026-03-05', 5000),
@@ -43,6 +43,8 @@ select tests.line_split(pg_temp.upid('pay2'), jsonb_build_array(
   jsonb_build_object('category_id', pg_temp.upid('other_income'), 'amount_minor', 4000)));
 
 select tests.authenticate_as('up_owner');
+select public.answer_utility_refund(pg_temp.upid('bill1'), 'matched', pg_temp.upid('pay1'));
+select public.answer_utility_refund(pg_temp.upid('bill2'), 'matched', pg_temp.upid('pay2'));
 
 create or replace function pg_temp.payment(p_label text)
 returns jsonb
@@ -53,7 +55,7 @@ as $$
 $$;
 grant execute on function pg_temp.payment(text) to authenticated;
 
-select is((pg_temp.payment('bill1')->>'transaction_id')::uuid, pg_temp.upid('pay1'), 'bill1''s suggested payment is pay1');
+select is((pg_temp.payment('bill1')->>'transaction_id')::uuid, pg_temp.upid('pay1'), 'bill1''s picked payment is pay1');
 select is(pg_temp.payment('bill1')->>'project_name', 'Example Maple House', 'the payment names its project');
 select is(pg_temp.payment('bill1')->'parts', '[]'::jsonb, 'an unsplit payment has no parts');
 select is(pg_temp.payment('bill2')->'parts', jsonb_build_array(

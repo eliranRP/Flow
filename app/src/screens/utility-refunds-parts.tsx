@@ -8,7 +8,7 @@ import { CheckIcon, ChevronIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { StatusMark } from "../ui/status-mark";
 import type { UtilityBill } from "../utility-refunds";
-import { billMeta, cardBillTitle, cardWhy, fixCopy, openMeta, paymentMeta, paymentParts, paymentTitle, type RefundCard } from "../utility-refund-view";
+import { billMeta, cardBillTitle, fixCopy, openMeta, paymentMeta, paymentParts, paymentTitle, type RefundCard } from "../utility-refund-view";
 
 /**
  * One leg of a card: a name and its line at the start, the amount at the end. FLOW-1142: the leg opens its
@@ -30,17 +30,15 @@ function Leg({ title, meta, amount, to }: { title: string; meta: string; amount:
 }
 
 /**
- * FLOW-1135 (V3-UtilityRefunds): a suggested refund. The bill (or the month's bills) and the payment as two rows,
- * why Flow pairs them, then "זה ההחזר?" with כן / לא. After a yes on a payment filed elsewhere it shows הוחזר, the
- * "ייתכן שסווג לא נכון" note and its one button, with להשאיר. A viewer sees the card with no answers.
+ * FLOW-1135 (V3-UtilityRefunds), FLOW-1143: a refund the owner matched that is filed elsewhere. The bill (or the
+ * month's bills) and the payment as rows, its split, then הוחזר, the "ייתכן שסווג לא נכון" note, its one-tap fix
+ * and להשאיר. A viewer sees the card with no buttons.
  */
-export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile, onKeep }: {
+export function RefundCardView({ card, readOnly, leaving, onRefile, onKeep }: {
   card: RefundCard;
   /** FLOW-1141: answered, the card folds away (ui/fold.tsx). */
   leaving: boolean;
   readOnly: boolean;
-  onYes: () => void;
-  onNo: () => void;
   onRefile: (category: string) => void;
   onKeep: () => void;
 }) {
@@ -50,7 +48,7 @@ export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile,
   const parts = paymentParts(card.payment);
   return (
     <FoldItem as="div" leaving={leaving}>
-      <section className="ui-urf-card m-page-enter" aria-label={`החזר אפשרי: ${cardBillTitle(card)}`}>
+      <section className="ui-urf-card m-page-enter" aria-label={`החזר לתיקון: ${cardBillTitle(card)}`}>
         <ul className="ui-urf-legs">
           {card.bills.map((bill) => (
             <Leg
@@ -83,28 +81,17 @@ export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile,
             </ul>
           </div>
         )}
-        <p className="ui-urf-why">{cardWhy(card)}</p>
-        {card.fix ? (
-          <div className="ui-urf-fix">
-            <span className="ui-urf-fix-done"><CheckIcon size={16} stroke={2.4} />הוחזר</span>
-            <span className="ui-urf-fix-title">ייתכן שסווג לא נכון</span>
-            <span className="ui-urf-fix-hint">{fix.hint}</span>
-            {readOnly ? null : (
-              <div className="ui-urf-actions">
-                <Button onClick={() => { onRefile(card.bills[0]?.category_name ?? "החשבונות"); }}>{fix.label}</Button>
-                <Button variant="secondary" className="ui-urf-keep" onClick={onKeep}>להשאיר</Button>
-              </div>
-            )}
-          </div>
-        ) : readOnly ? null : (
-          <div className="ui-urf-ask">
-            <h3 className="ui-urf-ask-title">זה ההחזר?</h3>
+        <div className="ui-urf-fix">
+          <span className="ui-urf-fix-done"><CheckIcon size={16} stroke={2.4} />הוחזר</span>
+          <span className="ui-urf-fix-title">ייתכן שסווג לא נכון</span>
+          <span className="ui-urf-fix-hint">{fix.hint}</span>
+          {readOnly ? null : (
             <div className="ui-urf-actions">
-              <Button onClick={onYes}>כן, זה ההחזר</Button>
-              <Button variant="secondary" onClick={onNo}>לא</Button>
+              <Button onClick={() => { onRefile(card.bills[0]?.category_name ?? "החשבונות"); }}>{fix.label}</Button>
+              <Button variant="secondary" className="ui-urf-keep" onClick={onKeep}>להשאיר</Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
     </FoldItem>
   );

@@ -133,6 +133,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "list_utility_refunds",
     "count_utility_refunds",
     "list_utility_payers",
+    "list_utility_months",
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",
