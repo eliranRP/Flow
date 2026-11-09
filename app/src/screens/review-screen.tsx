@@ -12,7 +12,7 @@ import { SetupSampleReview } from "../setup/sample-review";
 import { useOnline } from "../ui/band-states";
 import { ScreenState, usePreviewRetry } from "../ui/screen-state";
 import { ProjectWaitingList, ReviewAllList, reviewListReturn, type ReviewListState } from "./review-lists";
-import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
+import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewCardLoading, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 import { useJevBookingsQuery } from "../jev-bookings";
 import { JevBookingReview } from "./jev-booking-review";
@@ -113,6 +113,8 @@ export function ReviewScreen() {
     if (rows.some((row) => row.id === urlId)) return rotateReview(rows, urlId);
     return queueAfterFocus(rows, urlId, focusedOrder.current).rows;
   }
+  // FLOW-1137: the queue loads as its one review card's skeleton; the full list keeps the list skeleton.
+  const cardLoading = listing ? undefined : <ReviewCardLoading status="טוען…" />;
   const e2eWrite: ReviewPreviewWrite | undefined = reviewE2e != null && e2eList
     ? reviewE2e.e2ePreviewWrite()
     : undefined;
@@ -120,7 +122,7 @@ export function ReviewScreen() {
     const back = `/projects/${projectFilter}`;
     const waitingPhase = screenPhase(preview, waiting);
     if (waitingPhase.kind === "loading") {
-      return <ScreenState title="לאישור" backTo={back} phase={waitingPhase} onRetry={() => { void waiting.refetch(); }} />;
+      return <ScreenState title="לאישור" backTo={back} phase={waitingPhase} onRetry={() => { void waiting.refetch(); }} loading={cardLoading} />;
     }
     if (waitingPhase.kind === "error") {
       return <ProjectWaitingList rows={[]} search={search} backTo={back} backText={projectName} state={{ failed: { offline: waitingPhase.offline, onRetry: retryWaiting } }} />;
@@ -129,7 +131,7 @@ export function ReviewScreen() {
     if (held.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
     if (held.every((row) => row.review_id != null)) {
       if (phase.kind !== "ready") {
-        return <ScreenState title="לאישור" backTo={back} phase={phase} onRetry={() => { void review.refetch(); }} />;
+        return <ScreenState title="לאישור" backTo={back} phase={phase} onRetry={() => { void review.refetch(); }} loading={cardLoading} />;
       }
       const ids = new Set(held.map((row) => row.review_id));
       const rows = source.filter((row) => ids.has(row.id));
@@ -168,7 +170,7 @@ export function ReviewScreen() {
   // read leaves the queue as it is.
   const bookingsLive = !e2eList && preview === "off";
   if (bookingsLive && bookings.isPending) {
-    return <ScreenState title="לאישור" phase={{ kind: "loading" }} onRetry={() => { void bookings.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
+    return <ScreenState title="לאישור" phase={{ kind: "loading" }} onRetry={() => { void bookings.refetch(); }} backTo={listing ? `/review${search}` : undefined} loading={cardLoading} />;
   }
   const listedBookings = bookingsLive ? (bookings.data ?? []) : [];
   const waitingBookings = listing || fromList ? [] : listedBookings;
@@ -211,7 +213,7 @@ export function ReviewScreen() {
     );
   }
   if (phase.kind !== "ready") {
-    return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
+    return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} loading={cardLoading} />;
   }
   if (listing) return <ReviewAllList rows={rows} bookings={listedBookings} search={search} backTo={`/review${search}`} state={listState} paging={paging} />;
   const ordered = rowsForFocus(rows);

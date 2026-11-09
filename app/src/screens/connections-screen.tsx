@@ -15,6 +15,7 @@ import { NoteIcon } from "../ui/icons-later";
 import { ConnectionHead, ConnectionNote } from "../ui/connection-page";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
+import { GroupedSkeleton } from "../ui/loading-shapes";
 import { ScreenState } from "../ui/screen-state";
 import { Skeleton } from "../ui/skeleton";
 import type { SettingsSample } from "./settings-screen";
@@ -77,6 +78,7 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
         backTo={`/settings${search}`}
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
+        loading={<GroupedSkeleton groups={[2, 2]} />}
       />
     );
   }

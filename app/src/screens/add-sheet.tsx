@@ -13,7 +13,9 @@ import { useWriteGate } from "../use-is-viewer";
 import { DocumentIcon } from "../ui/icons";
 import { CameraIcon, CoinIcon } from "../ui/icons-later";
 import { ListRow } from "../ui/list-row";
+import { TileMenuSkeleton } from "../ui/loading-shapes";
 import { RouteSheet } from "../ui/route-sheet";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { AddEntrySheet } from "./add-entry-sheet";
 
 /** What the + sheet opens next: a form for a receipt (a photo or a file) or a cash/cheque line. */
@@ -59,8 +61,17 @@ function AddSheet({ fromProject }: { fromProject: { id: string; name: string } |
   const [pickError, setPickError] = useState<string | null>(null);
   const cameraPicker = useRef<HTMLInputElement>(null);
   const filePicker = useRef<HTMLInputElement>(null);
-  if (writeGate === "wait") return null;
-  if (writeGate !== "show") return writeGate;
+  if (writeGate !== "show" && writeGate !== "wait") return writeGate;
+  const sheetTitle = fromProject == null ? "הוספה" : `הוספה ל־${fromProject.name}`;
+  const sheetHint = fromProject == null ? undefined : "כל מה שתוסיפו ישויך לפרויקט הזה";
+  if (writeGate === "wait") {
+    // FLOW-1137: the sheet opens at once, its tiles and rows as blocks until the role says it may add.
+    return (
+      <RouteSheet title={sheetTitle} hint={sheetHint} closeTo={`/${search}`} returnFocusRef={addTriggerRef} panelClassName="ui-sheet-g14 ui-sheet-pad28 ui-add-menu">
+        <DelayedSkeleton><TileMenuSkeleton rows={fromProject == null ? 2 : 1} /></DelayedSkeleton>
+      </RouteSheet>
+    );
+  }
   function go(to: string) {
     void navigate(to, { replace: true, state: quickNewState(over) });
   }
@@ -115,8 +126,8 @@ function AddSheet({ fromProject }: { fromProject: { id: string; name: string } |
   }
   return (
     <RouteSheet
-      title={fromProject == null ? "הוספה" : `הוספה ל־${fromProject.name}`}
-      hint={fromProject == null ? undefined : "כל מה שתוסיפו ישויך לפרויקט הזה"}
+      title={sheetTitle}
+      hint={sheetHint}
       closeTo={`/${search}`}
       returnFocusRef={addTriggerRef}
       panelClassName="ui-sheet-g14 ui-sheet-pad28 ui-add-menu"

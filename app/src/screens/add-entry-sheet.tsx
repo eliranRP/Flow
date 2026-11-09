@@ -53,6 +53,11 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   const cats = sample ? SAMPLE_CATEGORIES : (categories.data ?? [])
     .filter((category) => !category.hidden && category.loan_part == null)
     .map((category) => ({ id: category.id, name: category.name, kind: category.kind }));
+  // FLOW-1137: while a list loads, its field draws skeleton chips, not "בלי פרויקט" alone or an empty group.
+  const listsLoading = {
+    projects: !sample && dashboard.isPending && dashboard.fetchStatus !== "idle",
+    categories: !sample && categories.isPending && categories.fetchStatus !== "idle",
+  };
   const fromProjectName = fromProjectId == null ? null : (projects.find((p) => p.id === fromProjectId)?.name ?? "");
 
   async function pickFile(file: File | undefined) {
@@ -120,6 +125,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
         fromProject={fromProjectName}
         projects={projects}
         categories={cats}
+        loading={listsLoading}
         edit={draft}
         onDraftChange={setDraft}
         document={document}

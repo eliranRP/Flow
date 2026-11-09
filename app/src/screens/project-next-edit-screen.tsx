@@ -151,14 +151,17 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
       ?? null;
   const chosen = picked ?? preset;
 
+  // FLOW-1137: while the role loads, the page's skeleton shows (a write route waits for the role), not nothing.
   const phase = sample
     ? ({ kind: "ready" } as const)
-    : screenPhase(preview, {
-      isPending: detail.isPending || (figures != null && next.pending),
-      isError: detail.isError || next.failed,
-      isPaused: detail.isPaused || next.paused,
-    });
-  if (gate !== "show" && sample == null) return gate === "wait" ? null : gate;
+    : gate === "wait"
+      ? ({ kind: "loading" } as const)
+      : screenPhase(preview, {
+        isPending: detail.isPending || (figures != null && next.pending),
+        isError: detail.isError || next.failed,
+        isPaused: detail.isPaused || next.paused,
+      });
+  if (gate !== "show" && gate !== "wait" && sample == null) return gate;
 
   const income = add ? chosen?.kind === "income" : (row?.minor ?? 0n) > 0n;
   const draft = draftText ?? (row == null ? "" : draftOf(row.minor));

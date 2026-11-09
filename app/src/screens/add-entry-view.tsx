@@ -7,6 +7,7 @@ import { Sheet } from "../ui/sheet";
 import { Chip } from "../ui/chip";
 import { onRadioArrow } from "../ui/segmented-control";
 import { AlertIcon } from "../ui/icons";
+import { ChipsSkeleton } from "../ui/loading-shapes";
 import {
   datePresets,
   ENTRY_FIELDS,
@@ -36,6 +37,8 @@ export interface AddEntryViewProps {
   fromProject?: string | null;
   projects: readonly AddEntryItem[];
   categories: readonly AddEntryCategory[];
+  /** FLOW-1137: a list still loading: its field draws skeleton chips in place of its chips. */
+  loading?: { projects: boolean; categories: boolean };
   edit: EntryDraft;
   onDraftChange: (next: EntryDraft) => void;
   document?: AttachedDocument | null;
@@ -315,6 +318,7 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         <div className="ui-add-field">
           <span className="ui-add-label" id={labelId("project")}>פרויקט</span>
+          {props.loading?.projects === true ? <ChipsSkeleton /> : (
           <ChipGroup
             id={fieldId("project")}
             labelId={labelId("project")}
@@ -337,6 +341,7 @@ export function AddEntryView(props: AddEntryViewProps) {
               בלי פרויקט
             </Chip>
           </ChipGroup>
+          )}
           <FieldError id={errId("project")} text={shown.project} />
           {adding === "project" ? (
             <AddNewEditor
@@ -355,6 +360,7 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         <div className="ui-add-field">
           <span className="ui-add-label" id={labelId("category")}>קטגוריה</span>
+          {props.loading?.categories === true ? <ChipsSkeleton /> : (
           <ChipGroup
             id={fieldId("category")}
             labelId={labelId("category")}
@@ -374,6 +380,7 @@ export function AddEntryView(props: AddEntryViewProps) {
               );
             })}
           </ChipGroup>
+          )}
           <FieldError id={errId("category")} text={shown.category} />
           {adding === "category" ? (
             <AddNewEditor

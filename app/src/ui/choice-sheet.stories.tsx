@@ -32,3 +32,15 @@ export const Saving: Story = {
 export const ThemeFollowsDevice: Story = {
   args: { copy: THEME_COPY, open: true, onOpenChange: noop, value: "system", saving: null, onPick: noop },
 };
+/** FLOW-1137: the choices are still loading (the recurring charge's project picker): skeleton radio rows, not an empty sheet. */
+export const Loading: Story = {
+  args: {
+    copy: { historyKey: "charge-project", title: "פרויקט", subtitle: "חל על כל התשלומים של ספק לדוגמה, גם הקודמים", choices: [] },
+    open: true,
+    onOpenChange: noop,
+    value: "",
+    saving: null,
+    onPick: noop,
+    loading: true,
+  },
+};

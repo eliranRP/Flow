@@ -158,12 +158,13 @@ export function ReviewListEnd({ paging }: { paging: ReviewPaging }) {
 
 /**
  * FLOW-1016: the cards loaded are used up and the next page is on its way. The queue keeps its frame, with the
- * card's place drawn as a skeleton, rather than the whole-screen loader.
+ * card's place drawn as a skeleton, rather than the whole-screen loader. FLOW-1137: the queue's first load draws
+ * it too, and says "טוען…" (`status`).
  */
-export function ReviewCardLoading() {
+export function ReviewCardLoading({ status = "טוענים עוד…" }: { status?: string } = {}) {
   return (
     <div className="ui-skel-card ui-review-card-loading" aria-busy="true">
-      <p className="sr-only" role="status">טוענים עוד…</p>
+      <p className="sr-only" role="status">{status}</p>
       {SKELETON_LINES.map(([width, height]) => (
         <span key={width} aria-hidden="true" className="ui-skeleton-bar" style={{ inlineSize: width, blockSize: height, flex: "none" }} />
       ))}

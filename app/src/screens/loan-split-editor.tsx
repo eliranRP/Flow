@@ -7,6 +7,7 @@ import { MoneyField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { SelectField } from "../ui/select-field";
 import { Sheet } from "../ui/sheet";
+import { Skeleton } from "../ui/skeleton";
 import { Stepper } from "../ui/stepper";
 import { Toggle } from "../ui/toggle";
 import { partCategoryOptions, type LoanCategory, type LoanPayment } from "./loan-detail-data";
@@ -286,16 +287,24 @@ export function LoanSplitEditor({
         )}
         {fees > 0n ? (
           <>
-            <SelectField
-              label="קטגוריה לעמלות"
-              value={feesCategoryId ?? ""}
-              disabled={saving || categories == null}
-              options={[
-                { value: "", label: categories == null ? "טוען…" : "בחרו קטגוריה" },
-                ...feeOptions.map((category) => ({ value: category.id, label: category.name })),
-              ]}
-              onChange={(event) => { setFeesCategoryId(event.target.value === "" ? null : event.target.value); }}
-            />
+            {categories == null ? (
+              // FLOW-1137: the field's label over a control-shaped block while the categories load, not "טוען…" as an option.
+              <div className="ui-field" aria-busy="true">
+                <span className="ui-field-label">קטגוריה לעמלות</span>
+                <Skeleton className="ui-loan-skel-control" />
+              </div>
+            ) : (
+              <SelectField
+                label="קטגוריה לעמלות"
+                value={feesCategoryId ?? ""}
+                disabled={saving}
+                options={[
+                  { value: "", label: "בחרו קטגוריה" },
+                  ...feeOptions.map((category) => ({ value: category.id, label: category.name })),
+                ]}
+                onChange={(event) => { setFeesCategoryId(event.target.value === "" ? null : event.target.value); }}
+              />
+            )}
             {feesCategoryId != null && feesCategoryId !== loanFeesCategory ? (
               <Toggle label="לשמור להלוואה הזו" checked={keep} disabled={saving} onChange={setKeep} />
             ) : null}

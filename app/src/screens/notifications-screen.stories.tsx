@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { NotificationsScreen, ReviewEmpty } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, OfflineStory } from "../ui/screen-stories-support";
@@ -14,9 +15,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const DEVICE_ROW = "המכשיר הזה מקבל התראות";
+
 const evening: NotificationPrefs = { ...NO_PREFS, evening_reminder: true, prompt_answered: true };
 
-function Page({ prefs, support, device, devices = [] }: { prefs: NotificationPrefs; support: PushSupport; device?: DevicePush; devices?: PushDevice[] }) {
+function Page({ prefs, support, device, devices = [] }: { prefs: NotificationPrefs; support: PushSupport; device?: DevicePush | null; devices?: PushDevice[] }) {
   return (
     <StoryRoute entry="/settings/notifications" tabs>
       <ExampleBar />
@@ -36,6 +39,14 @@ export const SettingsOffline: Story = {
   ),
 };
 /** A switch on and no device connected: the line asks to connect this device. */
+/** FLOW-1137: this device's state is still being read: the row's hint is a skeleton, not a switch that reads off. */
+export const SettingsDeviceLoading: Story = {
+  render: () => <Page prefs={evening} support="ok" device={null} devices={SAMPLE_DEVICES} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("switch", { name: DEVICE_ROW })).toBeNull();
+    await expect(within(canvasElement).getByText(DEVICE_ROW)).toBeVisible();
+  },
+};
 export const SettingsNoDevice: Story = { render: () => <Page prefs={evening} support="ok" device="not-subscribed" /> };
 /** Blocked on an iPhone: the device row points to the iOS Settings app. */
 export const SettingsBlocked: Story = { render: () => <Page prefs={evening} support="ok" device="denied" devices={SAMPLE_DEVICES.slice(1)} /> };

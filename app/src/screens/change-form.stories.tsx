@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChangeForm } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -147,6 +147,27 @@ export const ChangeFieldErrors: Story = {
 export const ChangeProjectLoading: Story = {
   name: "Project picker loading",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" loading />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
+};
+
+/** FLOW-1137: while the lists or the role load, the sheet draws the picker's radio rows under its one title. */
+export const ChangeSheetLoading: Story = {
+  name: "Sheet loading",
+  render: () => (
+    <StoryRoute entry="/review/change?item=r1&preview=loading">
+      <ExampleBar />
+      <ChangeForm />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-radio-skel")).not.toBeNull());
+    await expect(within(document.body).getAllByText("שינוי שיוך")).toHaveLength(1);
+  },
   globals: {
     viewport: {
       value: "flow390-short",
