@@ -53,7 +53,7 @@ export const FiveYears: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("heading", { level: 1, name: "סה״כ ל־Member A מריפייננס ב־2031" })).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: /^יותר, ריפייננס בעוד/ }));
+    await userEvent.click(await canvas.findByRole("button", { name: /^יותר, ריפייננס בעוד/ }));
     await waitFor(async () => { await expect(canvas.getByRole("heading", { level: 1 }).textContent).toBe("סה״כ ל־Member A מריפייננס ב־2032"); });
   },
 };
