@@ -274,7 +274,7 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
       />
       <div className="ui-loans-body">
         {ctx.loading ? (
-          <DelayedSkeleton>
+          <DelayedSkeleton offline>
             <LoansSkeleton />
           </DelayedSkeleton>
         ) : ctx.failed ? (

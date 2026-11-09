@@ -74,7 +74,7 @@ export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: {
         <div className="ui-charge-body">
           <ChargeBack />
           {/* FLOW-1139: the page's own shape (the Detail pattern), not list rows. */}
-          <DelayedSkeleton>
+          <DelayedSkeleton offline>
             <DetailSkeleton />
           </DelayedSkeleton>
         </div>

@@ -133,7 +133,7 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col" aria-busy="true">
         {header}
-        <DelayedSkeleton><UnassignedSkeleton /></DelayedSkeleton>
+        <DelayedSkeleton offline><UnassignedSkeleton /></DelayedSkeleton>
       </div>
     );
   }

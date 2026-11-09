@@ -4,7 +4,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, u
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { useAuth } from "./auth";
 import { SessionProviders } from "./session-providers";
-import { CashHomeSkeleton } from "./screens/home-skeleton";
+import { ColdOpenSkeleton, FullScreenFallback } from "./cold-open";
 import { TabBar } from "./ui/tab-bar";
 import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
@@ -239,7 +239,8 @@ function RequireAuth() {
   const { status } = useAuth();
   const location = useLocation();
   if (preview) return <Outlet />;
-  if (status === "loading") return <CashHomeSkeleton />;
+  // FLOW-1140: the route's own loading frame, in its own outlet, not Home's.
+  if (status === "loading") return <ColdOpenSkeleton />;
   if (status !== "authed") return <Navigate to={signInPathFor(`${location.pathname}${location.search}`)} replace />;
   return <Outlet />;
 }
@@ -338,7 +339,9 @@ function Shell() {
 function FullScreen() {
   return (
     <div className="safe-bottom min-h-dvh">
-      <ScreenSuspense>
+      {/* FLOW-1140: opened from a tab, this boundary is new, so it shows the screen's bar and blocks
+          (after 300ms) while the code loads; a boundary already on screen keeps the screen up. */}
+      <ScreenSuspense fallback={<FullScreenFallback />}>
         <Outlet />
       </ScreenSuspense>
     </div>

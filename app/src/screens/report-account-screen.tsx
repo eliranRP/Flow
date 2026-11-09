@@ -191,7 +191,7 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
     return (
       <div className="ui-rep-screen">
         {header}
-        {(sample?.failed ?? read.isError) ? <PageLoadFailed title="החשבון לא נטען" offline={!online} onRetry={() => { void read.refetch(); }} /> : <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>}
+        {(sample?.failed ?? read.isError) ? <PageLoadFailed title="החשבון לא נטען" offline={!online} onRetry={() => { void read.refetch(); }} /> : <DelayedSkeleton offline><ProfitRowsSkeleton /></DelayedSkeleton>}
       </div>
     );
   }
