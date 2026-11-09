@@ -16,9 +16,13 @@ import { waitForAccessToken } from "./wait-for-session";
 /** The company's last `months` cash months: Home's four, or a month chart's six (תזרים צפוי). */
 export function useCashMonthsQuery(active = true, months = CASH_MONTHS) {
   const preview = useHomePreview();
-  return useQuery({
+  return useQuery({ ...cashMonthsQueryOptions(preview, months), enabled: active && preview === "off" });
+}
+
+/** FLOW-1115: main.tsx starts Home's four months before the first render (home-early-reads.ts). */
+export function cashMonthsQueryOptions(preview: HomePreview, months: number) {
+  return {
     queryKey: ["dashboard", "cash-months", preview, months],
-    enabled: active && preview === "off",
     queryFn: async (): Promise<CashMonths> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -27,7 +31,7 @@ export function useCashMonthsQuery(active = true, months = CASH_MONTHS) {
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
     },
-  });
+  };
 }
 
 /** FLOW-417: the net since the first cash month and per year, for the history page. */
