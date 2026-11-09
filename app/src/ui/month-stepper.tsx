@@ -3,6 +3,7 @@ import { useId } from "react";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { OutwardChevron } from "./icons";
+import { DelayedSkeleton, Skeleton } from "./skeleton";
 
 /**
  * FLOW-362 (cycle 15, C15-6): a month page's earlier and later chevrons, at the end of its title.
@@ -17,6 +18,7 @@ export function MonthStepper({
   children,
   onBand = false,
   reason = null,
+  loading = false,
 }: {
   /** The earlier month's name for the chevron ("תזרים אוגוסט"), or null for none. */
   earlier: string | null;
@@ -31,9 +33,19 @@ export function MonthStepper({
    * loaded), said to a screen reader in place of "זה החודש הראשון" / "זה החודש הנוכחי".
    */
   reason?: string | null;
+  /**
+   * FLOW-1121: the months are still loading: on the band, the pager's track is the skeleton's band block and
+   * breathes as every skeleton does (after the skeleton delay; still with reduced motion). Its content stays.
+   */
+  loading?: boolean;
 }) {
   return (
     <div className={cx("ui-month-step", onBand && "ui-month-step-band")}>
+      {loading && onBand ? (
+        <DelayedSkeleton>
+          <Skeleton tone="band" className="ui-month-step-shimmer" />
+        </DelayedSkeleton>
+      ) : null}
       <StepArrow
         label={earlier}
         side="start"

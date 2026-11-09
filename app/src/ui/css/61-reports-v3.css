@@ -33,29 +33,6 @@
   overflow-wrap: anywhere;
 }
 
-/* FLOW-1120: a drilled month's name line: the name at the start and, at the end, "טוען חודשים…" while the months
-   load and the chevrons wait. The hint is a caption on the name's own line, so its slot is always there and the band
-   keeps its height when it comes and goes. No animation. */
-.ui-rep-band-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-inline-size: 0;
-}
-
-.ui-rep-band-head .ui-rep-band-name {
-  min-inline-size: 0;
-}
-
-.ui-rep-band-hint {
-  flex: none;
-  color: var(--color-on-band-secondary);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-  white-space: nowrap;
-}
-
 /* The pill opens the period (or date) sheet: the band's 48px track, as Home's month pill. */
 .ui-rep-pill {
   display: flex;
