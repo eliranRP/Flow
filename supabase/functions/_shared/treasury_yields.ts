@@ -1,5 +1,5 @@
 // FLOW-1119: the US Treasury's daily par yield curve, for the member share report's expected rate.
-// The daily job (mercury-sync, kind "treasury-yields") reads this year's and last year's CSV and stores
+// The flow-treasury-yields job (every four hours; mercury-sync, kind "treasury-yields") reads this year's and last year's CSV and stores
 // each trading day's 5 and 10 year yields with store_treasury_yields. A yield the owner typed lives in
 // the company's own setting and always wins over these.
 
