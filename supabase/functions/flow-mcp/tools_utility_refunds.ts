@@ -10,7 +10,7 @@ const ID = z.string().regex(UUID);
 const AS_OF = z.string().regex(DATE);
 const KEY = z.string().min(1).max(128);
 
-export const UTILITY_READS = ["list_utility_refunds", "count_utility_refunds", "list_utility_payers"] as const;
+export const UTILITY_READS = ["list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months"] as const;
 export const UTILITY_WRITES = [
   "set_utility_payer",
   "answer_utility_refund",
@@ -24,6 +24,7 @@ export const UTILITY_ALLOWED: Record<string, Set<string>> = {
   list_utility_refunds: new Set(["project_id", "as_of", "all"]),
   count_utility_refunds: new Set(["as_of"]),
   list_utility_payers: new Set(["project_id"]),
+  list_utility_months: new Set(["project_id", "as_of"]),
   set_utility_payer: new Set(["idempotency_key", "project_id", "supplier_id", "currency", "payer", "added"]),
   answer_utility_refund: new Set(["idempotency_key", "bill_transaction_id", "state", "payment_transaction_id", "as_of", "keep_category"]),
   mark_utility_refunds_seen: new Set(["idempotency_key", "project_id", "as_of"]),
@@ -33,6 +34,7 @@ export const UTILITY_ALLOWED: Record<string, Set<string>> = {
 const listSchema = z.object({ project_id: ID.optional(), as_of: AS_OF.optional(), all: z.boolean().optional() }).strict();
 const countSchema = z.object({ as_of: AS_OF.optional() }).strict();
 const payersSchema = z.object({ project_id: ID }).strict();
+const monthsSchema = z.object({ project_id: ID, as_of: AS_OF.optional() }).strict();
 const payerSchema = z.object({
   idempotency_key: KEY,
   project_id: ID,
@@ -80,6 +82,10 @@ export const UTILITY_READ_SPECS = [
   }, false),
   spec("list_utility_payers", "A property's utilities (project_id; another company's is refused: project not found): found from its חשבונות lines or added by the owner. utilities[]: supplier_id, supplier_name, currency, payer (tenant: the tenant pays it back, the default; company: the company pays and its bills are never checked), added, found, usual_minor (the median of its last 3 bills, null with none), bill_count, last_bill_date, and category_id and category_name (the latest bill's). Any member reads it.", {
     project_id: { type: "string" },
+  }, false),
+  spec("list_utility_months", `A property's utility bills by month (FLOW-1144; project_id, another company's is refused: project not found): the months, newest first, from its first tenant-paid utility bill or first rent line to the as-of month. ${AS_OF_TEXT}. months[]: month (YYYY-MM-01), rent_in (the sum of its rent lines: income under the rent category, as list_utility_refunds reads it), bills_paid (the sum of the tenant-paid utility bills dated in it), not_refunded (the part of those bills not refunded and not closed by the owner, waiting ones included), rent_lines[] (transaction_id, doc_date, amount_minor, currency, party, category_name) and bills[] (bill_transaction_id, doc_date, amount_minor, currency, supplier_name, category_name, state as list_utility_refunds gives it). Company-paid utilities are left out. Any member reads it.`, {
+    project_id: { type: "string" },
+    as_of: { type: "string" },
   }, false),
 ];
 
@@ -137,6 +143,11 @@ export async function utilityRead(
     const parsed = countSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
     return readOf(await rpc("count_utility_refunds", { p_today: parsed.data.as_of ?? null }), null);
+  }
+  if (name === "list_utility_months") {
+    const months = monthsSchema.safeParse(args);
+    if (!months.success) return fail("validation", "validation");
+    return readOf(await rpc("list_utility_months", { p_project: months.data.project_id, p_today: months.data.as_of ?? null }), "months");
   }
   const parsed = payersSchema.safeParse(args);
   if (!parsed.success) return fail("validation", "validation");

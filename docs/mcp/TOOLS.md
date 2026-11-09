@@ -115,7 +115,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "bank_accounts"` | `id` | the connection id `set_bank_accounts` or `answer_bank_account` returned (`list_bank_connections` `connections[].id`) |
 | `confirm_transfer_match`, `dismiss_transfer_match` | `out_transaction_id`, `in_transaction_id` | `list_transfer_matches` `matches[].out.transaction_id` and `matches[].in.transaction_id` |
 | `undo` `kind: "transfer_match"` | `id` | the money-out line's id the write returned (`out_transaction_id`) |
-| `list_utility_refunds`, `list_utility_payers`, `set_utility_payer`, `mark_utility_refunds_seen` | `project_id` | `list_projects` `projects[].id` |
+| `list_utility_refunds`, `list_utility_payers`, `list_utility_months`, `set_utility_payer`, `mark_utility_refunds_seen` | `project_id` | `list_projects` `projects[].id` |
 | `set_utility_payer` | `supplier_id`, `currency` | `list_utility_payers` `utilities[].supplier_id` and `utilities[].currency`, or a bill's `supplier_id` in `list_utility_refunds` |
 | `answer_utility_refund`, `refile_utility_refund` | `bill_transaction_id`, `payment_transaction_id` | `list_utility_refunds` `bills[].bill_transaction_id` and `bills[].payment.transaction_id` |
 | `undo` `kind: "utility_payer"`, `"utility_refund"`, `"utility_refunds_seen"`, `"utility_refile"` | `id` | the `id` (the write) the tool returned |
@@ -1116,6 +1116,10 @@ Without `all` the list is the app's: bills not refunded, and refunds the user ma
 ### list_utility_payers
 
 `{ "project_id": "<property>" }`. Read tool. A property's utilities: `data.project_id` and `utilities[]`: `supplier_id`, `supplier_name`, `currency`, `payer` (`tenant`, the default, or `company`), `added`, `found` (from its חשבונות lines), `usual_minor` (the median of its last 3 bills, worked out on read; null with none), `bill_count`, `last_bill_date`, and `category_id` and `category_name` (the latest bill's). Errors: `refused` for another company's property.
+
+### list_utility_months
+
+`{ "project_id": "<property>", "as_of": "2026-06-30" }` (`as_of` optional, default Israel's today). Read tool; any member reads it ([FLOW-1144](../backlog/tasks/FLOW-1144.md)). A property's utility bills by month: `data.project_id`, `as_of` and `months[]`, newest first, from the property's first tenant-paid utility bill or first rent line to the as-of month. Each month: `month` (YYYY-MM-01), `rent_in` (the sum of its rent lines: income under the rent category, as `list_utility_refunds` reads it), `bills_paid` (the sum of the tenant-paid utility bills dated in it), `not_refunded` (the part of those bills not refunded and not closed by the user, waiting ones included), `rent_lines[]` (`transaction_id`, `doc_date`, `amount_minor`, `currency`, `party`, `category_name`) and `bills[]` (`bill_transaction_id`, `doc_date`, `amount_minor`, `currency`, `supplier_name`, `category_name`, `state` as `list_utility_refunds` gives it). Company-paid utilities are left out. Errors: `refused` for another company's property; `validation` for a malformed id or date.
 
 ### set_utility_payer
 
