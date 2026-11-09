@@ -165,10 +165,13 @@ export { MEMBER_REPORT_DEFAULTS, applyBp, computeMemberShare } from "./member-sh
 export type {
   LoanType,
   FetchedTreasuryYield,
+  MemberLoanShare,
   MemberReportConfig,
+  MemberReportLoan,
   MemberReportProperty,
   MemberReportQuote,
   MemberReportYield,
+  MemberShare,
   MemberShareResult,
   PropertyShare,
   QuoteShare,

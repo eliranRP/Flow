@@ -1,4 +1,4 @@
-// FLOW-1117: get_member_report, get_member_share and set_member_report. Fixtures: tools_test_support.ts.
+// FLOW-1117: get_member_report, get_member_share and set_member_report (FLOW-1124: all-in and members' loans). Fixtures: tools_test_support.ts.
 // Invented names and figures only.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
@@ -18,6 +18,15 @@ const REPORT = {
     selling_cost_bp: 700, loan_balance_minor: 26_800_000, loans_other_currency: false,
   }],
   can_edit: true,
+};
+
+// FLOW-1124: the same report with an all-in and a member's own loan.
+const NOTE_ID = "00000000-0000-4000-8000-000000000002";
+const WITH_LOANS = {
+  ...REPORT,
+  config: { ...REPORT.config, members: [{ name: "Member A", ownership_bp: 5000, loan_ids: [NOTE_ID] }, { name: "Member B", ownership_bp: 5000 }] },
+  properties: [{ ...REPORT.properties[0], all_in_minor: 30_000_000, purchase_minor: 30_000_000, rehab_minor: 0, holding_minor: 0 }],
+  loans: [{ loan_id: NOTE_ID, name: "Member A note", kind: "demand", project_id: null, currency: "USD", balance_minor: 1_000_000 }],
 };
 
 type Share = {
@@ -74,17 +83,29 @@ Deno.test("get_member_share before any setting gives the company's figures with 
   assertEquals(share.totals.saleNetMinor, 12_260_000);
 });
 
+Deno.test("get_member_share counts the all-in and repays a member's own loan to them", async () => {
+  const { rpc } = rpcOf(() => ({ status: 200, json: WITH_LOANS }));
+  const read = await callTool("get_member_share", { member: "Member A" }, ["read"], rpc);
+  if (!read.structuredContent.ok) throw new Error("refused");
+  const share = read.structuredContent.data as {
+    totals: { equityMinor: number; profitMinor: number };
+    members: { saleMinor: number; loansMinor: number; saleTotalMinor: number; profitMinor: number }[];
+  };
+  assertEquals([share.totals.equityMinor, share.totals.profitMinor], [11_260_000, 9_060_000]);
+  assertEquals(share.members.map((m) => [m.saleMinor, m.loansMinor, m.saleTotalMinor, m.profitMinor]), [[5_630_000, 1_000_000, 6_630_000, 4_530_000]]);
+});
+
 Deno.test("set_member_report sends the parts as a patch, undo takes member_report", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "member_report" } } }));
   const set = await callTool("set_member_report", {
     idempotency_key: "mr-1",
-    members: [{ name: "Member A", ownership_bp: 10000 }],
+    members: [{ name: "Member A", ownership_bp: 10000, loan_ids: [QUOTE_ID] }],
     quote_date: null,
   }, ["write"], rpc);
   assertEquals(set.isError, false);
   assertEquals(calls.at(-1), {
     name: "mcp_set_member_report",
-    body: { p_idempotency_key: "mr-1", p_patch: { members: [{ name: "Member A", ownership_bp: 10000 }], quote_date: null } },
+    body: { p_idempotency_key: "mr-1", p_patch: { members: [{ name: "Member A", ownership_bp: 10000, loan_ids: [QUOTE_ID] }], quote_date: null } },
   });
   await callTool("undo", { idempotency_key: "u-mr", kind: "member_report", id: PROJECT }, ["write"], rpc);
   assertEquals(calls.at(-1)?.name, "mcp_undo");
@@ -96,6 +117,7 @@ Deno.test("set_member_report sends the parts as a patch, undo takes member_repor
     { idempotency_key: "k" },
     { idempotency_key: "k", rate_rule: { tenor_years: 7 } },
     { idempotency_key: "k", members: [{ name: "", ownership_bp: 10000 }] },
+    { idempotency_key: "k", members: [{ name: "Member A", ownership_bp: 10000, loan_ids: ["not-a-uuid"] }] },
     { idempotency_key: "k", quotes: [{ id: "q", lender: "Example", rate_ppm: 60_000, quoted_on: "2026-11-03" }] },
     { idempotency_key: "k", colour: "violet" },
   ]) {
