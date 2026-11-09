@@ -61,6 +61,8 @@
 /unpaid/ /unpaid 301
 /transfers /app-shell 200
 /transfers/ /transfers 301
+/utility-refunds /app-shell 200
+/utility-refunds/ /utility-refunds 301
 /missing-bills /app-shell 200
 /missing-bills/ /missing-bills 301
 /recurring /app-shell 200
@@ -118,6 +120,8 @@
 /projects/:projectId/categories/:categoryId/ /projects/:projectId/categories/:categoryId 301
 /projects/:projectId/investment /app-shell 200
 /projects/:projectId/investment/ /projects/:projectId/investment 301
+/projects/:projectId/utilities /app-shell 200
+/projects/:projectId/utilities/ /projects/:projectId/utilities 301
 /projects/:projectId/investment/:section /app-shell 200
 /projects/:projectId/investment/:section/ /projects/:projectId/investment/:section 301
 /projects/:projectId/investment/:section/:key /app-shell 200

@@ -1,0 +1,354 @@
+/* FLOW-1135 (V3-UtilityRefunds, decision 0265): החזרי חשבונות. The List pattern: the head, the figure, the
+   segment that docks, then the bills by property. A suggested refund is a surface card with a line border: the bill
+   and the payment as two rows, why Flow pairs them, and "זה ההחזר?" with כן / לא; after a yes on a payment filed
+   elsewhere, the raised note with its one fix. A bill not refunded is a 64px row with the dashed signal ring and
+   a 44px ✓ (ראיתי) on a tint disc. */
+.ui-urf-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-side) calc(var(--tabbar-height) + var(--space-6));
+}
+
+.ui-urf-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-start: var(--space-2);
+}
+
+.ui-urf-head > p,
+.ui-urf-head > h1 {
+  margin: 0;
+}
+
+.ui-urf-sub {
+  color: var(--color-text-secondary);
+}
+
+.ui-urf-figure {
+  color: var(--color-text);
+}
+
+.ui-urf-figure-zero {
+  color: var(--color-income);
+}
+
+.ui-urf-empty {
+  margin-block-start: var(--space-6);
+}
+
+.ui-urf-group {
+  gap: var(--space-2);
+}
+
+/* סימון הכל כנראה: a text button under the property's head, at the start. */
+.ui-urf-mark-all {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.ui-urf-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-1) var(--space-4) var(--space-inset-row);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-urf-legs {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-urf-leg {
+  display: flex;
+  min-width: 0;
+  min-block-size: calc(var(--row-height) - var(--space-2));
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-urf-leg + .ui-urf-leg {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-urf-leg-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-urf-leg-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The day and the gap wrap, as a hint does; they are never cut. */
+.ui-urf-leg-meta {
+  overflow-wrap: anywhere;
+}
+
+.ui-urf-leg-title {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-urf-leg-meta,
+.ui-urf-why,
+.ui-urf-fix-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-urf-leg-amount {
+  flex: none;
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-urf-leg-amount[data-income="true"] {
+  color: var(--color-income);
+}
+
+.ui-urf-why {
+  margin: 0;
+  padding-block: var(--space-1) var(--space-3);
+}
+
+.ui-urf-ask,
+.ui-urf-fix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-urf-ask-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-line2-line);
+}
+
+.ui-urf-fix {
+  padding: var(--space-3);
+  border-radius: var(--radius-card-inner);
+  background: var(--color-raised);
+}
+
+.ui-urf-fix-done {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-income);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-urf-fix-title {
+  color: var(--color-signal);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-btn-weight);
+}
+
+/* Two pills side by side; on a phone too narrow for both labels the row wraps whole, never a label. */
+.ui-urf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-urf-actions > .ui-btn {
+  flex: 1 1 0;
+  min-inline-size: max-content;
+  min-block-size: var(--touch-min);
+  block-size: auto;
+  padding-inline: var(--space-4);
+  font-size: var(--type-btn-2-size);
+}
+
+.ui-urf-actions > .ui-urf-keep {
+  flex: none;
+}
+
+.ui-urf-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-urf-item {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  border-block-end: 1px solid var(--color-line);
+}
+
+.ui-urf-item > .ui-row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  min-block-size: var(--row-height);
+}
+
+.ui-urf-seen {
+  flex: none;
+  margin-inline-start: var(--space-1);
+  border-radius: 50%;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+/* The bill's sheet: its line, the no-rent note, and the three answers. */
+.ui-urf-sheet-amount {
+  font-size: var(--type-sheet-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-urf-sheet-line {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-urf-no-rent {
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  color: var(--color-signal);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-urf-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+}
+
+.ui-urf-sheet-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* FLOW-1135 (V3-Project-Utilities): the property's חשבונות, who pays each. A 64px row per utility: its name and
+   usual amount at the start, the שוכר / חברה segment at the end, sized to its two words. */
+.ui-utl-page {
+  display: flex;
+  flex-direction: column;
+  padding-block: var(--space-2) calc(var(--tabbar-height) + var(--space-6));
+}
+
+/* The head's link to the bills not refunded, or the retry when they did not load. */
+.ui-utl-open {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-signal);
+  font: inherit;
+  font-weight: var(--type-btn-weight);
+  cursor: pointer;
+}
+
+.ui-utl-wait {
+  color: var(--color-text-secondary);
+}
+
+.ui-utl-lead {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-note-line);
+}
+
+.ui-utl-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-utl-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--row-height);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.ui-utl-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-utl-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The usual amount is in this line: it wraps, it is never cut. */
+.ui-utl-meta {
+  overflow-wrap: anywhere;
+}
+
+.ui-utl-name {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-utl-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-utl-payer {
+  flex: none;
+}
+
+.ui-utl-payer .ui-seg-btn {
+  min-inline-size: 64px;
+  padding-inline: var(--space-3);
+}
+
+.ui-utl-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 56px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-weight);
+  cursor: pointer;
+}

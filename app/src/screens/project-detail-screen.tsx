@@ -49,6 +49,8 @@ import { ProjectMenu } from "./project-menu";
 import { hideRow, isRowHidden, readHidden } from "../ui/attention-dismiss";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
+import { useUtilityPayersQuery, useUtilityRefundsQuery, useUtilityStub } from "../utility-refunds";
+import { refundCount } from "../utility-refund-view";
 
 function ProjectLoading({ projectId, search, example }: { projectId: string; search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
@@ -197,6 +199,14 @@ export function ProjectDetailScreen({
   const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? "", sample == null && linesMonth !== "");
   // The schedule and the month's lines are read only for a live page (not a sample or a preview).
   const linesLive = sample == null && preview === "off";
+  // FLOW-1135: the property's utilities (who pays each), and, once one is the tenant's, its bills not refunded.
+  // A sample page (a story) reads them only through a story's stand-in client.
+  const utilityStub = useUtilityStub();
+  const utilityProject = sample?.id ?? projectId;
+  const payers = useUtilityPayersQuery(utilityProject, sample == null ? detail.data != null : utilityStub);
+  const utilities = payers.data ?? [];
+  const refunds = useUtilityRefundsQuery(utilityProject, (sample == null || utilityStub) && utilities.some((item) => item.payer === "tenant"));
+  const refundBills = refunds.data?.bills ?? [];
   const blocked = useBlockedPreview();
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
@@ -278,6 +288,18 @@ export function ProjectDetailScreen({
       }}
     />
   );
+  const fresh = monthRow != null && monthRow.first_month == null;
+  const figures = investmentData.isOverhead ? null : investmentData.figures;
+  const kind = resolveProjectKind({
+    overhead: project.is_overhead === true,
+    type: monthRow?.type ?? null,
+    budget: project.budget_agorot != null,
+    arv: figures?.arvMinor != null,
+    value: figures?.valueMinor != null,
+  });
+  // FLOW-1135 (V3-Project-Rent-Utilities): a rental, or any project with utilities, has its חשבונות page.
+  const utilityCount = refundCount(refundBills);
+  const utilitiesTo = kind === "rental" || utilities.length > 0 ? `/projects/${project.id}/utilities${search}` : null;
   const menu = holdWrites ? <ReservedMenuSlot /> : (
     <ProjectMenu
       projectId={project.id}
@@ -291,18 +313,10 @@ export function ProjectDetailScreen({
       investmentTo={sectionHref("investment")}
       hasInvestment={investmentLoansRow(investmentData, project) != null}
       profitTo={`/projects/${project.id}/profit${withPeriodSearch(search, ALL_PERIOD)}`}
+      utilitiesTo={utilitiesTo ?? undefined}
     />
   );
   const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
-  const fresh = monthRow != null && monthRow.first_month == null;
-  const figures = investmentData.isOverhead ? null : investmentData.figures;
-  const kind = resolveProjectKind({
-    overhead: project.is_overhead === true,
-    type: monthRow?.type ?? null,
-    budget: project.budget_agorot != null,
-    arv: figures?.arvMinor != null,
-    value: figures?.valueMinor != null,
-  });
   const lifetimeRow = (lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency);
   // FLOW-1138: while the lifetime read is out, its row keeps its place with a bar for the figure.
   const lifetimeLoading = sample == null && lifetime.data == null && lifetime.isLoading;
@@ -334,6 +348,18 @@ export function ProjectDetailScreen({
       text: nextForecast == null ? undefined : formatAmountText(nextForecast.netMinor, next.currency, { plus: nextForecast.netMinor > 0n, direction: nextForecast.netMinor > 0n ? "income" : undefined }),
       href: `/projects/${project.id}/profit/next${search}`,
     }]),
+    ...(utilitiesTo == null ? [] : [{
+      id: "utilities",
+      title: "חשבונות",
+      hint: utilities.length === 0
+        ? "מי משלם כל חשבון: שוכר או חברה"
+        : [
+          "מי משלם",
+          utilities.length === 1 ? "ספק אחד" : `${String(utilities.length)} ספקים`,
+          utilityCount.notRefunded > 0 ? `${String(utilityCount.notRefunded)} לא הוחזרו` : null,
+        ].filter((part): part is string => part != null).join(" · "),
+      href: utilitiesTo,
+    }]),
   ];
   return (
     <ProjectCashOverview
@@ -358,6 +384,7 @@ export function ProjectDetailScreen({
         changes: recurring.changes,
         search,
         budget: kind === "renovation" && budgetMinor != null ? { budget_minor: Number(budgetMinor), spent_minor: Number(absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)) } : null,
+        utilities: utilityCount,
       })}
       // FLOW-961: offline, the page keeps its last read and says, in the band, which moment it is from.
       offlineSince={sample ? sampleOfflineSince ?? null : offlineSinceOf(online || preview !== "off", cash.dataUpdatedAt, detail.dataUpdatedAt)}

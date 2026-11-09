@@ -14,6 +14,7 @@ const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) =>
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
 const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
 const ProjectNextEditScreen = lazy(() => screenLoaders.projectNextEdit().then((m) => ({ default: m.ProjectNextEditScreen })));
+const ProjectUtilitiesScreen = lazy(() => screenLoaders.projectUtilities().then((m) => ({ default: m.ProjectUtilitiesScreen })));
 const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
 const PropertyStatementScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyStatementScreen })));
 const PropertyReturnLineScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyReturnLineScreen })));
@@ -55,6 +56,8 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/profit/next/add" element={<ProjectNextEditScreen add />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
+      {/* FLOW-1135: the property's utilities, who pays each (tenant or company). */}
+      <Route path="projects/:projectId/utilities" element={<ProjectUtilitiesScreen />} />
       {/* FLOW-451: what the investment page's figures are made of: the statement, a line, a metric, a part. */}
       {/* Two paths, not four: Cloudflare Pages takes at most 100 dynamic _redirects rules. */}
       <Route path="projects/:projectId/investment/:section" element={<PropertyReturnsSection />} />

@@ -44,6 +44,10 @@ export const LEDGER_KEYS = [
   "recurring-changes",
   "transfer-matches",
   "transfer-match-count",
+  // FLOW-1135: the utility bills not paid back, Home's count and a property's utilities, which a sync changes.
+  "utility-refunds",
+  "utility-refund-count",
+  "utility-payers",
   "recurring-schedule",
   "payment-recurring",
   "party-charges",

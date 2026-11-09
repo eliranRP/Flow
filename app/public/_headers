@@ -63,6 +63,8 @@
   Content-Type: text/html; charset=utf-8
 /transfers
   Content-Type: text/html; charset=utf-8
+/utility-refunds
+  Content-Type: text/html; charset=utf-8
 /missing-bills
   Content-Type: text/html; charset=utf-8
 /recurring

@@ -5,6 +5,7 @@ import { screenLoaders } from "../screen-loaders";
 const UnpaidScreen = lazy(() => screenLoaders.unpaid().then((m) => ({ default: m.UnpaidScreen })));
 const InvoiceScreen = lazy(() => screenLoaders.invoice().then((m) => ({ default: m.InvoiceScreen })));
 const TransfersScreen = lazy(() => screenLoaders.transfers().then((m) => ({ default: m.TransfersScreen })));
+const UtilityRefundsScreen = lazy(() => screenLoaders.utilityRefunds().then((m) => ({ default: m.UtilityRefundsScreen })));
 
 /** Open invoices: the bills that are not paid yet. */
 export function UnpaidRoute() {
@@ -19,4 +20,9 @@ export function UnpaidInvoiceRoute() {
 /** FLOW-941: the transfers between two Mercury connections Flow suggests, opened from Home's דורש טיפול. */
 export function TransfersRoute() {
   return <Route path="transfers" element={<TransfersScreen />} />;
+}
+
+/** FLOW-1135: the utility bills the tenant did not pay back, opened from Home's and a property's דורש טיפול. */
+export function UtilityRefundsRoute() {
+  return <Route path="utility-refunds" element={<UtilityRefundsScreen />} />;
 }

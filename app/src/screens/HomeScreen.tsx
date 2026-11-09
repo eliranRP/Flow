@@ -40,6 +40,7 @@ import { SetupHomeSlot } from "../setup/home";
 import { chargeChangeViews, lateCounts, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
+import { useUtilityRefundCountQuery } from "../utility-refund-count";
 import { reviewWaiting, useJevBookingCountQuery } from "../jev-booking-count";
 import { cardWeek, weeklyCardHidden } from "../weekly-card";
 import { useReturningRecurringOwner } from "../recurring-tip";
@@ -160,6 +161,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const changes = useRecurringChangesQuery();
   // FLOW-941: suggested transfers between two Mercury connections, a count. A failed read hides the row.
   const transfers = useTransferMatchCountQuery();
+  // FLOW-1135: the utility bills the tenant did not pay back, a count and a total. A failed read hides the row.
+  const utilities = useUtilityRefundCountQuery();
   // FLOW-955 (owner): Jev's bookings waiting for review count in לאישור too.
   const jevBookings = useJevBookingCountQuery();
   // FLOW-1015: the קבועים tip is for an owner who had the tab: one with recurring rows.
@@ -326,6 +329,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       attention={isCurrent ? attentionRows({
         pending: reviewWaiting(dashboard.data?.review_count ?? 0, jevBookings.data),
         transfers: transfers.data ?? 0,
+        utilities: utilities.data,
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross,
         currency: base,
