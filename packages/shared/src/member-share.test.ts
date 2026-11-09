@@ -121,6 +121,35 @@ describe("computeMemberShare", () => {
   });
 });
 
+describe("fetched Treasury yields (FLOW-1119)", () => {
+  const FETCHED = [
+    { on_date: "2026-10-30", y5_ppm: 40_900, y10_ppm: 43_300 },
+    { on_date: "2026-11-03", y5_ppm: 41_100, y10_ppm: 43_700 },
+  ];
+
+  it("fills a date the owner typed nothing for, marked as the Treasury's", () => {
+    const fetchedOnly = computeMemberShare({ ...CONFIG, yields: [] }, HOMES, FETCHED);
+    expect(fetchedOnly.rate).toMatchObject({ yieldDate: "2026-11-03", yieldPpm: 43_700, yieldSource: "treasury", expectedPpm: 58_700 });
+  });
+
+  it("loses to a yield the owner typed for the same date and tenor", () => {
+    const typed = computeMemberShare({ ...CONFIG, yields: [{ on_date: "2026-11-03", y10_ppm: 43_800, source: "manual" }] }, HOMES, FETCHED);
+    expect(typed.rate).toMatchObject({ yieldPpm: 43_800, yieldSource: "manual" });
+    const otherTenor = computeMemberShare({ ...CONFIG, rate_rule: { tenor_years: 5 }, yields: [{ on_date: "2026-11-03", y10_ppm: 43_800 }] }, HOMES, FETCHED);
+    expect(otherTenor.rate).toMatchObject({ yieldPpm: 41_100, yieldSource: "treasury" });
+  });
+
+  it("takes the closest earlier fetched day over an older typed one", () => {
+    const older = computeMemberShare({ ...CONFIG, quote_date: "2026-11-05", yields: [{ on_date: "2026-10-30", y10_ppm: 43_000 }] }, HOMES, FETCHED);
+    expect(older.rate).toMatchObject({ yieldDate: "2026-11-03", yieldSource: "treasury" });
+  });
+
+  it("dates the report by the newest fetched day when there are no quotes", () => {
+    const bare = computeMemberShare({ members: CONFIG.members }, HOMES, FETCHED);
+    expect(bare.rate).toMatchObject({ quoteDate: "2026-11-03", yieldDate: "2026-11-03", yieldPpm: 43_700 });
+  });
+});
+
 describe("helpers", () => {
   it("applies basis points with half-even rounding on either sign", () => {
     expect(applyBp(25n, 5000)).toBe(12n);

@@ -5,7 +5,8 @@
  * less its open loans. Refinance: a new loan at the loan-to-value, less the open loans and the closing
  * costs; what is left is cash out, and a property where it is not above zero is not refinanced. The
  * expected rate is the US Treasury yield (5 or 10 years) on the quotes' date, or the trading day
- * before, plus the spread; a lender quote at or under it is a good quote. A member's share is their
+ * before (typed by the owner, else fetched from the Treasury: FLOW-1119), plus the spread; a lender
+ * quote at or under it is a good quote. A member's share is their
  * ownership of each total. One calculation for the app and for MCP get_member_share.
  */
 import { divHalfEven } from "./money.ts";
@@ -157,18 +158,44 @@ function latest(dates: readonly string[]): string | null {
 }
 
 /** The yield on the quote date, or on the closest day before it that has one for the tenor. */
-function yieldFor(yields: readonly MemberReportYield[], date: string | null, tenor: 5 | 10): MemberReportYield | null {
+/** A fetched day of the Treasury's yields (FLOW-1119), as get_member_report returns them. */
+export type FetchedTreasuryYield = { readonly on_date: string; readonly y5_ppm: number | null; readonly y10_ppm: number | null };
+
+type TenorYield = { onDate: string; ppm: number; source: "treasury" | "manual" };
+
+/**
+ * The yield on the quote date, or on the closest day before it that has one for the tenor. A yield the
+ * owner typed (the setting's yields) wins over the Treasury's fetched one for its date (FLOW-1119).
+ */
+function yieldFor(
+  typed: readonly MemberReportYield[],
+  fetched: readonly FetchedTreasuryYield[],
+  date: string | null,
+  tenor: 5 | 10,
+): TenorYield | null {
   if (date == null) return null;
-  let found: MemberReportYield | null = null;
-  for (const y of yields) {
-    const value = tenor === 5 ? y.y5_ppm : y.y10_ppm;
-    if (value == null || y.on_date > date) continue;
-    if (found == null || y.on_date > found.on_date) found = y;
+  const byDate = new Map<string, TenorYield>();
+  for (const y of fetched) {
+    const ppm = tenor === 5 ? y.y5_ppm : y.y10_ppm;
+    if (ppm != null) byDate.set(y.on_date, { onDate: y.on_date, ppm, source: "treasury" });
+  }
+  for (const y of typed) {
+    const ppm = tenor === 5 ? y.y5_ppm : y.y10_ppm;
+    if (ppm != null) byDate.set(y.on_date, { onDate: y.on_date, ppm, source: y.source ?? "manual" });
+  }
+  let found: TenorYield | null = null;
+  for (const y of byDate.values()) {
+    if (y.onDate > date) continue;
+    if (found == null || y.onDate > found.onDate) found = y;
   }
   return found;
 }
 
-export function computeMemberShare(config: MemberReportConfig | null, properties: readonly MemberReportProperty[]): MemberShareResult {
+export function computeMemberShare(
+  config: MemberReportConfig | null,
+  properties: readonly MemberReportProperty[],
+  fetchedYields: readonly FetchedTreasuryYield[] = [],
+): MemberShareResult {
   const cfg = config ?? {};
   const ltvBp = cfg.assumptions?.ltv_bp ?? MEMBER_REPORT_DEFAULTS.ltvBp;
   const closingBp = cfg.assumptions?.closing_bp ?? MEMBER_REPORT_DEFAULTS.closingBp;
@@ -178,9 +205,10 @@ export function computeMemberShare(config: MemberReportConfig | null, properties
   const quotes = cfg.quotes ?? [];
   const yields = cfg.yields ?? [];
 
-  const quoteDate = cfg.quote_date ?? latest(quotes.map((q) => q.quoted_on)) ?? latest(yields.map((y) => y.on_date));
-  const y = yieldFor(yields, quoteDate, tenorYears);
-  const yieldPpm = y == null ? null : (tenorYears === 5 ? y.y5_ppm : y.y10_ppm) ?? null;
+  const quoteDate = cfg.quote_date ?? latest(quotes.map((q) => q.quoted_on))
+    ?? latest([...yields, ...fetchedYields].map((y) => y.on_date));
+  const y = yieldFor(yields, fetchedYields, quoteDate, tenorYears);
+  const yieldPpm = y?.ppm ?? null;
   const expectedPpm = yieldPpm == null ? null : yieldPpm + spreadBp * 100;
   const quoteShares: QuoteShare[] = quotes.map((q) => {
     const diffPpm = expectedPpm == null ? null : q.rate_ppm - expectedPpm;
@@ -256,7 +284,7 @@ export function computeMemberShare(config: MemberReportConfig | null, properties
     assumptions: { ltvBp, closingBp, termYears },
     rate: {
       quoteDate,
-      yieldDate: y?.on_date ?? null,
+      yieldDate: y?.onDate ?? null,
       yieldSource: y?.source ?? null,
       tenorYears,
       spreadBp,

@@ -1,4 +1,4 @@
-import type { MemberReportConfig, MemberReportProperty } from "@flow/shared";
+import type { FetchedTreasuryYield, MemberReportConfig, MemberReportProperty } from "@flow/shared";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 import { getSupabase } from "./lib/supabase";
@@ -15,6 +15,8 @@ import { waitForAccessToken } from "./wait-for-session";
 export type MemberReportRead = {
   config: MemberReportConfig | null;
   properties: MemberReportProperty[];
+  /** FLOW-1119: the Treasury's fetched yields around the quote dates; a typed yield wins over them. */
+  treasuryYields: FetchedTreasuryYield[];
   canEdit: boolean;
 };
 
@@ -37,6 +39,11 @@ const readSchema = z.object({
     loan_balance_minor: MINOR,
     loans_other_currency: z.boolean(),
   })),
+  treasury_yields: z.array(z.object({
+    on_date: z.string(),
+    y5_ppm: z.number().int().nullable(),
+    y10_ppm: z.number().int().nullable(),
+  })).default([]),
   can_edit: z.boolean(),
 });
 
@@ -46,6 +53,7 @@ export function parseMemberReport(data: unknown): MemberReportRead {
   return {
     config: parsed.config,
     properties: parsed.properties,
+    treasuryYields: parsed.treasury_yields,
     canEdit: parsed.can_edit,
   };
 }

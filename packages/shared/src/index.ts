@@ -164,6 +164,7 @@ export type { PartyCharges } from "./party-charges.ts";
 export { MEMBER_REPORT_DEFAULTS, applyBp, computeMemberShare } from "./member-share.ts";
 export type {
   LoanType,
+  FetchedTreasuryYield,
   MemberReportConfig,
   MemberReportProperty,
   MemberReportQuote,

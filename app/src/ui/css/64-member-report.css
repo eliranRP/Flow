@@ -92,6 +92,13 @@
   font-size: var(--type-meta-size);
 }
 
+/* FLOW-1119: where the expected rate's yield came from: its date and the Treasury or typed. */
+.ui-msr-yield-source {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
 .ui-msr-quote-end {
   display: inline-flex;
   align-items: center;

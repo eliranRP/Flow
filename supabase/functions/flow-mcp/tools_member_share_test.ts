@@ -56,6 +56,15 @@ Deno.test("get_member_share computes the app's figures, and one member by name",
   if (!nobody.structuredContent.ok) assertEquals(nobody.structuredContent.error.code, "not_found");
 });
 
+Deno.test("get_member_share uses the Treasury's fetched yields where none was typed", async () => {
+  const fetched = { ...REPORT, config: { ...REPORT.config, yields: [] }, treasury_yields: [{ on_date: "2026-10-30", y5_ppm: 40_900, y10_ppm: 43_500 }] };
+  const { rpc } = rpcOf(() => ({ status: 200, json: fetched }));
+  const read = await callTool("get_member_share", {}, ["read"], rpc);
+  if (!read.structuredContent.ok) throw new Error("refused");
+  const rate = (read.structuredContent.data as { rate: { yieldDate: string; yieldSource: string; expectedPpm: number } }).rate;
+  assertEquals([rate.yieldDate, rate.yieldSource, rate.expectedPpm], ["2026-10-30", "treasury", 58_500]);
+});
+
 Deno.test("get_member_share before any setting gives the company's figures with no members", async () => {
   const { rpc } = rpcOf(() => ({ status: 200, json: { ...REPORT, config: null } }));
   const read = await callTool("get_member_share", {}, ["read"], rpc);
