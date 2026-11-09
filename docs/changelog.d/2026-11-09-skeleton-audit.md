@@ -1,0 +1,1 @@
+Backlog: FLOW-1137 to FLOW-1139 put a skeleton in the content's own shape wherever the app still showed a blank, a generic list, a placeholder value or "טוען…" while loading (an audit of every loading state, 2026-11-09). FLOW-1140 plans what a cold open and a full-screen route's code loading should show.

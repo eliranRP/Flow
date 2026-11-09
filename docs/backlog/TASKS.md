@@ -592,6 +592,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1134"></a>[FLOW-1134](tasks/FLOW-1134.md) | Utility refunds: the data, the match and MCP | MCP |
 | <a id="flow-1135"></a>[FLOW-1135](tasks/FLOW-1135.md) | Utility refunds: Home's row, the screen and the property's bills section | SMALL UI |
 | <a id="flow-1136"></a>[FLOW-1136](tasks/FLOW-1136.md) | Member report תחזית: a skeleton while the forecast loads, not "טוען…" | SMALL UI |
+| <a id="flow-1137"></a>[FLOW-1137](tasks/FLOW-1137.md) | Skeletons in the content's shape: review, forms, sheets and settings | SMALL UI |
+| <a id="flow-1138"></a>[FLOW-1138](tasks/FLOW-1138.md) | Skeletons in the content's shape: projects and property returns | SMALL UI |
+| <a id="flow-1139"></a>[FLOW-1139](tasks/FLOW-1139.md) | Skeletons in the content's shape: forecast, invoices, loans, reports and Home's parts | SMALL UI |
+| <a id="flow-1140"></a>[FLOW-1140](tasks/FLOW-1140.md) | A cold open and a screen's code: a neutral skeleton, not Home's or a blank page (plan) | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
