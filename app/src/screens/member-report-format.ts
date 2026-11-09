@@ -106,7 +106,7 @@ export function saleFormula(r: MemberShareResult, member: MemberShare | null): F
     opens(money("member_loans", "−", "החזר הלוואות שותפים", -t.memberLoansMinor, "חוזרות לשותף שנתן אותן"), "member_loans"),
   ];
   const own = member == null || t.memberLoansMinor === 0n ? [] : [
-    opens(money("own", "+", `הלוואות של ${member.name}`, member.loansMinor, member.loansMinor === 0n ? "אין" : "חוזרות אליו", true), "member_loans"),
+    opens(money("own", "+", `הלוואות של ${member.name}`, member.loansMinor, member.loansMinor === 0n ? "אין" : "מוחזרות במכירה", true), "member_loans"),
     opens(money("total", "=", `סה״כ ל־${member.name}`, member.saleTotalMinor, "חלק בהון + הלוואות", true), "total"),
   ];
   return {

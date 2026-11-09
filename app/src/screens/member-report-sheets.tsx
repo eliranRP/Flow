@@ -152,7 +152,7 @@ export function MembersSheet({ open, onOpenChange, onSave, members, loans = [], 
       {loans.length === 0 ? null : (
         <section className="ui-msr-member-loans" aria-labelledby="msr-member-loans">
           <h3 id="msr-member-loans" className="t-section">הלוואות שותפים לחברה</h3>
-          <p className="ui-msr-help">הלוואה ששותף נתן לחברה מוחזרת לו במכירה, לפני חלוקת ההון, ומתווספת לסכום שלו.</p>
+          <p className="ui-msr-help">הלוואה ששותף נתן לחברה מוחזרת במכירה, לפני חלוקת ההון, ונספרת בסכום של אותו שותף.</p>
           {loans.map((loan) => {
             const owner = draft.findIndex((m) => (m.loanIds ?? []).includes(loan.loan_id));
             const where = properties.find((p) => p.project_id === loan.project_id)?.name;

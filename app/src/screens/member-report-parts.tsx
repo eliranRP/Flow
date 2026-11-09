@@ -69,7 +69,7 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
     case "member_loans":
       return {
         title: "הלוואות שותפים",
-        help: "הלוואות ששותף נתן לחברה. במכירה הן מוחזרות לו לפני חלוקת ההון, ומתווספות לסכום שלו.",
+        help: "הלוואות ששותף נתן לחברה. במכירה הן מוחזרות לפני חלוקת ההון, ונספרות בסכום של אותו שותף.",
         total: t.memberLoansMinor,
         totalLabel: "סה״כ",
         lines: r.memberLoans.map((l) => ({ key: l.loanId, title: l.name, hint: `${l.member} · ${propertyName(l.projectId)}`, minor: l.balanceMinor })),
@@ -110,7 +110,7 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
     case "total":
       return {
         title: "סה״כ לכל שותף",
-        help: "החלק של כל שותף בהון הנקי, ועוד ההלוואות שנתן לחברה, שמוחזרות לו.",
+        help: "החלק של כל שותף בהון הנקי, ועוד ההלוואות שנתן לחברה, שמוחזרות במכירה.",
         total: r.members.reduce((sum, m) => sum + m.saleTotalMinor, 0n),
         totalLabel: "לכל השותפים",
         lines: r.members.map((m) => ({ key: m.name, title: m.name, hint: `${money(m.saleMinor)} + ${money(m.loansMinor)}`, minor: m.saleTotalMinor })),

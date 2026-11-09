@@ -84,7 +84,7 @@ function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, memb
     return (
       <>
         {"חלק בהון "}<Amount agorot={member.saleMinor} currency={currency} />
-        {" · הלוואות שלו "}<Amount agorot={member.loansMinor} currency={currency} />
+        {" · הלוואות "}<Amount agorot={member.loansMinor} currency={currency} />
       </>
     );
   }
