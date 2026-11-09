@@ -172,6 +172,48 @@ describe("the cards", () => {
   });
 });
 
+describe("opening a transaction (FLOW-1142)", () => {
+  const href = (name: RegExp) => screen.getByRole("link", { name }).getAttribute("href");
+
+  it("each leg of a card opens its own transaction: the bill and the payment", async () => {
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    const card = screen.getAllByRole("region", { name: /החזר אפשרי: City Water/ })[0] as HTMLElement;
+    const legs = within(card).getAllByRole("link");
+    expect(legs.map((leg) => leg.getAttribute("href"))).toEqual(["/transactions/b-water-gefen", "/transactions/pay-zelle-a"]);
+    expect(href(/^Tenant B · /)).toBe("/transactions/pay-zelle-b");
+  });
+
+  it("a payment for several bills lists each bill as its own leg, each opening its transaction", async () => {
+    const [first] = utilityRefundsSample();
+    const pay = first?.payment;
+    db.bills = [
+      { ...first, rule: "bills", wrong_category: false },
+      { ...first, bill_transaction_id: "b-gas-pair", supplier_name: "Gas Co", category_name: "גז", amount_minor: 4_000n, rule: "bills", wrong_category: false, payment: pay },
+    ];
+    renderScreen();
+    const card = await screen.findByRole("region", { name: "החזר אפשרי: City Water + Gas Co" });
+    expect(within(card).getAllByRole("link").map((leg) => leg.getAttribute("href"))).toEqual([
+      "/transactions/b-water-gefen", "/transactions/b-gas-pair", "/transactions/pay-zelle-a",
+    ]);
+    expect(within(card).getByText("גז · 14/09/26")).toBeTruthy();
+  });
+
+  it("the bill's sheet opens its transaction", async () => {
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    fireEvent.click(screen.getByRole("button", { name: /^Gas Co/ }));
+    expect((await screen.findByRole("link", { name: "פתיחת התנועה" })).getAttribute("href")).toBe("/transactions/b-gas-gefen");
+  });
+
+  it("a viewer's bill row opens its transaction", async () => {
+    db.hold = true;
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    expect(href(/^Gas Co/)).toBe("/transactions/b-gas-gefen");
+  });
+});
+
 describe("the answers and their ביטול", () => {
   it("כן on a refund in its own category matches it; ביטול takes the answer back", async () => {
     db.bills = utilityRefundsSample().map((bill) => (bill.bill_transaction_id === "b-power-pine" ? { ...bill, wrong_category: false } : bill));

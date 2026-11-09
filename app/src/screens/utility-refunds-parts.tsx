@@ -1,22 +1,30 @@
 import { formatAmountText } from "@flow/shared";
+import { Link } from "react-router-dom";
+import { usePreviewSearch } from "../preview";
 import { Button } from "../ui/button";
 import { FoldItem } from "../ui/fold";
 import { IconButton } from "../ui/icon-button";
-import { CheckIcon } from "../ui/icons";
+import { CheckIcon, ChevronIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { StatusMark } from "../ui/status-mark";
 import type { UtilityBill } from "../utility-refunds";
-import { cardBillMeta, cardBillTitle, cardBillTotal, cardWhy, fixCopy, openMeta, paymentMeta, paymentTitle, type RefundCard } from "../utility-refund-view";
+import { billMeta, cardBillTitle, cardWhy, fixCopy, openMeta, paymentMeta, paymentTitle, type RefundCard } from "../utility-refund-view";
 
-/** One leg of a card: a name and its line at the start, the amount at the end. */
-function Leg({ title, meta, amount }: { title: string; meta: string; amount: string }) {
+/**
+ * One leg of a card: a name and its line at the start, the amount at the end. FLOW-1142: the leg opens its
+ * transaction's page, so the owner can check the bill or the payment before answering.
+ */
+function Leg({ title, meta, amount, to }: { title: string; meta: string; amount: string; to: string }) {
   return (
     <li className="ui-urf-leg">
-      <span className="ui-urf-leg-text">
-        <span className="ui-urf-leg-title" data-clip-ok="">{title}</span>
-        <span className="ui-urf-leg-meta">{meta}</span>
-      </span>
-      <bdi dir="ltr" className="ui-urf-leg-amount" data-income={amount.startsWith("+") ? "true" : undefined}>{amount}</bdi>
+      <Link className="ui-urf-leg-link" to={to} aria-label={`${title} · ${amount} · פתיחת התנועה`}>
+        <span className="ui-urf-leg-text">
+          <span className="ui-urf-leg-title" data-clip-ok="">{title}</span>
+          <span className="ui-urf-leg-meta">{meta}</span>
+        </span>
+        <bdi dir="ltr" className="ui-urf-leg-amount" data-income={amount.startsWith("+") ? "true" : undefined}>{amount}</bdi>
+        <span className="ui-urf-leg-chevron" aria-hidden="true"><ChevronIcon size={16} /></span>
+      </Link>
     </li>
   );
 }
@@ -36,15 +44,28 @@ export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile,
   onRefile: (category: string) => void;
   onKeep: () => void;
 }) {
-  const bills = cardBillTotal(card);
+  const search = usePreviewSearch();
   const currency = card.payment.currency;
   const fix = fixCopy(card);
   return (
     <FoldItem as="div" leaving={leaving}>
       <section className="ui-urf-card m-page-enter" aria-label={`החזר אפשרי: ${cardBillTitle(card)}`}>
         <ul className="ui-urf-legs">
-          <Leg title={cardBillTitle(card)} meta={cardBillMeta(card)} amount={formatAmountText(bills, currency, { detail: true, direction: "expense" })} />
-          <Leg title={paymentTitle(card.payment)} meta={paymentMeta(card)} amount={formatAmountText(card.payment.amount_minor, currency, { detail: true, direction: "income", plus: true })} />
+          {card.bills.map((bill) => (
+            <Leg
+              key={bill.bill_transaction_id}
+              title={bill.supplier_name ?? "ספק"}
+              meta={billMeta(bill)}
+              amount={formatAmountText(bill.amount_minor, currency, { detail: true, direction: "expense" })}
+              to={`/transactions/${bill.bill_transaction_id}${search}`}
+            />
+          ))}
+          <Leg
+            title={paymentTitle(card.payment)}
+            meta={paymentMeta(card)}
+            amount={formatAmountText(card.payment.amount_minor, currency, { detail: true, direction: "income", plus: true })}
+            to={`/transactions/${card.payment.transaction_id}${search}`}
+          />
         </ul>
         <p className="ui-urf-why">{cardWhy(card)}</p>
         {card.fix ? (
@@ -75,11 +96,12 @@ export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile,
 
 /**
  * A bill not refunded: the dashed ring in the signal colour, the supplier, "לא הוחזר · N ימים · dd/mm", the amount.
- * The row opens the bill's sheet; the ✓ beside it is ראיתי. A viewer's row opens nothing and has no ✓. FLOW-1141:
+ * The row opens the bill's sheet; the ✓ beside it is ראיתי. A viewer's row opens the bill's transaction and has no ✓. FLOW-1141:
  * closed, it slides toward its ✓ and folds away.
  */
 export function OpenBillRow({ bill, readOnly, leaving, onOpen, onSeen }: { bill: UtilityBill; readOnly: boolean; leaving: boolean; onOpen: () => void; onSeen: () => void }) {
   const name = bill.supplier_name ?? "ספק";
+  const search = usePreviewSearch();
   return (
     <FoldItem leaving={leaving} className="ui-urf-item m-page-enter">
       <ListRow
@@ -92,6 +114,7 @@ export function OpenBillRow({ bill, readOnly, leaving, onOpen, onSeen }: { bill:
         agorot={-bill.amount_minor}
         currency={bill.currency}
         signed
+        href={readOnly ? `/transactions/${bill.bill_transaction_id}${search}` : undefined}
         onClick={readOnly ? undefined : onOpen}
       />
       {readOnly ? null : (

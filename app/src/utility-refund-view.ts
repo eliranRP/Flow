@@ -95,14 +95,9 @@ export function cardBillTitle(card: RefundCard): string {
   return card.bills.map((bill) => bill.supplier_name ?? "ספק").join(" + ");
 }
 
-export function cardBillTotal(card: RefundCard): bigint {
-  return card.bills.reduce((sum, bill) => sum + bill.amount_minor, 0n);
-}
-
-export function cardBillMeta(card: RefundCard): string {
-  const [first] = card.bills;
-  if (first == null) return "";
-  return [first.category_name, refundDate(first.doc_date)].filter((part): part is string => part != null).join(" · ");
+/** A bill's leg on its card: its category and its date. */
+export function billMeta(bill: UtilityBill): string {
+  return [bill.category_name, refundDate(bill.doc_date)].filter((part): part is string => part != null).join(" · ");
 }
 
 /** The payment's payer (or its description). */
@@ -120,6 +115,10 @@ export function paymentMeta(card: RefundCard): string {
     refundDate(card.payment.doc_date),
     gap === 0 ? "באותו יום" : gap > 0 ? `${days(gap)} אחרי` : `${days(-gap)} לפני`,
   ].filter((part): part is string => part != null).join(" · ");
+}
+
+function cardBillTotal(card: RefundCard): bigint {
+  return card.bills.reduce((sum, bill) => sum + bill.amount_minor, 0n);
 }
 
 /** Why Flow suggests it: the same amount, the month's bills together, or the usual rent plus the bill. */
