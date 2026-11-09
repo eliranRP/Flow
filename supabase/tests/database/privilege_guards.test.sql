@@ -61,6 +61,7 @@ insert into pg_allowed (sig) values
     ('get_pnl_statement(date,date,uuid,boolean,text)'),
     ('get_dashboard(date,date,text)'),
     ('get_member_report()'),
+    ('get_member_projection_inputs()'),
     ('get_line_journal(uuid)'),
     ('get_line_journal_copies(uuid)'),
     ('get_line_journal_suggestion(uuid)'),
