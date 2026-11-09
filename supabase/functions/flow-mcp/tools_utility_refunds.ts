@@ -10,7 +10,7 @@ const ID = z.string().regex(UUID);
 const AS_OF = z.string().regex(DATE);
 const KEY = z.string().min(1).max(128);
 
-export const UTILITY_READS = ["list_utility_refunds", "count_utility_refunds", "list_utility_payers"] as const;
+export const UTILITY_READS = ["list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months"] as const;
 export const UTILITY_WRITES = [
   "set_utility_payer",
   "answer_utility_refund",
@@ -24,6 +24,7 @@ export const UTILITY_ALLOWED: Record<string, Set<string>> = {
   list_utility_refunds: new Set(["project_id", "as_of", "all"]),
   count_utility_refunds: new Set(["as_of"]),
   list_utility_payers: new Set(["project_id"]),
+  list_utility_months: new Set(["project_id", "as_of"]),
   set_utility_payer: new Set(["idempotency_key", "project_id", "supplier_id", "currency", "payer", "added"]),
   answer_utility_refund: new Set(["idempotency_key", "bill_transaction_id", "state", "payment_transaction_id", "as_of", "keep_category"]),
   mark_utility_refunds_seen: new Set(["idempotency_key", "project_id", "as_of"]),
@@ -33,6 +34,7 @@ export const UTILITY_ALLOWED: Record<string, Set<string>> = {
 const listSchema = z.object({ project_id: ID.optional(), as_of: AS_OF.optional(), all: z.boolean().optional() }).strict();
 const countSchema = z.object({ as_of: AS_OF.optional() }).strict();
 const payersSchema = z.object({ project_id: ID }).strict();
+const monthsSchema = z.object({ project_id: ID, as_of: AS_OF.optional() }).strict();
 const payerSchema = z.object({
   idempotency_key: KEY,
   project_id: ID,
@@ -70,16 +72,20 @@ function spec(name: string, description: string, properties: Record<string, unkn
 const AS_OF_TEXT = "as_of (YYYY-MM-DD, default Israel's today) is the day the match is worked out for";
 
 export const UTILITY_READ_SPECS = [
-  spec("list_utility_refunds", `Utility bills the tenant has not paid back (החזרי חשבונות, decision 0265). A utility is one supplier's bills for one property and currency: an expense filed to a property in a category named חשבונות or under it, an expense paid with a card whose name names exactly one property and says utilities (decision 0262's card-name rule), or a supplier the owner added (set_utility_payer added). Each is tenant-paid unless the owner set it company-paid, which is never checked. For every bill of a tenant-paid utility, from the first one in the books, Flow looks for an income line (not a supplier's credit note) dated from one month before the bill to as_of, filed to the property or to no property, not the refund of another bill, whose amount is within one unit of the currency (100 minor units) of the bill (rule bill), 2 or 3 of the property's bills of that month together, or the whole month (bills), or the property's usual rent (the median of its last 3 rent lines, category שכירות) plus one or more of them (rent_and_bills). Rule bill or bills with the payment filed to the category every bill of the group shares counts as refunded by itself (source auto); any other match is a suggestion (state suggested) for the user to answer with answer_utility_refund. A bill with no match 30 days after its date is not_refunded (younger: waiting). ${AS_OF_TEXT}. project_id limits it to a property (another company's is refused). By default the list is the app's: suggestions, bills not refunded, and refunds the owner matched that sit in another category (wrong_category: refile_utility_refund fixes it); all true lists every bill with its state (refunded, suggested, not_refunded, waiting, seen). Returns as_of and bills[]: bill_transaction_id, project_id, project_name, supplier_id, supplier_name, currency, category_id, category_name, amount_minor, doc_date, days (since the bill), state, source (auto, owner or null), rule (bill, bills, rent_and_bills or null), group_bill_transaction_ids (the bills one payment refunds), no_rent (the property had no rent line that month), payment (null, or transaction_id, doc_date, amount_minor, currency, description, party, project_id, category_id, category_name, split, project_name, and parts[]: the line's split parts in order, each category_id, category_name, project_id, project_name and amount_minor, [] when it is not split), wrong_category (false once the owner kept it: keep_category), keep_category and refiled. Any member reads it.`, {
+  spec("list_utility_refunds", `Utility bills the tenant has not paid back (החזרי חשבונות, decision 0265). A utility is one supplier's bills for one property and currency: an expense filed to a property in a category named חשבונות or under it, an expense paid with a card whose name names exactly one property and says utilities (decision 0262's card-name rule), or a supplier the owner added (set_utility_payer added). Each is tenant-paid unless the owner set it company-paid, which is never checked. For every bill of a tenant-paid utility, from the first one in the books, Flow counts it refunded by itself (source auto) only by an exact match (the owner's rule, FLOW-1143): an income line (not a supplier's credit note) dated from one month before the bill to as_of, filed to the bill's property and to the bill's category, not the refund of another bill, of exactly the bill's amount (rule bill), or of exactly the sum of 2 or 3 of the property's bills of that month in that category, or the whole month's (bills). Flow suggests nothing: any other bill is not_refunded 30 days after its date (younger: waiting), and the user may pick its refund with answer_utility_refund matched. ${AS_OF_TEXT}. project_id limits it to a property (another company's is refused). By default the list is the app's: bills not refunded, and refunds the owner matched that sit in another category (wrong_category: refile_utility_refund fixes it); all true lists every bill with its state (refunded, not_refunded, waiting, seen). Returns as_of and bills[]: bill_transaction_id, project_id, project_name, supplier_id, supplier_name, currency, category_id, category_name, amount_minor, doc_date, days (since the bill), state, source (auto, owner or null), rule (bill, bills or null), group_bill_transaction_ids (the bills one payment refunds), no_rent (the property had no rent line that month), payment (null, or transaction_id, doc_date, amount_minor, currency, description, party, project_id, category_id, category_name, split, project_name, and parts[]: the line's split parts in order, each category_id, category_name, project_id, project_name and amount_minor, [] when it is not split), wrong_category (false once the owner kept it: keep_category), keep_category and refiled. Any member reads it.`, {
     project_id: { type: "string" },
     as_of: { type: "string" },
     all: { type: "boolean" },
   }, false),
-  spec("count_utility_refunds", `For Home's row: as_of, not_refunded_count, not_refunded_by_currency[] (currency, amount_minor) and suggested_count, as list_utility_refunds counts them. ${AS_OF_TEXT}. Any member reads it.`, {
+  spec("count_utility_refunds", `For Home's row: as_of, not_refunded_count, not_refunded_by_currency[] (currency, amount_minor) and suggested_count (always 0: Flow suggests nothing), as list_utility_refunds counts them. ${AS_OF_TEXT}. Any member reads it.`, {
     as_of: { type: "string" },
   }, false),
   spec("list_utility_payers", "A property's utilities (project_id; another company's is refused: project not found): found from its חשבונות lines or added by the owner. utilities[]: supplier_id, supplier_name, currency, payer (tenant: the tenant pays it back, the default; company: the company pays and its bills are never checked), added, found, usual_minor (the median of its last 3 bills, null with none), bill_count, last_bill_date, and category_id and category_name (the latest bill's). Any member reads it.", {
     project_id: { type: "string" },
+  }, false),
+  spec("list_utility_months", `A property's utility bills by month (FLOW-1144; project_id, another company's is refused: project not found): the months, newest first, from its first tenant-paid utility bill or first rent line to the as-of month. ${AS_OF_TEXT}. months[]: month (YYYY-MM-01), rent_in (the sum of its rent lines: income under the rent category, as list_utility_refunds reads it), bills_paid (the sum of the tenant-paid utility bills dated in it), not_refunded (the part of those bills not refunded and not closed by the owner, waiting ones included), rent_lines[] (transaction_id, doc_date, amount_minor, currency, party, category_name) and bills[] (bill_transaction_id, doc_date, amount_minor, currency, supplier_name, category_name, state as list_utility_refunds gives it). Company-paid utilities are left out. Any member reads it.`, {
+    project_id: { type: "string" },
+    as_of: { type: "string" },
   }, false),
 ];
 
@@ -92,7 +98,7 @@ export const UTILITY_WRITE_SPECS = [
     payer: { type: ["string", "null"], enum: ["tenant", "company", null] },
     added: { type: "boolean" },
   }, true),
-  spec("answer_utility_refund", "Answer a utility bill from list_utility_refunds (owner or editor). state matched with payment_transaction_id: that money-in line is its refund (זה ההחזר? כן); the books stay as they are, and a payment in another category shows wrong_category for refile_utility_refund; keep_category true (only with matched) keeps that payment where it is filed (להשאיר), so the note goes, and false takes the keep back. rejected with payment_transaction_id: it is not (לא), and the pair is never suggested again. seen (no payment): closed, nothing to do (ראיתי, אין צורך בטיפול). null takes the bill's answer back (with payment_transaction_id: that pair's answer); taking back a refund Flow counted by itself (source auto) records the pair as rejected, so it is neither counted nor suggested again (state rejected in the result). Never answer without the user's word. Refused: transaction not found (another company's line), not a utility bill, not a refund payment (not money in, or another currency), undo the refile first (a refiled refund keeps its answer until undo of the refile), validation. as_of is the day an auto refund is looked up for. Returns bill_transaction_id, state, payment_transaction_id, prior_state, prior_payment_transaction_id, keep_category, undo_kind utility_refund and id (the write): undo puts the bill's answers back as they were, a conflict once they changed again.", {
+  spec("answer_utility_refund", "Answer a utility bill from list_utility_refunds (owner or editor). state matched with payment_transaction_id: that money-in line is its refund (זה ההחזר? כן); the books stay as they are, and a payment in another category shows wrong_category for refile_utility_refund; keep_category true (only with matched) keeps that payment where it is filed (להשאיר), so the note goes, and false takes the keep back. rejected with payment_transaction_id: it is not (לא), and the pair is never counted again. seen (no payment): closed, nothing to do (ראיתי, אין צורך בטיפול). null takes the bill's answer back (with payment_transaction_id: that pair's answer); taking back a refund Flow counted by itself (source auto) records the pair as rejected, so it is not counted again (state rejected in the result). Never answer without the user's word. Refused: transaction not found (another company's line), not a utility bill, not a refund payment (not money in, or another currency), undo the refile first (a refiled refund keeps its answer until undo of the refile), validation. as_of is the day an auto refund is looked up for. Returns bill_transaction_id, state, payment_transaction_id, prior_state, prior_payment_transaction_id, keep_category, undo_kind utility_refund and id (the write): undo puts the bill's answers back as they were, a conflict once they changed again.", {
     idempotency_key: { type: "string" },
     bill_transaction_id: { type: "string" },
     state: { type: ["string", "null"], enum: ["matched", "rejected", "seen", null] },
@@ -137,6 +143,11 @@ export async function utilityRead(
     const parsed = countSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
     return readOf(await rpc("count_utility_refunds", { p_today: parsed.data.as_of ?? null }), null);
+  }
+  if (name === "list_utility_months") {
+    const months = monthsSchema.safeParse(args);
+    if (!months.success) return fail("validation", "validation");
+    return readOf(await rpc("list_utility_months", { p_project: months.data.project_id, p_today: months.data.as_of ?? null }), "months");
   }
   const parsed = payersSchema.safeParse(args);
   if (!parsed.success) return fail("validation", "validation");
