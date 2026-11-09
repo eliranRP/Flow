@@ -145,7 +145,7 @@ function UndrillButton({ label, onBack }: { label: string; onBack: () => void })
 
 /**
  * The pill's chevrons: the earlier and later month's labels (null: none that way) and the step. FLOW-1102: `reason`
- * says why both wait while the months are not in (loading or failed), in place of the end of the list's. FLOW-1121:
+ * says why both wait while the months are not in (loading or failed), in place of the end of the list's. FLOW-1123:
  * `loading` shows it on screen: the pill shimmers as a skeleton does while the months load (the owner, 2026-11-09).
  */
 export type ReportPillStep = { earlier: string | null; later: string | null; onStep: (delta: -1 | 1) => void; reason?: string | null; loading?: boolean };

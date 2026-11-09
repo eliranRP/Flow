@@ -90,7 +90,7 @@
   padding-inline: var(--space-1);
 }
 
-/* FLOW-1121: the months are still loading: the track is the skeleton's band block (the same white as the track) and
+/* FLOW-1123: the months are still loading: the track is the skeleton's band block (the same white as the track) and
    breathes with every skeleton (ui-skel-pulse, still with reduced motion), under the month's name and the chevrons,
    which stay whole. It lightens nothing: at its brightest it is the track, so the name keeps the loaded contrast. */
 .ui-month-step-band:has(> .ui-month-step-shimmer) {

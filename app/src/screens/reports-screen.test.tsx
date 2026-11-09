@@ -229,7 +229,7 @@ describe("the P&L", () => {
     expect(screen.queryByText("לא הצלחנו לטעון את החודשים.")).toBeNull();
   });
 
-  it("in a month's drill, while the months are loading, the pill shimmers after the skeleton delay, hidden from a screen reader (FLOW-1121)", async () => {
+  it("in a month's drill, while the months are loading, the pill shimmers after the skeleton delay, hidden from a screen reader (FLOW-1123)", async () => {
     renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "loading" }, "/reports/pnl?view=month&month=2026-10");
     expect(screen.queryByText("טוען חודשים…")).toBeNull();
     const shimmer = await waitFor(() => {
@@ -243,7 +243,7 @@ describe("the P&L", () => {
     expect(screen.getByRole("button", { name: "אוקטובר 2026" })).toBeInTheDocument();
   });
 
-  it("in a month's drill, the pill does not shimmer once the months are in or failed (FLOW-1121)", async () => {
+  it("in a month's drill, the pill does not shimmer once the months are in or failed (FLOW-1123)", async () => {
     const view = renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
     await new Promise((resolve) => setTimeout(resolve, SKELETON_DELAY_MS + 50));
     expect(document.querySelector(".ui-month-step-shimmer")).toBeNull();

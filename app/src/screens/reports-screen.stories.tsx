@@ -355,7 +355,7 @@ export const MonthDrill: Story = {
     await expect(canvas.getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "חודש קודם" })).not.toHaveAttribute("aria-disabled");
     await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
-    // FLOW-1121: the months are in: the pill does not shimmer.
+    // FLOW-1123: the months are in: the pill does not shimmer.
     await expect(canvasElement.querySelector(".ui-month-step-shimmer")).toBeNull();
   },
 };
@@ -380,7 +380,7 @@ const underBand = (el: HTMLElement) => ({
   group: el.querySelector(".ui-rep-v3-group")?.getBoundingClientRect().top,
 });
 
-/** FLOW-1102, FLOW-1121: months still loading: neither chevron steps, and each says why, once; the pill shimmers as
+/** FLOW-1102, FLOW-1123: months still loading: neither chevron steps, and each says why, once; the pill shimmers as
  *  a skeleton does, over its whole track, with the month's name whole on it; nothing moves when the shimmer goes. */
 async function monthsLoadingShimmer(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
@@ -431,7 +431,7 @@ export const MonthDrillMonthsFailed320: Story = {
     await expect(canvas.getByText("לא הצלחנו לטעון את החודשים.")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים לא נטענו");
-    // FLOW-1121: the failure line says it; the pill does not shimmer.
+    // FLOW-1123: the failure line says it; the pill does not shimmer.
     await expect(canvasElement.querySelector(".ui-month-step-shimmer")).toBeNull();
     await fits(canvasElement);
   },

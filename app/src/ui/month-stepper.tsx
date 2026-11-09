@@ -34,7 +34,7 @@ export function MonthStepper({
    */
   reason?: string | null;
   /**
-   * FLOW-1121: the months are still loading: on the band, the pager's track is the skeleton's band block and
+   * FLOW-1123: the months are still loading: on the band, the pager's track is the skeleton's band block and
    * breathes as every skeleton does (after the skeleton delay; still with reduced motion). Its content stays.
    */
   loading?: boolean;
