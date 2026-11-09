@@ -49,6 +49,10 @@ export const readRpcs = new Set([
   "list_team",
   "list_transfer_matches",
   "count_transfer_matches",
+  // FLOW-1135: utility refunds, Home's row and the screens (reads only).
+  "count_utility_refunds",
+  "list_utility_refunds",
+  "list_utility_payers",
   "list_unpaid",
   "mcp_company_loan_currency",
   "mcp_loan_payments",
