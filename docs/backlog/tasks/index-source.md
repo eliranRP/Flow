@@ -569,6 +569,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1118
 - FLOW-1119
 - FLOW-1121
+- FLOW-1122
 
 ## Onboarding, Settings and connectors
 

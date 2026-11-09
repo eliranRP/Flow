@@ -114,7 +114,7 @@ export async function callWrite(
   if ((BANK_WRITES as readonly string[]).includes(name)) return bankWrite(name as typeof BANK_WRITES[number], args, rpc);
   if ((THREAD_WRITES as readonly string[]).includes(name)) return threadWrite(name as typeof THREAD_WRITES[number], args, rpc);
   if ((PROPERTY_WRITES as readonly string[]).includes(name)) return propertyWrite(name as typeof PROPERTY_WRITES[number], args, rpc);
-  if (name === "set_member_report") return memberShareWrite(args, rpc);
+  if (name === "set_member_report" || name === "refresh_treasury_yields") return memberShareWrite(args, rpc, name);
   if ((HANDOVER_WRITES as readonly string[]).includes(name)) return handoverWrite(name as typeof HANDOVER_WRITES[number], args, rpc);
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);

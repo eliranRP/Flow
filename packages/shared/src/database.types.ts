@@ -2109,6 +2109,9 @@ isOneToOne: false
 "mcp_reassign_recurring_charge":
 { Args: { "p_category_id": string,"p_charge_project_id": string,"p_currency": string,"p_direction": string,"p_idempotency_key": string,"p_party_id": string,"p_project_id": string }; Returns: Json
                            },
+"mcp_refresh_treasury_yields":
+{ Args: { "p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_remember_supplier_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
@@ -2407,6 +2410,9 @@ isOneToOne: false
                            },
 "recurring_this_month":
 { Args: { "p_today"?: string }; Returns: Json
+                           },
+"refresh_treasury_yields":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "remember_line_category":
 { Args: { "p_category_id": string,"p_id": string }; Returns: Json

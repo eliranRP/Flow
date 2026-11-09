@@ -101,7 +101,7 @@ export const WRITE_TOOL_NAMES = [
   "remember_supplier_category",
   "delete_category",
   "move_category_lines",
-  "set_company_currency", "set_tax_bracket", "set_land_account", "set_loan_closing_paid", "set_member_report",
+  "set_company_currency", "set_tax_bracket", "set_land_account", "set_loan_closing_paid", "set_member_report", "refresh_treasury_yields",
   "rename_category",
   "set_category_group",
   "set_category_parent",
