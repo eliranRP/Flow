@@ -129,6 +129,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_property_return_lines",
     "get_member_report",
     "get_member_share",
+    "get_member_projection",
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",

@@ -162,6 +162,18 @@ export type { ProjectCashCurrencyRow, ProjectCashRow, ProjectsCashMonth } from "
 export { partyChargesSchema } from "./party-charges.ts";
 export type { PartyCharges } from "./party-charges.ts";
 export { MEMBER_REPORT_DEFAULTS, applyBp, computeMemberShare } from "./member-share.ts";
+export { PROJECTION_DEFAULTS, PROJECTION_SERIES, computeMemberProjection, guessCostType } from "./member-projection.ts";
+export type {
+  CostType,
+  MemberProjection,
+  ProjectionConfig,
+  ProjectionInput,
+  ProjectionLoan,
+  ProjectionResult,
+  ProjectionSeries,
+  ProjectionYear,
+  PropertyProjection,
+} from "./member-projection.ts";
 export type {
   LoanType,
   FetchedTreasuryYield,
