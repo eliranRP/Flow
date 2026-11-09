@@ -21,6 +21,7 @@ const LISTED = {
     payment: {
       transaction_id: PAYMENT, doc_date: "2026-03-20", amount_minor: 10000, currency: "ILS", description: "Example refund",
       party: null, project_id: null, category_id: null, category_name: null, split: false,
+      project_name: null, parts: [],
     },
   }],
 };
