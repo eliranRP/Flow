@@ -145,9 +145,11 @@ function UndrillButton({ label, onBack }: { label: string; onBack: () => void })
 
 /**
  * The pill's chevrons: the earlier and later month's labels (null: none that way) and the step. FLOW-1102: `reason`
- * says why both wait while the months are not in (loading or failed), in place of the end of the list's.
+ * says why both wait while the months are not in (loading or failed), in place of the end of the list's. FLOW-1120:
+ * `hint` shows it on screen ("טוען חודשים…") at the end of the name's line, hidden from a screen reader, which hears
+ * the chevrons' `reason` once.
  */
-export type ReportPillStep = { earlier: string | null; later: string | null; onStep: (delta: -1 | 1) => void; reason?: string | null };
+export type ReportPillStep = { earlier: string | null; later: string | null; onStep: (delta: -1 | 1) => void; reason?: string | null; hint?: string | null };
 
 /**
  * FLOW-1045 (board V3-Report, the Overview pattern): the report's violet band (the name, the period or date
@@ -187,6 +189,7 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
     );
   }
   const currency = figure?.currency ?? "ILS";
+  const title = <FocusTitle className="t-name ui-rep-band-name">{name}</FocusTitle>;
   const pillButton = (
     <button type="button" className="ui-rep-pill m-press" aria-haspopup="dialog" onClick={pill.onOpen}>
       <span className="ui-rep-pill-label">{pill.label}</span>
@@ -201,7 +204,14 @@ export function ReportShell({ name, back, pill, figureLabel, figure, figureSub, 
         trailing={share}
         hero={
           <div className="ui-rep-band ui-band-fade">
-            <FocusTitle className="t-name ui-rep-band-name">{name}</FocusTitle>
+            {pill.step == null ? title : (
+              // FLOW-1120: a drilled month's name line keeps a slot at its end for the hint, filled or empty, so
+              // nothing moves when the months start or end loading.
+              <div className="ui-rep-band-head">
+                {title}
+                <span className="ui-rep-band-hint" aria-hidden="true">{pill.step.hint ?? ""}</span>
+              </div>
+            )}
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
             {pill.step == null ? pillButton : (
               <MonthStepper earlier={pill.step.earlier} later={pill.step.later} onBand onStep={pill.step.onStep} reason={pill.step.reason ?? null}>
