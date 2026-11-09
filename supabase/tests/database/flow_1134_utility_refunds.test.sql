@@ -1,4 +1,4 @@
--- FLOW-1130 (decision 0265): utility bills the tenant never paid back. The match on read (the three
+-- FLOW-1134 (decision 0265): utility bills the tenant never paid back. The match on read (the three
 -- amount rules, the window, the category rule for auto), the owner's answers (matched, rejected, seen,
 -- taken back), who pays, a month with no rent, mark all as seen, the refile and its undo, the MCP writes
 -- and their undo, a viewer and another company refused. Every read passes its as-of date.
@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(88);
+select plan(89);
 
 do $users$
 begin
@@ -71,9 +71,13 @@ insert into ur_lines values
   -- Rule 1 in another category, on no property: a suggestion.
   ('g1', 'expense', 'oak', 'gas', 'gasco', '2026-03-10', 7000),
   ('pg1', 'income', null, 'other_income', null, '2026-03-25', 7000),
-  -- Rule 2, auto: two bills of April together, filed to one of their categories.
+  -- Rule 2 with two categories: a suggestion.
+  ('e0', 'expense', 'oak', 'power', 'electric', '2026-01-10', 6000),
+  ('g0', 'expense', 'oak', 'gas', 'gasco', '2026-01-12', 2000),
+  ('p0', 'income', 'oak', 'power', null, '2026-01-25', 8000),
+  -- Rule 2, auto: two bills of April together, both in the payment's category.
   ('e2', 'expense', 'oak', 'power', 'electric', '2026-04-05', 8000),
-  ('g2', 'expense', 'oak', 'gas', 'gasco', '2026-04-08', 4000),
+  ('g2', 'expense', 'oak', 'power', 'gasco', '2026-04-08', 4000),
   ('p2', 'income', 'oak', 'power', null, '2026-04-20', 12000),
   -- Rule 3: the usual rent plus May's bill, filed as rent: a suggestion.
   ('e3', 'expense', 'oak', 'power', 'electric', '2026-05-05', 9000),
@@ -153,7 +157,9 @@ select is(pg_temp.bill('e1', '2026-06-30')->>'source', 'auto', 'it is counted by
 select is(pg_temp.st('g1'), 'suggested/bill>pg1', 'rule 1 in another category, on no property, is a suggestion');
 select is(pg_temp.bill('g1', '2026-06-30')->>'wrong_category', 'true', 'the suggested payment is flagged as filed elsewhere');
 select is(pg_temp.st('e2') || ' ' || pg_temp.st('g2'), 'refunded/bills>p2 refunded/bills>p2',
-  'rule 2: two bills of the month together, in one of their categories, count by themselves');
+  'rule 2: two bills of the month together, all in the payment''s category, count by themselves');
+select is(pg_temp.st('e0') || ' ' || pg_temp.st('g0'), 'suggested/bills>p0 suggested/bills>p0',
+  'rule 2 with bills in two categories is a suggestion');
 select is(jsonb_array_length(pg_temp.bill('e2', '2026-06-30')->'group_bill_transaction_ids'), 2, 'the group names both bills');
 select is(pg_temp.st('e3'), 'suggested/rent_and_bills>p3', 'rule 3: the usual rent plus the bill is always a suggestion');
 select is(pg_temp.st('w1'), 'not_refunded', 'a payment more than a month before the bill, or after the as-of date, does not count');
@@ -171,11 +177,11 @@ select is(
   (select string_agg((select x.label from pg_temp.ur x where x.id = (b->>'bill_transaction_id')::uuid), ' '
      order by o)
    from jsonb_array_elements(public.list_utility_refunds(pg_temp.uid('oak'), '2026-06-30')->'bills') with ordinality e(b, o)),
-  'g1 e3 w1', 'the app''s list for Oak: the suggestions first, then the bills not refunded');
+  'e0 g0 g1 e3 w1', 'the app''s list for Oak: the suggestions first, then the bills not refunded');
 select is(public.count_utility_refunds('2026-06-30'),
   jsonb_build_object('as_of', '2026-06-30', 'not_refunded_count', 4,
     'not_refunded_by_currency', jsonb_build_array(jsonb_build_object('currency', 'ILS', 'amount_minor', 20100)),
-    'suggested_count', 2),
+    'suggested_count', 4),
   'count_utility_refunds: the bills not refunded (w1, elm_e, elm_e2, elm_g) with their sum, and the suggestions');
 
 -- Who pays.

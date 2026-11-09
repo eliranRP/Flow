@@ -17,7 +17,7 @@ insert into pg_allowed (sig) values
     ('answer_recurring_handover(text,uuid,text,uuid,uuid,boolean,date)'),
     ('answer_recurring_match(txn_direction,uuid,uuid,boolean)'),
     ('answer_transfer_match(uuid,uuid,boolean)'),
-    -- FLOW-1130 (decision 0265): utility refunds.
+    -- FLOW-1134 (decision 0265): utility refunds.
     ('answer_utility_refund(uuid,text,uuid,date)'),
     ('count_utility_refunds(date)'),
     ('list_utility_payers(uuid)'),

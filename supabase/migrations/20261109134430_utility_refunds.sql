@@ -1,4 +1,4 @@
--- FLOW-1130 (decision 0265): utility bills the tenant never paid back.
+-- FLOW-1134 (decision 0265): utility bills the tenant never paid back.
 --
 -- A utility is one supplier's bills for one property and currency (the key of a recurring charge,
 -- decision 0185). Flow finds it from the lines: an expense filed to a property in a category named
@@ -15,7 +15,7 @@
 --    to no property, not the refund of another bill, whose amount is within one unit of the
 --    currency (100 minor units) of (1) the bill, (2) several of the property's bills of that month
 --    together, or (3) the property's usual rent plus one or more of them. Rule 1 or 2 with the
---    payment filed to the bills' category counts as refunded by itself; any other match is a
+--    payment filed to the category every bill shares counts as refunded by itself; any other match is a
 --    suggestion. A bill with no match 30 days after its date is not refunded (לא הוחזר); a month
 --    with no rent line on the property is flagged.
 -- 3. Reads (any member): list_utility_refunds, count_utility_refunds, list_utility_payers. Writes
@@ -62,7 +62,7 @@ create table public.utility_payers (
 create index utility_payers_supplier_idx on public.utility_payers (company_id, supplier_id);
 create index utility_payers_set_by_idx on public.utility_payers (set_by);
 comment on table public.utility_payers is
-  'FLOW-1130: who pays a property''s utility (one supplier and currency): the tenant pays it back (tenant, the default) or the company pays (company: its bills are never checked); added marks one the owner added by hand. Decision 0265.';
+  'FLOW-1134: who pays a property''s utility (one supplier and currency): the tenant pays it back (tenant, the default) or the company pays (company: its bills are never checked); added marks one the owner added by hand. Decision 0265.';
 
 alter table public.utility_payers enable row level security;
 revoke all on public.utility_payers from public, anon, authenticated;
@@ -95,7 +95,7 @@ create index utility_refund_answers_bill_idx on public.utility_refund_answers (c
 create index utility_refund_answers_payment_idx on public.utility_refund_answers (company_id, payment_transaction_id);
 create index utility_refund_answers_set_by_idx on public.utility_refund_answers (set_by);
 comment on table public.utility_refund_answers is
-  'FLOW-1130: the owner''s answers for a utility bill: matched (the payment line is its refund), rejected (that payment is not; never suggested again for the bill) or seen (closed, nothing to do). refile keeps what the one-tap fix changed. Decision 0265.';
+  'FLOW-1134: the owner''s answers for a utility bill: matched (the payment line is its refund), rejected (that payment is not; never suggested again for the bill) or seen (closed, nothing to do). refile keeps what the one-tap fix changed. Decision 0265.';
 
 alter table public.utility_refund_answers enable row level security;
 revoke all on public.utility_refund_answers from public, anon, authenticated;
@@ -224,7 +224,7 @@ $$;
 
 -- Every bill of a tenant-paid utility with its state as of p_today:
 --   refunded: matched by the owner (source owner) or counted by itself (source auto: rule 1 or 2 and
---     the payment filed to the bills' category);
+--     the payment filed to the category every bill of the group shares);
 --   suggested: any other match (rule 1, 2 or 3), for the owner to answer;
 --   seen: closed by the owner; not_refunded: no match 30 days or more after the bill; waiting: younger.
 -- Bills are matched oldest first; a payment is the refund of one bill, or of one group of the same
@@ -311,7 +311,7 @@ begin
         having bool_or(mb.ord = 1)
       )
       select p.id as pay_id, s.ids, r.rule,
-        r.rule < 3 and p.category_id is not null and p.category_id = any (s.cats) as auto,
+        r.rule < 3 and p.category_id is not null and coalesce(p.category_id = all (s.cats), false) as auto,
         abs(p.doc_date - b.doc_date) as days_apart, s.size,
         abs(p.amount_original - s.total - case when r.rule = 3 then usual else 0 end) as off_by
       from subs s
@@ -539,7 +539,7 @@ $$;
 revoke all on function public.list_utility_refunds(uuid, date, boolean) from public, anon, authenticated;
 grant execute on function public.list_utility_refunds(uuid, date, boolean) to authenticated;
 comment on function public.list_utility_refunds(uuid, date, boolean) is
-  'FLOW-1130 (decision 0265): utility bills the tenant has not paid back, and the suggested refunds, as of p_today (default Israel''s today). p_project_id limits it to a property; p_all lists every bill with its state.';
+  'FLOW-1134 (decision 0265): utility bills the tenant has not paid back, and the suggested refunds, as of p_today (default Israel''s today). p_project_id limits it to a property; p_all lists every bill with its state.';
 
 create function public.count_utility_refunds(p_today date default null)
 returns jsonb
@@ -572,7 +572,7 @@ $$;
 revoke all on function public.count_utility_refunds(date) from public, anon, authenticated;
 grant execute on function public.count_utility_refunds(date) to authenticated;
 comment on function public.count_utility_refunds(date) is
-  'FLOW-1130 (decision 0265): for Home''s row, the bills not refunded (count and sum per currency) and the suggestions, as of p_today.';
+  'FLOW-1134 (decision 0265): for Home''s row, the bills not refunded (count and sum per currency) and the suggestions, as of p_today.';
 
 create function public.list_utility_payers(p_project_id uuid)
 returns jsonb
@@ -625,7 +625,7 @@ $$;
 revoke all on function public.list_utility_payers(uuid) from public, anon, authenticated;
 grant execute on function public.list_utility_payers(uuid) to authenticated;
 comment on function public.list_utility_payers(uuid) is
-  'FLOW-1130 (decision 0265): a property''s utilities (found from its חשבונות lines, or added by the owner) with who pays, the usual amount (the median of the last 3 bills), the bill count and the last bill''s date.';
+  'FLOW-1134 (decision 0265): a property''s utilities (found from its חשבונות lines, or added by the owner) with who pays, the usual amount (the median of the last 3 bills), the bill count and the last bill''s date.';
 
 -- 4. The writes (owner or editor).
 create function public.set_utility_payer(
@@ -684,7 +684,7 @@ $$;
 revoke all on function public.set_utility_payer(uuid, uuid, text, text, boolean) from public, anon, authenticated;
 grant execute on function public.set_utility_payer(uuid, uuid, text, text, boolean) to authenticated;
 comment on function public.set_utility_payer(uuid, uuid, text, text, boolean) is
-  'FLOW-1130 (decision 0265): who pays a property''s utility: tenant (pays it back) or company (its bills are not checked); p_added marks a supplier added by hand; a null payer removes the row. Returns prior for ביטול. Owner or editor.';
+  'FLOW-1134 (decision 0265): who pays a property''s utility: tenant (pays it back) or company (its bills are not checked); p_added marks a supplier added by hand; a null payer removes the row. Returns prior for ביטול. Owner or editor.';
 
 create function public.answer_utility_refund(
   p_bill_transaction_id uuid, p_state text, p_payment_transaction_id uuid default null, p_today date default null
@@ -811,7 +811,7 @@ $$;
 revoke all on function public.answer_utility_refund(uuid, text, uuid, date) from public, anon, authenticated;
 grant execute on function public.answer_utility_refund(uuid, text, uuid, date) to authenticated;
 comment on function public.answer_utility_refund(uuid, text, uuid, date) is
-  'FLOW-1130 (decision 0265): answer a utility bill: matched (the payment is its refund), rejected (it is not; never suggested again), seen (nothing to do), or null to take the answer back (taking back a refund Flow counted by itself rejects the pair). Owner or editor.';
+  'FLOW-1134 (decision 0265): answer a utility bill: matched (the payment is its refund), rejected (it is not; never suggested again), seen (nothing to do), or null to take the answer back (taking back a refund Flow counted by itself rejects the pair). Owner or editor.';
 
 create function public.mark_utility_refunds_seen(p_project_id uuid, p_today date default null)
 returns jsonb
@@ -841,7 +841,7 @@ $$;
 revoke all on function public.mark_utility_refunds_seen(uuid, date) from public, anon, authenticated;
 grant execute on function public.mark_utility_refunds_seen(uuid, date) to authenticated;
 comment on function public.mark_utility_refunds_seen(uuid, date) is
-  'FLOW-1130 (decision 0265): closes every open not-refunded bill of a property as seen (suggestions stay open); returns the bills for ביטול (unmark_utility_refunds_seen). Owner or editor.';
+  'FLOW-1134 (decision 0265): closes every open not-refunded bill of a property as seen (suggestions stay open); returns the bills for ביטול (unmark_utility_refunds_seen). Owner or editor.';
 
 create function public.unmark_utility_refunds_seen(p_bill_transaction_ids uuid[])
 returns jsonb
@@ -865,7 +865,7 @@ $$;
 revoke all on function public.unmark_utility_refunds_seen(uuid[]) from public, anon, authenticated;
 grant execute on function public.unmark_utility_refunds_seen(uuid[]) to authenticated;
 comment on function public.unmark_utility_refunds_seen(uuid[]) is
-  'FLOW-1130 (decision 0265): the ביטול of mark_utility_refunds_seen: those bills'' seen answers go. Owner or editor.';
+  'FLOW-1134 (decision 0265): the ביטול of mark_utility_refunds_seen: those bills'' seen answers go. Owner or editor.';
 
 -- The one-tap fix: a refund the owner matched that sits in another category moves to the bill's
 -- category (reassign_transaction, with the bill's property), or, when the payment is more than the
@@ -953,7 +953,7 @@ $$;
 revoke all on function public.refile_utility_refund(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.refile_utility_refund(uuid, uuid) to authenticated;
 comment on function public.refile_utility_refund(uuid, uuid) is
-  'FLOW-1130 (decision 0265): the one-tap fix for a matched refund filed elsewhere: moves the payment to the bill''s category, or splits the bills'' part off a rent payment. Returns what it changed; undo_utility_refile puts it back. Owner or editor.';
+  'FLOW-1134 (decision 0265): the one-tap fix for a matched refund filed elsewhere: moves the payment to the bill''s category, or splits the bills'' part off a rent payment. Returns what it changed; undo_utility_refile puts it back. Owner or editor.';
 
 create function public.undo_utility_refile(p_bill_transaction_id uuid, p_payment_transaction_id uuid)
 returns jsonb
@@ -1011,7 +1011,7 @@ $$;
 revoke all on function public.undo_utility_refile(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.undo_utility_refile(uuid, uuid) to authenticated;
 comment on function public.undo_utility_refile(uuid, uuid) is
-  'FLOW-1130 (decision 0265): puts back what refile_utility_refund changed, refused (line changed since) once the payment line was changed after it. Owner or editor.';
+  'FLOW-1134 (decision 0265): puts back what refile_utility_refund changed, refused (line changed since) once the payment line was changed after it. Owner or editor.';
 
 -- 5. MCP: the writes with the idempotency key, the write gate and undo (id: the write).
 create function private.utility_mcp_failure(p_message text)
@@ -1356,7 +1356,7 @@ begin
     raise exception 'mcp_undo branches are not the expected definition';
   end if;
   def := replace(def, anchor, $n$    elsif p_kind in ('utility_payer', 'utility_refund', 'utility_refunds_seen', 'utility_refile') then
-      -- FLOW-1130 (decision 0265): what the write left must still hold; then what was before comes back.
+      -- FLOW-1134 (decision 0265): what the write left must still hold; then what was before comes back.
       response := private.undo_utility_write(cid, rec);
 $n$ || anchor);
   execute def;
