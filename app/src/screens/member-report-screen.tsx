@@ -5,12 +5,15 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { Amount } from "../ui/amount";
+import { BackButton } from "../ui/back";
 import { Button } from "../ui/button";
 import { formatDisplay } from "../ui/date-math";
+import { FocusTitle } from "../ui/focus-title";
+import { ChevronDownIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
-import { SelectField } from "../ui/select-field";
+import { TopBand } from "../ui/top-band";
 import { useMemberReport, useMemberReportWrite, type MemberReportPatch, type MemberReportRead } from "../use-member-report";
 import {
   MISSING_WORDS,
@@ -26,15 +29,15 @@ import {
   type ReportMode,
   type Share,
 } from "./member-report-format";
-import { AssumptionsSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet } from "./member-report-sheets";
-import { CalcSection, FormulaList, ReturnsHero } from "./project-returns-parts";
+import { AssumptionsSheet, MemberPickSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet } from "./member-report-sheets";
+import { CalcSection, FormulaList } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-1118 (decision 0263, concept A approved 2026-11-09): דוח שותף. A member's share if the company sells
  * every property, or after a refinance, with the lender quotes against the Treasury yield plus the spread.
  * ---------------------------------------------------------------------------------------------- */
 
-type SheetName = "members" | "quote" | "yields" | "assumptions";
+type SheetName = "members" | "pick" | "quote" | "yields" | "assumptions";
 
 const NO_LINKS = () => null;
 
@@ -100,17 +103,44 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
   const config = data?.config ?? {};
   const currency = result?.currency ?? "USD";
 
-  let body = null;
-  if (result != null) {
-    const memberMinor = member == null ? null : mode === "sell" ? member.saleMinor : member.refinanceMinor;
-    const whole = mode === "sell" ? result.totals.saleNetMinor : result.totals.cashOutMinor;
-    const figure = memberMinor ?? whole;
-    body = (
+  const back = `/reports${backSearch}`;
+  if (result == null) {
+    return <ScreenState title="דוח שותף" kicker="דוחות" backTo={back} phase={phase.kind === "ready" ? { kind: "loading" } : phase} onRetry={() => { void query.refetch(); }} />;
+  }
+  const memberMinor = member == null ? null : mode === "sell" ? member.saleMinor : member.refinanceMinor;
+  const whole = mode === "sell" ? result.totals.saleNetMinor : result.totals.cashOutMinor;
+  const figure = memberMinor ?? whole;
+  // The chip: the owner with one member edits the members; with two or more, or a viewer, it picks one.
+  const pickOnly = !canEdit || result.members.length > 1;
+  const chip = member == null ? undefined : (
+    <button type="button" className="ui-band-company ui-msr-chip m-press" aria-haspopup="dialog"
+      aria-label={`השותף: ${member.name}, ${bpText(member.ownershipBp)}. ${pickOnly ? "החלפה" : "עריכת שותפים"}`}
+      onClick={() => { setSheet(pickOnly ? "pick" : "members"); }}>
+      <span className="ui-msr-chip-name" dir="auto" data-clip-ok="">{`${member.name} · ${bpText(member.ownershipBp)}`}</span>
+      <ChevronDownIcon size={16} />
+    </button>
+  );
+  return (
+    <div className="ui-msr-page">
+      <TopBand
+        wordmark={false}
+        leading={<BackButton fallback={back} text="דוחות" onBand />}
+        trailing={chip}
+        heroClassName="ui-msr-hero"
+        hero={(
+          <>
+            <FocusTitle className="ui-band-label ui-msr-band-label">{heroLabel(mode, member?.name ?? null)}</FocusTitle>
+            <p className="ui-msr-band-figure ui-band-fade"><Amount agorot={figure} currency={currency} loss={figure < 0n} size="hero" /></p>
+            <p className="ui-msr-band-sub t-meta ui-band-fade">{heroMeta(mode, result, currency)}</p>
+          </>
+        )}
+      >
+        <div className="ui-msr-band-tabs">
+          <SegmentedControl label="תרחיש" showLabel={false} role="tab" tone="band" value={mode} onChange={(next) => { setParam("mode", next === "refi" ? "refi" : null); }}
+            options={[{ value: "sell", label: "מכירת הכל" }, { value: "refi", label: "ריפייננס" }]} />
+        </div>
+      </TopBand>
       <div className="ui-rep-content ui-msr">
-        <ReturnsHero
-          figure={<Amount agorot={figure} currency={currency} loss={figure < 0n} />}
-          meta={heroMeta(mode, result, currency)}
-        />
         {result.ownershipSet ? null : (
           <section className="ui-msr-empty" aria-label="לפני הגדרת שותפים">
             <h2 className="t-title-3">מי מחזיק כמה?</h2>
@@ -118,12 +148,6 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
             {canEdit ? <Button onClick={() => { setSheet("members"); }}>הגדרת שותפים</Button> : null}
           </section>
         )}
-        {result.members.length > 1 ? (
-          <SelectField label="שותף" value={String(index)} onChange={(event) => { setParam("member", event.target.value === "0" ? null : event.target.value); }}
-            options={result.members.map((m, i) => ({ value: String(i), label: `${m.name} · ${bpText(m.ownershipBp)}` }))} />
-        ) : null}
-        <SegmentedControl label="תרחיש" showLabel={false} role="tab" value={mode} onChange={(next) => { setParam("mode", next === "refi" ? "refi" : null); }}
-          options={[{ value: "sell", label: "מכירת הכל" }, { value: "refi", label: "ריפייננס" }]} />
         <CalcSection title="החישוב" total={null}>
           <FormulaList formula={mode === "sell" ? saleFormula(result, share, memberMinor) : refiFormula(result, share, memberMinor)} currency={currency} resolve={NO_LINKS} label="החישוב" />
         </CalcSection>
@@ -152,32 +176,24 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
             : `הלוואה ל־${String(result.assumptions.termYears)} שנה, ${bpText(result.assumptions.ltvBp)} מהשווי, ${bpText(result.assumptions.closingBp)} עלויות סגירה. לפני מס.`}
         </p>
       </div>
-    );
-  }
-
-  return (
-    <ScreenState
-      title="דוח שותף"
-      kicker="דוחות"
-      backTo={`/reports${backSearch}`}
-      phase={phase}
-      onRetry={() => { void query.refetch(); }}
-      titleAside={canEdit && result?.ownershipSet === true ? <Button variant="secondary" onClick={() => { setSheet("members"); }}>שותפים</Button> : undefined}
-    >
-      {body}
-      {result == null ? null : (
-        <>
-          <MembersSheet open={sheet === "members"} onOpenChange={(open) => { setSheet(open ? "members" : null); }} onSave={save} members={config.members ?? []} />
-          <QuoteSheet open={sheet === "quote"} onOpenChange={(open) => { setSheet(open ? "quote" : null); }} onSave={save}
-            quotes={config.quotes ?? []} quoteDate={result.rate.quoteDate} expectedPpm={result.rate.expectedPpm}
-            properties={result.properties.map((p) => ({ projectId: p.projectId, name: p.name }))} />
-          <YieldsSheet open={sheet === "yields"} onOpenChange={(open) => { setSheet(open ? "yields" : null); }} onSave={save} config={config} result={result} />
-          <AssumptionsSheet open={sheet === "assumptions"} onOpenChange={(open) => { setSheet(open ? "assumptions" : null); }} onSave={save} result={result} />
-          <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} />
-        </>
-      )}
-    </ScreenState>
+      <MemberPickSheet open={sheet === "pick"} onOpenChange={(open) => { setSheet(open ? "pick" : null); }} members={result.members} index={index}
+        onPick={(next) => { setParam("member", next === 0 ? null : String(next)); }}
+        onEdit={canEdit ? () => { setSheet("members"); } : undefined} />
+      <MembersSheet open={sheet === "members"} onOpenChange={(open) => { setSheet(open ? "members" : null); }} onSave={save} members={config.members ?? []} />
+      <QuoteSheet open={sheet === "quote"} onOpenChange={(open) => { setSheet(open ? "quote" : null); }} onSave={save}
+        quotes={config.quotes ?? []} quoteDate={result.rate.quoteDate} expectedPpm={result.rate.expectedPpm}
+        properties={result.properties.map((p) => ({ projectId: p.projectId, name: p.name }))} />
+      <YieldsSheet open={sheet === "yields"} onOpenChange={(open) => { setSheet(open ? "yields" : null); }} onSave={save} config={config} result={result} />
+      <AssumptionsSheet open={sheet === "assumptions"} onOpenChange={(open) => { setSheet(open ? "assumptions" : null); }} onSave={save} result={result} />
+      <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} />
+    </div>
   );
+}
+
+/** The band's label: whose figure it is, and which way. */
+function heroLabel(mode: ReportMode, name: string | null): string {
+  if (name == null) return mode === "sell" ? "הון נקי של החברה אם מוכרים הכל" : "כסף שמשתחרר בריפייננס";
+  return mode === "sell" ? `החלק של ${name} אם מוכרים הכל` : `החלק של ${name} מריפייננס`;
 }
 
 /** ריבית צפויה מול ההצעות: the quotes' date, the rule (5/10 years, +1.5/+2.0), the expected rate, the quotes. */

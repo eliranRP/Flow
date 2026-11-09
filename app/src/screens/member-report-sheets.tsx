@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { israelToday } from "../ui/date-math";
+import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
 import { SelectField } from "../ui/select-field";
 import { Sheet } from "../ui/sheet";
@@ -103,6 +104,29 @@ export function MembersSheet({ open, onOpenChange, onSave, members }: SaveProps 
         <bdi dir="ltr" className="ui-num">{`${String(total)}%`}</bdi>
       </p>
       {problem == null ? null : <p className="ui-msr-problem">{problem}</p>}
+    </Sheet>
+  );
+}
+
+/** The band's chip when there are two or more members, or for a viewer: whose share the report shows. */
+export function MemberPickSheet({ open, onOpenChange, members, index, onPick, onEdit }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  members: MemberShareResult["members"];
+  index: number;
+  onPick: (index: number) => void;
+  /** The owner's way to the members sheet; absent for a viewer. */
+  onEdit?: () => void;
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title="השותף בדוח" panelClassName="ui-sheet-wide ui-msr-sheet">
+      <List>
+        {members.map((m, i) => (
+          <ListRow key={m.name} variant="selectable" title={m.name} hint={bpText(m.ownershipBp)} selected={i === index}
+            onSelect={() => { onPick(i); onOpenChange(false); }} />
+        ))}
+      </List>
+      {onEdit == null ? null : <Button variant="link" onClick={onEdit}>עריכת שותפים ואחוזים</Button>}
     </Sheet>
   );
 }

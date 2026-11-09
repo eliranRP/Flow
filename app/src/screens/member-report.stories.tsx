@@ -107,6 +107,9 @@ export const BeforeOwnership: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("מי מחזיק כמה?")).toBeInTheDocument();
     await expect(canvas.getAllByText(/345,690/).length).toBeGreaterThan(0);
+    // The band shows the company's figure, with no member chip.
+    await expect(canvas.getByRole("heading", { level: 1 }).textContent).toBe("הון נקי של החברה אם מוכרים הכל");
+    await expect(canvas.queryByRole("button", { name: /^השותף:/ })).toBeNull();
     await userEvent.click(canvas.getByRole("button", { name: "הגדרת שותפים" }));
     await expect(await body(canvasElement).findByRole("dialog", { name: "שותפים ואחוזי בעלות" })).toBeVisible();
   },
@@ -119,7 +122,21 @@ export const Viewer: Story = {
     await expect(await canvas.findByText("Example Bank")).toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "+ הוספת הצעה" })).toBeNull();
     await expect(canvas.queryByRole("button", { name: "הנחות החישוב" })).toBeNull();
-    await expect(canvas.queryByRole("button", { name: "שותפים" })).toBeNull();
+    // A viewer's chip picks whose share to see, and offers no editing.
+    await userEvent.click(canvas.getByRole("button", { name: /^השותף: Member A/ }));
+    const sheet = within(await body(canvasElement).findByRole("dialog", { name: "השותף בדוח" }));
+    await expect(sheet.queryByRole("button", { name: "עריכת שותפים ואחוזים" })).toBeNull();
+    await userEvent.click(sheet.getByRole("button", { name: /Member C/ }));
+    await waitFor(async () => { await expect(canvas.getByRole("heading", { level: 1 }).textContent).toBe("החלק של Member C מריפייננס"); });
+  },
+};
+
+export const OneMemberChip: Story = {
+  render: () => <Report sample={{ ...MEMBER_REPORT, config: { ...MEMBER_REPORT.config, members: [{ name: "Member A", ownership_bp: 10000 }] } }} />,
+  play: async ({ canvasElement }) => {
+    // With one member, the owner's chip opens the members sheet itself.
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^השותף: Member A, 100%/ }));
+    await expect(await body(canvasElement).findByRole("dialog", { name: "שותפים ואחוזי בעלות" })).toBeVisible();
   },
 };
 
@@ -133,7 +150,10 @@ export const LeftOut: Story = {
 export const MembersSheet: Story = {
   render: () => <Report />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "שותפים" }));
+    // Three members: the chip picks one, and the owner edits from there.
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^השותף: Member A, 50%/ }));
+    const picker = within(await body(canvasElement).findByRole("dialog", { name: "השותף בדוח" }));
+    await userEvent.click(picker.getByRole("button", { name: "עריכת שותפים ואחוזים" }));
     const dialog = await body(canvasElement).findByRole("dialog", { name: "שותפים ואחוזי בעלות" });
     const sheet = within(dialog);
     await expect(sheet.getByRole("status").textContent).toContain("100%");

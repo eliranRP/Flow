@@ -1,8 +1,44 @@
 /* FLOW-1118 (decision 0263): דוח שותף, the member share report and its sheets (concept A, 2026-11-09). */
 
+/* The board's band: Back and the member chip, the label, the figure and its line, then the two tabs. */
+.ui-msr-chip {
+  max-inline-size: 60%;
+  margin-inline: 0 calc(var(--space-2) * -1);
+}
+
+.ui-msr-chip-name {
+  overflow: hidden;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-msr-hero .ui-msr-band-label {
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+}
+
+.ui-msr-band-figure {
+  margin: var(--space-1) 0 0;
+  color: var(--color-on-band);
+  white-space: nowrap;
+}
+
+.ui-msr-band-sub {
+  margin: var(--space-1) 0 0;
+  color: var(--color-on-band-secondary);
+}
+
+.ui-msr-band-tabs {
+  padding: var(--space-4) var(--space-side) 0;
+}
+
 .ui-msr {
   gap: var(--space-inset-row);
-  padding-block-end: var(--space-6);
+  padding-block: var(--space-4) var(--space-6);
 }
 
 /* Before any ownership is set: why the figure is the company's, and the way to set the members. */
