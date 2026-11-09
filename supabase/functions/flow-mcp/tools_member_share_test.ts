@@ -104,3 +104,17 @@ Deno.test("set_member_report sends the parts as a patch, undo takes member_repor
   }
   assertEquals(calls.length, before);
 });
+
+Deno.test("refresh_treasury_yields asks for the yields with its key only", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { requested: true } } }));
+  const done = await callTool("refresh_treasury_yields", { idempotency_key: "ty-1" }, ["write"], rpc);
+  assertEquals(done.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_refresh_treasury_yields", body: { p_idempotency_key: "ty-1" } });
+  const denied = await callTool("refresh_treasury_yields", { idempotency_key: "ty-2" }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  const before = calls.length;
+  for (const input of [{}, { idempotency_key: "" }, { idempotency_key: "ty-3", force: true }]) {
+    assertEquals((await callTool("refresh_treasury_yields", input, ["write"], rpc)).isError, true);
+  }
+  assertEquals(calls.length, before);
+});
