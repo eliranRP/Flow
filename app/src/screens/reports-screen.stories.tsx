@@ -355,6 +355,8 @@ export const MonthDrill: Story = {
     await expect(canvas.getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "חודש קודם" })).not.toHaveAttribute("aria-disabled");
     await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
+    // FLOW-1120: the months are in: the hint's slot is there, empty.
+    await expect(canvasElement.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
   },
 };
 
@@ -371,16 +373,66 @@ export const MonthDrillSheet320: Story = {
   },
 };
 
-/** FLOW-1102 at 320: the by-month read is still in, so neither chevron steps yet; each says why to a screen reader. */
+/** FLOW-1120: the band's bottom and the month's first group's top, in page pixels. */
+function underBand(canvasElement: HTMLElement): { band: number; group: number } {
+  const band = canvasElement.querySelector<HTMLElement>(".ui-rep-v3 > .ui-band");
+  const group = canvasElement.querySelector<HTMLElement>(".ui-rep-v3-group");
+  if (band == null || group == null) throw new Error("no band or group");
+  return { band: band.getBoundingClientRect().bottom, group: group.getBoundingClientRect().top };
+}
+
+/**
+ * FLOW-1102, FLOW-1120: the by-month read is still in, so neither chevron steps yet. "טוען חודשים…" shows at the end
+ * of the name's line, whole and inside the band, hidden from a screen reader (each chevron says why, once). The hint's
+ * slot is there with or without its words, so the band and the groups under it are where they are once the months
+ * are in (the same page without the words).
+ */
+async function monthsLoadingHint(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים עוד נטענים");
+  await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAccessibleDescription("החודשים עוד נטענים");
+  await canvasElement.ownerDocument.fonts.load("400 13px Rubik");
+  await canvasElement.ownerDocument.fonts.ready;
+  const hint = canvasElement.querySelector<HTMLElement>(".ui-rep-band-hint");
+  const name = canvasElement.querySelector<HTMLElement>(".ui-rep-band-name");
+  if (hint == null || name == null) throw new Error("no hint or name");
+  await expect(hint).toHaveTextContent("טוען חודשים…");
+  await expect(hint).toBeVisible();
+  await expect(hint).toHaveAttribute("aria-hidden", "true");
+  // One line, inside the band's width, clear of the name.
+  const row = hint.parentElement?.getBoundingClientRect();
+  const box = hint.getBoundingClientRect();
+  if (row == null) throw new Error("no name line");
+  await expect(box.height).toBeLessThanOrEqual(parseFloat(getComputedStyle(hint).lineHeight) + 1);
+  await expect(box.left).toBeGreaterThanOrEqual(row.left - 1);
+  await expect(box.right).toBeLessThanOrEqual(name.getBoundingClientRect().left);
+  // Nothing moves when the words go: the page as it is once the months are in.
+  const loading = underBand(canvasElement);
+  const words = hint.textContent;
+  hint.textContent = "";
+  try {
+    await expect(underBand(canvasElement)).toEqual(loading);
+  } finally {
+    hint.textContent = words;
+  }
+  await fits(canvasElement);
+}
+
 export const MonthDrillMonthsLoading320: Story = {
   name: "P&L · a month drilled · its months loading at 320",
   ...phone320,
   render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "loading" }} />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים עוד נטענים");
-    await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAccessibleDescription("החודשים עוד נטענים");
-    await fits(canvasElement);
+    await monthsLoadingHint(canvasElement);
+  },
+};
+
+export const MonthDrillMonthsLoading393: Story = {
+  name: "P&L · a month drilled · its months loading at 393",
+  ...phone393,
+  render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "loading" }} />,
+  play: async ({ canvasElement }) => {
+    await monthsLoadingHint(canvasElement);
   },
 };
 
@@ -394,6 +446,8 @@ export const MonthDrillMonthsFailed320: Story = {
     await expect(canvas.getByText("לא הצלחנו לטעון את החודשים.")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים לא נטענו");
+    // FLOW-1120: the failure line says it; the band's loading hint is gone.
+    await expect(canvasElement.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
     await fits(canvasElement);
   },
 };
