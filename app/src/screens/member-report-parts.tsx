@@ -6,7 +6,7 @@ import { formatDisplay } from "../ui/date-math";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { israelSyncPhrase } from "../sumit-copy";
-import { ALL_IN_HINT, bpText, type DrillKey, type ReportMode } from "./member-report-format";
+import { ALL_IN_HINT, bpText, noAllInText, type DrillKey, type ReportMode } from "./member-report-format";
 import { investmentBase } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
@@ -90,14 +90,14 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
       return each("עלויות מכירה", "האחוז של כל נכס כפול השווי שלו. בלי אחוז משלו, 8%.", t.profitSellingMinor,
         (p) => ({ hint: `${bpText(p.sellingCostBp)} × ${money(p.valueMinor)}`, minor: p.sellingCostMinor }), withAllIn);
     case "all_in":
-      return each("עלות כוללת", `${ALL_IN_HINT}, כמו בעמוד ההשקעה של כל נכס. נכס בלי מחיר קנייה לא נספר.`, t.allInMinor,
+      return each("עלות כוללת", `${ALL_IN_HINT}, כמו בעמוד ההשקעה של כל נכס. נכס בלי מחיר קנייה, או בלי עלות שיפוץ במטבע שלו, לא נספר.`, t.allInMinor,
         (p) => (p.allInMinor == null
-          ? { hint: "אין מחיר קנייה · לא נספר", minor: 0n, muted: true }
+          ? { hint: `${noAllInText(p)} · לא נספר`, minor: 0n, muted: true }
           : { hint: `${money(p.purchaseMinor ?? 0n)} + ${money(p.rehabMinor ?? 0n)} + ${money(p.holdingMinor ?? 0n)}`, minor: p.allInMinor }));
     case "profit":
       return each("רווח", "שווי, פחות עלויות המכירה, פחות העלות הכוללת. כמו הרווח הנקי בעמוד ההשקעה.", t.profitMinor,
         (p) => (p.profitMinor == null || p.allInMinor == null
-          ? { hint: "אין מחיר קנייה · לא נספר", minor: 0n, muted: true }
+          ? { hint: `${noAllInText(p)} · לא נספר`, minor: 0n, muted: true }
           : { hint: `${money(p.valueMinor)} − ${money(p.sellingCostMinor)} − ${money(p.allInMinor)}`, minor: p.profitMinor }));
     case "profit_share":
       return {

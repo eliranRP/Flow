@@ -2,11 +2,12 @@
 --
 -- 1. private.member_report_all_in(company, project): the property's all-in as its investment page counts
 --    it (get_property_returns: the purchase, the renovation so far, and the holding costs the renovation
---    does not count), with its three parts; null parts while the purchase or the renovation is unknown.
+--    does not count), with its three parts; the all-in is null while the purchase or the renovation (in the
+--    property's currency) is unknown.
 -- 2. get_member_report returns each property's all-in, and the company's open loans (id, name, kind,
 --    project, currency, balance), so the owner can say which a member gave the company.
 -- 3. The setting's members take loan_ids: the company's loans that member gave. A loan belongs to one
---    member. The report repays them before it splits the equity, and adds each to its member's total.
+--    member; another company's loan is refused, a loan deleted since is ignored. The report repays them before it splits the equity, and adds each to its member's total.
 
 begin;
 
@@ -165,7 +166,7 @@ begin
     raise exception 'member_report_check is not the expected definition';
   end if;
   def := replace(def, a_keys, $n$where k not in ('name', 'ownership_bp', 'loan_ids'))$n$);
-  -- Each of a member's loans is one of the company's loans, at most 50.
+  -- Each of a member's loans is a uuid, not another company's loan, at most 50.
   def := replace(def, a_total, a_total || $n$
       if item ? 'loan_ids' and (
         jsonb_typeof(item->'loan_ids') <> 'array'
@@ -174,7 +175,9 @@ begin
           select 1 from jsonb_array_elements(item->'loan_ids') x
           where jsonb_typeof(x) <> 'string'
             or (x #>> '{}') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-            or not exists (select 1 from public.loans l where l.id = (x #>> '{}')::uuid and l.company_id = p_company_id))
+            -- Another company's loan is refused; a loan deleted since is ignored (the report counts open
+            -- loans only), so deleting a member's loan never locks the setting.
+            or exists (select 1 from public.loans l where l.id = (x #>> '{}')::uuid and l.company_id <> p_company_id))
       ) then
         raise exception 'validation';
       end if;$n$);

@@ -109,7 +109,7 @@ export type PropertyShare = {
   readonly bankLoanMinor: bigint;
   /** Value - selling costs - loans: what the company keeps when it sells. Can be below zero. */
   readonly saleNetMinor: bigint;
-  /** FLOW-1124: purchase + renovation + holding; null without a purchase or a renovation figure. */
+  /** FLOW-1124: purchase + renovation + holding; null without a purchase or a renovation figure in its currency. */
   readonly allInMinor: bigint | null;
   readonly purchaseMinor: bigint | null;
   readonly rehabMinor: bigint | null;
@@ -178,7 +178,8 @@ export type MemberShareResult = {
   readonly ownershipSet: boolean;
   /** FLOW-1124: the members' loans the report repays, and the properties the profit leaves out (no all-in). */
   readonly memberLoans: readonly MemberLoanShare[];
-  readonly profitMissing: readonly { readonly projectId: string; readonly name: string }[];
+  /** reason: no purchase, or no renovation figure in the property's currency. */
+  readonly profitMissing: readonly { readonly projectId: string; readonly name: string; readonly reason: "purchase" | "rehab" }[];
 };
 
 export type MemberShare = {
@@ -409,6 +410,10 @@ export function computeMemberShare(
     members,
     ownershipSet: members.length > 0,
     memberLoans: counted,
-    profitMissing: shares.filter((s) => !withAllIn(s)).map((s) => ({ projectId: s.projectId, name: s.name })),
+    profitMissing: shares.filter((s) => !withAllIn(s)).map((s) => ({
+      projectId: s.projectId,
+      name: s.name,
+      reason: s.purchaseMinor == null ? "purchase" as const : "rehab" as const,
+    })),
   };
 }

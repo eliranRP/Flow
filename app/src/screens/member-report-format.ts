@@ -123,6 +123,14 @@ export function saleFormula(r: MemberShareResult, member: MemberShare | null): F
   };
 }
 
+/** FLOW-1124: why a property has no all-in, in a few words. */
+export const PROFIT_MISSING_WORDS = { purchase: "אין מחיר קנייה", rehab: "אין עלות שיפוץ במטבע הנכס" } as const;
+
+/** Why one property has no all-in: no purchase, or no renovation figure in its currency. */
+export function noAllInText(p: PropertyShare): string {
+  return p.purchaseMinor == null ? PROFIT_MISSING_WORDS.purchase : PROFIT_MISSING_WORDS.rehab;
+}
+
 /** The all-in's hint: what it is made of. */
 export const ALL_IN_HINT = "קנייה, שיפוץ והחזקה";
 

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(14);
+select plan(16);
 
 do $users$
 begin
@@ -106,11 +106,20 @@ select throws_ok($$select public.set_member_report('{"members": [{"name": "Membe
 select throws_ok($$select public.set_member_report('{"members": [{"name": "Member A", "ownership_bp": 10000, "loan_ids": "x"}]}')$$,
   'P0001', 'validation', 'loan_ids that is not a list is refused');
 
+-- A member's loan deleted since never locks the setting.
+select lives_ok(format($$select public.set_member_report('{"members": [{"name": "Member A", "ownership_bp": 10000, "loan_ids": ["%s"]}]}')$$, pg_temp.id('b_note')),
+  'the owner gives a loan to a member');
+reset role;
+delete from public.loans where id = pg_temp.id('b_note');
+select tests.authenticate_as('mai_owner');
+select is(public.set_member_report('{"rate_rule": {"tenor_years": 10, "spread_bp": 200}}')->'config'->'rate_rule'->>'spread_bp', '200',
+  'after the loan is deleted, another part still saves');
+
 -- MCP.
 select pg_temp.as_mcp('write');
-select is(public.mcp_set_member_report('mai-1', format('{"members": [{"name": "Member A", "ownership_bp": 10000, "loan_ids": ["%s", "%s"]}]}',
-  pg_temp.id('a_note'), pg_temp.id('b_note'))::jsonb)->'data'->'config'->'members'->0->'loan_ids',
-  jsonb_build_array(pg_temp.id('a_note'), pg_temp.id('b_note')), 'MCP sets a member''s loans');
+select is(public.mcp_set_member_report('mai-1', format('{"members": [{"name": "Member A", "ownership_bp": 10000, "loan_ids": ["%s"]}]}',
+  pg_temp.id('a_note'))::jsonb)->'data'->'config'->'members'->0->'loan_ids',
+  jsonb_build_array(pg_temp.id('a_note')), 'MCP sets a member''s loans');
 select is(public.mcp_set_member_report('mai-2', format('{"members": [{"name": "Member A", "ownership_bp": 10000, "loan_ids": ["%s"]}]}',
   pg_temp.id('other_note'))::jsonb)->'error'->>'code', 'validation', 'and answers another company''s loan as validation');
 

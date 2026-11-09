@@ -187,7 +187,9 @@ describe("all-in, profit and the members' loans (FLOW-1124)", () => {
     expect(result.totals.profitValueMinor).toBe(78_500_000n);
     expect(result.totals.profitSellingMinor).toBe(5_495_000n);
     expect(result.totals.profitMinor).toBe(12_005_000n);
-    expect(result.profitMissing.map((p) => p.name)).toEqual(["Sable"]);
+    expect(result.profitMissing.map((p) => [p.name, p.reason])).toEqual([["Sable", "purchase"]]);
+    const noRehab = computeMemberShare(config, [property("Pine", 10_000_000n, 0n, { purchase_minor: 8_000_000n, all_in_minor: null })]);
+    expect(noRehab.profitMissing.map((p) => p.reason)).toEqual(["rehab"]);
   });
 
   it("repays the members' loans before the equity is split, a loan on a property from its loans", () => {

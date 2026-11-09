@@ -12,6 +12,7 @@ import { TextField } from "../ui/text-field";
 import type { MemberReportPatch } from "../use-member-report";
 import {
   bpText,
+  noAllInText,
   ppmText,
   propertyProfitFormula,
   propertyRefiFormula,
@@ -441,7 +442,7 @@ function PropertyProfit({ property, member, currency }: { property: PropertyShar
     <section className="ui-msr-property-profit" aria-label="רווח מול העלות הכוללת">
       <h3 className="t-section">רווח מול העלות הכוללת</h3>
       {formula == null
-        ? <p className="ui-msr-help">אין מחיר קנייה לנכס. הוסיפו אותו בעמוד ההשקעה שלו כדי לראות את הרווח.</p>
+        ? <p className="ui-msr-help">{`${noAllInText(property)}. אפשר להשלים בעמוד ההשקעה של הנכס כדי לראות את הרווח.`}</p>
         : <FormulaList formula={formula} currency={currency} resolve={NO_LINKS} label={`רווח · ${property.name}`} />}
     </section>
   );

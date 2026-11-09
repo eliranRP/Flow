@@ -31,6 +31,8 @@ import {
   bpText,
   memberIndex,
   modeOf,
+  noAllInText,
+  PROFIT_MISSING_WORDS,
   ppmText,
   profitFormula,
   quoteRateText,
@@ -312,7 +314,7 @@ function heroLabel(mode: ReportMode, name: string | null): string {
 
 /** A property's line on מכירת הכל: its value, its loans, and its profit (FLOW-1124). */
 function saleHint(p: PropertyShare, currency: string): string {
-  const profit = p.profitMinor == null ? "אין מחיר קנייה" : `רווח ${formatMoney(p.profitMinor, currency)}`;
+  const profit = p.profitMinor == null ? noAllInText(p) : `רווח ${formatMoney(p.profitMinor, currency)}`;
   return `שווי ${formatMoney(p.valueMinor, currency)} · הלוואה ${formatMoney(p.loanBalanceMinor, currency)} · ${profit}`;
 }
 
@@ -330,7 +332,7 @@ function ProfitSection({ result, member, currency, resolve }: { result: MemberSh
         <FormulaList formula={profitFormula(result, member)} currency={currency} resolve={resolve} label="רווח" />
       )}
       {counted === 0 || result.profitMissing.length === 0 ? null : (
-        <p className="ui-msr-note">{`לא ברווח: ${result.profitMissing.map((m) => m.name).join(", ")} (אין מחיר קנייה).`}</p>
+        <p className="ui-msr-note">{`לא ברווח: ${result.profitMissing.map((m) => `${m.name} (${PROFIT_MISSING_WORDS[m.reason]})`).join(", ")}.`}</p>
       )}
     </CalcSection>
   );
