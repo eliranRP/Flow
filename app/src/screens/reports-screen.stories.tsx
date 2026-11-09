@@ -374,19 +374,13 @@ export const MonthDrillSheet320: Story = {
 };
 
 /** FLOW-1120: the band's bottom and the month's first group's top, in page pixels. */
-function underBand(canvasElement: HTMLElement): { band: number; group: number } {
-  const band = canvasElement.querySelector<HTMLElement>(".ui-rep-v3 > .ui-band");
-  const group = canvasElement.querySelector<HTMLElement>(".ui-rep-v3-group");
-  if (band == null || group == null) throw new Error("no band or group");
-  return { band: band.getBoundingClientRect().bottom, group: group.getBoundingClientRect().top };
-}
+const underBand = (el: HTMLElement) => ({
+  band: el.querySelector(".ui-rep-v3 > .ui-band")?.getBoundingClientRect().bottom,
+  group: el.querySelector(".ui-rep-v3-group")?.getBoundingClientRect().top,
+});
 
-/**
- * FLOW-1102, FLOW-1120: the by-month read is still in, so neither chevron steps yet. "טוען חודשים…" shows at the end
- * of the name's line, whole and inside the band, hidden from a screen reader (each chevron says why, once). The hint's
- * slot is there with or without its words, so the band and the groups under it are where they are once the months
- * are in (the same page without the words).
- */
+/** FLOW-1102, FLOW-1120: months still loading: neither chevron steps; "טוען חודשים…" ends the name's line, whole,
+ *  hidden from a screen reader (each chevron says why, once); its slot stays, so nothing moves when the words go. */
 async function monthsLoadingHint(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים עוד נטענים");
@@ -408,6 +402,7 @@ async function monthsLoadingHint(canvasElement: HTMLElement) {
   await expect(box.right).toBeLessThanOrEqual(name.getBoundingClientRect().left);
   // Nothing moves when the words go: the page as it is once the months are in.
   const loading = underBand(canvasElement);
+  await expect(Object.values(loading)).not.toContain(undefined);
   const words = hint.textContent;
   hint.textContent = "";
   try {
@@ -422,18 +417,13 @@ export const MonthDrillMonthsLoading320: Story = {
   name: "P&L · a month drilled · its months loading at 320",
   ...phone320,
   render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "loading" }} />,
-  play: async ({ canvasElement }) => {
-    await monthsLoadingHint(canvasElement);
-  },
+  play: ({ canvasElement }) => monthsLoadingHint(canvasElement),
 };
 
 export const MonthDrillMonthsLoading393: Story = {
+  ...MonthDrillMonthsLoading320,
   name: "P&L · a month drilled · its months loading at 393",
   ...phone393,
-  render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "loading" }} />,
-  play: async ({ canvasElement }) => {
-    await monthsLoadingHint(canvasElement);
-  },
 };
 
 /** FLOW-1102 at 320: the by-month read failed: one line says so, with its retry, above the month's groups. */
