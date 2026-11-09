@@ -97,16 +97,16 @@ describe("the project sheet (FLOW-445)", () => {
     expect(screen.getByRole("textbox", { name: "מחיר קנייה" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "שווי הנכס היום" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "תקציב שיפוץ" })).toBeNull();
-    fireEvent.click(screen.getByRole("radio", { name: "לקוח" }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט" }));
     expect(screen.getAllByRole("textbox")).toHaveLength(2);
     fireEvent.click(screen.getByRole("radio", { name: "תקורה" }));
     expect(screen.getAllByRole("textbox")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("radio", { name: "לקוח" }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט" }));
     fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "Okafor" } });
     fireEvent.change(screen.getByRole("textbox", { name: "סכום החוזה" }), { target: { value: "1000000" } });
     fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
     await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
-    expect(upsertCalls()[0]?.args).toEqual({ p_name: "Okafor", p_type: "לקוח", p_status: "active", p_budget_agorot: 100_000_000 });
+    expect(upsertCalls()[0]?.args).toEqual({ p_name: "Okafor", p_type: "פרויקט", p_status: "active", p_budget_agorot: 100_000_000 });
     expect(rpc.calls.some((call) => call.name === "set_project_investment")).toBe(false);
   });
 

@@ -68,7 +68,7 @@ export type ProjectKind = "renovation" | "rental" | "client" | "overhead";
 export const PROJECT_KINDS: readonly { kind: ProjectKind; label: string }[] = [
   { kind: "renovation", label: "שיפוץ" },
   { kind: "rental", label: "השכרה" },
-  { kind: "client", label: "לקוח" },
+  { kind: "client", label: "פרויקט" },
   { kind: "overhead", label: "תקורה" },
 ];
 
@@ -76,7 +76,7 @@ const KIND_WORDS: readonly (readonly [ProjectKind, RegExp])[] = [
   ["overhead", /תקורה|overhead/iu],
   ["renovation", /שיפוץ|פליפ|flip|renovat|rehab/iu],
   ["rental", /השכרה|שכירות|rent/iu],
-  ["client", /לקוח|client/iu],
+  ["client", /לקוח|פרויקט|client/iu],
 ];
 
 /** The kind a type word names ("flip", "השכרה"), or null when it names none. */
@@ -119,7 +119,7 @@ export type ProjectsFilter = "active" | "finished" | "all";
 export type ProjectKindGroup = { kind: ProjectKind; title: string; rows: ProjectCashRow[]; net: number };
 
 /**
- * FLOW-1044: the list's rows in groups by kind (שיפוץ, השכרה, לקוח, תקורה), each with the month's net in the
+ * FLOW-1044: the list's rows in groups by kind (שיפוץ, השכרה, פרויקט, תקורה), each with the month's net in the
  * list's currency. Active rows keep the list's order (orderActiveProjects); finished ones follow, the latest
  * finished first. The overhead project counts as active. A kind with no row is left out.
  */

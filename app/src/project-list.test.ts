@@ -123,7 +123,7 @@ describe("rows grouped by kind (FLOW-1044)", () => {
 
   it("active: the kinds in order, each group's rows in the list's order with its net", () => {
     const groups = groupProjectRows(rows, "active", ILS);
-    expect(groups.map((group) => group.title)).toEqual(["שיפוץ", "השכרה", "לקוח", "תקורה"]);
+    expect(groups.map((group) => group.title)).toEqual(["שיפוץ", "השכרה", "פרויקט", "תקורה"]);
     expect(groups[0]?.rows.map((r) => r.id)).toEqual(["lark", "juniper"]);
     expect(groups[0]?.net).toBe(-1000);
     expect(groups[3]?.rows.map((r) => r.id)).toEqual(["office"]);
