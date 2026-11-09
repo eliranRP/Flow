@@ -355,8 +355,8 @@ export const MonthDrill: Story = {
     await expect(canvas.getByRole("link", { name: /תנועות החודש/ })).toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "חודש קודם" })).not.toHaveAttribute("aria-disabled");
     await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
-    // FLOW-1120: the months are in: the hint's slot is there, empty.
-    await expect(canvasElement.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
+    // FLOW-1123: the months are in: the pill does not shimmer.
+    await expect(canvasElement.querySelector(".ui-month-step-shimmer")).toBeNull();
   },
 };
 
@@ -373,42 +373,37 @@ export const MonthDrillSheet320: Story = {
   },
 };
 
-/** FLOW-1120: the band's bottom and the month's first group's top, in page pixels. */
+/** FLOW-1120: the band's bottom, the pill's box and the month's first group's top, in page pixels. */
 const underBand = (el: HTMLElement) => ({
   band: el.querySelector(".ui-rep-v3 > .ui-band")?.getBoundingClientRect().bottom,
+  pill: el.querySelector(".ui-month-step-band")?.getBoundingClientRect().toJSON() as unknown,
   group: el.querySelector(".ui-rep-v3-group")?.getBoundingClientRect().top,
 });
 
-/** FLOW-1102, FLOW-1120: months still loading: neither chevron steps; "טוען חודשים…" ends the name's line, whole,
- *  hidden from a screen reader (each chevron says why, once); its slot stays, so nothing moves when the words go. */
-async function monthsLoadingHint(canvasElement: HTMLElement) {
+/** FLOW-1102, FLOW-1123: months still loading: neither chevron steps, and each says why, once; the pill shimmers as
+ *  a skeleton does, over its whole track, with the month's name whole on it; nothing moves when the shimmer goes. */
+async function monthsLoadingShimmer(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים עוד נטענים");
   await expect(canvas.getByRole("button", { name: "חודש הבא" })).toHaveAccessibleDescription("החודשים עוד נטענים");
-  await canvasElement.ownerDocument.fonts.load("400 13px Rubik");
-  await canvasElement.ownerDocument.fonts.ready;
-  const hint = canvasElement.querySelector<HTMLElement>(".ui-rep-band-hint");
-  const name = canvasElement.querySelector<HTMLElement>(".ui-rep-band-name");
-  if (hint == null || name == null) throw new Error("no hint or name");
-  await expect(hint).toHaveTextContent("טוען חודשים…");
-  await expect(hint).toBeVisible();
-  await expect(hint).toHaveAttribute("aria-hidden", "true");
-  // One line, inside the band's width, clear of the name.
-  const row = hint.parentElement?.getBoundingClientRect();
-  const box = hint.getBoundingClientRect();
-  if (row == null) throw new Error("no name line");
-  await expect(box.height).toBeLessThanOrEqual(parseFloat(getComputedStyle(hint).lineHeight) + 1);
-  await expect(box.left).toBeGreaterThanOrEqual(row.left - 1);
-  await expect(box.right).toBeLessThanOrEqual(name.getBoundingClientRect().left);
-  // Nothing moves when the words go: the page as it is once the months are in.
+  await expect(canvas.getByRole("button", { name: "אוקטובר 2026" })).toBeVisible();
+  const shimmer = await waitFor(() => {
+    const found = canvasElement.querySelector<HTMLElement>(".ui-month-step-band > .ui-month-step-shimmer");
+    if (found == null) throw new Error("no shimmer yet");
+    return found;
+  });
+  await expect(shimmer).toHaveAttribute("aria-hidden", "true");
+  await expect(shimmer).toHaveClass("ui-skeleton-bar-band");
+  const pill = shimmer.parentElement?.getBoundingClientRect();
+  await expect(shimmer.getBoundingClientRect().toJSON()).toEqual(pill?.toJSON());
+  // Nothing moves when the shimmer goes: the page as it is once the months are in.
   const loading = underBand(canvasElement);
   await expect(Object.values(loading)).not.toContain(undefined);
-  const words = hint.textContent;
-  hint.textContent = "";
+  shimmer.style.display = "none";
   try {
     await expect(underBand(canvasElement)).toEqual(loading);
   } finally {
-    hint.textContent = words;
+    shimmer.style.display = "";
   }
   await fits(canvasElement);
 }
@@ -417,7 +412,7 @@ export const MonthDrillMonthsLoading320: Story = {
   name: "P&L · a month drilled · its months loading at 320",
   ...phone320,
   render: () => <Pnl entry="/reports/pnl?view=month&month=2026-10" sample={{ drilled: REPORTS_OCTOBER, monthsRead: "loading" }} />,
-  play: ({ canvasElement }) => monthsLoadingHint(canvasElement),
+  play: ({ canvasElement }) => monthsLoadingShimmer(canvasElement),
 };
 
 export const MonthDrillMonthsLoading393: Story = {
@@ -436,8 +431,8 @@ export const MonthDrillMonthsFailed320: Story = {
     await expect(canvas.getByText("לא הצלחנו לטעון את החודשים.")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "נסו שוב" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "חודש קודם" })).toHaveAccessibleDescription("החודשים לא נטענו");
-    // FLOW-1120: the failure line says it; the band's loading hint is gone.
-    await expect(canvasElement.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
+    // FLOW-1123: the failure line says it; the pill does not shimmer.
+    await expect(canvasElement.querySelector(".ui-month-step-shimmer")).toBeNull();
     await fits(canvasElement);
   },
 };

@@ -15,6 +15,7 @@ import {
   REPORTS_TODAY,
 } from "../dev/reports-sample";
 import { renderWithProviders } from "../test-render";
+import { SKELETON_DELAY_MS } from "../ui/skeleton";
 import { BalanceReportScreen, type BalanceSample } from "./reports-balance-screen";
 import { ReportsHubScreen, ReportsScreen } from "./reports-hub-screen";
 import { barShare, hintFigures, reportHint, rowShare } from "./reports-parts";
@@ -228,21 +229,29 @@ describe("the P&L", () => {
     expect(screen.queryByText("לא הצלחנו לטעון את החודשים.")).toBeNull();
   });
 
-  it("in a month's drill, while the months are loading, the name's line shows טוען חודשים… once, hidden from a screen reader (FLOW-1120)", () => {
+  it("in a month's drill, while the months are loading, the pill shimmers after the skeleton delay, hidden from a screen reader (FLOW-1123)", async () => {
     renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "loading" }, "/reports/pnl?view=month&month=2026-10");
-    const hint = screen.getByText("טוען חודשים…");
-    expect(hint).toHaveAttribute("aria-hidden", "true");
-    // On the name's line, beside the heading.
-    expect(hint.parentElement).toContainElement(screen.getByRole("heading", { level: 1, name: "אוקטובר 2026" }));
+    expect(screen.queryByText("טוען חודשים…")).toBeNull();
+    const shimmer = await waitFor(() => {
+      const found = document.querySelector(".ui-month-step-band > .ui-month-step-shimmer");
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    expect(shimmer).toHaveAttribute("aria-hidden", "true");
+    expect(shimmer).toHaveClass("ui-skeleton-bar-band");
+    // The month's name stays on the pill.
+    expect(screen.getByRole("button", { name: "אוקטובר 2026" })).toBeInTheDocument();
   });
 
-  it("in a month's drill, the hint's slot stays, empty, once the months are in or failed (FLOW-1120)", () => {
+  it("in a month's drill, the pill does not shimmer once the months are in or failed (FLOW-1123)", async () => {
     const view = renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
-    expect(document.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
+    await new Promise((resolve) => setTimeout(resolve, SKELETON_DELAY_MS + 50));
+    expect(document.querySelector(".ui-month-step-shimmer")).toBeNull();
     view.unmount();
     renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "failed" }, "/reports/pnl?view=month&month=2026-10");
-    expect(document.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
-    expect(screen.queryByText("טוען חודשים…")).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, SKELETON_DELAY_MS + 50));
+    expect(document.querySelector(".ui-month-step-shimmer")).toBeNull();
+    expect(screen.getByText("לא הצלחנו לטעון את החודשים.")).toBeInTheDocument();
   });
 
   it("in a month's drill, a failed months read says so with a retry, and the chevrons say why they wait (FLOW-1102)", () => {

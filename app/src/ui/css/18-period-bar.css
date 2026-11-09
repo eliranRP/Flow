@@ -90,6 +90,32 @@
   padding-inline: var(--space-1);
 }
 
+/* FLOW-1123: the months are still loading: the track is the skeleton's band block (the same white as the track) and
+   breathes with every skeleton (ui-skel-pulse, still with reduced motion), under the month's name and the chevrons,
+   which stay whole. It lightens nothing: at its brightest it is the track, so the name keeps the loaded contrast. */
+.ui-month-step-band:has(> .ui-month-step-shimmer) {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+.ui-month-step-band > .ui-month-step-shimmer {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  max-inline-size: none;
+  border-radius: inherit;
+}
+
+/* Reduced motion: the pulse stops, and the shimmer stays at the pulse's trough, so the loading pill reads as dimmer
+   than the loaded one (a still shimmer at full opacity is the track itself, the same as the loaded pill). */
+@media (prefers-reduced-motion: reduce) {
+  .ui-month-step-band > .ui-month-step-shimmer {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
 /* FLOW-1051 (V3-Home): the pill's chevrons are 22px. */
 .ui-month-step-band .ui-month-step-arrow svg {
   inline-size: var(--glyph-band-step);
