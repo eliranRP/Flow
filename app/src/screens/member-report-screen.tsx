@@ -25,6 +25,7 @@ import { ChevronDownIcon, ChevronIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
+import { Skeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
 import {
@@ -60,6 +61,7 @@ import {
   type Share,
   yearsOf,
 } from "./member-report-format";
+import { ForecastSkeleton } from "./member-report-forecast-skeleton";
 import { DrillSheet, TreasuryUpdated } from "./member-report-parts";
 import { AssumptionsSheet, MemberPickSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet, spreadOptions } from "./member-report-sheets";
 import { CalcSection, FormulaList, type Resolve } from "./project-returns-parts";
@@ -269,7 +271,12 @@ export function MemberReportScreen({ sample, refreshSample, projectionSample }: 
         hero={(
           <>
             <FocusTitle className="ui-band-label ui-msr-band-label">{heroLabel(mode, member?.name ?? null, projection)}</FocusTitle>
-            <p className="ui-msr-band-figure ui-band-fade"><Amount agorot={figure} currency={currency} loss={figure < 0n} size="hero" /></p>
+            <p className="ui-msr-band-figure ui-band-fade">
+              {/* FLOW-1136: while the forecast loads, a band skeleton, not $0. */}
+              {mode === "forecast" && projection == null
+                ? <Skeleton tone="band" className="ui-msr-skel-band" />
+                : <Amount agorot={figure} currency={currency} loss={figure < 0n} size="hero" />}
+            </p>
             <p className="ui-msr-band-sub t-meta ui-band-fade">
               {mode === "forecast" ? forecastMeta(projection, forecastMember, currency) : heroMeta(mode, result, currency, member)}
             </p>
@@ -367,7 +374,7 @@ function forecastMeta(projection: ProjectionResult | null, member: ProjectionRes
   return <>{"ועוד "}<Amount agorot={cash} currency={currency} loss={cash < 0n} />{" תזרים עד אז · תחזית לפי ההנחות"}</>;
 }
 
-/** FLOW-1127: the forecast tab's content, loaded with it; a line while its inputs are read. */
+/** FLOW-1127: the forecast tab's content, loaded with it; a skeleton while its inputs or its code load (FLOW-1136). */
 function ForecastArea({ projection, member, years, canEdit, onSave, onYears, projectionConfig, inputs, failed, onRetry }: {
   projection: ProjectionResult | null;
   member: ProjectionResult["members"][number] | null;
@@ -388,12 +395,12 @@ function ForecastArea({ projection, member, years, canEdit, onSave, onYears, pro
       </section>
     );
   }
-  if (projection == null || inputs == null) return <p className="ui-msr-note" role="status">טוען את התחזית…</p>;
+  if (projection == null || inputs == null) return <ForecastSkeleton />;
   // Each cost category the properties' last 12 months hold, for its type.
   const seen = new Map<string, string>();
   for (const p of inputs.properties) for (const c of p.costs) if (c.category_id != null && !seen.has(c.category_id)) seen.set(c.category_id, c.name ?? "");
   return (
-    <Suspense fallback={<p className="ui-msr-note" role="status">טוען את התחזית…</p>}>
+    <Suspense fallback={<ForecastSkeleton />}>
       <ForecastBody result={projection} member={member} years={years} onYears={onYears} canEdit={canEdit}
         projection={projectionConfig} onSave={onSave} costCategories={[...seen].map(([id, name]) => ({ id, name }))} />
     </Suspense>
