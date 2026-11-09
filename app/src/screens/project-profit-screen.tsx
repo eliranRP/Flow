@@ -39,6 +39,8 @@ import { SummaryRow } from "./profit-summary";
 export type ProjectProfitSample = {
   project: NonNullable<ProjectDetail>;
   months: NonNullable<ProfitMonths>;
+  /** The months are still out (stories): the band's line and the month rows show their skeletons. */
+  monthsPending?: boolean;
   next?: NextMonthSample;
   offlineSince?: number;
   /** FLOW-1044: the project's type word, as its row on the list carries it (the kind reads it). */
@@ -114,7 +116,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   // The type word is on the project's row of the month (the list's cached read).
   const monthRow = useProjectsCashMonth(undefined, sample ? "" : projectId).data?.projects.find((row) => row.id === projectId);
   const project = sample?.project ?? detail.data ?? null;
-  const data = sample?.months ?? months.data ?? null;
+  const data = sample?.monthsPending === true ? null : sample?.months ?? months.data ?? null;
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const rows = data?.months ?? [];
   const id = sample ? sample.project.id : projectId;
@@ -128,7 +130,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   // FLOW-1002: the card is in the forecast's currency; months in another currency are not set beside it.
   const sameCurrency = nextMonth.currency === currency;
   const live = sample == null;
-  const monthsLoading = live && months.isLoading;
+  const monthsLoading = live ? months.isLoading : sample.monthsPending === true;
   const monthsFailed = live && months.isError;
   const cardLoading = live && nextMonth.pending && !nextMonth.paused && !nextMonth.failed;
   const profit = row?.profit_minor ?? 0n;
@@ -221,7 +223,8 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
         hero={(
           <>
             <FocusTitle className="t-title">רווח מתחילת הפרויקט</FocusTitle>
-            <p className="t-line2">{since}</p>
+            {/* FLOW-1138: the months say since when; until they are in, a bar holds the line's place. */}
+            {monthsLoading ? <Skeleton tone="band" className="ui-skel-project-label" /> : <p className="t-line2">{since}</p>}
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
             <p className="ui-band-label t-line2">{share == null ? "רווח" : "רווח לפני הוצאות כלליות"}</p>
             <div className="ui-project-profits t-detail">

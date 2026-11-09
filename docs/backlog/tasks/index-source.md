@@ -581,6 +581,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1133
 - FLOW-1134
 - FLOW-1135
+- FLOW-1136
+- FLOW-1137
+- FLOW-1138
+- FLOW-1139
+- FLOW-1140
 
 ## Onboarding, Settings and connectors
 

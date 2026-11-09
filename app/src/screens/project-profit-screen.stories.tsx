@@ -83,6 +83,19 @@ export const ProjectProfitLoading: Story = {
   ),
 };
 
+/** FLOW-1138: the project is in, its months are not: the band's line is a bar, not "כל התקופה". */
+export const ProjectProfitMonthsLoading: Story = {
+  name: "Project profit, the months loading",
+  render: () => <ProfitRoute entry="/projects/juniper-ct/profit" data={{ ...sample, monthsPending: true }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { level: 1, name: "רווח מתחילת הפרויקט" })).toBeInTheDocument();
+    await expect(canvas.queryByText("כל התקופה")).toBeNull();
+    await expect(canvasElement.querySelector(".ui-band-hero-project .ui-skel-project-label")).not.toBeNull();
+    await expect(await canvas.findByText("טוען…")).toBeInTheDocument();
+  },
+};
+
 /** Reached from the company profit page: Back names "רווח". */
 export const ProjectProfitFromCompany: Story = {
   name: "Project profit, opened from company profit",

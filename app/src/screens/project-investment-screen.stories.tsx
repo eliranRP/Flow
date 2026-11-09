@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment, mapleCourtSub2Investment } from "../dev/investment-sample";
 import { project as sampleProject } from "../dev/project-cash-sample";
 import {
@@ -69,6 +70,8 @@ type Args = {
   tab?: InvestmentTab;
   viewer?: boolean;
   hidden?: Record<string, string> | null;
+  /** The returns are still out (FLOW-1138). */
+  pending?: boolean;
 };
 
 /** The hidden cards a story starts with; every story sets its own, so none leaks into the next. */
@@ -84,14 +87,14 @@ function useHiddenRows(hidden: Record<string, string> | null) {
   });
 }
 
-function Screen({ data = "flip", returns = "complete", rent = false, sheet = null, info = null, how = false, tab = "property", viewer = false, hidden = null }: Args) {
+function Screen({ data = "flip", returns = "complete", rent = false, sheet = null, info = null, how = false, tab = "property", viewer = false, hidden = null, pending = false }: Args) {
   useHiddenRows(hidden);
   return (
     <StoryRoute entry="/projects/p1/investment" viewer={viewer}>
       <ProjectInvestmentScreen
         sample={rent ? RENTAL_PROJECT : sampleProject}
         sampleInvestment={rent ? RENTAL : DATA[data]}
-        sampleReturns={rent ? rental(RETURNS[returns]) : RETURNS[returns]}
+        sampleReturns={pending ? undefined : rent ? rental(RETURNS[returns]) : RETURNS[returns]}
         initialSheet={sheet}
         initialInfo={info}
         initialHow={how}
@@ -152,13 +155,28 @@ export const Annualized: Story = { args: { rent: true, returns: "annualized", ta
 /** FLOW-473: first rented 21 days back: the per-year figures read "מעט נתונים" and say why. */
 export const FewDays: Story = { name: "Fewer than 60 days", args: { rent: true, returns: "fewDays" } };
 
-/** V3-States: the band and the rows pulse while the project is read. */
+/** V3-States: the band pulses while the project is read; after 300ms, the page's cards in their shape (FLOW-1138). */
 export const Loading: Story = {
   render: () => (
     <StoryRoute entry="/projects/p1/investment?preview=loading">
       <ProjectInvestmentScreen backTo="/projects/p1" />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-pinv-parts")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
+};
+
+/** FLOW-1138: the metrics tab while the returns load: the parts' card and the metrics' groups in their shape. */
+export const MetricsLoading: Story = {
+  args: { rent: true, tab: "metrics", pending: true },
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toBeInTheDocument();
+    await expect(canvasElement.querySelectorAll(".ui-pinv-groups .ui-skel-group")).toHaveLength(3);
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
 };
 
 /** V3-States: the read failed; the band says so, with נסו שוב and צריך עזרה?. */

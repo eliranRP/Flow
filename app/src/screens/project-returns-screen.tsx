@@ -24,6 +24,7 @@ import { ALL_TIME, LINE_TITLES, acquisitionFormula, countHint, firstRentInPeriod
 import { PAGE_LEARN } from "./project-returns-learn";
 import { LearnButton } from "./project-returns-learn-sheet";
 import { CalcSection, FormulaList, ReturnLinesSection, ReturnsHero, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
+import { ReturnsSkeleton } from "./project-skeletons";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451: the cash-flow statement (board ConceptAReturnMath) and one line's page (board
@@ -181,6 +182,7 @@ export function PropertyStatementScreen({ sample, base: baseProp }: { sample?: R
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
+      loading={<ReturnsSkeleton />}
     >
       {page.returns == null ? null : <Statement r={page.returns} base={page.base} search={page.search} />}
     </ScreenState>
@@ -308,6 +310,7 @@ export function PropertyReturnLineScreen({ sample, base: baseProp }: { sample?: 
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
+      loading={<ReturnsSkeleton />}
     >
       {page.returns == null ? null : (
         <LineBody line={line} categoryId={categoryId} category={category} r={page.returns} base={page.base} search={page.search} projectId={page.projectId} name={page.name} lines={sample?.lines} />

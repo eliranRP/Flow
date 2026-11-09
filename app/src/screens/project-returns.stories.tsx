@@ -148,12 +148,41 @@ function LiveRoutes({ entry }: { entry: string }) {
       <Routes>
         <Route path="/projects/:projectId/investment/returns" element={<PropertyStatementScreen />} />
         <Route path="/projects/:projectId/investment/metric/:metric" element={<PropertyMetricScreen />} />
+        <Route path="/projects/:projectId/investment/returns/:line" element={<PropertyReturnLineScreen />} />
+        <Route path="/projects/:projectId/investment/part/:part" element={<PropertyPartScreen />} />
       </Routes>
     </StoryRoute>
   );
 }
 
-export const CalcLoading: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/returns?preview=loading" /> };
+/** FLOW-1138: a calculation page loads as its hero and two blocks, not list rows. */
+async function expectReturnsSkeleton(canvasElement: HTMLElement) {
+  await expect(await within(canvasElement).findByText("טוען…")).toBeInTheDocument();
+  await expect(canvasElement.querySelector(".ui-ret-hero .ui-skeleton-bar")).not.toBeNull();
+  await expect(canvasElement.querySelectorAll(".ui-ret-calc")).toHaveLength(2);
+  await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+}
+
+export const CalcLoading: Story = {
+  args: { entry: "" },
+  render: () => <LiveRoutes entry="/projects/p1/investment/returns?preview=loading" />,
+  play: async ({ canvasElement }) => { await expectReturnsSkeleton(canvasElement); },
+};
+export const CalcLineLoading: Story = {
+  args: { entry: "" },
+  render: () => <LiveRoutes entry="/projects/p1/investment/returns/income?preview=loading" />,
+  play: async ({ canvasElement }) => { await expectReturnsSkeleton(canvasElement); },
+};
+export const CalcMetricLoading: Story = {
+  args: { entry: "" },
+  render: () => <LiveRoutes entry="/projects/p1/investment/metric/coc?preview=loading" />,
+  play: async ({ canvasElement }) => { await expectReturnsSkeleton(canvasElement); },
+};
+export const CalcPartLoading: Story = {
+  args: { entry: "" },
+  render: () => <LiveRoutes entry="/projects/p1/investment/part/money-in?preview=loading" />,
+  play: async ({ canvasElement }) => { await expectReturnsSkeleton(canvasElement); },
+};
 export const CalcFailed: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/metric/coc?preview=error-server" /> };
 export const CalcOffline: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/metric/coc?preview=error" /> };
 export const CalcEmpty: Story = { args: { entry: "" }, render: () => <LiveRoutes entry="/projects/p1/investment/returns?preview=empty" /> };

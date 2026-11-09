@@ -423,3 +423,128 @@
   font-size: var(--type-meta-size);
   line-height: var(--type-title-line);
 }
+
+/* FLOW-1136: the forecast tab's skeleton, in its shape: the stepper, the bars, two cards, the properties. */
+.ui-msr-skel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-msr-skel-stepper {
+  inline-size: 100%;
+  block-size: var(--touch-min);
+  border-radius: var(--radius-input);
+}
+
+.ui-msr-skel-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  block-size: 140px;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-msr-skel-bar {
+  flex: 1;
+  border-start-start-radius: var(--radius-chip);
+  border-start-end-radius: var(--radius-chip);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.ui-msr-skel-bar-38 {
+  block-size: 38%;
+}
+
+.ui-msr-skel-bar-44 {
+  block-size: 44%;
+}
+
+.ui-msr-skel-bar-50 {
+  block-size: 50%;
+}
+
+.ui-msr-skel-bar-56 {
+  block-size: 56%;
+}
+
+.ui-msr-skel-bar-62 {
+  block-size: 62%;
+}
+
+.ui-msr-skel-bar-68 {
+  block-size: 68%;
+}
+
+.ui-msr-skel-bar-74 {
+  block-size: 74%;
+}
+
+.ui-msr-skel-bar-80 {
+  block-size: 80%;
+}
+
+.ui-msr-skel-bar-88 {
+  block-size: 88%;
+}
+
+.ui-msr-skel-bar-96 {
+  block-size: 96%;
+}
+
+.ui-msr-skel-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-msr-skel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-msr-skel-prop {
+  min-block-size: calc(var(--space-8) * 2);
+}
+
+.ui-msr-skel-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-msr-skel-title {
+  inline-size: 40%;
+  block-size: var(--space-4);
+}
+
+.ui-msr-skel-line {
+  inline-size: 55%;
+  block-size: var(--space-3);
+}
+
+.ui-msr-skel-hint {
+  inline-size: 70%;
+  block-size: var(--space-2);
+}
+
+.ui-msr-skel-figure {
+  inline-size: 72px;
+  block-size: var(--space-3);
+}
+
+.ui-msr-skel-band {
+  display: inline-block;
+  inline-size: 60%;
+  block-size: var(--skel-hero);
+  vertical-align: middle;
+}

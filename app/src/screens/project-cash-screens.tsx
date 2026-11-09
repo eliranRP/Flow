@@ -22,13 +22,14 @@ import { DocumentIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
-import { ListSkeleton, Skeleton } from "../ui/skeleton";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { StatusMark } from "../ui/status-mark";
 import { TopBand, usePageAtEnd } from "../ui/top-band";
 import { israelToday } from "../ui/date-math";
 import { reportsTo } from "../reports";
 import { loansFigure } from "./project-overview";
 import { ProjectEmptyCard, ProjectLinks, type ProjectLink } from "./project-page-cards";
+import { LineGroupsSkeleton } from "./project-skeletons";
 import type { ProjectInvestment } from "./project-investment-data";
 
 type Project = NonNullable<ProjectDetail>;
@@ -193,10 +194,10 @@ export function ProjectCashOverview({
   links?: readonly ProjectLink[];
   /** A project with no line, invoice or month yet: the links give way to the empty card. */
   fresh?: boolean;
-  /** The company's recurring schedule; the page keeps the project's own rows. */
-  schedule?: readonly ScheduleRow[];
-  /** The month's lines of the project, for the one-off group. */
-  lines?: readonly CashLine[];
+  /** The company's recurring schedule; the page keeps the project's own rows. Null while it is read. */
+  schedule?: readonly ScheduleRow[] | null;
+  /** The month's lines of the project, for the one-off group. Null while they are read. */
+  lines?: readonly CashLine[] | null;
   /** A failed read of the charges or the lines: its retry line sits above the groups, which then say nothing. */
   linesRetry?: () => void;
   /** FLOW-961: offline, the moment the figures on screen are from; null online. */
@@ -223,9 +224,11 @@ export function ProjectCashOverview({
   // FLOW-445: נכנס and יצא sit in the band on one line.
   const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);
   const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
-  const groups = projectLineGroups(schedule, lines, project.id, filter);
+  const groups = projectLineGroups(schedule ?? [], lines ?? [], project.id, filter);
+  // FLOW-1138: until the cash, the charges and the lines are in, the groups' place holds their skeleton, not "none yet".
+  const linesLoading = linesRetry == null && (data == null || schedule == null || lines == null);
   // FLOW-1081: a charge taken out of this month's forecast moves from נותר לשלם to הוצא מהצפי, out of its total.
-  const keyOf = (row: ScheduleRow) => (skip == null ? undefined : scheduleForecastKey(schedule, row, skip.base));
+  const keyOf = (row: ScheduleRow) => (skip == null || schedule == null ? undefined : scheduleForecastKey(schedule, row, skip.base));
   const isSkipped = (row: ScheduleRow) => {
     const key = keyOf(row);
     return key != null && skip != null && skip.skipped.has(key);
@@ -317,7 +320,6 @@ export function ProjectCashOverview({
         dock={control}
         docked={docked}
       />
-      {data == null ? <ListSkeleton /> : null}
       <div className="ui-project-stack">
         <AttentionCards rows={attention} storageKey={`project:${project.id}`} />
         {kindCard}
@@ -330,7 +332,8 @@ export function ProjectCashOverview({
             <DockSlot docked={docked}>{control}</DockSlot>
           </div>
           {linesRetry == null ? null : <FailureLine offline={!navigator.onLine} onRetry={linesRetry} />}
-          {hasLines || linesRetry != null ? null : <p className="ui-page-pad ui-project-lines-none t-line2">{filter === "left" ? "אין מה לשלם עוד החודש." : "אין עדיין תנועות החודש."}</p>}
+          {linesLoading ? <DelayedSkeleton><LineGroupsSkeleton /></DelayedSkeleton> : null}
+          {hasLines || linesRetry != null || linesLoading ? null : <p className="ui-page-pad ui-project-lines-none t-line2">{filter === "left" ? "אין מה לשלם עוד החודש." : "אין עדיין תנועות החודש."}</p>}
           {left.length === 0 ? null : (
             <section className="ui-month" aria-labelledby={`project-left-${project.id}`}>
               <GroupHead id={`project-left-${project.id}`} title="נותר לשלם" summary={summaryOf(left.length, left[0]?.currency, chargeTotal(left))} />

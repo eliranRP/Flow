@@ -20,10 +20,11 @@ import { GroupHead } from "../ui/group-head";
 import { CheckIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
-import { ListSkeleton } from "../ui/skeleton";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import type { ToastInput } from "../ui/toast-layout";
 import { ProjectFormSheet } from "./project-form-sheet";
+import { UnassignedSkeleton } from "./project-skeletons";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A sample list (stories): the lines and the projects the picker offers. */
@@ -132,7 +133,7 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col" aria-busy="true">
         {header}
-        <ListSkeleton />
+        <DelayedSkeleton><UnassignedSkeleton /></DelayedSkeleton>
       </div>
     );
   }

@@ -20,7 +20,7 @@ import { FocusTitle } from "../ui/focus-title";
 import { INVESTMENT_LABELS, type InvestmentField, type InvestmentFigures } from "../ui/investment-card";
 import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
-import { ListSkeleton, Skeleton } from "../ui/skeleton";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import { TopBand, usePageAtEnd } from "../ui/top-band";
 import { useHoldWrites } from "../use-is-viewer";
@@ -42,6 +42,8 @@ import {
   rentBandFigure,
   type InvestmentKind,
 } from "./project-returns-cards";
+import { InvestmentGroupsSkeleton } from "./project-skeletons";
+import { FLIP_GROUPS, RENT_GROUPS } from "./project-returns-deal";
 import { SELLING_COST_DEFAULT_BP, usePropertyReturnsQuery, type PropertyReturns } from "./project-returns-data";
 import type { EditField, InfoKey } from "./project-returns-info";
 import { editFieldOf, investmentBase, pageResolver, type Resolve } from "./project-returns-parts";
@@ -654,7 +656,9 @@ export function ProjectInvestmentScreen({
               landBusy={saveLand.isPending}
             />
           ) : shownTab === "metrics" ? (
-            returns == null ? <ListSkeleton /> : <MetricsGroup kind={kind} returns={returns} base={base} search={search} onAdd={onAdd} />
+            returns != null ? <MetricsGroup kind={kind} returns={returns} base={base} search={search} onAdd={onAdd} />
+              // The parts' card above says the returns are loading, or that they failed; the groups wait silently.
+              : returnsRead.isError && !sampled ? null : <InvestmentGroupsSkeleton groups={(kind === "rent" ? RENT_GROUPS : FLIP_GROUPS).length} />
           ) : loansGroup}
         </div>
       </div>
@@ -735,7 +739,13 @@ function InvestmentLoading({ back, name }: { back: string; name: string | undefi
           </>
         )}
       />
-      <ListSkeleton />
+      {/* The page's cards in their place: the returns' parts, then a group of rows (FLOW-1138). */}
+      <DelayedSkeleton>
+        <div className="ui-pinv-stack ui-page-pad">
+          <ReturnsCardsSkeleton />
+          <InvestmentGroupsSkeleton groups={1} />
+        </div>
+      </DelayedSkeleton>
     </div>
   );
 }
