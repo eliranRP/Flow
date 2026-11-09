@@ -1099,6 +1099,10 @@ begin
   if answer.id is null then
     raise exception 'refund not matched';
   end if;
+  -- A refund the owner keeps where it is (keep_category) is not moved, not even by a sibling's refile.
+  if answer.keep_category then
+    raise exception 'refund already in the bill''s category';
+  end if;
   perform 1 from public.utility_refund_answers x
   where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id
   for update;
@@ -1111,7 +1115,7 @@ begin
   from public.utility_refund_answers x
   join public.transactions t on t.id = x.bill_transaction_id and t.company_id = cid
   where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id
-    and t.category_id is not null and t.project_id is not null;
+    and not x.keep_category and t.category_id is not null and t.project_id is not null;
   if answer.refile is not null or not exists (
     select 1 from jsonb_to_recordset(matched) r(category_id uuid, amount bigint, wrong boolean) where r.wrong
   ) then
@@ -1167,7 +1171,7 @@ begin
   end if;
 
   update public.utility_refund_answers x set refile = changed
-  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id;
+  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id and not x.keep_category;
   return jsonb_build_object(
     'bill_transaction_id', bill.id,
     'payment_transaction_id', pay.id,

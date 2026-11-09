@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(117);
+select plan(124);
 
 do $users$
 begin
@@ -341,6 +341,26 @@ select tests.authenticate_as('ur_owner');
 select lives_ok(format('select public.undo_utility_refile(%L, %L)', pg_temp.uid('bg'), pg_temp.uid('pb')), 'undo from either bill');
 reset role;
 select is(private.line_split_parts(pg_temp.uid('pb')), '[]'::jsonb, 'the payment is whole again');
+-- A bill the owner keeps (להשאיר) stays where it is filed, even when its sibling on the same payment is refiled.
+select tests.authenticate_as('ur_owner');
+select lives_ok(format('select public.answer_utility_refund(%L, %L, %L, null, true)', pg_temp.uid('bg'), 'matched', pg_temp.uid('pb')),
+  'the owner keeps bg where it is filed');
+select is(public.refile_utility_refund(pg_temp.uid('be'), pg_temp.uid('pb'))->>'part_minor', '4000',
+  'refiling be splits off only be''s part');
+select is((pg_temp.bill('bg', '2026-06-30')->>'refiled') || ' ' || (pg_temp.bill('bg', '2026-06-30')->>'keep_category'), 'false true',
+  'the kept sibling is not refiled and stays kept');
+reset role;
+select is(private.line_split_parts(pg_temp.uid('pb')),
+  jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.uid('power'), 'project_id', pg_temp.uid('birch'), 'amount_minor', 4000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.uid('rent'), 'project_id', null, 'amount_minor', 153000, 'gross_up', false)),
+  'no part goes to the kept bill''s category; the rest stays rent');
+select tests.authenticate_as('ur_owner');
+select throws_ok(format('select public.refile_utility_refund(%L, %L)', pg_temp.uid('bg'), pg_temp.uid('pb')),
+  'P0001', 'refund already in the bill''s category', 'refiling a kept bill is refused');
+select lives_ok(format('select public.undo_utility_refile(%L, %L)', pg_temp.uid('be'), pg_temp.uid('pb')), 'undo be''s refile');
+reset role;
+select is(private.line_split_parts(pg_temp.uid('pb')), '[]'::jsonb, 'pb is whole again');
 
 -- Another company's ids are refused; the owner gets their own.
 select tests.authenticate_as('ur_outsider');
