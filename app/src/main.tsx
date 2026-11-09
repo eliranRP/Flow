@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
+import { followConnection } from "./connection";
 import { startHomeReads } from "./home-early-reads";
 import { createQueryClient } from "./query-client";
 import { applyThemeChoice, readThemeChoice } from "./theme-store";
@@ -22,6 +23,8 @@ void import("./sw-reload").then(({ watchServiceWorker }) => {
   watchServiceWorker(window, Date.now, () => touched);
 }, () => undefined);
 
+// FLOW-1140: before the first read, so a read sent with no connection pauses until it returns.
+followConnection();
 const queryClient = createQueryClient();
 startHomeReads(queryClient, window.location);
 

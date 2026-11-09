@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { Component, Suspense, type ReactNode } from "react";
 import { FailureLine } from "./ui/empty-state";
 
@@ -23,7 +24,7 @@ class ScreenLoadBoundary extends Component<{ children: ReactNode }, BoundaryStat
     if (this.state.failed) {
       return (
         <FailureLine
-          offline={typeof navigator !== "undefined" && !navigator.onLine}
+          offline={!onlineManager.isOnline()}
           onRetry={() => {
             window.location.reload();
           }}
@@ -34,11 +35,15 @@ class ScreenLoadBoundary extends Component<{ children: ReactNode }, BoundaryStat
   }
 }
 
-/** Where an on-demand screen renders: nothing while its code loads, the load error if it fails. */
-export function ScreenSuspense({ children }: { children: ReactNode }) {
+/**
+ * Where an on-demand screen renders: the load error if its code fails. While the code loads, nothing,
+ * or `fallback` (FLOW-1140, the full-screen outlet). React shows a fallback only in a boundary that is
+ * new; one already on screen keeps the screen it shows while a navigation (a transition) loads the next.
+ */
+export function ScreenSuspense({ children, fallback = null }: { children: ReactNode; fallback?: ReactNode }) {
   return (
     <ScreenLoadBoundary>
-      <Suspense fallback={null}>{children}</Suspense>
+      <Suspense fallback={fallback}>{children}</Suspense>
     </ScreenLoadBoundary>
   );
 }

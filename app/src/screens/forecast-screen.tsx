@@ -135,7 +135,7 @@ function ForecastHeadSkeleton() {
  */
 function ForecastPageSkeleton() {
   return (
-    <DelayedSkeleton>
+    <DelayedSkeleton offline>
       <div className="ui-forecast-skel" aria-busy="true">
         <p className="sr-only" role="status">טוען…</p>
         <ForecastHeadSkeleton />

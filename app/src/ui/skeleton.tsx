@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { cx } from "./cx";
+import { OfflineWait, useWaitingOffline } from "./offline-wait";
 
 const rowKeys = ["a", "b", "c", "d", "e", "f"] as const;
 
@@ -65,11 +66,14 @@ function useLingering(active: boolean, ms: number): boolean {
 /**
  * A load's skeleton (FLOW-371): nothing for the first 300ms, then the skeleton while `loading`. When
  * the load ends, a skeleton that was on screen fades out over 200ms, as the content fades in. A load
- * that ends within 300ms never shows one.
+ * that ends within 300ms never shows one. FLOW-1140: offline, a load that waits on a paused read shows
+ * the offline line in its place (ui/offline-wait.tsx); online nothing changes.
  */
 export function SkeletonSwap({ loading, children }: { loading: boolean; children: ReactNode }) {
   const held = useHeldFor(loading, SKELETON_DELAY_MS);
   const lingering = useLingering(held, SKELETON_FADE_MS);
+  const waiting = useWaitingOffline();
+  if (loading && waiting) return <OfflineWait />;
   if (loading) return held ? <>{children}</> : null;
   return lingering ? (
     <div className="ui-skel-leaving" aria-hidden="true">
@@ -78,9 +82,20 @@ export function SkeletonSwap({ loading, children }: { loading: boolean; children
   ) : null;
 }
 
-/** Renders its children only after the skeleton delay: a fast load shows nothing at all. */
-export function DelayedSkeleton({ children }: { children: ReactNode }) {
+/**
+ * Renders its children only after the skeleton delay: a fast load shows nothing at all. `offline`
+ * (FLOW-1140) marks a whole loading place, not a block inside a band or a row: offline, while a read
+ * waits for the connection, it shows the offline line instead.
+ */
+export function DelayedSkeleton({ children, offline = false }: { children: ReactNode; offline?: boolean }) {
   const shown = useElapsed(SKELETON_DELAY_MS);
+  if (offline) return <OfflineOrSkeleton shown={shown}>{children}</OfflineOrSkeleton>;
+  return shown ? <>{children}</> : null;
+}
+
+function OfflineOrSkeleton({ shown, children }: { shown: boolean; children: ReactNode }) {
+  const waiting = useWaitingOffline();
+  if (waiting) return <OfflineWait />;
   return shown ? <>{children}</> : null;
 }
 

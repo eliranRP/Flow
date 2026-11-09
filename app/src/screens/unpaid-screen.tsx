@@ -140,7 +140,7 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
       </header>
       {loading ? (
         // FLOW-1139: the page's shape: the total and its line, the filter, then the invoices.
-        <DelayedSkeleton>
+        <DelayedSkeleton offline>
           <LinesSkeleton />
         </DelayedSkeleton>
       ) : failed ? (

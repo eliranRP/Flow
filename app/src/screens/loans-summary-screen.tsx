@@ -320,7 +320,7 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
       />
       <div className="ui-loans-body">
         {read.phase === "loading" ? (
-          <DelayedSkeleton>
+          <DelayedSkeleton offline>
             <LoansSummarySkeleton />
           </DelayedSkeleton>
         ) : read.phase === "error" ? (

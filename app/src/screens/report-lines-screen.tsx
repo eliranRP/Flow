@@ -204,7 +204,7 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
     return (
       <div className="ui-rep-screen">
         {header}
-        {read.isError ? <PageLoadFailed title={`${title} לא נטען`} offline={!online} onRetry={() => { void read.refetch(); }} /> : <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>}
+        {read.isError ? <PageLoadFailed title={`${title} לא נטען`} offline={!online} onRetry={() => { void read.refetch(); }} /> : <DelayedSkeleton offline><ProfitRowsSkeleton /></DelayedSkeleton>}
       </div>
     );
   }
