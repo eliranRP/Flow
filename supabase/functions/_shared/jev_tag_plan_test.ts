@@ -529,6 +529,8 @@ Deno.test("FLOW-1072: a card named after one property decides the project over t
   assertEquals(planTag(expense({ cardName: "Ops Card" }), "auto", 0.9, props, categories, guessed).write?.projectId, OTHER);
 });
 
+// The same cases run in SQL (private.card_name_project_of) in supabase/tests/database/flow_1134_utility_refunds.test.sql:
+// keep the two in step.
 Deno.test("FLOW-1072: the card's name matches a property by its own words, a number on both must agree", () => {
   const props = [
     { id: PROJECT, name: "Example Rd 1234" },

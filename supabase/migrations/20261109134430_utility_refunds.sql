@@ -2,16 +2,19 @@
 --
 -- A utility is one supplier's bills for one property and currency (the key of a recurring charge,
 -- decision 0185). Flow finds it from the lines: an expense filed to a property in a category named
--- חשבונות or under it (the starter categories' tree); the owner can add one by hand. Each is
+-- חשבונות or under it (the starter categories' tree), or paid with a card whose name names exactly one
+-- property and a utilities word (decision 0262's card-name rule, ported to SQL); the owner can add one by
+-- hand. Each is
 -- tenant-paid (the tenant pays it back) unless the owner says the company pays.
 --
 -- 1. public.utility_payers: who pays a utility (tenant or company) and whether the owner added it.
 --    public.utility_refund_answers: the owner's answers for a bill: matched (with the payment line),
 --    rejected (a payment that is not the refund; never suggested again for that bill) or seen
---    (nothing to do). RLS on, no client grant; only the functions below read and write them.
+--    (nothing to do); a matched answer may keep a payment filed elsewhere as it is (keep_category).
+--    RLS on, no client grant; only the functions below read and write them.
 -- 2. The match is worked out on read (private.utility_refund_rows), like the transfer suggestions
---    (decision 0205): for each bill of a tenant-paid utility, from the first one in the books, a
---    money-in line dated from one month before the bill to the as-of date, filed to the property or
+--    (decision 0205), in one pass: for each bill of a tenant-paid utility, from the first one in the books,
+--    an income line dated from one month before the bill to the as-of date, filed to the property or
 --    to no property, not the refund of another bill, whose amount is within one unit of the
 --    currency (100 minor units) of (1) the bill, (2) several of the property's bills of that month
 --    together, or (3) the property's usual rent plus one or more of them. Rule 1 or 2 with the
@@ -21,8 +24,8 @@
 -- 3. Reads (any member): list_utility_refunds, count_utility_refunds, list_utility_payers. Writes
 --    (owner or editor, decision 0167): set_utility_payer, answer_utility_refund,
 --    mark_utility_refunds_seen and unmark_utility_refunds_seen, refile_utility_refund and
---    undo_utility_refile (the one-tap fix: the payment moves to the bill's category, or the bill's
---    part is split off a rent payment through save_line_split).
+--    undo_utility_refile (the one-tap fix: the payment moves to the bill's category, or is split into a
+--    part per bill category, plus the rest of a rent payment, through save_line_split).
 -- 4. MCP (decision 0095): mcp_set_utility_payer, mcp_answer_utility_refund,
 --    mcp_mark_utility_refunds_seen and mcp_refile_utility_refund, with the idempotency key, the write
 --    gate and the undo kinds utility_payer, utility_refund, utility_refunds_seen and utility_refile
@@ -76,10 +79,13 @@ create table public.utility_refund_answers (
   payment_transaction_id uuid,
   -- A matched pair the one-tap fix refiled: what it changed, so undo_utility_refile puts it back.
   refile jsonb,
+  -- A matched refund filed elsewhere that the owner keeps as it is (להשאיר): no wrong-category note.
+  keep_category boolean not null default false,
   set_by uuid references auth.users (id) on delete set null,
   set_at timestamptz not null default clock_timestamp(),
   constraint utility_refund_answers_payment check ((state = 'seen') = (payment_transaction_id is null)),
   constraint utility_refund_answers_two_lines check (payment_transaction_id is distinct from bill_transaction_id),
+  constraint utility_refund_answers_keep check (not keep_category or state = 'matched'),
   constraint utility_refund_answers_refile check (
     refile is null or (state = 'matched' and jsonb_typeof(refile) = 'object')
   ),
@@ -101,6 +107,10 @@ alter table public.utility_refund_answers enable row level security;
 revoke all on public.utility_refund_answers from public, anon, authenticated;
 grant select, insert, update, delete on public.utility_refund_answers to service_role;
 
+-- The match reads a company's lines by direction and date (the money-in candidates, the rent lines).
+create index transactions_company_direction_date_idx
+  on public.transactions (company_id, direction, doc_date) where removed_at is null;
+
 -- 2. The match.
 -- A category named p_root of kind p_kind and every category under it (the parent tree).
 create function private.utility_category_ids(p_company uuid, p_root text, p_kind public.category_kind)
@@ -120,24 +130,133 @@ as $$
   select coalesce(array_agg(distinct tree.id), '{}') from tree;
 $$;
 
--- The company's utilities: a (property, supplier, currency) with an expense line filed under
--- חשבונות (found), or one the owner added; payer is the owner's pick, tenant by default.
+-- The card-name rule of decision 0262 (cardProject in supabase/functions/_shared/jev_tag_plan.ts), in SQL.
+-- Keep the two in step: the same generic words, tokens and cases (the pgTAP test of FLOW-1134 repeats the
+-- Deno test "FLOW-1072: the card's name matches a property by its own words").
+-- Words a property's name shares with any card or account name, so they never decide a match.
+create function private.card_generic_words()
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select array[
+    'rd', 'road', 'ave', 'av', 'avenue', 'st', 'street', 'dr', 'drive', 'ln', 'lane', 'blvd', 'boulevard', 'ct', 'court',
+    'way', 'pl', 'place', 'ter', 'terrace', 'cir', 'circle', 'hwy', 'pkwy', 'trl', 'sq', 'north', 'south', 'east', 'west',
+    'utilities', 'utility', 'card', 'account', 'checking', 'savings', 'ops', 'operating', 'rent', 'rental', 'flip',
+    'rehab', 'renovation', 'property', 'project', 'llc', 'inc', 'the', 'and', 'of', 'unit', 'apt',
+    'main', 'business', 'primary', 'personal', 'joint', 'general', 'company',
+    'רחוב', 'שדרות', 'דרך', 'כרטיס', 'חשבון', 'שיפוץ', 'פרויקט', 'דירה', 'נכס'
+  ]::text[];
+$$;
+
+-- A name's own words (3 letters or more, generic words left out) and numbers (2 digits or more), lower case.
+create function private.card_name_keys(p_name text, out words text[], out numbers text[])
+language sql
+immutable
+set search_path = ''
+as $$
+  select
+    coalesce(array_agg(distinct k.token) filter (
+      where k.token !~ '^[0-9]+$' and char_length(k.token) >= 3 and not (k.token = any (private.card_generic_words()))
+    ), '{}'),
+    coalesce(array_agg(distinct k.token) filter (where k.token ~ '^[0-9]+$' and char_length(k.token) >= 2), '{}')
+  from regexp_split_to_table(lower(coalesce(p_name, '')), '[^[:alnum:]]+') as k(token)
+  where k.token <> '';
+$$;
+
+-- The project a card's name names, when exactly one does: every word of the project's name is in the card's
+-- name, and a number on both must agree. Overhead and finished projects are not candidates. p_projects is
+-- [{id, name, overhead, finished}], as cardProject takes them.
+create function private.card_name_project_of(p_card text, p_projects jsonb)
+returns uuid
+language sql
+immutable
+set search_path = ''
+as $$
+  select case when count(*) = 1 then min(m.id::text)::uuid end
+  from (
+    select (e->>'id')::uuid as id
+    from jsonb_array_elements(case when jsonb_typeof(p_projects) = 'array' then p_projects else '[]'::jsonb end) e
+    cross join lateral private.card_name_keys(e->>'name') own
+    cross join lateral private.card_name_keys(p_card) card
+    where nullif(btrim(coalesce(p_card, '')), '') is not null
+      and not coalesce((e->>'overhead')::boolean, false)
+      and not coalesce((e->>'finished')::boolean, false)
+      and cardinality(own.words) > 0
+      and own.words <@ card.words
+      and not (cardinality(card.numbers) > 0 and cardinality(own.numbers) > 0 and not (own.numbers && card.numbers))
+  ) m;
+$$;
+
+-- The company's projects as card_name_project_of takes them.
+create function private.card_name_projects(p_company uuid)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'id', p.id, 'name', p.name,
+      'overhead', p.id is not distinct from c.overhead_project_id,
+      'finished', p.status = 'finished'
+    )), '[]'::jsonb)
+  from public.projects p
+  join public.companies c on c.id = p.company_id
+  where p.company_id = p_company;
+$$;
+
+-- The company's utilities: a (property, supplier, currency) with an expense line filed under חשבונות, or
+-- paid with a card whose name names exactly one property and a utilities word (the purpose words of the
+-- generic list: utilities, utility), wherever that line is filed (found); or one the owner added. payer is
+-- the owner's pick, tenant by default.
 create function private.utility_keys(p_company uuid)
 returns table (project_id uuid, supplier_id uuid, currency text, payer text, added boolean, found boolean)
 language sql
 stable
 set search_path = ''
 as $$
-  with found as (
-    select distinct t.project_id, t.supplier_id, t.currency
-    from public.transactions t
+  with cats as (
+    select private.utility_category_ids(p_company, 'חשבונות', 'expense') as ids
+  ),
+  projects as (
+    select private.card_name_projects(p_company) as list
+  ),
+  cards as (
+    select distinct cc.provider::text as provider, card.value->>'last4' as last4,
+      private.card_name_project_of(private.mask_long_digits(card.value->>'label'), pr.list) as project_id
+    from public.connector_connections cc
+    cross join projects pr
+    cross join lateral jsonb_array_elements(
+      case when jsonb_typeof(cc.card_labels) = 'array' then cc.card_labels else '[]'::jsonb end
+    ) as card(value)
+    where cc.company_id = p_company
+      and card.value->>'last4' ~ '^[0-9]{4}$'
+      and exists (
+        select 1 from regexp_split_to_table(lower(coalesce(card.value->>'label', '')), '[^[:alnum:]]+') w(token)
+        where w.token in ('utilities', 'utility')
+      )
+  ),
+  found as (
+    select t.project_id, t.supplier_id, t.currency
+    from public.transactions t, cats
     where t.company_id = p_company
       and t.direction = 'expense'
       and t.project_id is not null
       and t.supplier_id is not null
       and t.removed_at is null
       and t.line_status = 'posted'
-      and t.category_id = any (private.utility_category_ids(p_company, 'חשבונות', 'expense'))
+      and t.category_id = any (cats.ids)
+    union
+    select cd.project_id, t.supplier_id, t.currency
+    from public.transactions t
+    join cards cd on cd.provider = t.source::text and cd.last4 = t.provider_meta->>'card_last4'
+    where t.company_id = p_company
+      and cd.project_id is not null
+      and t.direction = 'expense'
+      and t.supplier_id is not null
+      and t.removed_at is null
+      and t.line_status = 'posted'
   ),
   payers as (
     select u.* from public.utility_payers u where u.company_id = p_company
@@ -174,63 +293,17 @@ as $$
     and t.amount_original > 100;
 $$;
 
--- The property's usual rent: the median of its last 3 money-in lines in the rent categories
--- (שכירות and under it), in the currency, dated before p_before. Null when it has none.
-create function private.utility_usual_rent(
-  p_company uuid, p_project uuid, p_currency text, p_before date, p_rent uuid[]
-)
-returns bigint
-language sql
-stable
-set search_path = ''
-as $$
-  select round(percentile_cont(0.5) within group (order by r.amount_original))::bigint
-  from (
-    select t.amount_original
-    from public.transactions t
-    where t.company_id = p_company
-      and t.project_id = p_project
-      and t.currency = p_currency
-      and t.direction = 'income'
-      and t.removed_at is null
-      and t.line_status = 'posted'
-      and t.category_id = any (p_rent)
-      and t.doc_date < p_before
-    order by t.doc_date desc, t.id desc
-    limit 3
-  ) r
-  having count(*) > 0;
-$$;
-
--- A month with no rent: the property has no money-in line in the rent categories dated in it.
-create function private.utility_no_rent(p_company uuid, p_project uuid, p_day date, p_rent uuid[])
-returns boolean
-language sql
-stable
-set search_path = ''
-as $$
-  select not exists (
-    select 1 from public.transactions t
-    where t.company_id = p_company
-      and t.project_id = p_project
-      and t.direction = 'income'
-      and t.removed_at is null
-      and t.line_status = 'posted'
-      and t.category_id = any (p_rent)
-      and t.doc_date >= date_trunc('month', p_day)::date
-      and t.doc_date < (date_trunc('month', p_day) + interval '1 month')::date
-  );
-$$;
-
 -- Every bill of a tenant-paid utility with its state as of p_today:
 --   refunded: matched by the owner (source owner) or counted by itself (source auto: rule 1 or 2 and
 --     the payment filed to the category every bill of the group shares);
 --   suggested: any other match (rule 1, 2 or 3), for the owner to answer;
 --   seen: closed by the owner; not_refunded: no match 30 days or more after the bill; waiting: younger.
--- Bills are matched oldest first; a payment is the refund of one bill, or of one group of the same
--- month's bills (rules 2 and 3: group_ids). A pair the owner rejected is never matched. The peers a
--- group is drawn from are the bill and up to 9 more of the property's open bills of that month, in
--- that currency. p_project only filters what is returned: the match always runs on the whole company.
+-- One pass (FLOW-1134 review, B2): the bills the owner closed are left out first; the groups are every
+-- set of up to 3 of a month's open bills of a property and currency, plus the whole month when it has
+-- more; each group's targets (its total, and the usual rent plus its total) meet the money-in lines once,
+-- by amount bucket. Then bills are matched oldest first: a group is owned by its oldest bill, a payment is
+-- the refund of one group, a bill is in one group, and a pair the owner rejected is never matched.
+-- p_project only filters what is returned: the match always runs on the whole company.
 create function private.utility_refund_rows(p_company uuid, p_today date, p_project uuid default null)
 returns table (
   bill_id uuid, project_id uuid, supplier_id uuid, currency text, category_id uuid, doc_date date,
@@ -240,160 +313,217 @@ language plpgsql
 stable
 set search_path = ''
 as $$
+#variable_conflict use_column
 declare
-  bills private.utility_bill[];
   rent uuid[] := private.utility_category_ids(p_company, 'שכירות', 'income');
-  done uuid[] := '{}';
-  used uuid[] := '{}';
-  b private.utility_bill;
-  g private.utility_bill;
-  a record;
-  best record;
-  usual bigint;
-  peers private.utility_bill[];
+  bills private.utility_bill[];
+  closed text[];
+  closed_pay uuid[];
+  owner_paid uuid[];
+  done boolean[] := '{}';
+  used boolean[] := '{}';
+  res_state text[] := '{}';
+  res_rule smallint[] := '{}';
+  res_pay uuid[] := '{}';
+  res_owner integer[] := '{}';
+  c record;
+  cur integer := 0;
+  taken boolean := false;
+  o integer;
+  clash boolean;
 begin
   select coalesce(array_agg(x order by x.doc_date, x.id), '{}') into bills
   from private.utility_bills(p_company) x;
+  if cardinality(bills) = 0 then
+    return;
+  end if;
 
-  -- The owner's closing answers first.
-  for a in
-    select x.bill_transaction_id, x.state as answer, x.payment_transaction_id
-    from public.utility_refund_answers x
-    where x.company_id = p_company and x.state in ('matched', 'seen')
-      and x.bill_transaction_id in (select u.id from unnest(bills) u)
-  loop
-    done := done || a.bill_transaction_id;
-    if a.payment_transaction_id is not null then
-      used := used || a.payment_transaction_id;
-    end if;
-  end loop;
-  for b in select u.* from unnest(bills) u where u.id = any (done) loop
-    continue when p_project is not null and b.project_id <> p_project;
-    select x.state, x.payment_transaction_id into a
-    from public.utility_refund_answers x
-    where x.company_id = p_company and x.bill_transaction_id = b.id and x.state in ('matched', 'seen');
-    bill_id := b.id; project_id := b.project_id; supplier_id := b.supplier_id; currency := b.currency;
-    category_id := b.category_id; doc_date := b.doc_date; amount := b.amount;
-    state := case when a.state = 'matched' then 'refunded' else 'seen' end;
-    source := 'owner'; rule := null; payment_id := a.payment_transaction_id; group_ids := array[b.id];
-    no_rent := private.utility_no_rent(p_company, b.project_id, b.doc_date, rent);
-    return next;
-  end loop;
+  -- The owner's closing answers, by the bill's place in bills.
+  select array_agg(a.state order by u.ord), array_agg(a.payment_transaction_id order by u.ord)
+  into closed, closed_pay
+  from unnest(bills) with ordinality as u(id, project_id, supplier_id, currency, category_id, doc_date, amount, ord)
+  left join public.utility_refund_answers a
+    on a.company_id = p_company and a.bill_transaction_id = u.id and a.state in ('matched', 'seen');
+  owner_paid := array_remove(closed_pay, null);
 
-  -- Then the match, oldest bill first.
-  foreach b in array bills loop
-    continue when b.id = any (done);
-    usual := private.utility_usual_rent(p_company, b.project_id, b.currency, b.doc_date, rent);
-    peers := array[b] || coalesce((
-      select array_agg(q.u order by (q.u).doc_date, (q.u).id)
+  for c in
+    with b as materialized (
+      select u.ord::integer as ord, u.id, u.project_id, u.currency, u.category_id, u.doc_date, u.amount,
+        date_trunc('month', u.doc_date)::date as month
+      from unnest(bills) with ordinality as u(id, project_id, supplier_id, currency, category_id, doc_date, amount, ord)
+      where closed[u.ord] is null
+    ),
+    -- The pairs and triples are drawn from a month's first 12 open bills (220 triples at most).
+    b12 as materialized (
+      select x.* from (
+        select b.*, row_number() over (partition by b.project_id, b.currency, b.month order by b.ord) as rn from b
+      ) x
+      where x.rn <= 12
+    ),
+    subs as materialized (
+      select row_number() over () as sid, x.*
       from (
-        select u from unnest(bills) u
-        where u.id <> b.id and not (u.id = any (done))
-          and u.project_id = b.project_id and u.currency = b.currency
-          and date_trunc('month', u.doc_date) = date_trunc('month', b.doc_date)
-        order by u.doc_date, u.id
-        limit 9
-      ) q
-    ), '{}');
-
-    select m.* into best
-    from (
-      with mb as (
-        select u.id, u.amount, u.category_id, u.ord
-        from unnest(peers) with ordinality as u(id, project_id, supplier_id, currency, category_id, doc_date, amount, ord)
-      ),
-      subs as (
-        select array_agg(mb.id order by mb.ord) as ids, sum(mb.amount)::bigint as total,
-          array_agg(mb.category_id) as cats, count(*)::integer as size
-        from generate_series(1, (1 << cardinality(peers)) - 1) s(mask)
-        join mb on ((s.mask >> (mb.ord::integer - 1)) & 1) = 1
-        group by s.mask
-        having bool_or(mb.ord = 1)
-      )
-      select p.id as pay_id, s.ids, r.rule,
-        r.rule < 3 and p.category_id is not null and coalesce(p.category_id = all (s.cats), false) as auto,
-        abs(p.doc_date - b.doc_date) as days_apart, s.size,
-        abs(p.amount_original - s.total - case when r.rule = 3 then usual else 0 end) as off_by
-      from subs s
-      cross join public.transactions p
-      cross join lateral (
-        select case
-          when s.size = 1 and abs(p.amount_original - s.total) <= 100 then 1
-          when s.size > 1 and abs(p.amount_original - s.total) <= 100 then 2
-          when usual is not null and abs(p.amount_original - usual - s.total) <= 100 then 3
-        end::smallint as rule
-      ) r
+        select b1.ord as owner, array[b1.ord] as ords, b1.amount as total, array[b1.category_id] as cats, 1 as size,
+          b1.project_id, b1.currency, b1.doc_date
+        from b b1
+        union all
+        select b1.ord, array[b1.ord, b2.ord], b1.amount + b2.amount, array[b1.category_id, b2.category_id], 2,
+          b1.project_id, b1.currency, b1.doc_date
+        from b12 b1
+        join b12 b2 on b2.project_id = b1.project_id and b2.currency = b1.currency and b2.month = b1.month and b2.ord > b1.ord
+        union all
+        select b1.ord, array[b1.ord, b2.ord, b3.ord], b1.amount + b2.amount + b3.amount,
+          array[b1.category_id, b2.category_id, b3.category_id], 3, b1.project_id, b1.currency, b1.doc_date
+        from b12 b1
+        join b12 b2 on b2.project_id = b1.project_id and b2.currency = b1.currency and b2.month = b1.month and b2.ord > b1.ord
+        join b12 b3 on b3.project_id = b1.project_id and b3.currency = b1.currency and b3.month = b1.month and b3.ord > b2.ord
+        union all
+        -- The whole month, when it has more than 3 bills.
+        select min(b.ord), array_agg(b.ord order by b.ord), sum(b.amount)::bigint, array_agg(b.category_id), count(*)::integer,
+          b.project_id, b.currency, min(b.doc_date)
+        from b
+        group by b.project_id, b.currency, b.month
+        having count(*) > 3
+      ) x
+    ),
+    rent_lines as materialized (
+      select t.project_id, t.currency, t.doc_date,
+        lead(t.doc_date) over w as next_date,
+        array_agg(t.amount_original) over (w rows between 2 preceding and current row) as last3
+      from public.transactions t
+      where t.company_id = p_company
+        and t.direction = 'income'
+        and t.removed_at is null
+        and t.line_status = 'posted'
+        and t.project_id is not null
+        and t.category_id = any (rent)
+      window w as (partition by t.project_id, t.currency order by t.doc_date, t.id)
+    ),
+    -- The usual rent of each open bill: the median of the last 3 rent lines dated before it (the rent
+    -- line before it, and the 2 before that one).
+    usual as materialized (
+      select b.ord,
+        (select round(percentile_cont(0.5) within group (order by v))::bigint from unnest(r.last3) v) as usual
+      from b
+      join rent_lines r
+        on r.project_id = b.project_id and r.currency = b.currency
+        and r.doc_date < b.doc_date and (r.next_date is null or b.doc_date <= r.next_date)
+    ),
+    pays as materialized (
+      select p.id, p.currency, p.project_id, p.category_id, p.doc_date, p.amount_original as amount,
+        p.amount_original / 100 as bucket, (row_number() over ())::integer as pord
+      from public.transactions p
       where p.company_id = p_company
+        and p.direction = 'income'
         and p.removed_at is null
         and p.line_status = 'posted'
         and p.amount_original > 0
-        and (p.direction = 'income' or p.doc_kind = 'credit')
-        and p.currency = b.currency
-        and (p.project_id = b.project_id or p.project_id is null)
-        and p.doc_date >= (b.doc_date - interval '1 month')::date
         and p.doc_date <= p_today
-        and not (p.id = any (used))
-        and r.rule is not null
-        and not exists (
-          select 1 from public.utility_refund_answers x
-          where x.company_id = p_company and x.state = 'rejected'
-            and x.payment_transaction_id = p.id and x.bill_transaction_id = any (s.ids)
-        )
-    ) m
-    order by m.auto desc, m.rule, m.days_apart, m.size, m.off_by, m.pay_id
-    limit 1;
-
-    if best.pay_id is not null then
-      used := used || best.pay_id;
-      done := done || best.ids;
-      for g in select u.* from unnest(peers) u where u.id = any (best.ids) loop
-        continue when p_project is not null and g.project_id <> p_project;
-        bill_id := g.id; project_id := g.project_id; supplier_id := g.supplier_id; currency := g.currency;
-        category_id := g.category_id; doc_date := g.doc_date; amount := g.amount;
-        state := case when best.auto then 'refunded' else 'suggested' end;
-        source := case when best.auto then 'auto' end;
-        rule := best.rule; payment_id := best.pay_id; group_ids := best.ids;
-        no_rent := private.utility_no_rent(p_company, g.project_id, g.doc_date, rent);
-        return next;
-      end loop;
-    else
-      done := done || b.id;
-      continue when p_project is not null and b.project_id <> p_project;
-      bill_id := b.id; project_id := b.project_id; supplier_id := b.supplier_id; currency := b.currency;
-      category_id := b.category_id; doc_date := b.doc_date; amount := b.amount;
-      state := case when p_today - b.doc_date >= 30 then 'not_refunded' else 'waiting' end;
-      source := null; rule := null; payment_id := null; group_ids := array[b.id];
-      no_rent := private.utility_no_rent(p_company, b.project_id, b.doc_date, rent);
-      return next;
+        and p.doc_date >= (select min(b.doc_date) from b) - 31
+        and (p.project_id is null or p.project_id in (select b.project_id from b))
+        and not (p.id = any (owner_paid))
+    ),
+    -- Each group's targets (its total; the usual rent plus its total) in amount buckets 100 minor units
+    -- wide, so the money-in lines are met by equality.
+    buckets as materialized (
+      select s.sid, s.project_id, s.currency, s.doc_date, k.kind, k.target, g.bucket
+      from subs s
+      left join usual u on u.ord = s.owner
+      cross join lateral (values (1, s.total), (3, s.total + u.usual)) k(kind, target)
+      cross join lateral generate_series((k.target - 100) / 100, (k.target + 100) / 100) g(bucket)
+      where k.target is not null
+    ),
+    cand as materialized (
+      select t.sid,
+        p.id as pay_id, p.pord, p.category_id as pay_cat, t.kind,
+        abs(p.amount - t.target) as off_by,
+        abs(p.doc_date - t.doc_date) as days_apart
+      from buckets t
+      join pays p on p.currency = t.currency and p.bucket = t.bucket
+      where abs(p.amount - t.target) <= 100
+        and (p.project_id is null or p.project_id = t.project_id)
+        and p.doc_date >= (t.doc_date - interval '1 month')::date
+    )
+    select s.owner, s.ords, s.size, x.pay_id, x.pord, x.off_by, x.days_apart,
+      case when x.kind = 3 then 3 when s.size = 1 then 1 else 2 end::smallint as rule,
+      (x.kind = 1 and x.pay_cat is not null and coalesce(x.pay_cat = all (s.cats), false)) as auto
+    from cand x
+    join subs s on s.sid = x.sid
+    where not exists (
+      select 1 from public.utility_refund_answers r
+      where r.company_id = p_company and r.state = 'rejected' and r.payment_transaction_id = x.pay_id
+        and r.bill_transaction_id in (select (bills[q]).id from unnest(s.ords) q)
+    )
+    order by s.owner, auto desc, rule, x.days_apart, s.size, x.off_by, x.pay_id
+  loop
+    if c.owner <> cur then
+      cur := c.owner;
+      taken := false;
     end if;
+    continue when taken or coalesce(done[c.owner], false) or coalesce(used[c.pord], false);
+    clash := false;
+    foreach o in array c.ords loop
+      if coalesce(done[o], false) then
+        clash := true;
+        exit;
+      end if;
+    end loop;
+    continue when clash;
+    used[c.pord] := true;
+    foreach o in array c.ords loop
+      done[o] := true;
+      res_state[o] := case when c.auto then 'refunded' else 'suggested' end;
+      res_rule[o] := c.rule;
+      res_pay[o] := c.pay_id;
+      res_owner[o] := c.owner;
+    end loop;
+    taken := true;
   end loop;
-end;
-$$;
 
--- The payment line as the list gives it.
-create function private.utility_payment_json(p_company uuid, p_id uuid)
-returns jsonb
-language sql
-stable
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'transaction_id', t.id,
-    'doc_date', t.doc_date,
-    'amount_minor', t.amount_original,
-    'currency', t.currency,
-    'description', t.description,
-    'party', coalesce(cu.name, s.name),
-    'project_id', t.project_id,
-    'category_id', t.category_id,
-    'category_name', c.name,
-    'split', exists (select 1 from private.split_parts x where x.transaction_id = t.id)
+  return query
+  with rent_months as (
+    select distinct t.project_id, date_trunc('month', t.doc_date)::date as month
+    from public.transactions t
+    where t.company_id = p_company
+      and t.direction = 'income'
+      and t.removed_at is null
+      and t.line_status = 'posted'
+      and t.project_id is not null
+      and t.category_id = any (rent)
+  ),
+  r as (
+    select u.id, u.project_id, u.supplier_id, u.currency, u.category_id, u.doc_date, u.amount,
+      closed[u.ord] as closing, closed_pay[u.ord] as closing_pay,
+      case when closed[u.ord] is null then res_state[u.ord] end as matched_state,
+      case when closed[u.ord] is null then res_rule[u.ord] end as matched_rule,
+      case when closed[u.ord] is null then res_pay[u.ord] end as matched_pay,
+      case when closed[u.ord] is null and res_owner[u.ord] is not null then res_owner[u.ord] else -u.ord::integer end as grp,
+      u.ord
+    from unnest(bills) with ordinality as u(id, project_id, supplier_id, currency, category_id, doc_date, amount, ord)
+  ),
+  g as (
+    select r.*, array_agg(r.id) over (partition by r.grp order by r.ord
+      rows between unbounded preceding and unbounded following) as ids
+    from r
   )
-  from public.transactions t
-  left join public.customers cu on cu.id = t.customer_id and cu.company_id = t.company_id
-  left join public.suppliers s on s.id = t.supplier_id and s.company_id = t.company_id
-  left join public.categories c on c.id = t.category_id and c.company_id = t.company_id
-  where t.id = p_id and t.company_id = p_company;
+  select g.id, g.project_id, g.supplier_id, g.currency, g.category_id, g.doc_date, g.amount,
+    case
+      when g.closing = 'matched' then 'refunded'
+      when g.closing = 'seen' then 'seen'
+      when g.matched_state is not null then g.matched_state
+      when p_today - g.doc_date >= 30 then 'not_refunded'
+      else 'waiting'
+    end,
+    case when g.closing is not null then 'owner' when g.matched_state = 'refunded' then 'auto' end,
+    g.matched_rule,
+    coalesce(g.closing_pay, g.matched_pay),
+    g.ids,
+    rm.project_id is null
+  from g
+  left join rent_months rm on rm.project_id = g.project_id and rm.month = date_trunc('month', g.doc_date)::date
+  where p_project is null or g.project_id = p_project
+  order by g.ord;
+end;
 $$;
 
 -- A matched payment filed elsewhere: neither its category nor one of its split parts is the bill's.
@@ -423,7 +553,8 @@ stable
 set search_path = ''
 as $$
   select coalesce(jsonb_agg(jsonb_build_object(
-      'state', x.state, 'payment_transaction_id', x.payment_transaction_id, 'refile', x.refile
+      'state', x.state, 'payment_transaction_id', x.payment_transaction_id, 'refile', x.refile,
+      'keep_category', x.keep_category
     ) order by x.state, x.payment_transaction_id), '[]'::jsonb)
   from public.utility_refund_answers x
   where x.company_id = p_company and x.bill_transaction_id = p_bill;
@@ -436,20 +567,24 @@ set search_path = ''
 as $$
 begin
   delete from public.utility_refund_answers x where x.company_id = p_company and x.bill_transaction_id = p_bill;
-  insert into public.utility_refund_answers (company_id, bill_transaction_id, state, payment_transaction_id, refile, set_by)
+  insert into public.utility_refund_answers (
+    company_id, bill_transaction_id, state, payment_transaction_id, refile, keep_category, set_by
+  )
   select p_company, p_bill, e->>'state', (e->>'payment_transaction_id')::uuid,
-    case when jsonb_typeof(e->'refile') = 'object' then e->'refile' end, auth.uid()
+    case when jsonb_typeof(e->'refile') = 'object' then e->'refile' end,
+    coalesce((e->>'keep_category')::boolean, false), auth.uid()
   from jsonb_array_elements(case when jsonb_typeof(p_rows) = 'array' then p_rows else '[]'::jsonb end) e;
 end;
 $$;
 
 revoke all on function private.utility_category_ids(uuid, text, public.category_kind) from public, anon, authenticated;
 revoke all on function private.utility_keys(uuid) from public, anon, authenticated;
+revoke all on function private.card_generic_words() from public, anon, authenticated;
+revoke all on function private.card_name_keys(text) from public, anon, authenticated;
+revoke all on function private.card_name_project_of(text, jsonb) from public, anon, authenticated;
+revoke all on function private.card_name_projects(uuid) from public, anon, authenticated;
 revoke all on function private.utility_bills(uuid, boolean) from public, anon, authenticated;
-revoke all on function private.utility_usual_rent(uuid, uuid, text, date, uuid[]) from public, anon, authenticated;
-revoke all on function private.utility_no_rent(uuid, uuid, date, uuid[]) from public, anon, authenticated;
 revoke all on function private.utility_refund_rows(uuid, date, uuid) from public, anon, authenticated;
-revoke all on function private.utility_payment_json(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.utility_wrong_category(uuid, uuid, uuid) from public, anon, authenticated;
 revoke all on function private.utility_answer_rows(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.utility_answer_put(uuid, uuid, jsonb) from public, anon, authenticated;
@@ -498,41 +633,82 @@ begin
     raise exception 'project not found';
   end if;
   return jsonb_build_object('as_of', today, 'bills', coalesce((
+    with r as materialized (
+      select * from private.utility_refund_rows(cid, today, p_project_id)
+    ),
+    paid as materialized (
+      select r.bill_id, pt.id, pt.doc_date, pt.amount_original, pt.currency, pt.description, pt.project_id,
+        pt.category_id, coalesce(cu.name, ps.name) as party, pc.name as category_name,
+        exists (select 1 from private.split_parts x where x.transaction_id = pt.id) as split,
+        exists (select 1 from private.split_parts x
+                where x.transaction_id = pt.id and x.category_id = r.category_id and not x.draft) as part_in_bill,
+        x.keep_category, x.refile is not null as refiled
+      from r
+      join public.transactions pt on pt.id = r.payment_id and pt.company_id = cid
+      left join public.customers cu on cu.id = pt.customer_id and cu.company_id = cid
+      left join public.suppliers ps on ps.id = pt.supplier_id and ps.company_id = cid
+      left join public.categories pc on pc.id = pt.category_id and pc.company_id = cid
+      left join public.utility_refund_answers x
+        on x.company_id = cid and x.bill_transaction_id = r.bill_id and x.state = 'matched' and x.payment_transaction_id = pt.id
+    ),
+    -- A payment filed elsewhere: neither its category (unsplit) nor one of its parts is the bill's, and the
+    -- owner did not keep it as it is.
+    flagged as (
+      select r.*, p.bill_id is not null as has_payment, p.id as pay_id, p.doc_date as pay_date,
+        p.amount_original as pay_amount, p.currency as pay_currency, p.description as pay_description,
+        p.party as pay_party, p.project_id as pay_project_id, p.category_id as pay_category_id,
+        p.category_name as pay_category_name, coalesce(p.split, false) as pay_split,
+        coalesce(p.refiled, false) as refiled,
+        coalesce(p.keep_category, false) as keep_category,
+        p.bill_id is not null and r.category_id is not null and not coalesce(p.keep_category, false)
+          and not (p.category_id is not distinct from r.category_id and not p.split)
+          and not p.part_in_bill as wrong_category
+      from r
+      left join paid p on p.bill_id = r.bill_id
+    )
     select jsonb_agg(jsonb_build_object(
-        'bill_transaction_id', r.bill_id,
-        'project_id', r.project_id,
-        'project_name', p.name,
-        'supplier_id', r.supplier_id,
+        'bill_transaction_id', f.bill_id,
+        'project_id', f.project_id,
+        'project_name', pr.name,
+        'supplier_id', f.supplier_id,
         'supplier_name', s.name,
-        'currency', r.currency,
-        'category_id', r.category_id,
+        'currency', f.currency,
+        'category_id', f.category_id,
         'category_name', c.name,
-        'amount_minor', r.amount,
-        'doc_date', r.doc_date,
-        'days', today - r.doc_date,
-        'state', r.state,
-        'source', r.source,
-        'rule', case r.rule when 1 then 'bill' when 2 then 'bills' when 3 then 'rent_and_bills' end,
-        'group_bill_transaction_ids', to_jsonb(r.group_ids),
-        'no_rent', r.no_rent,
-        'payment', case when r.payment_id is not null then private.utility_payment_json(cid, r.payment_id) end,
-        'wrong_category', r.payment_id is not null and private.utility_wrong_category(cid, r.payment_id, r.category_id),
-        'refiled', exists (
-          select 1 from public.utility_refund_answers x
-          where x.company_id = cid and x.bill_transaction_id = r.bill_id and x.refile is not null
-        )
-      ) order by case r.state when 'suggested' then 0 when 'not_refunded' then 1 when 'refunded' then 2 else 3 end,
-        p.name, r.doc_date, r.bill_id)
-    from private.utility_refund_rows(cid, today, p_project_id) r
-    join public.projects p on p.id = r.project_id and p.company_id = cid
-    left join public.suppliers s on s.id = r.supplier_id and s.company_id = cid
-    left join public.categories c on c.id = r.category_id and c.company_id = cid
+        'amount_minor', f.amount,
+        'doc_date', f.doc_date,
+        'days', today - f.doc_date,
+        'state', f.state,
+        'source', f.source,
+        'rule', case f.rule when 1 then 'bill' when 2 then 'bills' when 3 then 'rent_and_bills' end,
+        'group_bill_transaction_ids', to_jsonb(f.group_ids),
+        'no_rent', f.no_rent,
+        'payment', case when f.has_payment then jsonb_build_object(
+          'transaction_id', f.pay_id,
+          'doc_date', f.pay_date,
+          'amount_minor', f.pay_amount,
+          'currency', f.pay_currency,
+          'description', f.pay_description,
+          'party', f.pay_party,
+          'project_id', f.pay_project_id,
+          'category_id', f.pay_category_id,
+          'category_name', f.pay_category_name,
+          'split', f.pay_split
+        ) end,
+        'wrong_category', f.wrong_category,
+        'keep_category', f.keep_category,
+        'refiled', f.refiled
+      ) order by case f.state when 'suggested' then 0 when 'not_refunded' then 1 when 'refunded' then 2 else 3 end,
+        pr.name, f.doc_date, f.bill_id)
+    from flagged f
+    join public.projects pr on pr.id = f.project_id and pr.company_id = cid
+    left join public.suppliers s on s.id = f.supplier_id and s.company_id = cid
+    left join public.categories c on c.id = f.category_id and c.company_id = cid
     -- The app's list: what asks for an answer (a suggestion, a bill not refunded) and a refund the
     -- owner matched that sits in another category (the one-tap fix). p_all (the MCP): every bill.
     where coalesce(p_all, false)
-      or r.state in ('suggested', 'not_refunded')
-      or (r.state = 'refunded' and r.source = 'owner'
-        and private.utility_wrong_category(cid, r.payment_id, r.category_id))
+      or f.state in ('suggested', 'not_refunded')
+      or (f.state = 'refunded' and f.source = 'owner' and f.wrong_category)
   ), '[]'::jsonb));
 end;
 $$;
@@ -593,6 +769,7 @@ begin
     raise exception 'project not found';
   end if;
   return jsonb_build_object('project_id', p_project_id, 'utilities', coalesce((
+    with allbills as materialized (select * from private.utility_bills(cid, true))
     select jsonb_agg(jsonb_build_object(
         'supplier_id', k.supplier_id,
         'supplier_name', s.name,
@@ -602,21 +779,27 @@ begin
         'found', k.found,
         'usual_minor', u.usual,
         'bill_count', u.bills,
-        'last_bill_date', u.last_date
+        'last_bill_date', u.last_date,
+        'category_id', u.category_id,
+        'category_name', (select c.name from public.categories c where c.id = u.category_id and c.company_id = cid)
       ) order by s.name, k.currency, k.supplier_id)
     from private.utility_keys(cid) k
     join public.suppliers s on s.id = k.supplier_id and s.company_id = cid
     -- The usual amount: the median of the utility's last 3 bills.
     cross join lateral (
       select (select round(percentile_cont(0.5) within group (order by l.amount))::bigint
-              from (select b.amount from private.utility_bills(cid, true) b
+              from (select b.amount from allbills b
                     where b.project_id = k.project_id and b.supplier_id = k.supplier_id and b.currency = k.currency
                     order by b.doc_date desc, b.id desc limit 3) l
               having count(*) > 0) as usual,
-        (select count(*) from private.utility_bills(cid, true) b
+        (select count(*) from allbills b
          where b.project_id = k.project_id and b.supplier_id = k.supplier_id and b.currency = k.currency) as bills,
-        (select max(b.doc_date) from private.utility_bills(cid, true) b
-         where b.project_id = k.project_id and b.supplier_id = k.supplier_id and b.currency = k.currency) as last_date
+        (select max(b.doc_date) from allbills b
+         where b.project_id = k.project_id and b.supplier_id = k.supplier_id and b.currency = k.currency) as last_date,
+        -- The latest bill's category.
+        (select b.category_id from allbills b
+         where b.project_id = k.project_id and b.supplier_id = k.supplier_id and b.currency = k.currency
+         order by b.doc_date desc, b.id desc limit 1) as category_id
     ) u
     where k.project_id = p_project_id
   ), '[]'::jsonb));
@@ -687,7 +870,8 @@ comment on function public.set_utility_payer(uuid, uuid, text, text, boolean) is
   'FLOW-1134 (decision 0265): who pays a property''s utility: tenant (pays it back) or company (its bills are not checked); p_added marks a supplier added by hand; a null payer removes the row. Returns prior for ביטול. Owner or editor.';
 
 create function public.answer_utility_refund(
-  p_bill_transaction_id uuid, p_state text, p_payment_transaction_id uuid default null, p_today date default null
+  p_bill_transaction_id uuid, p_state text, p_payment_transaction_id uuid default null, p_today date default null,
+  p_keep_category boolean default null
 )
 returns jsonb
 language plpgsql
@@ -720,18 +904,20 @@ begin
   if p_state is not null and p_state not in ('matched', 'rejected', 'seen')
     or (p_state in ('matched', 'rejected') and p_payment_transaction_id is null)
     or (p_state = 'seen' and p_payment_transaction_id is not null)
+    or (p_keep_category is not null and p_state is distinct from 'matched')
   then
     raise exception 'validation';
   end if;
   if not exists (
     select 1 from private.utility_keys(cid) k
     where k.project_id = bill.project_id and k.supplier_id = bill.supplier_id and k.currency = bill.currency
-  ) or bill.direction <> 'expense' or bill.doc_kind = 'credit' or bill.removed_at is not null then
+  ) or bill.direction <> 'expense' or bill.doc_kind = 'credit' or bill.removed_at is not null
+    or bill.line_status <> 'posted' or bill.amount_original <= 100 then
     raise exception 'not a utility bill';
   end if;
   if pay.id is not null and (
     pay.removed_at is not null or pay.currency <> bill.currency or pay.id = bill.id
-    or not (pay.direction = 'income' or pay.doc_kind = 'credit')
+    or pay.direction <> 'income'
   ) then
     raise exception 'not a refund payment';
   end if;
@@ -740,7 +926,7 @@ begin
   where x.company_id = cid and x.bill_transaction_id = bill.id
   for update;
   before := private.utility_answer_rows(cid, bill.id);
-  select x.state, x.payment_transaction_id, x.refile into closing
+  select x.state, x.payment_transaction_id, x.refile, x.keep_category into closing
   from public.utility_refund_answers x
   where x.company_id = cid and x.bill_transaction_id = bill.id and x.state in ('matched', 'seen');
 
@@ -759,8 +945,15 @@ begin
       delete from public.utility_refund_answers x
       where x.company_id = cid and x.bill_transaction_id = bill.id
         and (x.state in ('matched', 'seen') or (x.state = 'rejected' and x.payment_transaction_id = pay.id));
-      insert into public.utility_refund_answers (company_id, bill_transaction_id, state, payment_transaction_id, set_by)
-      values (cid, bill.id, 'matched', pay.id, auth.uid());
+      insert into public.utility_refund_answers (
+        company_id, bill_transaction_id, state, payment_transaction_id, keep_category, set_by
+      )
+      values (cid, bill.id, 'matched', pay.id, coalesce(p_keep_category, false), auth.uid());
+    elsif p_keep_category is not null then
+      -- The same pair: keep (להשאיר) or drop the keep.
+      update public.utility_refund_answers x
+      set keep_category = p_keep_category, set_by = auth.uid(), set_at = clock_timestamp()
+      where x.company_id = cid and x.bill_transaction_id = bill.id and x.state = 'matched';
     end if;
   elsif p_state = 'rejected' then
     delete from public.utility_refund_answers x
@@ -803,15 +996,17 @@ begin
     'payment_transaction_id', coalesce(auto_pay, pay.id),
     'prior_state', closing.state,
     'prior_payment_transaction_id', closing.payment_transaction_id,
+    'keep_category', (select x.keep_category from public.utility_refund_answers x
+      where x.company_id = cid and x.bill_transaction_id = bill.id and x.state = 'matched'),
     'before', before,
     'after', private.utility_answer_rows(cid, bill.id)
   );
 end;
 $$;
-revoke all on function public.answer_utility_refund(uuid, text, uuid, date) from public, anon, authenticated;
-grant execute on function public.answer_utility_refund(uuid, text, uuid, date) to authenticated;
-comment on function public.answer_utility_refund(uuid, text, uuid, date) is
-  'FLOW-1134 (decision 0265): answer a utility bill: matched (the payment is its refund), rejected (it is not; never suggested again), seen (nothing to do), or null to take the answer back (taking back a refund Flow counted by itself rejects the pair). Owner or editor.';
+revoke all on function public.answer_utility_refund(uuid, text, uuid, date, boolean) from public, anon, authenticated;
+grant execute on function public.answer_utility_refund(uuid, text, uuid, date, boolean) to authenticated;
+comment on function public.answer_utility_refund(uuid, text, uuid, date, boolean) is
+  'FLOW-1134 (decision 0265): answer a utility bill: matched (the payment is its refund; p_keep_category keeps a payment filed elsewhere as it is), rejected (it is not; never suggested again), seen (nothing to do), or null to take the answer back (taking back a refund Flow counted by itself rejects the pair). Owner or editor.';
 
 create function public.mark_utility_refunds_seen(p_project_id uuid, p_today date default null)
 returns jsonb
@@ -867,10 +1062,12 @@ grant execute on function public.unmark_utility_refunds_seen(uuid[]) to authenti
 comment on function public.unmark_utility_refunds_seen(uuid[]) is
   'FLOW-1134 (decision 0265): the ביטול of mark_utility_refunds_seen: those bills'' seen answers go. Owner or editor.';
 
--- The one-tap fix: a refund the owner matched that sits in another category moves to the bill's
--- category (reassign_transaction, with the bill's property), or, when the payment is more than the
--- bills it refunds (rent plus the bills), their part is split off it (save_line_split), the rest staying
--- in its own category. What it changed is kept on the answer (refile) for undo_utility_refile.
+-- The one-tap fix: a refund the owner matched that sits in another category. When the payment is the
+-- bills it refunds and they are of one category, it moves to that category (reassign_transaction, with
+-- the bill's property). Otherwise (rent plus the bills, or bills of two categories) it is split in one call
+-- (save_line_split): one part per bill category on the bill's property, and the rest, when more than one
+-- unit is left, staying in the payment's own category. What it changed is kept on every answer that
+-- matched the payment (refile), for undo_utility_refile.
 create function public.refile_utility_refund(p_bill_transaction_id uuid, p_payment_transaction_id uuid)
 returns jsonb
 language plpgsql
@@ -883,6 +1080,9 @@ declare
   pay public.transactions%rowtype;
   answer public.utility_refund_answers%rowtype;
   total bigint;
+  cats integer;
+  parts jsonb;
+  matched jsonb;
   part bigint;
   changed jsonb;
   undo_id uuid;
@@ -899,7 +1099,22 @@ begin
   if answer.id is null then
     raise exception 'refund not matched';
   end if;
-  if answer.refile is not null or not private.utility_wrong_category(cid, pay.id, bill.category_id) then
+  perform 1 from public.utility_refund_answers x
+  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id
+  for update;
+  -- The bills this payment refunds (the owner matched it to each), by category.
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'category_id', t.category_id, 'amount', t.amount_original, 'doc_date', t.doc_date,
+      'wrong', private.utility_wrong_category(cid, pay.id, t.category_id)
+    ) order by t.doc_date, t.id), '[]'::jsonb)
+  into matched
+  from public.utility_refund_answers x
+  join public.transactions t on t.id = x.bill_transaction_id and t.company_id = cid
+  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id
+    and t.category_id is not null and t.project_id is not null;
+  if answer.refile is not null or not exists (
+    select 1 from jsonb_to_recordset(matched) r(category_id uuid, amount bigint, wrong boolean) where r.wrong
+  ) then
     raise exception 'refund already in the bill''s category';
   end if;
   if bill.project_id is null then
@@ -909,19 +1124,31 @@ begin
     raise exception 'line has a split by category';
   end if;
 
-  -- The bills this payment refunds (the owner matched it to each).
-  select coalesce(sum(t.amount_original), 0) into total
-  from public.utility_refund_answers x
-  join public.transactions t on t.id = x.bill_transaction_id and t.company_id = cid
-  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id
-    and t.category_id is not distinct from bill.category_id;
+  select coalesce(sum(r.amount), 0), count(distinct r.category_id) into total, cats
+  from jsonb_to_recordset(matched) r(category_id uuid, amount bigint, wrong boolean);
 
-  if pay.amount_original - total > 100 then
-    part := round(total::numeric * abs(pay.amount_net) / pay.amount_original)::bigint;
-    perform public.save_line_split(pay.id, jsonb_build_array(
-      jsonb_build_object('category_id', bill.category_id, 'project_id', bill.project_id, 'amount_minor', part),
-      jsonb_build_object('rest', true)
-    ), false);
+  if pay.amount_original - total > 100 or cats > 1 then
+    -- One part per bill category, in the payment's own units (the net, when it differs from the amount).
+    select jsonb_agg(jsonb_build_object(
+        'category_id', s.category_id, 'project_id', bill.project_id,
+        'amount_minor', round(s.amount::numeric * abs(pay.amount_net) / pay.amount_original)::bigint
+      ) order by s.first_seen, s.category_id)
+    into parts
+    from (
+      select r.category_id, sum(r.amount) as amount, min(r.doc_date) as first_seen
+      from jsonb_to_recordset(matched) r(category_id uuid, amount bigint, doc_date date)
+      group by r.category_id
+    ) s;
+    part := (select sum((e->>'amount_minor')::bigint) from jsonb_array_elements(parts) e);
+    if pay.amount_original - total > 100 then
+      parts := parts || jsonb_build_array(jsonb_build_object('rest', true));
+    elsif part <> abs(pay.amount_net) then
+      -- Within one unit of the bills: the last part takes the difference, so the parts make the line.
+      parts := jsonb_set(parts, array[(jsonb_array_length(parts) - 1)::text, 'amount_minor'],
+        to_jsonb((parts->-1->>'amount_minor')::bigint + abs(pay.amount_net) - part));
+      part := abs(pay.amount_net);
+    end if;
+    perform public.save_line_split(pay.id, parts, false);
     changed := jsonb_build_object(
       'mode', 'split',
       'user_assigned', pay.user_assigned,
@@ -939,7 +1166,8 @@ begin
     );
   end if;
 
-  update public.utility_refund_answers x set refile = changed where x.id = answer.id;
+  update public.utility_refund_answers x set refile = changed
+  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id;
   return jsonb_build_object(
     'bill_transaction_id', bill.id,
     'payment_transaction_id', pay.id,
@@ -1000,7 +1228,8 @@ begin
     end if;
     perform public.undo_reassign((answer.refile->>'reassign_undo_id')::uuid);
   end if;
-  update public.utility_refund_answers x set refile = null where x.id = answer.id;
+  update public.utility_refund_answers x set refile = null
+  where x.company_id = cid and x.state = 'matched' and x.payment_transaction_id = pay.id;
   return jsonb_build_object(
     'bill_transaction_id', p_bill_transaction_id,
     'payment_transaction_id', pay.id,
@@ -1098,7 +1327,7 @@ begin
     response := jsonb_build_object('ok', true, 'data', written || jsonb_build_object(
       'undo_kind', 'utility_payer', 'id', write_id));
   exception
-    when deadlock_detected or serialization_failure or lock_not_available then
+    when deadlock_detected or serialization_failure or lock_not_available or unique_violation then
       return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.utility_mcp_failure(sqlerrm);
@@ -1112,7 +1341,7 @@ grant execute on function public.mcp_set_utility_payer(text, uuid, uuid, text, t
 
 create function public.mcp_answer_utility_refund(
   p_idempotency_key text, p_bill_transaction_id uuid, p_state text, p_payment_transaction_id uuid default null,
-  p_today date default null
+  p_today date default null, p_keep_category boolean default null
 )
 returns jsonb
 language plpgsql
@@ -1123,7 +1352,8 @@ declare
   start jsonb;
   token uuid;
   hash text := 'utility_refund|' || coalesce(p_bill_transaction_id::text, '') || '|' || coalesce(p_state, 'null')
-    || '|' || coalesce(p_payment_transaction_id::text, 'null') || '|' || coalesce(p_today::text, 'today');
+    || '|' || coalesce(p_payment_transaction_id::text, 'null') || '|' || coalesce(p_today::text, 'today')
+    || '|' || coalesce(p_keep_category::text, 'null');
   written jsonb;
   write_id uuid;
   response jsonb;
@@ -1134,7 +1364,8 @@ begin
   end if;
   token := (start->>'token_id')::uuid;
   begin
-    written := public.answer_utility_refund(p_bill_transaction_id, p_state, p_payment_transaction_id, p_today);
+    written := public.answer_utility_refund(p_bill_transaction_id, p_state, p_payment_transaction_id, p_today,
+      p_keep_category);
     insert into private.mcp_writes (token_id, user_id, kind, transaction_id, prior, created_at)
     values (token, auth.uid(), 'utility_refund', p_bill_transaction_id,
       jsonb_build_object('before', written->'before', 'after', written->'after'), clock_timestamp())
@@ -1142,7 +1373,7 @@ begin
     response := jsonb_build_object('ok', true, 'data', (written - 'before' - 'after') || jsonb_build_object(
       'undo_kind', 'utility_refund', 'id', write_id));
   exception
-    when deadlock_detected or serialization_failure or lock_not_available then
+    when deadlock_detected or serialization_failure or lock_not_available or unique_violation then
       return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.utility_mcp_failure(sqlerrm);
@@ -1151,8 +1382,8 @@ begin
   return response;
 end;
 $$;
-revoke all on function public.mcp_answer_utility_refund(text, uuid, text, uuid, date) from public, anon, authenticated;
-grant execute on function public.mcp_answer_utility_refund(text, uuid, text, uuid, date) to authenticated;
+revoke all on function public.mcp_answer_utility_refund(text, uuid, text, uuid, date, boolean) from public, anon, authenticated;
+grant execute on function public.mcp_answer_utility_refund(text, uuid, text, uuid, date, boolean) to authenticated;
 
 create function public.mcp_mark_utility_refunds_seen(p_idempotency_key text, p_project_id uuid, p_today date default null)
 returns jsonb
@@ -1182,7 +1413,7 @@ begin
     response := jsonb_build_object('ok', true, 'data', (written - 'set_at') || jsonb_build_object(
       'undo_kind', 'utility_refunds_seen', 'id', write_id));
   exception
-    when deadlock_detected or serialization_failure or lock_not_available then
+    when deadlock_detected or serialization_failure or lock_not_available or unique_violation then
       return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.utility_mcp_failure(sqlerrm);
@@ -1226,7 +1457,7 @@ begin
     response := jsonb_build_object('ok', true, 'data', written || jsonb_build_object(
       'undo_kind', 'utility_refile', 'id', write_id));
   exception
-    when deadlock_detected or serialization_failure or lock_not_available then
+    when deadlock_detected or serialization_failure or lock_not_available or unique_violation then
       return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.utility_mcp_failure(sqlerrm);

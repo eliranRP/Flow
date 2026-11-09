@@ -17,7 +17,7 @@ const LISTED = {
     bill_transaction_id: BILL, project_id: PROJECT, project_name: "Example Oak House", supplier_id: SUPPLIER,
     supplier_name: "Example Power Co", currency: "ILS", category_id: null, category_name: null, amount_minor: 10000,
     doc_date: "2026-03-05", days: 117, state: "suggested", source: null, rule: "bill", group_bill_transaction_ids: [BILL],
-    no_rent: false, wrong_category: true, refiled: false,
+    no_rent: false, wrong_category: true, keep_category: false, refiled: false,
     payment: {
       transaction_id: PAYMENT, doc_date: "2026-03-20", amount_minor: 10000, currency: "ILS", description: "Example refund",
       party: null, project_id: null, category_id: null, category_name: null, split: false,
@@ -29,7 +29,7 @@ const PAYERS = {
   project_id: PROJECT,
   utilities: [{
     supplier_id: SUPPLIER, supplier_name: "Example Power Co", currency: "ILS", payer: "tenant", added: false, found: true,
-    usual_minor: null, bill_count: 0, last_bill_date: null,
+    usual_minor: null, bill_count: 0, last_bill_date: null, category_id: null, category_name: null,
   }],
 };
 const REFUSED = (message: string) => ({ ok: false, error: { code: "refused", message } });
@@ -102,14 +102,16 @@ Deno.test("answer_utility_refund sends each state through mcp_answer_utility_ref
     { idempotency_key: "a2", bill_transaction_id: BILL, state: "rejected", payment_transaction_id: PAYMENT },
     { idempotency_key: "a3", bill_transaction_id: BILL, state: "seen", as_of: "2026-06-30" },
     { idempotency_key: "a4", bill_transaction_id: BILL, state: null },
+    { idempotency_key: "a5", bill_transaction_id: BILL, state: "matched", payment_transaction_id: PAYMENT, keep_category: true },
   ]) {
     assertEquals((await callTool("answer_utility_refund", args, ["write"], rpc)).isError, false);
   }
-  assertEquals(calls.map((call) => [call.name, call.body.p_state, call.body.p_payment_transaction_id, call.body.p_today]), [
-    ["mcp_answer_utility_refund", "matched", PAYMENT, null],
-    ["mcp_answer_utility_refund", "rejected", PAYMENT, null],
-    ["mcp_answer_utility_refund", "seen", null, "2026-06-30"],
-    ["mcp_answer_utility_refund", null, null, null],
+  assertEquals(calls.map((call) => [call.name, call.body.p_state, call.body.p_payment_transaction_id, call.body.p_today, call.body.p_keep_category]), [
+    ["mcp_answer_utility_refund", "matched", PAYMENT, null, null],
+    ["mcp_answer_utility_refund", "rejected", PAYMENT, null, null],
+    ["mcp_answer_utility_refund", "seen", null, "2026-06-30", null],
+    ["mcp_answer_utility_refund", null, null, null, null],
+    ["mcp_answer_utility_refund", "matched", PAYMENT, null, true],
   ]);
 });
 
@@ -140,6 +142,8 @@ Deno.test("the writes check their arguments before any call", async () => {
     ["answer_utility_refund", { idempotency_key: "b", bill_transaction_id: BILL, state: "seen", payment_transaction_id: PAYMENT }],
     ["answer_utility_refund", { idempotency_key: "b", bill_transaction_id: BILL, state: "paid", payment_transaction_id: PAYMENT }],
     ["answer_utility_refund", { idempotency_key: "b", bill_transaction_id: "nope", state: "seen" }],
+    ["answer_utility_refund", { idempotency_key: "b", bill_transaction_id: BILL, state: "seen", keep_category: true }],
+    ["answer_utility_refund", { idempotency_key: "b", bill_transaction_id: BILL, state: "matched", payment_transaction_id: PAYMENT, keep_category: "yes" }],
     ["mark_utility_refunds_seen", { idempotency_key: "b", project_id: PROJECT, as_of: "today" }],
     ["refile_utility_refund", { idempotency_key: "b", bill_transaction_id: BILL }],
     ["refile_utility_refund", { idempotency_key: "b", bill_transaction_id: BILL, payment_transaction_id: PAYMENT, mode: "move" }],

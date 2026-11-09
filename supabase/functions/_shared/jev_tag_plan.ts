@@ -402,7 +402,9 @@ export function buildTagState(
 
 /**
  * Words a property's name shares with any card or account name, so they never decide a match: street
- * kinds, the purposes the owner names cards by, and filler (FLOW-1072).
+ * kinds, the purposes the owner names cards by, and filler (FLOW-1072). The SQL copy of this rule
+ * (private.card_generic_words, card_name_keys and card_name_project_of in the FLOW-1134 utility refunds
+ * migration) must keep the same words; its pgTAP test repeats this file's cardProject cases.
  */
 const GENERIC_NAME_WORDS = new Set([
   "rd", "road", "ave", "av", "avenue", "st", "street", "dr", "drive", "ln", "lane", "blvd", "boulevard", "ct", "court",
