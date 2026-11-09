@@ -251,6 +251,8 @@ export function MemberReportScreen({ sample, refreshSample, projectionSample }: 
     : mode === "sell" ? member.saleTotalMinor : mode === "refi" ? member.refiTotalMinor : (forecastMember?.totalMinor ?? 0n);
   const whole = mode === "sell" ? result.totals.equityMinor : mode === "refi" ? result.totals.cashOutMinor : (projection?.refi.splitMinor ?? 0n);
   const figure = memberMinor ?? whole;
+  // The forecast's inputs could not be read: the band shows a dash, the tab its retry (not a skeleton forever).
+  const forecastFailed = live && inputsQuery.isError;
   // The chip: the owner with one member edits the members; with two or more, or a viewer, it picks one.
   const pickOnly = !canEdit || result.members.length > 1;
   const chip = member == null ? undefined : (
@@ -272,9 +274,9 @@ export function MemberReportScreen({ sample, refreshSample, projectionSample }: 
           <>
             <FocusTitle className="ui-band-label ui-msr-band-label">{heroLabel(mode, member?.name ?? null, projection)}</FocusTitle>
             <p className="ui-msr-band-figure ui-band-fade">
-              {/* FLOW-1136: while the forecast loads, a band skeleton, not $0. */}
+              {/* FLOW-1136: while the forecast loads, a band skeleton, not $0; a dash if it failed. */}
               {mode === "forecast" && projection == null
-                ? <Skeleton tone="band" className="ui-msr-skel-band" />
+                ? (forecastFailed ? "—" : <Skeleton tone="band" className="ui-msr-skel-band" />)
                 : <Amount agorot={figure} currency={currency} loss={figure < 0n} size="hero" />}
             </p>
             <p className="ui-msr-band-sub t-meta ui-band-fade">
@@ -299,7 +301,7 @@ export function MemberReportScreen({ sample, refreshSample, projectionSample }: 
         {mode === "forecast" ? (
           <ForecastArea projection={projection} member={forecastMember} years={years} canEdit={canEdit} onSave={save}
             onYears={(next) => { setParam("years", next === (projectionConfig?.years ?? 10) ? null : String(next)); }}
-            projectionConfig={projectionConfig} inputs={inputs} failed={live && inputsQuery.isError} onRetry={() => { void inputsQuery.refetch(); }} />
+            projectionConfig={projectionConfig} inputs={inputs} failed={forecastFailed} onRetry={() => { void inputsQuery.refetch(); }} />
         ) : (
           <>
           <CalcSection title="החישוב" total={null}>

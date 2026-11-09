@@ -24,8 +24,9 @@ function CalcCardSkeleton({ rows }: { rows: number }) {
 export function ForecastSkeleton() {
   return (
     <DelayedSkeleton>
-      <div className="ui-msr-skel" aria-busy="true">
-        <p className="sr-only" role="status">טוען את התחזית…</p>
+      {/* The status line sits outside the busy blocks, so screen readers announce it at once. */}
+      <p className="sr-only" role="status">טוען את התחזית…</p>
+      <div className="ui-msr-skel" aria-busy="true" aria-hidden="true">
         <Skeleton className="ui-msr-skel-stepper" />
         <div className="ui-msr-skel-bars" aria-hidden="true">
           {BARS.map((h) => <Skeleton key={h} className={`ui-msr-skel-bar ui-msr-skel-bar-${String(h)}`} />)}
