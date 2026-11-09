@@ -1,4 +1,4 @@
-import type { FetchedTreasuryYield, MemberReportConfig, MemberReportLoan, MemberReportProperty } from "@flow/shared";
+import type { FetchedTreasuryYield, MemberReportConfig, MemberReportLoan, MemberReportProperty, ProjectionInput } from "@flow/shared";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -82,6 +82,64 @@ export function parseMemberReport(data: unknown): MemberReportRead {
     treasuryRequestedAt: parsed.treasury_requested_at,
     canEdit: parsed.can_edit,
   };
+}
+
+/** FLOW-1127: the forecast's inputs (get_member_projection_inputs), read only when the forecast opens. */
+export type MemberProjectionInputs = {
+  /** The last day of the last full month: year 1 starts after it. */
+  asOf: string;
+  /** The date today's loan balances are at. */
+  today: string;
+  properties: ProjectionInput[];
+};
+
+export const MEMBER_PROJECTION_KEY = "member-projection";
+
+const inputsSchema = z.object({
+  as_of: z.string(),
+  today: z.string().optional(),
+  properties: z.array(z.object({
+    project_id: z.string(),
+    rent_minor: MINOR,
+    rented_months: z.number().int(),
+    units: z.number().int(),
+    costs: z.array(z.object({ category_id: z.string().nullable(), name: z.string().nullable(), amount_minor: MINOR })),
+    loans: z.array(z.object({
+      loan_id: z.string(),
+      kind: z.enum(["amortizing", "interest_only", "balloon", "demand"]),
+      currency: z.string(),
+      principal_minor: MINOR,
+      annual_rate_ppm: z.number().int(),
+      term_months: z.number().int().nullable(),
+      start_date: z.string(),
+      payment_minor: MINOR.nullable(),
+      interest_only_months: z.number().int().nullable(),
+      amortization_months: z.number().int().nullable(),
+      balance_minor: MINOR,
+      rates: z.array(z.object({ effective_date: z.string(), annual_rate_ppm: z.number().int() })),
+    })),
+  })),
+});
+
+export function parseProjectionInputs(data: unknown): MemberProjectionInputs {
+  const parsed = inputsSchema.parse(data);
+  return { asOf: parsed.as_of, today: parsed.today ?? parsed.as_of, properties: parsed.properties };
+}
+
+export function useMemberProjectionInputs(enabled: boolean): UseQueryResult<MemberProjectionInputs> {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: [MEMBER_PROJECTION_KEY, preview],
+    enabled: enabled && preview === "off",
+    queryFn: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("get_member_projection_inputs");
+      if (error) throw error;
+      return parseProjectionInputs(data);
+    },
+  });
 }
 
 /** refresh_treasury_yields' answer (#1079): asked now, or not, and why. */

@@ -36,6 +36,8 @@ export const LEDGER_KEYS = [
   "balance-sheet",
   // FLOW-1118: the member share report reads each property's open loan balance, which a sync's payment lowers.
   "member-report",
+  // FLOW-1127: the forecast's inputs: each property's rent, costs and loan terms, which a sync changes.
+  "member-projection",
   "month-forecast",
   "missing-bills",
   "expected-months",

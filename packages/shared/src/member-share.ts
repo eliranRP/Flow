@@ -14,6 +14,7 @@
  * setting's loan_ids) are repaid before the equity is split, and come back to that member: their total
  * from a sale is their part of the equity plus their loans.
  */
+import type { ProjectionConfig } from "./member-projection.ts";
 import { divHalfEven } from "./money.ts";
 
 export const MEMBER_REPORT_DEFAULTS = {
@@ -57,6 +58,8 @@ export type MemberReportConfig = {
   readonly quotes?: readonly MemberReportQuote[];
   readonly yields?: readonly MemberReportYield[];
   readonly quote_date?: string | null;
+  /** FLOW-1126: the forecast's assumptions (member-projection.ts). */
+  readonly projection?: ProjectionConfig;
 };
 
 export type MemberReportProperty = {
