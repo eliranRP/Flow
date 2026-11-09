@@ -88,6 +88,7 @@ import { bookLineSchema, createJournalEntrySchema, setCategoryAccountSchema, set
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
 import { BANK_WRITES, bankWrite } from "./tools_bank.ts";
 import { THREAD_WRITES, threadWrite } from "./tools_thread.ts";
+import { memberShareWrite } from "./tools_member_share.ts";
 import { PROPERTY_WRITES, propertyWrite } from "./tools_property.ts";
 import { HANDOVER_WRITES, handoverWrite } from "./tools_handover.ts";
 
@@ -113,6 +114,7 @@ export async function callWrite(
   if ((BANK_WRITES as readonly string[]).includes(name)) return bankWrite(name as typeof BANK_WRITES[number], args, rpc);
   if ((THREAD_WRITES as readonly string[]).includes(name)) return threadWrite(name as typeof THREAD_WRITES[number], args, rpc);
   if ((PROPERTY_WRITES as readonly string[]).includes(name)) return propertyWrite(name as typeof PROPERTY_WRITES[number], args, rpc);
+  if (name === "set_member_report") return memberShareWrite(args, rpc);
   if ((HANDOVER_WRITES as readonly string[]).includes(name)) return handoverWrite(name as typeof HANDOVER_WRITES[number], args, rpc);
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);

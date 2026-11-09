@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `set_loan_closing_paid`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `answer_recurring_handover`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `set_loan_closing_paid`, `set_member_report`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `answer_recurring_handover`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -96,6 +96,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
 | `undo` `kind: "tax_bracket"` | `id` | the company id `set_tax_bracket` returned |
 | `undo` `kind: "land_account"` | `id` | the company id `set_land_account` returned |
+| `undo` `kind: "member_report"` | `id` | the company id `set_member_report` returned |
 | `undo` `kind: "loan_closing_paid"` | `id` | the loan id `set_loan_closing_paid` returned |
 | `get_property_returns`, `get_property_return_lines` | `project_id` | `list_projects` id |
 | `rename_category` | `category_id` | `list_categories` `categories[].id` |
@@ -1237,6 +1238,30 @@ Names the balance-sheet account that holds each property's land (owner only; an 
 ```
 
 Sets what a loan paid at closing, from the settlement statement (HUD-1), in major units (owner only; 0 to the loan's principal, else `validation`; `null` is the whole loan, the default; an unknown or another company's loan is `loan not found`), [0250](../decisions/0250-returns-in-service.md). A loan paid out at closing without passing through the bank counts this amount into the purchase price in `get_property_returns`, so a hard-money loan's renovation holdback is not counted as the price. Output `data`: `id` (the loan), `closing_paid_minor`, `prior`, `undo_kind: "loan_closing_paid"`. Undo, with the loan id, puts the prior amount back; it is `conflict` once it was changed again.
+
+## Member share report · FLOW-1117
+
+Decision [0263](../decisions/0263-member-share-report.md). The app's דוח שותף and these tools compute the same figures with `packages/shared/src/member-share.ts`. Rates are parts per million (6.125% is `61250`); spreads, ownership and percentages are basis points.
+
+### get_member_report
+
+No input. Output `data`: `config`, the company's setting or `null` before the first `set_member_report` (`members`, `assumptions`, `rate_rule`, `quotes`, `yields`, `quote_date`, each left out until set); `properties`, each active project with a value or an open loan, not the overhead project (`project_id`, `name`, `currency`, `value_minor`, `value_date`, `selling_cost_bp` or `null`, `loan_balance_minor` of its open loans in its currency, `loans_other_currency`); `can_edit` (the owner).
+
+### get_member_share
+
+```json
+{ "member": "Member A" }
+```
+
+`member` is optional (a name, any case; unknown is `not_found`). Output `data` (amounts in minor units of `currency`, before tax): `properties[]` (`saleNetMinor` = value − selling costs − open loans; `newLoanMinor` at the loan to value, `closingMinor`, `cashOutMinor` = new loan − loans − closing, `refinances` when it is above zero, `paymentMinor` at `rate.paymentPpm` over the term), `missing[]` (left out: `value`, `currency`, `loan_currency`), `totals` (the refinance totals count the refinanced properties only), `assumptions` (defaults 75% loan to value, 2% closing, 30 years; selling cost 8% where a property has none), `rate` (`quoteDate`: `quote_date`, else the latest quote's; `yieldDate`: that day or the closest one before it with a yield; `yieldPpm` for `tenorYears` 5 or 10, default 10; `expectedPpm` = yield + `spreadBp` × 100, default 150; `paymentPpm`: expected, else the best quote), `quotes[]` with `effectivePpm` (points spread over six years), `diffPpm` and `verdict` (on the quoted rate, not the effective one: `good` at or under expected, `near` within 2500, `high`), `members[]` (`name`, `ownershipBp`, `saleMinor`, `refinanceMinor`) and `ownershipSet`.
+
+### set_member_report
+
+```json
+{ "idempotency_key": "mr-1", "members": [{ "name": "Member A", "ownership_bp": 5000 }, { "name": "Member B", "ownership_bp": 5000 }], "rate_rule": { "tenor_years": 10, "spread_bp": 150 } }
+```
+
+Owner only. Name at least one part: `members` (up to 20, unique names; when any, `ownership_bp` adds up to 10000, else `ownership must add up to 100%`), `assumptions` (`ltv_bp` 0–10000, `closing_bp` 0–2000, `term_years` 1–40), `rate_rule` (`tenor_years` 5 or 10, `spread_bp` 0–1000), `quotes` (up to 50: `id` a new uuid, `lender`, `rate_ppm`, `points_bp`, `quoted_on`, `loan_type` `fixed`, `arm`, `dscr` or `other`, `project_id` of the company or `null` for all), `yields` (up to 400, one per `on_date`: `y5_ppm`, `y10_ppm`, `source` `manual` or `treasury`) and `quote_date`. A part named replaces that part whole (send every quote to keep it); a part left out stays; `null` clears it. Output `data`: `id` (the company), `config` (after), `prior`, `undo_kind: "member_report"`. Undo, with the company id, puts the setting before back; it is `conflict` once it changed again.
 
 ## Loans · cycle 5
 

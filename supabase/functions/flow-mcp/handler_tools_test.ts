@@ -169,6 +169,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "set_tax_bracket",
     "set_land_account",
     "set_loan_closing_paid",
+    "set_member_report",
     "set_company_currency",
     "rename_category",
     "set_category_parent",
@@ -204,7 +205,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 56, "fifty-six reads (FLOW-450 adds get_property_returns and get_property_return_lines, FLOW-216 adds get_company_next_month_inputs, FLOW-174 adds get_journal_entry_history, FLOW-165 adds get_account_lines, FLOW-162 adds export_report, FLOW-160 adds get_pnl_statement, FLOW-155 adds list_prepaid_schedules and get_prepaid_schedule, FLOW-152 adds get_balance_sheet, FLOW-217 adds get_started, FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast, FLOW-142 adds get_loans_paid, the project forecast adds get_project_forecast_edits, FLOW-938 adds list_bank_connections, FLOW-941 adds list_transfer_matches, FLOW-950 adds list_accounts and get_line_legs, FLOW-517 adds get_weekly_summary, FLOW-957 adds get_transaction_thread, FLOW-149 adds get_account_balances)");
+  assertEquals(readNames.length, 58, "fifty-eight reads (FLOW-1117 adds get_member_report and get_member_share, FLOW-450 adds get_property_returns and get_property_return_lines, FLOW-216 adds get_company_next_month_inputs, FLOW-174 adds get_journal_entry_history, FLOW-165 adds get_account_lines, FLOW-162 adds export_report, FLOW-160 adds get_pnl_statement, FLOW-155 adds list_prepaid_schedules and get_prepaid_schedule, FLOW-152 adds get_balance_sheet, FLOW-217 adds get_started, FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast, FLOW-142 adds get_loans_paid, the project forecast adds get_project_forecast_edits, FLOW-938 adds list_bank_connections, FLOW-941 adds list_transfer_matches, FLOW-950 adds list_accounts and get_line_legs, FLOW-517 adds get_weekly_summary, FLOW-957 adds get_transaction_thread, FLOW-149 adds get_account_balances)");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {

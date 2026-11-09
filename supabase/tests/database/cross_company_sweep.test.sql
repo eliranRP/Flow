@@ -190,7 +190,7 @@ begin
   perform pg_temp.put('edit', edit);
   insert into public.forecast_line_matches (company_id, edit_id, month, transaction_id, expected_minor)
   values (a, edit, next_month, line, 7654321);
-  insert into public.invoice_paid_marks (company_id, transaction_id, marked_by) values (a, invoice, owner);
+  insert into public.invoice_paid_marks (company_id, transaction_id, marked_by) values (a, invoice, owner); insert into public.member_reports (company_id, config) values (a, jsonb_build_object('members', jsonb_build_array(jsonb_build_object('name', 'Victim Member', 'ownership_bp', 10000)))); -- FLOW-1117
   insert into public.invoice_payment_links (company_id, transaction_id, bank_transaction_id, linked_by)
   values (a, invoice, bank_in, owner);
   insert into public.invoice_match_dismissals (company_id, transaction_id, bank_transaction_id, dismissed_by)
@@ -734,7 +734,7 @@ begin
   elsif t = 'jsonb' then
     v := case
       when n = 'patch' and p_fn ~ 'forecast' then '{"amount_minor": 100}'
-      when n = 'patch' and p_fn ~ 'investment' then '{"purchase_minor": 100}'
+      when n = 'patch' and p_fn ~ 'investment' then '{"purchase_minor": 100}' when n = 'patch' and p_fn ~ 'member_report' then '{"rate_rule": {"tenor_years": 10, "spread_bp": 150}}'
       when n = 'patch' then '{"name": "Sweep Name"}'
       when n = 'items' then jsonb_build_array(jsonb_build_object(
         'transaction_id', ids->'line', 'project_id', ids->'project', 'category_id', ids->'category'))::text

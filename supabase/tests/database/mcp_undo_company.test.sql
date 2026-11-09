@@ -235,7 +235,7 @@ insert into muc_sweep (kind, write_id, p_id)
 select k, gen_random_uuid(),
   case
     when k in ('project_forecast', 'index_rate', 'loan_part_category', 'loan_category_from', 'recurring_handover') then null
-    when k in ('cash_basis', 'company', 'loan_order', 'company_currency', 'jev_mode', 'books_closed', 'tax_bracket', 'land_account') then pg_temp.id('b')
+    when k in ('cash_basis', 'company', 'loan_order', 'company_currency', 'jev_mode', 'books_closed', 'tax_bracket', 'land_account', 'member_report') then pg_temp.id('b')
     else pg_temp.id('target')
   end
 from unnest(array[
@@ -251,7 +251,7 @@ from unnest(array[
   'book_line', 'note_add', 'note_edit', 'note_remove', 'file_remove', 'loan_part_category',
   'loan_category_from', 'journal_entry', 'category_account', 'account_create', 'account_update',
   'account_archive', 'account_restore', 'account_merge', 'prepaid_create', 'prepaid_refund', 'prepaid_update',
-  'prepaid_end', 'prepaid_delete', 'books_closed', 'journal_entry_update', 'tax_bracket', 'land_account', 'loan_closing_paid'
+  'prepaid_end', 'prepaid_delete', 'books_closed', 'journal_entry_update', 'tax_bracket', 'land_account', 'loan_closing_paid', 'member_report'
 ]) k;
 update muc_sweep set p_id = write_id where p_id is null;
 
@@ -290,7 +290,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  77,
+  78,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -298,7 +298,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  77,
+  78,
   'the swept writes keep the company they were stored with'
 );
 select is(
