@@ -190,6 +190,8 @@ export function applyPatch(config: MemberReportConfig | null, patch: MemberRepor
 export function useMemberReportWrite() {
   const client = useQueryClient();
   return useWrite<MemberReportPatch>({
+    // Taps in a row reach the server in the order tapped (each sends the whole rate rule).
+    scope: MEMBER_REPORT_KEY,
     optimistic: (patch) => client.getQueriesData<MemberReportRead>({ queryKey: [MEMBER_REPORT_KEY] })
       .filter(([, data]) => data != null)
       .map(([key]) => ({

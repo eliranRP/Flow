@@ -361,7 +361,7 @@ function RateSection({ result, canEdit, onOpen, onSave, config, updated }: {
       <div className="ui-msr-rate">
         {/* FLOW-1128: the date is one row (its label, the date, a chevron), not a large button beside it. */}
         {canEdit ? (
-          <button type="button" className="ui-msr-rate-line ui-msr-date m-press" aria-label={`תאריך ההצעות: ${date}. שינוי`}
+          <button type="button" className="ui-msr-rate-line ui-msr-date ui-hit m-press" aria-label={`תאריך ההצעות: ${date}. שינוי`}
             onClick={() => { onOpen("yields"); }}>
             <span className="t-muted">תאריך ההצעות</span>
             <span className="ui-msr-date-value"><bdi dir="ltr" className="ui-num">{date}</bdi><ChevronIcon size={18} /></span>
