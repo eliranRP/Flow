@@ -156,13 +156,29 @@ export function useRefreshTreasury(sample?: () => Promise<RefreshAnswer>): { ref
   return { refresh, busy };
 }
 
+/** The report with these properties' selling cost set, as set_project_investment leaves it (null: the default). */
+export function withSellingCost(read: MemberReportRead, projectIds: readonly string[], bp: number | null): MemberReportRead {
+  return { ...read, properties: read.properties.map((p) => (projectIds.includes(p.project_id) ? { ...p, selling_cost_bp: bp } : p)) };
+}
+
 /**
  * FLOW-1121: a property's selling cost from the report, through the same write the investment page makes
  * (set_project_investment's selling_cost_bp; null is the default 8%), for one property or several. Reads the
  * report and the project's own reads (its page and returns sit under "project") again.
  */
 export function useSellingCostWrite() {
+  const client = useQueryClient();
   return useWrite<{ projectIds: readonly string[]; bp: number | null }>({
+    // FLOW-1128: the report shows the new percent at once; a failure puts it back.
+    optimistic: ({ projectIds, bp }) => client.getQueriesData<MemberReportRead>({ queryKey: [MEMBER_REPORT_KEY] })
+      .filter(([, data]) => data != null)
+      .map(([key]) => ({
+        key,
+        update: (old: unknown) => {
+          const read = old as MemberReportRead | undefined;
+          return read == null ? read : withSellingCost(read, projectIds, bp);
+        },
+      })),
     failure: (error) => ((error as { code?: string }).code === "42501"
       ? { message: "רק בעלי החברה יכולים לשנות את עלויות המכירה.", retry: false }
       : "לא הצלחנו לשמור את עלויות המכירה."),

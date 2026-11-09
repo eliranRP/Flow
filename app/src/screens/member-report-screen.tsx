@@ -22,6 +22,7 @@ import {
   useMemberReportWrite,
   useRefreshTreasury,
   useSellingCostWrite,
+  withSellingCost,
   type MemberReportPatch,
   type MemberReportRead,
   type RefreshAnswer,
@@ -68,11 +69,6 @@ const SAMPLE_REFRESH = (): Promise<RefreshAnswer> => Promise.resolve({ requested
 
 function isDrillKey(value: string): value is DrillKey {
   return (DRILL_KEYS as readonly string[]).includes(value);
-}
-
-/** A sample's selling cost changed the way set_project_investment does (stories). */
-function withSelling(read: MemberReportRead, projectIds: readonly string[], bp: number | null): MemberReportRead {
-  return { ...read, properties: read.properties.map((p) => (projectIds.includes(p.project_id) ? { ...p, selling_cost_bp: bp } : p)) };
 }
 
 function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, member: MemberShare | null) {
@@ -147,7 +143,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
 
   const saveSelling = useCallback(async (projectIds: readonly string[], bp: number | null): Promise<boolean> => {
     if (!live) {
-      setSampled((current) => (current == null ? current : withSelling(current, projectIds, bp)));
+      setSampled((current) => (current == null ? current : withSellingCost(current, projectIds, bp)));
       return true;
     }
     try {
