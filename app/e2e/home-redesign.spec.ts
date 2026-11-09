@@ -27,7 +27,8 @@ test("the drawer opens, a future month is disabled, and a pick replaces the mont
   const drawer = page.getByRole("dialog", { name: "בחירת חודש" });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole("button", { disabled: true }).first()).toBeVisible();
-  const pick = drawer.getByRole("button", { name: /נטו/ }).first();
+  // A past month with data. In a preview its net is never read, so it shows "—", not a made-up ₪0 (FLOW-1139).
+  const pick = drawer.locator(".ui-month-cell-data").first();
   await pick.click();
   await expect(drawer).toHaveCount(0);
   await expect(page).toHaveURL(/month=/);
