@@ -26,7 +26,7 @@ function normalisedPath(value: string): string | null {
   }
   if (url.origin !== "https://flow.invalid" || url.username !== "" || url.password !== "") return null;
   const path = `${url.pathname}${url.search}${url.hash}`;
-  let decoded = path;
+  let decoded: string;
   try {
     decoded = decodeURIComponent(path);
   } catch {

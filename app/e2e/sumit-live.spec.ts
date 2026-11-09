@@ -253,9 +253,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   const { session, seedToken } = await sessionForNewOwner();
   const token = String(session.access_token);
   const probe = `FLOW-PROBE-${String(Date.now())}`;
-  let splitId = "";
   let createdId: number | null = null;
-  let creditId: number | null = null;
 
   await page.addInitScript(
     ({ key, value }) => {
@@ -293,7 +291,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await page.goto("/");
   await showInvoicedAllTime(page);
   await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
-  splitId = await enterWorkerSplit(token, seedToken);
+  const splitId = await enterWorkerSplit(token, seedToken);
   await page.goto("/projects");
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
   await expect(page.getByText("שיפוץ הרצל 12")).toBeVisible();
@@ -332,7 +330,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
           },
           Items: [{ Item: { Name: `${probe}-credit`, Price: 118 }, Quantity: 1, UnitPrice: 118 }],
         });
-        creditId = documentId(credited);
+        const creditId = documentId(credited);
         await linkCredit(creditId, createdId);
         await page.waitForTimeout(61_000);
         await page.goto("/settings/connections");

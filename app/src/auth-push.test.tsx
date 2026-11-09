@@ -11,17 +11,27 @@ import { notePushOwner } from "./push-owner";
 const auth = vi.hoisted(() => ({ handlers: [] as Array<(event: string, session: Session | null) => void> }));
 const forget = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
-vi.mock("./lib/supabase", () => ({
-  getSupabase: () => ({
-    auth: {
-      onAuthStateChange: (callback: (event: string, session: Session | null) => void) => {
-        auth.handlers.push(callback);
-        return { data: { subscription: { unsubscribe: () => undefined } } };
-      },
+// One client, as the app's getSupabase gives, and an unsubscribe that drops its handler, so a re-render
+// that subscribes again leaves one handler, not two.
+const client = vi.hoisted(() => ({
+  auth: {
+    onAuthStateChange: (callback: (event: string, session: Session | null) => void) => {
+      auth.handlers.push(callback);
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              auth.handlers.splice(auth.handlers.indexOf(callback), 1);
+            },
+          },
+        },
+      };
     },
-    rpc: () => Promise.resolve({ data: null, error: null }),
-  }),
+  },
+  rpc: () => Promise.resolve({ data: null, error: null }),
 }));
+
+vi.mock("./lib/supabase", () => ({ getSupabase: () => client }));
 vi.mock("./push", () => ({ forgetThisDevice: forget }));
 
 const USER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
