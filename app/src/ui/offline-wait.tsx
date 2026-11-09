@@ -10,6 +10,8 @@ export const OFFLINE_WAIT_WORDS = "ננסה שוב כשהחיבור יחזור";
  * (React Query pauses it). Online this is always false and costs no subscription. A screen's skeleton
  * then gives way to the offline line; when the connection returns the read resumes and the skeleton,
  * then the content, come back by themselves. Outside a query client (a bare story or test) it is false.
+ * It looks at any paused read, not only this place's own: offline, a skeleton waiting on its own read
+ * can't finish either, so the line is right for it too.
  */
 export function useWaitingOffline(): boolean {
   const client = useContext(QueryClientContext);
