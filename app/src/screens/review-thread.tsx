@@ -17,6 +17,7 @@ import { Button } from "../ui/button";
 import { CheckIcon, DocumentIcon } from "../ui/icons";
 import { CameraIcon, NoteIcon, PaperclipIcon } from "../ui/icons-later";
 import { Sheet } from "../ui/sheet";
+import { Skeleton } from "../ui/skeleton";
 import { useWrite } from "../use-write";
 import { DraftFiles, mercuryNoteStatus, saveThreadDraft, ThreadFileChip, usePickFiles, type ThreadDraft } from "./transaction-thread";
 import "../ui/css/58-transaction-thread.css";
@@ -162,7 +163,10 @@ export function ReviewThreadEntry({
   const id = transactionId ?? "";
   const counts = useThreadCounts(id === "" ? [] : [id]);
   const [open, setOpen] = useState(false);
-  if (id === "" || counts.isPending) return null;
+  if (id === "") return null;
+  // FLOW-1137: a writer's button holds its place while the counts load, so the card does not jump when it lands.
+  // A viewer's shows only when there is something, so it waits for the counts.
+  if (counts.isPending) return !holdWrites && counts.fetchStatus !== "idle" ? <Skeleton className="ui-review-thread-skel" /> : null;
   const { notes, files } = threadCount(counts.data, id);
   if (holdWrites && notes + files === 0) return null;
   return (

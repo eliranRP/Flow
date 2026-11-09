@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import { SAMPLE_ASSISTANT_KEYS, SAMPLE_ASSISTANT_SECRET, SAMPLE_EXPIRED_KEY } from "../assistant-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -23,6 +24,15 @@ function page(props: Parameters<typeof AiConnectionPage>[0], entry = "/settings/
 }
 
 const connected = { state: "connected", keys: SAMPLE_ASSISTANT_KEYS } as const;
+
+/** FLOW-1137: the page loads as a group head over an inset card of rows, not generic list rows. */
+export const Loading: Story = {
+  name: "Loading",
+  render: () => page({ sample: { state: "loading" } }),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-grouped-skel")).not.toBeNull());
+  },
+};
 
 export const Setup: Story = {
   name: "Setup",

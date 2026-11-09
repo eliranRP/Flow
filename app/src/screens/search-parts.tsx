@@ -5,12 +5,13 @@ import { BackIcon, DocumentIcon } from "../ui/icons";
 
 /**
  * The first read of a typed search, before any line is in hand (FLOW-368 §2.5): five rows drawn as
- * the board's skeleton (avatar, two bars, an end bar), under a note on the period searched.
+ * the board's skeleton (avatar, two bars, an end bar). FLOW-1139: the note on the period searched is read to
+ * screen readers only; the screen shows the blocks.
  */
 export function SearchingRows({ allTime }: { allTime: boolean }) {
   return (
     <div className="ui-search-searching" aria-busy="true">
-      <p className="ui-search-searching-note" role="status">{allTime ? "מחפש בכל התקופות…" : "מחפש…"}</p>
+      <p className="sr-only" role="status">{allTime ? "מחפש בכל התקופות…" : "מחפש…"}</p>
       <div className="ui-search-skel-list">
         {[0, 1, 2, 3, 4].map((index) => (
           <div className="ui-search-skel-row" key={index}>

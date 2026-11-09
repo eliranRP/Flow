@@ -154,6 +154,8 @@ export function useCompanyProfitMonths(today: string, enabled: boolean, sample?:
   });
   return {
     months: sample?.months ?? read.data?.months ?? null,
+    /** FLOW-1139: the months are being read: the chart's skeleton holds its place. */
+    loading: live && read.isPending,
     failed: live && read.isError,
   };
 }

@@ -315,6 +315,16 @@
   color: var(--color-accent-text);
 }
 
+/* FLOW-1139: the card's skeleton while the week's figures load, in the card's own box. */
+.ui-weekly-card-skel .ui-weekly-card-icon {
+  background: var(--color-skeleton);
+}
+
+.ui-weekly-skel-figure {
+  inline-size: 110px;
+  block-size: 28px;
+}
+
 .ui-weekly-card-hide {
   position: absolute;
   inset-block-start: var(--space-1);

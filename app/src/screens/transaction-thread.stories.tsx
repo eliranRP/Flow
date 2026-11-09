@@ -2,10 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { THREAD_KEY, type Thread } from "../transaction-thread";
+import { THREAD_COUNTS_KEY, THREAD_KEY, type Thread } from "../transaction-thread";
 import { StoryRoute } from "../ui/story-route";
 import { TransactionThread } from "./transaction-thread";
-import { BeforeApproveSheet } from "./review-thread";
+import { BeforeApproveSheet, ReviewThreadEntry } from "./review-thread";
 
 /**
  * FLOW-957 (boards "A · Thread — transaction page" and "C · Sheet — approval card", owner 2026-10-25):
@@ -105,6 +105,45 @@ export const Empty: Story = {
   render: () => <ThreadStory thread={empty} />,
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByLabelText("הערה")).toBeVisible();
+  },
+};
+
+/** A read that never answers, for a loading story: the query stays pending and fetching. */
+function Pending({ queryKey }: { queryKey: readonly unknown[] }) {
+  const client = useQueryClient();
+  useState(() => {
+    void client.query({ queryKey, queryFn: () => new Promise<never>(() => undefined) }).catch(() => undefined);
+    return true;
+  });
+  return null;
+}
+
+/** FLOW-1137: while the read is out, the section holds its place: its title and a block where the note goes. */
+export const Loading: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <Pending queryKey={[THREAD_KEY, "off", "t1"]} />
+      <div className="ui-page-pad">
+        <TransactionThread transactionId="t1" holdWrites={false} />
+      </div>
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByRole("heading", { name: "הערה וקבצים" })).toBeVisible();
+    await expect(canvasElement.querySelector(".ui-thread-skel-note")).not.toBeNull();
+  },
+};
+
+/** FLOW-1137: the approval card's thread button holds its place while the counts load. */
+export const ReviewEntryLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/review">
+      <Pending queryKey={[THREAD_COUNTS_KEY, "off", "t1"]} />
+      <ReviewThreadEntry transactionId="t1" holdWrites={false} approveDisabled={false} onApprove={() => undefined} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector(".ui-review-thread-skel")).not.toBeNull();
   },
 };
 

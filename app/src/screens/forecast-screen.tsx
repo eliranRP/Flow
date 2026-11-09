@@ -18,7 +18,8 @@ import { FocusTitle } from "../ui/focus-title";
 import { DETAIL_BAR, ScreenHeader, useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
-import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
+import { ChartSkeleton } from "../ui/chart-skeleton";
+import { DelayedSkeleton, ListSkeleton, Skeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
 import { CalendarCheckIcon } from "../ui/icons-later";
 import { useToast } from "../ui/toast";
@@ -115,6 +116,53 @@ function ForecastSection({
   );
 }
 
+/** FLOW-1139: the figure, the card and the chart while today's cash or the forecast loads. */
+function ForecastHeadSkeleton() {
+  return (
+    <>
+      <Skeleton className="ui-forecast-skel-figure" />
+      <div className="ui-fc-block ui-forecast-fc">
+        <NextMonthCardSkeleton />
+        <ChartSkeleton />
+      </div>
+    </>
+  );
+}
+
+/**
+ * FLOW-1139: the page while the forecast loads, in the page's shape: the figure, the card, the chart, the views
+ * and two sections of rows. It waits 300ms like the app's other skeletons, and says it is loading in one sr-only line.
+ */
+function ForecastPageSkeleton() {
+  return (
+    <DelayedSkeleton>
+      <div className="ui-forecast-skel" aria-busy="true">
+        <p className="sr-only" role="status">טוען…</p>
+        <ForecastHeadSkeleton />
+        <Skeleton className="ui-forecast-skel-views" />
+        {[3, 2].map((rows, section) => (
+          <div key={section} className="ui-forecast-section">
+            <span className="ui-forecast-skel-head">
+              <Skeleton width="sm" />
+              <Skeleton width="sm" />
+            </span>
+            {Array.from({ length: rows }, (_, row) => (
+              <span key={row} className="ui-skel-list-row">
+                <span aria-hidden="true" className="ui-skeleton-bar ui-forecast-skel-initial" />
+                <span className="ui-skel-list-lines">
+                  <Skeleton className="ui-forecast-skel-name" />
+                  <Skeleton className="ui-forecast-skel-meta" />
+                </span>
+                <Skeleton className="ui-forecast-skel-amount" />
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </DelayedSkeleton>
+  );
+}
+
 /**
  * FLOW-141: the month-end forecast. A row opens its page at `<this path>/item/<key>`, over the list,
  * which stays mounted under it. `openWhen` opens the page's When sheet with it (the dev route's frame).
@@ -154,6 +202,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const days = daysLeftInMonth(today, month);
   const chartFigures = sample != null ? sample.months ?? null : chartCash.data == null ? null : cashMonthFigures(chartCash.data, base);
   const chart = build == null || chartFigures == null ? null : monthEndChart(month, chartFigures, { incomeMinor: build.incomeTotal, expenseMinor: build.expenseTotal }, base);
+  // FLOW-1139: the chart's months are still being read: a chart skeleton holds its place (a failed read draws none).
+  const chartLoading = live && chartCash.isLoading;
   // FLOW-970: a failed read says what happened, with the retry and the way to help; offline, the last figures stay with their moment.
   const failed = sample?.failed ?? (data == null && query.isError);
   const offlineSince = live ? (online || data == null ? undefined : query.dataUpdatedAt || undefined) : sample.offlineSince;
@@ -325,13 +375,13 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     ...[...soFar?.income ?? [], ...soFar?.expense ?? []].flatMap((row): Array<[string, string]> => (row.name == null ? [] : [[row.key, row.name]])),
     ...(categories.data ?? []).map((row): [string, string] => [row.id, row.name]),
   ]);
-  // A name still loading shows nothing, never "כללי" or "ללא קטגוריה" for a moment.
+  // A name still loading is null (FLOW-1139: the page draws a skeleton in its place), never "כללי" or "ללא קטגוריה" for a moment.
   const projectName = open == null
     ? ""
-    : open.project_name ?? (open.project_id == null ? "כללי" : live && projects.isPending ? "" : projects.data?.projects.find((row) => row.id === open.project_id)?.name ?? "כללי");
+    : open.project_name ?? (open.project_id == null ? "כללי" : live && projects.isPending ? null : projects.data?.projects.find((row) => row.id === open.project_id)?.name ?? "כללי");
   const categoryName = open?.category_id == null
     ? NO_CATEGORY
-    : categoryNames.get(open.category_id) ?? (live && categories.isPending ? "" : NO_CATEGORY);
+    : categoryNames.get(open.category_id) ?? (live && categories.isPending ? null : NO_CATEGORY);
 
   // FLOW-1048: the views as the one segmented control, in the page and, once it reaches the bar, docked in it.
   const viewSwitch = (
@@ -369,11 +419,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       {/* A sample has no read to retry: its failure is fixed, so נסו שוב does nothing there. */}
       {failed ? <PageLoadFailed title="הצפי לא נטען" offline={!online} onRetry={() => { if (live) void query.refetch(); }} /> : null}
       {offlineSince == null || failed ? null : <BandOfflineLine since={offlineSince} onPage />}
-      {data == null && !failed ? (
-        <DelayedSkeleton>
-          <ListSkeleton />
-        </DelayedSkeleton>
-      ) : null}
+      {data == null && !failed ? <ForecastPageSkeleton /> : null}
       {build == null || failed ? null : (
         <>
           {!startKnown ? (
@@ -381,7 +427,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             cash.isError || cash.isSuccess ? (
               <PageLoadFailed title="התזרים של היום לא נטען" offline={!online} onRetry={() => void cash.refetch()} />
             ) : (
-              <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
+              <DelayedSkeleton><ForecastHeadSkeleton /></DelayedSkeleton>
             )
           ) : (
           <>
@@ -403,7 +449,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               strong
               caption={itemsCaption(build)}
             />
-            {chart == null ? null : <MonthChart kind="cash" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} takeaway={monthEndTakeaway(month, total, base)} />}
+            {chart == null ? (chartLoading ? <DelayedSkeleton><ChartSkeleton /></DelayedSkeleton> : null) : <MonthChart kind="cash" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} takeaway={monthEndTakeaway(month, total, base)} />}
           </div>
           </>
           )}

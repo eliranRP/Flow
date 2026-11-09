@@ -22,8 +22,8 @@ const SUMMARY: WeeklySummary = {
   more_over_budget: 0,
 };
 
-const query = vi.hoisted(() => ({ data: undefined as WeeklySummary | undefined }));
-vi.mock("../use-weekly-summary", () => ({ useWeeklySummaryQuery: () => ({ data: query.data }) }));
+const query = vi.hoisted(() => ({ data: undefined as WeeklySummary | undefined, isPending: false }));
+vi.mock("../use-weekly-summary", () => ({ useWeeklySummaryQuery: () => ({ data: query.data, isPending: query.isPending }) }));
 
 function Where() {
   return <p data-testid="where">{useLocation().search}</p>;
@@ -62,12 +62,23 @@ describe("WeeklySummaryCardSlot", () => {
   beforeEach(() => {
     localStorage.clear();
     query.data = SUMMARY;
+    query.isPending = false;
   });
 
-  it("shows nothing until the week's figures arrive", () => {
+  it("holds the card's place with a skeleton until the week's figures arrive (FLOW-1139)", async () => {
+    query.data = undefined;
+    query.isPending = true;
+    slot();
+    expect(screen.queryByText("הסיכום השבועי מוכן")).toBeNull();
+    expect(await screen.findByRole("status")).toHaveTextContent("טוען את הסיכום השבועי…");
+    expect(document.querySelector(".ui-weekly-card-skel")).not.toBeNull();
+  });
+
+  it("shows nothing when the read failed", () => {
     query.data = undefined;
     slot();
     expect(screen.queryByText("הסיכום השבועי מוכן")).toBeNull();
+    expect(document.querySelector(".ui-weekly-card-skel")).toBeNull();
   });
 
   it("opens the week's sheet on a tap, keeping the rest of the address", () => {

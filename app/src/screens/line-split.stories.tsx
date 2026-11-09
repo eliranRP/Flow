@@ -1,5 +1,6 @@
 import type { TransactionDetail } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import type { ReactElement } from "react";
 import {
   SAMPLE_EXPENSE_LINE,
@@ -160,3 +161,16 @@ const unsplit = storyOf(() => (
   </StoryRoute>
 ));
 export const DetailEntry: Story = { ...unsplit, name: "Detail entry rows" };
+
+/** FLOW-1137: while the line and its lists load (and while the role loads), the form's skeleton, not list rows. */
+export const Loading: Story = {
+  name: "Loading",
+  render: () => (
+    <StoryRoute entry={`/transactions/${SAMPLE_EXPENSE_LINE.id}/split-category?preview=loading`}>
+      <LineSplitScreen />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-form-skel")).not.toBeNull());
+  },
+};

@@ -83,5 +83,15 @@ export const NoOpenLoans: Story = {
 };
 
 export const Viewer: Story = { name: "Viewer", args: { store: () => sampleLoanStore(), viewer: true } };
-export const Loading: Story = { name: "Loading", args: { store: () => sampleLoanStore(), phase: "loading" } };
+/** FLOW-1139: the band holds its figure and rows as band skeletons, the body the paid parts and the per-loan bars. */
+export const Loading: Story = {
+  name: "Loading",
+  args: { store: () => sampleLoanStore(), phase: "loading" },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelectorAll(".ui-loans-band-skel .ui-skeleton-bar-band").length).toBeGreaterThanOrEqual(3);
+    await expect(await within(canvasElement).findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelector(".ui-loans-sum-skel-parts")).not.toBeNull();
+    await expect(canvasElement.querySelectorAll(".ui-loans-sum-skel-track")).toHaveLength(3);
+  },
+};
 export const LoadError: Story = { name: "Error", args: { store: () => sampleLoanStore(), phase: "error" } };

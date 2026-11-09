@@ -238,3 +238,18 @@
   font: inherit;
   font-size: var(--type-caption-size);
 }
+
+/* FLOW-1137: the thread section's place while its read is out: one block the height of the note field and its
+   actions; and the review card's thread button's place, as one 44px pill in the button's margins. */
+.ui-thread-skel-note {
+  inline-size: 100%;
+  block-size: calc(var(--touch-min) * 3);
+  border-radius: var(--radius-card-inner);
+}
+
+.ui-review-thread-skel {
+  margin: var(--space-2) var(--space-side) 0;
+  inline-size: auto;
+  block-size: var(--touch-min);
+  border-radius: var(--radius-chip);
+}

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { ProjectNextEditScreen, type ProjectNextEditSample } from "./project-next-edit-screen";
@@ -21,6 +22,20 @@ function page(preset: Partial<ProjectNextEditSample>, add = false) {
     </StoryRoute>
   );
 }
+
+/** FLOW-1137: while the page's reads (or the role) load, its skeleton shows, not a blank page. */
+export const ProjectNextEditLoading: Story = {
+  name: "Project, next month forecast, edit loading",
+  render: () => (
+    <StoryRoute entry="/projects/juniper-ct/profit/next/edit/avg%3Arepairs?preview=loading" tabs>
+      <ExampleBar />
+      <ProjectNextEditScreen />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector("[aria-busy='true'] [role='status']")).not.toBeNull());
+  },
+};
 
 /** ProfitNextEdit: the repairs average's edit page, typed as 1,200 (high against its usual $310). */
 export const ProjectNextEdit: Story = {

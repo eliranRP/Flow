@@ -249,6 +249,14 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-1139: a count still loading. */
+.ui-search-check-skel {
+  display: inline-block;
+  inline-size: 20px;
+  block-size: 12px;
+  vertical-align: middle;
+}
+
 /* The project shortcut, first in the results when the text names a project. */
 .ui-search-project {
   display: flex;
@@ -617,13 +625,6 @@
 }
 
 /* Searching: the note, then five skeleton rows of the board's row shape. */
-.ui-search-searching-note {
-  margin: 0;
-  padding: calc(var(--space-1) * 1.5) var(--space-4) calc(var(--space-1) * 0.75);
-  font-size: var(--type-caption-size);
-  color: var(--color-text-muted);
-}
-
 .ui-search-skel-list {
   display: flex;
   flex-direction: column;

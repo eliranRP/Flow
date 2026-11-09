@@ -259,24 +259,29 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   // The project check counts every line of the project, as tapping it shows them (all time).
   const projectFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, project: busiest?.id ?? null }), [busiest?.id]);
   const projectQuery = useSearchQuery(projectFilters, live && !filtered && busiest != null);
-  const projectAllCount = local ? filterSearchRows(local.rows, projectFilters).length : projectQuery.data?.pages[0]?.total ?? null;
+  // FLOW-1139: null while a count is being read (a skeleton), undefined when it isn't coming (failed or not asked): blank.
+  type CountRead = { data?: { pages: { total: number }[] }; fetchStatus: string };
+  const countOf = (query: CountRead, applied: SearchFilters): number | null | undefined => {
+    if (local) return filterSearchRows(local.rows, applied).length;
+    const total = query.data?.pages[0]?.total;
+    if (total != null) return total;
+    return query.fetchStatus === "idle" ? undefined : null;
+  };
+  const projectAllCount = countOf(projectQuery, projectFilters);
   const monthName = new Intl.DateTimeFormat("he-IL", { month: "long" }).format(checkNow);
-  const countOf = (pages: { total: number } | undefined, applied: SearchFilters) => (
-    local ? filterSearchRows(local.rows, applied).length : pages?.total ?? null
-  );
   const checks: QuickCheck[] = [
     {
       key: "review",
       title: "ממתינים לאישור",
       hint: "תנועות ש־Flow לא בטוח לגביהן",
-      count: countOf(reviewQuery.data?.pages[0], reviewFilters),
+      count: countOf(reviewQuery, reviewFilters),
       onPick: () => { update({ review: true }); },
     },
     {
       key: "income",
       title: "הכנסות החודש",
       hint: `כל מה שנכנס ב${monthName}`,
-      count: countOf(incomeQuery.data?.pages[0], incomeFilters),
+      count: countOf(incomeQuery, incomeFilters),
       onPick: () => { update({ direction: "income", period: presetPeriod("month", checkNow) }); },
     },
   ];

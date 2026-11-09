@@ -7,6 +7,7 @@ import { useDashboardQuery } from "../use-books";
 import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { Button } from "../ui/button";
 import { ConnectionNote, ConnectionPage } from "../ui/connection-page";
+import { GroupedSkeleton } from "../ui/loading-shapes";
 import { ScreenState } from "../ui/screen-state";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
@@ -138,7 +139,7 @@ export function AiConnectionPage({
       ? ({ kind: "error", offline: !navigator.onLine } as const)
       : state === "loading" ? ({ kind: "loading" } as const) : screenPhase(preview, dashboard);
     const retry = state === "loading" || state === "error" ? () => { void status.refetch(); } : () => { void dashboard.refetch(); };
-    return <ScreenState title={TITLE} kicker="חיבורים" backTo={backTo} phase={phase} onRetry={retry} />;
+    return <ScreenState title={TITLE} kicker="חיבורים" backTo={backTo} phase={phase} onRetry={retry} loading={<GroupedSkeleton groups={[2]} />} />;
   }
   if (state === "no-company") {
     return (

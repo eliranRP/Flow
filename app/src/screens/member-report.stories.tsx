@@ -39,6 +39,25 @@ function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
+/** FLOW-1139: while the report loads: the band's figure and its line as band skeletons, then the calculation's rows. */
+export const Loading: Story = {
+  render: () => (
+    <StoryRoute entry="/reports/member?preview=loading" tabs>
+      <ExampleBar />
+      <MemberReportScreen />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "דוח שותף" })).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-msr-band-figure .ui-skeleton-bar-band")).not.toBeNull();
+    await expect(canvas.getByRole("tab", { name: "מכירת הכל" })).toBeInTheDocument();
+    await expect(await canvas.findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelectorAll(".ui-msr-skel-card")).toHaveLength(2);
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
+};
+
 export const HubCard: Story = {
   render: () => (
     <StoryRoute entry="/reports" tabs>

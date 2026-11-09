@@ -165,6 +165,12 @@ export const HubBalanceFailed: Story = {
   },
 };
 
+/** FLOW-1139: the months are still being read: the P&L card's chart strip holds its place in skeleton bars. */
+export const HubMonthsLoading: Story = { name: "Hub · months loading", render: () => <Hub sample={{ months: undefined }} />, play: async ({ canvasElement }) => {
+  await expect(canvasElement.querySelectorAll(".ui-chart-skel-mini .ui-skeleton-bar")).toHaveLength(10);
+  await fits(canvasElement);
+} };
+
 /** The months read failed: the cards stay, the P&L card shows the retry line in place of its chart. */
 export const HubMonthsFailed: Story = {
   name: "Hub · balance loaded, months failed",

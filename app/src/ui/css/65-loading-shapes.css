@@ -1,0 +1,76 @@
+/* FLOW-1137: loading states in the content's own shape (ui/loading-shapes.tsx). Grey blocks only; the
+   shared .ui-skeleton-bar rule draws and pulses them. */
+
+/* A form: the line's figure, then a label bar over a 44px control per field, 20px apart. */
+.ui-form-skel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-side) 0;
+}
+
+.ui-form-skel-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-form-skel-amount {
+  inline-size: var(--skel-lg);
+  block-size: var(--space-10);
+  border-radius: var(--radius-input);
+}
+
+/* A choice sheet's rows: the change picker's radio rows (.ui-radio-row), each one bar. */
+.ui-radio-skel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A chip field's chips: 44px pills in the chips' row and gap. */
+.ui-chips-skel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.ui-chip-skel {
+  block-size: var(--touch-min);
+  border-radius: var(--radius-chip);
+}
+
+.ui-chip-skel-a {
+  inline-size: var(--skel-pill);
+}
+
+.ui-chip-skel-b {
+  inline-size: calc(var(--skel-pill) + var(--space-8));
+}
+
+.ui-chip-skel-c {
+  inline-size: var(--skel-sm);
+}
+
+/* The + sheet's tiles: the tile's own height and corner. */
+.ui-tile-skel {
+  inline-size: 100%;
+  block-size: 112px;
+  border-radius: var(--radius-card-tight);
+}
+
+/* A settings-style page: the segmented control, then per group a head bar over an inset card. */
+.ui-grouped-skel-segment {
+  margin: var(--space-4) var(--space-side) 0;
+  inline-size: auto;
+  block-size: var(--touch-min);
+  border-radius: var(--radius-input);
+}
+
+.ui-grouped-skel-head {
+  inline-size: var(--skel-sm);
+  block-size: var(--skel-block);
+}
+
+.ui-grouped-skel-head-short {
+  inline-size: calc(var(--skel-sm) - var(--space-4));
+}

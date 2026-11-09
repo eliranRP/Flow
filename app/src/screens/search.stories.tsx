@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { SearchScreen, type SearchSample } from "./search";
+import { SearchStart } from "./search-start";
 
 /**
  * FLOW-368: the transaction search, one field with סינון beside it, the checks before anything is
@@ -94,7 +95,32 @@ export const NoResults: Story = { render: () => <Search entry="/search?q=מעל�
 /** FLOW-1049: zero results with a filter on: the link that drops it, סינון, and the clear. Never a dead end. */
 export const NoResultsFiltered: Story = { render: () => <Search entry="/search?q=מעליות&dir=income" /> };
 
-export const Loading: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
+/** FLOW-1139: the searching rows; the note on the period searched is read to screen readers only. */
+export const Loading: Story = {
+  render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} />,
+  play: async ({ canvasElement }) => {
+    const note = within(canvasElement).getByText(/^מחפש/);
+    await expect(note).toHaveClass("sr-only");
+    await expect(canvasElement.querySelectorAll(".ui-search-skel-row")).toHaveLength(5);
+  },
+};
+
+/** FLOW-1139: the start page's checks while their counts load: a skeleton in each count's place, not a blank. */
+export const StartCountsLoading: Story = {
+  render: () => (
+    <SearchStart
+      recent={[]}
+      checks={[
+        { key: "review", title: "מחכות לאישור", hint: "תנועות שעוד לא אושרו", count: null, onPick: () => undefined },
+        { key: "income", title: "הכנסות החודש", hint: "כל מה שנכנס החודש", count: null, onPick: () => undefined },
+      ]}
+      onRecent={() => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelectorAll(".ui-search-check-count .ui-search-check-skel")).toHaveLength(2);
+  },
+};
 export const Failed: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: false } }} /> };
 /** FLOW-971: offline, the search runs on the lines already read and says so under the field. */
 export const Offline: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, offline: true }} /> };

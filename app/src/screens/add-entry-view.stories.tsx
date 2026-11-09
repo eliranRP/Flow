@@ -54,6 +54,15 @@ export const CashFromProject: Story = {
   args: { fromProject: "Oak Ridge", start: { payee: "", categoryId: null } },
 };
 
+/** FLOW-1137: the projects and categories still loading: each field draws skeleton chips, not "בלי פרויקט" alone or nothing. */
+export const ListsLoading: Story = {
+  args: { projects: [], categories: [], loading: { projects: true, categories: true }, start: { projectId: null, categoryId: null } },
+  play: async () => {
+    await waitFor(() => expect(document.querySelectorAll(".ui-chips-skel")).toHaveLength(2));
+    await expect(within(document.body).queryByText("בלי פרויקט")).toBeNull();
+  },
+};
+
 /** A receipt with a matched bank line: the box names it and the save attaches to it. */
 export const ReceiptMatched: Story = {
   args: {

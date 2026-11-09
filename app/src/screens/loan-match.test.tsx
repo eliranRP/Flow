@@ -526,8 +526,9 @@ describe("LoanTransactionSplit", () => {
     fireEvent.change(within(editor).getByLabelText("עמלות"), { target: { value: "1.35" } });
     expect(within(editor).getByText("בחרו לאן נרשמות העמלות.")).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "שמירה" })).toBeDisabled();
-    const picker = within(editor).getByLabelText("קטגוריה לעמלות");
-    await waitFor(() => { expect(within(picker).getByRole("option", { name: "עמלות בנק" })).toBeInTheDocument(); });
+    // FLOW-1137: while the categories load the field is a skeleton; the select comes with them.
+    const picker = await within(editor).findByLabelText("קטגוריה לעמלות");
+    expect(within(picker).getByRole("option", { name: "עמלות בנק" })).toBeInTheDocument();
     fireEvent.change(picker, { target: { value: "cat-bank" } });
     expect(within(editor).getByRole("switch", { name: "לשמור להלוואה הזו" })).toBeChecked();
     fireEvent.click(within(editor).getByRole("button", { name: "שמירה" }));

@@ -26,6 +26,7 @@ import { CalendarIcon, DocumentIcon } from "../ui/icons";
 import { BellIcon } from "../ui/icons-later";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
+import { Skeleton } from "../ui/skeleton";
 import { Toggle } from "../ui/toggle";
 import { useTopToast } from "../ui/top-toast";
 import { PUSH_ACTIVE_HERE, pushBlockedMessage, subscribeDiagnostic, subscribeFailure } from "./push-copy";
@@ -104,8 +105,8 @@ export function NotificationsScreen({
 }: {
   sample?: NotificationPrefs;
   support?: PushSupport;
-  /** This device's state in a sample. Live, it is read from the browser. */
-  device?: DevicePush;
+  /** This device's state in a sample; null is a read still out. Live, it is read from the browser. */
+  device?: DevicePush | null;
   /** The connected devices in a sample. */
   devices?: PushDevice[];
   /** Which of the sample's devices is this one. */
@@ -163,6 +164,7 @@ export function NotificationsScreen({
   const noteBody = can === "ios-home-screen" ? <IosHomeNote /> : note;
   const anyOn = SWITCHES.some((item) => prefs[item.key]);
   const deviceUsable = here === "subscribed" || here === "not-subscribed" || here === "no-worker";
+  const deviceLoading = live ? can === "ok" && here == null && !deviceQuery.isError : device === null;
 
   function refresh() {
     void client.invalidateQueries({ queryKey: DEVICE_PUSH_KEY });
@@ -297,16 +299,21 @@ export function NotificationsScreen({
       />
       <SettingsOfflineLine words={NOTIFICATIONS_OFFLINE} />
       <List layout="inset">
-        <Toggle
-          label={DEVICE_LABEL}
-          hint={deviceHint(here)}
-          icon={<BellIcon size={22} />}
-          checked={here === "subscribed"}
-          busy={deviceBusy || (live && can === "ok" && here == null)}
-          disabled={!deviceUsable}
-          disabledNoteId={note != null ? noteId : undefined}
-          onChange={deviceChange}
-        />
+        {deviceLoading ? (
+          // FLOW-1137: this device's state is still being read: a skeleton hint, not a switch that reads "off".
+          <ListRow variant="static" title={DEVICE_LABEL} icon={<BellIcon size={22} />} hint={<Skeleton width="sm" />} skelHint busy />
+        ) : (
+          <Toggle
+            label={DEVICE_LABEL}
+            hint={deviceHint(here)}
+            icon={<BellIcon size={22} />}
+            checked={here === "subscribed"}
+            busy={deviceBusy}
+            disabled={!deviceUsable}
+            disabledNoteId={note != null ? noteId : undefined}
+            onChange={deviceChange}
+          />
+        )}
         {list != null && list.length > 0 ? (
           <ListRow variant="button" title={TEST_PUSH} icon={<BellIcon size={22} />} busy={testBusy} onClick={testPush} />
         ) : null}

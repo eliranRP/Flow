@@ -52,6 +52,8 @@ export type ChargePageData =
       changes: RecurringChange[] | undefined;
       lineId: string | null;
       charges: PartyCharges | null;
+      /** FLOW-1139: the line or its charges are still being read: the history's skeleton holds its place. */
+      chargesLoading?: boolean;
       recurring: PaymentRecurring | null;
       /** FLOW-963: when the schedule on screen was read, for the offline line. */
       updatedAt?: number;
@@ -94,6 +96,7 @@ export function useChargePageData(direction: "income" | "expense", partyId: stri
     changes: changes.data,
     lineId,
     charges: charges.data ?? null,
+    chargesLoading: line.isPending || (lineId != null && charges.isPending),
     recurring: recurring.data ?? null,
     updatedAt: schedule.dataUpdatedAt,
   };
