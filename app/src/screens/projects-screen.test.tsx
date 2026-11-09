@@ -18,7 +18,7 @@ function group(title: string): HTMLElement {
 describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
   it("groups the active projects by kind, each head with its count and the month's total", () => {
     renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} now={NOW} />);
-    expect(screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent)).toEqual(expect.arrayContaining(["שיפוץ", "השכרה", "לקוח", "תקורה"]));
+    expect(screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent)).toEqual(expect.arrayContaining(["שיפוץ", "השכרה", "פרויקט", "תקורה"]));
     expect(within(group("שיפוץ")).getByRole("link", { name: /^Lark Hill/ })).toHaveAttribute("href", "/projects/p2");
     expect(within(group("השכרה")).getByRole("link", { name: /^Birch St/ })).toBeInTheDocument();
     const overhead = within(group("תקורה")).getByRole("link", { name: /^משרד החברה \/ תקורה/ });
@@ -34,7 +34,7 @@ describe("ProjectsScreen (FLOW-445b, FLOW-1044)", () => {
     expect(screen.queryByRole("link", { name: /^פרויקט ישן/ })).not.toBeInTheDocument();
     const filter = screen.getAllByRole("radiogroup", { name: "סינון פרויקטים" })[0] as HTMLElement;
     fireEvent.click(within(filter).getByRole("radio", { name: "הסתיימו" }));
-    expect(within(group("לקוח")).getByRole("link", { name: /^פרויקט ישן/ })).toHaveTextContent("רווח כולל");
+    expect(within(group("פרויקט")).getByRole("link", { name: /^פרויקט ישן/ })).toHaveTextContent("רווח כולל");
     expect(screen.queryByRole("heading", { name: "שיפוץ" })).not.toBeInTheDocument();
   });
 
