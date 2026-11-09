@@ -57,6 +57,13 @@ describe("drawerCells", () => {
     expect(cells.find((cell) => cell.index === 10)).toEqual({ key: "2026-11", index: 10, state: "future", netMinor: null });
   });
 
+  it("marks the months with data pending while the year is read, with no net (FLOW-1139)", () => {
+    const cells = drawerCells(2026, null, "2026-01", TODAY, "2026-07");
+    expect(cells.find((cell) => cell.index === 0)).toEqual({ key: "2026-01", index: 0, state: "data", netMinor: null, pending: true });
+    expect(cells.find((cell) => cell.index === 6)).toEqual({ key: "2026-07", index: 6, state: "selected", netMinor: null, pending: true });
+    expect(cells.find((cell) => cell.index === 10)).toEqual({ key: "2026-11", index: 10, state: "future", netMinor: null });
+  });
+
   it("disables months before the books' first month", () => {
     const cells = drawerCells(2025, {}, "2025-03", TODAY, "2026-10");
     expect(cells.find((cell) => cell.index === 1)?.state).toBe("before");

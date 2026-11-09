@@ -83,6 +83,21 @@
   padding-block: var(--space-1) var(--space-3);
 }
 
+/* FLOW-1139: the pairs' skeleton, in the cards' own boxes. */
+.ui-xfer-skel-lead,
+.ui-xfer-skel-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ui-xfer-skel-answer {
+  flex: 1 1 0;
+  block-size: var(--touch-min);
+  border-radius: var(--radius-chip);
+}
+
 /* Two halves side by side; on a phone too narrow for both labels the row wraps whole, never a label. */
 .ui-xfer-actions {
   display: flex;

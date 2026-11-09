@@ -2,16 +2,23 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
 import { longHebrew } from "../ui/story-support";
 import { RECURRING_CHARGES_FIXTURE_POWER, RECURRING_CHARGES_FIXTURE_WATER, RECURRING_MISSING_FIXTURE } from "../recurring-sample";
+import { Route, Routes } from "react-router-dom";
 import { StoryRoute } from "../ui/story-route";
 import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-charge-screen";
 
 /** FLOW-447c: the charge page on the board's two parties, as the page's states. Invented names only. */
 const NOW = new Date("2026-10-11T12:00:00Z");
 
-function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" | "pick" | "long" }) {
-  const entry = state === "late" || state === "ignored" ? "/recurring/expense/power" : "/recurring/expense/water";
+function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" | "pick" | "long" | "loading" | "history" }) {
+  const entry = state === "late" || state === "ignored" ? "/recurring/expense/power" : state === "loading" ? "/recurring/expense/water?preview=loading" : "/recurring/expense/water";
   return (
     <StoryRoute entry={entry}>
+      {state === "loading" ? (
+        <Routes>
+          <Route path="/recurring/:direction/:partyId" element={<RecurringChargeScreen now={NOW} />} />
+        </Routes>
+      ) : null}
+      {state === "history" ? <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_WATER, charges: null, chargesLoading: true }} /> : null}
       {state === "missing" ? <ChargeMissing /> : null}
       {state === "error" ? <ChargeError /> : null}
       {state === "item" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} /> : null}
@@ -52,6 +59,26 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** FLOW-1139: while the schedule loads: the detail page's shape under Back, not list rows. */
+export const Loading: Story = {
+  args: { state: "loading" },
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelector(".ui-charge-body .ui-skel-detail-head")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
+};
+
+/** FLOW-1139: the page is in, its charges still load: the history's place is held by its skeleton (bars and rows). */
+export const HistoryLoading: Story = {
+  args: { state: "history" },
+  play: async ({ canvasElement }) => {
+    await waitFor(async () => {
+      await expect(canvasElement.querySelectorAll(".ui-charge-history-skel-bar")).toHaveLength(6);
+    });
+  },
+};
 
 /** The arrived bill, 38% over: the banner with its התעלמות, the history, the recurring row. */
 export const Item: Story = { args: { state: "item" } };

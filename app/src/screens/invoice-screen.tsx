@@ -9,6 +9,7 @@ import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { DocumentCard } from "../ui/document-card";
 import { EmptyState } from "../ui/empty-state";
+import { DetailSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { israelToday } from "../ui/date-math";
 import { unpaidDaysOpen, unpaidDocumentUrl, unpaidIsMarked, UNPAID_OVERDUE_DAYS, type UnpaidInvoice, type UnpaidSummary } from "../unpaid";
@@ -51,7 +52,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offli
   const documentUrl = row == null ? null : unpaidDocumentUrl(row);
   const customer = row == null ? "" : row.customer_name ?? row.description;
   return (
-    <ScreenState title="חשבונית" kicker="חשבוניות פתוחות" barOnly backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry} headerClassName="ui-inv-screen">
+    <ScreenState title="חשבונית" kicker="חשבוניות פתוחות" barOnly backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry} headerClassName="ui-inv-screen" loading={<DetailSkeleton />}>
       {failed ? (
         <div className="ui-page-pad">
           <PageLoadFailed title="החשבונית לא נטענה" offline={!online || (actions.phase.kind === "error" && actions.phase.offline)} onRetry={actions.retry} />

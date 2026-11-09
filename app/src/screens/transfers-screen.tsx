@@ -14,6 +14,7 @@ import { EmptyState } from "../ui/empty-state";
 import { HintParts } from "../ui/hint-parts";
 import { CheckIcon } from "../ui/icons";
 import { ScreenState } from "../ui/screen-state";
+import { Skeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 // The pair cards' own CSS; none of it is in Home's first load.
 import "../ui/css/54-transfer-matches.css";
@@ -68,6 +69,40 @@ export function TransferMatchCard({ match, readOnly, onAnswer }: { match: Transf
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * FLOW-1139: the page while the pairs load, in its shape: the lead line, then two pair cards, each the money out
+ * and the money in as two rows, the reason line and the two answers. One sr-only line says it is loading.
+ */
+function TransfersSkeleton() {
+  return (
+    <div className="ui-page-pad ui-xfer-page" aria-busy="true">
+      <p className="sr-only" role="status">טוען…</p>
+      <span className="ui-xfer-skel-lead">
+        <Skeleton width="lg" />
+        <Skeleton width="md" />
+      </span>
+      {[0, 1].map((card) => (
+        <div key={card} className="ui-xfer-card">
+          {[0, 1].map((leg) => (
+            <span key={leg} className="ui-xfer-leg">
+              <span className="ui-xfer-skel-text">
+                <Skeleton width="md" />
+                <Skeleton width="sm" />
+              </span>
+              <Skeleton width="sm" />
+            </span>
+          ))}
+          <p className="ui-xfer-why"><Skeleton width="md" /></p>
+          <span className="ui-xfer-actions">
+            <span aria-hidden="true" className="ui-skeleton-bar ui-xfer-skel-answer" />
+            <span aria-hidden="true" className="ui-skeleton-bar ui-xfer-skel-answer" />
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -137,6 +172,7 @@ export function TransfersScreen({ sample }: { sample?: TransferMatch[] } = {}) {
       backTo={`/${search}`}
       phase={phase}
       onRetry={() => void query.refetch()}
+      loading={<TransfersSkeleton />}
       empty={(
         <div className="ui-page-pad">
           <EmptyState

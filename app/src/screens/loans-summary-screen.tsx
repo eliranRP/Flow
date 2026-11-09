@@ -15,8 +15,7 @@ import { BackIcon, ChevronIcon, InfoIcon } from "../ui/icons";
 import { PercentIcon, RefreshIcon } from "../ui/icons-later";
 import { PartsBar } from "../ui/parts-bar";
 import { SegmentedControl } from "../ui/segmented-control";
-import { DelayedSkeleton } from "../ui/skeleton";
-import { LoansSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { readLoanPayments, readLoanRow, type LoanPayment } from "./loan-detail-data";
 import { useMemoryLoanStore, type MemoryLoanStore } from "./loan-detail-store";
 import { LOAN_PART_BOARD_LABEL, wholeMoney } from "./loan-detail-view-data";
@@ -245,6 +244,16 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
               {summary == null ? null : <p className="ui-loan-band-sub">{summary.sub}</p>}
             </div>
             {/* FLOW-1055 (V3-LoansSummary): the period switch sits in the band, under the title; it docks into the bar. */}
+            {/* FLOW-1139: while the summary loads, the band holds its figure and rows as band skeletons (as the loans list's band). */}
+            {read.phase === "loading" ? (
+              <div className="ui-loans-band-skel" aria-hidden="true">
+                <Skeleton tone="band" className="ui-loans-sum-skel-period" />
+                <Skeleton tone="band" width="md" />
+                <Skeleton tone="band" className="ui-skel-project-num" />
+                <Skeleton tone="band" width="lg" />
+                <Skeleton tone="band" width="lg" />
+              </div>
+            ) : null}
             {hasLoans ? (
               <div className="ui-loans-sum-period">
                 <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
@@ -312,7 +321,7 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
       <div className="ui-loans-body">
         {read.phase === "loading" ? (
           <DelayedSkeleton>
-            <LoansSkeleton />
+            <LoansSummarySkeleton />
           </DelayedSkeleton>
         ) : read.phase === "error" ? (
           <EmptyState
@@ -407,6 +416,41 @@ function LoansSummaryBody({ read, period: initialPeriod, month: initialMonth, ba
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * FLOW-1139: the summary's body while it loads, in its shape: the card of what the payments were made of (its
+ * title, the parts bar, the legend and the note), then לפי הלוואה with a row per loan (the name and the sum, the
+ * loan's bar, the line under it). The page says it is loading in one sr-only line.
+ */
+function LoansSummarySkeleton() {
+  return (
+    <div className="ui-loans-sum-skel" aria-busy="true">
+      <p className="sr-only" role="status">טוען…</p>
+      <section className="ui-loans-sum-skel-card">
+        <Skeleton className="ui-loans-sum-skel-title" />
+        <span aria-hidden="true" className="ui-skeleton-bar ui-loans-sum-skel-parts" />
+        {[0, 1, 2].map((key) => (
+          <span key={key} className="ui-loans-sum-skel-line">
+            <Skeleton width="sm" />
+            <Skeleton width="sm" />
+          </span>
+        ))}
+        <Skeleton width="lg" />
+      </section>
+      <Skeleton className="ui-loans-sum-skel-title" />
+      {[0, 1, 2].map((key) => (
+        <span key={key} className="ui-loans-sum-skel-loan">
+          <span className="ui-loans-sum-skel-line">
+            <Skeleton width="md" />
+            <Skeleton width="sm" />
+          </span>
+          <span aria-hidden="true" className="ui-skeleton-bar ui-loans-sum-skel-track" />
+          <Skeleton className="ui-loans-sum-skel-meta" />
+        </span>
+      ))}
     </div>
   );
 }
