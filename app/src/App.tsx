@@ -41,6 +41,7 @@ import { TransfersRoute, UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid
 const StatusCover = lazy(() => import("./ui/status-cover").then((m) => ({ default: m.StatusCover })));
 const CompanyProfitScreen = lazy(() => screenLoaders.companyProfit().then((m) => ({ default: m.CompanyProfitScreen })));
 const ReportsScreen = lazy(() => screenLoaders.reports().then((m) => ({ default: m.ReportsScreen })));
+const MemberReportScreen = lazy(() => screenLoaders.reportMember().then((m) => ({ default: m.MemberReportScreen })));
 const PnlReportScreen = lazy(() => screenLoaders.reportPnl().then((m) => ({ default: m.PnlReportScreen })));
 const BalanceReportScreen = lazy(() => screenLoaders.reportBalance().then((m) => ({ default: m.BalanceReportScreen })));
 const ReportLinesScreen = lazy(() => screenLoaders.reportLines().then((m) => ({ default: m.ReportLinesScreen })));
@@ -189,6 +190,7 @@ function AppRoutes() {
                 <Route path="reports" element={<ReportsScreen />} />
                 <Route path="reports/pnl" element={<PnlReportScreen />} />
                 <Route path="reports/balance" element={<BalanceReportScreen />} />
+                <Route path="reports/member" element={<MemberReportScreen />} />
                 <Route path="reports/lines" element={<ReportLinesScreen />} />
                 <Route path="reports/account" element={<ReportAccountScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />

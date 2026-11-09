@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import type { ProfitMonths } from "@flow/shared";
+import { computeMemberShare, type ProfitMonths } from "@flow/shared";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { usePreviewSearch, useHomePreview } from "../preview";
@@ -29,13 +29,14 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import type { ScreenPhase } from "../ui/screen-phase";
 import { Skeleton } from "../ui/skeleton";
+import { useMemberReport, type MemberReportRead } from "../use-member-report";
 import { useBalanceAt, useCompanyMonths, usePnl } from "../use-reports";
 import { ReportShareSheet } from "./report-share-sheet";
 import { amountText } from "./reports-parts";
 import { PnlPeriodSheet, useLatePick } from "./reports-sheets";
 
 /** The hub's four reads. */
-export type HubRead = "statement" | "byProject" | "months" | "balance";
+export type HubRead = "statement" | "byProject" | "months" | "balance" | "member";
 
 /** A fixture: today, and the hub's reads as they would come back (`failed`: the reads that failed). */
 export type HubSample = {
@@ -44,6 +45,8 @@ export type HubSample = {
   byProject?: Statement;
   months?: NonNullable<ProfitMonths>;
   balance?: BalanceSheet;
+  /** FLOW-1118: the member share report's read; no card when left out. */
+  member?: MemberReportRead;
   phase?: ScreenPhase;
   offlineSince?: number;
   failed?: readonly HubRead[];
@@ -136,6 +139,35 @@ function ReportCard({ to, title, label, figure, chart, facts, after }: { to: str
 }
 
 /**
+ * FLOW-1118: דוח שותף's card. The first member's share if every property is sold, their part of the company as
+ * the bar, and the company's net and the refinance figure; before ownership is set, the company's net. No card
+ * for a company with no property to count.
+ */
+function MemberCard({ read, to }: { read: MemberReportRead; to: string }) {
+  const r = computeMemberShare(read.config, read.properties);
+  if (r.properties.length === 0 || r.currency == null) return null;
+  const first = r.members[0];
+  const figure = first?.saleMinor ?? r.totals.saleNetMinor;
+  const refinance = first?.refinanceMinor ?? r.totals.cashOutMinor;
+  const ownership = first?.ownershipBp ?? 10_000;
+  return (
+    <ReportCard
+      to={to}
+      title="דוח שותף"
+      label={first == null ? "הון נקי של החברה · אם מוכרים הכל" : `החלק של ${first.name} (${String(ownership / 100)}%) · אם מוכרים הכל`}
+      figure={<Amount agorot={figure} currency={r.currency} loss={figure < 0n} size="card" />}
+      chart={<SplitBar assets={10_000n} liabilities={BigInt(10_000 - ownership)} />}
+      facts={(
+        <>
+          <Fact label="הון נקי לכולם"><Amount agorot={r.totals.saleNetMinor} currency={r.currency} loss={r.totals.saleNetMinor < 0n} /></Fact>
+          <Fact label="בריפייננס"><Amount agorot={refinance} currency={r.currency} income /></Fact>
+        </>
+      )}
+    />
+  );
+}
+
+/**
  * FLOW-1045 (board V3-Reports, the Hub pattern): the reports tab. The page title with the period chip, then
  * one card for each of the two reports (the net profit for the period, the equity as of today) with a mini
  * chart and two facts, then "פירוקים": the P&L by project and by month and the balance sheet by project.
@@ -157,10 +189,13 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
   const byProjectRead = usePnl(range, null, true, live);
   const monthsRead = useCompanyMonths(range, live);
   const balanceRead = useBalanceAt(today, null, live);
+  const memberQuery = useMemberReport(live);
   const statement = live ? statementRead.data : sample.statement;
   const byProject = live ? byProjectRead.data : sample.byProject;
   const months = live ? monthsRead.data : sample.months;
   const balance = live ? balanceRead.data : sample.balance;
+  const member = live ? memberQuery.data : sample.member;
+  const memberFailed = live ? memberQuery.isError : sample.failed?.includes("member") ?? false;
   const failedOf = (name: HubRead, read: { failed: boolean }) => (live ? read.failed : sample.failed?.includes(name) ?? false);
   const statementFailed = failedOf("statement", statementRead);
   const byProjectFailed = failedOf("byProject", byProjectRead);
@@ -242,10 +277,14 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
         )}
       />
     ) : balanceFailed ? <ReportCardFailed title="מאזן" offline={offline} onRetry={() => { balanceRead.refetch(); }} /> : <ReportCardSkeleton />;
+    const memberCard = member != null ? <MemberCard read={member} to={`/reports/member${search}`} />
+      : memberFailed ? <ReportCardFailed title="דוח שותף" offline={offline} onRetry={() => { void memberQuery.refetch(); }} />
+      : live ? <ReportCardSkeleton /> : null;
     body = (
       <>
         {pnlCard}
         {balanceCard}
+        {memberCard}
         <section className="ui-rep-hub-cuts" aria-labelledby="rep-hub-cuts">
           <h2 id="rep-hub-cuts" className="t-section ui-rep-hub-cuts-title">פירוקים</h2>
           <List>

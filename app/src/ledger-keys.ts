@@ -34,6 +34,8 @@ export const LEDGER_KEYS = [
   "breakdown-lines",
   // FLOW-161: the reports' balance sheet (the P&L statement sits under "dashboard").
   "balance-sheet",
+  // FLOW-1118: the member share report reads each property's open loan balance, which a sync's payment lowers.
+  "member-report",
   "month-forecast",
   "missing-bills",
   "expected-months",

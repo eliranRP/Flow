@@ -35,6 +35,7 @@ export const screenLoaders = {
   reports: () => import("./screens/reports-hub-screen"),
   reportPnl: () => import("./screens/reports-screen"),
   reportBalance: () => import("./screens/reports-balance-screen"),
+  reportMember: () => import("./screens/member-report-screen"),
   reportLines: () => import("./screens/report-lines-screen"),
   reportAccount: () => import("./screens/report-account-screen"),
   projectProfit: () => import("./screens/project-profit-screen"),
