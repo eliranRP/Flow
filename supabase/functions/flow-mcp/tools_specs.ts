@@ -7,6 +7,7 @@ import { THREAD_READ_SPECS, THREAD_UNDO_KINDS, THREAD_WRITE_SPECS } from "./tool
 import { MEMBER_SHARE_READ_SPECS, MEMBER_SHARE_WRITE_SPECS } from "./tools_member_share.ts";
 import { PROPERTY_READ_SPECS, PROPERTY_WRITE_SPECS } from "./tools_property.ts";
 import { HANDOVER_UNDO_KINDS, HANDOVER_WRITE_SPECS } from "./tools_handover.ts";
+import { UTILITY_READ_SPECS, UTILITY_UNDO_KINDS, UTILITY_WRITE_SPECS } from "./tools_utility_refunds.ts";
 
 function toolSpec(
   name: string,
@@ -105,7 +106,7 @@ function readTools() {
     }),
     syncStatusSpec(),
     ...PROPERTY_READ_SPECS,
-    ...MEMBER_SHARE_READ_SPECS,
+    ...MEMBER_SHARE_READ_SPECS, ...UTILITY_READ_SPECS,
     toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is invoiced or cash (default the company's date choice, like get_totals); the output echoes basis. Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default the company currency): that group's lines, newest first, in rows[] with has_more, and total_minor and count for the whole group; a line's parts on different projects are separate rows. With group_by category, projects[] ({key, project_id, name, total_minor}, largest first) is the whole group by project as get_pnl_statement by_project counts it (a split line by its parts, a shared cost by its allocations); key is a project id, overhead, unassigned or null (no project); [] with project_id or excluded (FLOW-989). excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part. level parent (with group_by category, FLOW-406) folds each sub-category into its parent: key is the parent's id and its lines are its own and its sub-categories'; the default level category keeps one group per category. project_id (with group or excluded, group_by category only, FLOW-165) gives one project's lines: its own and its allocation of a shared cost, as get_pnl_statement reads a project; another company's project is not_found.", {
       direction: { type: "string", enum: ["income", "expense"] },
       from: { type: "string" },
@@ -777,14 +778,14 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects, create_categories or reassign_recurring_charge batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
-    ...THREAD_WRITE_SPECS, ...HANDOVER_WRITE_SPECS,
+    ...THREAD_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS,
   ];
 }
 

@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `set_loan_closing_paid`, `set_member_report`, `refresh_treasury_yields`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `answer_recurring_handover`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `set_loan_closing_paid`, `set_member_report`, `refresh_treasury_yields`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `answer_recurring_handover`, `set_utility_payer`, `answer_utility_refund`, `mark_utility_refunds_seen`, `refile_utility_refund`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -115,6 +115,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "bank_accounts"` | `id` | the connection id `set_bank_accounts` or `answer_bank_account` returned (`list_bank_connections` `connections[].id`) |
 | `confirm_transfer_match`, `dismiss_transfer_match` | `out_transaction_id`, `in_transaction_id` | `list_transfer_matches` `matches[].out.transaction_id` and `matches[].in.transaction_id` |
 | `undo` `kind: "transfer_match"` | `id` | the money-out line's id the write returned (`out_transaction_id`) |
+| `list_utility_refunds`, `list_utility_payers`, `set_utility_payer`, `mark_utility_refunds_seen` | `project_id` | `list_projects` `projects[].id` |
+| `set_utility_payer` | `supplier_id`, `currency` | `list_utility_payers` `utilities[].supplier_id` and `utilities[].currency`, or a bill's `supplier_id` in `list_utility_refunds` |
+| `answer_utility_refund`, `refile_utility_refund` | `bill_transaction_id`, `payment_transaction_id` | `list_utility_refunds` `bills[].bill_transaction_id` and `bills[].payment.transaction_id` |
+| `undo` `kind: "utility_payer"`, `"utility_refund"`, `"utility_refunds_seen"`, `"utility_refile"` | `id` | the `id` (the write) the tool returned |
 | `book_line` | `legs[].account_id` | `list_accounts` `accounts[].id` (`bookable` true) |
 | `create_journal_entry` | `legs[].account_id`, `legs[].project_id` | `list_accounts` `accounts[].id` (`bookable` true, not the bank), `list_projects` |
 | `undo` `kind: "journal_entry"` | `id` | the line id `create_journal_entry` returned |
@@ -1087,6 +1091,56 @@ A pair is a posted Mercury money-out line (not a refund) and a posted Mercury mo
 ```
 
 "לא, צירוף מקרים". Write tool, owner or editor, `mcp_answer_transfer_match` (`p_same` false). The pair is never suggested again and both lines stay as they are; each may still pair with another line. A confirmed pair is taken back first. Output as `confirm_transfer_match` with `same: false`; undo (kind `transfer_match`, the money-out line) suggests the pair again.
+
+### list_utility_refunds
+
+```json
+{ "project_id": "<property, optional>", "as_of": "2026-06-30", "all": false }
+```
+
+(FLOW-1130, planned in [FLOW-1129](../backlog/tasks/FLOW-1129.md), [0265](../decisions/0265-utility-refunds.md)). Read tool; any member reads it. Utility bills the tenant has not paid back. A utility is one supplier's bills for one property and currency: an expense filed to a property in a category named חשבונות or under it, or a supplier the owner added (`set_utility_payer` `added`). Each is tenant-paid unless the owner set it company-paid; a company-paid utility's bills are never checked.
+
+For every bill of a tenant-paid utility (an expense line that is not a credit note, over one unit of its currency), from the first one in the books, Flow looks for a money-in line dated from one month before the bill to `as_of` (default Israel's today), filed to the same property or to no property, not the refund of another bill, whose amount is within one unit of the currency (100 minor units) of:
+
+1. the bill (`rule: "bill"`);
+2. several of the property's open bills of that month together (`"bills"`; the bill and up to 9 more); or
+3. the property's usual rent (the median of its last 3 money-in lines in שכירות or under it, dated before the bill) plus one or more of those bills (`"rent_and_bills"`).
+
+Rule 1 or 2 with the payment filed to one of the bills' categories counts as refunded by itself (`state: "refunded"`, `source: "auto"`). Any other match is a suggestion (`state: "suggested"`) for the user to answer with `answer_utility_refund`. Bills are matched oldest first, the counted-by-itself match first, then the lower rule, the closer date. A pair the user rejected is never matched again. A bill with no match 30 days or more after its date is `not_refunded` (younger: `waiting`); a closed one is `seen`.
+
+Without `all` the list is the app's: suggestions first, then bills not refunded, and refunds the user matched that sit in another category. `all: true` lists every bill with its state. Output `data`: `as_of` and `bills[]`: `bill_transaction_id`, `project_id`, `project_name`, `supplier_id`, `supplier_name`, `currency`, `category_id`, `category_name`, `amount_minor`, `doc_date`, `days`, `state`, `source` (`auto`, `owner` or null), `rule` (null for an owner's match), `group_bill_transaction_ids` (the bills one payment refunds), `no_rent` (the property had no rent line in the bill's month: "חודש בלי שכירות"), `payment` (null, or `transaction_id`, `doc_date`, `amount_minor`, `currency`, `description`, `party`, `project_id`, `category_id`, `category_name`, `split`), `wrong_category` (the payment is not filed to the bill's category: "ייתכן שסווג לא נכון") and `refiled`. Errors: `refused` for another company's property or a failed read; `validation` for a malformed id or date.
+
+### count_utility_refunds
+
+`{ "as_of": "2026-06-30" }` (optional). Read tool, for Home's row. Output `data`: `as_of`, `not_refunded_count`, `not_refunded_by_currency[]` (`currency`, `amount_minor`) and `suggested_count`, as `list_utility_refunds` counts them.
+
+### list_utility_payers
+
+`{ "project_id": "<property>" }`. Read tool. A property's utilities: `data.project_id` and `utilities[]`: `supplier_id`, `supplier_name`, `currency`, `payer` (`tenant`, the default, or `company`), `added`, `found` (from its חשבונות lines), `usual_minor` (the median of its last 3 bills, worked out on read; null with none), `bill_count` and `last_bill_date`. Errors: `refused` for another company's property.
+
+### set_utility_payer
+
+```json
+{ "idempotency_key": "payer-1", "project_id": "<property>", "supplier_id": "<supplier>", "currency": "ILS", "payer": "company", "added": false }
+```
+
+Write tool, owner or editor, `mcp_set_utility_payer`. `payer` `tenant` (השוכר מחזיר) or `company` (החברה משלמת: its bills are not checked, which closes the open ones); `added: true` adds a supplier by hand; `payer: null` removes the row. Output `data`: `project_id`, `supplier_id`, `currency`, `payer`, `added`, `prior` (null, or `payer` and `added` before), `undo_kind: "utility_payer"` and `id` (the write). Undo puts the prior back; `conflict` once it changed again. Errors: `refused` / `project not found` or `supplier not found` (another company's ids included), `validation`.
+
+### answer_utility_refund
+
+```json
+{ "idempotency_key": "refund-1", "bill_transaction_id": "<bill>", "state": "matched", "payment_transaction_id": "<money-in line>" }
+```
+
+Write tool, owner or editor, `mcp_answer_utility_refund`. `state`: `matched` with a payment (זה ההחזר? כן; the books stay as they are), `rejected` with a payment (לא; never suggested again for the bill), `seen` without one (ראיתי, אין צורך בטיפול), or `null` to take the bill's answer back (with a payment: that pair's answer). Taking back a refund Flow counted by itself (`source: "auto"`) records the pair as `rejected`, so it is neither counted nor suggested again. `as_of` is the day that auto refund is looked up for. Output `data`: `bill_transaction_id`, `state`, `payment_transaction_id`, `prior_state`, `prior_payment_transaction_id`, `undo_kind: "utility_refund"` and `id` (the write). Undo puts the bill's answers back as they were; `conflict` once they changed again. Errors: `refused` / `transaction not found` (another company's line), `not a utility bill`, `not a refund payment` (not money in, or another currency), `undo the refile first`; `validation`.
+
+### mark_utility_refunds_seen
+
+`{ "idempotency_key": "seen-1", "project_id": "<property>", "as_of": "2026-06-30" }`. Write tool, owner or editor, `mcp_mark_utility_refunds_seen` (סימון הכל כנראה). Closes every `not_refunded` bill of the property as seen; suggestions stay open. Output `data`: `project_id`, `bill_transaction_ids`, `undo_kind: "utility_refunds_seen"` and `id` (the write). Undo opens every one of them again. Errors: `refused` / `project not found`.
+
+### refile_utility_refund
+
+`{ "idempotency_key": "refile-1", "bill_transaction_id": "<bill>", "payment_transaction_id": "<money-in line>" }`. Write tool, owner or editor, `mcp_refile_utility_refund`: the one-tap fix (העברה ל<category> כהחזר) for a refund the user matched that sits in another category. When the payment is the bills it refunds, it moves to the bill's category and property (`mode: "move"`, as `assign_expense` files it). When it is more (rent plus the bills), the bills' part is split off into the bill's category on the property and the rest stays in its own category (`mode: "split"`, `part_minor`). Output `data`: `bill_transaction_id`, `payment_transaction_id`, `mode`, `category_id`, `part_minor`, `refile` (what it changed), `undo_kind: "utility_refile"` and `id` (the write). Undo puts the payment back as it was; `conflict` / `line changed since` once the line was changed after it. Errors: `refused` / `transaction not found`, `refund not matched`, `refund already in the bill's category`, `line has a split by category`, `line has an open review`.
 
 ### get_sync_status
 
