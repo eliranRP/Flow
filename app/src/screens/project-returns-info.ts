@@ -28,7 +28,9 @@ export type Target =
   | { kind: "metric"; metric: AnyMetricKey }
   | { kind: "edit"; field: EditField }
   /** One loan's page, or the loans list with no id. */
-  | { kind: "loans"; loanId?: string };
+  | { kind: "loans"; loanId?: string }
+  /** FLOW-1121: a sheet of the page the formula is on (the member report's parts); the page's resolver opens it. */
+  | { kind: "sheet"; sheet: string };
 
 export type FigureValue =
   | { kind: "money"; minor: bigint; income?: boolean }

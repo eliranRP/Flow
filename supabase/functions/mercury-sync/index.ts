@@ -17,6 +17,7 @@ import {
 import { addCalendarDays, jerusalemDate } from "../_shared/connectors/mercury/dates.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { refreshTreasuryYields } from "../_shared/treasury_yields.ts";
+import { edgeWaitUntil } from "../_shared/edge_defer.ts";
 import { treasuryVoidIds } from "../_shared/connectors/mercury/normalize.ts";
 import { isLegacyRow, legacyPatch, rpcWithSlot } from "../_shared/connectors/mercury/legacy.ts";
 import {
@@ -86,8 +87,17 @@ Deno.serve(async (req) => {
       // FLOW-978: the hourly flow-thread-files-purge job, not a refresh drain.
       const job = (await req.json().catch(() => ({}))) as { kind?: string };
       if (job.kind === "purge-files") return json({ ok: true, ...(await purgeThreadFiles(admin, THREAD_BUCKET)) });
-      // FLOW-1119: the daily flow-treasury-yields job.
-      if (job.kind === "treasury-yields") return json({ ok: true, ...(await refreshTreasuryYields((fn, args) => admin.rpc(fn, args))) });
+      // FLOW-1119: the flow-treasury-yields job. pg_net stops waiting after 5 seconds and two years of the
+      // Treasury's CSV take longer, so the work runs after the answer (EdgeRuntime.waitUntil) and logs its count.
+      if (job.kind === "treasury-yields") {
+        const work = refreshTreasuryYields((fn, args) => admin.rpc(fn, args))
+          .then((done) => { console.log(`treasury-yields stored ${String(done.stored)}`); })
+          .catch((error: unknown) => { console.error(`treasury-yields failed: ${error instanceof Error ? error.message : "error"}`); });
+        const defer = edgeWaitUntil();
+        if (defer == null) await work;
+        else defer(work);
+        return json({ ok: true, started: true }, 202);
+      }
       const due = await admin.rpc("claim_connector_refreshes", { p_limit: 20, p_provider: "mercury" });
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
       const results = [];

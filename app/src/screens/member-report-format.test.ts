@@ -2,7 +2,8 @@ import { computeMemberShare } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { MEMBER_CONFIG, MEMBER_PROPERTIES } from "../dev/member-report-sample";
 import { parseMemberReport } from "../use-member-report";
-import { bpText, memberIndex, modeOf, ppmText, quoteRateText, refiFormula, saleFormula, spreadText, verdictText } from "./member-report-format";
+import { bpText, memberIndex, modeOf, ppmText, quoteRateText, refiFormula, saleFormula, sellingHint, spreadText, verdictText } from "./member-report-format";
+import { drillOf } from "./member-report-parts";
 import { applyPatch } from "./member-report-screen";
 import { draftMembers, draftTotalBp, membersDraft, membersProblem, percentToUnits, spreadOptions } from "./member-report-sheets";
 
@@ -40,15 +41,61 @@ describe("member report formulas", () => {
     const member = result.members[0];
     if (member == null) throw new Error("no member");
     const sale = saleFormula(result, { name: member.name, ownershipBp: member.ownershipBp }, member.saleMinor);
-    expect(sale.rows.map((r) => r.label)).toEqual(["שווי הנכסים", "עלויות מכירה", "סילוק הלוואות", "הון נקי"]);
-    expect(sale.result).toMatchObject({ label: "החלק של Member A", value: { minor: 17_284_500n } });
+    expect(sale.rows.map((r) => r.label)).toEqual(["שווי הנכסים", "עלויות מכירה", "סילוק הלוואות", "הון נקי", "החלק של Member A"]);
+    expect(sale.rows.at(-1)).toMatchObject({ value: { minor: 17_284_500n } });
+    expect(sale.result).toBeNull();
     const whole = saleFormula(result, null, null);
-    expect(whole.rows).toHaveLength(3);
-    expect(whole.result).toMatchObject({ label: "לכל השותפים", value: { minor: 34_569_000n } });
+    expect(whole.rows).toHaveLength(4);
+    expect(whole.rows.at(-1)).toMatchObject({ label: "לכל השותפים", value: { minor: 34_569_000n } });
   });
 
   it("ends the refinance with the cash it frees", () => {
-    expect(refiFormula(result, null, null).result).toMatchObject({ value: { minor: 13_450_500n } });
+    expect(refiFormula(result, null, null).rows.at(-1)).toMatchObject({ value: { minor: 13_450_500n } });
+  });
+
+  it("opens every row's parts: each row names its sheet", () => {
+    const member = { name: "Member A", ownershipBp: 5000 };
+    expect(saleFormula(result, member, 0n).rows.map((r) => r.target)).toEqual(
+      ["value", "selling", "loans", "net", "share"].map((sheet) => ({ kind: "sheet", sheet })));
+    expect(refiFormula(result, member, 0n).rows.map((r) => r.target)).toEqual(
+      ["loan", "payoff", "closing", "cash", "share"].map((sheet) => ({ kind: "sheet", sheet })));
+    // Before ownership, the company's whole opens the net (or the cash freed).
+    expect(saleFormula(result, null, null).rows.at(-1)?.target).toEqual({ kind: "sheet", sheet: "net" });
+  });
+
+  it("names the selling cost's percent, its range, and the default", () => {
+    expect(sellingHint(result.properties)).toBe("7% · תיווך, סגירה ומסים");
+    const mixed = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES.map((p, i) => (i === 0 ? { ...p, selling_cost_bp: 800 } : p)));
+    expect(sellingHint(mixed.properties)).toBe("7%–8% · תיווך, סגירה ומסים");
+    const defaults = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES.map((p) => ({ ...p, selling_cost_bp: null })));
+    expect(sellingHint(defaults.properties)).toBe("8% · ברירת מחדל · תיווך, סגירה ומסים");
+    expect(sellingHint([])).toBe("תיווך, סגירה ומסים");
+  });
+});
+
+describe("a row's parts", () => {
+  it("takes every figure from the result, with its total", () => {
+    const selling = drillOf("selling", "sell", result, "USD");
+    expect(selling.lines.map((l) => l.minor)).toEqual(result.properties.map((p) => p.sellingCostMinor));
+    expect(selling.lines[0]?.hint).toBe("7% × $420,000");
+    expect(selling.total).toBe(result.totals.sellingCostMinor);
+    expect(drillOf("net", "sell", result, "USD").lines[0]?.hint).toBe("$420,000 − $29,400 − $268,000");
+    expect(drillOf("value", "sell", result, "USD").lines[0]?.hint).toBe("הערכה מ־01/11/2026");
+  });
+
+  it("marks a property that is not refinanced, and leaves it out of the total", () => {
+    const deep = computeMemberShare(MEMBER_CONFIG, [{ ...MEMBER_PROPERTIES[0], loan_balance_minor: 40_000_000n } as typeof MEMBER_PROPERTIES[number], ...MEMBER_PROPERTIES.slice(1)]);
+    const cash = drillOf("cash", "refi", deep, "USD");
+    expect(cash.lines[0]).toMatchObject({ muted: true });
+    expect(cash.lines[0]?.hint.startsWith("לא ממוחזר, לא נספר")).toBe(true);
+    expect(cash.total).toBe(deep.totals.cashOutMinor);
+  });
+
+  it("gives every member's share of the total", () => {
+    const share = drillOf("share", "sell", result, "USD");
+    expect(share.lines.map((l) => [l.title, l.minor])).toEqual(result.members.map((m) => [m.name, m.saleMinor]));
+    expect(share.lines[1]?.hint).toBe("30% × $345,690");
+    expect(drillOf("share", "refi", result, "USD").total).toBe(result.totals.cashOutMinor);
   });
 });
 
@@ -104,5 +151,9 @@ describe("parseMemberReport", () => {
     });
     expect(read.properties[0]?.loan_balance_minor).toBe(26_800_000n);
     expect(read.canEdit).toBe(false);
+    // Before #1079 deploys the Treasury's times are absent: both read as null.
+    expect([read.treasuryFetchedAt, read.treasuryRequestedAt]).toEqual([null, null]);
+    const fetched = parseMemberReport({ config: null, properties: [], can_edit: true, treasury_fetched_at: "2026-11-09T07:30:00Z", treasury_requested_at: null });
+    expect(fetched.treasuryFetchedAt).toBe("2026-11-09T07:30:00Z");
   });
 });

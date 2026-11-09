@@ -10,13 +10,14 @@ import {
 import { envelopeOf, fail, ok, READ_REFUSED, type ToolResult, type ToolRpc, WRITE_REFUSED } from "./tools_args.ts";
 
 export const MEMBER_SHARE_READS = ["get_member_report", "get_member_share"] as const;
-export const MEMBER_SHARE_WRITES = ["set_member_report"] as const;
+export const MEMBER_SHARE_WRITES = ["set_member_report", "refresh_treasury_yields"] as const;
 
 /** The tools' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const MEMBER_SHARE_ALLOWED: Record<string, Set<string>> = {
   get_member_report: new Set([]),
   get_member_share: new Set(["member"]),
   set_member_report: new Set(["idempotency_key", "members", "assumptions", "rate_rule", "quotes", "yields", "quote_date"]),
+  refresh_treasury_yields: new Set(["idempotency_key"]),
 };
 
 const DATE_TEXT = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -106,7 +107,16 @@ export async function memberShareRead(name: typeof MEMBER_SHARE_READS[number], a
   return ok(plain(share));
 }
 
-export async function memberShareWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+export async function memberShareWrite(args: Record<string, unknown>, rpc: ToolRpc, name = "set_member_report"): Promise<ToolResult> {
+  if (name === "refresh_treasury_yields") {
+    const key = args.idempotency_key;
+    if (typeof key !== "string" || key.length < 1 || key.length > 128 || Object.keys(args).some((k) => k !== "idempotency_key")) {
+      return fail("validation", "validation");
+    }
+    const result = await rpc("mcp_refresh_treasury_yields", { p_idempotency_key: key });
+    if (result.status >= 400) return fail("refused", WRITE_REFUSED);
+    return envelopeOf(result.json);
+  }
   const parsed = setMemberReportSchema.safeParse(args);
   if (!parsed.success) return fail("validation", "validation");
   const { idempotency_key, ...patch } = parsed.data;
@@ -142,5 +152,8 @@ export const MEMBER_SHARE_WRITE_SPECS = [
     quotes: { type: ["array", "null"], items: { type: "object" } },
     yields: { type: ["array", "null"], items: { type: "object" } },
     quote_date: { type: ["string", "null"] },
+  }, true),
+  spec("refresh_treasury_yields", "Ask for the US Treasury's 5 and 10 year yields now (owner or editor; FLOW-1122), instead of waiting for the job that runs every four hours. At most once every five minutes for everyone: within that, requested is false with reason recent and requested_at. reason unavailable means the server cannot reach the Treasury feed. The yields arrive within a minute; get_member_report's treasury_fetched_at says when they were last stored. The yields are public market data, so nothing to undo.", {
+    idempotency_key: { type: "string" },
   }, true),
 ];

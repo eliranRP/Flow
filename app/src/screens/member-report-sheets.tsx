@@ -1,5 +1,5 @@
 import type { LoanType, MemberReportConfig, MemberReportQuote, MemberShareResult, PropertyShare } from "@flow/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { israelToday } from "../ui/date-math";
@@ -241,7 +241,12 @@ export function spreadOptions(current: number): { value: string; label: string; 
   return values.map((bp) => ({ value: String(bp), label: bp === 150 ? "+1.5" : bp === 200 ? "+2.0" : spreadText(bp), numeric: true }));
 }
 
-export function YieldsSheet({ open, onOpenChange, onSave, config, result }: SaveProps & { config: MemberReportConfig; result: MemberShareResult }) {
+export function YieldsSheet({ open, onOpenChange, onSave, config, result, updated }: SaveProps & {
+  config: MemberReportConfig;
+  result: MemberShareResult;
+  /** FLOW-1121: when the Treasury's yields were last fetched, with רענון for the owner; first in the sheet. */
+  updated?: ReactNode;
+}) {
   const date = result.rate.quoteDate ?? israelToday();
   const yields = config.yields ?? [];
   const today = yields.find((y) => y.on_date === date);
@@ -291,6 +296,7 @@ export function YieldsSheet({ open, onOpenChange, onSave, config, result }: Save
       panelClassName="ui-sheet-wide ui-msr-sheet"
       action={<Button full busy={busy} disabled={bad} onClick={() => { void save(); }}>שמירה</Button>}
     >
+      {updated}
       <p className="ui-msr-help">מתוך עקום התשואות היומי של משרד האוצר האמריקאי, לסגירת היום. בסוף שבוע, יום המסחר הקודם.</p>
       <div className="ui-msr-pair">
         <TextField label="5 שנים (%)" numeric inputMode="decimal" dir="ltr" value={y5} placeholder="4.12" onChange={(event) => { setY5(event.target.value); }} />
