@@ -585,6 +585,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1125"></a>[FLOW-1125](tasks/FLOW-1125.md) | Member report: the portfolio in future years and the refinance then (plan) | PLAN FIRST |
 | <a id="flow-1126"></a>[FLOW-1126](tasks/FLOW-1126.md) | Member report forecast: the data, the calculation and MCP | MCP |
 | <a id="flow-1127"></a>[FLOW-1127](tasks/FLOW-1127.md) | Member report forecast: the תחזית tab and its sheets | SMALL UI |
+| <a id="flow-1128"></a>[FLOW-1128](tasks/FLOW-1128.md) | Member report: the rate card's toggles show the tap at once, and the quotes' date is one row | BUG |
 
 ## Onboarding, Settings and connectors
 

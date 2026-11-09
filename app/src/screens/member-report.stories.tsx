@@ -221,7 +221,7 @@ export const QuoteSheet: Story = {
 export const YieldsSheet: Story = {
   render: () => <Report entry="/reports/member?mode=refi" />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "03/11/2026" }));
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^תאריך ההצעות: 03\/11\/2026/ }));
     const sheet = within(await body(canvasElement).findByRole("dialog", { name: "תשואות אג״ח ארה״ב" }));
     await expect(sheet.getByLabelText("10 שנים (%)")).toHaveValue("4.38");
     await userEvent.click(sheet.getByRole("radio", { name: "+2.0" }));
@@ -273,7 +273,7 @@ export const CustomSpread: Story = {
     const canvas = within(canvasElement);
     // A spread set through MCP (175) shows as its own, picked option, on the card and in the sheet.
     await expect(await canvas.findByRole("radio", { name: "+1.75", checked: true })).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "03/11/2026" }));
+    await userEvent.click(canvas.getByRole("button", { name: /^תאריך ההצעות: 03\/11\/2026/ }));
     const sheet = within(await body(canvasElement).findByRole("dialog", { name: "תשואות אג״ח ארה״ב" }));
     await expect(sheet.getByRole("radio", { name: "+1.75", checked: true })).toBeInTheDocument();
     await expect(sheet.getByText("6.13%")).toBeInTheDocument();

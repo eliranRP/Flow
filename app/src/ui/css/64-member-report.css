@@ -203,3 +203,25 @@
   gap: var(--space-2);
   margin-block-start: var(--space-4);
 }
+
+/* FLOW-1128: the quotes' date is one row that opens the yields sheet, the date and a chevron at its end. */
+.ui-msr-date {
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding: 0;
+  border: 0;
+  border-block-end: var(--stroke-hairline) solid var(--color-line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-msr-date-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text);
+  font-weight: 600;
+}

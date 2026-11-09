@@ -177,9 +177,28 @@ export function useSellingCostWrite() {
   });
 }
 
-/** Saves a patch, then reads the report again. */
+/** A patch applied to a setting the way set_member_report merges it: a part named replaces it, null clears it. */
+export function applyPatch(config: MemberReportConfig | null, patch: MemberReportPatch): MemberReportConfig {
+  const merged: Record<string, unknown> = { ...config, ...patch };
+  return Object.fromEntries(Object.entries(merged).filter(([, value]) => value != null));
+}
+
+/**
+ * Saves a patch, then reads the report again. FLOW-1128: the tap shows at once (the read takes a second or two,
+ * since each property's all-in is worked out); a failure puts the setting back and says so.
+ */
 export function useMemberReportWrite() {
+  const client = useQueryClient();
   return useWrite<MemberReportPatch>({
+    optimistic: (patch) => client.getQueriesData<MemberReportRead>({ queryKey: [MEMBER_REPORT_KEY] })
+      .filter(([, data]) => data != null)
+      .map(([key]) => ({
+        key,
+        update: (old: unknown) => {
+          const read = old as MemberReportRead | undefined;
+          return read == null ? read : { ...read, config: applyPatch(read.config, patch) };
+        },
+      })),
     failure: (error) => ((error as { code?: string }).code === "42501"
       ? { message: "רק בעלי החברה יכולים לשנות את הדוח.", retry: false }
       : error.message.includes("100%") ? { message: "הבעלות צריכה להסתכם ב־100%.", retry: false } : "לא הצלחנו לשמור."),
