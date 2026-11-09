@@ -67,7 +67,6 @@ describe("member report formulas", () => {
   });
 
   it("opens every row's parts: each row names its sheet", () => {
-    const member = { name: "Member A", ownershipBp: 5000 };
     expect(saleFormula(result, result.members[0] ?? null).rows.map((r) => r.target)).toEqual(
       ["value", "selling", "loans", "net", "share"].map((sheet) => ({ kind: "sheet", sheet })));
     expect(refiFormula(result, result.members[0] ?? null).rows.map((r) => r.target)).toEqual(
