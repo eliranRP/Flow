@@ -10,7 +10,11 @@ export const GEFEN = "p-gefen-3";
 export const PINE = "p-pine-4";
 
 function payment(id: string, date: string, minor: bigint, party: string, category: string, project: string | null): UtilityPayment {
-  return { transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", description: "Zelle", party, project_id: project, category_id: `c-${category}`, category_name: category, split: false };
+  return {
+    transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", description: "Zelle", party, project_id: project,
+    project_name: project === GEFEN ? "דירת הגפן 3" : project === PINE ? "Pine Ave 4" : null,
+    category_id: `c-${category}`, category_name: category, split: false, parts: [],
+  };
 }
 
 function bill(over: Partial<UtilityBill> & Pick<UtilityBill, "bill_transaction_id" | "project_id" | "supplier_name" | "amount_minor" | "doc_date" | "days" | "state">): UtilityBill {
@@ -104,4 +108,20 @@ export function storyUtilityClient(bills: UtilityBill[] = utilityRefundsSample()
     return Promise.resolve({ data, error: null });
   };
   return { rpc } as unknown as RpcClient;
+}
+
+/** FLOW-1142: the rent payment split by category: the rent on the property, the bill's part, and a part on another property. */
+export function utilitySplitSample(): UtilityBill[] {
+  return utilityRefundsSample().map((bill) => (bill.payment?.transaction_id !== "pay-zelle-a" ? bill : {
+    ...bill,
+    payment: {
+      ...bill.payment,
+      split: true,
+      parts: [
+        { category_id: "c-שכירות", category_name: "שכירות", project_id: GEFEN, project_name: "דירת הגפן 3", amount_minor: 170_000n },
+        { category_id: "c-power-water", category_name: "חשמל ומים", project_id: GEFEN, project_name: "דירת הגפן 3", amount_minor: 8_420n },
+        { category_id: "c-שכירות", category_name: "שכירות", project_id: PINE, project_name: "Pine Ave 4", amount_minor: 10_000n },
+      ],
+    },
+  }));
 }

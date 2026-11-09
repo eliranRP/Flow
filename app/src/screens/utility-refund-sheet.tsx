@@ -1,5 +1,6 @@
 import { formatAmountText, type SearchRow } from "@flow/shared";
 import { useState } from "react";
+import { usePreviewSearch } from "../preview";
 import { EMPTY_FILTERS, searchRowTitle, uniqueSearchRows, useSearchQuery, type SearchFilters } from "../search";
 import { Button } from "../ui/button";
 import { israelToday } from "../ui/date-math";
@@ -83,7 +84,8 @@ function PaymentChoices({ bill, onPick }: { bill: UtilityBill; onPick: (paymentI
 /**
  * FLOW-1135 (V3-UtilityRefunds): a bill not refunded, opened from its row. ראיתי, אין צורך בטיפול first (it is
  * the answer most bills get, and the board's first for a month with no rent), then החברה משלמת תמיד for the
- * supplier, then הוחזר · בחירת התשלום, which lists the money in that may be its refund.
+ * supplier, then הוחזר · בחירת התשלום, which lists the money in that may be its refund. FLOW-1142: פתיחת התנועה
+ * opens the bill's transaction page, to check it before answering.
  */
 export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPicked }: {
   bill: UtilityBill | null;
@@ -103,6 +105,7 @@ export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPick
   if (open !== (bill != null)) setOpen(bill != null);
   const current = bill ?? shown;
   const name = current?.supplier_name ?? "ספק";
+  const search = usePreviewSearch();
   return (
     <Sheet
       open={bill != null}
@@ -126,6 +129,7 @@ export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPick
             <Button full onClick={() => { onSeen(current); }}>ראיתי, אין צורך בטיפול</Button>
             <Button full variant="secondary" onClick={() => { onCompany(current); }}>{`החברה משלמת תמיד · ${name}`}</Button>
             <Button full variant="link" onClick={() => { setPicking(true); }}>הוחזר · בחירת התשלום</Button>
+            <Button full variant="link" to={`/transactions/${current.bill_transaction_id}${search}`}>פתיחת התנועה</Button>
           </div>
         </>
       )}

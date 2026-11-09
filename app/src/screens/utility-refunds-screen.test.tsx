@@ -5,11 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { utilityRefundsRow } from "./attention-rows";
 import { refundWindowStart } from "./utility-refund-sheet";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
-import { GEFEN, PINE, utilityRefundsSample } from "./utility-refunds-sample";
+import { GEFEN, PINE, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
 import { ToastProvider } from "../ui/toast";
 import { parseUtilityRefundCount } from "../utility-refund-count";
 import { cardWhy, paymentMeta, paymentsTaken, refundDate, refundGroups } from "../utility-refund-view";
 import type { UtilityBill } from "../utility-refunds";
+import { utilityRefundsSchema } from "../utility-refund-schema";
 
 // FLOW-1135 (decision 0265): החזרי חשבונות. Home's row, the cards, and every live answer with its ביטול.
 const db = vi.hoisted(() => ({
@@ -172,6 +173,48 @@ describe("the cards", () => {
   });
 });
 
+describe("opening a transaction (FLOW-1142)", () => {
+  const href = (name: RegExp) => screen.getByRole("link", { name }).getAttribute("href");
+
+  it("each leg of a card opens its own transaction: the bill and the payment", async () => {
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    const card = screen.getAllByRole("region", { name: /החזר אפשרי: City Water/ })[0] as HTMLElement;
+    const legs = within(card).getAllByRole("link");
+    expect(legs.map((leg) => leg.getAttribute("href"))).toEqual(["/transactions/b-water-gefen", "/transactions/pay-zelle-a"]);
+    expect(href(/^Tenant B · /)).toBe("/transactions/pay-zelle-b");
+  });
+
+  it("a payment for several bills lists each bill as its own leg, each opening its transaction", async () => {
+    const [first] = utilityRefundsSample();
+    const pay = first?.payment;
+    db.bills = [
+      { ...first, rule: "bills", wrong_category: false },
+      { ...first, bill_transaction_id: "b-gas-pair", supplier_name: "Gas Co", category_name: "גז", amount_minor: 4_000n, rule: "bills", wrong_category: false, payment: pay },
+    ];
+    renderScreen();
+    const card = await screen.findByRole("region", { name: "החזר אפשרי: City Water + Gas Co" });
+    expect(within(card).getAllByRole("link").map((leg) => leg.getAttribute("href"))).toEqual([
+      "/transactions/b-water-gefen", "/transactions/b-gas-pair", "/transactions/pay-zelle-a",
+    ]);
+    expect(within(card).getByText("גז · 14/09/26")).toBeTruthy();
+  });
+
+  it("the bill's sheet opens its transaction", async () => {
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    fireEvent.click(screen.getByRole("button", { name: /^Gas Co/ }));
+    expect((await screen.findByRole("link", { name: "פתיחת התנועה" })).getAttribute("href")).toBe("/transactions/b-gas-gefen");
+  });
+
+  it("a viewer's bill row opens its transaction", async () => {
+    db.hold = true;
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    expect(href(/^Gas Co/)).toBe("/transactions/b-gas-gefen");
+  });
+});
+
 describe("the answers and their ביטול", () => {
   it("כן on a refund in its own category matches it; ביטול takes the answer back", async () => {
     db.bills = utilityRefundsSample().map((bill) => (bill.bill_transaction_id === "b-power-pine" ? { ...bill, wrong_category: false } : bill));
@@ -292,7 +335,7 @@ describe("the answers and their ביטול", () => {
     const [power] = utilityRefundsSample().filter((bill) => bill.bill_transaction_id === "b-power-gefen");
     const refunded = (over: Partial<UtilityBill>): UtilityBill => ({
       ...(power as UtilityBill), bill_transaction_id: "b-other", state: "refunded", source: "owner",
-      payment: { transaction_id: "pay-picked", doc_date: "2026-10-01", amount_minor: 12_840n, currency: "USD", description: "Zelle", party: "Tenant A", project_id: GEFEN, category_id: "c-rent", category_name: "שכירות", split: false },
+      payment: { transaction_id: "pay-picked", doc_date: "2026-10-01", amount_minor: 12_840n, currency: "USD", description: "Zelle", party: "Tenant A", project_id: GEFEN, category_id: "c-rent", project_name: "דירת הגפן 3", category_name: "שכירות", split: false, parts: [] },
       ...over,
     });
     db.all = [refunded({ project_id: PINE })];
@@ -393,12 +436,54 @@ describe("the dates", () => {
     renderScreen(`/utility-refunds?project=${GEFEN}`);
     expect(await screen.findByText("לא הוחזר · 67 ימים · 03/09/26")).toBeTruthy();
     expect(screen.getByText("חשמל ומים · 14/09/26")).toBeTruthy();
-    expect(screen.getByText("שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
+    expect(screen.getByText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
     const [row] = screen.getAllByRole("button", { name: /^Power Co/ });
     fireEvent.click(row as HTMLElement);
     fireEvent.click(await screen.findByRole("button", { name: "הוחזר · בחירת התשלום" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Power Co · $128.40 · 03/09/26")).toBeTruthy();
     expect(await within(dialog).findByText("שכירות · 01/10/26")).toBeTruthy();
+  });
+});
+
+// FLOW-1142 (the owner): the payment leg names the project it is filed to, and a split payment lists its parts.
+describe("the payment's project and split", () => {
+  it("reads a payment without the new fields as no project name and no split (before the server sends them)", () => {
+    const [first] = utilityRefundsSample();
+    const payment = { ...first?.payment, amount_minor: 100, project_name: undefined, parts: undefined };
+    const body = { as_of: "2026-11-09", bills: [{ ...first, amount_minor: 100, payment }] };
+    const parsed = utilityRefundsSchema.parse(body).bills[0]?.payment;
+    expect(parsed?.project_name).toBeNull();
+    expect(parsed?.parts).toEqual([]);
+  });
+
+  it("names the payment's project on its line, and its leg's name says what the leg shows", async () => {
+    renderScreen(`/utility-refunds?project=${GEFEN}`);
+    expect(await screen.findByText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Tenant A · דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי · +$1,884.20 · פתיחת התנועה" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "City Water · חשמל ומים · 14/09/26 · −$84.20 · פתיחת התנועה" })).toBeTruthy();
+  });
+
+  it("keeps בלי פרויקט for a payment on no project", async () => {
+    renderScreen(`/utility-refunds?project=${PINE}`);
+    expect(await screen.findByText("בלי פרויקט · הכנסה אחרת · 12/09/26 · 7 ימים אחרי")).toBeTruthy();
+  });
+
+  it("lists a split payment's parts under its leg, with the project only where it differs", async () => {
+    db.bills = utilitySplitSample();
+    renderScreen(`/utility-refunds?project=${GEFEN}`);
+    const card = await screen.findByRole("region", { name: /החזר אפשרי/ });
+    const split = within(card).getByRole("list", { name: "פיצול" });
+    expect(within(split).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "שכירות · $1,700",
+      "חשמל ומים · $84.20",
+      "שכירות · Pine Ave 4 · $100",
+    ]);
+  });
+
+  it("shows no split for a payment that is not split", async () => {
+    renderScreen();
+    const cards = await screen.findAllByRole("region", { name: /החזר אפשרי/ });
+    for (const card of cards) expect(within(card).queryByText("פיצול")).toBeNull();
   });
 });

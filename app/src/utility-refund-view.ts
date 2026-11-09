@@ -95,14 +95,9 @@ export function cardBillTitle(card: RefundCard): string {
   return card.bills.map((bill) => bill.supplier_name ?? "ספק").join(" + ");
 }
 
-export function cardBillTotal(card: RefundCard): bigint {
-  return card.bills.reduce((sum, bill) => sum + bill.amount_minor, 0n);
-}
-
-export function cardBillMeta(card: RefundCard): string {
-  const [first] = card.bills;
-  if (first == null) return "";
-  return [first.category_name, refundDate(first.doc_date)].filter((part): part is string => part != null).join(" · ");
+/** A bill's leg on its card: its category and its date. */
+export function billMeta(bill: UtilityBill): string {
+  return [bill.category_name, refundDate(bill.doc_date)].filter((part): part is string => part != null).join(" · ");
 }
 
 /** The payment's payer (or its description). */
@@ -110,16 +105,23 @@ export function paymentTitle(payment: UtilityPayment): string {
   return payment.party ?? payment.description ?? "תשלום";
 }
 
-/** "שכירות · 02/10/26 · 18 ימים אחרי", or "בלי פרויקט · הכנסה · 12/09 · …" for a payment on no property. */
+/**
+ * "דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי" (FLOW-1142: the project the payment is filed to), or
+ * "בלי פרויקט · הכנסה · 12/09/26 · …" for a payment on no property.
+ */
 export function paymentMeta(card: RefundCard): string {
   const [first] = card.bills;
   const gap = first == null ? 0 : Math.round((Date.parse(card.payment.doc_date) - Date.parse(first.doc_date)) / 86_400_000);
   return [
-    card.payment.project_id == null ? "בלי פרויקט" : null,
+    card.payment.project_id == null ? "בלי פרויקט" : card.payment.project_name,
     card.payment.category_name ?? "בלי קטגוריה",
     refundDate(card.payment.doc_date),
     gap === 0 ? "באותו יום" : gap > 0 ? `${days(gap)} אחרי` : `${days(-gap)} לפני`,
   ].filter((part): part is string => part != null).join(" · ");
+}
+
+function cardBillTotal(card: RefundCard): bigint {
+  return card.bills.reduce((sum, bill) => sum + bill.amount_minor, 0n);
 }
 
 /** Why Flow suggests it: the same amount, the month's bills together, or the usual rent plus the bill. */
@@ -185,4 +187,19 @@ export function paymentsTaken(all: readonly UtilityBill[], bill: UtilityBill): S
     if (!sameMonth) taken.add(other.payment.transaction_id);
   }
   return taken;
+}
+
+/**
+ * FLOW-1142: a split payment's parts, one line each: "<category> · <project, when not the payment's>" and the
+ * amount. None for a payment that is not split.
+ */
+export function paymentParts(payment: UtilityPayment): { key: string; text: string; amount: string }[] {
+  return payment.parts.map((part, index) => ({
+    key: `${String(index)}:${part.category_id ?? ""}:${part.project_id ?? ""}`,
+    text: [
+      part.category_name ?? "בלי קטגוריה",
+      part.project_id === payment.project_id ? null : part.project_id == null ? "בלי פרויקט" : part.project_name,
+    ].filter((item): item is string => item != null).join(" · "),
+    amount: formatAmountText(part.amount_minor, payment.currency, { detail: true }),
+  }));
 }
