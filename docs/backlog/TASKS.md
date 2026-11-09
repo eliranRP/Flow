@@ -591,6 +591,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1133"></a>[FLOW-1133](tasks/FLOW-1133.md) | Utility bills the tenant never paid back (plan) | PLAN FIRST |
 | <a id="flow-1134"></a>[FLOW-1134](tasks/FLOW-1134.md) | Utility refunds: the data, the match and MCP | MCP |
 | <a id="flow-1135"></a>[FLOW-1135](tasks/FLOW-1135.md) | Utility refunds: Home's row, the screen and the property's bills section | SMALL UI |
+| <a id="flow-1136"></a>[FLOW-1136](tasks/FLOW-1136.md) | Member report תחזית: a skeleton while the forecast loads, not "טוען…" | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

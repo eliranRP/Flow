@@ -8,7 +8,7 @@ import { MemberReportScreen } from "./member-report-screen";
 /**
  * FLOW-1127 (FLOW-1125's mockup A, C and D, approved 2026-11-09): דוח שותף's תחזית tab. The refinance year, the
  * bars, the refinance then with the member's part, the cash flow until then, a property year by year, the
- * assumptions, a viewer, and a property left out.
+ * assumptions, a viewer, a property left out, and the skeleton while it loads (FLOW-1136).
  */
 const meta = {
   title: "Screens/Member report/Forecast",
@@ -18,14 +18,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function Report({ entry = "/reports/member?mode=forecast", sample = MEMBER_REPORT, inputs = MEMBER_PROJECTION_INPUTS }: {
+function Report({ entry = "/reports/member?mode=forecast", sample = MEMBER_REPORT, inputs = MEMBER_PROJECTION_INPUTS, loading = false }: {
   entry?: string;
   sample?: MemberReportRead;
   inputs?: MemberProjectionInputs;
+  /** The forecast's inputs never arrive: the tab stays on its skeleton (FLOW-1136). */
+  loading?: boolean;
 }) {
   return (
     <StoryRoute entry={entry} tabs>
-      <MemberReportScreen sample={sample} projectionSample={inputs} />
+      <MemberReportScreen sample={sample} projectionSample={loading ? undefined : inputs} />
     </StoryRoute>
   );
 }
@@ -122,5 +124,17 @@ export const ForecastLeftOut: Story = {
     const leftOut = await within(canvasElement).findByRole("region", { name: "לא בתחזית · 1" });
     await expect(leftOut.textContent).toContain("אין שכירות ב־3 החודשים האחרונים");
     await expect(leftOut.textContent).toContain("Sable Ct");
+  },
+};
+
+export const ForecastLoading: Story = {
+  render: () => <Report loading />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // After the skeleton's 300ms wait: the tab's shape, one status line, and no $0 in the band.
+    await expect(await canvas.findByText("טוען את התחזית…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelector(".ui-msr-skel[aria-busy='true']")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-msr-skel-band")).not.toBeNull();
+    await expect(canvas.queryByText("$0")).toBeNull();
   },
 };
