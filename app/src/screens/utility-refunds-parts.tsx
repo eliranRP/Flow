@@ -8,7 +8,7 @@ import { CheckIcon, ChevronIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { StatusMark } from "../ui/status-mark";
 import type { UtilityBill } from "../utility-refunds";
-import { billMeta, cardBillTitle, cardWhy, fixCopy, openMeta, paymentMeta, paymentTitle, type RefundCard } from "../utility-refund-view";
+import { billMeta, cardBillTitle, cardWhy, fixCopy, openMeta, paymentMeta, paymentParts, paymentTitle, type RefundCard } from "../utility-refund-view";
 
 /**
  * One leg of a card: a name and its line at the start, the amount at the end. FLOW-1142: the leg opens its
@@ -17,7 +17,7 @@ import { billMeta, cardBillTitle, cardWhy, fixCopy, openMeta, paymentMeta, payme
 function Leg({ title, meta, amount, to }: { title: string; meta: string; amount: string; to: string }) {
   return (
     <li className="ui-urf-leg">
-      <Link className="ui-urf-leg-link" to={to} aria-label={`${title} · ${amount} · פתיחת התנועה`}>
+      <Link className="ui-urf-leg-link" to={to} aria-label={`${title} · ${meta} · ${amount} · פתיחת התנועה`}>
         <span className="ui-urf-leg-text">
           <span className="ui-urf-leg-title" data-clip-ok="">{title}</span>
           <span className="ui-urf-leg-meta">{meta}</span>
@@ -47,6 +47,7 @@ export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile,
   const search = usePreviewSearch();
   const currency = card.payment.currency;
   const fix = fixCopy(card);
+  const parts = paymentParts(card.payment);
   return (
     <FoldItem as="div" leaving={leaving}>
       <section className="ui-urf-card m-page-enter" aria-label={`החזר אפשרי: ${cardBillTitle(card)}`}>
@@ -67,6 +68,21 @@ export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile,
             to={`/transactions/${card.payment.transaction_id}${search}`}
           />
         </ul>
+        {parts.length === 0 ? null : (
+          // FLOW-1142: how the payment is split, under its leg, so the owner sees where each part is filed.
+          <div className="ui-urf-split">
+            <p className="ui-urf-split-head" id={`split-${card.key}`}>פיצול</p>
+            <ul className="ui-urf-split-list" aria-labelledby={`split-${card.key}`}>
+              {parts.map((part) => (
+                <li key={part.key} className="ui-urf-split-line">
+                  {part.text}
+                  {" · "}
+                  <bdi dir="ltr">{part.amount}</bdi>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p className="ui-urf-why">{cardWhy(card)}</p>
         {card.fix ? (
           <div className="ui-urf-fix">

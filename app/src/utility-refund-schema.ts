@@ -7,6 +7,15 @@ import { z } from "zod";
 const minorSchema = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]).transform((value) => BigInt(value));
 const text = z.string().nullable().optional().transform((value) => value ?? null);
 
+/** FLOW-1142: one part of a payment split by category (save_line_split), with its category and project. */
+const partSchema = z.object({
+  category_id: text,
+  category_name: text,
+  project_id: text,
+  project_name: text,
+  amount_minor: minorSchema,
+});
+
 const paymentSchema = z.object({
   transaction_id: z.string(),
   doc_date: z.string(),
@@ -15,9 +24,13 @@ const paymentSchema = z.object({
   description: text,
   party: text,
   project_id: text,
+  /** FLOW-1142: the payment's project, by name (null before the server sends it, and on no project). */
+  project_name: text,
   category_id: text,
   category_name: text,
   split: z.boolean().optional().default(false),
+  /** FLOW-1142: the payment's parts when it is split by category; [] when it is not (or before the server sends them). */
+  parts: z.array(partSchema).optional().default([]),
 });
 
 const billSchema = z.object({

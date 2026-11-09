@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
-import { PINE, storyUtilityClient, utilityFixSample, utilityRefundsSample } from "./utility-refunds-sample";
+import { PINE, storyUtilityClient, utilityFixSample, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { UtilityClientProvider, type UtilityBill } from "../utility-refunds";
@@ -35,6 +35,38 @@ export const UtilityRefundsList: Story = {
 export const UtilityRefundsFix: Story = {
   name: "UtilityRefunds, may be filed wrong",
   render: () => <RefundsStory bills={utilityFixSample()} />,
+};
+
+/** FLOW-1142: the rent payment is split by category: its parts under its leg, the project named where it differs. */
+export const UtilityRefundsSplit: Story = {
+  name: "UtilityRefunds, split payment",
+  render: () => <RefundsStory bills={utilitySplitSample()} />,
+  play: async ({ canvasElement }) => {
+    const list = await within(canvasElement).findByRole("list", { name: "פיצול" });
+    await expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+  },
+};
+
+/** FLOW-1142: long split lines (a long category and project) wrap at 320 and are never cut. */
+export const UtilityRefundsSplitLong: Story = {
+  name: "UtilityRefunds, split payment, long content",
+  render: () => (
+    <RefundsStory
+      bills={utilitySplitSample().map((bill) => (bill.payment == null || bill.payment.parts.length === 0 ? bill : {
+        ...bill,
+        payment: {
+          ...bill.payment,
+          project_name: "דירת הגפן 3 · הבניין הצפוני ליד הפארק הגדול",
+          parts: bill.payment.parts.map((part) => ({
+            ...part,
+            category_name: `${String(part.category_name)} ושירותים משותפים לבניין`,
+            project_name: `${String(part.project_name)} · הבניין הדרומי ליד תחנת הרכבת`,
+            amount_minor: part.amount_minor * 1000n + 7n,
+          })),
+        },
+      }))}
+    />
+  ),
 };
 
 /** One property, opened from its page's row (`?project=`): Back returns to the property. */

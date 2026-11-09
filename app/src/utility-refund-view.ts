@@ -105,12 +105,15 @@ export function paymentTitle(payment: UtilityPayment): string {
   return payment.party ?? payment.description ?? "תשלום";
 }
 
-/** "שכירות · 02/10/26 · 18 ימים אחרי", or "בלי פרויקט · הכנסה · 12/09 · …" for a payment on no property. */
+/**
+ * "דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי" (FLOW-1142: the project the payment is filed to), or
+ * "בלי פרויקט · הכנסה · 12/09/26 · …" for a payment on no property.
+ */
 export function paymentMeta(card: RefundCard): string {
   const [first] = card.bills;
   const gap = first == null ? 0 : Math.round((Date.parse(card.payment.doc_date) - Date.parse(first.doc_date)) / 86_400_000);
   return [
-    card.payment.project_id == null ? "בלי פרויקט" : null,
+    card.payment.project_id == null ? "בלי פרויקט" : card.payment.project_name,
     card.payment.category_name ?? "בלי קטגוריה",
     refundDate(card.payment.doc_date),
     gap === 0 ? "באותו יום" : gap > 0 ? `${days(gap)} אחרי` : `${days(-gap)} לפני`,
@@ -184,4 +187,19 @@ export function paymentsTaken(all: readonly UtilityBill[], bill: UtilityBill): S
     if (!sameMonth) taken.add(other.payment.transaction_id);
   }
   return taken;
+}
+
+/**
+ * FLOW-1142: a split payment's parts, one line each: "<category> · <project, when not the payment's>" and the
+ * amount. None for a payment that is not split.
+ */
+export function paymentParts(payment: UtilityPayment): { key: string; text: string; amount: string }[] {
+  return payment.parts.map((part, index) => ({
+    key: `${String(index)}:${part.category_id ?? ""}:${part.project_id ?? ""}`,
+    text: [
+      part.category_name ?? "בלי קטגוריה",
+      part.project_id === payment.project_id ? null : part.project_id == null ? "בלי פרויקט" : part.project_name,
+    ].filter((item): item is string => item != null).join(" · "),
+    amount: formatAmountText(part.amount_minor, payment.currency, { detail: true }),
+  }));
 }
