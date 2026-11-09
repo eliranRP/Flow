@@ -121,7 +121,6 @@ export function missingByReason(missing: ProjectionResult["missing"]): { reason:
   return [...groups].map(([reason, names]) => ({ reason, names }));
 }
 
-
 /* The assumptions draft (C) ---------------------------------------------------------------------- */
 
 export const SERIES_LABELS: Record<ProjectionSeries, string> = {

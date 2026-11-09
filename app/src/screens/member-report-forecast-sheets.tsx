@@ -82,7 +82,7 @@ export function ForecastAssumptionsSheet({ open, onOpenChange, canEdit, projecti
               {percent(SERIES_LABELS[s], draft.growth[s], (v) => { set({ growth: { ...draft.growth, [s]: v } }); })}
               {/* A year with its own change: the calendar opens the years; marked while open or while a year differs. */}
               <IconButton
-                label={openSeries === s ? "סגירת השנים" : "שינוי שונה לשנה מסוימת"}
+                label={`${SERIES_LABELS[s]}: שינוי שונה לשנה מסוימת${draft.byYear[s].some((v) => v.trim() !== "") ? " · יש שנים שונות" : ""}`}
                 className="ui-msr-forecast-years-toggle"
                 aria-expanded={openSeries === s}
                 aria-controls={`msr-fa-years-${s}`}

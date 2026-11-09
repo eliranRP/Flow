@@ -92,10 +92,12 @@ export const ForecastAssumptions: Story = {
     await expect(sheet.getByLabelText("Repairs")).toHaveValue("repairs");
     await userEvent.clear(sheet.getByLabelText("שכירות"));
     await userEvent.type(sheet.getByLabelText("שכירות"), "4");
-    await userEvent.click(sheet.getAllByRole("button", { name: "שינוי שונה לשנה מסוימת" })[0] as HTMLElement);
+    const rentYears = sheet.getByRole("button", { name: "שכירות: שינוי שונה לשנה מסוימת" });
+    await userEvent.click(rentYears);
+    await expect(rentYears).toHaveAttribute("aria-expanded", "true");
     await userEvent.type(sheet.getByLabelText("שנה 2"), "8");
     // The rent's calendar stays marked: one of its years has its own change.
-    await expect(sheet.getByRole("button", { name: "סגירת השנים" })).toHaveAttribute("data-on");
+    await expect(sheet.getByRole("button", { name: "שכירות: שינוי שונה לשנה מסוימת · יש שנים שונות" })).toHaveAttribute("data-on");
     await userEvent.click(sheet.getByRole("button", { name: "שמירה" }));
     await expect(await body(canvasElement).findByText("הנחות התחזית נשמרו")).toBeInTheDocument();
     await waitFor(async () => { await expect(canvas.getByText(/שכירות 4% בשנה/)).toBeInTheDocument(); });
