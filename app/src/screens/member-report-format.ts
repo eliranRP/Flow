@@ -5,7 +5,7 @@ import type { Formula, FormulaRow } from "./project-returns-info";
  * FLOW-1118: the member share report's words and formulas (pure, for the screen and its sheets).
  * ---------------------------------------------------------------------------------------------- */
 
-export type ReportMode = "sell" | "refi";
+export type ReportMode = "sell" | "refi" | "forecast";
 
 /** A rate in parts per million as a percent: 58800 → "5.88%", 61250 with 3 places → "6.125%". */
 export function ppmText(ppm: number, places = 2): string {
@@ -44,7 +44,15 @@ export function memberIndex(search: string, count: number): number {
 }
 
 export function modeOf(search: string): ReportMode {
-  return new URLSearchParams(search).get("mode") === "refi" ? "refi" : "sell";
+  const mode = new URLSearchParams(search).get("mode");
+  return mode === "refi" || mode === "forecast" ? mode : "sell";
+}
+
+/** FLOW-1127: the forecast's refinance year from `?years=`, 1 to 10; null when it names none. */
+export function yearsOf(search: string): number | null {
+  const raw = new URLSearchParams(search).get("years");
+  const n = raw != null && /^\d{1,2}$/.test(raw) ? Number(raw) : null;
+  return n != null && n >= 1 && n <= 10 ? n : null;
 }
 
 function money(key: string, op: FormulaRow["op"], label: string, minor: bigint, hint?: string, income = false): FormulaRow {

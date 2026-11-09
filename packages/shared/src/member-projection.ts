@@ -254,7 +254,7 @@ function loanByYear(loan: ProjectionLoan, asOf: string, today: string, years: nu
 }
 
 export function computeMemberProjection(input: {
-  readonly config: (MemberReportConfig & { readonly projection?: ProjectionConfig }) | null;
+  readonly config: MemberReportConfig | null;
   readonly properties: readonly MemberReportProperty[];
   readonly loans: readonly MemberReportLoan[];
   readonly inputs: readonly ProjectionInput[];
