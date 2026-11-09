@@ -2,6 +2,7 @@ import "../ui/lazy.css";
 import { applyBp, computeMemberShare, formatMoney, type MemberReportConfig, type MemberShareResult, type PropertyShare } from "@flow/shared";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useCompanyCurrency } from "../company-currency";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { Amount } from "../ui/amount";
@@ -13,6 +14,7 @@ import { ChevronDownIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
+import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
 import { useMemberReport, useMemberReportWrite, type MemberReportPatch, type MemberReportRead } from "../use-member-report";
 import {
@@ -29,7 +31,7 @@ import {
   type ReportMode,
   type Share,
 } from "./member-report-format";
-import { AssumptionsSheet, MemberPickSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet } from "./member-report-sheets";
+import { AssumptionsSheet, MemberPickSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet, spreadOptions } from "./member-report-sheets";
 import { CalcSection, FormulaList } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
@@ -101,7 +103,8 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
 
   const canEdit = data?.canEdit === true;
   const config = data?.config ?? {};
-  const currency = result?.currency ?? "USD";
+  const companyCurrency = useCompanyCurrency();
+  const currency = result?.currency ?? companyCurrency;
 
   const back = `/reports${backSearch}`;
   if (result == null) {
@@ -185,7 +188,7 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
         properties={result.properties.map((p) => ({ projectId: p.projectId, name: p.name }))} />
       <YieldsSheet open={sheet === "yields"} onOpenChange={(open) => { setSheet(open ? "yields" : null); }} onSave={save} config={config} result={result} />
       <AssumptionsSheet open={sheet === "assumptions"} onOpenChange={(open) => { setSheet(open ? "assumptions" : null); }} onSave={save} result={result} />
-      <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} />
+      <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} currency={currency} />
     </div>
   );
 }
@@ -205,6 +208,13 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
   config: MemberReportConfig;
 }) {
   const rate = result.rate;
+  const toast = useToast();
+  // A quote is removed at once, with ביטול that saves the list before (DESIGN-RULES 0030's undo toast).
+  const remove = async (id: string, lender: string) => {
+    const before = config.quotes ?? [];
+    if (!(await onSave({ quotes: before.filter((x) => x.id !== id) }))) return;
+    toast.show({ message: `ההצעה של ${lender} הוסרה`, action: "ביטול", onAction: () => { void onSave({ quotes: before }); } });
+  };
   const rule = (tenor: 5 | 10, spread: number) => { void onSave({ rate_rule: { tenor_years: tenor, spread_bp: spread } }); };
   return (
     <CalcSection title="ריבית צפויה מול ההצעות" total={rate.expectedPpm == null ? null : <bdi dir="ltr" className="ui-num">{ppmText(rate.expectedPpm)}</bdi>}>
@@ -219,7 +229,7 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
           options={[{ value: "5", label: "5 שנים" }, { value: "10", label: "10 שנים" }]}
           onChange={(next) => { rule(next === "5" ? 5 : 10, rate.spreadBp); }} />
         <SegmentedControl label="מרווח" value={String(rate.spreadBp)} disabled={!canEdit}
-          options={[{ value: "150", label: "+1.5", numeric: true }, { value: "200", label: "+2.0", numeric: true }]}
+          options={spreadOptions(rate.spreadBp)}
           onChange={(next) => { rule(rate.tenorYears, Number(next)); }} />
         <p className="ui-msr-formula">
           {rate.yieldPpm == null
@@ -234,7 +244,7 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
               <span className="ui-msr-quote-end">
                 <bdi dir="ltr" className="ui-num" data-verdict={q.verdict ?? undefined}>{quoteRateText(q.rate_ppm)}</bdi>
                 {canEdit ? (
-                  <Button variant="danger-link" aria-label={`הסרת ההצעה של ${q.lender}`} onClick={() => { void onSave({ quotes: (config.quotes ?? []).filter((x) => x.id !== q.id) }); }}>הסרה</Button>
+                  <Button variant="danger-link" aria-label={`הסרת ההצעה של ${q.lender}`} onClick={() => { void remove(q.id, q.lender); }}>הסרה</Button>
                 ) : null}
               </span>
             )} />

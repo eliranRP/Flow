@@ -208,3 +208,48 @@ export const PropertySheet: Story = {
     await expect(await sheet.findByText(/תשלום חודשי חדש/)).toBeVisible();
   },
 };
+
+export const RemoveQuoteUndo: Story = {
+  render: () => <Report entry="/reports/member?mode=refi" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "הסרת ההצעה של Example Bank" }));
+    await waitFor(async () => { await expect(canvas.queryByText("Example Bank")).toBeNull(); });
+    // ביטול on the toast saves the list from before.
+    await userEvent.click(await body(canvasElement).findByRole("button", { name: "ביטול" }));
+    await waitFor(async () => { await expect(canvas.getByText("Example Bank")).toBeInTheDocument(); });
+  },
+};
+
+const CUSTOM_SPREAD: MemberReportRead = { ...MEMBER_REPORT, config: { ...MEMBER_REPORT.config, rate_rule: { tenor_years: 10, spread_bp: 175 } } };
+
+export const CustomSpread: Story = {
+  render: () => <Report entry="/reports/member?mode=refi" sample={CUSTOM_SPREAD} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // A spread set through MCP (175) shows as its own, picked option, on the card and in the sheet.
+    await expect(await canvas.findByRole("radio", { name: "+1.75", checked: true })).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "03/11/2026" }));
+    const sheet = within(await body(canvasElement).findByRole("dialog", { name: "תשואות אג״ח ארה״ב" }));
+    await expect(sheet.getByRole("radio", { name: "+1.75", checked: true })).toBeInTheDocument();
+    await expect(sheet.getByText("6.13%")).toBeInTheDocument();
+  },
+};
+
+const THIRDS: MemberReportRead = { ...MEMBER_REPORT, config: { ...MEMBER_REPORT.config, members: [
+  { name: "Member A", ownership_bp: 3333 }, { name: "Member B", ownership_bp: 3333 }, { name: "Member C", ownership_bp: 3334 },
+] } };
+
+export const ThirdsSplit: Story = {
+  render: () => <Report sample={THIRDS} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^השותף: Member A, 33.33%/ }));
+    const picker = within(await body(canvasElement).findByRole("dialog", { name: "השותף בדוח" }));
+    await userEvent.click(picker.getByRole("button", { name: "עריכת שותפים ואחוזים" }));
+    const sheet = within(await body(canvasElement).findByRole("dialog", { name: "שותפים ואחוזי בעלות" }));
+    // The split opens in its basis points and can be saved as it is.
+    await expect(sheet.getAllByLabelText("בעלות (%)").map((field) => (field as HTMLInputElement).value)).toEqual(["33.33", "33.33", "33.34"]);
+    await expect(sheet.getByRole("status").textContent).toContain("100%");
+    await expect(sheet.getByRole("button", { name: "שמירה" })).toBeEnabled();
+  },
+};

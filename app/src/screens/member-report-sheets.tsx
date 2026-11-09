@@ -44,15 +44,40 @@ function unitsToRaw(units: number | null | undefined, scale: number): string {
 
 /* Members ------------------------------------------------------------------------------------- */
 
-type DraftMember = { name: string; percent: number };
+/** A member as typed: the name, and the ownership as a percent with up to two decimals ("33.33"). */
+type DraftMember = { name: string; percent: string };
 
-/** The members' draft is saveable: names given and unique, and the ownership adds up to 100%. */
+const OWNERSHIP_WHOLE = 10_000;
+
+/** A member's typed ownership in basis points; null when it is not 0 to 100 with up to two decimals. */
+function ownershipBp(percent: string): number | null {
+  return percentToUnits(percent, 2, 100, OWNERSHIP_WHOLE);
+}
+
+/** The stored members as the sheet's draft, in their exact basis points (3334 → "33.34"). */
+export function membersDraft(members: NonNullable<MemberReportConfig["members"]>): DraftMember[] {
+  if (members.length === 0) return [{ name: "", percent: "50" }, { name: "", percent: "50" }];
+  return members.map((m) => ({ name: m.name, percent: unitsToRaw(m.ownership_bp, 100) }));
+}
+
+/** The draft as set_member_report's members; call only when membersProblem is null. */
+export function draftMembers(draft: readonly DraftMember[]): NonNullable<MemberReportConfig["members"]> {
+  return draft.map((m) => ({ name: m.name.trim(), ownership_bp: ownershipBp(m.percent) ?? 0 }));
+}
+
+/** The draft's total in basis points, a percent typed wrong counting as none. */
+export function draftTotalBp(draft: readonly DraftMember[]): number {
+  return draft.reduce((sum, m) => sum + (ownershipBp(m.percent) ?? 0), 0);
+}
+
+/** The members' draft is saveable: names given and unique, each percent valid, and exactly 10000 basis points. */
 export function membersProblem(draft: readonly DraftMember[]): string | null {
   if (draft.length === 0) return null;
   if (draft.some((m) => m.name.trim() === "")) return "לכל שותף צריך שם.";
   if (new Set(draft.map((m) => m.name.trim().toLowerCase())).size !== draft.length) return "שני שותפים באותו שם.";
-  const total = draft.reduce((sum, m) => sum + m.percent, 0);
-  if (total !== 100) return total < 100 ? `חסרים ${String(100 - total)}% עד 100%.` : `עודף של ${String(total - 100)}% מעל 100%.`;
+  if (draft.some((m) => ownershipBp(m.percent) == null)) return "בעלות היא בין 0 ל־100%, עד שתי ספרות אחרי הנקודה.";
+  const total = draftTotalBp(draft);
+  if (total !== OWNERSHIP_WHOLE) return total < OWNERSHIP_WHOLE ? `חסרים ${bpText(OWNERSHIP_WHOLE - total)} עד 100%.` : `עודף של ${bpText(total - OWNERSHIP_WHOLE)} מעל 100%.`;
   return null;
 }
 
@@ -61,19 +86,17 @@ export function MembersSheet({ open, onOpenChange, onSave, members }: SaveProps 
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!open) return;
-    setDraft(members.length === 0
-      ? [{ name: "", percent: 50 }, { name: "", percent: 50 }]
-      : members.map((m) => ({ name: m.name, percent: Math.round(m.ownership_bp / 100) })));
+    setDraft(membersDraft(members));
     // Only a new open resets the draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  const total = draft.reduce((sum, m) => sum + m.percent, 0);
+  const total = draftTotalBp(draft);
   const problem = membersProblem(draft);
   const set = (index: number, next: Partial<DraftMember>) => { setDraft((rows) => rows.map((row, i) => (i === index ? { ...row, ...next } : row))); };
   async function save() {
     if (busy || problem != null) return;
     setBusy(true);
-    const ok = await onSave({ members: draft.map((m) => ({ name: m.name.trim(), ownership_bp: m.percent * 100 })) });
+    const ok = await onSave({ members: draftMembers(draft) });
     setBusy(false);
     if (ok) onOpenChange(false);
   }
@@ -91,17 +114,18 @@ export function MembersSheet({ open, onOpenChange, onSave, members }: SaveProps 
         {draft.map((member, index) => (
           <li key={index} className="ui-msr-member">
             <TextField label={`שותף ${String(index + 1)}`} value={member.name} maxLength={60} onChange={(event) => { set(index, { name: event.target.value }); }} />
-            <Stepper label="בעלות (%)" value={member.percent} min={0} max={100} onChange={(percent) => { set(index, { percent }); }} />
+            <TextField label="בעלות (%)" numeric inputMode="decimal" dir="ltr" value={member.percent} placeholder="50"
+              onChange={(event) => { set(index, { percent: event.target.value }); }} />
             {draft.length > 1 ? (
               <Button variant="danger-link" onClick={() => { setDraft((rows) => rows.filter((_, i) => i !== index)); }}>הסרה</Button>
             ) : null}
           </li>
         ))}
       </ul>
-      {draft.length < 20 ? <Button variant="link" onClick={() => { setDraft((rows) => [...rows, { name: "", percent: 0 }]); }}>+ הוספת שותף</Button> : null}
+      {draft.length < 20 ? <Button variant="link" onClick={() => { setDraft((rows) => [...rows, { name: "", percent: "0" }]); }}>+ הוספת שותף</Button> : null}
       <p className="ui-msr-total" data-ok={problem == null || undefined} role="status">
         <span>סה״כ</span>
-        <bdi dir="ltr" className="ui-num">{`${String(total)}%`}</bdi>
+        <bdi dir="ltr" className="ui-num">{bpText(total)}</bdi>
       </p>
       {problem == null ? null : <p className="ui-msr-problem">{problem}</p>}
     </Sheet>
@@ -211,6 +235,12 @@ export function QuoteSheet({ open, onOpenChange, onSave, quotes, quoteDate, expe
 
 /* The Treasury yields of the quote date and the spread ------------------------------------- */
 
+/** +1.5 and +2.0 as on the board, and the spread the setting holds when it is another one (MCP takes 0 to 1000). */
+export function spreadOptions(current: number): { value: string; label: string; numeric: true }[] {
+  const values = current === 150 || current === 200 ? [150, 200] : [150, 200, current].sort((a, b) => a - b);
+  return values.map((bp) => ({ value: String(bp), label: bp === 150 ? "+1.5" : bp === 200 ? "+2.0" : spreadText(bp), numeric: true }));
+}
+
 export function YieldsSheet({ open, onOpenChange, onSave, config, result }: SaveProps & { config: MemberReportConfig; result: MemberShareResult }) {
   const date = result.rate.quoteDate ?? israelToday();
   const yields = config.yields ?? [];
@@ -218,14 +248,17 @@ export function YieldsSheet({ open, onOpenChange, onSave, config, result }: Save
   const [y5, setY5] = useState("");
   const [y10, setY10] = useState("");
   const [tenor, setTenor] = useState<"5" | "10">("10");
-  const [spread, setSpread] = useState<"150" | "200">("150");
+  const [spread, setSpread] = useState("150");
   const [busy, setBusy] = useState(false);
+  const storedTenor = String(result.rate.tenorYears);
+  const storedSpread = String(result.rate.spreadBp);
   useEffect(() => {
     if (!open) return;
     setY5(unitsToRaw(today?.y5_ppm, 10_000));
     setY10(unitsToRaw(today?.y10_ppm, 10_000));
-    setTenor(String(result.rate.tenorYears) as "5" | "10");
-    setSpread(result.rate.spreadBp === 200 ? "200" : "150");
+    setTenor(storedTenor as "5" | "10");
+    // A spread set elsewhere stays as it is unless the owner picks another.
+    setSpread(storedSpread);
     // Only a new open resets the draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -238,9 +271,11 @@ export function YieldsSheet({ open, onOpenChange, onSave, config, result }: Save
     setBusy(true);
     const rest = yields.filter((y) => y.on_date !== date);
     const entry = p5 == null && p10 == null ? [] : [{ on_date: date, y5_ppm: p5, y10_ppm: p10, source: "manual" as const }];
+    // The rule is sent only when the owner changed it.
+    const ruleChanged = tenor !== storedTenor || spread !== storedSpread;
     const ok = await onSave({
       yields: [...rest, ...entry],
-      rate_rule: { tenor_years: tenor === "5" ? 5 : 10, spread_bp: Number(spread) },
+      ...(ruleChanged ? { rate_rule: { tenor_years: tenor === "5" ? 5 : 10, spread_bp: Number(spread) } } : {}),
       quote_date: date,
     });
     setBusy(false);
@@ -262,7 +297,7 @@ export function YieldsSheet({ open, onOpenChange, onSave, config, result }: Save
         <TextField label="10 שנים (%)" numeric inputMode="decimal" dir="ltr" value={y10} placeholder="4.38" onChange={(event) => { setY10(event.target.value); }} />
       </div>
       <SegmentedControl label="אג״ח" value={tenor} options={[{ value: "5", label: "5 שנים" }, { value: "10", label: "10 שנים" }]} onChange={setTenor} />
-      <SegmentedControl label="מרווח" value={spread} options={[{ value: "150", label: "+1.5", numeric: true }, { value: "200", label: "+2.0", numeric: true }]} onChange={setSpread} />
+      <SegmentedControl label="מרווח" value={spread} options={spreadOptions(Number(storedSpread))} onChange={setSpread} />
       {chosen == null ? null : (
         <p className="ui-msr-verdict" role="status">
           <span>{`אג״ח ${tenor} שנים ${ppmText(chosen)} ${spreadText(Number(spread))} =`}</span>
@@ -316,17 +351,18 @@ export function AssumptionsSheet({ open, onOpenChange, onSave, result }: SavePro
 
 /* One property ---------------------------------------------------------------------------------- */
 
-export function PropertySheet({ open, onOpenChange, property, result, member, mode: startMode }: {
+export function PropertySheet({ open, onOpenChange, property, result, member, mode: startMode, currency }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   property: PropertyShare | null;
   result: MemberShareResult;
   member: Share;
   mode: ReportMode;
+  /** The report's currency, else the company's. */
+  currency: string;
 }) {
   const [mode, setMode] = useState<ReportMode>(startMode);
   useEffect(() => { if (open) setMode(startMode); }, [open, startMode]);
-  const currency = result.currency ?? "USD";
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={property?.name ?? ""} panelClassName="ui-sheet-wide ui-msr-sheet">
       {property == null ? null : (

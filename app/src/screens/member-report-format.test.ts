@@ -4,7 +4,7 @@ import { MEMBER_CONFIG, MEMBER_PROPERTIES } from "../dev/member-report-sample";
 import { parseMemberReport } from "../use-member-report";
 import { bpText, memberIndex, modeOf, ppmText, quoteRateText, refiFormula, saleFormula, spreadText, verdictText } from "./member-report-format";
 import { applyPatch } from "./member-report-screen";
-import { membersProblem, percentToUnits } from "./member-report-sheets";
+import { draftMembers, draftTotalBp, membersDraft, membersProblem, percentToUnits, spreadOptions } from "./member-report-sheets";
 
 const result = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES);
 
@@ -61,13 +61,32 @@ describe("member report sheets", () => {
     expect(percentToUnits("abc", 2, 100, 10_000)).toBeNull();
   });
 
-  it("saves the members only when named, unique and at 100%", () => {
-    expect(membersProblem([{ name: "A", percent: 60 }, { name: "B", percent: 40 }])).toBeNull();
-    expect(membersProblem([{ name: "A", percent: 60 }, { name: "B", percent: 30 }])).toBe("חסרים 10% עד 100%.");
-    expect(membersProblem([{ name: "A", percent: 60 }, { name: "B", percent: 50 }])).toBe("עודף של 10% מעל 100%.");
-    expect(membersProblem([{ name: "A", percent: 50 }, { name: "a", percent: 50 }])).toBe("שני שותפים באותו שם.");
-    expect(membersProblem([{ name: " ", percent: 100 }])).toBe("לכל שותף צריך שם.");
+  it("saves the members only when named, unique, valid and at exactly 10000 basis points", () => {
+    expect(membersProblem([{ name: "A", percent: "60" }, { name: "B", percent: "40" }])).toBeNull();
+    expect(membersProblem([{ name: "A", percent: "60" }, { name: "B", percent: "30" }])).toBe("חסרים 10% עד 100%.");
+    expect(membersProblem([{ name: "A", percent: "33.33" }, { name: "B", percent: "33.33" }, { name: "C", percent: "33.33" }])).toBe("חסרים 0.01% עד 100%.");
+    expect(membersProblem([{ name: "A", percent: "60.5" }, { name: "B", percent: "40" }])).toBe("עודף של 0.5% מעל 100%.");
+    expect(membersProblem([{ name: "A", percent: "50" }, { name: "a", percent: "50" }])).toBe("שני שותפים באותו שם.");
+    expect(membersProblem([{ name: "A", percent: "33.333" }, { name: "B", percent: "66.667" }])).toBe("בעלות היא בין 0 ל־100%, עד שתי ספרות אחרי הנקודה.");
+    expect(membersProblem([{ name: " ", percent: "100" }])).toBe("לכל שותף צריך שם.");
     expect(membersProblem([])).toBeNull();
+  });
+
+  it("opens and saves a split in basis points unchanged", () => {
+    const stored = [{ name: "A", ownership_bp: 3333 }, { name: "B", ownership_bp: 3333 }, { name: "C", ownership_bp: 3334 }];
+    const draft = membersDraft(stored);
+    expect(draft.map((m) => m.percent)).toEqual(["33.33", "33.33", "33.34"]);
+    expect(draftTotalBp(draft)).toBe(10_000);
+    expect(membersProblem(draft)).toBeNull();
+    expect(draftMembers(draft)).toEqual(stored);
+    const quarter = [{ name: "A", ownership_bp: 2525 }, { name: "B", ownership_bp: 7475 }];
+    expect(draftMembers(membersDraft(quarter))).toEqual(quarter);
+  });
+
+  it("offers +1.5 and +2.0, and a stored spread that is neither", () => {
+    expect(spreadOptions(150).map((o) => o.label)).toEqual(["+1.5", "+2.0"]);
+    expect(spreadOptions(175).map((o) => [o.value, o.label])).toEqual([["150", "+1.5"], ["175", "+1.75"], ["200", "+2.0"]]);
+    expect(spreadOptions(250).map((o) => o.label)).toEqual(["+1.5", "+2.0", "+2.5"]);
   });
 
   it("merges a patch the way the server does: a null part clears it", () => {

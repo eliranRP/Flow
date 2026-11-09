@@ -228,23 +228,6 @@ describe("the P&L", () => {
     expect(screen.queryByText("לא הצלחנו לטעון את החודשים.")).toBeNull();
   });
 
-  it("in a month's drill, while the months are loading, the name's line shows טוען חודשים… once, hidden from a screen reader (FLOW-1120)", () => {
-    renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "loading" }, "/reports/pnl?view=month&month=2026-10");
-    const hint = screen.getByText("טוען חודשים…");
-    expect(hint).toHaveAttribute("aria-hidden", "true");
-    // On the name's line, beside the heading.
-    expect(hint.parentElement).toContainElement(screen.getByRole("heading", { level: 1, name: "אוקטובר 2026" }));
-  });
-
-  it("in a month's drill, the hint's slot stays, empty, once the months are in or failed (FLOW-1120)", () => {
-    const view = renderPnl({ drilled: REPORTS_OCTOBER }, "/reports/pnl?view=month&month=2026-10");
-    expect(document.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
-    view.unmount();
-    renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "failed" }, "/reports/pnl?view=month&month=2026-10");
-    expect(document.querySelector(".ui-rep-band-hint")).toBeEmptyDOMElement();
-    expect(screen.queryByText("טוען חודשים…")).toBeNull();
-  });
-
   it("in a month's drill, a failed months read says so with a retry, and the chevrons say why they wait (FLOW-1102)", () => {
     renderPnl({ drilled: REPORTS_OCTOBER, monthsRead: "failed" }, "/reports/pnl?view=month&month=2026-10");
     const line = screen.getByText("לא הצלחנו לטעון את החודשים.").closest("[role=status]") as HTMLElement;

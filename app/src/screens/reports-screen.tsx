@@ -298,7 +298,6 @@ export function PnlReportScreen({ sample }: { sample?: PnlSample } = {}) {
                 later: near.later == null ? null : "חודש הבא",
                 onStep: (delta) => { const key = delta < 0 ? near.earlier : near.later; if (key != null) toMonth(key); },
                 reason: monthsWait === "loading" ? "החודשים עוד נטענים" : monthsWait === "failed" ? "החודשים לא נטענו" : null,
-                hint: monthsWait === "loading" ? "טוען חודשים…" : null,
               },
             }
           : { label: pnlChipLabel(route.period, today), onOpen: () => { period.setOpen(true); } }}
