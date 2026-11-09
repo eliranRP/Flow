@@ -797,6 +797,25 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"member_reports": {
+                  Row: {
+                    "company_id": string,"config": NonNullable<Json>,"updated_at": string
+                  }
+                  Insert: {
+                    "company_id": string,"config": NonNullable<Json>,"updated_at"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"config"?: NonNullable<Json>,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "member_reports_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: true
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"notification_prefs": {
                   Row: {
                     "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_sent_on": string | null,"weekly_summary": boolean
@@ -1779,6 +1798,9 @@ isOneToOne: false
 "get_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
+"get_member_report":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_notification_prefs":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -2203,6 +2225,9 @@ isOneToOne: false
 "mcp_set_loan_refinance":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_new_loan_id": string }; Returns: Json
                            },
+"mcp_set_member_report":
+{ Args: { "p_idempotency_key": string,"p_patch": Json }; Returns: Json
+                           },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
                            },
@@ -2495,6 +2520,9 @@ isOneToOne: false
                            },
 "set_loan_closing_paid":
 { Args: { "p_closing_paid_minor": number,"p_loan_id": string }; Returns: Json
+                           },
+"set_member_report":
+{ Args: { "p_patch": Json }; Returns: Json
                            },
 "set_member_role":
 { Args: { "p_role": string,"p_user_id": string }; Returns: Json
