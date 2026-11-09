@@ -111,6 +111,16 @@ export const FORECAST_MISSING_WORDS: Record<ProjectionResult["missing"][number][
   rent: "אין שכירות ב־3 החודשים האחרונים",
 };
 
+/** The properties left out, grouped by reason in the order the reasons first appear: one line per reason. */
+export function missingByReason(missing: ProjectionResult["missing"]): { reason: string; names: string[] }[] {
+  const groups = new Map<string, string[]>();
+  for (const m of missing) {
+    const words = FORECAST_MISSING_WORDS[m.reason];
+    groups.set(words, [...(groups.get(words) ?? []), m.name]);
+  }
+  return [...groups].map(([reason, names]) => ({ reason, names }));
+}
+
 /* The assumptions draft (C) ---------------------------------------------------------------------- */
 
 export const SERIES_LABELS: Record<ProjectionSeries, string> = {
