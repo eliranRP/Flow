@@ -59,32 +59,61 @@ function shareRow(key: string, whole: bigint, member: Share, minor: bigint | nul
   return money(key, "=", `החלק של ${member.name}`, minor ?? 0n, bpText(member.ownershipBp), true);
 }
 
-/** Sell everything: value − selling costs − loans = net; the member's part of it. */
+/** FLOW-1121: the part of החישוב a row opens: its figure per property (or per member), and the total. */
+export type DrillKey = "value" | "selling" | "loans" | "net" | "share" | "loan" | "payoff" | "closing" | "cash";
+
+export const DRILL_KEYS: readonly DrillKey[] = ["value", "selling", "loans", "net", "share", "loan", "payoff", "closing", "cash"];
+
+/** The rows open their parts: each row's sheet (the page's resolver opens it). */
+function opens(row: FormulaRow, sheet: DrillKey): FormulaRow {
+  return { ...row, target: { kind: "sheet", sheet } };
+}
+
+/**
+ * The selling cost's hint: its percent ("8% · ברירת מחדל" when every property takes the default), or the range
+ * when the properties differ ("7%–8%"), then what it is.
+ */
+export function sellingHint(properties: readonly PropertyShare[]): string {
+  const what = "תיווך, סגירה ומסים";
+  if (properties.length === 0) return what;
+  const bps = properties.map((p) => p.sellingCostBp);
+  const low = Math.min(...bps);
+  const high = Math.max(...bps);
+  if (low !== high) return `${bpText(low)}–${bpText(high)} · ${what}`;
+  return `${bpText(low)}${properties.every((p) => p.sellingCostDefault) ? " · ברירת מחדל" : ""} · ${what}`;
+}
+
+/**
+ * Sell everything: value − selling costs − loans = net, then the member's part of it. Every row opens its parts,
+ * the share too, so it is the last row (FormulaList's result row opens nothing).
+ */
 export function saleFormula(r: MemberShareResult, member: Share, memberMinor: bigint | null): Formula {
   const t = r.totals;
   const count = r.properties.length;
   return {
     rows: [
-      money("value", "", "שווי הנכסים", t.valueMinor, `${String(count)} נכסים`),
-      money("selling", "−", "עלויות מכירה", -t.sellingCostMinor, "תיווך, סגירה ומסים"),
-      money("loans", "−", "סילוק הלוואות", -t.loanBalanceMinor, "יתרות היום"),
-      ...(member == null ? [] : [money("net", "=", "הון נקי", t.saleNetMinor, "לכל השותפים")]),
+      opens(money("value", "", "שווי הנכסים", t.valueMinor, `${String(count)} נכסים`), "value"),
+      opens(money("selling", "−", "עלויות מכירה", -t.sellingCostMinor, sellingHint(r.properties)), "selling"),
+      opens(money("loans", "−", "סילוק הלוואות", -t.loanBalanceMinor, "יתרות היום"), "loans"),
+      ...(member == null ? [] : [opens(money("net", "=", "הון נקי", t.saleNetMinor, "לכל השותפים"), "net")]),
+      opens(shareRow("share", t.saleNetMinor, member, memberMinor), member == null ? "net" : "share"),
     ],
-    result: shareRow("share", t.saleNetMinor, member, memberMinor),
+    result: null,
   };
 }
 
-/** Refinance: new loan − payoff − closing = cash out; the member's part of it. */
+/** Refinance: new loan − payoff − closing = cash out, then the member's part of it; every row opens its parts. */
 export function refiFormula(r: MemberShareResult, member: Share, memberMinor: bigint | null): Formula {
   const t = r.totals;
   return {
     rows: [
-      money("loan", "", "הלוואה חדשה", t.newLoanMinor, `${bpText(r.assumptions.ltvBp)} מהשווי`),
-      money("payoff", "−", "סילוק ההלוואות הקיימות", -t.payoffMinor, "יתרות היום"),
-      money("closing", "−", "עלויות סגירה", -t.closingMinor, `${bpText(r.assumptions.closingBp)} מההלוואה החדשה`),
-      ...(member == null ? [] : [money("cash", "=", "כסף שמשתחרר", t.cashOutMinor, "לכל השותפים")]),
+      opens(money("loan", "", "הלוואה חדשה", t.newLoanMinor, `${bpText(r.assumptions.ltvBp)} מהשווי`), "loan"),
+      opens(money("payoff", "−", "סילוק ההלוואות הקיימות", -t.payoffMinor, "יתרות היום"), "payoff"),
+      opens(money("closing", "−", "עלויות סגירה", -t.closingMinor, `${bpText(r.assumptions.closingBp)} מההלוואה החדשה`), "closing"),
+      ...(member == null ? [] : [opens(money("cash", "=", "כסף שמשתחרר", t.cashOutMinor, "לכל השותפים"), "cash")]),
+      opens(shareRow("share", t.cashOutMinor, member, memberMinor), member == null ? "cash" : "share"),
     ],
-    result: shareRow("share", t.cashOutMinor, member, memberMinor),
+    result: null,
   };
 }
 

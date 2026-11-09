@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { applyBp, computeMemberShare, formatMoney, type MemberReportConfig, type MemberShareResult, type PropertyShare } from "@flow/shared";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCompanyCurrency } from "../company-currency";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -8,7 +8,7 @@ import { screenPhase } from "../query-phase";
 import { Amount } from "../ui/amount";
 import { BackButton } from "../ui/back";
 import { Button } from "../ui/button";
-import { formatDisplay } from "../ui/date-math";
+import { formatDisplay, israelToday } from "../ui/date-math";
 import { FocusTitle } from "../ui/focus-title";
 import { ChevronDownIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
@@ -16,8 +16,17 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
-import { useMemberReport, useMemberReportWrite, type MemberReportPatch, type MemberReportRead } from "../use-member-report";
 import {
+  useMemberReport,
+  useMemberReportWrite,
+  useRefreshTreasury,
+  useSellingCostWrite,
+  type MemberReportPatch,
+  type MemberReportRead,
+  type RefreshAnswer,
+} from "../use-member-report";
+import {
+  DRILL_KEYS,
   MISSING_WORDS,
   bpText,
   memberIndex,
@@ -28,11 +37,14 @@ import {
   saleFormula,
   spreadText,
   verdictText,
+  type DrillKey,
   type ReportMode,
   type Share,
 } from "./member-report-format";
+import { DrillSheet, TreasuryUpdated } from "./member-report-parts";
 import { AssumptionsSheet, MemberPickSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet, spreadOptions } from "./member-report-sheets";
-import { CalcSection, FormulaList } from "./project-returns-parts";
+import { CalcSection, FormulaList, type Resolve } from "./project-returns-parts";
+import { PERCENT_KINDS, PercentSheet, type PercentKind } from "./project-returns-sheets";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-1118 (decision 0263, concept A approved 2026-11-09): דוח שותף. A member's share if the company sells
@@ -41,7 +53,23 @@ import { CalcSection, FormulaList } from "./project-returns-parts";
 
 type SheetName = "members" | "pick" | "quote" | "yields" | "assumptions";
 
-const NO_LINKS = () => null;
+/** FLOW-1121: the selling cost's editor, of the report's value (the investment page's is of the ARV). */
+const SELLING_KIND: PercentKind = {
+  ...PERCENT_KINDS.selling,
+  help: "תיווך, עלויות סגירה ומסים במכירה, באחוזים מהשווי. בלי ערך משלו, 8%. נשמר בנכס, כמו בעמוד ההשקעה שלו.",
+  layer: "member-selling",
+};
+
+const SAMPLE_REFRESH = (): Promise<RefreshAnswer> => Promise.resolve({ requested: true });
+
+function isDrillKey(value: string): value is DrillKey {
+  return (DRILL_KEYS as readonly string[]).includes(value);
+}
+
+/** A sample's selling cost changed the way set_project_investment does (stories). */
+function withSelling(read: MemberReportRead, projectIds: readonly string[], bp: number | null): MemberReportRead {
+  return { ...read, properties: read.properties.map((p) => (projectIds.includes(p.project_id) ? { ...p, selling_cost_bp: bp } : p)) };
+}
 
 /** A patch applied to a sample's setting, the way set_member_report merges it (stories). */
 export function applyPatch(config: MemberReportConfig | null, patch: MemberReportPatch): MemberReportConfig {
@@ -60,7 +88,11 @@ function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string) {
   );
 }
 
-export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {}) {
+export function MemberReportScreen({ sample, refreshSample }: {
+  sample?: MemberReportRead;
+  /** Stories: what refresh_treasury_yields answers (with a sample, "requested" when left out). */
+  refreshSample?: () => Promise<RefreshAnswer>;
+} = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const preview = useHomePreview();
@@ -72,6 +104,11 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
   const write = useMemberReportWrite();
   const [sheet, setSheet] = useState<SheetName | null>(null);
   const [property, setProperty] = useState<PropertyShare | null>(null);
+  // FLOW-1121: the row of החישוב opened, and the selling cost being edited (a property's id, or "all").
+  const [drill, setDrill] = useState<DrillKey | null>(null);
+  const [selling, setSelling] = useState<string | null>(null);
+  const sellingWrite = useSellingCostWrite();
+  const treasury = useRefreshTreasury(live ? undefined : (refreshSample ?? SAMPLE_REFRESH));
   const phase = live ? screenPhase(preview, query) : { kind: "ready" as const };
 
   const result = useMemo(() => (data == null ? null : computeMemberShare(data.config, data.properties, data.treasuryYields)), [data]);
@@ -101,15 +138,67 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
     }
   }, [live, write]);
 
+  const saveSelling = useCallback(async (projectIds: readonly string[], bp: number | null): Promise<boolean> => {
+    if (!live) {
+      setSampled((current) => (current == null ? current : withSelling(current, projectIds, bp)));
+      return true;
+    }
+    try {
+      await sellingWrite.mutateAsync({ projectIds, bp });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [live, sellingWrite]);
+
+  // A selling cost saved here can be taken back, as on the investment page (DESIGN-RULES 0030): each property's
+  // percent before (null while it took the default) is kept, and ביטול puts every one back. The properties are
+  // written one by one; when one fails, the ones already written are put back and the write's own toast says so.
+  const toast = useToast();
+  const saveSellingWithUndo = useCallback(async (ids: readonly string[], bp: number | null): Promise<boolean> => {
+    const before = (result?.properties ?? [])
+      .filter((p) => ids.includes(p.projectId))
+      .map((p) => [p.projectId, p.sellingCostDefault ? null : p.sellingCostBp] as const);
+    const written: (typeof before)[number][] = [];
+    for (const entry of before) {
+      if (!(await saveSelling([entry[0]], bp))) {
+        for (const [id, prior] of written) await saveSelling([id], prior);
+        return false;
+      }
+      written.push(entry);
+    }
+    toast.show({
+      message: "עלויות המכירה עודכנו",
+      action: "ביטול",
+      onAction: () => { void (async () => { for (const [id, prior] of before) await saveSelling([id], prior); })(); },
+    });
+    return true;
+  }, [result, saveSelling, toast]);
+
   const canEdit = data?.canEdit === true;
   const config = data?.config ?? {};
   const companyCurrency = useCompanyCurrency();
   const currency = result?.currency ?? companyCurrency;
+  const updated = (
+    <TreasuryUpdated fetchedAt={data?.treasuryFetchedAt} busy={treasury.busy} onRefresh={canEdit ? () => { void treasury.refresh(); } : undefined} />
+  );
 
   const back = `/reports${backSearch}`;
   if (result == null) {
     return <ScreenState title="דוח שותף" kicker="דוחות" backTo={back} phase={phase.kind === "ready" ? { kind: "loading" } : phase} onRetry={() => { void query.refetch(); }} />;
   }
+  // Every row of החישוב opens its parts (FLOW-1121).
+  const resolve: Resolve = (target) => {
+    if (target.kind !== "sheet" || !isDrillKey(target.sheet)) return null;
+    const key = target.sheet;
+    return { onClick: () => { setDrill(key); } };
+  };
+  // The selling cost being edited: one property's own percent (null while it takes the default), or every
+  // property's when they share one.
+  const sellingIds = selling == null ? [] : selling === "all" ? result.properties.map((p) => p.projectId) : [selling];
+  const sellingShown = result.properties.filter((p) => sellingIds.includes(p.projectId));
+  const sellingBp = sellingShown.length > 0 && sellingShown.every((p) => !p.sellingCostDefault && p.sellingCostBp === sellingShown[0]?.sellingCostBp)
+    ? (sellingShown[0]?.sellingCostBp ?? null) : null;
   const memberMinor = member == null ? null : mode === "sell" ? member.saleMinor : member.refinanceMinor;
   const whole = mode === "sell" ? result.totals.saleNetMinor : result.totals.cashOutMinor;
   const figure = memberMinor ?? whole;
@@ -152,9 +241,9 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
           </section>
         )}
         <CalcSection title="החישוב" total={null}>
-          <FormulaList formula={mode === "sell" ? saleFormula(result, share, memberMinor) : refiFormula(result, share, memberMinor)} currency={currency} resolve={NO_LINKS} label="החישוב" />
+          <FormulaList formula={mode === "sell" ? saleFormula(result, share, memberMinor) : refiFormula(result, share, memberMinor)} currency={currency} resolve={resolve} label="החישוב" />
         </CalcSection>
-        {mode === "refi" ? <RateSection result={result} canEdit={canEdit} onOpen={setSheet} onSave={save} config={config} /> : null}
+        {mode === "refi" ? <RateSection result={result} canEdit={canEdit} onOpen={setSheet} onSave={save} config={config} updated={updated} /> : null}
         <section className="ui-msr-props" aria-labelledby="msr-props">
           <h2 id="msr-props" className="t-section">לפי נכס</h2>
           <List>
@@ -186,8 +275,17 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
       <QuoteSheet open={sheet === "quote"} onOpenChange={(open) => { setSheet(open ? "quote" : null); }} onSave={save}
         quotes={config.quotes ?? []} quoteDate={result.rate.quoteDate} expectedPpm={result.rate.expectedPpm}
         properties={result.properties.map((p) => ({ projectId: p.projectId, name: p.name }))} />
-      <YieldsSheet open={sheet === "yields"} onOpenChange={(open) => { setSheet(open ? "yields" : null); }} onSave={save} config={config} result={result} />
+      <YieldsSheet open={sheet === "yields"} onOpenChange={(open) => { setSheet(open ? "yields" : null); }} onSave={save} config={config} result={result} updated={updated} />
       <AssumptionsSheet open={sheet === "assumptions"} onOpenChange={(open) => { setSheet(open ? "assumptions" : null); }} onSave={save} result={result} />
+      <DrillSheet drill={drill} mode={mode} onOpenChange={(open) => { if (!open) setDrill(null); }} result={result} currency={currency} search={backSearch}
+        onEditSelling={canEdit ? (id) => { setDrill(null); setSelling(id ?? "all"); } : undefined} />
+      <PercentSheet
+        kind={{ ...SELLING_KIND, title: selling === "all" ? "עלויות מכירה · כל הנכסים" : `עלויות מכירה · ${sellingShown[0]?.name ?? ""}` }}
+        open={selling != null}
+        onOpenChange={(open) => { if (!open) setSelling(null); }}
+        bp={sellingBp}
+        onSave={(bp) => saveSellingWithUndo(sellingIds, bp)}
+      />
       <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} currency={currency} />
     </div>
   );
@@ -199,13 +297,17 @@ function heroLabel(mode: ReportMode, name: string | null): string {
   return mode === "sell" ? `החלק של ${name} אם מוכרים הכל` : `החלק של ${name} מריפייננס`;
 }
 
+const YIELDS_AUTO = "תשואות האג״ח מתעדכנות אוטומטית מאתר משרד האוצר.";
+
 /** ריבית צפויה מול ההצעות: the quotes' date, the rule (5/10 years, +1.5/+2.0), the expected rate, the quotes. */
-function RateSection({ result, canEdit, onOpen, onSave, config }: {
+function RateSection({ result, canEdit, onOpen, onSave, config, updated }: {
   result: MemberShareResult;
   canEdit: boolean;
   onOpen: (sheet: SheetName) => void;
   onSave: (patch: MemberReportPatch) => Promise<boolean>;
   config: MemberReportConfig;
+  /** When the Treasury's yields were last fetched, and the owner's רענון (FLOW-1121). */
+  updated: ReactNode;
 }) {
   const rate = result.rate;
   const toast = useToast();
@@ -216,14 +318,16 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
     toast.show({ message: `ההצעה של ${lender} הוסרה`, action: "ביטול", onAction: () => { void onSave({ quotes: before }); } });
   };
   const rule = (tenor: 5 | 10, spread: number) => { void onSave({ rate_rule: { tenor_years: tenor, spread_bp: spread } }); };
+  // With no quote and no yield yet, the date is today's: the yields sheet opens on it.
+  const date = formatDisplay(rate.quoteDate ?? israelToday());
   return (
     <CalcSection title="ריבית צפויה מול ההצעות" total={rate.expectedPpm == null ? null : <bdi dir="ltr" className="ui-num">{ppmText(rate.expectedPpm)}</bdi>}>
       <div className="ui-msr-rate">
         <div className="ui-msr-rate-line">
           <span className="t-muted">תאריך ההצעות</span>
           {canEdit ? (
-            <Button variant="secondary" onClick={() => { onOpen("yields"); }}>{rate.quoteDate == null ? "בחירה" : formatDisplay(rate.quoteDate)}</Button>
-          ) : <span>{rate.quoteDate == null ? "—" : formatDisplay(rate.quoteDate)}</span>}
+            <Button variant="secondary" onClick={() => { onOpen("yields"); }}>{date}</Button>
+          ) : <span>{date}</span>}
         </div>
         <SegmentedControl label="אג״ח ארה״ב" value={String(rate.tenorYears)} disabled={!canEdit}
           options={[{ value: "5", label: "5 שנים" }, { value: "10", label: "10 שנים" }]}
@@ -233,12 +337,13 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
           onChange={(next) => { rule(rate.tenorYears, Number(next)); }} />
         <p className="ui-msr-formula">
           {rate.yieldPpm == null
-            ? (canEdit ? "חסרה תשואת האג״ח לתאריך. הקישו על התאריך כדי להוסיף." : "חסרה תשואת האג״ח לתאריך.")
+            ? (canEdit ? `${YIELDS_AUTO} אפשר גם להקליד ידנית.` : YIELDS_AUTO)
             : `אג״ח ${String(rate.tenorYears)} שנים ${ppmText(rate.yieldPpm)} ${spreadText(rate.spreadBp)}`}
         </p>
         {rate.yieldDate == null ? null : (
           <p className="ui-msr-yield-source">{`תשואה מ־${formatDisplay(rate.yieldDate)} · ${rate.yieldSource === "treasury" ? "משרד האוצר" : "הוקלד"}`}</p>
         )}
+        {updated}
       </div>
       <List>
         {result.quotes.map((q) => (
@@ -253,6 +358,7 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
             )} />
         ))}
       </List>
+      {result.quotes.length === 0 ? <p className="ui-msr-note">{canEdit ? "עוד אין הצעות. הוסיפו הצעה כדי להשוות." : "עוד אין הצעות."}</p> : null}
       {canEdit ? <Button variant="link" onClick={() => { onOpen("quote"); }}>+ הוספת הצעה</Button> : null}
     </CalcSection>
   );
