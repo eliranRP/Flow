@@ -1,0 +1,133 @@
+/* FLOW-1118 (decision 0263): דוח שותף, the member share report and its sheets (concept A, 2026-11-09). */
+
+.ui-msr {
+  gap: var(--space-inset-row);
+  padding-block-end: var(--space-6);
+}
+
+/* Before any ownership is set: why the figure is the company's, and the way to set the members. */
+.ui-msr-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-msr-empty h2,
+.ui-msr-empty p {
+  margin: 0;
+}
+
+.ui-msr-empty p,
+.ui-msr-help,
+.ui-msr-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-msr-props {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The rate card: the date, the rule's two choices and the formula, above the quotes. */
+.ui-msr-rate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block-end: var(--space-2);
+}
+
+.ui-msr-rate-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ui-msr-formula {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+}
+
+.ui-msr-quote-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-msr-quote-end [data-verdict="good"],
+.ui-msr-verdict[data-verdict="good"] {
+  color: var(--color-good);
+}
+
+.ui-msr-quote-end [data-verdict="high"],
+.ui-msr-verdict[data-verdict="high"] {
+  color: var(--color-bad);
+}
+
+/* The sheets. */
+.ui-msr-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-msr-members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-msr-member {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-end: var(--space-3);
+  border-block-end: var(--stroke-hairline) solid var(--color-line);
+}
+
+.ui-msr-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ui-msr-total,
+.ui-msr-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-input);
+  background: var(--color-bad-tint);
+  color: var(--color-bad);
+}
+
+.ui-msr-total[data-ok],
+.ui-msr-verdict {
+  background: var(--color-tint);
+  color: var(--color-text);
+}
+
+.ui-msr-total[data-ok] {
+  color: var(--color-good);
+}
+
+.ui-msr-problem {
+  margin: 0;
+  color: var(--color-bad);
+  font-size: var(--type-meta-size);
+}

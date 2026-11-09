@@ -161,3 +161,15 @@ export { projectsCashMonthSchema } from "./projects-cash.ts";
 export type { ProjectCashCurrencyRow, ProjectCashRow, ProjectsCashMonth } from "./projects-cash.ts";
 export { partyChargesSchema } from "./party-charges.ts";
 export type { PartyCharges } from "./party-charges.ts";
+export { MEMBER_REPORT_DEFAULTS, applyBp, computeMemberShare } from "./member-share.ts";
+export type {
+  LoanType,
+  MemberReportConfig,
+  MemberReportProperty,
+  MemberReportQuote,
+  MemberReportYield,
+  MemberShareResult,
+  PropertyShare,
+  QuoteShare,
+  QuoteVerdict,
+} from "./member-share.ts";
