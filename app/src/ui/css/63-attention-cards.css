@@ -39,22 +39,30 @@
 }
 
 .ui-attn-item {
-  overflow: hidden;
   max-block-size: calc(var(--touch-min) + var(--space-3) + var(--space-2));
+}
+
+/* FLOW-1141: the v3 row-card fold (ui/fold.tsx), shared by these cards and the utility refunds list. A
+   .ui-fold item folds from its own height, set on it when the fold starts. */
+.ui-attn-item,
+.ui-fold {
+  overflow: hidden;
   transition:
     max-block-size var(--motion-sheet-out) var(--ease-exit),
     opacity var(--motion-toast-out) var(--ease-linear),
     transform var(--motion-sheet-out) var(--ease-exit);
 }
 
-/* Toward the X, at the inline end: left under dir=rtl. */
-.ui-attn-item[data-leaving] {
+/* Toward the X or the ✓, at the inline end: left under dir=rtl. */
+.ui-attn-item[data-leaving],
+.ui-fold[data-leaving] {
   max-block-size: 0;
   opacity: 0;
   transform: translateX(calc(-1 * var(--rise-push)));
 }
 
-.ui-attn-item[data-leaving]:dir(ltr) {
+.ui-attn-item[data-leaving]:dir(ltr),
+.ui-fold[data-leaving]:dir(ltr) {
   transform: translateX(var(--rise-push));
 }
 

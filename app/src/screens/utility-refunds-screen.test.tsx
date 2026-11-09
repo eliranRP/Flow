@@ -8,7 +8,7 @@ import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { GEFEN, PINE, utilityRefundsSample } from "./utility-refunds-sample";
 import { ToastProvider } from "../ui/toast";
 import { parseUtilityRefundCount } from "../utility-refund-count";
-import { cardWhy, paymentMeta, paymentsTaken, refundGroups } from "../utility-refund-view";
+import { cardWhy, paymentMeta, paymentsTaken, refundDate, refundGroups } from "../utility-refund-view";
 import type { UtilityBill } from "../utility-refunds";
 
 // FLOW-1135 (decision 0265): החזרי חשבונות. Home's row, the cards, and every live answer with its ביטול.
@@ -134,7 +134,7 @@ describe("the cards", () => {
     const [gefen, pine] = groups;
     expect(gefen && cardWhy(gefen.cards[0] as never)).toBe("השכירות $1,800 + החשבון $84.20");
     expect(pine && cardWhy(pine.cards[0] as never)).toBe("אותו סכום · התשלום בלי פרויקט");
-    expect(pine && paymentMeta(pine.cards[0] as never)).toBe("בלי פרויקט · הכנסה אחרת · 12/09 · 7 ימים אחרי");
+    expect(pine && paymentMeta(pine.cards[0] as never)).toBe("בלי פרויקט · הכנסה אחרת · 12/09/26 · 7 ימים אחרי");
   });
 
   it("shows the summary, the figure and both properties", async () => {
@@ -142,7 +142,7 @@ describe("the cards", () => {
     expect(await screen.findByText("4 לא הוחזרו · 2 לבדיקה")).toBeTruthy();
     expect(document.querySelector(".ui-urf-figure")?.textContent).toBe("−$295.39");
     expect(screen.getAllByRole("region", { name: /החזר אפשרי/ })).toHaveLength(2);
-    expect(screen.getByText("לא הוחזר · 90 ימים · 11/08 · חודש בלי שכירות")).toBeTruthy();
+    expect(screen.getByText("לא הוחזר · 90 ימים · 11/08/26 · חודש בלי שכירות")).toBeTruthy();
   });
 
   it("limits the list to one property with ?project=", async () => {
@@ -179,7 +179,7 @@ describe("the answers and their ביטול", () => {
     fireEvent.click(await screen.findByRole("button", { name: "כן, זה ההחזר" }));
     expect(await screen.findByText("Power Co · סומן כהוחזר")).toBeTruthy();
     expect(calls("answer_utility_refund")).toEqual([{ p_bill_transaction_id: "b-power-pine", p_state: "matched", p_payment_transaction_id: "pay-zelle-b" }]);
-    expect(screen.queryByRole("region", { name: /החזר אפשרי/ })).toBeNull();
+    await waitFor(() => { expect(screen.queryByRole("region", { name: /החזר אפשרי/ })).toBeNull(); });
     await undo();
     await waitFor(() => { expect(calls("answer_utility_refund")).toHaveLength(2); });
     expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-power-pine", p_state: null, p_payment_transaction_id: "pay-zelle-b" });
@@ -221,7 +221,7 @@ describe("the answers and their ביטול", () => {
     renderScreen(`/utility-refunds?project=${GEFEN}`);
     fireEvent.click(await screen.findByRole("button", { name: "להשאיר" }));
     expect(await screen.findByText("נשאר כמו שהוא")).toBeTruthy();
-    expect(screen.queryByText("ייתכן שסווג לא נכון")).toBeNull();
+    await waitFor(() => { expect(screen.queryByText("ייתכן שסווג לא נכון")).toBeNull(); });
     expect(calls("answer_utility_refund")).toEqual([{ p_bill_transaction_id: "b-water-gefen", p_state: "matched", p_payment_transaction_id: "pay-zelle-a", p_keep_category: true }]);
     await undo();
     await waitFor(() => { expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-water-gefen", p_state: "matched", p_payment_transaction_id: "pay-zelle-a", p_keep_category: false }); });
@@ -243,7 +243,7 @@ describe("the answers and their ביטול", () => {
     fireEvent.click(await screen.findByRole("button", { name: "סימון הכל כנראה" }));
     expect(await screen.findByText("דירת הגפן 3 · 2 סומנו כנראה")).toBeTruthy();
     expect(calls("mark_utility_refunds_seen")).toEqual([{ p_project_id: GEFEN }]);
-    expect(screen.queryByRole("button", { name: /^ראיתי:/ })).toBeNull();
+    await waitFor(() => { expect(screen.queryByRole("button", { name: /^ראיתי:/ })).toBeNull(); });
     await undo();
     await waitFor(() => { expect(calls("unmark_utility_refunds_seen")).toEqual([{ p_bill_transaction_ids: ["b-power-gefen", "b-gas-gefen"] }]); });
     expect(await screen.findAllByRole("button", { name: /^ראיתי:/ })).toHaveLength(2);
@@ -321,5 +321,84 @@ describe("the answers and their ביטול", () => {
     fireEvent.click(await screen.findByRole("button", { name: "ראיתי: Net Co" }));
     expect(await screen.findByText("הסימון לא נשמר. אפשר לנסות שוב.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "ראיתי: Net Co" })).toBeTruthy();
+  });
+});
+
+// FLOW-1141 (the owner): a bill row or a card answered slides toward its ✓ and folds (ui/fold.tsx), and stays
+// in the list until the fold ends; under reduced motion it goes at once; ביטול brings it back.
+describe("the fold", () => {
+  const item = (name: string) => screen.getByRole("button", { name }).closest(".ui-fold");
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps a row closed with ✓ in the list while it folds, then drops it", async () => {
+    renderScreen();
+    fireEvent.click(await screen.findByRole("button", { name: "ראיתי: Gas Co" }));
+    expect(item("ראיתי: Gas Co")?.hasAttribute("data-leaving")).toBe(true);
+    expect(item("ראיתי: Gas Co")?.hasAttribute("inert")).toBe(true);
+    expect(await screen.findByText("Gas Co · ראיתי")).toBeTruthy();
+    // The write answered; the row is still folding.
+    expect(screen.getByRole("button", { name: "ראיתי: Gas Co" })).toBeTruthy();
+    await waitFor(() => { expect(screen.queryByRole("button", { name: "ראיתי: Gas Co" })).toBeNull(); });
+  });
+
+  it("folds every row סימון הכל כנראה closes", async () => {
+    renderScreen(`/utility-refunds?project=${GEFEN}`);
+    fireEvent.click(await screen.findByRole("button", { name: "סימון הכל כנראה" }));
+    expect(item("ראיתי: Power Co")?.hasAttribute("data-leaving")).toBe(true);
+    expect(item("ראיתי: Gas Co")?.hasAttribute("data-leaving")).toBe(true);
+    await waitFor(() => { expect(screen.queryByRole("button", { name: /^ראיתי:/ })).toBeNull(); });
+  });
+
+  it("folds a suggestion card answered לא", async () => {
+    renderScreen(`/utility-refunds?project=${PINE}`);
+    fireEvent.click(await screen.findByRole("button", { name: "לא" }));
+    expect(screen.getByRole("region", { name: /החזר אפשרי/ }).closest(".ui-fold")?.hasAttribute("data-leaving")).toBe(true);
+    await waitFor(() => { expect(screen.queryByRole("region", { name: /החזר אפשרי/ })).toBeNull(); });
+  });
+
+  it("ביטול mid-fold stops the fold and keeps the row", async () => {
+    renderScreen();
+    fireEvent.click(await screen.findByRole("button", { name: "ראיתי: Net Co" }));
+    await undo();
+    await waitFor(() => { expect(calls("answer_utility_refund")).toHaveLength(2); });
+    await waitFor(() => { expect(item("ראיתי: Net Co")?.hasAttribute("data-leaving")).toBe(false); });
+    await new Promise((resolve) => { setTimeout(resolve, 400); });
+    expect(screen.getByRole("button", { name: "ראיתי: Net Co" })).toBeTruthy();
+  });
+
+  it("with reduced motion the row goes at once", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("prefers-reduced-motion"), media: query, onchange: null,
+      addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+    }));
+    renderScreen();
+    fireEvent.click(await screen.findByRole("button", { name: "ראיתי: Gas Co" }));
+    expect(screen.queryByRole("button", { name: "ראיתי: Gas Co" })).toBeNull();
+    await undo();
+    expect(await screen.findByRole("button", { name: "ראיתי: Gas Co" })).toBeTruthy();
+  });
+});
+
+// FLOW-1141 (the owner): every date on the utility refund screens reads dd/mm/yy.
+describe("the dates", () => {
+  it("writes each date with its year", () => {
+    expect(refundDate("2026-09-14")).toBe("14/09/26");
+    expect(refundDate("2025-12-31")).toBe("31/12/25");
+  });
+
+  it("shows the bills', the payments' and the picker's dates as dd/mm/yy", async () => {
+    renderScreen(`/utility-refunds?project=${GEFEN}`);
+    expect(await screen.findByText("לא הוחזר · 67 ימים · 03/09/26")).toBeTruthy();
+    expect(screen.getByText("חשמל ומים · 14/09/26")).toBeTruthy();
+    expect(screen.getByText("שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
+    const [row] = screen.getAllByRole("button", { name: /^Power Co/ });
+    fireEvent.click(row as HTMLElement);
+    fireEvent.click(await screen.findByRole("button", { name: "הוחזר · בחירת התשלום" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Power Co · $128.40 · 03/09/26")).toBeTruthy();
+    expect(await within(dialog).findByText("שכירות · 01/10/26")).toBeTruthy();
   });
 });

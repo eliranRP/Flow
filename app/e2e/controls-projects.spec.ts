@@ -15,7 +15,7 @@ test("projects list, finished projects, and the new-project sheet", async ({ pag
   const renovation = page.getByRole("region", { name: "שיפוץ" });
   await expect(renovation.getByRole("link", { name: /^Lark Hill/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "השכרה" }).getByRole("link", { name: /^Birch St/ })).toBeVisible();
-  await expect(page.getByRole("region", { name: "לקוח" }).getByRole("link", { name: /^Halvorsen/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "פרויקט" }).getByRole("link", { name: /^Halvorsen/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "תקורה" })).toBeVisible();
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toHaveCount(0);
   await filter.getByRole("radio", { name: "הסתיימו" }).click();
@@ -38,7 +38,7 @@ test("projects list, finished projects, and the new-project sheet", async ({ pag
   await kind.getByRole("radio", { name: "השכרה" }).click();
   await expect(dialog.getByRole("textbox", { name: "שווי הנכס היום" })).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: "תקציב שיפוץ" })).toHaveCount(0);
-  await kind.getByRole("radio", { name: "לקוח" }).click();
+  await kind.getByRole("radio", { name: "פרויקט" }).click();
   await expect(dialog.getByRole("textbox", { name: "סכום החוזה" })).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: "מחיר קנייה" })).toHaveCount(0);
   await kind.getByRole("radio", { name: "תקורה" }).click();

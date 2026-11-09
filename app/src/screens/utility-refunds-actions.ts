@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { useInvalidateBooks } from "../use-books";
+import { useFold } from "../ui/fold";
 import { useToast } from "../ui/toast";
 import {
   answerUtilityRefund,
@@ -42,14 +43,17 @@ function sameUtility(bill: UtilityBill, key: UtilityKey): boolean {
 }
 
 /**
- * FLOW-1135 (V3-UtilityRefunds): every answer on the list. Each one takes its card or row away at once, writes,
- * and shows a toast whose ביטול calls the write's take-back path (answer null, unmark_utility_refunds_seen,
- * undo_utility_refile, set_utility_payer back to the prior). A failed write puts the card back and says so.
+ * FLOW-1135 (V3-UtilityRefunds): every answer on the list. Each one folds its card or row away at once (FLOW-1141:
+ * the v3 row-card fold, ui/fold.tsx; it stays in the list until the fold ends), writes, and shows a toast whose
+ * ביטול calls the write's take-back path (answer null, unmark_utility_refunds_seen, undo_utility_refile,
+ * set_utility_payer back to the prior) and brings it back. A failed write puts the card back and says so. The
+ * reads refresh once the fold has ended, so the data drops a row only after it has folded.
  */
 export function useUtilityRefundActions() {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const [local, setLocal] = useState<ReadonlyMap<string, LocalAnswer>>(new Map());
+  const { leaving, fold, cancel } = useFold();
 
   const mark = (keys: readonly string[], value: LocalAnswer | null) => {
     setLocal((before) => {
@@ -62,8 +66,12 @@ export function useUtilityRefundActions() {
     });
   };
 
-  /** Runs a write; false after a failure, which the toast names. */
-  async function write(run: () => Promise<unknown>, failure: string, ledger = false): Promise<boolean> {
+  const refresh = (ledger: boolean) => {
+    void invalidate(ledger ? [...UTILITY_KEYS, ...LEDGER_KEYS] : [...UTILITY_KEYS]);
+  };
+
+  /** Runs a write; false after a failure, which the toast names. With `now`, the reads refresh at once. */
+  async function write(run: () => Promise<unknown>, failure: string, ledger = false, now = true): Promise<boolean> {
     try {
       await run();
     } catch (error) {
@@ -71,11 +79,11 @@ export function useUtilityRefundActions() {
       toast.show({ tone: "bad", message: changed ? FAILED.changed : failure });
       return false;
     }
-    void invalidate(ledger ? [...UTILITY_KEYS, ...LEDGER_KEYS] : [...UTILITY_KEYS]);
+    if (now) refresh(ledger);
     return true;
   }
 
-  /** Hides `keys`, writes, and offers ביטול; `back` is what the keys show after the ביטול. */
+  /** Folds `keys` away, writes, and offers ביטול; `back` is what the keys show after the ביטול. */
   async function answer({ keys, run, failure, message, undo, back = null, ledger = false }: {
     keys: readonly string[];
     run: () => Promise<unknown>;
@@ -85,9 +93,10 @@ export function useUtilityRefundActions() {
     back?: LocalAnswer | null;
     ledger?: boolean;
   }) {
-    mark(keys, "hidden");
-    if (!(await write(run, failure, ledger))) {
-      mark(keys, back);
+    // Each row is hidden as its own fold ends, unless a failure or ביטול stopped it.
+    const folds = keys.map((key) => fold(key, () => { mark([key], "hidden"); }));
+    if (!(await write(run, failure, ledger, false))) {
+      for (const key of keys) cancel(key);
       return;
     }
     toast.show({
@@ -95,10 +104,14 @@ export function useUtilityRefundActions() {
       action: "ביטול",
       onAction: () => {
         void (async () => {
-          if (await write(undo, FAILED.undo, ledger)) mark(keys, back);
+          if (!(await write(undo, FAILED.undo, ledger))) return;
+          for (const key of keys) cancel(key);
+          mark(keys, back);
         })();
       },
     });
+    await Promise.all(folds);
+    refresh(ledger);
   }
 
   const rpc = useUtilityRpc();
@@ -108,6 +121,8 @@ export function useUtilityRefundActions() {
 
   return {
     local,
+    /** The cards and rows folding away now, by key (a card's key or a bill's id). */
+    leaving,
     /** כן, זה ההחזר: a payment filed elsewhere stays, with the note and its fix; otherwise the card goes. */
     yes(card: RefundCard) {
       const pay = card.payment.transaction_id;

@@ -166,7 +166,7 @@ export const ProjectsLong: Story = {
 };
 
 /** FLOW-1044 (board V3-NewProject): the kind comes first and the fields follow it. One story per kind. */
-function newProjectStory(kind: "שיפוץ" | "השכרה" | "לקוח" | "תקורה", fields: string[]): Story {
+function newProjectStory(kind: "שיפוץ" | "השכרה" | "פרויקט" | "תקורה", fields: string[]): Story {
   return {
     render: () => (
       <StoryRoute entry="/projects" tabs>
@@ -187,7 +187,7 @@ function newProjectStory(kind: "שיפוץ" | "השכרה" | "לקוח" | "תק�
 
 export const ProjectsNewRenovation: Story = { name: "Projects, new project, renovation", ...newProjectStory("שיפוץ", ["מחיר קנייה", "תקציב שיפוץ", "שווי צפוי אחרי שיפוץ"]) };
 export const ProjectsNewRental: Story = { name: "Projects, new project, rental", ...newProjectStory("השכרה", ["מחיר קנייה", "שווי הנכס היום"]) };
-export const ProjectsNewClient: Story = { name: "Projects, new project, client", ...newProjectStory("לקוח", ["סכום החוזה"]) };
+export const ProjectsNewClient: Story = { name: "Projects, new project, client", ...newProjectStory("פרויקט", ["סכום החוזה"]) };
 export const ProjectsNewOverhead: Story = { name: "Projects, new project, overhead", ...newProjectStory("תקורה", []) };
 
 /** FLOW-961: יצירת פרויקט is never disabled; with no name the tap says what to fill, under the field. */

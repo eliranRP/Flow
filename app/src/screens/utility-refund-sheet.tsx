@@ -7,7 +7,7 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ListSkeleton } from "../ui/skeleton";
 import { useUtilityRefundsQuery, type UtilityBill } from "../utility-refunds";
-import { dayMonth, openMeta, paymentsTaken } from "../utility-refund-view";
+import { openMeta, paymentsTaken, refundDate } from "../utility-refund-view";
 
 /**
  * A month before the bill: where a refund may start (decision 0265's window). The same day a month earlier,
@@ -69,7 +69,7 @@ function PaymentChoices({ bill, onPick }: { bill: UtilityBill; onPick: (paymentI
           variant="project"
           layout="flat"
           title={searchRowTitle(row)}
-          hint={[row.category_name ?? "בלי קטגוריה", row.project_id == null ? "בלי פרויקט" : null, dayMonth(row.doc_date)].filter(Boolean).join(" · ")}
+          hint={[row.category_name ?? "בלי קטגוריה", row.project_id == null ? "בלי פרויקט" : null, refundDate(row.doc_date)].filter(Boolean).join(" · ")}
           agorot={row.amount_original ?? row.amount_net}
           currency={row.currency}
           signed
@@ -114,7 +114,7 @@ export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPick
     >
       {current == null ? null : picking ? (
         <>
-          <p className="t-caption t-muted">{`${name} · ${formatAmountText(current.amount_minor, current.currency, { detail: true })} · ${dayMonth(current.doc_date)}`}</p>
+          <p className="t-caption t-muted">{`${name} · ${formatAmountText(current.amount_minor, current.currency, { detail: true })} · ${refundDate(current.doc_date)}`}</p>
           <PaymentChoices bill={current} onPick={(paymentId) => { onPicked(current, paymentId); }} />
           <Button variant="link" onClick={() => { setPicking(false); }}>חזרה</Button>
         </>
