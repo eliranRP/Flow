@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { formatMoney, type MemberProjection, type ProjectionResult, type PropertyProjection } from "@flow/shared";
 import { useState, type ReactNode } from "react";
 import { Amount } from "../ui/amount";
