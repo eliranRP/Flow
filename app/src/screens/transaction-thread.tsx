@@ -26,6 +26,7 @@ import { useWrite } from "../use-write";
 import { Button } from "../ui/button";
 import { CloseIcon, DocumentIcon } from "../ui/icons";
 import { PaperclipIcon, PencilIcon, TrashIcon } from "../ui/icons-later";
+import { Skeleton } from "../ui/skeleton";
 import "../ui/css/58-transaction-thread.css";
 
 const THREAD_KEYS = [THREAD_KEY, THREAD_COUNTS_KEY] as const;
@@ -248,9 +249,23 @@ export function usePickFiles(onPicked: (files: File[]) => void) {
   };
 }
 
-/** The thread section of the transaction page: the line's one note and its files. Nothing shows until the read answers; a failed read shows nothing. */
+/**
+ * The thread section of the transaction page: the line's one note and its files. While the read is out a writer's
+ * section holds its place with a skeleton (FLOW-1137); a viewer's shows nothing until it answers, since it shows
+ * only what is there. A failed read shows nothing.
+ */
 export function TransactionThread({ transactionId, holdWrites }: { transactionId: string; holdWrites: boolean }) {
   const thread = useThreadQuery(transactionId);
+  if (thread.isPending && thread.fetchStatus !== "idle" && !holdWrites) {
+    return (
+      <section className="ui-thread" aria-labelledby={`thread-${transactionId}`} aria-busy="true">
+        <div className="ui-thread-title">
+          <h2 id={`thread-${transactionId}`} className="t-section">הערה וקבצים</h2>
+        </div>
+        <Skeleton className="ui-thread-skel-note" />
+      </section>
+    );
+  }
   if (thread.data == null) return null;
   const note = threadNote(thread.data);
   if (holdWrites && note == null && thread.data.files.length === 0) return null;

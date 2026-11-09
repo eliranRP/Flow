@@ -1,6 +1,6 @@
 import type { CategoryRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { CategoriesScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, storyBody } from "../ui/screen-stories-support";
@@ -191,6 +191,19 @@ export const CategoriesNewTaken: Story = {
     const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "קטגוריה חדשה" });
     await userEvent.type(within(sheet).getByRole("textbox", { name: "שם" }), "חומרים");
     await within(sheet).findByText("כבר יש קטגוריה בשם הזה");
+  },
+};
+
+/** FLOW-1137: the page loads in its own shape: the segmented control, then an inset card of rows. */
+export const CategoriesLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories?preview=loading" tabs>
+      <ExampleBar />
+      <CategoriesScreen />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-grouped-skel-segment")).not.toBeNull());
   },
 };
 

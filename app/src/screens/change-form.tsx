@@ -17,7 +17,10 @@ import { LEDGER_KEYS } from "../ledger-keys";
 import { useJevReview } from "./jev-review-card";
 import { jevShown, withJev } from "./jev-review";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_SPLIT_NOTE, type ChangeChoice } from "../ui/change-sheet";
-import { ScreenState } from "../ui/screen-state";
+import { FailureLine } from "../ui/empty-state";
+import { RadioRowsSkeleton } from "../ui/loading-shapes";
+import { usePreviewRetry } from "../ui/screen-state";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { RouteSheet } from "../ui/route-sheet";
 import { useToast } from "../ui/toast";
 import { reversalChoices } from "../reversal";
@@ -127,6 +130,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const formPhase = phase.kind === "ready" && sample == null && row == null
     ? (deepLink.reading ? ({ kind: "loading" } as const) : ({ kind: "empty" } as const))
     : phase;
+  const retryForm = usePreviewRetry(() => { void dashboard.refetch(); void categories.refetch(); void review.refetch(); });
   const income = direction === "income";
   const splitReview = sample?.split === true || reviewIsSplit(row);
   useEffect(() => {
@@ -498,12 +502,15 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     : linePick === "category"
       ? reviewLineFocus.category
       : undefined;
-  if (writeGate === "wait") return null;
-  if (writeGate !== "show") return writeGate;
-  if (formPhase.kind !== "ready") {
+  if (writeGate !== "show" && writeGate !== "wait") return writeGate;
+  // FLOW-1137: while the role or the lists load, the sheet draws the picker's radio rows under its own
+  // title (no second header); a failed read says so there.
+  const sheetPhase = writeGate === "wait" ? ({ kind: "loading" } as const) : formPhase;
+  if (sheetPhase.kind !== "ready") {
     return (
       <RouteSheet title="שינוי שיוך" closeTo={closeTo} returnFocusRef={returnFocusRef}>
-        <ScreenState title="שינוי שיוך" phase={formPhase} onRetry={() => { void dashboard.refetch(); void categories.refetch(); void review.refetch(); }} />
+        {sheetPhase.kind === "loading" ? <DelayedSkeleton><RadioRowsSkeleton rows={2} /></DelayedSkeleton> : null}
+        {sheetPhase.kind === "error" ? <FailureLine offline={sheetPhase.offline} onRetry={retryForm} /> : null}
       </RouteSheet>
     );
   }

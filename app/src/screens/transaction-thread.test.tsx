@@ -85,8 +85,9 @@ const ownNote = { ...mercuryNote, id: "n1", source: "flow" as const, body: "Chec
 describe("TransactionThread", () => {
   it("shows the line's one note, Mercury's, with the line's files and the paperclip", async () => {
     render(wrap(<TransactionThread transactionId="t1" holdWrites={false} />));
-    expect(await screen.findByRole("heading", { name: "הערה וקבצים" })).toBeInTheDocument();
-    expect(screen.getByText("הערה מ־Mercury")).toBeInTheDocument();
+    // FLOW-1137: the heading shows while the read is out too, so wait for the note itself.
+    expect(await screen.findByText("הערה מ־Mercury")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "הערה וקבצים" })).toBeInTheDocument();
     expect(screen.getByText("Lumber for back deck, invoice #4471")).toBeInTheDocument();
     expect(screen.getByText("receipt-4471.pdf")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "צירוף קובץ" })).toBeInTheDocument();

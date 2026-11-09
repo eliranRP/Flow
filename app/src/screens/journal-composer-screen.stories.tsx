@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import {
   SAMPLE_BALANCED_START,
   SAMPLE_COMPOSER_ACCOUNTS,
@@ -88,4 +89,16 @@ export const NoHistory: Story = {
       initial={{ start: "free", legs: [{ key: "one", accountId: "a-sales", projectId: "p-herz", side: "credit", amount: "200000" }], copied: null }}
     />
   ),
+};
+
+/** FLOW-1137: while the line, its journal and the bank's name load (and while the role loads), the form's skeleton. */
+export const Loading: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t-sample/journal?preview=loading">
+      <JournalComposerScreen />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-form-skel")).not.toBeNull());
+  },
 };

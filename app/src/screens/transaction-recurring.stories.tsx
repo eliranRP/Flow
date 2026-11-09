@@ -1,6 +1,6 @@
 import type { PartyCharges, PaymentRecurring, TransactionDetail } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { TxnRecurring } from "./transaction-recurring";
 import { cheaperCharges, mailboxCharges, steadyCharges } from "../ui/related-charges.sample";
 import { StoryRoute } from "../ui/story-route";
@@ -48,10 +48,10 @@ const chargeSamples: Record<"mailbox" | "few" | "steady", PartyCharges> = {
   steady: steadyCharges,
 };
 
-function Demo({ state, charges }: { state: keyof typeof stateSamples; charges: keyof typeof chargeSamples }) {
+function Demo({ state, charges }: { state: keyof typeof stateSamples | "loading"; charges: keyof typeof chargeSamples }) {
   return (
     <StoryRoute entry="/transactions/t-rec">
-      <TxnRecurring txn={txn} holdWrites={false} sample={stateSamples[state]} sampleCharges={chargeSamples[charges]} context="דירת הגפן · חשבונות" />
+      <TxnRecurring txn={txn} holdWrites={false} sample={state === "loading" ? "loading" : stateSamples[state]} sampleCharges={chargeSamples[charges]} context="דירת הגפן · חשבונות" />
     </StoryRoute>
   );
 }
@@ -78,6 +78,14 @@ export const AllChargesSheet: Story = {
   args: { state: "found", charges: "mailbox" },
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: "לכל החיובים" }));
+  },
+};
+/** FLOW-1137: the recurring read is out: the value, hint and pace tag are skeletons, not "לא קבוע" as if read. */
+export const Loading: Story = {
+  args: { state: "loading", charges: "mailbox" },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText("לא קבוע")).toBeNull();
+    await expect(canvasElement.querySelectorAll(".ui-recurring-card .ui-skeleton-bar")).toHaveLength(3);
   },
 };
 /** Few earlier charges: no link to all of them, and the history stays short. */

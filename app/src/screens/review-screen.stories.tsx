@@ -1,5 +1,6 @@
 import type { ReviewRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import { ReviewAllList, ReviewQueue, ReviewScreen } from "./flow-screens";
 import { ReviewEmpty as ReviewDoneFrame } from "./review-shared";
 import { StoryRoute } from "../ui/story-route";
@@ -267,6 +268,7 @@ export const ReviewFiltered: Story = {
   ),
 };
 
+/** FLOW-1137: the queue loads as its one review card's skeleton, not list rows. */
 export const ReviewLoading: Story = {
   render: () => (
     <StoryRoute entry="/review?preview=loading" tabs>
@@ -274,6 +276,9 @@ export const ReviewLoading: Story = {
       <ReviewScreen />
     </StoryRoute>
   ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-review-card-loading")).not.toBeNull());
+  },
 };
 
 export const ReviewError: Story = {

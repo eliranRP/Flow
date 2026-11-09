@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { SettingsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
 import { StoryRoute } from "../ui/story-route";
@@ -23,6 +23,35 @@ export const SettingsMain: Story = {
       <SettingsScreen sample={{ ...pagesBusiness, teamCount: 3, companyCount: 2, categoryCount: 12, setupLeft: 2 }} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-1137: Settings loads in its grouped shape: two group heads, each over an inset card of icon rows. */
+export const SettingsLoading: Story = {
+  name: "Settings, loading",
+  render: () => (
+    <StoryRoute entry="/settings?preview=loading" tabs>
+      <ExampleBar />
+      <SettingsScreen />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-grouped-skel")).not.toBeNull());
+  },
+};
+
+/** FLOW-1137: the team count and the businesses are still read: their rows hold skeleton values, not a blank or nothing. */
+export const SettingsCountsLoading: Story = {
+  name: "Settings, counts loading",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...pagesBusiness, teamCount: "loading", companyCount: "loading", categoryCount: 12 }} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("החלפת עסק")).toBeVisible();
+    await expect(within(canvasElement).queryByRole("button", { name: /החלפת עסק/ })).toBeNull();
+  },
 };
 
 /** FLOW-972: offline, the line under the head says that changes wait for the connection. */

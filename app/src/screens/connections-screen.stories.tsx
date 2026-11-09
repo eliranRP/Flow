@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import { ConnectionsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
@@ -159,6 +160,20 @@ export const ConnectionsLoading: Story = {
       />
     </StoryRoute>
   ),
+};
+
+/** FLOW-1137: the page itself loads in its grouped shape (בנק וספרים, עזרים), not generic list rows. */
+export const ConnectionsPageLoading: Story = {
+  name: "Connections, page loading",
+  render: () => (
+    <StoryRoute entry="/settings/connections?preview=loading" tabs>
+      <ExampleBar />
+      <ConnectionsScreen />
+    </StoryRoute>
+  ),
+  play: async () => {
+    await waitFor(() => expect(document.querySelector(".ui-grouped-skel")).not.toBeNull());
+  },
 };
 
 export const ConnectionsError: Story = {

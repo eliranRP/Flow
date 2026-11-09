@@ -24,6 +24,7 @@ import { PeopleIcon } from "../ui/icons";
 import { BellIcon, BuildingIcon, DownloadIcon, PlugIcon, SparkIcon, TagIcon, ThemeIcon, TransferIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
+import { GroupedSkeleton } from "../ui/loading-shapes";
 import { ScreenState } from "../ui/screen-state";
 import { Button } from "../ui/button";
 import { LegalLinks } from "./legal-links";
@@ -67,12 +68,12 @@ export type SettingsSample = {
   loanCurrency?: LoanCurrency;
   /** FLOW-502. The התראות row's count. */
   notifications?: NotificationPrefs;
-  /** FLOW-601. The צוות row's count; left out, a sample has no צוות row. */
-  teamCount?: number;
+  /** FLOW-601. The צוות row's count; left out, a sample has no צוות row. "loading": the count's read is out. */
+  teamCount?: number | "loading";
   /** The visible categories, for the קטגוריות row. */
   categoryCount?: number;
-  /** The businesses the person belongs to, for the החלפת עסק row. */
-  companyCount?: number;
+  /** The businesses the person belongs to, for the החלפת עסק row. "loading": the read is out. */
+  companyCount?: number | "loading";
   /** FLOW-103. The company's profit basis, for the העסק page's row (a sample or preview). */
   basis?: BasisChoice;
   /** The העסק page's after-overhead switch, on (a sample only; live reads the company). */
@@ -237,6 +238,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         title="הגדרות"
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
+        loading={<GroupedSkeleton groups={[4, 3]} />}
       />
     );
   }
@@ -291,12 +293,12 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
 
   // FLOW-601: the owner's צוות row, with how many people are on the team.
   // Undefined hides the row; null shows it without a count (still loading, or the read failed).
-  const teamCount: number | null | undefined = holdOwner
+  const teamCount: number | "loading" | null | undefined = holdOwner
     ? undefined
     : sample
       ? sample.teamCount
       : live && liveCompany
-        ? (team.data?.members.length ?? null)
+        ? (team.data?.members.length ?? (team.isPending && team.fetchStatus !== "idle" ? "loading" : null))
         : undefined;
   // FLOW-502: per user, so it shows without a company too. A preview reads the sample, never the server.
   const notificationsSample = sample ? (sample.notifications ?? NO_PREFS) : preview !== "off" ? NO_PREFS : undefined;
@@ -304,7 +306,10 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const notificationsLoading = notificationsSample == null && notificationsQuery.isPending;
   const categoryCount = sample ? sample.categoryCount : live && liveCompany ? (categories.data?.filter((row) => !row.hidden).length ?? null) : undefined;
   const categoriesLoading = sample == null && liveCompany && categories.isPending;
-  const companyCount = sample ? sample.companyCount : companies.data?.companies.length;
+  // FLOW-1137: while the businesses are read, the החלפת עסק row holds its place with a skeleton count.
+  const companyCount = sample
+    ? sample.companyCount
+    : (companies.data?.companies.length ?? (companies.isPending && companies.fetchStatus !== "idle" ? "loading" : undefined));
   const setupLeft = setupEntry != null ? Math.max(0, 5 - setupEntry.done) : null;
 
   return (
@@ -341,7 +346,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
                 href={`/settings/team${search}`}
                 title="צוות"
                 icon={<PeopleIcon />}
-                value={teamCount == null ? undefined : <bdi className="ui-num" dir="ltr">{String(teamCount)}</bdi>}
+                value={teamCount == null || teamCount === "loading" ? undefined : <bdi className="ui-num" dir="ltr">{String(teamCount)}</bdi>}
+                skeleton={teamCount === "loading"}
               />
             ) : null}
             <SettingsPageRow
@@ -385,7 +391,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           buttonRef={themeRowRef}
           onClick={() => { setThemeOpen(true); }}
         />
-        {noCompany || companyCount == null ? null : (
+        {noCompany || companyCount == null ? null : companyCount === "loading" ? (
+          <ListRow variant="static" title="החלפת עסק" value={<Skeleton width="sm" />} icon={<TransferIcon />} />
+        ) : (
           <ListRow
             variant="button"
             title="החלפת עסק"
