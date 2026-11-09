@@ -1,6 +1,8 @@
 import { PROJECTION_SERIES, guessCostType, type CostType, type ProjectionConfig, type ProjectionSeries } from "@flow/shared";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import { IconButton } from "../ui/icon-button";
+import { CalendarIcon } from "../ui/icons";
 import { SelectField } from "../ui/select-field";
 import { Sheet } from "../ui/sheet";
 import { Stepper } from "../ui/stepper";
@@ -71,17 +73,27 @@ export function ForecastAssumptionsSheet({ open, onOpenChange, canEdit, projecti
       panelClassName="ui-sheet-wide ui-msr-sheet"
       action={canEdit ? <Button full busy={busy} disabled={problem != null} onClick={() => { void save(); }}>שמירה</Button> : undefined}
     >
-      <p className="ui-msr-help">לכל התיק. כל ערך מתחיל בברירת מחדל; לשכירות, לכל עלות ולעליית הערך אפשר לתת שינוי אחר לשנה מסוימת.</p>
+      <p className="ui-msr-help">לכל התיק. כל ערך מתחיל בברירת מחדל; לשכירות, לכל עלות ולעליית הערך אפשר לתת שינוי אחר לשנה מסוימת, בלוח השנה שליד השדה.</p>
       <section className="ui-msr-forecast-group" aria-labelledby="msr-fa-growth">
         <h3 id="msr-fa-growth" className="t-section">שינוי בכל שנה (%)</h3>
         {PROJECTION_SERIES.map((s) => (
           <div key={s} className="ui-msr-forecast-series">
-            {percent(SERIES_LABELS[s], draft.growth[s], (v) => { set({ growth: { ...draft.growth, [s]: v } }); })}
-            <Button variant="link" aria-expanded={openSeries === s} onClick={() => { setOpenSeries(openSeries === s ? null : s); }}>
-              {openSeries === s ? "סגירת השנים" : "שינוי שונה לשנה מסוימת"}
-            </Button>
+            <div className="ui-msr-forecast-series-row">
+              {percent(SERIES_LABELS[s], draft.growth[s], (v) => { set({ growth: { ...draft.growth, [s]: v } }); })}
+              {/* A year with its own change: the calendar opens the years; marked while open or while a year differs. */}
+              <IconButton
+                label={openSeries === s ? "סגירת השנים" : "שינוי שונה לשנה מסוימת"}
+                className="ui-msr-forecast-years-toggle"
+                aria-expanded={openSeries === s}
+                aria-controls={`msr-fa-years-${s}`}
+                data-on={openSeries === s || draft.byYear[s].some((v) => v.trim() !== "") ? "" : undefined}
+                onClick={() => { setOpenSeries(openSeries === s ? null : s); }}
+              >
+                <CalendarIcon />
+              </IconButton>
+            </div>
             {openSeries === s ? (
-              <div className="ui-msr-forecast-years-grid">
+              <div id={`msr-fa-years-${s}`} className="ui-msr-forecast-years-grid">
                 {draft.byYear[s].map((v, i) => (
                   <TextField key={i} label={`שנה ${String(i + 1)}`} numeric inputMode="decimal" dir="ltr" value={v} placeholder={draft.growth[s]} disabled={!canEdit}
                     onChange={(event) => { set({ byYear: { ...draft.byYear, [s]: draft.byYear[s].map((x, j) => (j === i ? event.target.value : x)) } }); }} />
