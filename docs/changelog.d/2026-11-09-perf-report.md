@@ -1,0 +1,1 @@
+The 2026-11-09 daily perf report is in `docs/qa/perf/`. FLOW-1115 (#1066) is in production: a cold start on Home sends its figures' two reads before the first render, so on most loads Home's figures now show at about 1.7 to 1.8 s on the test phone, against 1.9 to 2.1 s this morning.
