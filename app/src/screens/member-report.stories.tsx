@@ -89,6 +89,25 @@ export const Refinance: Story = {
     await expect(canvas.getByText(/מתחת לצפוי ב־0.08% · הצעה טובה/)).toBeInTheDocument();
     // Member A's half of $134,505 freed: $67,252.50.
     await expect(canvas.getByRole("list", { name: "החישוב" }).textContent).toMatch(/67,25[23]/);
+    await expect(canvas.getByText("תשואה מ־03/11/2026 · הוקלד")).toBeInTheDocument();
+    await fits(canvasElement);
+  },
+};
+
+/** FLOW-1119: no yield typed; the Treasury's fetched day before the quote date gives the expected rate. */
+export const FetchedYield: Story = {
+  render: () => (
+    <Report entry="/reports/member?mode=refi" sample={{
+      ...MEMBER_REPORT,
+      config: { ...MEMBER_REPORT.config, yields: [] },
+      treasuryYields: [{ on_date: "2026-10-30", y5_ppm: 40_900, y10_ppm: 43_500 }],
+    }} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 10 year 4.35% on Friday 30/10 + 1.5 = 5.85%, from the Treasury.
+    await expect((await canvas.findAllByText("5.85%")).length).toBeGreaterThan(0);
+    await expect(canvas.getByText("תשואה מ־30/10/2026 · משרד האוצר")).toBeInTheDocument();
     await fits(canvasElement);
   },
 };

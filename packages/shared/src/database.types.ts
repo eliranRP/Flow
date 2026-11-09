@@ -1514,6 +1514,19 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"treasury_yields": {
+                  Row: {
+                    "fetched_at": string,"on_date": string,"y10_ppm": number | null,"y5_ppm": number | null
+                  }
+                  Insert: {
+                    "fetched_at"?: string,"on_date": string,"y10_ppm"?: number | null,"y5_ppm"?: number | null
+                  }
+                  Update: {
+                    "fetched_at"?: string,"on_date"?: string,"y10_ppm"?: number | null,"y5_ppm"?: number | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -2577,6 +2590,9 @@ isOneToOne: false
                            },
 "store_mcp_credential":
 { Args: { "p_client"?: string,"p_expires_at": string,"p_hint"?: string,"p_name"?: string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
+                           },
+"store_treasury_yields":
+{ Args: { "p_rows": Json }; Returns: number
                            },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json

@@ -42,10 +42,10 @@ export const MEMBER_CONFIG: MemberReportConfig = {
   quote_date: "2026-11-03",
 };
 
-export const MEMBER_REPORT: MemberReportRead = { config: MEMBER_CONFIG, properties: MEMBER_PROPERTIES, canEdit: true };
+export const MEMBER_REPORT: MemberReportRead = { config: MEMBER_CONFIG, properties: MEMBER_PROPERTIES, treasuryYields: [], canEdit: true };
 
 /** Before any ownership is set: the company's figures only. */
-export const MEMBER_REPORT_EMPTY: MemberReportRead = { config: null, properties: MEMBER_PROPERTIES, canEdit: true };
+export const MEMBER_REPORT_EMPTY: MemberReportRead = { config: null, properties: MEMBER_PROPERTIES, treasuryYields: [], canEdit: true };
 
 /** A property with no value yet and one in shekels: both left out, and named. */
 export const MEMBER_REPORT_LEFT_OUT: MemberReportRead = {

@@ -144,7 +144,7 @@ function ReportCard({ to, title, label, figure, chart, facts, after }: { to: str
  * for a company with no property to count.
  */
 function MemberCard({ read, to }: { read: MemberReportRead; to: string }) {
-  const r = computeMemberShare(read.config, read.properties);
+  const r = computeMemberShare(read.config, read.properties, read.treasuryYields);
   if (r.properties.length === 0 || r.currency == null) return null;
   const first = r.members[0];
   const figure = first?.saleMinor ?? r.totals.saleNetMinor;

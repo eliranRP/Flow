@@ -16,6 +16,7 @@ import {
 } from "../_shared/connectors/mercury/client.ts";
 import { addCalendarDays, jerusalemDate } from "../_shared/connectors/mercury/dates.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
+import { refreshTreasuryYields } from "../_shared/treasury_yields.ts";
 import { treasuryVoidIds } from "../_shared/connectors/mercury/normalize.ts";
 import { isLegacyRow, legacyPatch, rpcWithSlot } from "../_shared/connectors/mercury/legacy.ts";
 import {
@@ -56,7 +57,8 @@ class SyncHold extends Error {
 
 /**
  * Mercury sync. The cron header drains Mercury refresh requests, or with {"kind":"purge-files"}
- * removes the thread files nothing points at any more (FLOW-978).
+ * removes the thread files nothing points at any more (FLOW-978), or with {"kind":"treasury-yields"}
+ * stores the US Treasury's daily yields for the member share report (FLOW-1119).
  * The connector drain posts this function for Mercury and sumit-sync for SUMIT.
  * sumit-sync is not called from here and is not changed.
  *
@@ -84,6 +86,8 @@ Deno.serve(async (req) => {
       // FLOW-978: the hourly flow-thread-files-purge job, not a refresh drain.
       const job = (await req.json().catch(() => ({}))) as { kind?: string };
       if (job.kind === "purge-files") return json({ ok: true, ...(await purgeThreadFiles(admin, THREAD_BUCKET)) });
+      // FLOW-1119: the daily flow-treasury-yields job.
+      if (job.kind === "treasury-yields") return json({ ok: true, ...(await refreshTreasuryYields((fn, args) => admin.rpc(fn, args))) });
       const due = await admin.rpc("claim_connector_refreshes", { p_limit: 20, p_provider: "mercury" });
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
       const results = [];

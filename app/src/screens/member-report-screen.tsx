@@ -74,7 +74,7 @@ export function MemberReportScreen({ sample }: { sample?: MemberReportRead } = {
   const [property, setProperty] = useState<PropertyShare | null>(null);
   const phase = live ? screenPhase(preview, query) : { kind: "ready" as const };
 
-  const result = useMemo(() => (data == null ? null : computeMemberShare(data.config, data.properties)), [data]);
+  const result = useMemo(() => (data == null ? null : computeMemberShare(data.config, data.properties, data.treasuryYields)), [data]);
   const mode = modeOf(location.search);
   const index = memberIndex(location.search, result?.members.length ?? 0);
   const member = result?.members[index] ?? null;
@@ -234,8 +234,11 @@ function RateSection({ result, canEdit, onOpen, onSave, config }: {
         <p className="ui-msr-formula">
           {rate.yieldPpm == null
             ? (canEdit ? "חסרה תשואת האג״ח לתאריך. הקישו על התאריך כדי להוסיף." : "חסרה תשואת האג״ח לתאריך.")
-            : `אג״ח ${String(rate.tenorYears)} שנים ${ppmText(rate.yieldPpm)} ${spreadText(rate.spreadBp)}${rate.yieldDate != null && rate.yieldDate !== rate.quoteDate ? ` (מ־${formatDisplay(rate.yieldDate)})` : ""}`}
+            : `אג״ח ${String(rate.tenorYears)} שנים ${ppmText(rate.yieldPpm)} ${spreadText(rate.spreadBp)}`}
         </p>
+        {rate.yieldDate == null ? null : (
+          <p className="ui-msr-yield-source">{`תשואה מ־${formatDisplay(rate.yieldDate)} · ${rate.yieldSource === "treasury" ? "משרד האוצר" : "הוקלד"}`}</p>
+        )}
       </div>
       <List>
         {result.quotes.map((q) => (

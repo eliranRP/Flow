@@ -68,6 +68,11 @@ const readSchema = z.object({
     loan_balance_minor: MINOR,
     loans_other_currency: z.boolean(),
   })),
+  treasury_yields: z.array(z.object({
+    on_date: z.string(),
+    y5_ppm: z.number().int().nullable(),
+    y10_ppm: z.number().int().nullable(),
+  })).default([]),
   can_edit: z.boolean(),
 });
 
@@ -87,7 +92,11 @@ export async function memberShareRead(name: typeof MEMBER_SHARE_READS[number], a
   }
   const parsed = readSchema.safeParse(result.json);
   if (!parsed.success) return fail("refused", READ_REFUSED);
-  const share = computeMemberShare(parsed.data.config as MemberReportConfig | null, parsed.data.properties as MemberReportProperty[]);
+  const share = computeMemberShare(
+    parsed.data.config as MemberReportConfig | null,
+    parsed.data.properties as MemberReportProperty[],
+    parsed.data.treasury_yields,
+  );
   if (member != null) {
     const wanted = (member as string).trim().toLowerCase();
     const found = share.members.find((m) => m.name.toLowerCase() === wanted);
@@ -118,8 +127,8 @@ function spec(name: string, description: string, properties: Record<string, unkn
 }
 
 export const MEMBER_SHARE_READ_SPECS = [
-  spec("get_member_report", "The member share report's inputs (FLOW-1117): config, the company's setting (null before the first set_member_report): members (name, ownership_bp; they add up to 10000), assumptions (ltv_bp, closing_bp, term_years), rate_rule (tenor_years 5 or 10, spread_bp), quotes (id, lender, rate_ppm, points_bp, quoted_on, loan_type, project_id or null for all), yields (on_date, y5_ppm, y10_ppm, source treasury or manual) and quote_date; properties: each active project with a value or an open loan, not the overhead project (project_id, name, currency, value_minor, value_date, selling_cost_bp or null, loan_balance_minor of its open loans in its currency, loans_other_currency); can_edit (the owner). Rates are parts per million (6.125% is 61250).", {}, false),
-  spec("get_member_share", "An LLC member's share, as the app's דוח שותף computes it (FLOW-1117). Sell everything: per property value - selling costs (selling_cost_bp, else 8%) - open loans (saleNetMinor). Refinance: a new loan at assumptions ltv (default 75%) of the value, less the open loans and the closing costs (default 2% of the new loan); cashOutMinor, and a property where it is not above zero is not refinanced (refinances false). rate: quoteDate (config quote_date, else the latest quote's date), yieldDate (that date or the closest day before with a yield), yieldPpm (the 5 or 10 year Treasury, rate_rule tenor_years, default 10), expectedPpm (yield + spread_bp x 100, default 150), paymentPpm (expected, else the best quote) and each quote's diffPpm and verdict (good at or under expected, near within 2500 ppm, high). paymentMinor is a 30-year (term_years) payment of principal and interest at paymentPpm. members: name, ownershipBp, saleMinor and refinanceMinor (their ownership of the totals); member (a name, any case) keeps one, else not_found. missing lists properties left out: no value, another currency than the report's, loans in another currency. Amounts are minor units of currency. Before tax.", {
+  spec("get_member_report", "The member share report's inputs (FLOW-1117): config, the company's setting (null before the first set_member_report): members (name, ownership_bp; they add up to 10000), assumptions (ltv_bp, closing_bp, term_years), rate_rule (tenor_years 5 or 10, spread_bp), quotes (id, lender, rate_ppm, points_bp, quoted_on, loan_type, project_id or null for all), yields (on_date, y5_ppm, y10_ppm, source treasury or manual) and quote_date; properties: each active project with a value or an open loan, not the overhead project (project_id, name, currency, value_minor, value_date, selling_cost_bp or null, loan_balance_minor of its open loans in its currency, loans_other_currency); treasury_yields, the US Treasury's daily yields fetched every four hours (FLOW-1119: on_date, y5_ppm, y10_ppm) from two weeks before the earliest quote date to today; can_edit (the owner). Rates are parts per million (6.125% is 61250).", {}, false),
+  spec("get_member_share", "An LLC member's share, as the app's דוח שותף computes it (FLOW-1117). Sell everything: per property value - selling costs (selling_cost_bp, else 8%) - open loans (saleNetMinor). Refinance: a new loan at assumptions ltv (default 75%) of the value, less the open loans and the closing costs (default 2% of the new loan); cashOutMinor, and a property where it is not above zero is not refinanced (refinances false). rate: quoteDate (config quote_date, else the latest quote's date), yieldDate (that date or the closest day before with a yield), yieldSource (manual: typed in the setting, which wins for its date and tenor; treasury: fetched), yieldPpm (the 5 or 10 year Treasury, rate_rule tenor_years, default 10), expectedPpm (yield + spread_bp x 100, default 150), paymentPpm (expected, else the best quote) and each quote's diffPpm and verdict (good at or under expected, near within 2500 ppm, high). paymentMinor is a 30-year (term_years) payment of principal and interest at paymentPpm. members: name, ownershipBp, saleMinor and refinanceMinor (their ownership of the totals); member (a name, any case) keeps one, else not_found. missing lists properties left out: no value, another currency than the report's, loans in another currency. Amounts are minor units of currency. Before tax.", {
     member: { type: "string" },
   }, false),
 ];
