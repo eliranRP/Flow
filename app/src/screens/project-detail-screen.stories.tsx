@@ -7,7 +7,8 @@ import { FILLED } from "../ui/investment-card.stories-support";
 import { ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 import { kindSample, type ProjectKind } from "../dev/project-kinds-sample";
 import { devProjectsCash } from "../dev/projects-sample";
-import { GEFEN, utilityPayersSample, utilityRefundsSample } from "./utility-refunds-sample";
+import { GEFEN, storyUtilityClient, utilityPayersSample, utilityRefundsSample } from "./utility-refunds-sample";
+import { UtilityClientProvider } from "../utility-refunds";
 
 const meta = {
   title: "Screens/Routes",
@@ -311,16 +312,18 @@ export const ProjectRentalUtilities: Story = {
       .map((bill) => ({ ...bill, project_id: data.project.id, project_name: data.project.name }));
     return (
       <StoryRoute entry={`/projects/${data.project.id}`} tabs>
-        <ProjectDetailScreen
-          example={exampleOnBand}
-          sample={data.project}
-          sampleCash={data.cash}
-          sampleInvestment={data.investment}
-          sampleMenuRow={data.row}
-          sampleNext={data.next}
-          sampleUtilities={{ utilities: utilityPayersSample(), bills }}
-          sectionTo={(target) => (target === "overview" ? `/projects/${data.project.id}` : `/projects/${data.project.id}/${target}`)}
-        />
+        {/* The utilities read through a stand-in for Flow's server, as the utility screens' stories do. */}
+        <UtilityClientProvider client={storyUtilityClient(bills, utilityPayersSample())}>
+          <ProjectDetailScreen
+            example={exampleOnBand}
+            sample={data.project}
+            sampleCash={data.cash}
+            sampleInvestment={data.investment}
+            sampleMenuRow={data.row}
+            sampleNext={data.next}
+            sectionTo={(target) => (target === "overview" ? `/projects/${data.project.id}` : `/projects/${data.project.id}/${target}`)}
+          />
+        </UtilityClientProvider>
       </StoryRoute>
     );
   },

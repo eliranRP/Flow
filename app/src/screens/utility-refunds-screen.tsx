@@ -31,29 +31,27 @@ const LIST_BAR = 44;
  * the title, "N לא הוחזרו · M לבדיקה", the sum not refunded, then הכול / לבדיקה / לא הוחזרו, which docks into the
  * compact bar. The bills by property under sticky heads: the suggested refunds first, then the bills not refunded,
  * with סימון הכל כנראה under the head. `?project=` limits it to one property (its page's row opens it so).
- * `sample` draws the stories, with answers on the screen only.
  */
-export function UtilityRefundsScreen({ sample }: { sample?: UtilityBill[] } = {}) {
-  const live = sample == null;
+export function UtilityRefundsScreen() {
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const [params] = useSearchParams();
   const projectId = params.get("project");
-  const query = useUtilityRefundsQuery(projectId, live);
+  const query = useUtilityRefundsQuery(projectId);
   const holdWrites = useHoldWrites();
   const readOnly = holdWrites;
   const online = useOnline();
   const currency = useCompanyCurrency();
-  const actions = useUtilityRefundActions(live);
+  const actions = useUtilityRefundActions();
   const [filter, setFilter] = useState<RefundFilter>("all");
   const [opened, setOpened] = useState<UtilityBill | null>(null);
   const [titleMark, setTitleMark] = useState<HTMLElement | null>(null);
   const barShown = useScrolledPast(titleMark, true, LIST_BAR);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: LIST_BAR });
 
-  const bills = (live ? query.data?.bills : sample)?.filter((bill) => projectId == null || bill.project_id === projectId) ?? [];
+  const bills = query.data?.bills.filter((bill) => projectId == null || bill.project_id === projectId) ?? [];
   const groups = refundGroups(bills, actions.local);
-  const phase = live ? screenPhase(preview, query) : ({ kind: "ready" } as const);
+  const phase = screenPhase(preview, query);
   const loading = phase.kind === "loading";
   const failed = phase.kind === "error";
   const ready = !loading && !failed;
@@ -63,7 +61,7 @@ export function UtilityRefundsScreen({ sample }: { sample?: UtilityBill[] } = {}
   const property = projectId == null ? null : bills[0]?.project_name ?? null;
   const back = projectId == null ? `/${search}` : `/projects/${projectId}${search}`;
   const backText = projectId == null ? "בית" : property ?? "פרויקט";
-  const since = live && !online && query.data != null ? query.dataUpdatedAt : undefined;
+  const since = !online && query.data != null ? query.dataUpdatedAt : undefined;
 
   const control = (
     <SegmentedControl<RefundFilter>

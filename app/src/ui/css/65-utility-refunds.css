@@ -86,11 +86,15 @@
   min-width: 0;
 }
 
-.ui-urf-leg-title,
-.ui-urf-leg-meta {
+.ui-urf-leg-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The day and the gap wrap, as a hint does; they are never cut. */
+.ui-urf-leg-meta {
+  overflow-wrap: anywhere;
 }
 
 .ui-urf-leg-title {
@@ -254,12 +258,22 @@
   padding-block: var(--space-2) calc(var(--tabbar-height) + var(--space-6));
 }
 
+/* The head's link to the bills not refunded, or the retry when they did not load. */
 .ui-utl-open {
   display: inline-flex;
   align-items: center;
   min-block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--color-signal);
+  font: inherit;
   font-weight: var(--type-btn-weight);
+  cursor: pointer;
+}
+
+.ui-utl-wait {
+  color: var(--color-text-secondary);
 }
 
 .ui-utl-lead {
@@ -293,11 +307,15 @@
   min-width: 0;
 }
 
-.ui-utl-name,
-.ui-utl-meta {
+.ui-utl-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The usual amount is in this line: it wraps, it is never cut. */
+.ui-utl-meta {
+  overflow-wrap: anywhere;
 }
 
 .ui-utl-name {

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { createContext, createElement, useContext, type ReactNode } from "react";
 import type { z } from "zod";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -21,22 +22,62 @@ export type Payer = UtilityPayer["payer"];
 export const UTILITY_REFUNDS_KEY = "utility-refunds";
 export const UTILITY_PAYERS_KEY = "utility-payers";
 
-async function client(): Promise<RpcClient> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
-  return supabase;
+/**
+ * Where the utility reads and writes go: Flow's server, or, in a story, a stand-in that answers from sample data
+ * (`stub`). Every read and write of these screens takes its client from here.
+ */
+type UtilityClient = { get: () => RpcClient | null; stub: boolean };
+
+const UtilityClientContext = createContext<UtilityClient>({ get: getSupabase, stub: false });
+
+/**
+ * A story's client: the screens read and write through `client` instead of Flow's server. Invented data only.
+ * @forTests
+ */
+export function UtilityClientProvider({ client, children }: { client: RpcClient; children: ReactNode }) {
+  return createElement(UtilityClientContext.Provider, { value: { get: () => client, stub: true } }, children);
 }
 
-/** The bills that ask for an answer, all properties or one (`projectId`). */
-export function useUtilityRefundsQuery(projectId: string | null, active = true) {
+/** The client for a write: throws when there is none (no Supabase configured). */
+export function useUtilityRpc(): () => RpcClient {
+  const { get } = useContext(UtilityClientContext);
+  return () => {
+    const rpc = get();
+    if (!rpc) throw new Error("supabase");
+    return rpc;
+  };
+}
+
+/** True inside a story's UtilityClientProvider: a sample page may read through it. */
+export function useUtilityStub(): boolean {
+  return useContext(UtilityClientContext).stub;
+}
+
+function useReadClient(): () => Promise<RpcClient> {
+  const rpc = useUtilityRpc();
+  return async () => {
+    const supabase = rpc();
+    await waitForAccessToken(supabase);
+    return supabase;
+  };
+}
+
+/**
+ * The bills that ask for an answer, all properties or one (`projectId`). `all` reads every bill with its state
+ * (matched ones too), for the payment picker to leave out a payment that is already another bill's refund.
+ */
+export function useUtilityRefundsQuery(projectId: string | null, active = true, all = false) {
   const preview = useHomePreview();
+  const client = useReadClient();
   return useQuery({
-    queryKey: [UTILITY_REFUNDS_KEY, preview, projectId ?? ""],
+    queryKey: [UTILITY_REFUNDS_KEY, preview, projectId ?? "", all ? "all" : "open"],
     enabled: active && preview === "off",
     queryFn: async (): Promise<UtilityRefunds> => {
       const supabase = await client();
-      const { data, error } = await supabase.rpc("list_utility_refunds", projectId == null ? {} : { p_project_id: projectId });
+      const { data, error } = await supabase.rpc("list_utility_refunds", {
+        ...(projectId == null ? {} : { p_project_id: projectId }),
+        ...(all ? { p_all: true } : {}),
+      });
       if (error) throw error;
       return (await loadReadSchemas()).utilityRefundsSchema.parse(data);
     },
@@ -46,6 +87,7 @@ export function useUtilityRefundsQuery(projectId: string | null, active = true) 
 /** A property's utilities: who pays each, its usual amount and its bills. */
 export function useUtilityPayersQuery(projectId: string, active = true) {
   const preview = useHomePreview();
+  const client = useReadClient();
   return useQuery({
     queryKey: [UTILITY_PAYERS_KEY, preview, projectId],
     enabled: active && preview === "off" && projectId !== "",

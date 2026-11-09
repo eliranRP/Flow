@@ -1,3 +1,4 @@
+import type { RpcClient } from "../recurring-actions";
 import type { ScheduleRow } from "../recurring-schedule";
 import type { UtilityBill, UtilityPayer, UtilityPayment } from "../utility-refunds";
 
@@ -80,4 +81,27 @@ export function utilityScheduleSample(): ScheduleRow[] {
     project_id: GEFEN, project_name: "דירת הגפן 3", category_id: `c-${category}`, category_name: category,
   });
   return [row("s-City Water", "City Water", 8_000, "חשמל ומים"), row("s-Trash Co", "Trash Co", 3_500, "פינוי אשפה")];
+}
+
+/** The sample as the server's JSON: amounts in minor units as digit strings, as the schemas read them. */
+function asJson(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value, (_, item: unknown) => (typeof item === "bigint" ? item.toString() : item)));
+}
+
+/**
+ * A stand-in for Flow's server in the stories (UtilityClientProvider): the utility reads answer from the sample
+ * (one property's with p_project_id), and every write succeeds, so a story's answer shows its toast with ביטול.
+ */
+export function storyUtilityClient(bills: UtilityBill[] = utilityRefundsSample(), utilities: UtilityPayer[] = utilityPayersSample()): RpcClient {
+  const rpc = (name: string, args: Record<string, unknown> = {}) => {
+    const project = typeof args.p_project_id === "string" ? args.p_project_id : null;
+    const own = bills.filter((bill) => project == null || bill.project_id === project);
+    const data = name === "list_utility_refunds" ? { as_of: "2026-11-09", bills: asJson(own) }
+      : name === "list_utility_payers" ? { project_id: project, utilities: asJson(utilities) }
+        : name === "mark_utility_refunds_seen" ? { bill_transaction_ids: own.filter((bill) => bill.state === "not_refunded").map((bill) => bill.bill_transaction_id) }
+          : name === "set_utility_payer" ? { prior: null }
+            : null;
+    return Promise.resolve({ data, error: null });
+  };
+  return { rpc } as unknown as RpcClient;
 }

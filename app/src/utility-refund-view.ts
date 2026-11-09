@@ -171,3 +171,17 @@ export function refundCount(bills: readonly UtilityBill[]): { notRefunded: numbe
     totals: [...totals].map(([currency, minor]) => ({ currency, minor })),
   };
 }
+
+/**
+ * The payments already the refund of another bill (Flow's match or the owner's), which the payment picker leaves
+ * out. A payment matched to a bill of the same property and month stays: one payment may refund a month's bills.
+ */
+export function paymentsTaken(all: readonly UtilityBill[], bill: UtilityBill): Set<string> {
+  const taken = new Set<string>();
+  for (const other of all) {
+    if (other.state !== "refunded" || other.payment == null || other.bill_transaction_id === bill.bill_transaction_id) continue;
+    const sameMonth = other.project_id === bill.project_id && other.doc_date.slice(0, 7) === bill.doc_date.slice(0, 7);
+    if (!sameMonth) taken.add(other.payment.transaction_id);
+  }
+  return taken;
+}

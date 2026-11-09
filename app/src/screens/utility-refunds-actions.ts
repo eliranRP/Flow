@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { LEDGER_KEYS } from "../ledger-keys";
-import { liveRpcClient } from "../recurring-actions";
 import { useInvalidateBooks } from "../use-books";
 import { useToast } from "../ui/toast";
 import {
@@ -13,6 +12,7 @@ import {
   unmarkUtilityRefundsSeen,
   UTILITY_PAYERS_KEY,
   UTILITY_REFUNDS_KEY,
+  useUtilityRpc,
   type PayerPrior,
   type UtilityBill,
   type UtilityKey,
@@ -45,9 +45,8 @@ function sameUtility(bill: UtilityBill, key: UtilityKey): boolean {
  * FLOW-1135 (V3-UtilityRefunds): every answer on the list. Each one takes its card or row away at once, writes,
  * and shows a toast whose ביטול calls the write's take-back path (answer null, unmark_utility_refunds_seen,
  * undo_utility_refile, set_utility_payer back to the prior). A failed write puts the card back and says so.
- * `live` false (stories, tests of the sample) answers on the screen only.
  */
-export function useUtilityRefundActions(live: boolean) {
+export function useUtilityRefundActions() {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const [local, setLocal] = useState<ReadonlyMap<string, LocalAnswer>>(new Map());
@@ -63,16 +62,16 @@ export function useUtilityRefundActions(live: boolean) {
     });
   };
 
-  /** Runs a write (live only); false after a failure, which the toast names. */
+  /** Runs a write; false after a failure, which the toast names. */
   async function write(run: () => Promise<unknown>, failure: string, ledger = false): Promise<boolean> {
     try {
-      if (live) await run();
+      await run();
     } catch (error) {
       const changed = error instanceof Error && error.message.includes("line changed since");
       toast.show({ tone: "bad", message: changed ? FAILED.changed : failure });
       return false;
     }
-    if (live) void invalidate(ledger ? [...UTILITY_KEYS, ...LEDGER_KEYS] : [...UTILITY_KEYS]);
+    void invalidate(ledger ? [...UTILITY_KEYS, ...LEDGER_KEYS] : [...UTILITY_KEYS]);
     return true;
   }
 
@@ -102,7 +101,7 @@ export function useUtilityRefundActions(live: boolean) {
     });
   }
 
-  const rpc = () => liveRpcClient();
+  const rpc = useUtilityRpc();
   const each = (card: RefundCard, run: (bill: UtilityBill) => Promise<void>) => async () => {
     for (const bill of card.bills) await run(bill);
   };

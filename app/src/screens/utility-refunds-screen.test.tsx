@@ -3,11 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { utilityRefundsRow } from "./attention-rows";
+import { refundWindowStart } from "./utility-refund-sheet";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { GEFEN, PINE, utilityRefundsSample } from "./utility-refunds-sample";
 import { ToastProvider } from "../ui/toast";
 import { parseUtilityRefundCount } from "../utility-refund-count";
-import { cardWhy, paymentMeta, refundGroups } from "../utility-refund-view";
+import { cardWhy, paymentMeta, paymentsTaken, refundGroups } from "../utility-refund-view";
 import type { UtilityBill } from "../utility-refunds";
 
 // FLOW-1135 (decision 0265): החזרי חשבונות. Home's row, the cards, and every live answer with its ביטול.
@@ -16,13 +17,18 @@ const db = vi.hoisted(() => ({
   fail: false,
   hold: false,
   bills: [] as unknown[],
+  /** Every bill with its state (the picker's read, p_all). */
+  all: [] as unknown[],
 }));
 
 vi.mock("../utility-refunds", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../utility-refunds")>();
   return {
     ...actual,
-    useUtilityRefundsQuery: () => useQuery({ queryKey: ["utility-refunds", "off", ""], queryFn: () => Promise.resolve({ as_of: "2026-11-09", bills: db.bills as UtilityBill[] }) }),
+    useUtilityRefundsQuery: (_project: string | null, _active?: boolean, all?: boolean) => useQuery({
+      queryKey: ["utility-refunds", "off", "", all === true ? "all" : "open"],
+      queryFn: () => Promise.resolve({ as_of: "2026-11-09", bills: (all === true ? db.all : db.bills) as UtilityBill[] }),
+    }),
   };
 });
 
@@ -65,6 +71,7 @@ afterEach(() => {
   db.fail = false;
   db.hold = false;
   db.bills = [];
+  db.all = [];
   window.localStorage.clear();
 });
 
@@ -264,6 +271,48 @@ describe("the answers and their ביטול", () => {
     expect(calls("answer_utility_refund")).toEqual([{ p_bill_transaction_id: "b-power-gefen", p_state: "matched", p_payment_transaction_id: "pay-picked" }]);
     await undo();
     await waitFor(() => { expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-power-gefen", p_state: null, p_payment_transaction_id: "pay-picked" }); });
+  });
+
+  it("each opening of a bill starts on its actions, never on the picker left open", async () => {
+    renderScreen(`/utility-refunds?project=${GEFEN}`);
+    const [row] = await screen.findAllByRole("button", { name: /^Power Co/ });
+    fireEvent.click(row as HTMLElement);
+    fireEvent.click(await screen.findByRole("button", { name: "הוחזר · בחירת התשלום" }));
+    fireEvent.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: /Tenant A/ }));
+    await undo();
+    const [again] = await screen.findAllByRole("button", { name: /^Power Co/ });
+    fireEvent.click(again as HTMLElement);
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByRole("button", { name: "ראיתי, אין צורך בטיפול" })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "החברה משלמת תמיד · Power Co" })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "הוחזר · בחירת התשלום" })).toBeTruthy();
+  });
+
+  it("the picker leaves out a payment already another property's or month's refund, and keeps one of the same month", async () => {
+    const [power] = utilityRefundsSample().filter((bill) => bill.bill_transaction_id === "b-power-gefen");
+    const refunded = (over: Partial<UtilityBill>): UtilityBill => ({
+      ...(power as UtilityBill), bill_transaction_id: "b-other", state: "refunded", source: "owner",
+      payment: { transaction_id: "pay-picked", doc_date: "2026-10-01", amount_minor: 12_840n, currency: "USD", description: "Zelle", party: "Tenant A", project_id: GEFEN, category_id: "c-rent", category_name: "שכירות", split: false },
+      ...over,
+    });
+    db.all = [refunded({ project_id: PINE })];
+    renderScreen(`/utility-refunds?project=${GEFEN}`);
+    const [row] = await screen.findAllByRole("button", { name: /^Power Co/ });
+    fireEvent.click(row as HTMLElement);
+    fireEvent.click(await screen.findByRole("button", { name: "הוחזר · בחירת התשלום" }));
+    expect(await screen.findByText("אין תשלומים שנכנסו מחודש לפני החשבון ועד היום.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Tenant A/ })).toBeNull();
+    // The same property and month: one payment may refund the month's bills together.
+    expect([...paymentsTaken([refunded({ doc_date: "2026-09-20" })], power as UtilityBill)]).toEqual([]);
+    expect([...paymentsTaken([refunded({ doc_date: "2026-08-20" })], power as UtilityBill)]).toEqual(["pay-picked"]);
+    expect([...paymentsTaken([refunded({ state: "suggested" })], power as UtilityBill)]).toEqual([]);
+  });
+
+  it("the picker's window starts a month before the bill, clamped to that month's last day", () => {
+    expect(refundWindowStart("2026-03-31")).toBe("2026-02-28");
+    expect(refundWindowStart("2024-03-30")).toBe("2024-02-29");
+    expect(refundWindowStart("2026-01-31")).toBe("2025-12-31");
+    expect(refundWindowStart("2026-11-15")).toBe("2026-10-15");
   });
 
   it("a failed write puts the row back and says what failed", async () => {

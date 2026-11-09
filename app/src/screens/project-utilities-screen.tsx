@@ -5,7 +5,6 @@ import { Link, useParams } from "react-router-dom";
 import { useProjectsCashMonth } from "../project-cash";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
-import { liveRpcClient } from "../recurring-actions";
 import { useRecurringScheduleQuery, type ScheduleRow } from "../recurring-schedule";
 import { useInvalidateBooks } from "../use-books";
 import { useHoldWrites } from "../use-is-viewer";
@@ -18,12 +17,9 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
-import { restoreUtilityPayer, setUtilityPayer, useUtilityPayersQuery, useUtilityRefundsQuery, type Payer, type PayerPrior, type UtilityBill, type UtilityKey, type UtilityPayer } from "../utility-refunds";
+import { restoreUtilityPayer, setUtilityPayer, useUtilityPayersQuery, useUtilityRefundsQuery, useUtilityRpc, type Payer, type PayerPrior, type UtilityKey, type UtilityPayer } from "../utility-refunds";
 import { AddSupplierSheet, supplierChoices } from "./project-utilities-add";
 import { UTILITY_KEYS } from "./utility-refunds-actions";
-
-/** Stories: the property's name, its utilities, its bills not refunded and its recurring expenses. */
-export type ProjectUtilitiesSample = { projectId: string; name: string; utilities: UtilityPayer[]; bills: UtilityBill[]; schedule: ScheduleRow[] };
 
 const keyText = (row: { supplier_id: string; currency: string }) => `${row.supplier_id}:${row.currency}`;
 
@@ -39,33 +35,34 @@ function payerMeta(row: UtilityPayer, payer: Payer): string {
  * back, חברה checks none and closes its open bills. הוספת ספק adds one of the property's recurring expenses. Every
  * change toasts with ביטול (set_utility_payer back to what it was). A viewer sees who pays and changes nothing.
  */
-export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSample } = {}) {
-  const live = sample == null;
-  const params = useParams();
-  const projectId = sample?.projectId ?? params.projectId ?? "";
+export function ProjectUtilitiesScreen() {
+  const { projectId = "" } = useParams();
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const online = useOnline();
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const readOnly = useHoldWrites();
-  const payers = useUtilityPayersQuery(projectId, live);
-  const refunds = useUtilityRefundsQuery(projectId, live);
-  const schedule = useRecurringScheduleQuery(live && preview === "off" && !readOnly);
-  const row = useProjectsCashMonth(undefined, live ? projectId : "").data?.projects.find((item) => item.id === projectId);
+  const rpc = useUtilityRpc();
+  const payers = useUtilityPayersQuery(projectId);
+  const refunds = useUtilityRefundsQuery(projectId);
+  const schedule = useRecurringScheduleQuery(preview === "off" && !readOnly);
+  const row = useProjectsCashMonth(undefined, projectId).data?.projects.find((item) => item.id === projectId);
   const [picked, setPicked] = useState<ReadonlyMap<string, Payer>>(new Map());
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<readonly UtilityPayer[]>([]);
 
-  const name = sample?.name ?? row?.name ?? "הנכס";
-  const utilities = [...(live ? payers.data ?? [] : sample.utilities), ...added]
+  const bills = refunds.data?.bills ?? [];
+  const name = row?.name ?? bills.find((bill) => bill.project_id === projectId)?.project_name ?? "הנכס";
+  const utilities = [...(payers.data ?? []), ...added]
     .filter((item, index, all) => all.findIndex((other) => keyText(other) === keyText(item)) === index);
-  const bills = (live ? refunds.data?.bills : sample.bills) ?? [];
   const openOf = (row: { supplier_id: string; currency: string }) =>
     bills.filter((bill) => bill.state === "not_refunded" && bill.project_id === projectId && keyText(bill) === keyText(row)).length;
   const payerOf = (item: UtilityPayer): Payer => picked.get(keyText(item)) ?? item.payer;
   const open = utilities.filter((item) => payerOf(item) === "tenant").reduce((sum, item) => sum + openOf(item), 0);
-  const phase = live ? screenPhase(preview, payers) : ({ kind: "ready" } as const);
+  const phase = screenPhase(preview, payers);
+  // The head's "הכול הוחזר" is a claim: it waits for the bills, and says so when they did not load.
+  const refundsPhase = screenPhase(preview, refunds);
   const back = `/projects/${projectId}${search}`;
 
   const pick = (key: string, payer: Payer | null) => {
@@ -80,8 +77,8 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
   /** Writes a payer; returns what was set before, or undefined after a failure (which the toast names). */
   async function write(run: () => Promise<PayerPrior>, failure: string): Promise<PayerPrior | undefined> {
     try {
-      const prior = live ? await run() : null;
-      if (live) void invalidate([...UTILITY_KEYS]);
+      const prior = await run();
+      void invalidate([...UTILITY_KEYS]);
       return prior;
     } catch {
       toast.show({ tone: "bad", message: failure });
@@ -94,7 +91,7 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
     const before = payerOf(item);
     if (before === payer) return;
     pick(keyText(item), payer);
-    const prior = await write(() => setUtilityPayer(liveRpcClient(), key, payer, item.added), "השינוי של מי משלם לא נשמר. אפשר לנסות שוב.");
+    const prior = await write(() => setUtilityPayer(rpc(), key, payer, item.added), "השינוי של מי משלם לא נשמר. אפשר לנסות שוב.");
     if (prior === undefined) {
       pick(keyText(item), null);
       return;
@@ -105,7 +102,7 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
       action: "ביטול",
       onAction: () => {
         void (async () => {
-          if ((await write(() => restoreUtilityPayer(liveRpcClient(), key, prior), "הביטול לא נשמר. אפשר לנסות שוב.")) !== undefined) pick(keyText(item), before);
+          if ((await write(() => restoreUtilityPayer(rpc(), key, prior), "הביטול לא נשמר. אפשר לנסות שוב.")) !== undefined) pick(keyText(item), before);
         })();
       },
     });
@@ -120,7 +117,7 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
       category_id: choice.category_id, category_name: choice.category_name,
     };
     setAdded((before) => [...before, item]);
-    const prior = await write(() => setUtilityPayer(liveRpcClient(), key, "tenant", true), "הספק לא נוסף. אפשר לנסות שוב.");
+    const prior = await write(() => setUtilityPayer(rpc(), key, "tenant", true), "הספק לא נוסף. אפשר לנסות שוב.");
     const drop = () => { setAdded((before) => before.filter((other) => keyText(other) !== keyText(item))); };
     if (prior === undefined) {
       drop();
@@ -131,13 +128,13 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
       action: "ביטול",
       onAction: () => {
         void (async () => {
-          if ((await write(() => restoreUtilityPayer(liveRpcClient(), key, prior), "הביטול לא נשמר. אפשר לנסות שוב.")) !== undefined) drop();
+          if ((await write(() => restoreUtilityPayer(rpc(), key, prior), "הביטול לא נשמר. אפשר לנסות שוב.")) !== undefined) drop();
         })();
       },
     });
   }
 
-  const choices = supplierChoices(live ? schedule.data ?? [] : sample.schedule, projectId, utilities);
+  const choices = supplierChoices(schedule.data ?? [], projectId, utilities);
   return (
     <div>
       <TopBand
@@ -163,9 +160,13 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
           <GroupHead
             id="utl-head"
             title="חשבונות"
-            summary={open > 0
-              ? <Link className="ui-utl-open" to={`/utility-refunds?project=${encodeURIComponent(projectId)}${search === "" ? "" : `&${search.slice(1)}`}`}>{`${String(open)} לא הוחזרו`}</Link>
-              : "הכול הוחזר"}
+            summary={refundsPhase.kind === "error"
+              ? <button type="button" className="ui-utl-open" onClick={() => void refunds.refetch()}>לא נטען · ניסיון חוזר</button>
+              : refundsPhase.kind !== "ready"
+                ? <span className="ui-utl-wait">בודקים…</span>
+                : open > 0
+                  ? <Link className="ui-utl-open" to={`/utility-refunds?project=${encodeURIComponent(projectId)}${search === "" ? "" : `&${search.slice(1)}`}`}>{`${String(open)} לא הוחזרו`}</Link>
+                  : "הכול הוחזר"}
           />
           <p className="ui-utl-lead">מי משלם כל חשבון. שוכר: בודקים שהחזיר. חברה: לא בודקים.</p>
           {utilities.length === 0 ? (
@@ -178,7 +179,7 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
                   <li key={keyText(item)} className="ui-utl-row m-page-enter">
                     <span className="ui-utl-text">
                       <span className="ui-utl-name" data-clip-ok="">{item.supplier_name}</span>
-                      <span className="ui-utl-meta" data-clip-ok="">{payerMeta(item, payer)}</span>
+                      <span className="ui-utl-meta">{payerMeta(item, payer)}</span>
                     </span>
                     <div className="ui-utl-payer">
                       <SegmentedControl<Payer>
@@ -201,7 +202,7 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
               הוספת ספק
             </button>
           )}
-          <p className="ui-utl-lead">Flow מוצא את הספקים מהשורות בקטגוריות החשבונות. כל ספק מתחיל כ״שוכר״. מעבר ל״חברה״ סוגר את החשבונות הפתוחים שלו, עם ביטול.</p>
+          <p className="ui-utl-lead">Flow מוצא את הספקים מהשורות: קטגוריות החשבונות ושם הכרטיס. כל ספק מתחיל כ״שוכר״. מעבר ל״חברה״ סוגר את החשבונות הפתוחים שלו, עם ביטול.</p>
         </section>
       )}
       {readOnly ? null : (

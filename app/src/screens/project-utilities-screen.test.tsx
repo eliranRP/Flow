@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectAttentionRows } from "./project-attention";
@@ -9,10 +9,13 @@ import { ToastProvider } from "../ui/toast";
 import { refundCount } from "../utility-refund-view";
 
 // FLOW-1135 (V3-Project-Utilities): who pays each utility, הוספת ספק, each with ביטול; the property page's row.
-const db = vi.hoisted(() => ({
-  rpcs: [] as Array<{ name: string; args: unknown }>,
+type RefundsRead = "ok" | "pending" | "error";
+const db = vi.hoisted((): { rpcs: Array<{ name: string; args: unknown }>; fail: boolean; hold: boolean; refunds: RefundsRead } => ({
+  rpcs: [],
   fail: false,
   hold: false,
+  /** How the bills read ends: with the sample, never (still loading), or failed. */
+  refunds: "ok",
 }));
 
 vi.mock("../utility-refunds", async (importOriginal) => {
@@ -21,7 +24,12 @@ vi.mock("../utility-refunds", async (importOriginal) => {
   return {
     ...actual,
     useUtilityPayersQuery: () => useQuery({ queryKey: ["utility-payers", "off", "p"], queryFn: () => Promise.resolve(sample.utilityPayersSample()) }),
-    useUtilityRefundsQuery: () => useQuery({ queryKey: ["utility-refunds", "off", "p"], queryFn: () => Promise.resolve({ as_of: "2026-11-09", bills: sample.utilityRefundsSample() }) }),
+    useUtilityRefundsQuery: () => useQuery({
+      queryKey: ["utility-refunds", "off", "p"],
+      queryFn: () => (db.refunds === "pending" ? new Promise<never>(() => undefined)
+        : db.refunds === "error" ? Promise.reject(new Error("refused"))
+          : Promise.resolve({ as_of: "2026-11-09", bills: sample.utilityRefundsSample() })),
+    }),
   };
 });
 
@@ -51,6 +59,7 @@ afterEach(() => {
   db.rpcs = [];
   db.fail = false;
   db.hold = false;
+  db.refunds = "ok";
 });
 
 function renderScreen() {
@@ -134,6 +143,26 @@ describe("ProjectUtilitiesScreen", () => {
     fireEvent.click(within(group).getByRole("radio", { name: "חברה" }));
     expect(await screen.findByText("השינוי של מי משלם לא נשמר. אפשר לנסות שוב.")).toBeTruthy();
     expect(within(group).getByRole("radio", { name: "שוכר" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("never says הכול הוחזר before the bills are read, and offers a retry when they fail", async () => {
+    db.refunds = "pending";
+    renderScreen();
+    expect(await screen.findByText("בודקים…")).toBeTruthy();
+    expect(screen.queryByText("הכול הוחזר")).toBeNull();
+    cleanup();
+    db.refunds = "error";
+    renderScreen();
+    expect(await screen.findByRole("button", { name: "לא נטען · ניסיון חוזר" })).toBeTruthy();
+    expect(screen.queryByText("הכול הוחזר")).toBeNull();
+    db.refunds = "ok";
+    fireEvent.click(screen.getByRole("button", { name: "לא נטען · ניסיון חוזר" }));
+    expect(await screen.findByRole("link", { name: "2 לא הוחזרו" })).toBeTruthy();
+  });
+
+  it("says where Flow finds the suppliers, as the board does", async () => {
+    renderScreen();
+    expect(await screen.findByText(/מהשורות: קטגוריות החשבונות ושם הכרטיס/)).toBeTruthy();
   });
 
   it("gives a viewer no changes", async () => {

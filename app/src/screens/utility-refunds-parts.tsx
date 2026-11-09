@@ -13,7 +13,7 @@ function Leg({ title, meta, amount }: { title: string; meta: string; amount: str
     <li className="ui-urf-leg">
       <span className="ui-urf-leg-text">
         <span className="ui-urf-leg-title" data-clip-ok="">{title}</span>
-        <span className="ui-urf-leg-meta" data-clip-ok="">{meta}</span>
+        <span className="ui-urf-leg-meta">{meta}</span>
       </span>
       <bdi dir="ltr" className="ui-urf-leg-amount" data-income={amount.startsWith("+") ? "true" : undefined}>{amount}</bdi>
     </li>

@@ -49,7 +49,7 @@ import { ProjectMenu } from "./project-menu";
 import { hideRow, isRowHidden, readHidden } from "../ui/attention-dismiss";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
-import { useUtilityPayersQuery, useUtilityRefundsQuery, type UtilityBill, type UtilityPayer } from "../utility-refunds";
+import { useUtilityPayersQuery, useUtilityRefundsQuery, useUtilityStub } from "../utility-refunds";
 import { refundCount } from "../utility-refund-view";
 
 function ProjectLoading({ projectId, search, example }: { projectId: string; search: string; example?: ReactNode }) {
@@ -127,7 +127,6 @@ export function ProjectDetailScreen({
   sampleOfflineSince,
   sampleSchedule,
   sampleLines,
-  sampleUtilities,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -144,8 +143,6 @@ export function ProjectDetailScreen({
   /** FLOW-1044: the company's recurring schedule and the month's lines as they would come back (stories). */
   sampleSchedule?: ScheduleRow[];
   sampleLines?: CashLine[];
-  /** FLOW-1135: a sample property's utilities and its bills not refunded (stories). */
-  sampleUtilities?: { utilities: UtilityPayer[]; bills: UtilityBill[] };
   /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
   sampleMenuRow?: ProjectCashRow;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
@@ -203,10 +200,13 @@ export function ProjectDetailScreen({
   // The schedule and the month's lines are read only for a live page (not a sample or a preview).
   const linesLive = sample == null && preview === "off";
   // FLOW-1135: the property's utilities (who pays each), and, once one is the tenant's, its bills not refunded.
-  const payers = useUtilityPayersQuery(projectId, sample == null && detail.data != null);
-  const utilities = sampleUtilities?.utilities ?? payers.data ?? [];
-  const refunds = useUtilityRefundsQuery(projectId, sample == null && utilities.some((item) => item.payer === "tenant"));
-  const refundBills = sampleUtilities?.bills ?? refunds.data?.bills ?? [];
+  // A sample page (a story) reads them only through a story's stand-in client.
+  const utilityStub = useUtilityStub();
+  const utilityProject = sample?.id ?? projectId;
+  const payers = useUtilityPayersQuery(utilityProject, sample == null ? detail.data != null : utilityStub);
+  const utilities = payers.data ?? [];
+  const refunds = useUtilityRefundsQuery(utilityProject, (sample == null || utilityStub) && utilities.some((item) => item.payer === "tenant"));
+  const refundBills = refunds.data?.bills ?? [];
   const blocked = useBlockedPreview();
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
