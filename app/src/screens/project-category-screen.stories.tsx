@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Route, Routes } from "react-router-dom";
+import { expect, within } from "storybook/test";
 import { ProjectCategoryScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -103,4 +104,20 @@ export const ProjectCategoryError: Story = {
       </Routes>
     </StoryRoute>
   ),
+};
+
+/** FLOW-1138: a category's lines load as their month groups, after 300ms. */
+export const ProjectCategoryLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c1?preview=loading">
+      <Routes>
+        <Route path="/projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
+      </Routes>
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toBeInTheDocument();
+    await expect(canvasElement.querySelectorAll(".ui-skel-group")).toHaveLength(2);
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
 };

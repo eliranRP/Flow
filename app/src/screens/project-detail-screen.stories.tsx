@@ -1,6 +1,6 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
@@ -60,6 +60,13 @@ export const ProjectDetailLoading: Story = {
       <ProjectDetailScreen example={exampleOnBand} />
     </StoryRoute>
   ),
+  // FLOW-1138: after 300ms, the links' card and the month's lines in their shape, no old categories head.
+  play: async ({ canvasElement }) => {
+    await waitFor(() => expect(canvasElement.querySelectorAll(".ui-skel-group")).toHaveLength(2));
+    await expect(canvasElement.querySelector(".ui-project-links")).not.toBeNull();
+    await expect(within(canvasElement).queryByText("הוצאות לפי קטגוריה")).toBeNull();
+    await expect(within(canvasElement).getAllByText("טוען…")).toHaveLength(1);
+  },
 };
 
 export const ProjectDetailError: Story = {

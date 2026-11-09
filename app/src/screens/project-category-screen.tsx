@@ -23,6 +23,7 @@ import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
+import { LineGroupsSkeleton } from "./project-skeletons";
 
 type CategorySample = {
   categoryName: string;
@@ -72,7 +73,7 @@ export function ProjectCategoryScreen({
   }, [fetchNext]);
   useTxnListMore(`${location.pathname}${location.search}`, !sample && !rowHref && category.hasNextPage, sample || rowHref ? null : loadMore);
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
+    return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} loading={<LineGroupsSkeleton />} />;
   }
   const first = category.data?.pages[0];
   if (!sample && (first == null)) {
