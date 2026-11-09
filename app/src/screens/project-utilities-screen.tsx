@@ -162,7 +162,7 @@ export function ProjectUtilitiesScreen() {
             title="חשבונות"
             summary={refundsPhase.kind === "error"
               ? <button type="button" className="ui-utl-open" onClick={() => void refunds.refetch()}>לא נטען · ניסיון חוזר</button>
-              : refundsPhase.kind !== "ready"
+              : refundsPhase.kind === "loading"
                 ? <span className="ui-utl-wait">בודקים…</span>
                 : open > 0
                   ? <Link className="ui-utl-open" to={`/utility-refunds?project=${encodeURIComponent(projectId)}${search === "" ? "" : `&${search.slice(1)}`}`}>{`${String(open)} לא הוחזרו`}</Link>
