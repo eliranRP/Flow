@@ -225,3 +225,201 @@
   color: var(--color-text);
   font-weight: var(--type-name-weight);
 }
+
+/* FLOW-1129: on ריפייננס, the properties not refinanced sit apart under their own heading and sum. */
+.ui-msr-drill-rest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+}
+
+.ui-msr-drill-rest-total {
+  color: var(--color-text-secondary);
+}
+
+/* FLOW-1127: the forecast tab. The refinance year, and equity over loan balances year by year. */
+.ui-msr-forecast-years {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-msr-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-msr-bars-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  block-size: 140px;
+}
+
+.ui-msr-bar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  block-size: 100%;
+}
+
+.ui-msr-bar-equity {
+  border-start-start-radius: var(--radius-chip);
+  border-start-end-radius: var(--radius-chip);
+  background: var(--color-tint-strong);
+}
+
+.ui-msr-bar[data-on] .ui-msr-bar-equity {
+  background: var(--color-accent);
+}
+
+.ui-msr-bar-loan {
+  background: var(--color-line);
+}
+
+.ui-msr-bars-years {
+  display: flex;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+}
+
+.ui-msr-bars-years > span {
+  flex: 1;
+  text-align: center;
+}
+
+.ui-msr-bars-years > span[data-on] {
+  color: var(--color-text);
+}
+
+.ui-msr-bars-legend {
+  display: flex;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+}
+
+.ui-msr-bars-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ui-msr-key-equity,
+.ui-msr-key-loan {
+  display: inline-block;
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-accent);
+}
+
+.ui-msr-key-loan {
+  background: var(--color-line);
+}
+
+/* One property's year: value, balance, equity and DSCR. */
+.ui-msr-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ui-msr-facts > div {
+  padding: var(--space-3);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-msr-facts dt {
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+}
+
+.ui-msr-facts dd {
+  margin: 0;
+}
+
+/* The assumptions sheet: a group per kind, and a series' years when opened. */
+.ui-msr-forecast-group,
+.ui-msr-forecast-series {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-msr-forecast-group {
+  margin-block-start: var(--space-4);
+}
+
+.ui-msr-forecast-years-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* FLOW-1132: a yearly change's field with its calendar at the end; the calendar marked while open or a year differs. */
+.ui-msr-forecast-series-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.ui-msr-forecast-series-row > .ui-field {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-msr-forecast-years-toggle {
+  flex-shrink: 0;
+  margin-block-end: var(--space-1);
+  color: var(--color-text-secondary);
+}
+
+.ui-msr-forecast-years-toggle[data-on] {
+  background: var(--color-tint);
+  color: var(--color-accent);
+}
+
+/* FLOW-1132: the properties left out of the forecast, one line per reason with the names under it. */
+.ui-msr-left-out {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-msr-left-out-title,
+.ui-msr-left-out-reason,
+.ui-msr-left-out-names {
+  margin: 0;
+}
+
+.ui-msr-left-out-title {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-name-weight);
+}
+
+.ui-msr-left-out-reason {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
+.ui-msr-left-out-names {
+  color: var(--color-text);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-title-line);
+}

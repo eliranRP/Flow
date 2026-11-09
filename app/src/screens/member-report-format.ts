@@ -5,7 +5,7 @@ import type { Formula, FormulaRow } from "./project-returns-info";
  * FLOW-1118: the member share report's words and formulas (pure, for the screen and its sheets).
  * ---------------------------------------------------------------------------------------------- */
 
-export type ReportMode = "sell" | "refi";
+export type ReportMode = "sell" | "refi" | "forecast";
 
 /** A rate in parts per million as a percent: 58800 → "5.88%", 61250 with 3 places → "6.125%". */
 export function ppmText(ppm: number, places = 2): string {
@@ -44,7 +44,15 @@ export function memberIndex(search: string, count: number): number {
 }
 
 export function modeOf(search: string): ReportMode {
-  return new URLSearchParams(search).get("mode") === "refi" ? "refi" : "sell";
+  const mode = new URLSearchParams(search).get("mode");
+  return mode === "refi" || mode === "forecast" ? mode : "sell";
+}
+
+/** FLOW-1127: the forecast's refinance year from `?years=`, 1 to 10; null when it names none. */
+export function yearsOf(search: string): number | null {
+  const raw = new URLSearchParams(search).get("years");
+  const n = raw != null && /^\d{1,2}$/.test(raw) ? Number(raw) : null;
+  return n != null && n >= 1 && n <= 10 ? n : null;
 }
 
 function money(key: string, op: FormulaRow["op"], label: string, minor: bigint, hint?: string, income = false): FormulaRow {
@@ -156,16 +164,33 @@ export function profitFormula(r: MemberShareResult, member: MemberShare | null):
   };
 }
 
-/** Refinance: new loan − payoff − closing = cash out, then the member's part of it; every row opens its parts. */
-export function refiFormula(r: MemberShareResult, member: Share, memberMinor: bigint | null): Formula {
+/**
+ * Refinance: new loan − payoff − closing = cash out, then the member's part of it; every row opens its parts.
+ * FLOW-1129: a member's loan on a refinanced property is paid off by the new loan and goes back to them: the payoff
+ * shows it apart, and the member's own loans and their total follow their part.
+ */
+export function refiFormula(r: MemberShareResult, member: MemberShare | null): Formula {
   const t = r.totals;
+  const share: Share = member == null ? null : { name: member.name, ownershipBp: member.ownershipBp };
+  const memberLoans = t.payoffMemberLoansMinor;
+  const payoff = memberLoans === 0n
+    ? [opens(money("payoff", "−", "סילוק ההלוואות הקיימות", -t.payoffMinor, "יתרות היום"), "payoff")]
+    : [
+      opens(money("payoff", "−", "סילוק הלוואות", -(t.payoffMinor - memberLoans), "יתרות היום"), "payoff"),
+      opens(money("member_loans", "−", "החזר הלוואות שותפים", -memberLoans, "על הנכסים הממוחזרים"), "member_loans"),
+    ];
+  const own = member == null || memberLoans === 0n ? [] : [
+    opens(money("own", "+", `הלוואות של ${member.name}`, member.refiLoansMinor, member.refiLoansMinor === 0n ? "אין" : "מוחזרות בריפייננס", true), "member_loans"),
+    opens(money("total", "=", `סה״כ ל־${member.name}`, member.refiTotalMinor, "חלק בכסף + הלוואות", true), "total"),
+  ];
   return {
     rows: [
       opens(money("loan", "", "הלוואה חדשה", t.newLoanMinor, `${bpText(r.assumptions.ltvBp)} מהשווי`), "loan"),
-      opens(money("payoff", "−", "סילוק ההלוואות הקיימות", -t.payoffMinor, "יתרות היום"), "payoff"),
+      ...payoff,
       opens(money("closing", "−", "עלויות סגירה", -t.closingMinor, `${bpText(r.assumptions.closingBp)} מההלוואה החדשה`), "closing"),
       ...(member == null ? [] : [opens(money("cash", "=", "כסף שמשתחרר", t.cashOutMinor, "לכל השותפים"), "cash")]),
-      opens(shareRow("share", t.cashOutMinor, member, memberMinor), member == null ? "cash" : "share"),
+      opens(shareRow("share", t.cashOutMinor, share, member?.refinanceMinor ?? null), member == null ? "cash" : "share"),
+      ...own,
     ],
     result: null,
   };

@@ -95,6 +95,51 @@ Deno.test("get_member_share counts the all-in and repays a member's own loan to 
   assertEquals(share.members.map((m) => [m.saleMinor, m.loansMinor, m.saleTotalMinor, m.profitMinor]), [[5_630_000, 1_000_000, 6_630_000, 4_530_000]]);
 });
 
+// FLOW-1126: the forecast's inputs for Birch: $3,100 rent, $290 tax a month, its mortgage.
+const INPUTS = {
+  as_of: "2026-10-31",
+  properties: [{
+    project_id: PROJECT, rent_minor: 310_000, rented_months: 12, units: 1,
+    costs: [{ category_id: null, name: "Property tax", amount_minor: 348_000 }],
+    loans: [{
+      loan_id: "00000000-0000-4000-8000-000000000009", kind: "amortizing", currency: "USD", principal_minor: 26_800_000,
+      annual_rate_ppm: 65_000, term_months: 360, start_date: "2026-11-01", payment_minor: 169_394,
+      interest_only_months: null, amortization_months: null, balance_minor: 26_800_000, rates: [],
+    }],
+  }],
+};
+
+Deno.test("get_member_projection reads the report and the inputs, and answers the forecast for a year and a member", async () => {
+  const { calls, rpc } = rpcOf((name) => ({ status: 200, json: name === "get_member_projection_inputs" ? INPUTS : WITH_LOANS }));
+  const read = await callTool("get_member_projection", { years: 5, member: "member b" }, ["read"], rpc);
+  if (!read.structuredContent.ok) throw new Error("refused");
+  assertEquals(calls.map((c) => c.name), ["get_member_report", "get_member_projection_inputs"]);
+  const projection = read.structuredContent.data as {
+    years: number; totals: { rentMinor: number }[]; refi: { rateIsToday: boolean; ratePpm: number }; members: { name: string }[];
+  };
+  assertEquals(projection.years, 5);
+  assertEquals(projection.totals.map((t) => t.rentMinor)[0], 3_720_000);
+  assertEquals([projection.refi.rateIsToday, projection.refi.ratePpm], [true, 58_800]);
+  assertEquals(projection.members.map((m) => m.name), ["Member B"]);
+  for (const bad of [{ years: 0 }, { years: 11 }, { years: 2.5 }, { member: "" }]) {
+    assertEquals((await callTool("get_member_projection", bad, ["read"], rpc)).isError, true);
+  }
+  const nobody = await callTool("get_member_projection", { member: "Member Z" }, ["read"], rpc);
+  if (!nobody.structuredContent.ok) assertEquals(nobody.structuredContent.error.code, "not_found");
+});
+
+Deno.test("set_member_report takes the projection part within its bounds", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "member_report" } } }));
+  const set = await callTool("set_member_report", { idempotency_key: "mp-1", projection: { rent_growth_bp: 400, by_year: { rent: { "2": 500 } } } }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls.at(-1)?.body, { p_idempotency_key: "mp-1", p_patch: { projection: { rent_growth_bp: 400, by_year: { rent: { "2": 500 } } } } });
+  const before = calls.length;
+  for (const projection of [{ rent_growth_bp: 4000 }, { by_year: { rent: { "11": 1 } } }, { colour: 1 }, { category_types: { x: "tax" } }]) {
+    assertEquals((await callTool("set_member_report", { idempotency_key: "k", projection }, ["write"], rpc)).isError, true);
+  }
+  assertEquals(calls.length, before);
+});
+
 Deno.test("set_member_report sends the parts as a patch, undo takes member_report", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "member_report" } } }));
   const set = await callTool("set_member_report", {

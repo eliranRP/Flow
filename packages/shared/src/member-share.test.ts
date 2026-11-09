@@ -222,6 +222,17 @@ describe("all-in, profit and the members' loans (FLOW-1124)", () => {
     expect(plain.totals.profitMinor).toBe(0n);
   });
 
+  it("repays a member's loan on a refinanced property to them (FLOW-1129)", () => {
+    // Juniper refinances: 75% of $365,000 = $273,750, less $241,500 and closing; Member B's $20,000 note is in its payoff.
+    expect(result.properties[1]?.refinances).toBe(true);
+    expect(result.totals.payoffMemberLoansMinor).toBe(2_000_000n);
+    const b = result.members[1];
+    expect(b?.refiLoansMinor).toBe(2_000_000n);
+    expect(b?.refiTotalMinor).toBe((b?.refinanceMinor ?? 0n) + 2_000_000n);
+    // Member A's note is the company's, on no property: a refinance pays it no part.
+    expect(result.members[0]?.refiLoansMinor).toBe(0n);
+  });
+
   it("leaves out a member's loan on a property the report leaves out", () => {
     const withPine = computeMemberShare({ members: [{ name: "Member A", ownership_bp: 10000, loan_ids: ["pine"] }] },
       [...homes, property("Pine", null, 1_000_000n)], [], [loan("pine", "id-Pine", 1_000_000n)]);

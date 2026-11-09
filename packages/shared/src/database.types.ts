@@ -1811,6 +1811,9 @@ isOneToOne: false
 "get_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
+"get_member_projection_inputs":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_member_report":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

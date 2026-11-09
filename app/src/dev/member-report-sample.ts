@@ -1,5 +1,5 @@
-import type { MemberReportConfig, MemberReportLoan, MemberReportProperty } from "@flow/shared";
-import type { MemberReportRead } from "../use-member-report";
+import type { MemberReportConfig, MemberReportLoan, MemberReportProperty, ProjectionInput, ProjectionLoan } from "@flow/shared";
+import type { MemberProjectionInputs, MemberReportRead } from "../use-member-report";
 
 /**
  * FLOW-1118: the member share report's fixtures, the approved board's invented figures in cents. Three
@@ -72,5 +72,42 @@ export const MEMBER_REPORT_LEFT_OUT: MemberReportRead = {
     ...MEMBER_PROPERTIES,
     { ...home("4", "Cedar Row", 0, 0), value_minor: null },
     { ...home("5", "Olive House", 150_000_000, 0), currency: "ILS" },
+  ],
+};
+
+/* FLOW-1127: the forecast's inputs for the three homes: their rent, last 12 months of costs, and loans. */
+
+function mortgage(id: string, balance: number, payment: number, rate: number): ProjectionLoan {
+  return {
+    loan_id: id, kind: "amortizing", currency: "USD", principal_minor: BigInt(balance), annual_rate_ppm: rate, term_months: 360,
+    start_date: "2026-11-01", payment_minor: BigInt(payment), interest_only_months: null, amortization_months: null,
+    balance_minor: BigInt(balance), rates: [],
+  };
+}
+
+function inputs(i: number, rent: number, tax: number, insurance: number, loans: ProjectionLoan[]): ProjectionInput {
+  return {
+    project_id: MEMBER_PROPERTIES[i]?.project_id ?? "",
+    rent_minor: BigInt(rent),
+    rented_months: 12,
+    units: 1,
+    costs: [
+      { category_id: "e0000000-0000-4000-8000-000000000001", name: "Property tax", amount_minor: BigInt(tax) },
+      { category_id: "e0000000-0000-4000-8000-000000000002", name: "Insurance", amount_minor: BigInt(insurance) },
+      { category_id: "e0000000-0000-4000-8000-000000000003", name: "Repairs", amount_minor: 90_000n },
+    ],
+    loans,
+  };
+}
+
+const B_NOTE_LOAN: ProjectionLoan = { ...mortgage(B_NOTE, 2_000_000, 0, 60_000), kind: "demand", term_months: null, payment_minor: null };
+
+export const MEMBER_PROJECTION_INPUTS: MemberProjectionInputs = {
+  asOf: "2026-10-31",
+  today: "2026-11-09",
+  properties: [
+    inputs(0, 310_000, 348_000, 192_000, [mortgage("d0000000-0000-4000-8000-000000000003", 26_800_000, 169_394, 65_000)]),
+    inputs(1, 275_000, 300_000, 168_000, [mortgage("d0000000-0000-4000-8000-000000000004", 22_150_000, 143_656, 67_500), B_NOTE_LOAN]),
+    inputs(2, 235_000, 252_000, 144_000, []),
   ],
 };

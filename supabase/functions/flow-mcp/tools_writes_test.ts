@@ -159,6 +159,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_property_return_lines",
     "get_member_report",
     "get_member_share",
+    "get_member_projection",
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",

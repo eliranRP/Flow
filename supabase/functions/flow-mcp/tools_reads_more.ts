@@ -11,6 +11,6 @@ export function moreRead(name: string, args: Record<string, unknown>, rpc: ToolR
   if (name === "get_weekly_summary") return weeklySummaryTool(args, rpc);
   if (name === "get_transaction_thread") return threadRead(args, rpc);
   if (name === "get_property_returns" || name === "get_property_return_lines") return propertyRead(name, args, rpc);
-  if (name === "get_member_report" || name === "get_member_share") return memberShareRead(name, args, rpc);
+  if (name === "get_member_report" || name === "get_member_share" || name === "get_member_projection") return memberShareRead(name, args, rpc);
   return null;
 }

@@ -586,9 +586,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1126"></a>[FLOW-1126](tasks/FLOW-1126.md) | Member report forecast: the data, the calculation and MCP | MCP |
 | <a id="flow-1127"></a>[FLOW-1127](tasks/FLOW-1127.md) | Member report forecast: the תחזית tab and its sheets | SMALL UI |
 | <a id="flow-1128"></a>[FLOW-1128](tasks/FLOW-1128.md) | Member report: the rate card's toggles show the tap at once, and the quotes' date is one row | BUG |
-| <a id="flow-1129"></a>[FLOW-1129](tasks/FLOW-1129.md) | Utility bills the tenant never paid back (plan) | PLAN FIRST |
-| <a id="flow-1130"></a>[FLOW-1130](tasks/FLOW-1130.md) | Utility refunds: the data, the match and MCP | MCP |
-| <a id="flow-1131"></a>[FLOW-1131](tasks/FLOW-1131.md) | Utility refunds: Home's row, the screen and the property's bills section | SMALL UI |
+| <a id="flow-1129"></a>[FLOW-1129](tasks/FLOW-1129.md) | Member report ריפייננס: a member's loan the refinance pays off goes back to them; the properties not refinanced sit apart | SMALL UI |
+| <a id="flow-1132"></a>[FLOW-1132](tasks/FLOW-1132.md) | Member report תחזית: an icon for a year's own change, and the properties left out grouped by reason | SMALL UI |
+| <a id="flow-1133"></a>[FLOW-1133](tasks/FLOW-1133.md) | Utility bills the tenant never paid back (plan) | PLAN FIRST |
+| <a id="flow-1134"></a>[FLOW-1134](tasks/FLOW-1134.md) | Utility refunds: the data, the match and MCP | MCP |
+| <a id="flow-1135"></a>[FLOW-1135](tasks/FLOW-1135.md) | Utility refunds: Home's row, the screen and the property's bills section | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

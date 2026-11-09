@@ -84,7 +84,9 @@ export const RefinanceRowsOpen: Story = {
   render: () => <Report entry="/reports/member?mode=refi" />,
   play: async ({ canvasElement }) => {
     await opens(canvasElement, /הלוואה חדשה/, "הלוואה חדשה", /75% × \$420,000/);
-    await opens(canvasElement, /סילוק ההלוואות הקיימות/, "סילוק ההלוואות הקיימות", /יתרות היום/);
+    // FLOW-1129: Member B's $20,000 note on Juniper is paid off by its refinance, and goes back to them.
+    await opens(canvasElement, /סילוק הלוואות/, "סילוק הלוואות", /בלי הלוואת שותף \$20,000/);
+    await opens(canvasElement, /החזר הלוואות שותפים/, "הלוואות שותפים", /Member B · Juniper Ct/);
     await opens(canvasElement, /עלויות סגירה/, "עלויות סגירה", /2% × \$315,000/);
     await opens(canvasElement, /כסף שמשתחרר/, "כסף שמשתחרר", /\$315,000 − \$268,000 − \$6,300/);
     await opens(canvasElement, /החלק של Member A/, "החלק של כל שותף", /50% × \$134,505/);
@@ -99,7 +101,8 @@ const DEEP: MemberReportRead = {
 export const RefinanceNotRefinanced: Story = {
   render: () => <Report entry="/reports/member?mode=refi" sample={DEEP} />,
   play: async ({ canvasElement }) => {
-    await opens(canvasElement, /כסף שמשתחרר/, "כסף שמשתחרר", /לא ממוחזר, לא נספר/);
+    // FLOW-1129: the properties not refinanced sit apart, under their own heading and sum.
+    await opens(canvasElement, /כסף שמשתחרר/, "כסף שמשתחרר", /לא ממוחזרים · לא נספרים/);
   },
 };
 

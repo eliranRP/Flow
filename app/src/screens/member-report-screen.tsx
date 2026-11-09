@@ -1,6 +1,17 @@
 import "../ui/lazy.css";
-import { applyBp, computeMemberShare, formatMoney, type MemberReportConfig, type MemberShare, type MemberShareResult, type PropertyShare } from "@flow/shared";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  applyBp,
+  computeMemberProjection,
+  computeMemberShare,
+  formatMoney,
+  type MemberReportConfig,
+  type MemberShare,
+  type MemberShareResult,
+  type ProjectionConfig,
+  type ProjectionResult,
+  type PropertyShare,
+} from "@flow/shared";
+import { lazy, Suspense, useCallback, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCompanyCurrency } from "../company-currency";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -18,11 +29,13 @@ import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
 import {
   applyPatch,
+  useMemberProjectionInputs,
   useMemberReport,
   useMemberReportWrite,
   useRefreshTreasury,
   useSellingCostWrite,
   withSellingCost,
+  type MemberProjectionInputs,
   type MemberReportPatch,
   type MemberReportRead,
   type RefreshAnswer,
@@ -45,6 +58,7 @@ import {
   type DrillKey,
   type ReportMode,
   type Share,
+  yearsOf,
 } from "./member-report-format";
 import { DrillSheet, TreasuryUpdated } from "./member-report-parts";
 import { AssumptionsSheet, MemberPickSheet, MembersSheet, PropertySheet, QuoteSheet, YieldsSheet, spreadOptions } from "./member-report-sheets";
@@ -57,6 +71,9 @@ import { PERCENT_KINDS, PercentSheet, type PercentKind } from "./project-returns
  * ---------------------------------------------------------------------------------------------- */
 
 type SheetName = "members" | "pick" | "quote" | "yields" | "assumptions";
+
+// FLOW-1127: the forecast tab loads with the tab, apart from the report.
+const ForecastBody = lazy(() => import("./member-report-forecast").then((m) => ({ default: m.ForecastBody })));
 
 /** FLOW-1121: the selling cost's editor, of the report's value (the investment page's is of the ARV). */
 const SELLING_KIND: PercentKind = {
@@ -82,6 +99,15 @@ function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, memb
     );
   }
   if (mode === "sell") return "אם מוכרים הכל · אחרי עלויות המכירה וסילוק ההלוואות";
+  // FLOW-1129: a member whose loan a refinance pays off sees their part and their loans apart.
+  if (member != null && member.refiLoansMinor !== 0n) {
+    return (
+      <>
+        {"חלק בכסף "}<Amount agorot={member.refinanceMinor} currency={currency} />
+        {" · הלוואות "}<Amount agorot={member.refiLoansMinor} currency={currency} />
+      </>
+    );
+  }
   if (r.totals.refinancedCount === 0) return "אף נכס לא משחרר כסף בריפייננס";
   return (
     <>
@@ -91,8 +117,10 @@ function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, memb
   );
 }
 
-export function MemberReportScreen({ sample, refreshSample }: {
+export function MemberReportScreen({ sample, refreshSample, projectionSample }: {
   sample?: MemberReportRead;
+  /** Stories: the forecast's inputs in place of get_member_projection_inputs. */
+  projectionSample?: MemberProjectionInputs;
   /** Stories: what refresh_treasury_yields answers (with a sample, "requested" when left out). */
   refreshSample?: () => Promise<RefreshAnswer>;
 } = {}) {
@@ -116,6 +144,18 @@ export function MemberReportScreen({ sample, refreshSample }: {
 
   const result = useMemo(() => (data == null ? null : computeMemberShare(data.config, data.properties, data.treasuryYields, data.loans)), [data]);
   const mode = modeOf(location.search);
+  // FLOW-1127: the forecast's inputs, read when its tab opens.
+  const inputsQuery = useMemberProjectionInputs(live && mode === "forecast");
+  const inputs = live ? inputsQuery.data : projectionSample;
+  const projectionConfig = data?.config?.projection;
+  const years = yearsOf(location.search) ?? projectionConfig?.years ?? 10;
+  const projection = useMemo((): ProjectionResult | null => {
+    if (data == null || inputs == null || result == null) return null;
+    return computeMemberProjection({
+      config: data.config, properties: data.properties, loans: data.loans, inputs: inputs.properties,
+      asOf: inputs.asOf, today: inputs.today, expectedRatePpm: result.rate.expectedPpm, years,
+    });
+  }, [data, inputs, result, years]);
   const index = memberIndex(location.search, result?.members.length ?? 0);
   const member = result?.members[index] ?? null;
   const share: Share = member == null ? null : { name: member.name, ownershipBp: member.ownershipBp };
@@ -202,9 +242,12 @@ export function MemberReportScreen({ sample, refreshSample }: {
   const sellingShown = result.properties.filter((p) => sellingIds.includes(p.projectId));
   const sellingBp = sellingShown.length > 0 && sellingShown.every((p) => !p.sellingCostDefault && p.sellingCostBp === sellingShown[0]?.sellingCostBp)
     ? (sellingShown[0]?.sellingCostBp ?? null) : null;
-  // FLOW-1124: a sale brings a member their part of the equity and their own loans back.
-  const memberMinor = member == null ? null : mode === "sell" ? member.saleTotalMinor : member.refinanceMinor;
-  const whole = mode === "sell" ? result.totals.equityMinor : result.totals.cashOutMinor;
+  // FLOW-1124: a sale brings a member their part of the equity and their own loans back. FLOW-1127: the forecast,
+  // their total from the refinance in the chosen year.
+  const forecastMember = projection?.members[index] ?? null;
+  const memberMinor = member == null ? null
+    : mode === "sell" ? member.saleTotalMinor : mode === "refi" ? member.refiTotalMinor : (forecastMember?.totalMinor ?? 0n);
+  const whole = mode === "sell" ? result.totals.equityMinor : mode === "refi" ? result.totals.cashOutMinor : (projection?.refi.splitMinor ?? 0n);
   const figure = memberMinor ?? whole;
   // The chip: the owner with one member edits the members; with two or more, or a viewer, it picks one.
   const pickOnly = !canEdit || result.members.length > 1;
@@ -225,15 +268,17 @@ export function MemberReportScreen({ sample, refreshSample }: {
         heroClassName="ui-msr-hero"
         hero={(
           <>
-            <FocusTitle className="ui-band-label ui-msr-band-label">{heroLabel(mode, member?.name ?? null)}</FocusTitle>
+            <FocusTitle className="ui-band-label ui-msr-band-label">{heroLabel(mode, member?.name ?? null, projection)}</FocusTitle>
             <p className="ui-msr-band-figure ui-band-fade"><Amount agorot={figure} currency={currency} loss={figure < 0n} size="hero" /></p>
-            <p className="ui-msr-band-sub t-meta ui-band-fade">{heroMeta(mode, result, currency, member)}</p>
+            <p className="ui-msr-band-sub t-meta ui-band-fade">
+              {mode === "forecast" ? forecastMeta(projection, forecastMember, currency) : heroMeta(mode, result, currency, member)}
+            </p>
           </>
         )}
       >
         <div className="ui-msr-band-tabs">
-          <SegmentedControl label="תרחיש" showLabel={false} role="tab" tone="band" value={mode} onChange={(next) => { setParam("mode", next === "refi" ? "refi" : null); }}
-            options={[{ value: "sell", label: "מכירת הכל" }, { value: "refi", label: "ריפייננס" }]} />
+          <SegmentedControl label="תרחיש" showLabel={false} role="tab" tone="band" value={mode} onChange={(next) => { setParam("mode", next === "sell" ? null : next); }}
+            options={[{ value: "sell", label: "מכירת הכל" }, { value: "refi", label: "ריפייננס" }, { value: "forecast", label: "תחזית" }]} />
         </div>
       </TopBand>
       <div className="ui-rep-content ui-msr">
@@ -244,34 +289,42 @@ export function MemberReportScreen({ sample, refreshSample }: {
             {canEdit ? <Button onClick={() => { setSheet("members"); }}>הגדרת שותפים</Button> : null}
           </section>
         )}
-        <CalcSection title="החישוב" total={null}>
-          <FormulaList formula={mode === "sell" ? saleFormula(result, member) : refiFormula(result, share, memberMinor)} currency={currency} resolve={resolve} label="החישוב" />
-        </CalcSection>
-        {mode === "sell" ? <ProfitSection result={result} member={member} currency={currency} resolve={resolve} /> : null}
-        {mode === "refi" ? <RateSection result={result} canEdit={canEdit} onOpen={setSheet} onSave={save} config={config} updated={updated} /> : null}
-        <section className="ui-msr-props" aria-labelledby="msr-props">
-          <h2 id="msr-props" className="t-section">לפי נכס</h2>
-          <List>
-            {result.properties.map((p) => {
-              const whole = mode === "sell" ? p.saleNetMinor : p.refinances ? p.cashOutMinor : 0n;
-              const own = member == null ? whole : applyBp(whole, member.ownershipBp);
-              return (
-                <ListRow key={p.projectId} variant="project" title={p.name} agorot={own} currency={currency} loss={own < 0n}
-                  hint={mode === "sell" ? saleHint(p, currency) : p.refinances ? `הלוואה חדשה ${formatMoney(p.newLoanMinor, currency)}` : "לא משתלם למחזר"}
-                  onClick={() => { setProperty(p); }} />
-              );
-            })}
-          </List>
-          {result.missing.length === 0 ? null : (
-            <p className="ui-msr-note">{`לא בחישוב: ${result.missing.map((m) => `${m.name} (${MISSING_WORDS[m.reason]})`).join(", ")}.`}</p>
-          )}
-        </section>
-        {canEdit ? <Button variant="link" onClick={() => { setSheet("assumptions"); }}>הנחות החישוב</Button> : null}
-        <p className="ui-rep-note">
-          {mode === "sell"
-            ? "השווי מההערכה האחרונה של כל נכס. לפני מס; רואה החשבון קובע את המס על הרווח."
-            : `הלוואה ל־${String(result.assumptions.termYears)} שנה, ${bpText(result.assumptions.ltvBp)} מהשווי, ${bpText(result.assumptions.closingBp)} עלויות סגירה. לפני מס.`}
-        </p>
+        {mode === "forecast" ? (
+          <ForecastArea projection={projection} member={forecastMember} years={years} canEdit={canEdit} onSave={save}
+            onYears={(next) => { setParam("years", next === (projectionConfig?.years ?? 10) ? null : String(next)); }}
+            projectionConfig={projectionConfig} inputs={inputs} failed={live && inputsQuery.isError} onRetry={() => { void inputsQuery.refetch(); }} />
+        ) : (
+          <>
+          <CalcSection title="החישוב" total={null}>
+            <FormulaList formula={mode === "sell" ? saleFormula(result, member) : refiFormula(result, member)} currency={currency} resolve={resolve} label="החישוב" />
+          </CalcSection>
+          {mode === "sell" ? <ProfitSection result={result} member={member} currency={currency} resolve={resolve} /> : null}
+          {mode === "refi" ? <RateSection result={result} canEdit={canEdit} onOpen={setSheet} onSave={save} config={config} updated={updated} /> : null}
+          <section className="ui-msr-props" aria-labelledby="msr-props">
+            <h2 id="msr-props" className="t-section">לפי נכס</h2>
+            <List>
+              {result.properties.map((p) => {
+                const whole = mode === "sell" ? p.saleNetMinor : p.refinances ? p.cashOutMinor : 0n;
+                const own = member == null ? whole : applyBp(whole, member.ownershipBp);
+                return (
+                  <ListRow key={p.projectId} variant="project" title={p.name} agorot={own} currency={currency} loss={own < 0n}
+                    hint={mode === "sell" ? saleHint(p, currency) : p.refinances ? `הלוואה חדשה ${formatMoney(p.newLoanMinor, currency)}` : "לא משתלם למחזר"}
+                    onClick={() => { setProperty(p); }} />
+                );
+              })}
+            </List>
+            {result.missing.length === 0 ? null : (
+              <p className="ui-msr-note">{`לא בחישוב: ${result.missing.map((m) => `${m.name} (${MISSING_WORDS[m.reason]})`).join(", ")}.`}</p>
+            )}
+          </section>
+          {canEdit ? <Button variant="link" onClick={() => { setSheet("assumptions"); }}>הנחות החישוב</Button> : null}
+          <p className="ui-rep-note">
+            {mode === "sell"
+              ? "השווי מההערכה האחרונה של כל נכס. לפני מס; רואה החשבון קובע את המס על הרווח."
+              : `הלוואה ל־${String(result.assumptions.termYears)} שנה, ${bpText(result.assumptions.ltvBp)} מהשווי, ${bpText(result.assumptions.closingBp)} עלויות סגירה. לפני מס.`}
+          </p>
+          </>
+        )}
       </div>
       <MemberPickSheet open={sheet === "pick"} onOpenChange={(open) => { setSheet(open ? "pick" : null); }} members={result.members} index={index}
         onPick={(next) => { setParam("member", next === 0 ? null : String(next)); }}
@@ -298,9 +351,53 @@ export function MemberReportScreen({ sample, refreshSample }: {
 }
 
 /** The band's label: whose figure it is, and which way. */
-function heroLabel(mode: ReportMode, name: string | null): string {
+function heroLabel(mode: ReportMode, name: string | null, projection: ProjectionResult | null): string {
+  if (mode === "forecast") {
+    const year = projection == null ? "" : `ב־${String(Number(projection.asOf.slice(0, 4)) + projection.years)}`;
+    return name == null ? `כסף שמשתחרר לשותפים מריפייננס ${year}` : `סה״כ ל־${name} מריפייננס ${year}`;
+  }
   if (name == null) return mode === "sell" ? "הון נקי של החברה אם מוכרים הכל" : "כסף שמשתחרר בריפייננס";
-  return mode === "sell" ? `סה״כ ל־${name} אם מוכרים הכל` : `החלק של ${name} מריפייננס`;
+  return mode === "sell" ? `סה״כ ל־${name} אם מוכרים הכל` : `סה״כ ל־${name} מריפייננס`;
+}
+
+/** FLOW-1127: the band's line on תחזית: the cash flow until the refinance, and that it is a forecast. */
+function forecastMeta(projection: ProjectionResult | null, member: ProjectionResult["members"][number] | null, currency: string): ReactNode {
+  if (projection == null) return "תחזית לפי ההנחות";
+  const cash = member?.cashFlowMinor ?? projection.cashFlowMinor;
+  return <>{"ועוד "}<Amount agorot={cash} currency={currency} loss={cash < 0n} />{" תזרים עד אז · תחזית לפי ההנחות"}</>;
+}
+
+/** FLOW-1127: the forecast tab's content, loaded with it; a line while its inputs are read. */
+function ForecastArea({ projection, member, years, canEdit, onSave, onYears, projectionConfig, inputs, failed, onRetry }: {
+  projection: ProjectionResult | null;
+  member: ProjectionResult["members"][number] | null;
+  years: number;
+  canEdit: boolean;
+  onSave: (patch: MemberReportPatch) => Promise<boolean>;
+  onYears: (years: number) => void;
+  projectionConfig: ProjectionConfig | undefined;
+  inputs: MemberProjectionInputs | undefined;
+  failed: boolean;
+  onRetry: () => void;
+}) {
+  if (failed) {
+    return (
+      <section className="ui-msr-empty" aria-label="התחזית">
+        <p>לא הצלחנו לקרוא את נתוני התחזית.</p>
+        <Button onClick={onRetry}>ניסיון חוזר</Button>
+      </section>
+    );
+  }
+  if (projection == null || inputs == null) return <p className="ui-msr-note" role="status">טוען את התחזית…</p>;
+  // Each cost category the properties' last 12 months hold, for its type.
+  const seen = new Map<string, string>();
+  for (const p of inputs.properties) for (const c of p.costs) if (c.category_id != null && !seen.has(c.category_id)) seen.set(c.category_id, c.name ?? "");
+  return (
+    <Suspense fallback={<p className="ui-msr-note" role="status">טוען את התחזית…</p>}>
+      <ForecastBody result={projection} member={member} years={years} onYears={onYears} canEdit={canEdit}
+        projection={projectionConfig} onSave={onSave} costCategories={[...seen].map(([id, name]) => ({ id, name }))} />
+    </Suspense>
+  );
 }
 
 /** A property's line on מכירת הכל: its value, its loans, and its profit (FLOW-1124). */
