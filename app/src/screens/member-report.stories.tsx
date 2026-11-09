@@ -150,7 +150,7 @@ export const Viewer: Story = {
     const sheet = within(await body(canvasElement).findByRole("dialog", { name: "השותף בדוח" }));
     await expect(sheet.queryByRole("button", { name: "עריכת שותפים ואחוזים" })).toBeNull();
     await userEvent.click(sheet.getByRole("button", { name: /Member C/ }));
-    await waitFor(async () => { await expect(canvas.getByRole("heading", { level: 1 }).textContent).toBe("החלק של Member C מריפייננס"); });
+    await waitFor(async () => { await expect(canvas.getByRole("heading", { level: 1 }).textContent).toBe("סה״כ ל־Member C מריפייננס"); });
   },
 };
 

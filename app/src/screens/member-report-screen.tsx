@@ -82,6 +82,15 @@ function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, memb
     );
   }
   if (mode === "sell") return "אם מוכרים הכל · אחרי עלויות המכירה וסילוק ההלוואות";
+  // FLOW-1129: a member whose loan a refinance pays off sees their part and their loans apart.
+  if (member != null && member.refiLoansMinor !== 0n) {
+    return (
+      <>
+        {"חלק בכסף "}<Amount agorot={member.refinanceMinor} currency={currency} />
+        {" · הלוואות "}<Amount agorot={member.refiLoansMinor} currency={currency} />
+      </>
+    );
+  }
   if (r.totals.refinancedCount === 0) return "אף נכס לא משחרר כסף בריפייננס";
   return (
     <>
@@ -203,7 +212,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
   const sellingBp = sellingShown.length > 0 && sellingShown.every((p) => !p.sellingCostDefault && p.sellingCostBp === sellingShown[0]?.sellingCostBp)
     ? (sellingShown[0]?.sellingCostBp ?? null) : null;
   // FLOW-1124: a sale brings a member their part of the equity and their own loans back.
-  const memberMinor = member == null ? null : mode === "sell" ? member.saleTotalMinor : member.refinanceMinor;
+  const memberMinor = member == null ? null : mode === "sell" ? member.saleTotalMinor : member.refiTotalMinor;
   const whole = mode === "sell" ? result.totals.equityMinor : result.totals.cashOutMinor;
   const figure = memberMinor ?? whole;
   // The chip: the owner with one member edits the members; with two or more, or a viewer, it picks one.
@@ -245,7 +254,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
           </section>
         )}
         <CalcSection title="החישוב" total={null}>
-          <FormulaList formula={mode === "sell" ? saleFormula(result, member) : refiFormula(result, share, memberMinor)} currency={currency} resolve={resolve} label="החישוב" />
+          <FormulaList formula={mode === "sell" ? saleFormula(result, member) : refiFormula(result, member)} currency={currency} resolve={resolve} label="החישוב" />
         </CalcSection>
         {mode === "sell" ? <ProfitSection result={result} member={member} currency={currency} resolve={resolve} /> : null}
         {mode === "refi" ? <RateSection result={result} canEdit={canEdit} onOpen={setSheet} onSave={save} config={config} updated={updated} /> : null}
@@ -300,7 +309,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
 /** The band's label: whose figure it is, and which way. */
 function heroLabel(mode: ReportMode, name: string | null): string {
   if (name == null) return mode === "sell" ? "הון נקי של החברה אם מוכרים הכל" : "כסף שמשתחרר בריפייננס";
-  return mode === "sell" ? `סה״כ ל־${name} אם מוכרים הכל` : `החלק של ${name} מריפייננס`;
+  return mode === "sell" ? `סה״כ ל־${name} אם מוכרים הכל` : `סה״כ ל־${name} מריפייננס`;
 }
 
 /** A property's line on מכירת הכל: its value, its loans, and its profit (FLOW-1124). */

@@ -156,16 +156,33 @@ export function profitFormula(r: MemberShareResult, member: MemberShare | null):
   };
 }
 
-/** Refinance: new loan − payoff − closing = cash out, then the member's part of it; every row opens its parts. */
-export function refiFormula(r: MemberShareResult, member: Share, memberMinor: bigint | null): Formula {
+/**
+ * Refinance: new loan − payoff − closing = cash out, then the member's part of it; every row opens its parts.
+ * FLOW-1129: a member's loan on a refinanced property is paid off by the new loan and goes back to them: the payoff
+ * shows it apart, and the member's own loans and their total follow their part.
+ */
+export function refiFormula(r: MemberShareResult, member: MemberShare | null): Formula {
   const t = r.totals;
+  const share: Share = member == null ? null : { name: member.name, ownershipBp: member.ownershipBp };
+  const memberLoans = t.payoffMemberLoansMinor;
+  const payoff = memberLoans === 0n
+    ? [opens(money("payoff", "−", "סילוק ההלוואות הקיימות", -t.payoffMinor, "יתרות היום"), "payoff")]
+    : [
+      opens(money("payoff", "−", "סילוק הלוואות", -(t.payoffMinor - memberLoans), "יתרות היום"), "payoff"),
+      opens(money("member_loans", "−", "החזר הלוואות שותפים", -memberLoans, "על הנכסים הממוחזרים"), "member_loans"),
+    ];
+  const own = member == null || memberLoans === 0n ? [] : [
+    opens(money("own", "+", `הלוואות של ${member.name}`, member.refiLoansMinor, member.refiLoansMinor === 0n ? "אין" : "מוחזרות בריפייננס", true), "member_loans"),
+    opens(money("total", "=", `סה״כ ל־${member.name}`, member.refiTotalMinor, "חלק בכסף + הלוואות", true), "total"),
+  ];
   return {
     rows: [
       opens(money("loan", "", "הלוואה חדשה", t.newLoanMinor, `${bpText(r.assumptions.ltvBp)} מהשווי`), "loan"),
-      opens(money("payoff", "−", "סילוק ההלוואות הקיימות", -t.payoffMinor, "יתרות היום"), "payoff"),
+      ...payoff,
       opens(money("closing", "−", "עלויות סגירה", -t.closingMinor, `${bpText(r.assumptions.closingBp)} מההלוואה החדשה`), "closing"),
       ...(member == null ? [] : [opens(money("cash", "=", "כסף שמשתחרר", t.cashOutMinor, "לכל השותפים"), "cash")]),
-      opens(shareRow("share", t.cashOutMinor, member, memberMinor), member == null ? "cash" : "share"),
+      opens(shareRow("share", t.cashOutMinor, share, member?.refinanceMinor ?? null), member == null ? "cash" : "share"),
+      ...own,
     ],
     result: null,
   };
