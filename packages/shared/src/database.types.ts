@@ -1560,13 +1560,13 @@ isOneToOne: false
                   ]
                 },"utility_refund_answers": {
                   Row: {
-                    "bill_transaction_id": string,"company_id": string,"id": string,"payment_transaction_id": string | null,"refile": Json | null,"set_at": string,"set_by": string | null,"state": string
+                    "bill_transaction_id": string,"company_id": string,"id": string,"keep_category": boolean,"payment_transaction_id": string | null,"refile": Json | null,"set_at": string,"set_by": string | null,"state": string
                   }
                   Insert: {
-                    "bill_transaction_id": string,"company_id": string,"id"?: string,"payment_transaction_id"?: string | null,"refile"?: Json | null,"set_at"?: string,"set_by"?: string | null,"state": string
+                    "bill_transaction_id": string,"company_id": string,"id"?: string,"keep_category"?: boolean,"payment_transaction_id"?: string | null,"refile"?: Json | null,"set_at"?: string,"set_by"?: string | null,"state": string
                   }
                   Update: {
-                    "bill_transaction_id"?: string,"company_id"?: string,"id"?: string,"payment_transaction_id"?: string | null,"refile"?: Json | null,"set_at"?: string,"set_by"?: string | null,"state"?: string
+                    "bill_transaction_id"?: string,"company_id"?: string,"id"?: string,"keep_category"?: boolean,"payment_transaction_id"?: string | null,"refile"?: Json | null,"set_at"?: string,"set_by"?: string | null,"state"?: string
                   }
                   Relationships: [
                     {
@@ -1694,7 +1694,7 @@ isOneToOne: false
 { Args: { "p_in_transaction_id": string,"p_out_transaction_id": string,"p_same": boolean }; Returns: Json
                            },
 "answer_utility_refund":
-{ Args: { "p_bill_transaction_id": string,"p_payment_transaction_id"?: string,"p_state": string,"p_today"?: string }; Returns: Json
+{ Args: { "p_bill_transaction_id": string,"p_keep_category"?: boolean,"p_payment_transaction_id"?: string,"p_state": string,"p_today"?: string }; Returns: Json
                            },
 "apply_starter_categories":
 { Args: { "p_set": string }; Returns: Json
@@ -2059,7 +2059,7 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_in_transaction_id": string,"p_out_transaction_id": string,"p_same": boolean }; Returns: Json
                            },
 "mcp_answer_utility_refund":
-{ Args: { "p_bill_transaction_id": string,"p_idempotency_key": string,"p_payment_transaction_id"?: string,"p_state": string,"p_today"?: string }; Returns: Json
+{ Args: { "p_bill_transaction_id": string,"p_idempotency_key": string,"p_keep_category"?: boolean,"p_payment_transaction_id"?: string,"p_state": string,"p_today"?: string }; Returns: Json
                            },
 "mcp_archive_account":
 { Args: { "p_account_id": string,"p_idempotency_key": string }; Returns: Json
