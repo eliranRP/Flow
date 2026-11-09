@@ -157,6 +157,7 @@ export function UtilityRefundsScreen() {
                 <RefundCardView
                   key={card.key}
                   card={card}
+                  leaving={actions.leaving.has(card.key)}
                   readOnly={readOnly}
                   onYes={() => { actions.yes(card); }}
                   onNo={() => { actions.no(card); }}
@@ -170,6 +171,7 @@ export function UtilityRefundsScreen() {
                     <OpenBillRow
                       key={bill.bill_transaction_id}
                       bill={bill}
+                      leaving={actions.leaving.has(bill.bill_transaction_id)}
                       readOnly={readOnly}
                       onOpen={() => { setOpened(bill); }}
                       onSeen={() => { actions.seen(bill); }}

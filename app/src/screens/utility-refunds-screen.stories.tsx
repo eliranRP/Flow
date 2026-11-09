@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { PINE, storyUtilityClient, utilityFixSample, utilityRefundsSample } from "./utility-refunds-sample";
 import { StoryRoute } from "../ui/story-route";
@@ -95,6 +95,21 @@ export const UtilityRefundsSheet: Story = {
     const [row] = await within(canvasElement).findAllByRole("button", { name: /^City Water/ });
     await userEvent.click(row as HTMLElement);
     await expect(await within(document.body).findByRole("button", { name: "ראיתי, אין צורך בטיפול" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1141: ✓ slides the row toward it and folds it away (the v3 row-card fold); ביטול brings it back. */
+export const UtilityRefundsFold: Story = {
+  name: "UtilityRefunds, a row folds away",
+  render: () => <RefundsStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const seen = await canvas.findByRole("button", { name: "ראיתי: Gas Co" });
+    await userEvent.click(seen);
+    await expect(await within(document.body).findByText("Gas Co · ראיתי")).toBeInTheDocument();
+    await waitFor(() => expect(canvas.queryByRole("button", { name: "ראיתי: Gas Co" })).toBeNull());
+    await userEvent.click(within(document.body).getByRole("button", { name: "ביטול" }));
+    await expect(await canvas.findByRole("button", { name: "ראיתי: Gas Co" })).toBeInTheDocument();
   },
 };
 

@@ -1,5 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { Button } from "../ui/button";
+import { FoldItem } from "../ui/fold";
 import { IconButton } from "../ui/icon-button";
 import { CheckIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
@@ -25,8 +26,10 @@ function Leg({ title, meta, amount }: { title: string; meta: string; amount: str
  * why Flow pairs them, then "זה ההחזר?" with כן / לא. After a yes on a payment filed elsewhere it shows הוחזר, the
  * "ייתכן שסווג לא נכון" note and its one button, with להשאיר. A viewer sees the card with no answers.
  */
-export function RefundCardView({ card, readOnly, onYes, onNo, onRefile, onKeep }: {
+export function RefundCardView({ card, readOnly, leaving, onYes, onNo, onRefile, onKeep }: {
   card: RefundCard;
+  /** FLOW-1141: answered, the card folds away (ui/fold.tsx). */
+  leaving: boolean;
   readOnly: boolean;
   onYes: () => void;
   onNo: () => void;
@@ -37,45 +40,48 @@ export function RefundCardView({ card, readOnly, onYes, onNo, onRefile, onKeep }
   const currency = card.payment.currency;
   const fix = fixCopy(card);
   return (
-    <section className="ui-urf-card m-page-enter" aria-label={`החזר אפשרי: ${cardBillTitle(card)}`}>
-      <ul className="ui-urf-legs">
-        <Leg title={cardBillTitle(card)} meta={cardBillMeta(card)} amount={formatAmountText(bills, currency, { detail: true, direction: "expense" })} />
-        <Leg title={paymentTitle(card.payment)} meta={paymentMeta(card)} amount={formatAmountText(card.payment.amount_minor, currency, { detail: true, direction: "income", plus: true })} />
-      </ul>
-      <p className="ui-urf-why">{cardWhy(card)}</p>
-      {card.fix ? (
-        <div className="ui-urf-fix">
-          <span className="ui-urf-fix-done"><CheckIcon size={16} stroke={2.4} />הוחזר</span>
-          <span className="ui-urf-fix-title">ייתכן שסווג לא נכון</span>
-          <span className="ui-urf-fix-hint">{fix.hint}</span>
-          {readOnly ? null : (
-            <div className="ui-urf-actions">
-              <Button onClick={() => { onRefile(card.bills[0]?.category_name ?? "החשבונות"); }}>{fix.label}</Button>
-              <Button variant="secondary" className="ui-urf-keep" onClick={onKeep}>להשאיר</Button>
-            </div>
-          )}
-        </div>
-      ) : readOnly ? null : (
-        <div className="ui-urf-ask">
-          <h3 className="ui-urf-ask-title">זה ההחזר?</h3>
-          <div className="ui-urf-actions">
-            <Button onClick={onYes}>כן, זה ההחזר</Button>
-            <Button variant="secondary" onClick={onNo}>לא</Button>
+    <FoldItem as="div" leaving={leaving}>
+      <section className="ui-urf-card m-page-enter" aria-label={`החזר אפשרי: ${cardBillTitle(card)}`}>
+        <ul className="ui-urf-legs">
+          <Leg title={cardBillTitle(card)} meta={cardBillMeta(card)} amount={formatAmountText(bills, currency, { detail: true, direction: "expense" })} />
+          <Leg title={paymentTitle(card.payment)} meta={paymentMeta(card)} amount={formatAmountText(card.payment.amount_minor, currency, { detail: true, direction: "income", plus: true })} />
+        </ul>
+        <p className="ui-urf-why">{cardWhy(card)}</p>
+        {card.fix ? (
+          <div className="ui-urf-fix">
+            <span className="ui-urf-fix-done"><CheckIcon size={16} stroke={2.4} />הוחזר</span>
+            <span className="ui-urf-fix-title">ייתכן שסווג לא נכון</span>
+            <span className="ui-urf-fix-hint">{fix.hint}</span>
+            {readOnly ? null : (
+              <div className="ui-urf-actions">
+                <Button onClick={() => { onRefile(card.bills[0]?.category_name ?? "החשבונות"); }}>{fix.label}</Button>
+                <Button variant="secondary" className="ui-urf-keep" onClick={onKeep}>להשאיר</Button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
-    </section>
+        ) : readOnly ? null : (
+          <div className="ui-urf-ask">
+            <h3 className="ui-urf-ask-title">זה ההחזר?</h3>
+            <div className="ui-urf-actions">
+              <Button onClick={onYes}>כן, זה ההחזר</Button>
+              <Button variant="secondary" onClick={onNo}>לא</Button>
+            </div>
+          </div>
+        )}
+      </section>
+    </FoldItem>
   );
 }
 
 /**
  * A bill not refunded: the dashed ring in the signal colour, the supplier, "לא הוחזר · N ימים · dd/mm", the amount.
- * The row opens the bill's sheet; the ✓ beside it is ראיתי. A viewer's row opens nothing and has no ✓.
+ * The row opens the bill's sheet; the ✓ beside it is ראיתי. A viewer's row opens nothing and has no ✓. FLOW-1141:
+ * closed, it slides toward its ✓ and folds away.
  */
-export function OpenBillRow({ bill, readOnly, onOpen, onSeen }: { bill: UtilityBill; readOnly: boolean; onOpen: () => void; onSeen: () => void }) {
+export function OpenBillRow({ bill, readOnly, leaving, onOpen, onSeen }: { bill: UtilityBill; readOnly: boolean; leaving: boolean; onOpen: () => void; onSeen: () => void }) {
   const name = bill.supplier_name ?? "ספק";
   return (
-    <li className="ui-urf-item m-page-enter">
+    <FoldItem leaving={leaving} className="ui-urf-item m-page-enter">
       <ListRow
         variant="project"
         layout="flat"
@@ -93,6 +99,6 @@ export function OpenBillRow({ bill, readOnly, onOpen, onSeen }: { bill: UtilityB
           <CheckIcon size={20} stroke={2.2} />
         </IconButton>
       )}
-    </li>
+    </FoldItem>
   );
 }

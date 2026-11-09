@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { formatDayMonth } from "./ui/date-math";
 import type { UtilityBill, UtilityPayment } from "./utility-refunds";
 
 /**
@@ -80,9 +81,9 @@ export function openTotals(groups: readonly RefundGroup[]): { currency: string; 
   return [...totals].map(([currency, minor]) => ({ currency, minor }));
 }
 
-/** dd/mm, as the board writes a bill's day. */
-export function dayMonth(iso: string): string {
-  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+/** FLOW-1141 (the owner): every date on the utility refund screens reads dd/mm/yy, the year included. */
+export function refundDate(iso: string): string {
+  return formatDayMonth(iso, undefined, { year: "always" });
 }
 
 function days(count: number): string {
@@ -101,7 +102,7 @@ export function cardBillTotal(card: RefundCard): bigint {
 export function cardBillMeta(card: RefundCard): string {
   const [first] = card.bills;
   if (first == null) return "";
-  return [first.category_name, dayMonth(first.doc_date)].filter((part): part is string => part != null).join(" · ");
+  return [first.category_name, refundDate(first.doc_date)].filter((part): part is string => part != null).join(" · ");
 }
 
 /** The payment's payer (or its description). */
@@ -109,14 +110,14 @@ export function paymentTitle(payment: UtilityPayment): string {
   return payment.party ?? payment.description ?? "תשלום";
 }
 
-/** "שכירות · 02/10 · 18 ימים אחרי", or "בלי פרויקט · הכנסה · 12/09 · …" for a payment on no property. */
+/** "שכירות · 02/10/26 · 18 ימים אחרי", or "בלי פרויקט · הכנסה · 12/09 · …" for a payment on no property. */
 export function paymentMeta(card: RefundCard): string {
   const [first] = card.bills;
   const gap = first == null ? 0 : Math.round((Date.parse(card.payment.doc_date) - Date.parse(first.doc_date)) / 86_400_000);
   return [
     card.payment.project_id == null ? "בלי פרויקט" : null,
     card.payment.category_name ?? "בלי קטגוריה",
-    dayMonth(card.payment.doc_date),
+    refundDate(card.payment.doc_date),
     gap === 0 ? "באותו יום" : gap > 0 ? `${days(gap)} אחרי` : `${days(-gap)} לפני`,
   ].filter((part): part is string => part != null).join(" · ");
 }
@@ -146,9 +147,9 @@ export function fixCopy(card: RefundCard): { label: string; hint: string } {
   };
 }
 
-/** A bill's line: "לא הוחזר · 67 ימים · 03/09", and the no-rent note. */
+/** A bill's line: "לא הוחזר · 67 ימים · 03/09/26", and the no-rent note. */
 export function openMeta(bill: UtilityBill): string {
-  return ["לא הוחזר", days(bill.days), dayMonth(bill.doc_date), bill.no_rent ? "חודש בלי שכירות" : null]
+  return ["לא הוחזר", days(bill.days), refundDate(bill.doc_date), bill.no_rent ? "חודש בלי שכירות" : null]
     .filter((part): part is string => part != null)
     .join(" · ");
 }
