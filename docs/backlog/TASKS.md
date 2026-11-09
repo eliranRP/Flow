@@ -582,6 +582,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1121"></a>[FLOW-1121](tasks/FLOW-1121.md) | Member report: every figure of the calculation opens its parts; the selling cost shows its percent and can be changed | SMALL UI |
 | <a id="flow-1122"></a>[FLOW-1122](tasks/FLOW-1122.md) | Member report: refresh the US Treasury yields by hand | MCP |
 | <a id="flow-1124"></a>[FLOW-1124](tasks/FLOW-1124.md) | Member report: each property's all-in and profit, and each member's own loans in their total | SMALL UI |
+| <a id="flow-1125"></a>[FLOW-1125](tasks/FLOW-1125.md) | Member report: the portfolio in future years and the refinance then (plan) | PLAN FIRST |
+| <a id="flow-1126"></a>[FLOW-1126](tasks/FLOW-1126.md) | Member report forecast: the data, the calculation and MCP | MCP |
+| <a id="flow-1127"></a>[FLOW-1127](tasks/FLOW-1127.md) | Member report forecast: the תחזית tab and its sheets | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
