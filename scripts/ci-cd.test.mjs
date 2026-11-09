@@ -19,8 +19,8 @@ const ACTION_SHA = {
   "actions/cache/restore": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/upload-artifact": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
   "actions/download-artifact": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
-  "pnpm/action-setup": "ea17c68df8912ef543352723c149a84f56e3d413",
-  "supabase/setup-cli": "45a513f8c64c0bc8e0e3dfe572b5c95be85f6359",
+  "pnpm/action-setup": "73e46992e05b19abd31f2f3c20e0e7370d762115",
+  "supabase/setup-cli": "689adcfb80d947100a1eab127289b97d1fb07b13",
   "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed",
 };
 const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
@@ -256,9 +256,9 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /cancel-in-progress: false/);
   assert.match(deploy, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/);
   assert.match(deploy, /persist-credentials: false/);
-  assert.match(deploy, /pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0/);
+  assert.match(deploy, /pnpm\/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6\.1\.1/);
   assert.match(deploy, /actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0/);
-  assert.match(deploy, /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3\.0\.1/);
+  assert.match(deploy, /supabase\/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3\.2\.0/);
   assert.match(deploy, /SUPABASE_DB_URL/);
   assert.match(deploy, /CLOUDFLARE_API_TOKEN/);
   assert.match(deploy, /CLOUDFLARE_ACCOUNT_ID/);
@@ -537,7 +537,7 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
     `uses: pnpm/action-setup@${ACTION_SHA["actions/checkout"]}`,
   );
   assert.deepEqual(usesProblems(lintPnpm), [
-    `- uses: pnpm/action-setup@${ACTION_SHA["actions/checkout"]} # v6.1.0`,
+    `- uses: pnpm/action-setup@${ACTION_SHA["actions/checkout"]} # v6.1.1`,
   ]);
   assert.equal(jobIn(lintPnpm, "e2e-shard").includes(`pnpm/action-setup@${ACTION_SHA["pnpm/action-setup"]}`), true);
 
@@ -548,7 +548,7 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
     `uses: supabase/setup-cli@${ACTION_SHA["actions/setup-node"]}`,
   );
   assert.deepEqual(usesProblems(e2eCli), [
-    `- uses: supabase/setup-cli@${ACTION_SHA["actions/setup-node"]} # v3.0.1`,
+    `- uses: supabase/setup-cli@${ACTION_SHA["actions/setup-node"]} # v3.2.0`,
   ]);
   assert.equal(jobIn(e2eCli, "deploy").includes(`supabase/setup-cli@${ACTION_SHA["supabase/setup-cli"]}`), true);
 
@@ -989,7 +989,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   }
   for (const name of ["static", "types", "db"]) {
     const body = jobIn(pr, name);
-    assert.match(body, /uses: pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n {8}with:\n {10}version: 10\.33\.3\n/, name);
+    assert.match(body, /uses: pnpm\/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6\.1\.1\n {8}with:\n {10}version: 10\.33\.3\n/, name);
     assert.match(body, /uses: actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0\n {8}with:\n {10}node-version: 26\n/, name);
     assert.ok(body.includes("run: echo \"path=$(pnpm store path --silent)\" >> \"$GITHUB_OUTPUT\"\n"), name);
     assert.match(body, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: \$\{\{ steps\.pnpm-store\.outputs\.path \}\}\n {10}key: node-cache-Linux-x64-pnpm-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}\n {10}restore-keys: node-cache-Linux-x64-pnpm-\n/, name);
@@ -1007,7 +1007,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // The static slice and the db slice run deno (the flow-mcp tests, the edge-function check, the edge seed).
   assert.match(jobIn(pr, "static"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.match(jobIn(pr, "db"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
-  assert.match(jobIn(pr, "db"), /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3\.0\.1\n {8}with:\n {10}version: 2\.118\.0\n/);
+  assert.match(jobIn(pr, "db"), /supabase\/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3\.2\.0\n {8}with:\n {10}version: 2\.118\.0\n/);
 
   const staticJob = jobIn(pr, "static");
   assert.ok(staticJob.includes("run: bash scripts/local-ci.sh --part static"));

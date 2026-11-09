@@ -218,7 +218,7 @@ function reviewQueryOptions(preview: string, project: string | null) {
       const want = Math.max(REVIEW_PAGE_SIZE, client.getQueryData<ReviewRow[]>(key)?.length ?? 0);
       let rows: ReviewRow[] = [];
       let next: ReviewCursor | null = null;
-      let total = 0;
+      let total: number;
       do {
         const page: Awaited<ReturnType<typeof readReviewPage>> = await readReviewPage(client, supabase, {
           p_limit: Math.min(REVIEW_READ_MAX, Math.max(REVIEW_PAGE_SIZE, want - rows.length)),

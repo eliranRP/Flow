@@ -208,7 +208,7 @@ export async function loadJevFills(ids: readonly string[], signal?: AbortSignal)
     }
   } catch (error) {
     if (signal?.aborted || error instanceof Error) throw error;
-    throw new Error("jev_prefills");
+    throw new Error("jev_prefills", { cause: error });
   }
   return fills;
 }
