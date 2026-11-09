@@ -29,6 +29,7 @@ export const readRpcs = new Set([
   "get_profit_months",
   "get_project",
   "get_property_returns",
+  "get_member_report",
   "get_property_return_lines",
   "get_setup_suggestions",
   "get_transaction",
