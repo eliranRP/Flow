@@ -491,7 +491,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1101"></a>[FLOW-1101](tasks/FLOW-1101.md) | A failed investment save after a new project's create makes a retry create a second project | BUG |
 | <a id="flow-1102"></a>[FLOW-1102](tasks/FLOW-1102.md) | Two "ביטול" with different effects when every attention card is hidden; small follow-ups | SMALL UI |
 | <a id="flow-1120"></a>[FLOW-1120](tasks/FLOW-1120.md) | Reports month drill: the arrows wait with no visible word while the months load | SMALL UI |
-| <a id="flow-1121"></a>[FLOW-1121](tasks/FLOW-1121.md) | Reports month drill: the month pill shimmers while the months load, in place of "טוען חודשים…" | SMALL UI |
+| <a id="flow-1123"></a>[FLOW-1123](tasks/FLOW-1123.md) | Reports month drill: the month pill shimmers while the months load, in place of "טוען חודשים…" | SMALL UI |
 | <a id="flow-1104"></a>[FLOW-1104](tasks/FLOW-1104.md) | A project month's profit shows a credit on an expense with a minus | BUG |
 | <a id="flow-1105"></a>[FLOW-1105](tasks/FLOW-1105.md) | Review nits from #1044, #1045 and #1046 | SMALL UI |
 | <a id="flow-1088"></a>[FLOW-1088](tasks/FLOW-1088.md) | New project: a missing name does not move focus to the field or announce the error | SMALL UI |
