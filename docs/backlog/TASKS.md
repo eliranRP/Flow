@@ -574,6 +574,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-471"></a>[FLOW-471](tasks/FLOW-471.md) | Returns sheets and headers: one definition per figure, plain words, true counts, a header that fits 320 | SMALL UI |
 | <a id="flow-472"></a>[FLOW-472](tasks/FLOW-472.md) | The closing-paid sheet shows its default and checks as you type | SMALL UI |
 | <a id="flow-473"></a>[FLOW-473](tasks/FLOW-473.md) | Owner's calls on the returns: a minimum before a per-year figure; which loans show "סכום ששולם בסגירה" | SMALL UI |
+| <a id="flow-1117"></a>[FLOW-1117](tasks/FLOW-1117.md) | Member share report: the data and the MCP tools | MCP |
+| <a id="flow-1118"></a>[FLOW-1118](tasks/FLOW-1118.md) | Member share report: the screens | SMALL UI |
+| <a id="flow-1119"></a>[FLOW-1119](tasks/FLOW-1119.md) | Member share report: the Treasury yields filled in by themselves | SMALL CYCLE |
 
 ## Onboarding, Settings and connectors
 
