@@ -151,6 +151,30 @@ export function MemberReportScreen({ sample, refreshSample }: {
     }
   }, [live, sellingWrite]);
 
+  // A selling cost saved here can be taken back, as on the investment page (DESIGN-RULES 0030): each property's
+  // percent before (null while it took the default) is kept, and ביטול puts every one back. The properties are
+  // written one by one; when one fails, the ones already written are put back and the write's own toast says so.
+  const toast = useToast();
+  const saveSellingWithUndo = useCallback(async (ids: readonly string[], bp: number | null): Promise<boolean> => {
+    const before = (result?.properties ?? [])
+      .filter((p) => ids.includes(p.projectId))
+      .map((p) => [p.projectId, p.sellingCostDefault ? null : p.sellingCostBp] as const);
+    const written: (typeof before)[number][] = [];
+    for (const entry of before) {
+      if (!(await saveSelling([entry[0]], bp))) {
+        for (const [id, prior] of written) await saveSelling([id], prior);
+        return false;
+      }
+      written.push(entry);
+    }
+    toast.show({
+      message: "עלויות המכירה עודכנו",
+      action: "ביטול",
+      onAction: () => { void (async () => { for (const [id, prior] of before) await saveSelling([id], prior); })(); },
+    });
+    return true;
+  }, [result, saveSelling, toast]);
+
   const canEdit = data?.canEdit === true;
   const config = data?.config ?? {};
   const companyCurrency = useCompanyCurrency();
@@ -260,7 +284,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
         open={selling != null}
         onOpenChange={(open) => { if (!open) setSelling(null); }}
         bp={sellingBp}
-        onSave={(bp) => saveSelling(sellingIds, bp)}
+        onSave={(bp) => saveSellingWithUndo(sellingIds, bp)}
       />
       <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} currency={currency} />
     </div>

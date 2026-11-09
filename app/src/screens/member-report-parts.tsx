@@ -15,8 +15,8 @@ import { investmentBase } from "./project-returns-parts";
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * FLOW-1121: when the Treasury's yields were last fetched ("עודכן ב-14:05", "עוד לא עודכן"), and for the owner or an
- * editor, רענון, which asks for them now. On the rate card and at the top of the yields sheet.
+ * FLOW-1121: when the Treasury's yields were last fetched ("עודכן ב-14:05", "עוד לא עודכן"), and for the owner,
+ * רענון, which asks for them now. On the rate card and at the top of the yields sheet.
  */
 export function TreasuryUpdated({ fetchedAt, onRefresh, busy }: { fetchedAt: string | null | undefined; onRefresh?: () => void; busy: boolean }) {
   return (

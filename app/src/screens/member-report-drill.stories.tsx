@@ -111,6 +111,34 @@ export const SellingCostAll: Story = {
   },
 };
 
+const MIXED_SELLING: MemberReportRead = {
+  ...MEMBER_REPORT,
+  properties: MEMBER_REPORT.properties.map((p, i) => (i === 0 ? { ...p, selling_cost_bp: 600 } : i === 1 ? { ...p, selling_cost_bp: null } : p)),
+};
+
+export const SellingCostAllUndo: Story = {
+  render: () => <Report sample={MIXED_SELLING} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const calc = () => canvas.getByRole("list", { name: "החישוב" }).textContent;
+    await expect((await canvas.findByRole("list", { name: "החישוב" })).textContent).toContain("6%–8% · תיווך, סגירה ומסים");
+    await userEvent.click(within(canvas.getByRole("list", { name: "החישוב" })).getByRole("button", { name: /עלויות מכירה/ }));
+    const parts = within(await body(canvasElement).findByRole("dialog", { name: "עלויות מכירה" }));
+    await userEvent.click(parts.getByRole("button", { name: "שינוי האחוז לכל הנכסים" }));
+    const edit = within(await body(canvasElement).findByRole("dialog", { name: "עלויות מכירה · כל הנכסים" }));
+    const field = edit.getByLabelText("אחוז");
+    await userEvent.clear(field);
+    await userEvent.type(field, "9");
+    await userEvent.click(edit.getByRole("button", { name: "שמירה" }));
+    await waitFor(async () => { await expect(calc()).toContain("9% · תיווך, סגירה ומסים"); });
+    // ביטול puts every property back: 6%, the default 8%, and 7%.
+    await expect(await body(canvasElement).findByText("עלויות המכירה עודכנו")).toBeInTheDocument();
+    await userEvent.click(body(canvasElement).getByRole("button", { name: "ביטול" }));
+    await waitFor(async () => { await expect(calc()).toContain("6%–8% · תיווך, סגירה ומסים"); });
+    await opens(canvasElement, /עלויות מכירה/, "עלויות מכירה", /8% \(ברירת מחדל\) × \$365,000/);
+  },
+};
+
 export const ViewerParts: Story = {
   render: () => <Report sample={{ ...MEMBER_REPORT, canEdit: false }} />,
   play: async ({ canvasElement }) => {
