@@ -5,7 +5,7 @@ import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import type { RpcClient } from "./recurring-actions";
-import type { utilityPayersSchema, utilityRefundsSchema } from "./utility-refund-schema";
+import type { utilityMonthsSchema, utilityPayersSchema, utilityRefundsSchema } from "./utility-refund-schema";
 import { assertNoError } from "./use-write";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -18,9 +18,11 @@ export type UtilityBill = UtilityRefunds["bills"][number];
 export type UtilityPayment = NonNullable<UtilityBill["payment"]>;
 export type UtilityPayer = z.output<typeof utilityPayersSchema>[number];
 export type Payer = UtilityPayer["payer"];
+export type UtilityMonth = z.output<typeof utilityMonthsSchema>[number];
 
 export const UTILITY_REFUNDS_KEY = "utility-refunds";
 export const UTILITY_PAYERS_KEY = "utility-payers";
+export const UTILITY_MONTHS_KEY = "utility-months";
 
 /**
  * Where the utility reads and writes go: Flow's server, or, in a story, a stand-in that answers from sample data
@@ -96,6 +98,22 @@ export function useUtilityPayersQuery(projectId: string, active = true) {
       const { data, error } = await supabase.rpc("list_utility_payers", { p_project_id: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).utilityPayersSchema.parse(data);
+    },
+  });
+}
+
+/** FLOW-1144: a property's months, newest first: the rent in, the bills paid, and what is not refunded. */
+export function useUtilityMonthsQuery(projectId: string, active = true) {
+  const preview = useHomePreview();
+  const client = useReadClient();
+  return useQuery({
+    queryKey: [UTILITY_MONTHS_KEY, preview, projectId],
+    enabled: active && preview === "off" && projectId !== "",
+    queryFn: async (): Promise<UtilityMonth[]> => {
+      const supabase = await client();
+      const { data, error } = await supabase.rpc("list_utility_months", { p_project: projectId });
+      if (error) throw error;
+      return (await loadReadSchemas()).utilityMonthsSchema.parse(data);
     },
   });
 }

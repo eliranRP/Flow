@@ -48,6 +48,7 @@ export const LEDGER_KEYS = [
   "utility-refunds",
   "utility-refund-count",
   "utility-payers",
+  "utility-months",
   "recurring-schedule",
   "payment-recurring",
   "party-charges",

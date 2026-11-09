@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
-import { formatDayMonth } from "./ui/date-math";
-import type { UtilityBill, UtilityPayment } from "./utility-refunds";
+import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
+import type { UtilityBill, UtilityMonth, UtilityPayment } from "./utility-refunds";
 
 /**
  * FLOW-1135 (V3-UtilityRefunds), FLOW-1143: the list's cards, worked out from list_utility_refunds. Flow suggests
@@ -171,4 +171,25 @@ export function paymentParts(payment: UtilityPayment): { key: string; text: stri
     ].filter((item): item is string => item != null).join(" · "),
     amount: formatAmountText(part.amount_minor, payment.currency, { detail: true }),
   }));
+}
+
+/** FLOW-1144: "אוקטובר 2026", a month of list_utility_months (YYYY-MM-01). */
+export function utilityMonthLabel(month: string): string {
+  const name = HEBREW_MONTHS[Number(month.slice(5, 7)) - 1];
+  return name == null ? month : `${name} ${month.slice(0, 4)}`;
+}
+
+/** The month's currency: its first line's, else the company's. */
+export function utilityMonthCurrency(month: UtilityMonth, fallback: string): string {
+  return month.rent_lines[0]?.currency ?? month.bills[0]?.currency ?? fallback;
+}
+
+/**
+ * FLOW-1144: a month's status. No rent came in ("לא נכנסה שכירות"); or bills are not refunded ("חסר $X", their sum,
+ * a bill still waiting included); or every bill is back ("כל החשבונות הוחזרו").
+ */
+export function utilityMonthStatus(month: UtilityMonth, currency: string): { ok: boolean; text: string } {
+  if (month.rent_lines.length === 0 && month.rent_in === 0n) return { ok: false, text: "לא נכנסה שכירות" };
+  if (month.not_refunded > 0n) return { ok: false, text: `חסר ${formatAmountText(month.not_refunded, currency, { detail: true })}` };
+  return { ok: true, text: "כל החשבונות הוחזרו" };
 }

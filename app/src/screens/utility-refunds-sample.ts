@@ -1,6 +1,6 @@
 import type { RpcClient } from "../recurring-actions";
 import type { ScheduleRow } from "../recurring-schedule";
-import type { UtilityBill, UtilityPayer, UtilityPayment } from "../utility-refunds";
+import type { UtilityBill, UtilityMonth, UtilityPayer, UtilityPayment } from "../utility-refunds";
 
 /**
  * FLOW-1135: the V3-UtilityRefunds board's sample, for the stories and the tests. Invented properties, suppliers,
@@ -92,12 +92,17 @@ function asJson(value: unknown): unknown {
  * A stand-in for Flow's server in the stories (UtilityClientProvider): the utility reads answer from the sample
  * (one property's with p_project_id), and every write succeeds, so a story's answer shows its toast with ביטול.
  */
-export function storyUtilityClient(bills: UtilityBill[] = utilityRefundsSample(), utilities: UtilityPayer[] = utilityPayersSample()): RpcClient {
+export function storyUtilityClient(
+  bills: UtilityBill[] = utilityRefundsSample(),
+  utilities: UtilityPayer[] = utilityPayersSample(),
+  months: UtilityMonth[] = utilityMonthsSample(),
+): RpcClient {
   const rpc = (name: string, args: Record<string, unknown> = {}) => {
     const project = typeof args.p_project_id === "string" ? args.p_project_id : null;
     const own = bills.filter((bill) => project == null || bill.project_id === project);
     const data = name === "list_utility_refunds" ? { as_of: "2026-11-09", bills: asJson(own) }
       : name === "list_utility_payers" ? { project_id: project, utilities: asJson(utilities) }
+        : name === "list_utility_months" ? { project_id: args.p_project, as_of: "2026-11-09", months: asJson(months) }
         : name === "mark_utility_refunds_seen" ? { bill_transaction_ids: own.filter((bill) => bill.state === "not_refunded").map((bill) => bill.bill_transaction_id) }
           : name === "set_utility_payer" ? { prior: null }
             : null;
@@ -120,4 +125,24 @@ export function utilitySplitSample(): UtilityBill[] {
       ],
     },
   }));
+}
+
+/**
+ * FLOW-1144 (the V3-Project-UtilityMonths board's months): November all back, October with Gas Co not refunded, September
+ * all back, and July with no rent. Newest first, as the read sends them.
+ */
+export function utilityMonthsSample(): UtilityMonth[] {
+  const rent = (id: string, date: string, minor: bigint) => ({ transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", party: "RentRedi", category_name: "הכנסות שכירות" });
+  const bill = (id: string, date: string, minor: bigint, supplier: string, category: string, state: string) => ({
+    bill_transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", supplier_name: supplier, category_name: category, state,
+  });
+  return [
+    { month: "2026-11-01", rent_in: 183_660n, bills_paid: 8_660n, not_refunded: 0n, rent_lines: [rent("m-rent-11", "2026-11-06", 183_660n)], bills: [bill("m-water-11", "2026-11-02", 8_660n, "City Water", "חשמל ומים", "refunded")] },
+    {
+      month: "2026-10-01", rent_in: 205_486n, bills_paid: 30_486n, not_refunded: 8_036n, rent_lines: [rent("m-rent-10", "2026-10-07", 205_486n)],
+      bills: [bill("m-water-10", "2026-10-04", 22_450n, "City Water", "חשמל ומים", "refunded"), bill("m-gas-10", "2026-10-03", 8_036n, "Gas Co", "גז", "waiting")],
+    },
+    { month: "2026-09-01", rent_in: 195_000n, bills_paid: 26_333n, not_refunded: 0n, rent_lines: [rent("m-rent-09", "2026-09-10", 195_000n)], bills: [bill("m-water-09", "2026-09-05", 26_333n, "City Water", "חשמל ומים", "refunded")] },
+    { month: "2026-07-01", rent_in: 0n, bills_paid: 6_100n, not_refunded: 6_100n, rent_lines: [], bills: [bill("m-water-07", "2026-07-08", 6_100n, "City Water", "חשמל ומים", "not_refunded")] },
+  ];
 }

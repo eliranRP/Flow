@@ -393,3 +393,43 @@
   font-weight: var(--type-btn-weight);
   cursor: pointer;
 }
+
+/* FLOW-1144 (V3-Project-UtilityMonths): לפי חודש. A month's row carries two lines under its name: the rent and the
+   bills, then its status (signal, or the income colour when every bill is back). They wrap, never cut. */
+.ui-utm-sums,
+.ui-utm-status {
+  display: block;
+}
+
+.ui-utm-rent {
+  color: var(--color-income);
+}
+
+.ui-utm-status {
+  color: var(--color-signal);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-utm-status[data-ok] {
+  color: var(--color-income);
+}
+
+/* The sheet: the status under the month, then its two groups. */
+.ui-utm-sheet-status {
+  margin: 0;
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-utm-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-utm-none {
+  margin: 0;
+  padding-block: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
