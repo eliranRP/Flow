@@ -104,6 +104,13 @@ export const TOOL_GROUPS: GuideGroup[] = [
     ],
   },
   {
+    id: "utility_refunds", title: "Utility refunds", summary: "Utility bills the tenant has not paid back, and who pays each utility.",
+    tools: [
+      "list_utility_refunds", "count_utility_refunds", "list_utility_payers", "set_utility_payer", "answer_utility_refund",
+      "mark_utility_refunds_seen", "refile_utility_refund",
+    ],
+  },
+  {
     id: "bank", title: "Bank sync", summary: "Bank connections and pulling new lines.",
     tools: ["list_bank_connections", "set_bank_accounts", "answer_bank_account", "sync_bank", "get_sync_status"],
   },

@@ -11,6 +11,7 @@ import { THREAD_ALLOWED, THREAD_UNDO_KINDS } from "./tools_thread.ts";
 import { MEMBER_SHARE_ALLOWED, MEMBER_SHARE_READS } from "./tools_member_share.ts";
 import { PROPERTY_ALLOWED, PROPERTY_READS } from "./tools_property.ts";
 import { HANDOVER_ALLOWED, HANDOVER_UNDO_KINDS } from "./tools_handover.ts";
+import { UTILITY_ALLOWED, UTILITY_READS, UTILITY_UNDO_KINDS, UTILITY_WRITES } from "./tools_utility_refunds.ts";
 import { linePartSchema, linePartsProblem } from "./tools_split_schemas.ts";
 
 export const READ_TOOL_NAMES = [
@@ -30,7 +31,7 @@ export const READ_TOOL_NAMES = [
   "get_sync_status",
   "get_breakdown",
   ...PROPERTY_READS,
-  ...MEMBER_SHARE_READS,
+  ...MEMBER_SHARE_READS, ...UTILITY_READS,
   "get_jev_status",
   "get_jev_accuracy",
   "get_profit_months",
@@ -115,7 +116,7 @@ export const WRITE_TOOL_NAMES = [
   "set_line_recurring",
   "set_line_pace",
   "set_line_usual_amount",
-  "answer_recurring_match", "answer_recurring_handover",
+  "answer_recurring_match", "answer_recurring_handover", ...UTILITY_WRITES,
   "reassign_recurring_charge",
   "undo_jev_prefill",
   "undo",
@@ -162,7 +163,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
-  ...FORECAST_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED, ...LEDGER_ALLOWED, ...THREAD_ALLOWED, ...PROPERTY_ALLOWED, ...MEMBER_SHARE_ALLOWED, ...HANDOVER_ALLOWED,
+  ...FORECAST_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED, ...LEDGER_ALLOWED, ...THREAD_ALLOWED, ...PROPERTY_ALLOWED, ...MEMBER_SHARE_ALLOWED, ...HANDOVER_ALLOWED, ...UTILITY_ALLOWED,
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember", "unshare"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -280,7 +281,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", "prepaid_create", "prepaid_update", "prepaid_refund", "prepaid_end", "prepaid_delete", "books_closed", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", "prepaid_create", "prepaid_update", "prepaid_refund", "prepaid_end", "prepaid_delete", "books_closed", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,

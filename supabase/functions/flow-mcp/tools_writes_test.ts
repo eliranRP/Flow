@@ -131,6 +131,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "remove_transaction_note",
     "remove_transaction_file",
     "answer_recurring_handover",
+    "set_utility_payer", "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund",
     "get_sync_status",
   ]);
   for (const tool of toolsFor(["write"])) {
@@ -160,6 +161,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_member_report",
     "get_member_share",
     "get_member_projection",
+    "list_utility_refunds", "count_utility_refunds", "list_utility_payers",
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",
@@ -295,6 +297,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "remove_transaction_note",
     "remove_transaction_file",
     "answer_recurring_handover",
+    "set_utility_payer", "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund",
   ]);
   assertEquals(toolsFor([]), []);
 });
