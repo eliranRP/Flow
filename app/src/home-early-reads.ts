@@ -18,7 +18,7 @@ export function startHomeReads(client: QueryClient, location: { pathname: string
   if (!supabase) return;
   void supabase.auth.getSession().then(({ data }) => {
     if (data.session == null) return;
-    void client.prefetchQuery(cashMonthsQueryOptions("off", CASH_MONTHS));
-    void client.prefetchQuery(dashboardQueryOptions("off", defaultPeriod()));
+    client.query(cashMonthsQueryOptions("off", CASH_MONTHS)).catch(() => undefined);
+    client.query(dashboardQueryOptions("off", defaultPeriod())).catch(() => undefined);
   }, () => undefined);
 }
