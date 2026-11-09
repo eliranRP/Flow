@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
+import { startHomeReads } from "./home-early-reads";
 import { createQueryClient } from "./query-client";
 import { applyThemeChoice, readThemeChoice } from "./theme-store";
 import "./styles/app.css";
@@ -22,6 +23,7 @@ void import("./sw-reload").then(({ watchServiceWorker }) => {
 }, () => undefined);
 
 const queryClient = createQueryClient();
+startHomeReads(queryClient, window.location);
 
 const root = document.getElementById("root");
 if (!root) {

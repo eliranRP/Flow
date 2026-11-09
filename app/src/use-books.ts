@@ -76,14 +76,10 @@ function rpcArgs(period: PeriodChoice): { p_from?: string; p_to?: string } {
   };
 }
 
-export function useDashboardQuery(active = true) {
-  const preview = useHomePreview();
-  const { period } = useBooks();
-  return useQuery({
+/** Home's P&L read. FLOW-1115: main.tsx starts it before the first render (home-early-reads.ts). */
+export function dashboardQueryOptions(preview: HomePreview, period: PeriodChoice) {
+  return {
     queryKey: ["dashboard", preview, period],
-    enabled: active && preview === "off",
-    // A new period keeps Home and its period bar (and the focus on its arrow); the figures follow the new read.
-    placeholderData: keepPreviousData,
     queryFn: async (): Promise<Dashboard> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -92,6 +88,17 @@ export function useDashboardQuery(active = true) {
       if (error) throw error;
       return (await loadReadSchemas()).dashboardSchema.parse(data);
     },
+  };
+}
+
+export function useDashboardQuery(active = true) {
+  const preview = useHomePreview();
+  const { period } = useBooks();
+  return useQuery({
+    ...dashboardQueryOptions(preview, period),
+    enabled: active && preview === "off",
+    // A new period keeps Home and its period bar (and the focus on its arrow); the figures follow the new read.
+    placeholderData: keepPreviousData,
   });
 }
 
