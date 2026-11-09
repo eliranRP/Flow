@@ -2,7 +2,7 @@ import { computeMemberProjection, computeMemberShare } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { MEMBER_CONFIG, MEMBER_LOANS, MEMBER_PROJECTION_INPUTS, MEMBER_PROPERTIES } from "../dev/member-report-sample";
 import { forecastDrill } from "./member-report-forecast";
-import { forecastDraft, forecastFormula, forecastYear, projectionFromDraft, propertyYearFormula, signedBp, untilFormula, withHidden } from "./member-report-forecast-format";
+import { forecastDraft, forecastFormula, forecastYear, projectionFromDraft, propertyYearFormula, signedBp, missingByReason, untilFormula, withHidden } from "./member-report-forecast-format";
 
 /* FLOW-1127: the forecast tab's formulas and its assumptions draft. */
 
@@ -85,5 +85,18 @@ describe("withHidden", () => {
   it("is null when nothing is set", () => {
     expect(withHidden(undefined, null)).toBeNull();
     expect(withHidden({ rent_growth_bp: 300 }, null)).toBeNull();
+  });
+});
+
+describe("missingByReason", () => {
+  it("groups the properties left out under one line per reason, in the order the reasons first appear", () => {
+    expect(missingByReason([
+      { projectId: "a", name: "A St", reason: "rent" },
+      { projectId: "b", name: "B St", reason: "value" },
+      { projectId: "c", name: "C St", reason: "rent" },
+    ])).toEqual([
+      { reason: "אין שכירות ב־3 החודשים האחרונים", names: ["A St", "C St"] },
+      { reason: "אין שווי", names: ["B St"] },
+    ]);
   });
 });

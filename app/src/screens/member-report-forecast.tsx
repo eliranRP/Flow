@@ -9,11 +9,11 @@ import { Stepper } from "../ui/stepper";
 import type { MemberReportPatch } from "../use-member-report";
 import { bpText } from "./member-report-format";
 import {
-  FORECAST_MISSING_WORDS,
   forecastFormula,
   forecastPropertyHint,
   forecastYear,
   membersRepaid,
+  missingByReason,
   propertyYearFormula,
   untilFormula,
   type ForecastDrillKey,
@@ -166,7 +166,17 @@ export function ForecastBody({ result, member, years, onYears, canEdit, projecti
   };
   let missing: ReactNode = null;
   if (result.missing.length > 0) {
-    missing = <p className="ui-msr-note">{`לא בתחזית: ${result.missing.map((m) => `${m.name} (${FORECAST_MISSING_WORDS[m.reason]})`).join(", ")}.`}</p>;
+    missing = (
+      <section className="ui-msr-left-out" aria-labelledby="msr-forecast-left-out">
+        <h3 id="msr-forecast-left-out" className="ui-msr-left-out-title">{`לא בתחזית · ${String(result.missing.length)}`}</h3>
+        {missingByReason(result.missing).map((g) => (
+          <div key={g.reason} className="ui-msr-left-out-group">
+            <p className="ui-msr-left-out-reason">{g.reason}</p>
+            <p className="ui-msr-left-out-names">{g.names.join(" · ")}</p>
+          </div>
+        ))}
+      </section>
+    );
   }
   return (
     <>
