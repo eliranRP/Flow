@@ -1,12 +1,13 @@
 import { BackIcon } from "../ui/icons";
 import { ClockIcon } from "../ui/icons-later";
+import { Skeleton } from "../ui/skeleton";
 
 export type QuickCheck = {
   key: string;
   title: string;
   hint: string;
-  /** Null while the count is still loading. */
-  count: number | null;
+  /** Null while the count is still loading; undefined when it isn't coming (its read failed): blank. */
+  count: number | null | undefined;
   onPick: () => void;
 };
 
@@ -52,7 +53,10 @@ export function SearchStart({
                   <span className="ui-search-check-title">{check.title}</span>
                   <span className="ui-search-check-hint">{check.hint}</span>
                 </span>
-                <span className="ui-search-check-count">{check.count ?? ""}</span>
+                <span className="ui-search-check-count">
+                  {/* FLOW-1139: a count still loading is a skeleton, not a blank. */}
+                  {check.count === null ? <Skeleton className="ui-search-check-skel" /> : (check.count ?? "")}
+                </span>
                 <span className="ui-search-check-chevron" aria-hidden="true">
                   <BackIcon size={18} />
                 </span>

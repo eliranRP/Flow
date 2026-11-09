@@ -28,6 +28,7 @@ import { BuildingIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import type { ScreenPhase } from "../ui/screen-phase";
+import { ChartSkeleton } from "../ui/chart-skeleton";
 import { Skeleton } from "../ui/skeleton";
 import { useMemberReport, type MemberReportRead } from "../use-member-report";
 import { useBalanceAt, useCompanyMonths, usePnl } from "../use-reports";
@@ -254,7 +255,8 @@ export function ReportsHubScreen({ sample }: { sample?: HubSample } = {}) {
         title="רווח והפסד"
         label={`רווח נקי · ${pnlChipLabel(period, today)}`}
         figure={pnl == null ? "—" : <Amount agorot={pnl.net_minor} currency={pnl.currency} loss={pnl.net_minor < 0n} size="card" />}
-        chart={bars.length === 0 ? null : <MonthBars values={bars} />}
+        // FLOW-1139: while the months load, the chart's strip holds its place in skeleton bars.
+        chart={months == null && !monthsFailed ? <ChartSkeleton mini /> : bars.length === 0 ? null : <MonthBars values={bars} />}
         facts={pnl == null ? null : (
           <>
             <Fact label="הכנסות"><Amount agorot={pnl.income_minor} currency={pnl.currency} income /></Fact>

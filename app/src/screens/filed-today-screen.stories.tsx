@@ -1,5 +1,6 @@
 import type { FiledTodayRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { FiledTodayScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, filedTodayCount } from "../ui/screen-stories-support";
@@ -30,6 +31,21 @@ export const FiledToday: Story = {
       <FiledTodayScreen sample={sampleFiled} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-1139: while the day's lines load: the total, then the lines under their heads, as a skeleton. */
+export const FiledTodayLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/review/filed?preview=loading" tabs>
+      <ExampleBar />
+      <FiledTodayScreen />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelector(".ui-skel-lines-figure")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
 };
 
 export const FiledTodayEmpty: Story = {

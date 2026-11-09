@@ -121,6 +121,14 @@
   font-weight: var(--type-caption-weight);
 }
 
+/* FLOW-1139: a month's net while the year is read. */
+.ui-month-cell-skel {
+  display: inline-block;
+  inline-size: 40px;
+  block-size: 10px;
+  vertical-align: middle;
+}
+
 .ui-month-cell-selected {
   border-color: var(--color-accent);
   background: var(--color-tint);

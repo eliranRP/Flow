@@ -50,7 +50,7 @@ export const TransfersLong: Story = {
   ),
 };
 
-/** FLOW-1049: the read is on its way. */
+/** FLOW-1049: the read is on its way. FLOW-1139: the lead line and two pair cards as a skeleton. */
 export const TransfersLoading: Story = {
   name: "Transfers, loading",
   render: () => (
@@ -59,6 +59,11 @@ export const TransfersLoading: Story = {
       <TransfersScreen />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelectorAll(".ui-xfer-card")).toHaveLength(2);
+    await expect(canvasElement.querySelectorAll(".ui-xfer-skel-answer")).toHaveLength(4);
+  },
 };
 
 /** FLOW-1049: the read failed: what happened, with נסו שוב. */

@@ -5,6 +5,7 @@ import { CHART_MONTHS } from "../month-figures";
 import { chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures, profitTakeaway, type RentCategory } from "../next-month-chart";
 import { shiftMonthKey } from "../period";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
+import { ChartSkeleton } from "../ui/chart-skeleton";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 
@@ -12,12 +13,14 @@ import { DelayedSkeleton } from "../ui/skeleton";
  * The company's next month (canvas note spec-fcwide, item 2): the shared dashed card with no link (its grey
  * caption says what the sum is made of: "7 פרויקטים וכללי") and the chart of the company's last six profit
  * months with the forecast as its last pair, no link under it. The card hides when nothing is expected; the
- * chart waits for its months and drops the forecast pair when the forecast could not be read.
+ * chart's skeleton holds its place while its months load (FLOW-1139), and the chart drops the forecast pair when
+ * the forecast could not be read.
  */
 export function CompanyNextMonthBlock({
   forecast,
   loading,
   months,
+  monthsLoading,
   current,
   thisMonthExpense,
   currency,
@@ -29,6 +32,8 @@ export function CompanyNextMonthBlock({
   loading: boolean;
   /** get_profit_months for the company; null while unread or failed. */
   months: NonNullable<ProfitMonths>["months"] | null;
+  /** The months are still being read (not failed): the chart's skeleton holds its place. */
+  monthsLoading: boolean;
   /** yyyy-mm, the month to date. */
   current: string;
   /** This month's counted expenses so far: the expense caption compares with it. */
@@ -57,7 +62,7 @@ export function CompanyNextMonthBlock({
           caption={companyForecastCaption(forecast)}
         />
       )}
-      {history == null ? null : (
+      {history == null ? (monthsLoading ? <DelayedSkeleton><ChartSkeleton /></DelayedSkeleton> : null) : (
         <MonthChart
           kind="profit"
           history={history.months}

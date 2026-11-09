@@ -283,6 +283,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       forecast={next.forecast}
       loading={nextWaiting}
       months={chartMonths.months}
+      monthsLoading={chartMonths.loading}
       current={currentKey}
       thisMonthExpense={model.expense}
       currency={currency}

@@ -141,7 +141,7 @@ export const InvoiceError: Story = {
   ),
 };
 
-/** FLOW-1049: the read is on its way: the title stays, the rows are a skeleton. */
+/** FLOW-1049: the read is on its way: the title stays. FLOW-1139: the total, its line, the filter and the rows as a skeleton. */
 export const UnpaidLoading: Story = {
   name: "Unpaid, loading",
   render: () => (
@@ -150,6 +150,27 @@ export const UnpaidLoading: Story = {
       <UnpaidScreen />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelector(".ui-skel-lines-figure")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-skel-lines-chips")).not.toBeNull();
+  },
+};
+
+/** FLOW-1139: the invoice page while the invoices load: the detail page's shape, not list rows. */
+export const InvoiceLoading: Story = {
+  name: "Invoice page, loading",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1043?preview=loading" tabs>
+      <ExampleBar />
+      <InvoiceScreen invoiceId="inv-1043" />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toHaveAttribute("role", "status");
+    await expect(canvasElement.querySelector(".ui-skel-detail-head")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
 };
 
 /** FLOW-1049: long names end in an ellipsis; the check button keeps its 44px. */

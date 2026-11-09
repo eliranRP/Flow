@@ -15,6 +15,7 @@ import { groupByKey } from "../ui/month-groups";
 import { lineCountHint } from "../line-count-hint";
 import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { KEPT_OUT } from "./screen-shared";
+import { LinesSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { DEV_FILED_ROWS } from "../dev/filed-today-sample";
 import { ListTake, ReviewListEmpty, signedTotals } from "./review-lists";
@@ -76,6 +77,8 @@ export function FiledTodayScreen({
       backTo={backTo ?? `/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
+      // FLOW-1139: the page's shape: the day's total, then the lines under their project heads.
+      loading={<LinesSkeleton />}
       empty={(
         <div className="ui-review-list-body">
           <ReviewListEmpty title={FILED_TODAY_EMPTY_TITLE} body={FILED_TODAY_EMPTY_BODY} action="ללאישור" to={backTo ?? `/review${search}`} />
