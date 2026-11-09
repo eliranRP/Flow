@@ -47,6 +47,8 @@ import { ProjectMenu } from "./project-menu";
 import { hideRow, isRowHidden, readHidden } from "../ui/attention-dismiss";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
+import { useUtilityPayersQuery, useUtilityRefundsQuery, type UtilityBill, type UtilityPayer } from "../utility-refunds";
+import { refundCount } from "../utility-refund-view";
 
 function ProjectLoading({ projectId, search, example }: { projectId: string; search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
@@ -117,6 +119,7 @@ export function ProjectDetailScreen({
   sampleOfflineSince,
   sampleSchedule,
   sampleLines,
+  sampleUtilities,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -133,6 +136,8 @@ export function ProjectDetailScreen({
   /** FLOW-1044: the company's recurring schedule and the month's lines as they would come back (stories). */
   sampleSchedule?: ScheduleRow[];
   sampleLines?: CashLine[];
+  /** FLOW-1135: a sample property's utilities and its bills not refunded (stories). */
+  sampleUtilities?: { utilities: UtilityPayer[]; bills: UtilityBill[] };
   /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
   sampleMenuRow?: ProjectCashRow;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
@@ -187,6 +192,11 @@ export function ProjectDetailScreen({
   const forecastSkip = useForecastSkip(thisMonth, skipMonth, overrides.data ?? null);
   const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? "";
   const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? "", sample == null && linesMonth !== "");
+  // FLOW-1135: the property's utilities (who pays each), and, once one is the tenant's, its bills not refunded.
+  const payers = useUtilityPayersQuery(projectId, sample == null && detail.data != null);
+  const utilities = sampleUtilities?.utilities ?? payers.data ?? [];
+  const refunds = useUtilityRefundsQuery(projectId, sample == null && utilities.some((item) => item.payer === "tenant"));
+  const refundBills = sampleUtilities?.bills ?? refunds.data?.bills ?? [];
   const blocked = useBlockedPreview();
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
@@ -268,6 +278,18 @@ export function ProjectDetailScreen({
       }}
     />
   );
+  const fresh = monthRow != null && monthRow.first_month == null;
+  const figures = investmentData.isOverhead ? null : investmentData.figures;
+  const kind = resolveProjectKind({
+    overhead: project.is_overhead === true,
+    type: monthRow?.type ?? null,
+    budget: project.budget_agorot != null,
+    arv: figures?.arvMinor != null,
+    value: figures?.valueMinor != null,
+  });
+  // FLOW-1135 (V3-Project-Rent-Utilities): a rental, or any project with utilities, has its חשבונות page.
+  const utilityCount = refundCount(refundBills);
+  const utilitiesTo = kind === "rental" || utilities.length > 0 ? `/projects/${project.id}/utilities${search}` : null;
   const menu = holdWrites ? <ReservedMenuSlot /> : (
     <ProjectMenu
       projectId={project.id}
@@ -281,18 +303,10 @@ export function ProjectDetailScreen({
       investmentTo={sectionHref("investment")}
       hasInvestment={investmentLoansRow(investmentData, project) != null}
       profitTo={`/projects/${project.id}/profit${withPeriodSearch(search, ALL_PERIOD)}`}
+      utilitiesTo={utilitiesTo ?? undefined}
     />
   );
   const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
-  const fresh = monthRow != null && monthRow.first_month == null;
-  const figures = investmentData.isOverhead ? null : investmentData.figures;
-  const kind = resolveProjectKind({
-    overhead: project.is_overhead === true,
-    type: monthRow?.type ?? null,
-    budget: project.budget_agorot != null,
-    arv: figures?.arvMinor != null,
-    value: figures?.valueMinor != null,
-  });
   const lifetimeRow = (lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency);
   const investment = investmentLoansRow(investmentData, project);
   // A rental's card is its returns: the investment summary, once its purchase or value is entered.
@@ -320,6 +334,18 @@ export function ProjectDetailScreen({
       text: nextForecast == null ? undefined : formatAmountText(nextForecast.netMinor, next.currency, { plus: nextForecast.netMinor > 0n, direction: nextForecast.netMinor > 0n ? "income" : undefined }),
       href: `/projects/${project.id}/profit/next${search}`,
     }]),
+    ...(utilitiesTo == null ? [] : [{
+      id: "utilities",
+      title: "חשבונות",
+      hint: utilities.length === 0
+        ? "מי משלם כל חשבון: שוכר או חברה"
+        : [
+          "מי משלם",
+          utilities.length === 1 ? "ספק אחד" : `${String(utilities.length)} ספקים`,
+          utilityCount.notRefunded > 0 ? `${String(utilityCount.notRefunded)} לא הוחזרו` : null,
+        ].filter((part): part is string => part != null).join(" · "),
+      href: utilitiesTo,
+    }]),
   ];
   return (
     <ProjectCashOverview
@@ -341,6 +367,7 @@ export function ProjectDetailScreen({
         changes: recurring.changes,
         search,
         budget: kind === "renovation" && budgetMinor != null ? { budget_minor: Number(budgetMinor), spent_minor: Number(absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)) } : null,
+        utilities: utilityCount,
       })}
       // FLOW-961: offline, the page keeps its last read and says, in the band, which moment it is from.
       offlineSince={sample ? sampleOfflineSince ?? null : offlineSinceOf(online || preview !== "off", cash.dataUpdatedAt, detail.dataUpdatedAt)}

@@ -339,6 +339,15 @@ export function FlagIcon(props: IconProps) {
   );
 }
 
+/** FLOW-1135: the project menu's חשבונות row (the property's utilities): a lightning bolt. */
+export function BoltIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" />
+    </Svg>
+  );
+}
+
 /** The project menu's delete row: a bin. */
 export function BinIcon(props: IconProps) {
   return (

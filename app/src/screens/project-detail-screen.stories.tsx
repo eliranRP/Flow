@@ -7,6 +7,7 @@ import { FILLED } from "../ui/investment-card.stories-support";
 import { ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 import { kindSample, type ProjectKind } from "../dev/project-kinds-sample";
 import { devProjectsCash } from "../dev/projects-sample";
+import { GEFEN, utilityPayersSample, utilityRefundsSample } from "./utility-refunds-sample";
 
 const meta = {
   title: "Screens/Routes",
@@ -292,3 +293,33 @@ function kindStory(kind: Exclude<ProjectKind, "flip">): Story {
 export const ProjectRentalPage: Story = { name: "Project, rental", ...kindStory("rental") };
 /** A client job: the next-month card shows the client's payment and the subcontractor the owner added. */
 export const ProjectClientPage: Story = { name: "Project, client job", ...kindStory("client") };
+
+/** FLOW-1135 (V3-Project-Rent-Utilities): a rental whose tenant did not pay back two bills: the row-card, the חשבונות row. */
+export const ProjectRentalUtilities: Story = {
+  name: "Project, rental with bills not refunded",
+  render: () => {
+    const data = kindSample("rental", devProjectsCash.projects[0]);
+    const bills = utilityRefundsSample()
+      .filter((bill) => bill.project_id === GEFEN)
+      .map((bill) => ({ ...bill, project_id: data.project.id, project_name: data.project.name }));
+    return (
+      <StoryRoute entry={`/projects/${data.project.id}`} tabs>
+        <ProjectDetailScreen
+          example={exampleOnBand}
+          sample={data.project}
+          sampleCash={data.cash}
+          sampleInvestment={data.investment}
+          sampleMenuRow={data.row}
+          sampleNext={data.next}
+          sampleUtilities={{ utilities: utilityPayersSample(), bills }}
+          sectionTo={(target) => (target === "overview" ? `/projects/${data.project.id}` : `/projects/${data.project.id}/${target}`)}
+        />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("link", { name: /2 חשבונות לא הוחזרו/ })).toBeInTheDocument();
+    await expect(canvas.getByText("מי משלם · 4 ספקים · 2 לא הוחזרו")).toBeInTheDocument();
+  },
+};

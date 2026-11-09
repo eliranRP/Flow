@@ -2,7 +2,8 @@ import type { MissingBill, RecurringChange } from "@flow/shared";
 import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
 import { BUDGET_ALERT_PERCENT, budgetPercent } from "../project-list";
 import type { BannerRow } from "../ui/banner";
-import { attentionRows } from "./attention-rows";
+import type { UtilityRefundCount } from "../utility-refund-count";
+import { attentionRows, utilityRefundsRow } from "./attention-rows";
 
 function withParam(search: string, key: string, value: string): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
@@ -30,6 +31,7 @@ function keyed(row: BannerRow, counts: Record<string, string>): BannerRow {
  * change measured on the project's own share, from project_recurring_changes). The server
  * already leaves out what this user hid (decision 0175), so a hide on קבועים hides it here too.
  * FLOW-1044: on the project page they are AttentionCards, and a renovation past 80% of its budget adds a row.
+ * FLOW-1135: a property's utility bills the tenant did not pay back add Home's row, opening the list on the property.
  */
 export function projectAttentionRows({
   projectId,
@@ -38,6 +40,7 @@ export function projectAttentionRows({
   changes,
   search,
   budget = null,
+  utilities,
 }: {
   projectId: string;
   pending: number;
@@ -46,6 +49,8 @@ export function projectAttentionRows({
   search: string;
   /** FLOW-1044: the budget and what is spent of it, for the "עבר 80% מהתקציב" row. */
   budget?: { budget_minor: number | null; spent_minor: number } | null;
+  /** FLOW-1135: the property's utility bills not refunded and its suggested refunds. */
+  utilities?: UtilityRefundCount;
 }): BannerRow[] {
   const counts = lateCounts(late.filter((row) => row.project_id === projectId));
   const own = changes.filter((row) => row.project_id === projectId);
@@ -62,6 +67,8 @@ export function projectAttentionRows({
   // FLOW-424 (C18-4): the review, קבועים and changed-charges rows open on this project, so the count matches.
   const projectSearch = withParam(search, "project", projectId);
   const routed = rows.map((row) => ({ ...row, to: row.to.replace(/^\/(review|missing-bills|recurring\/changes)[^#]*/, (_, page: string) => `/${page}${projectSearch}`) }));
+  const utilityRow = utilities == null ? null : utilityRefundsRow(utilities, `/utility-refunds${projectSearch}`);
+  if (utilityRow != null) routed.push(utilityRow);
   const percent = budget == null ? null : budgetPercent(budget);
   if (percent != null && percent >= BUDGET_ALERT_PERCENT) {
     routed.push({

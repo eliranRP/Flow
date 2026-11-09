@@ -16,7 +16,7 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { IconButton } from "../ui/icon-button";
 import { Button } from "../ui/button";
 import { MoreIcon } from "../ui/icons";
-import { BarsIcon, BinIcon, FlagIcon, InvestIcon, PencilIcon } from "../ui/icons-later";
+import { BarsIcon, BinIcon, BoltIcon, FlagIcon, InvestIcon, PencilIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ProjectFormSheet } from "./project-form-sheet";
@@ -43,6 +43,7 @@ export function ProjectMenu({
   investmentTo,
   hasInvestment,
   profitTo,
+  utilitiesTo,
 }: {
   projectId: string;
   name: string;
@@ -61,6 +62,8 @@ export function ProjectMenu({
   hasInvestment: boolean;
   /** FLOW-1044: the profit since the start, the menu's third row. */
   profitTo: string;
+  /** FLOW-1135: a property's חשבונות (who pays each utility), on a rental or a project with utilities. */
+  utilitiesTo?: string;
 }) {
   const blocked = useBlockedPreview();
   const navigate = useNavigate();
@@ -206,6 +209,16 @@ export function ProjectMenu({
             href={profitTo}
             chevron
           />
+          {utilitiesTo == null ? null : (
+            <ListRow
+              variant="item"
+              title="חשבונות"
+              hint="מי משלם כל חשבון: שוכר או חברה"
+              icon={<BoltIcon />}
+              href={utilitiesTo}
+              chevron
+            />
+          )}
           <ListRow
             variant="button"
             title={action}

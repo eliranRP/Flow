@@ -2,6 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import { countTag } from "../ui/attention-cards";
 import type { BannerRow } from "../ui/banner";
+import type { UtilityRefundCount } from "../utility-refund-count";
 import { reviewItems, reviewMinutes } from "../weekly-summary";
 import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
@@ -16,11 +17,13 @@ import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from 
  * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו", that opens the list of
  * those charges (FLOW-1021). FLOW-1036: every row but the review carries its `dismissKey`, `<id>:<count>[:<amount>]`,
  * so a row hidden on Home's cards shows again once what it counts changes. The late count rows open the קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
- * count row under the review row, opening העברות לבדיקה.
+ * count row under the review row, opening העברות לבדיקה. FLOW-1135: the utility bills the tenant did not pay back get
+ * a row after it (V3-Home-UtilityRefunds), opening החזרי חשבונות.
  */
 export function attentionRows({
   pending,
   transfers = 0,
+  utilities,
   unpaidCount,
   unpaidGross,
   currency = "ILS",
@@ -34,6 +37,8 @@ export function attentionRows({
   pending: number;
   /** FLOW-941: suggested transfers between two Mercury connections. */
   transfers?: number;
+  /** FLOW-1135: the utility bills not refunded and the suggested refunds (count_utility_refunds). */
+  utilities?: UtilityRefundCount;
   unpaidCount: number;
   unpaidGross: bigint;
   /** The company's base currency for the open invoices' total (ILS when not given). */
@@ -74,6 +79,8 @@ export function attentionRows({
       hint: "בין חשבונות Mercury",
     });
   }
+  const utilityRow = utilities == null ? null : utilityRefundsRow(utilities, `/utility-refunds${search}`);
+  if (utilityRow != null) rows.push(utilityRow);
   if (unpaidCount > 0) {
     rows.push({
       id: "unpaid",
@@ -151,5 +158,39 @@ export function changeRow(change: ChargeChangeView, { saysRecurring = true }: { 
     tag: change.now,
     // One line, cut at its end only when it does not fit (43-home.css).
     hint: <><bdi dir="ltr">{change.now}</bdi> במקום <bdi dir="ltr">{change.usual}</bdi>{saysRecurring ? " · חיוב קבוע" : null}</>,
+  };
+}
+
+/**
+ * FLOW-1135 (V3-Home-UtilityRefunds, V3-Project-Rent-Utilities): "N חשבונות לא הוחזרו · $X", only when there is one;
+ * with only suggestions left, "N החזרים לבדיקה". One currency shows its total; several show the count alone. The
+ * suggestions count in its dismissKey, so a new one brings back a hidden row. Home and the property page share it.
+ */
+export function utilityRefundsRow({ notRefunded, totals, suggested }: UtilityRefundCount, to: string): BannerRow | null {
+  if (notRefunded === 0 && suggested === 0) return null;
+  const [only] = totals.length === 1 ? totals : [];
+  const total = only == null ? null : formatAmountText(only.minor, only.currency, { detail: true });
+  const dismissKey = `utility-refunds:${String(notRefunded)}:${String(suggested)}:${totals.map((row) => `${row.currency}${String(row.minor)}`).join("+")}`;
+  if (notRefunded === 0) {
+    return {
+      id: "utility-refunds",
+      dismissKey,
+      to,
+      icon: <InvoiceIcon />,
+      title: suggested === 1 ? "החזר אחד לבדיקה" : <><bdi dir="ltr">{String(suggested)}</bdi> החזרים לבדיקה</>,
+      short: "החזרים לבדיקה",
+      tag: String(suggested),
+    };
+  }
+  const count = notRefunded === 1 ? "חשבון אחד לא הוחזר" : <><bdi dir="ltr">{String(notRefunded)}</bdi> חשבונות לא הוחזרו</>;
+  return {
+    id: "utility-refunds",
+    dismissKey,
+    to,
+    icon: <InvoiceIcon />,
+    title: total == null ? count : <>{count} · <bdi dir="ltr">{total}</bdi></>,
+    // FLOW-1097: under 360px the short title and the total (or the count) on one line.
+    short: "לא הוחזרו",
+    tag: total ?? countTag(notRefunded, "חשבון אחד", "חשבונות"),
   };
 }

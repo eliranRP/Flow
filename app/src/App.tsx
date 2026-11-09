@@ -35,7 +35,7 @@ import { ProjectRoutes } from "./routes/projects";
 import { SearchRoute } from "./routes/search";
 import { SetupRoutes } from "./routes/setup";
 import { SettingsRoutes } from "./routes/settings";
-import { TransfersRoute, UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
+import { TransfersRoute, UnpaidInvoiceRoute, UnpaidRoute, UtilityRefundsRoute } from "./routes/unpaid";
 
 // The status bar's cover loads after the first paint: nothing scrolls under the clock before then.
 const StatusCover = lazy(() => import("./ui/status-cover").then((m) => ({ default: m.StatusCover })));
@@ -203,6 +203,7 @@ function AppRoutes() {
                 <Route path="review/filed" element={<FiledTodayScreen />} />
                 {UnpaidRoute()}
                 {TransfersRoute()}
+                {UtilityRefundsRoute()}
                 <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
                 <Route path="recurring/changes" element={<RecurringChangesScreen />} />
