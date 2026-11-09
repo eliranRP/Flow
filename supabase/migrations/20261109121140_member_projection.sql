@@ -2,9 +2,10 @@
 --
 -- 1. public.get_member_projection_inputs() (owner and viewers): each property's starting point for the forecast,
 --    read only when the forecast opens, so the report's own read stays as it is:
---    - rent_minor: the scheduled rent, the highest of the last three full months' rent, so a month with a
---      turnover or a late payment does not read as zero, and empty months are not counted twice;
---    - rented_months: the months with rent in the last 12 full months, to scale a partial year's costs;
+--    - rent_minor: the scheduled rent, the median of the last three full months' rent, so neither a month with
+--      a turnover or a late payment nor one with two payments sets it, and empty months are not counted twice;
+--    - rented_months: the months since the first rent, at most 12, to scale a partial year's costs (a vacant
+--      month in a rented year is not a partial year);
 --    - costs: the last 12 full months of opex lines after the first rent, by category, as costs (positive);
 --      debt service and CapEx are left out (the loans' schedules and the CapEx reserve take their place);
 --    - units; and each open loan's terms and rate changes, for its schedule (principal and interest only).
@@ -43,17 +44,22 @@ declare
 begin
   select p.investment_currency, coalesce(p.units, 1) into cur, units
   from public.projects p where p.id = p_project_id and p.company_id = p_company_id;
-  -- The rent of each of the last three full months; the highest is the scheduled rent.
-  select max(m.amount) into rent
-  from (
+  -- The rent of each of the last three full months (a month with none counts as none); the median is the
+  -- scheduled rent.
+  select percentile_disc(0.5) within group (order by coalesce(m.amount, 0)) into rent
+  from generate_series(date_trunc('month', p_to) - interval '2 months', date_trunc('month', p_to), interval '1 month') g(month)
+  left join (
     select date_trunc('month', a.line_date) as month, sum(a.amount_minor) as amount
-    from private.property_lines(p_company_id, p_project_id, (p_to - interval '3 months')::date + 1, p_to) a
+    from private.property_lines(p_company_id, p_project_id, (date_trunc('month', p_to) - interval '2 months')::date, p_to) a
     where a.currency = cur and a.line = 'income'
     group by 1
-  ) m;
-  select count(distinct date_trunc('month', a.line_date))::integer into months
-  from private.property_lines(p_company_id, p_project_id, d_from, p_to) a
-  where a.currency = cur and a.line = 'income';
+  ) m on m.month = g.month;
+  -- The months since the first rent, at most 12.
+  select least(12, (extract(year from age(date_trunc('month', p_to), date_trunc('month', min(a.line_date)))) * 12
+      + extract(month from age(date_trunc('month', p_to), date_trunc('month', min(a.line_date)))))::integer + 1)
+  into months
+  from private.property_lines(p_company_id, p_project_id, null, null) a
+  where a.currency = cur and a.line = 'income' and a.line_date <= p_to;
   select coalesce(jsonb_agg(jsonb_build_object('category_id', x.category_id, 'name', x.name, 'amount_minor', x.amount)
     order by x.amount desc), '[]'::jsonb)
   into costs
@@ -126,7 +132,8 @@ begin
     and (p.value_minor is not null or exists (
       select 1 from public.loans l
       where l.company_id = cid and l.project_id = p.id and l.status = 'open'::public.loan_status));
-  return jsonb_build_object('as_of', d_to, 'properties', props);
+  -- `today`: the date today's loan balances are at, for the schedules' anchor.
+  return jsonb_build_object('as_of', d_to, 'today', (now() at time zone 'Asia/Jerusalem')::date, 'properties', props);
 end;
 $$;
 revoke all on function public.get_member_projection_inputs() from public, anon;
@@ -187,7 +194,7 @@ begin
         end if;
       end loop;
     elsif k = 'category_types' then
-      -- {"<category id>": "tax" | "insurance" | "hoa" | "repairs" | "other"}, the company's categories.
+      -- {"<category id>": "tax" | "insurance" | "hoa" | "repairs" | "other"}, not another company's categories.
       if jsonb_typeof(v) <> 'object'
         or (select count(*) from jsonb_object_keys(v)) > 200
         or exists (
@@ -195,7 +202,8 @@ begin
           where t.key !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
             or jsonb_typeof(t.value) <> 'string'
             or t.value #>> '{}' not in ('tax', 'insurance', 'hoa', 'repairs', 'other')
-            or not exists (select 1 from public.categories c where c.id = t.key::uuid and c.company_id = p_company_id))
+            -- Another company's category is refused; one deleted since is ignored, so a deletion never locks the setting.
+            or exists (select 1 from public.categories c where c.id = t.key::uuid and c.company_id <> p_company_id))
       then
         raise exception 'validation';
       end if;

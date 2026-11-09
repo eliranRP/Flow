@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(14);
+select plan(16);
 
 do $users$
 begin
@@ -43,7 +43,7 @@ where id = pg_temp.id('birch');
 insert into public.company_viewers (user_id, company_id) values (tests.get_supabase_uid('mpj_viewer'), pg_temp.id('co'));
 
 -- Rent of $3,100 in each of the last four full months, but only $1,550 last month (a late payment):
--- the scheduled rent is the highest of the last three, $3,100.
+-- the scheduled rent is the median of the last three, $3,100.
 select tests.fixture_line(pg_temp.id('co'), 'mpj:rent' || n, case when n = 1 then 155000 else 310000 end, 'income',
   pg_temp.id('birch'), pg_temp.id('rent'), pg_temp.month_ago(n) + 4, 'USD')
 from generate_series(1, 4) n;
@@ -72,8 +72,9 @@ select tests.authenticate_as('mpj_owner');
 
 select is((public.get_member_projection_inputs()->>'as_of')::date, (date_trunc('month', current_date) - interval '1 day')::date,
   'the window ends with the last full month');
-select is((pg_temp.input()->>'rent_minor')::bigint, 310000::bigint, 'the scheduled rent is the highest of the last three full months');
-select is((pg_temp.input()->>'rented_months')::integer, 4, 'four months had rent in the last 12');
+select is((pg_temp.input()->>'rent_minor')::bigint, 310000::bigint, 'the scheduled rent is the median of the last three full months');
+select is((pg_temp.input()->>'rented_months')::integer, 4, 'four months since the first rent');
+select is((public.get_member_projection_inputs()->>'today')::date, (now() at time zone 'Asia/Jerusalem')::date, 'and the date the balances are at');
 select is((pg_temp.input()->>'units')::integer, 2, 'the units');
 select is(
   (select jsonb_object_agg(c->>'name', (c->>'amount_minor')::bigint) from jsonb_array_elements(pg_temp.input()->'costs') c),
@@ -99,6 +100,12 @@ select throws_ok($$select public.set_member_report('{"projection": {"by_year": {
 select throws_ok(format($$select public.set_member_report('{"projection": {"category_types": {"%s": "tax"}}}')$$, pg_temp.id('other_cat')),
   'P0001', 'validation', 'another company''s category is refused');
 select throws_ok($$select public.set_member_report('{"projection": {"colour": 1}}')$$, 'P0001', 'validation', 'an unknown key is refused');
+-- A category deleted since never locks the setting.
+reset role;
+delete from public.categories where id = pg_temp.id('tax');
+select tests.authenticate_as('mpj_owner');
+select is(public.set_member_report('{"rate_rule": {"tenor_years": 10, "spread_bp": 200}}')->'config'->'rate_rule'->>'spread_bp', '200',
+  'after a typed category is deleted, another part still saves');
 
 select tests.authenticate_as('mpj_viewer');
 select is((pg_temp.input()->>'rent_minor')::bigint, 310000::bigint, 'a viewer reads the inputs');

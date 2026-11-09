@@ -114,6 +114,29 @@ describe("computeMemberProjection (FLOW-1126)", () => {
     expect(r.properties[0]?.years.map((y) => y.debtServiceMinor > 0n)).toEqual(Array.from({ length: 10 }, () => true));
   });
 
+  it("pays members no more than the refinance frees when a member's loan amortizes", () => {
+    const note = mortgage("a-note", 9_400_000n, { payment_minor: 70_000n });
+    const r = run({
+      years: 10,
+      config: { members: [{ name: "Member A", ownership_bp: 5000, loan_ids: ["a-note"] }, { name: "Member B", ownership_bp: 5000 }] },
+      loans: [{ loan_id: "a-note", name: "A note", kind: "amortizing", project_id: "birch", currency: "USD", balance_minor: 9_400_000n }],
+      inputs: [input("birch", 310_000n, [mortgage("m-birch", 17_400_000n, { payment_minor: 110_000n }), note])],
+    });
+    const prop = r.properties[0];
+    const noteN = r.refi.payoffMemberLoansMinor;
+    expect(noteN).toBeLessThan(9_400_000n);
+    expect(prop?.refi.memberLoansMinor).toBe(noteN);
+    // What the members get: their split of the cash out, plus the note's balance then (paid off by the new loan).
+    const paid = r.members.reduce((sum, m) => sum + m.totalMinor, 0n);
+    const freed = r.refi.cashOutMinor + noteN;
+    expect(paid - freed <= 1n && freed - paid <= 1n).toBe(true);
+  });
+
+  it("applies a change set for year 1 itself", () => {
+    const y1 = run({ years: 1, config: { projection: { by_year: { rent: { "1": 1000 } } } } }).properties[0]?.years[0];
+    expect(y1?.rentMinor).toBe(4_092_000n);
+  });
+
   it("leaves out a property with no rent, and scales a partial year's costs", () => {
     const r = run({
       years: 1,

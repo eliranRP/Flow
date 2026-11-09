@@ -204,14 +204,22 @@ function times(amount: bigint, numerator: bigint, denominator: bigint): bigint {
   return product < 0n ? -divHalfEven(-product, denominator) : divHalfEven(product, denominator);
 }
 
-/** A loan's balance at the end of each year, and its principal and interest in each, from its schedule. */
-function loanByYear(loan: ProjectionLoan, asOf: string, years: number): { balance: bigint[]; debt: bigint[] } {
+/** A loan that keeps its balance, paying only interest (none for a member's demand loan). */
+function flat(loan: ProjectionLoan, years: number, interest: boolean): { balance: bigint[]; debt: bigint[] } {
+  const yearly = interest ? times(loan.balance_minor, BigInt(loan.annual_rate_ppm), 1_000_000n) : 0n;
+  return { balance: Array.from({ length: years }, () => loan.balance_minor), debt: Array.from({ length: years }, () => yearly) };
+}
+
+/**
+ * A loan's balance at the end of each year, and its principal and interest in each, from its schedule. The balance
+ * is today's (at `today`) less the principal the schedule pays from today to then.
+ */
+function loanByYear(loan: ProjectionLoan, asOf: string, today: string, years: number): { balance: bigint[]; debt: bigint[] } {
   const balance: bigint[] = [];
   const debt: bigint[] = [];
-  if (loan.kind === "demand" || loan.term_months == null || loan.payment_minor == null) {
-    for (let y = 1; y <= years; y++) { balance.push(loan.balance_minor); debt.push(0n); }
-    return { balance, debt };
-  }
+  if (loan.kind === "demand") return flat(loan, years, false);
+  // A loan without the terms for a schedule keeps its balance and pays interest.
+  if (loan.term_months == null || loan.payment_minor == null) return flat(loan, years, true);
   let schedule: ReturnType<typeof buildLoanSchedule>;
   try {
     schedule = buildLoanSchedule({
@@ -228,14 +236,12 @@ function loanByYear(loan: ProjectionLoan, asOf: string, years: number): { balanc
     });
   } catch {
     // Terms the schedule refuses (a payment under the interest): the balance stays and only interest is paid.
-    const interest = times(loan.balance_minor, BigInt(loan.annual_rate_ppm), 1_000_000n);
-    for (let y = 1; y <= years; y++) { balance.push(loan.balance_minor); debt.push(interest); }
-    return { balance, debt };
+    return flat(loan, years, true);
   }
   const rows = schedule.rows;
   // The schedule's balance after the last payment due on or before a date (its principal before the first).
   const scheduledAt = (date: string) => rows.reduce((bal, r) => (r.dueDate <= date ? r.balanceMinor : bal), loan.principal_minor);
-  const now = scheduledAt(asOf);
+  const now = scheduledAt(today);
   for (let y = 1; y <= years; y++) {
     const from = addYears(asOf, y - 1);
     const to = addYears(asOf, y);
@@ -254,6 +260,8 @@ export function computeMemberProjection(input: {
   readonly inputs: readonly ProjectionInput[];
   /** The last day of the last full month. */
   readonly asOf: string;
+  /** The date today's loan balances are at; the schedules count principal from it. Defaults to asOf. */
+  readonly today?: string;
   /** Today's expected rate (the report's), the default refinance rate. */
   readonly expectedRatePpm: number | null;
   /** The refinance year, 1 to 10; else the setting's, else 10. */
@@ -293,6 +301,8 @@ export function computeMemberProjection(input: {
   for (const m of cfg.members ?? []) for (const id of m.loan_ids ?? []) owner.set(id, m.name);
   const missing: ProjectionResult["missing"][number][] = [];
   const properties: PropertyProjection[] = [];
+  // Each property loan's balance in year N, so a member's amortizing loan is repaid at what is left of it.
+  const projected = new Map<string, bigint>();
 
   for (const prop of input.properties) {
     const inp = byId.get(prop.project_id);
@@ -311,7 +321,8 @@ export function computeMemberProjection(input: {
       if (type === "repairs") continue;
       base[type] += times(c.amount_minor, 12n, BigInt(scale));
     }
-    const loans = inp.loans.map((l) => ({ loan: l, ...loanByYear(l, input.asOf, years) }));
+    const loans = inp.loans.map((l) => ({ loan: l, ...loanByYear(l, input.asOf, input.today ?? input.asOf, years) }));
+    for (const l of loans) projected.set(l.loan.loan_id, l.balance[years - 1] ?? l.loan.balance_minor);
     const memberLoanIds = new Set(inp.loans.filter((l) => owner.has(l.loan_id)).map((l) => l.loan_id));
 
     const turns = (n: bigint) => times(n, 12n, BigInt(stayMonths));
@@ -319,11 +330,11 @@ export function computeMemberProjection(input: {
     let rentMonthly = inp.rent_minor;
     const costs = { ...base };
     let value = prop.value_minor;
+    // Year 1 starts from the last 12 months; a change set for year 1 itself still applies.
+    const change = (series: ProjectionSeries, y: number) => (y > 1 ? growth(series, y) : p.by_year?.[series]?.["1"] ?? 0);
     for (let y = 1; y <= years; y++) {
-      if (y > 1) {
-        rentMonthly = applyBp(rentMonthly, 10_000 + growth("rent", y));
-        for (const t of ["tax", "insurance", "hoa", "other"] as const) costs[t] = applyBp(costs[t], 10_000 + growth(t, y));
-      }
+      rentMonthly = applyBp(rentMonthly, 10_000 + change("rent", y));
+      for (const t of ["tax", "insurance", "hoa", "other"] as const) costs[t] = applyBp(costs[t], 10_000 + change(t, y));
       value = applyBp(value, 10_000 + growth("appreciation", y));
       const rent = rentMonthly * 12n;
       const vacancy = turns(times(rentMonthly, BigInt(emptyTenths), 10n));
@@ -403,13 +414,14 @@ export function computeMemberProjection(input: {
   const memberLoans = input.loans.filter((l) => owner.has(l.loan_id) && l.currency === currency);
   const onRefinanced = memberLoans.filter((l) => l.project_id != null && refinancedIds.has(l.project_id));
   const companyLoans = memberLoans.filter((l) => l.project_id == null || !reported.has(l.project_id));
-  const companyOwed = companyLoans.reduce((s, l) => s + l.balance_minor, 0n);
+  const balanceN = (l: MemberReportLoan) => projected.get(l.loan_id) ?? l.balance_minor;
+  const companyOwed = companyLoans.reduce((s, l) => s + balanceN(l), 0n);
   const companyRepaid = cashOut <= 0n ? 0n : companyOwed <= cashOut ? companyOwed : cashOut;
   const split = cashOut - companyRepaid;
   const cashFlow = totals.reduce((s, r) => s + r.cashFlowMinor, 0n);
   const members = (cfg.members ?? []).map((m): MemberProjection => {
-    const own = onRefinanced.reduce((s, l) => (owner.get(l.loan_id) === m.name ? s + l.balance_minor : s), 0n);
-    const mine = companyLoans.reduce((s, l) => (owner.get(l.loan_id) === m.name ? s + l.balance_minor : s), 0n);
+    const own = onRefinanced.reduce((s, l) => (owner.get(l.loan_id) === m.name ? s + balanceN(l) : s), 0n);
+    const mine = companyLoans.reduce((s, l) => (owner.get(l.loan_id) === m.name ? s + balanceN(l) : s), 0n);
     const fromCompany = companyOwed === 0n ? 0n : times(companyRepaid, mine, companyOwed);
     const cashShare = applyBp(split, m.ownership_bp);
     return {
@@ -434,7 +446,7 @@ export function computeMemberProjection(input: {
       valueMinor: rsum((pr) => pr.years[years - 1]?.valueMinor ?? 0n),
       newLoanMinor: rsum((pr) => pr.refi.newLoanMinor),
       payoffMinor: rsum((pr) => pr.refi.payoffMinor),
-      payoffMemberLoansMinor: onRefinanced.reduce((s, l) => s + l.balance_minor, 0n),
+      payoffMemberLoansMinor: onRefinanced.reduce((s, l) => s + balanceN(l), 0n),
       closingMinor: rsum((pr) => pr.refi.closingMinor),
       cashOutMinor: cashOut,
       companyLoansRepaidMinor: companyRepaid,

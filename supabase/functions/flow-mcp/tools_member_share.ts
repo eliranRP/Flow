@@ -51,7 +51,8 @@ const projectionSchema = z.object({
   term_years: z.number().int().min(1).max(40).optional(),
   by_year: z.partialRecord(z.enum(["rent", "tax", "insurance", "hoa", "other", "appreciation"]),
     z.record(z.string().regex(/^([1-9]|10)$/), GROWTH_BP)).optional(),
-  category_types: z.record(UUID_TEXT, z.enum(["tax", "insurance", "hoa", "repairs", "other"])).optional(),
+  category_types: z.record(UUID_TEXT, z.enum(["tax", "insurance", "hoa", "repairs", "other"]))
+    .refine((types) => Object.keys(types).length <= 200).optional(),
 }).strict();
 
 // The shapes the database checks too (private.member_report_check); a null part clears it.
@@ -125,6 +126,7 @@ const readSchema = z.object({
 
 const inputsSchema = z.object({
   as_of: z.string(),
+  today: z.string().optional(),
   properties: z.array(z.object({
     project_id: z.string(),
     rent_minor: MINOR,
@@ -184,6 +186,7 @@ export async function memberShareRead(name: typeof MEMBER_SHARE_READS[number], a
       loans: parsed.data.loans as MemberReportLoan[],
       inputs: parsedInputs.data.properties as ProjectionInput[],
       asOf: parsedInputs.data.as_of,
+      today: parsedInputs.data.today,
       expectedRatePpm: share.rate.expectedPpm,
       years: years == null ? undefined : (years as number),
     });
@@ -234,7 +237,7 @@ export const MEMBER_SHARE_READ_SPECS = [
   spec("get_member_share", "An LLC member's share, as the app's דוח שותף computes it (FLOW-1117). Sell everything: per property value - selling costs (selling_cost_bp, else 8%) - open loans (saleNetMinor); of the loans, memberLoanMinor is the members' own and bankLoanMinor the rest. totals.equityMinor is value - selling - bank loans - every member's loan (memberLoansMinor; memberLoans lists them, projectId null for the company's own): what the members split. Profit: value - selling - allInMinor (purchase + renovation + holding, as the investment page) per property (profitMinor, null without the all-in; profitMissing names those, reason purchase or rehab), totals.profitMinor of the others. Refinance: a new loan at assumptions ltv (default 75%) of the value, less the open loans and the closing costs (default 2% of the new loan); cashOutMinor, and a property where it is not above zero is not refinanced (refinances false). rate: quoteDate (config quote_date, else the latest quote's date), yieldDate (that date or the closest day before with a yield), yieldSource (manual: typed in the setting, which wins for its date and tenor; treasury: fetched), yieldPpm (the 5 or 10 year Treasury, rate_rule tenor_years, default 10), expectedPpm (yield + spread_bp x 100, default 150), paymentPpm (expected, else the best quote) and each quote's diffPpm and verdict (good at or under expected, near within 2500 ppm, high). paymentMinor is a 30-year (term_years) payment of principal and interest at paymentPpm. members: name, ownershipBp, saleMinor (their part of equityMinor), loansMinor (their own loans repaid), saleTotalMinor (the two), profitMinor and refinanceMinor (their ownership of the totals), refiLoansMinor (their own loans on the refinanced properties, paid off to them; totals.payoffMemberLoansMinor) and refiTotalMinor (the two); member (a name, any case) keeps one, else not_found. missing lists properties left out: no value, another currency than the report's, loans in another currency. Amounts are minor units of currency. Before tax.", {
     member: { type: "string" },
   }, false),
-  spec("get_member_projection", "The member report's forecast (FLOW-1126): each property year by year from the last full month (as_of) and a refinance in year N (years 1 to 10, else the setting's projection.years, else 10). Each year per property: rentMinor (the scheduled rent, the highest of the last three full months, × 12, growing by the rent change from year 2), vacancyMinor (monthly rent × empty months × 12 ÷ average stay), turnoverMinor (units × cost × 12 ÷ stay), costs by type (tax, insurance, hoa, other: the last 12 months of opex by category, a partial year scaled to 12, each growing by its own change; repairs left out, maintenance replaces them), maintenanceMinor and capexMinor (percents of rent), noiMinor, debtServiceMinor (the loans' scheduled principal and interest, no escrow), cashFlowMinor, valueMinor and balanceMinor at the year's end; totals the same for the portfolio. refi: the new loan at the LTV of year N's value less that year's balances and closing (cashOutMinor; a property where it is not above zero is not refinanced), companyLoansRepaidMinor (the company's own member loans repaid first), splitMinor, ratePpm (rateIsToday: today's expected rate), dscrMilli. members: cashShareMinor, loansBackMinor (their loans on refinanced properties and their part of the company's), totalMinor, cashFlowMinor (their part of the cash flow until then); member (a name, any case) keeps one, else not_found. missing: properties left out (value, currency, loan_currency, rent). assumptions: each as used; set them with set_member_report's projection part. Before tax.", {
+  spec("get_member_projection", "The member report's forecast (FLOW-1126): each property year by year from the last full month (as_of) and a refinance in year N (years 1 to 10, else the setting's projection.years, else 10). Each year per property: rentMinor (the scheduled rent, the median of the last three full months, × 12, growing by the rent change from year 2), vacancyMinor (monthly rent × empty months × 12 ÷ average stay), turnoverMinor (units × cost × 12 ÷ stay), costs by type (tax, insurance, hoa, other: the last 12 months of opex by category, a partial year since the first rent scaled to 12, each growing by its own change from year 2, a by_year change for year 1 too; repairs left out, maintenance replaces them), maintenanceMinor and capexMinor (percents of rent), noiMinor, debtServiceMinor (the loans' scheduled principal and interest, no escrow), cashFlowMinor, valueMinor and balanceMinor at the year's end; totals the same for the portfolio. refi: the new loan at the LTV of year N's value less that year's balances and closing (cashOutMinor; a property where it is not above zero is not refinanced), companyLoansRepaidMinor (the company's own member loans repaid first), splitMinor, ratePpm (rateIsToday: today's expected rate), dscrMilli. members: cashShareMinor, loansBackMinor (their loans on refinanced properties and their part of the company's), totalMinor, cashFlowMinor (their part of the cash flow until then); member (a name, any case) keeps one, else not_found. missing: properties left out (value, currency, loan_currency, rent). assumptions: each as used; set them with set_member_report's projection part. Before tax.", {
   member: { type: "string" },
   years: { type: "integer", minimum: 1, maximum: 10 },
 }, false),

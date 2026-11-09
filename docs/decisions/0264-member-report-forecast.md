@@ -18,15 +18,16 @@ The owner asked to see the portfolio in future years, and what a refinance in 10
    - each open loan's terms and rate changes.
 
    `get_member_report` is not widened, because it already takes about 1.8 s, and the forecast reads its own inputs only when it opens.
-2. **The scheduled rent** is the highest of the last three full months' rent. A late payment or a turnover month would make the latest month alone read low, and collected rent already reflects empty months, so vacancy would otherwise be counted twice.
+2. **The scheduled rent** is the median of the last three full months' rent. A late payment or a turnover month would make the latest month alone read low, two payments in one month would make the highest read double, and collected rent already reflects empty months, so vacancy would otherwise be counted twice. A partial year is the months since the first rent: a vacant month in a rented year does not scale the costs up.
 3. **The assumptions are a `projection` part** of `member_reports.config`:
    - set by `set_member_report` and MCP like the other parts, with undo kind `member_report`;
    - validated by `private.member_projection_check` within FLOW-1125's bounds;
    - the defaults live in `packages/shared/src/member-projection.ts`, so the stored part holds only what the owner changed.
 4. **One calculation, `computeMemberProjection`,** for the app and MCP `get_member_projection`.
    - Costs: repairs are left out (maintenance replaces them), and a partial year is scaled to 12 months.
-   - Debt service: principal and interest from each loan's schedule, never escrow. Balances: today's balance less the principal the schedule pays by then.
-   - A loan whose terms the schedule refuses keeps its balance and pays interest only.
+   - Debt service: principal and interest from each loan's schedule, never escrow. Balances: today's balance less the principal the schedule pays from today to then. A member's loan is repaid at its balance in year N.
+   - A loan whose terms the schedule refuses, or that has none, keeps its balance and pays interest only; a member's demand loan keeps its balance and pays none.
+   - A category deleted since it was typed is ignored, so it never locks the setting.
    - Members' loans:
      - one on a refinanced property is paid off to its member;
      - the company's own are repaid out of the cash out first, in proportion when it is short;
