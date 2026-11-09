@@ -99,6 +99,14 @@
   font-size: var(--type-caption-size);
 }
 
+/* FLOW-1121: "עודכן ב-14:05 · רענון": the time, then the owner's link on the same line. */
+.ui-msr-updated {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .ui-msr-quote-end {
   display: inline-flex;
   align-items: center;
@@ -173,4 +181,16 @@
   margin: 0;
   color: var(--color-bad);
   font-size: var(--type-meta-size);
+}
+
+/* FLOW-1121: a row of החישוב, opened: its total under the properties (or members). */
+.ui-msr-drill-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block: var(--space-3) 0;
+  border-block-start: var(--stroke-hairline) solid var(--color-line);
+  font-weight: var(--type-btn-2-weight);
 }
