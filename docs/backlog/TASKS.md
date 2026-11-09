@@ -578,6 +578,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1117"></a>[FLOW-1117](tasks/FLOW-1117.md) | Member share report: the data and the MCP tools | MCP |
 | <a id="flow-1118"></a>[FLOW-1118](tasks/FLOW-1118.md) | Member share report: the screens | SMALL UI |
 | <a id="flow-1119"></a>[FLOW-1119](tasks/FLOW-1119.md) | Member share report: the Treasury yields filled in by themselves | SMALL CYCLE |
+| <a id="flow-1121"></a>[FLOW-1121](tasks/FLOW-1121.md) | Member report: every figure of the calculation opens its parts; the selling cost shows its percent and can be changed | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
