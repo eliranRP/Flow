@@ -223,5 +223,5 @@
   align-items: center;
   gap: var(--space-1);
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: var(--type-section-weight);
 }
