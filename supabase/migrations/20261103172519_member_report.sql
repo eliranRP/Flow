@@ -252,7 +252,7 @@ begin
   return jsonb_build_object(
     'config', cfg,
     'properties', props,
-    'can_edit', private.current_company_id() is not distinct from cid
+    'can_edit', private.owner_company_id() is not distinct from cid
   );
 end;
 $$;
@@ -274,9 +274,10 @@ declare
   prior jsonb;
   next jsonb;
 begin
-  cid := private.current_company_id();
+  -- Owner only: an editor or a viewer of the company is refused.
+  cid := private.owner_company_id();
   if cid is null then
-    if exists (select 1 from public.company_viewers w where w.user_id = (select auth.uid())) then
+    if private.readable_company_id() is not null then
       raise exception 'forbidden' using errcode = '42501';
     end if;
     raise exception 'no company';
@@ -357,7 +358,12 @@ begin
     when deadlock_detected or serialization_failure or lock_not_available then
       return private.mcp_error('unavailable', 'retry');
     when others then
-      response := private.mcp_refused(sqlerrm);
+      -- The setting's own checks answer as validation, with their message.
+      if sqlerrm in ('validation', 'ownership must add up to 100%') then
+        response := private.mcp_error('validation', sqlerrm);
+      else
+        response := private.mcp_refused(sqlerrm);
+      end if;
   end;
 
   perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);

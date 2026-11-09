@@ -4,12 +4,13 @@
 
 begin;
 
-select plan(27);
+select plan(31);
 
 do $users$
 begin
   perform tests.create_supabase_user('mrp_owner', 'mrp-owner@example.com');
   perform tests.create_supabase_user('mrp_viewer', 'mrp-viewer@example.com');
+  perform tests.create_supabase_user('mrp_editor', 'mrp-editor@example.com');
   perform tests.create_supabase_user('mrp_other', 'mrp-other@example.com');
 end
 $users$;
@@ -39,6 +40,8 @@ update public.projects set investment_currency = 'USD', value_minor = 20000000, 
 where id = pg_temp.id('sold');
 insert into public.company_viewers (user_id, company_id)
 values (tests.get_supabase_uid('mrp_viewer'), pg_temp.id('co'));
+insert into public.company_members (company_id, user_id, role)
+values (pg_temp.id('co'), tests.get_supabase_uid('mrp_editor'), 'editor');
 
 -- Birch's loan: 268,000.00 open, in dollars.
 insert into public.loans (
@@ -113,6 +116,10 @@ select tests.authenticate_as('mrp_viewer');
 select is(public.get_member_report()->'config'->'members'->0->>'name', 'Member A', 'a viewer reads the setting');
 select is((public.get_member_report()->>'can_edit')::boolean, false, 'and cannot edit it');
 select throws_ok($$select public.set_member_report('{"quote_date": "2026-11-04"}')$$, '42501', 'forbidden', 'a viewer cannot write');
+select tests.authenticate_as('mrp_editor');
+select is((public.get_member_report()->>'can_edit')::boolean, false, 'an editor reads the setting but cannot edit it');
+select throws_ok($$select public.set_member_report('{"quote_date": "2026-11-04"}')$$, '42501', 'forbidden',
+  'an editor cannot change the members'' ownership (owner only)');
 select tests.authenticate_as('mrp_other');
 select is(public.get_member_report()->'config', 'null'::jsonb, 'another company sees its own empty setting');
 select is(jsonb_array_length(public.get_member_report()->'properties'), 0, 'and none of the first company''s properties');
@@ -124,6 +131,10 @@ select is(public.mcp_set_member_report('mrp-1', '{"assumptions": {"ltv_bp": 7000
   'MCP set_member_report returns its undo kind');
 select is(public.mcp_set_member_report('mrp-1', '{"assumptions": {"ltv_bp": 7000}}')->'data'->'config'->'assumptions',
   '{"ltv_bp": 7000}'::jsonb, 'a replay answers the same');
+select is(public.mcp_set_member_report('mrp-2', '{"members": [{"name": "Member A", "ownership_bp": 9000}]}')->'error',
+  '{"code": "validation", "message": "ownership must add up to 100%"}'::jsonb, 'MCP answers a bad split as validation, with its message');
+select is(public.mcp_set_member_report('mrp-3', '{"rate_rule": {"tenor_years": 7}}')->'error'->>'code', 'validation',
+  'and any other bad part as validation');
 select is(public.mcp_undo('mrp-undo-1', 'member_report', pg_temp.id('co'))->>'ok', 'true', 'undo works');
 select is((select config->'assumptions' from public.member_reports where company_id = pg_temp.id('co')),
   '{"ltv_bp": 7500, "closing_bp": 200, "term_years": 30}'::jsonb, 'and puts the assumptions back');
