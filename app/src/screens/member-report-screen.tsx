@@ -25,7 +25,7 @@ import { ChevronDownIcon, ChevronIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
-import { Skeleton } from "../ui/skeleton";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
 import {
@@ -230,7 +230,11 @@ export function MemberReportScreen({ sample, refreshSample, projectionSample }: 
 
   const back = `/reports${backSearch}`;
   if (result == null) {
-    return <ScreenState title="דוח שותף" kicker="דוחות" backTo={back} phase={phase.kind === "ready" ? { kind: "loading" } : phase} onRetry={() => { void query.refetch(); }} />;
+    // FLOW-1139: while the report loads, the band's figure and the calculation's rows, not list rows.
+    if (phase.kind === "ready" || phase.kind === "loading") {
+      return <MemberReportLoading back={back} mode={mode} onMode={(next) => { setParam("mode", next === "sell" ? null : next); }} />;
+    }
+    return <ScreenState title="דוח שותף" kicker="דוחות" backTo={back} phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
   // Every row of החישוב opens its parts (FLOW-1121).
   const resolve: Resolve = (target) => {
@@ -355,6 +359,64 @@ export function MemberReportScreen({ sample, refreshSample, projectionSample }: 
         onSave={(bp) => saveSellingWithUndo(sellingIds, bp)}
       />
       <PropertySheet open={property != null} onOpenChange={(open) => { if (!open) setProperty(null); }} property={property} result={result} member={share} mode={mode} currency={currency} />
+    </div>
+  );
+}
+
+/**
+ * FLOW-1139: the report while it loads, in its shape: the band with Back, the figure and its line as band skeletons
+ * and the real scenario switch; under it the calculation's card, a second card and the properties. The title is
+ * for the screen reader; the blocks wait 300ms like the app's other skeletons, under one sr-only status line.
+ */
+function MemberReportLoading({ back, mode, onMode }: { back: string; mode: ReportMode; onMode: (next: ReportMode) => void }) {
+  return (
+    <div className="ui-msr-page">
+      <TopBand
+        wordmark={false}
+        leading={<BackButton fallback={back} text="דוחות" onBand />}
+        heroClassName="ui-msr-hero"
+        hero={(
+          <>
+            <FocusTitle className="sr-only">דוח שותף</FocusTitle>
+            <span className="ui-band-label ui-msr-band-label" aria-hidden="true"><Skeleton tone="band" width="lg" /></span>
+            <p className="ui-msr-band-figure" aria-hidden="true"><Skeleton tone="band" className="ui-msr-skel-band" /></p>
+            <p className="ui-msr-band-sub t-meta" aria-hidden="true"><Skeleton tone="band" width="md" /></p>
+          </>
+        )}
+      >
+        <div className="ui-msr-band-tabs">
+          <SegmentedControl label="תרחיש" showLabel={false} role="tab" tone="band" value={mode} onChange={onMode}
+            options={[{ value: "sell", label: "מכירת הכל" }, { value: "refi", label: "ריפייננס" }, { value: "forecast", label: "תחזית" }]} />
+        </div>
+      </TopBand>
+      <div className="ui-rep-content ui-msr">
+        <DelayedSkeleton>
+          <p className="sr-only" role="status">טוען…</p>
+          <div className="ui-msr-skel" aria-busy="true" aria-hidden="true">
+            {[5, 3].map((rows, card) => (
+              <div key={card} className="ui-msr-skel-card">
+                <Skeleton className="ui-msr-skel-title" />
+                {Array.from({ length: rows }, (_, row) => (
+                  <div key={row} className="ui-msr-skel-row">
+                    <Skeleton className="ui-msr-skel-line" />
+                    <Skeleton className="ui-msr-skel-figure" />
+                  </div>
+                ))}
+              </div>
+            ))}
+            <Skeleton className="ui-msr-skel-title" />
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="ui-msr-skel-row ui-msr-skel-prop">
+                <span className="ui-msr-skel-lines">
+                  <Skeleton className="ui-msr-skel-line" />
+                  <Skeleton className="ui-msr-skel-hint" />
+                </span>
+                <Skeleton className="ui-msr-skel-figure" />
+              </div>
+            ))}
+          </div>
+        </DelayedSkeleton>
+      </div>
     </div>
   );
 }

@@ -30,10 +30,10 @@ function yearMonths(y: number) {
   };
 }
 
-function renderDrawer(props: Partial<Parameters<typeof MonthDrawer>[0]> = {}) {
+function renderDrawer(props: Partial<Parameters<typeof MonthDrawer>[0]> = {}, impl?: typeof rpc.impl) {
   const onPick = vi.fn();
   const onOpenChange = vi.fn();
-  rpc.impl = (name) => Promise.resolve({ data: name === "cash_year_months" ? yearMonths(year) : null, error: null });
+  rpc.impl = impl ?? ((name) => Promise.resolve({ data: name === "cash_year_months" ? yearMonths(year) : null, error: null }));
   renderWithProviders(
     <MonthDrawer
       open
@@ -79,7 +79,7 @@ describe("MonthDrawer (FLOW-364)", () => {
     await screen.findByRole("dialog", { name: "בחירת חודש" });
     expect(screen.queryByRole("button", { name: "שנה הבאה" })).toBeNull();
     expect(screen.queryByRole("button", { name: "שנה קודמת" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /מרץ, נטו/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /מרץ, נטו/ }));
     expect(onPick).toHaveBeenCalledWith(`${String(year)}-03`);
   });
 
@@ -122,6 +122,26 @@ describe("MonthDrawer (FLOW-364)", () => {
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("shows a skeleton in each month's net while the year is read, never ₪0 (FLOW-1139)", async () => {
+    renderDrawer({}, () => new Promise(() => undefined));
+    await screen.findByRole("dialog", { name: "בחירת חודש" });
+    const cells = Array.from(document.querySelectorAll<HTMLButtonElement>(".ui-month-cell"));
+    const read = cells.filter((cell) => cell.classList.contains("ui-month-cell-data") || cell.classList.contains("ui-month-cell-selected"));
+    expect(read.length).toBeGreaterThan(0);
+    for (const cell of read) {
+      expect(cell.querySelector(".ui-month-cell-skel")).not.toBeNull();
+      expect(cell.textContent).not.toContain("₪");
+    }
+  });
+
+  it("shows a dash in each month's net when the year's read failed (FLOW-1139)", async () => {
+    renderDrawer({}, () => Promise.resolve({ data: null, error: { message: "failed" } }));
+    await screen.findByRole("dialog", { name: "בחירת חודש" });
+    const march = await screen.findByRole("button", { name: "מרץ" });
+    await within(march).findByText("—");
+    expect(march.querySelector(".ui-month-cell-skel")).toBeNull();
   });
 
   it("draws no figure box without a figure", async () => {

@@ -4,6 +4,7 @@ import type { MonthFigures } from "../month-figures";
 import type { NextMonthForecast } from "../project-next-month";
 import type { ForecastKind } from "../ui/forecast-words";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
+import { ChartSkeleton } from "../ui/chart-skeleton";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 
@@ -12,8 +13,8 @@ import { DelayedSkeleton } from "../ui/skeleton";
  * it: the dashed forecast card, then the chart of the page's own months with the forecast as its last pair.
  * The forecast is the one the צפי page shows (useNextMonthForecast): on the profit page as it is, on the project
  * page in cash terms (cashForecast: the loans' principal added, decision 0196); the history is the page's
- * (profit months or cash months). The card hides when nothing is expected next month; the chart waits for its
- * history.
+ * (profit months or cash months). The card hides when nothing is expected next month; while the reads are out,
+ * skeletons of the card and the chart hold their places.
  */
 export function NextMonthBlock({
   forecast,
@@ -30,7 +31,7 @@ export function NextMonthBlock({
   takeaway = false,
 }: {
   forecast: NextMonthForecast | null;
-  /** The forecast's reads are still out: the card's skeleton holds its place, and the chart waits. */
+  /** The forecast's reads are still out: the card's and the chart's skeletons hold their places. */
   loading: boolean;
   /** yyyy-mm, the month to date; null while the history is unread. */
   current: string | null;
@@ -54,7 +55,8 @@ export function NextMonthBlock({
   return (
     <div className="ui-fc-block">
       {loading ? (
-        <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
+        // FLOW-1139: the chart waits with the card, so its place is held too.
+        <DelayedSkeleton><NextMonthCardSkeleton /><ChartSkeleton /></DelayedSkeleton>
       ) : forecast == null || (forecast.rows.length === 0 && forecast.expenseMinor === 0n) ? null : (
         <ForecastCard
           title={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}

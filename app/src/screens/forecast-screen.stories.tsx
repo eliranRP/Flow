@@ -3,6 +3,7 @@ import { type BoardForecastVariant, monthForecastBoardSample, monthForecastSampl
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
+import { ForecastItemPage } from "./forecast-item-page";
 import { ForecastScreen } from "./forecast-screen";
 
 const meta: Meta<{ kind: ForecastSampleKind }> = {
@@ -108,7 +109,7 @@ export const ForecastDocked: Story = {
   },
 };
 
-/** While the forecast loads (V3-States). */
+/** While the forecast loads (V3-States). FLOW-1139: the page's shape, the figure, the card, the chart and rows, not list rows. */
 export const ForecastLoading: Story = {
   name: "Forecast · loading",
   render: () => (
@@ -116,4 +117,32 @@ export const ForecastLoading: Story = {
       <ForecastScreen />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("טוען…")).toHaveAttribute("role", "status");
+    const skeleton = canvasElement.querySelector(".ui-forecast-skel[aria-busy='true']");
+    await expect(skeleton?.querySelector(".ui-forecast-skel-figure")).not.toBeNull();
+    await expect(skeleton?.querySelector(".ui-fc-card")).not.toBeNull();
+    await expect(skeleton?.querySelectorAll(".ui-chart-skel-month")).toHaveLength(6);
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
+};
+
+/** FLOW-1139: a row's page while the project and category names load: a skeleton in each name's place, not a blank. */
+export const ForecastItemNamesLoading: Story = {
+  name: "Forecast · item page, names loading",
+  render: () => {
+    const sample = monthForecastBoardSample("board");
+    const item = sample.data.build.items.find((row) => row.key === "invoice:inv-1043") ?? sample.data.build.items[0];
+    if (item == null) throw new Error("the board sample has no items");
+    return (
+      <StoryRoute entry="/forecast/item/invoice%3Ainv-1043" tabs>
+        <ForecastItemPage item={item} today={sample.today} backTo="/forecast" projectName={null} categoryName={null} onSave={() => undefined} onClose={() => undefined} />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector(".ui-forecast-page-project .ui-skeleton-bar")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-forecast-page-category .ui-skeleton-bar")).not.toBeNull();
+  },
 };

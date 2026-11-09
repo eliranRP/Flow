@@ -15,6 +15,7 @@ import { PACE_WORDS, paceChoices } from "../project-next-edit";
 import type { ForecastPace } from "../project-next-month";
 import { useProjectForecastWrites } from "../project-forecast-writes";
 import { List } from "../ui/list-row";
+import { Skeleton } from "../ui/skeleton";
 import { itemCharge } from "./forecast-categories";
 import { ADDED_LINE, dayMonth, FORECAST_TITLE, itemLate, itemWhat } from "./forecast-parts";
 import { monthName } from "./home-parts";
@@ -158,8 +159,9 @@ export function ForecastItemPage({
   today: string;
   /** The list's path (with its query): Back's fallback on a deep link. */
   backTo: string;
-  projectName: string;
-  categoryName: string;
+  /** Null while its read is out: a skeleton holds the name's place (FLOW-1139). */
+  projectName: string | null;
+  categoryName: string | null;
   /** The dev route's When frame opens the sheet with the page. */
   openWhen?: boolean;
   /** `alsoUndo` (FLOW-1018): the pace write's undo, which the save's one ביטול sends after the month's own. */
@@ -269,8 +271,8 @@ export function ForecastItemPage({
         <p className="ui-forecast-page-meta">{`${monthLabel} · ${income ? "הכנסה" : "הוצאה"} · ${kindText}`}</p>
       </header>
       <List layout="inset" className="ui-forecast-page-card">
-        <IconRow className="ui-forecast-page-project" icon={<ProjectsIcon size={22} />} label="פרויקט" value={projectName} />
-        <IconRow className="ui-forecast-page-category" icon={<TagIcon size={22} />} label="קטגוריה" value={categoryName} />
+        <IconRow className="ui-forecast-page-project" icon={<ProjectsIcon size={22} />} label="פרויקט" value={projectName ?? ""} tag={projectName == null ? <Skeleton width="sm" /> : undefined} />
+        <IconRow className="ui-forecast-page-category" icon={<TagIcon size={22} />} label="קטגוריה" value={categoryName ?? ""} tag={categoryName == null ? <Skeleton width="sm" /> : undefined} />
       </List>
       <List layout="inset" className="ui-forecast-page-card">
         <IconRow

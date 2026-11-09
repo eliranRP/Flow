@@ -7,6 +7,7 @@ import { israelToday, HEBREW_MONTHS } from "../ui/date-math";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { Sheet } from "../ui/sheet";
+import { Skeleton } from "../ui/skeleton";
 import { IconButton } from "../ui/icon-button";
 import { OutwardChevron } from "../ui/icons";
 import { cx } from "../ui/cx";
@@ -67,7 +68,11 @@ export function MonthDrawer({
     if (open) setYear(openYear());
   }
   const months = useCashYearMonthsQuery(year, open && yearMonths == null);
-  const netByMonth = netsOf((yearMonths ?? months.data)?.months ?? [], base);
+  // FLOW-1139: while the year is read, each month's net is a skeleton, never ₪0; a failed read shows a dash.
+  const yearRead = yearMonths ?? months.data;
+  const netByMonth = yearRead == null ? null : netsOf(yearRead.months, base);
+  // A read that failed, or one that never runs (a preview), shows a dash, not a skeleton that stays.
+  const failed = yearRead == null && (months.isError || months.fetchStatus === "idle");
   const cells = drawerCells(year, netByMonth, firstKey, today, selectedKey, withForecast);
   const canEarlier = canStepYear(year, -1, firstKey, today, withForecast);
   const canLater = canStepYear(year, 1, firstKey, today, withForecast);
@@ -93,7 +98,7 @@ export function MonthDrawer({
         )}
         <div className="ui-month-drawer-grid">
           {cells.map((cell) => (
-            <MonthCell key={cell.key} cell={cell} base={base} onPick={onPick} />
+            <MonthCell key={cell.key} cell={cell} base={base} failed={failed} onPick={onPick} />
           ))}
         </div>
         <Button full onClick={() => { onOpenChange(false); }}>
@@ -128,16 +133,17 @@ function YearStep({ label, side, disabled, onClick }: { label: string; side: "st
   );
 }
 
-function MonthCell({ cell, base, onPick }: { cell: DrawerCell; base: string; onPick: (key: string) => void }) {
+function MonthCell({ cell, base, failed, onPick }: { cell: DrawerCell; base: string; failed: boolean; onPick: (key: string) => void }) {
   const name = HEBREW_MONTHS[cell.index] ?? "";
   const off = cell.state === "future" || cell.state === "before";
   // FLOW-1056, FLOW-1066: a month of the forecast, picked or not, is צפי, never a net.
-  const forecast = cell.state === "forecast" || (cell.state === "selected" && cell.netMinor == null);
+  const forecast = cell.state === "forecast" || (cell.state === "selected" && cell.netMinor == null && cell.pending !== true);
   const label =
     cell.state === "future" ? `${name}, עוד לא הגיע`
     : cell.state === "before" ? `${name}, לפני הנתונים`
     : forecast ? `${name}, תחזית`
-    : `${name}, נטו ${formatAmountText(cell.netMinor ?? 0n, base)}`;
+    : cell.netMinor == null ? name
+    : `${name}, נטו ${formatAmountText(cell.netMinor, base)}`;
   return (
     <button
       type="button"
@@ -155,10 +161,12 @@ function MonthCell({ cell, base, onPick }: { cell: DrawerCell; base: string; onP
           "עוד לא"
         ) : forecast ? (
           "צפי"
-        ) : cell.state === "before" ? (
+        ) : cell.state === "before" || (cell.netMinor == null && failed) ? (
           "—"
+        ) : cell.netMinor == null ? (
+          <Skeleton className="ui-month-cell-skel" />
         ) : (
-          <Amount agorot={cell.netMinor ?? 0n} currency={base} size="list" loss={(cell.netMinor ?? 0n) < 0n} />
+          <Amount agorot={cell.netMinor} currency={base} size="list" loss={cell.netMinor < 0n} />
         )}
       </span>
     </button>

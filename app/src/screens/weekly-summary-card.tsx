@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Amount } from "../ui/amount";
 import { CalendarIcon, CheckIcon, ChevronIcon, CloseIcon } from "../ui/icons";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { useWeeklySummaryQuery } from "../use-weekly-summary";
 import { hideWeeklyCard } from "../weekly-card";
 import { cardStatus, searchWithWeek, weekLabel } from "../weekly-summary";
@@ -68,8 +69,36 @@ export function WeeklySummaryCard({
 }
 
 /**
- * The live card for `weekStart`. Nothing shows until the week's figures arrive, and a failed read
- * shows nothing. A tap opens the weekly sheet over Home (`?week=`, the push's link); ✕ hides the
+ * FLOW-1139: the card's place while the week's figures load, in its shape: the icon, the title and the week,
+ * then the figure and the status. It waits 300ms like the app's other skeletons.
+ */
+function WeeklySummaryCardSkeleton() {
+  return (
+    <div className="ui-weekly-card ui-weekly-card-skel" aria-busy="true">
+      <p className="sr-only" role="status">טוען את הסיכום השבועי…</p>
+      <span className="ui-weekly-card-open" aria-hidden="true">
+        <span className="ui-weekly-card-head">
+          <span className="ui-skeleton-bar ui-weekly-card-icon" />
+          <span className="ui-weekly-card-titles">
+            <Skeleton width="md" />
+            <Skeleton width="sm" />
+          </span>
+        </span>
+        <span className="ui-weekly-card-foot">
+          <span className="ui-weekly-card-profit">
+            <Skeleton width="sm" />
+            <Skeleton className="ui-weekly-skel-figure" />
+          </span>
+          <Skeleton width="sm" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The live card for `weekStart`. While the week's figures load a skeleton holds the card's place (FLOW-1139);
+ * a failed read shows nothing. A tap opens the weekly sheet over Home (`?week=`, the push's link); ✕ hides the
  * week's card on this phone.
  */
 export function WeeklySummaryCardSlot({ weekStart }: { weekStart: string }) {
@@ -86,7 +115,8 @@ export function WeeklySummaryCardSlot({ weekStart }: { weekStart: string }) {
       window.clearTimeout(timer);
     };
   }, [phase]);
-  if (query.data == null || phase === "gone") return null;
+  if (phase === "gone") return null;
+  if (query.data == null) return query.isPending ? <DelayedSkeleton><WeeklySummaryCardSkeleton /></DelayedSkeleton> : null;
   return (
     <WeeklySummaryCard
       summary={query.data}

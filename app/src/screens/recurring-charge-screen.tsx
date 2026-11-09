@@ -15,7 +15,8 @@ import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
-import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
+import { DetailSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { paceSheetCopy, paceToast, type PaceChoice } from "../ui/pace";
 import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
 import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } from "../ui/recurring-charge-parts";
@@ -40,6 +41,8 @@ export type ChargeSample = {
   changes?: RecurringChange[];
   lineId: string | null;
   charges: PartyCharges | null;
+  /** FLOW-1139: the charges are still being read (the history's skeleton). */
+  chargesLoading?: boolean;
   recurring: PaymentRecurring | null;
   /** Offline: the moment the page's figures are from. */
   offlineSince?: number;
@@ -70,8 +73,9 @@ export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: {
       <div className="ui-charge-page">
         <div className="ui-charge-body">
           <ChargeBack />
+          {/* FLOW-1139: the page's own shape (the Detail pattern), not list rows. */}
           <DelayedSkeleton>
-            <ListSkeleton />
+            <DetailSkeleton />
           </DelayedSkeleton>
         </div>
       </div>
@@ -91,6 +95,31 @@ function ChargeBack() {
   return (
     <div className="ui-charge-back" data-toast-ceiling="">
       <BackButton fallback={`/recurring${search}`} text="קבועים" />
+    </div>
+  );
+}
+
+const HISTORY_BARS = [44, 62, 50, 70, 56, 80] as const;
+
+/**
+ * FLOW-1139: the charge's history while its charges load, in its shape: the head, six month bars and three rows.
+ * It holds the place the history takes, so it does not push the page when it arrives.
+ */
+function ChargeHistorySkeleton() {
+  return (
+    <div className="ui-charges-history ui-charge-history-skel" aria-hidden="true">
+      <Skeleton className="ui-charge-history-skel-head" />
+      <span className="ui-charge-history-skel-bars">
+        {HISTORY_BARS.map((height) => (
+          <span key={height} className="ui-skeleton-bar ui-charge-history-skel-bar" style={{ blockSize: `${String(height)}%` }} />
+        ))}
+      </span>
+      {[0, 1, 2].map((row) => (
+        <span key={row} className="ui-charge-history-skel-row">
+          <Skeleton width="sm" />
+          <Skeleton width="sm" />
+        </span>
+      ))}
     </div>
   );
 }
@@ -359,6 +388,8 @@ function ChargeBody({
                 setAllOpen(true);
               }}
             />
+          ) : data.chargesLoading === true ? (
+            <DelayedSkeleton><ChargeHistorySkeleton /></DelayedSkeleton>
           ) : null}
         </section>
       </div>

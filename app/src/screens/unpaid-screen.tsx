@@ -17,7 +17,8 @@ import { RefreshIcon } from "../ui/icons-later";
 import { ListRow } from "../ui/list-row";
 import { useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
-import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
+import { LinesSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { unpaidDaysOpen, unpaidIsMarked, unpaidOverdueMinor, unpaidTotals, UNPAID_OVERDUE_DAYS, type UnpaidInvoice, type UnpaidSummary } from "../unpaid";
 import { usePreviewSearch } from "../preview";
 import { UNPAID_MARKED, useUnpaidActions } from "./unpaid-actions";
@@ -138,8 +139,9 @@ export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: Unpai
         <span ref={setTitleMark} className="ui-compact-mark" aria-hidden="true" />
       </header>
       {loading ? (
+        // FLOW-1139: the page's shape: the total and its line, the filter, then the invoices.
         <DelayedSkeleton>
-          <ListSkeleton />
+          <LinesSkeleton />
         </DelayedSkeleton>
       ) : failed ? (
         <PageLoadFailed title="החשבוניות לא נטענו" offline={!online || (actions.phase.kind === "error" && actions.phase.offline)} onRetry={actions.retry} />

@@ -1,6 +1,9 @@
 import type { WeeklySummary } from "@flow/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { WeeklySummaryCard } from "./weekly-summary-card";
+import { useState } from "react";
+import { expect, waitFor, within } from "storybook/test";
+import { WeeklySummaryCard, WeeklySummaryCardSlot } from "./weekly-summary-card";
 
 // FLOW-956: one story per board look (board "Weekly card on Home", page "Ready for dev"). Invented
 // figures only, in cents.
@@ -48,4 +51,30 @@ export const AllApproved: Story = {
 /** No lines that week: $0 muted and "לא נכנסו תנועות". */
 export const NoLines: Story = {
   render: shown({ ...LINES, lines: 0, auto_approved: 0, week_waiting: 0, waiting: 0, in_minor: 0n, out_minor: 0n, profit_minor: 0n, kept_out_minor: 0n }),
+};
+
+/** The live slot with the week's read held open: Home's slot keeps its place. */
+function LoadingSlot() {
+  const [client] = useState(() => {
+    const next = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // useWeeklySummaryQuery's key; the read never answers, so the slot stays on its skeleton.
+    void next.query({ queryKey: ["dashboard", "weekly-summary", WEEK], queryFn: () => new Promise<WeeklySummary>(() => undefined) });
+    return next;
+  });
+  return (
+    <QueryClientProvider client={client}>
+      <WeeklySummaryCardSlot weekStart={WEEK} />
+    </QueryClientProvider>
+  );
+}
+
+/** FLOW-1139: while the week's figures load, a skeleton in the card's shape holds its place on Home. */
+export const Loading: Story = {
+  render: () => <LoadingSlot />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען את הסיכום השבועי…")).toHaveAttribute("role", "status");
+    await waitFor(async () => {
+      await expect(canvasElement.querySelector(".ui-weekly-card-skel .ui-weekly-card-icon")).not.toBeNull();
+    });
+  },
 };

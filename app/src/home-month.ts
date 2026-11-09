@@ -74,18 +74,21 @@ export type DrawerCell = {
   state: DrawerCellState;
   /** The month's net in the base currency; null for a forecast, a future or a before-the-books month. */
   netMinor: bigint | null;
+  /** FLOW-1139: the year's nets are still being read; the drawer draws a skeleton in place of the net. */
+  pending?: true;
 };
 
 /**
  * The twelve cells of one year in the month drawer. `netByMonth` holds the base-currency net of each month that
- * has data, keyed by YYYY-MM. A month before the books' first month is "before" and a month after today is
+ * has data, keyed by YYYY-MM; null while the year is read (FLOW-1139: a month with data is then `pending`, with no
+ * net, never ₪0). A month before the books' first month is "before" and a month after today is
  * "future" (both disabled). FLOW-1036, FLOW-1066: with `withForecast`, every month of the forecast (next month to
  * forecastLastMonth) is "forecast": dashed like a month to come, and (FLOW-1056) picked like any month; once
  * picked it is "selected", with no net (its figures are a forecast). Only a month past it stays "future".
  */
 export function drawerCells(
   year: number,
-  netByMonth: Record<string, bigint>,
+  netByMonth: Record<string, bigint> | null,
   firstKey: string | null,
   todayKey: string,
   selectedKey: string,
@@ -93,14 +96,15 @@ export function drawerCells(
 ): DrawerCell[] {
   const today = todayKey.slice(0, 7);
   const last = withForecast ? forecastLastMonth(today) : today;
+  const net = (key: string): Pick<DrawerCell, "netMinor" | "pending"> => (netByMonth == null ? { netMinor: null, pending: true } : { netMinor: netByMonth[key] ?? 0n });
   return Array.from({ length: 12 }, (_, index) => {
     const key = `${String(year)}-${String(index + 1).padStart(2, "0")}`;
     const forecast = key > today && key <= last;
-    if (key === selectedKey) return { key, index, state: "selected", netMinor: forecast ? null : netByMonth[key] ?? 0n };
+    if (key === selectedKey) return forecast ? { key, index, state: "selected", netMinor: null } : { key, index, state: "selected", ...net(key) };
     if (forecast) return { key, index, state: "forecast", netMinor: null };
     if (key > today) return { key, index, state: "future", netMinor: null };
     if (firstKey != null && key < firstKey) return { key, index, state: "before", netMinor: null };
-    return { key, index, state: "data", netMinor: netByMonth[key] ?? 0n };
+    return { key, index, state: "data", ...net(key) };
   });
 }
 
