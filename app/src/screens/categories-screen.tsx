@@ -17,6 +17,7 @@ import { TagIcon } from "../ui/icons-later";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
+import { GroupedSkeleton } from "../ui/loading-shapes";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
@@ -318,6 +319,7 @@ export function CategoriesScreen({
         backTo={parentId == null ? `/settings${search}` : `${listPath}${search}`}
         phase={phase}
         onRetry={() => { void categories.refetch(); }}
+        loading={<GroupedSkeleton groups={[5]} segment={parentId == null} />}
       />
     );
   }

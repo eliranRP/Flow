@@ -3,6 +3,7 @@ import { useSheetHistory } from "./back";
 import { Button } from "./button";
 import { cx } from "./cx";
 import { ListRow } from "./list-row";
+import { RadioRowsSkeleton } from "./loading-shapes";
 import { Sheet } from "./sheet";
 
 /** A choice sheet's own words: its history entry, title, the note under the rows (if any), and the rows. */
@@ -35,6 +36,8 @@ export type ChoiceSheetProps<T extends string, V extends string = T> = {
   panelClassName?: string;
   /** FLOW-1093: a last row that is not a choice (the board's "+ פרויקט חדש"); `close` closes the sheet. */
   action?: { label: string; onSelect: (close: () => void) => void };
+  /** FLOW-1137: the choices are still loading: skeleton radio rows stand in their place. */
+  loading?: boolean;
 };
 
 /**
@@ -51,6 +54,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
   returnFocusRef,
   panelClassName,
   action,
+  loading = false,
 }: ChoiceSheetProps<T, V>) {
   // Set by `close`: the save has settled, so Back's popstate must not wait on a stale `saving`.
   const closing = useRef(false);
@@ -72,7 +76,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
       onRequestClose={requestSheetClose}
       panelClassName={cx("ui-sheet-choice", panelClassName)}
     >
-      {copy.choices.length === 0 && copy.empty != null ? <p className="ui-muted ui-choice-empty">{copy.empty}</p> : (
+      {loading ? <RadioRowsSkeleton /> : copy.choices.length === 0 && copy.empty != null ? <p className="ui-muted ui-choice-empty">{copy.empty}</p> : (
       <div role="radiogroup" aria-label={copy.title} className="ui-choice-sheet">
         {copy.choices.map((choice) => (
           <ListRow control="radio"

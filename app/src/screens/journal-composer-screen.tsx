@@ -18,6 +18,7 @@ import type { ChangeChoice } from "../ui/change-sheet-copy";
 import { IconButton } from "../ui/icon-button";
 import { CloseIcon } from "../ui/icons";
 import { AccountPickSheet, ComposerAddLeg, ComposerBankLeg, ComposerLegCard, ComposerStart, ComposerStatus, CopySheet, ProjectPickSheet, type ComposerStartKind, type CopyOption } from "../ui/journal-composer";
+import { FormSkeleton } from "../ui/loading-shapes";
 import { ScreenState } from "../ui/screen-state";
 import { useToast } from "../ui/toast";
 
@@ -309,13 +310,17 @@ export function JournalComposerScreen({ sample }: { sample?: JournalComposerSamp
       />
     );
   }
-  if (writeGate === "wait") return null;
-  if (writeGate !== "show") return writeGate;
+  if (writeGate !== "show" && writeGate !== "wait") return writeGate;
   const queries = [txn, journal, accounts, dashboard, suggestion, copies];
   const phases = queries.map((query) => screenPhase(preview, query));
-  const phase: ScreenPhase = phases.find((item) => item.kind === "error")
-    ?? phases.find((item) => item.kind === "loading")
-    ?? { kind: "ready" };
+  // FLOW-1137: the bank leg waits for the account's name, so it never says "בנק" before the name is in.
+  const metaLoading = meta.isPending && meta.fetchStatus !== "idle";
+  // While the role loads, the form's skeleton shows: the screen is a write route, so it waits for the role.
+  const phase: ScreenPhase = writeGate === "wait"
+    ? { kind: "loading" }
+    : phases.find((item) => item.kind === "error")
+      ?? phases.find((item) => item.kind === "loading")
+      ?? (metaLoading ? { kind: "loading" } : { kind: "ready" });
   const read = journal.data != null ? composerLineFrom(journal.data) : null;
   if (phase.kind !== "ready" || txn.data == null || read?.bank == null) {
     return (
@@ -325,6 +330,7 @@ export function JournalComposerScreen({ sample }: { sample?: JournalComposerSamp
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { for (const query of queries) void query.refetch(); }}
         empty={<p className="ui-page-pad t-caption t-muted">לתנועה הזו אין עדיין פקודה.</p>}
+        loading={<FormSkeleton figure fields={3} />}
       />
     );
   }

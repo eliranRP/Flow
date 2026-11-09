@@ -34,10 +34,10 @@ const CATEGORIES: LoanCategory[] = [
   { id: "cat-bank", name: "עמלות בנק", kind: "expense", loanPart: null, excludedFromPnl: false, hidden: false },
 ];
 
-type EditorArgs = { lineMinor: number; demand?: boolean; twoLoans?: boolean };
+type EditorArgs = { lineMinor: number; demand?: boolean; twoLoans?: boolean; categoriesLoading?: boolean };
 
 /** Args stay plain JSON: Storybook cannot serialise bigint amounts. */
-function Editor({ lineMinor, demand = false, twoLoans = false }: EditorArgs) {
+function Editor({ lineMinor, demand = false, twoLoans = false, categoriesLoading = false }: EditorArgs) {
   const [open, setOpen] = useState(true);
   const loans = demand ? [DEMAND] : twoLoans ? [MORTGAGE, DEMAND] : [MORTGAGE];
   return (
@@ -47,7 +47,7 @@ function Editor({ lineMinor, demand = false, twoLoans = false }: EditorArgs) {
       loans={loans}
       payments={{}}
       line={{ transactionId: "txn-1", docDate: "2026-06-01", lineMinor: BigInt(lineMinor), currency: "USD" }}
-      categories={CATEGORIES}
+      categories={categoriesLoading ? undefined : CATEGORIES}
       onSave={() => undefined}
     />
   );
@@ -74,6 +74,18 @@ export const WithFees: Story = {
     await fireEvent.change(await body.findByLabelText("עמלות"), { target: { value: "1.35" } });
     await fireEvent.change(body.getByLabelText("קטגוריה לעמלות"), { target: { value: "cat-bank" } });
     await expect(body.getByRole("switch", { name: "לשמור להלוואה הזו" })).toBeChecked();
+  },
+};
+
+/** FLOW-1137: fees typed while the categories load: the fee category's control is a block, not "טוען…" in the select. */
+export const FeesCategoryLoading: Story = {
+  args: { categoriesLoading: true },
+  play: async () => {
+    const body = sheet();
+    await fireEvent.change(await body.findByLabelText("עמלות"), { target: { value: "1.35" } });
+    await expect(body.getByText("קטגוריה לעמלות")).toBeVisible();
+    await expect(body.queryByRole("combobox", { name: "קטגוריה לעמלות" })).toBeNull();
+    await expect(body.queryByText("טוען…")).toBeNull();
   },
 };
 

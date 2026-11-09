@@ -8,6 +8,7 @@ import { usePreviewSearch } from "../preview";
 import { useWrite } from "../use-write";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { RepeatIcon } from "../ui/icons";
+import { Skeleton } from "../ui/skeleton";
 import { IconRow } from "../ui/icon-row";
 import { PACE_LABEL, paceSheetCopy, paceToast, type PaceChoice } from "../ui/pace";
 import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
@@ -39,8 +40,8 @@ export function TxnRecurring({
 }: {
   txn: NonNullable<TransactionDetail>;
   holdWrites: boolean;
-  /** A story's recurring state; set, the row writes locally. */
-  sample?: PaymentRecurring | null;
+  /** A story's recurring state; set, the row writes locally. "loading" draws the row while its read is out. */
+  sample?: PaymentRecurring | null | "loading";
   /** A story's party charges, in place of the party_charges read. */
   sampleCharges?: PartyCharges | null;
   /** A story's open sheet: the all-charges list or the pace choices. */
@@ -61,7 +62,9 @@ export function TxnRecurring({
   const paceRow = useRef<HTMLButtonElement>(null);
   const allRef = useRef<HTMLButtonElement>(null);
   // A sample without its own recurring state: the line's party, not recurring yet.
-  const recurring = sample === undefined
+  // FLOW-1137: while the read is out the row's value, hint and tag are skeletons, not "לא קבוע" as if read.
+  const loading = sample === "loading" || (sample === undefined && recurringQuery.isPending && recurringQuery.fetchStatus !== "idle");
+  const recurring = sample === undefined || sample === "loading"
     ? recurringQuery.data
     : (sample ?? {
         transaction_id: txn.id,
@@ -130,11 +133,11 @@ export function TxnRecurring({
       <IconRow
         icon={<RepeatIcon />}
         label="קבוע"
-        value={valueWord}
-        hint={hint}
-        endTag={<span className={isRecurring ? "ui-recurring-tag" : "ui-recurring-tag ui-recurring-tag-off"}>{tag}</span>}
-        disabled={holdWrites || noParty || (sample === undefined && recurringQuery.isError)}
-        busy={sample === undefined && recurringQuery.isLoading}
+        value={loading ? "" : valueWord}
+        tag={loading ? <Skeleton width="md" /> : undefined}
+        hint={loading ? <Skeleton width="sm" /> : hint}
+        endTag={loading ? <Skeleton width="sm" /> : <span className={isRecurring ? "ui-recurring-tag" : "ui-recurring-tag ui-recurring-tag-off"}>{tag}</span>}
+        disabled={holdWrites || noParty || loading || (sample === undefined && recurringQuery.isError)}
         buttonRef={paceRow}
         onClick={() => {
           if (holdWrites || noParty || (sample === undefined && blocked())) return;

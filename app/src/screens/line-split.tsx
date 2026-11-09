@@ -14,6 +14,7 @@ import { useWriteGate } from "../use-is-viewer";
 import { assertNoError } from "../use-write";
 import { waitForAccessToken } from "../wait-for-session";
 import { type ChangeChoice } from "../ui/change-sheet";
+import { FormSkeleton } from "../ui/loading-shapes";
 import { ScreenState } from "../ui/screen-state";
 import { type LineInfo, type LineSplitApi } from "./line-split-parts";
 import { LineSplitEditor } from "./line-split-editor";
@@ -151,10 +152,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
   });
   const api = useMemo(() => sample?.api ?? liveLineSplitApi(transactionId), [sample?.api, transactionId]);
   const fallback = backTo ?? `/transactions/${transactionId}${search}`;
-  if (live) {
-    if (writeGate === "wait") return null;
-    if (writeGate !== "show") return writeGate;
-  }
+  if (live && writeGate !== "show" && writeGate !== "wait") return writeGate;
   if (sample) {
     return (
       <LineSplitEditor
@@ -177,9 +175,12 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
   }
   const queries = [txn, categories, dashboard, split];
   const phases = [...queries.map((query) => screenPhase(preview, query)), loan.isPending ? ({ kind: "loading" } as const) : ({ kind: "ready" } as const)];
-  const phase: ScreenPhase = phases.find((item) => item.kind === "error")
-    ?? phases.find((item) => item.kind !== "ready")
-    ?? (txn.data ? { kind: "ready" } : { kind: "empty" });
+  // FLOW-1137: while the role loads, the form's skeleton shows (a write route waits for the role).
+  const phase: ScreenPhase = writeGate === "wait"
+    ? { kind: "loading" }
+    : phases.find((item) => item.kind === "error")
+      ?? phases.find((item) => item.kind !== "ready")
+      ?? (txn.data ? { kind: "ready" } : { kind: "empty" });
   if (phase.kind !== "ready" || !txn.data) {
     return (
       <ScreenState
@@ -188,6 +189,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { for (const query of queries) void query.refetch(); }}
         empty={<p className="ui-page-pad t-caption t-muted">אין תנועה להצגה.</p>}
+        loading={<FormSkeleton figure fields={3} />}
       />
     );
   }

@@ -77,6 +77,8 @@ export function useChargePick({
   const kinds: ChargePickChoice[] = sample?.categories
     ?? (categories.data ?? []).filter((category) => category.kind === row.direction && (!category.hidden || category.id === row.category_id)).map((category) => ({ id: category.id, name: category.name }));
   const target = { direction: row.direction, partyId: row.party_id, currency: row.currency, projectId: row.project_id };
+  // FLOW-1137: while the open list loads, the sheet draws skeleton radio rows, not an empty sheet.
+  const listLoading = (query: { isPending: boolean; fetchStatus: string }) => live && sample == null && query.isPending && query.fetchStatus !== "idle";
 
   /**
    * The toast's ביטול. It runs on its own, not through the page's write, so it still works after a project
@@ -147,6 +149,7 @@ export function useChargePick({
       }}
       value={kind === "project" ? currentProject : currentCategory}
       saving={saving}
+      loading={listLoading(kind === "project" ? dashboard : categories)}
       onPick={(id, close) => {
         if (write.isPending) return;
         const list = kind === "project" ? projects : kinds;
