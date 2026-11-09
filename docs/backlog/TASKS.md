@@ -581,6 +581,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1119"></a>[FLOW-1119](tasks/FLOW-1119.md) | Member share report: the Treasury yields filled in by themselves | SMALL CYCLE |
 | <a id="flow-1121"></a>[FLOW-1121](tasks/FLOW-1121.md) | Member report: every figure of the calculation opens its parts; the selling cost shows its percent and can be changed | SMALL UI |
 | <a id="flow-1122"></a>[FLOW-1122](tasks/FLOW-1122.md) | Member report: refresh the US Treasury yields by hand | MCP |
+| <a id="flow-1124"></a>[FLOW-1124](tasks/FLOW-1124.md) | Member report: each property's all-in and profit, and each member's own loans in their total | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

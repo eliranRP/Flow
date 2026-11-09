@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { annuityPaymentMinor, applyBp, computeMemberShare, type MemberReportConfig, type MemberReportProperty } from "./member-share.ts";
+import {
+  annuityPaymentMinor,
+  applyBp,
+  computeMemberShare,
+  type MemberReportConfig,
+  type MemberReportLoan,
+  type MemberReportProperty,
+} from "./member-share.ts";
 
 const UUID_1 = "00000000-0000-4000-8000-000000000001";
 
@@ -147,6 +154,79 @@ describe("fetched Treasury yields (FLOW-1119)", () => {
   it("dates the report by the newest fetched day when there are no quotes", () => {
     const bare = computeMemberShare({ members: CONFIG.members }, HOMES, FETCHED);
     expect(bare.rate).toMatchObject({ quoteDate: "2026-11-03", yieldDate: "2026-11-03", yieldPpm: 43_700 });
+  });
+});
+
+describe("all-in, profit and the members' loans (FLOW-1124)", () => {
+  const homes = [
+    property("Birch", 42_000_000n, 26_800_000n, { all_in_minor: 30_000_000n, purchase_minor: 27_000_000n, rehab_minor: 2_500_000n, holding_minor: 500_000n }),
+    property("Juniper", 36_500_000n, 24_150_000n, { all_in_minor: 31_000_000n }),
+    property("Sable", 29_800_000n, 15_200_000n),
+  ];
+  const loan = (loan_id: string, project_id: string | null, balance: bigint, currency = "USD"): MemberReportLoan =>
+    ({ loan_id, name: `Loan ${loan_id}`, kind: "demand", project_id, currency, balance_minor: balance });
+  const loans = [
+    loan("a-note", "id-overhead", 5_000_000n),
+    loan("b-note", "id-Juniper", 2_000_000n),
+    loan("bank", "id-Birch", 26_800_000n),
+    loan("c-euro", null, 1_000_000n, "EUR"),
+  ];
+  const config: MemberReportConfig = {
+    members: [
+      { name: "Member A", ownership_bp: 5000, loan_ids: ["a-note"] },
+      { name: "Member B", ownership_bp: 3000, loan_ids: ["b-note"] },
+      { name: "Member C", ownership_bp: 2000, loan_ids: ["c-euro"] },
+    ],
+  };
+  const result = computeMemberShare(config, homes, [], loans);
+
+  it("profit is the value less the selling costs less the all-in", () => {
+    expect(result.properties.map((p) => p.profitMinor)).toEqual([9_060_000n, 2_945_000n, null]);
+    expect(result.properties[0]?.purchaseMinor).toBe(27_000_000n);
+    expect(result.totals.allInMinor).toBe(61_000_000n);
+    expect(result.totals.profitValueMinor).toBe(78_500_000n);
+    expect(result.totals.profitSellingMinor).toBe(5_495_000n);
+    expect(result.totals.profitMinor).toBe(12_005_000n);
+    expect(result.profitMissing.map((p) => [p.name, p.reason])).toEqual([["Sable", "purchase"]]);
+    const noRehab = computeMemberShare(config, [property("Pine", 10_000_000n, 0n, { purchase_minor: 8_000_000n, all_in_minor: null })]);
+    expect(noRehab.profitMissing.map((p) => p.reason)).toEqual(["rehab"]);
+  });
+
+  it("repays the members' loans before the equity is split, a loan on a property from its loans", () => {
+    expect(result.properties[1]?.memberLoanMinor).toBe(2_000_000n);
+    expect(result.properties[1]?.bankLoanMinor).toBe(22_150_000n);
+    expect(result.totals.bankLoanMinor).toBe(64_150_000n);
+    expect(result.totals.memberLoansMinor).toBe(7_000_000n);
+    expect(result.totals.saleNetMinor).toBe(34_569_000n);
+    expect(result.totals.equityMinor).toBe(29_569_000n);
+    const t = result.totals;
+    expect(t.valueMinor - t.sellingCostMinor - t.bankLoanMinor - t.memberLoansMinor).toBe(t.equityMinor);
+  });
+
+  it("gives each member their part of the equity, plus their own loans, and their part of the profit", () => {
+    expect(result.members.map((m) => [m.saleMinor, m.loansMinor, m.saleTotalMinor, m.profitMinor])).toEqual([
+      [14_784_500n, 5_000_000n, 19_784_500n, 6_002_500n],
+      [8_870_700n, 2_000_000n, 10_870_700n, 3_601_500n],
+      [5_913_800n, 0n, 5_913_800n, 2_401_000n],
+    ]);
+    expect(result.memberLoans.map((l) => [l.loanId, l.member, l.projectId])).toEqual([
+      ["a-note", "Member A", null],
+      ["b-note", "Member B", "id-Juniper"],
+    ]);
+  });
+
+  it("without members' loans, the equity is the net of the sale", () => {
+    const plain = computeMemberShare(CONFIG, HOMES);
+    expect(plain.totals.equityMinor).toBe(plain.totals.saleNetMinor);
+    expect(plain.members[0]?.saleTotalMinor).toBe(plain.members[0]?.saleMinor);
+    expect(plain.totals.profitMinor).toBe(0n);
+  });
+
+  it("leaves out a member's loan on a property the report leaves out", () => {
+    const withPine = computeMemberShare({ members: [{ name: "Member A", ownership_bp: 10000, loan_ids: ["pine"] }] },
+      [...homes, property("Pine", null, 1_000_000n)], [], [loan("pine", "id-Pine", 1_000_000n)]);
+    expect(withPine.totals.memberLoansMinor).toBe(0n);
+    expect(withPine.members[0]?.loansMinor).toBe(0n);
   });
 });
 

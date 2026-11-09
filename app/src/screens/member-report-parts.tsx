@@ -6,7 +6,7 @@ import { formatDisplay } from "../ui/date-math";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { israelSyncPhrase } from "../sumit-copy";
-import { bpText, type DrillKey, type ReportMode } from "./member-report-format";
+import { ALL_IN_HINT, bpText, noAllInText, type DrillKey, type ReportMode } from "./member-report-format";
 import { investmentBase } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
@@ -43,10 +43,15 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
   const money = (minor: bigint) => formatMoney(minor, currency);
   const t = r.totals;
   const props = r.properties;
-  const each = (title: string, help: string, total: bigint, line: (p: PropertyShare) => Omit<Line, "key" | "title" | "property">): Drill => ({
+  const each = (title: string, help: string, total: bigint, line: (p: PropertyShare) => Omit<Line, "key" | "title" | "property">,
+    only: readonly PropertyShare[] = props): Drill => ({
     title, help, total, totalLabel: "סה״כ",
-    lines: props.map((p) => ({ key: p.projectId, title: p.name, property: p, ...line(p) })),
+    lines: only.map((p) => ({ key: p.projectId, title: p.name, property: p, ...line(p) })),
   });
+  // FLOW-1124: the profit counts the properties with an all-in.
+  const withAllIn = props.filter((p) => p.allInMinor != null);
+  const propertyName = (id: string | null) => (id == null ? "של החברה" : props.find((p) => p.projectId === id)?.name ?? "");
+  const offProperty = r.memberLoans.filter((l) => l.projectId == null);
   const refi = (p: PropertyShare, hint: string, minor: bigint) => (p.refinances ? { hint, minor } : { hint: `${NOT_REFINANCED} · ${hint}`, minor, muted: true });
   switch (key) {
     case "value":
@@ -56,11 +61,60 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
       return each("עלויות מכירה", "תיווך, עלויות סגירה ומסים במכירה: האחוז של כל נכס כפול השווי שלו. בלי אחוז משלו, 8%.", t.sellingCostMinor,
         (p) => ({ hint: `${bpText(p.sellingCostBp)}${p.sellingCostDefault ? " (ברירת מחדל)" : ""} × ${money(p.valueMinor)}`, minor: p.sellingCostMinor }));
     case "loans":
-      return each("סילוק הלוואות", "היתרה היום של ההלוואות הפתוחות של כל נכס.", t.loanBalanceMinor,
-        (p) => ({ hint: p.loanBalanceMinor === 0n ? "אין הלוואה פתוחה" : "יתרות היום", minor: p.loanBalanceMinor }));
-    case "net":
-      return each("הון נקי", "מה שנשאר לחברה ממכירת כל נכס: שווי, פחות עלויות המכירה, פחות ההלוואות.", t.saleNetMinor,
+      return each("סילוק הלוואות", "היתרה היום של ההלוואות הפתוחות של כל נכס, בלי הלוואות השותפים.", t.bankLoanMinor,
+        (p) => ({
+          hint: p.bankLoanMinor === 0n ? "אין הלוואה פתוחה" : p.memberLoanMinor === 0n ? "יתרות היום" : `יתרות היום · בלי הלוואת שותף ${money(p.memberLoanMinor)}`,
+          minor: p.bankLoanMinor,
+        }));
+    case "member_loans":
+      return {
+        title: "הלוואות שותפים",
+        help: "הלוואות ששותף נתן לחברה. במכירה הן מוחזרות לפני חלוקת ההון, ונספרות בסכום של אותו שותף.",
+        total: t.memberLoansMinor,
+        totalLabel: "סה״כ",
+        lines: r.memberLoans.map((l) => ({ key: l.loanId, title: l.name, hint: `${l.member} · ${propertyName(l.projectId)}`, minor: l.balanceMinor })),
+      };
+    case "net": {
+      // A member's loan to the company, on no property, is repaid from the whole (FLOW-1124).
+      const drill = each("הון נקי", "מה שנשאר לשותפים: שווי כל נכס, פחות עלויות המכירה, פחות ההלוואות; ופחות הלוואות השותפים לחברה.", t.equityMinor,
         (p) => ({ hint: `${money(p.valueMinor)} − ${money(p.sellingCostMinor)} − ${money(p.loanBalanceMinor)}`, minor: p.saleNetMinor }));
+      return {
+        ...drill,
+        lines: [...drill.lines, ...offProperty.map((l) => ({ key: l.loanId, title: l.name, hint: `הלוואת שותף · ${l.member}`, minor: -l.balanceMinor }))],
+      };
+    }
+    case "profit_value":
+      return each("שווי הנכסים", "השווי של כל נכס שיש לו עלות כוללת.", t.profitValueMinor,
+        (p) => ({ hint: p.valueDate == null ? "בלי תאריך הערכה" : `הערכה מ־${formatDisplay(p.valueDate)}`, minor: p.valueMinor }), withAllIn);
+    case "profit_selling":
+      return each("עלויות מכירה", "האחוז של כל נכס כפול השווי שלו. בלי אחוז משלו, 8%.", t.profitSellingMinor,
+        (p) => ({ hint: `${bpText(p.sellingCostBp)} × ${money(p.valueMinor)}`, minor: p.sellingCostMinor }), withAllIn);
+    case "all_in":
+      return each("עלות כוללת", `${ALL_IN_HINT}, כמו בעמוד ההשקעה של כל נכס. נכס בלי מחיר קנייה, או בלי עלות שיפוץ במטבע שלו, לא נספר.`, t.allInMinor,
+        (p) => (p.allInMinor == null
+          ? { hint: `${noAllInText(p)} · לא נספר`, minor: 0n, muted: true }
+          : { hint: `${money(p.purchaseMinor ?? 0n)} + ${money(p.rehabMinor ?? 0n)} + ${money(p.holdingMinor ?? 0n)}`, minor: p.allInMinor }));
+    case "profit":
+      return each("רווח", "שווי, פחות עלויות המכירה, פחות העלות הכוללת. כמו הרווח הנקי בעמוד ההשקעה.", t.profitMinor,
+        (p) => (p.profitMinor == null || p.allInMinor == null
+          ? { hint: `${noAllInText(p)} · לא נספר`, minor: 0n, muted: true }
+          : { hint: `${money(p.valueMinor)} − ${money(p.sellingCostMinor)} − ${money(p.allInMinor)}`, minor: p.profitMinor }));
+    case "profit_share":
+      return {
+        title: "הרווח של כל שותף",
+        help: "אחוז הבעלות של כל שותף כפול הרווח.",
+        total: t.profitMinor,
+        totalLabel: "לכל השותפים",
+        lines: r.members.map((m) => ({ key: m.name, title: m.name, hint: `${bpText(m.ownershipBp)} × ${money(t.profitMinor)}`, minor: m.profitMinor })),
+      };
+    case "total":
+      return {
+        title: "סה״כ לכל שותף",
+        help: "החלק של כל שותף בהון הנקי, ועוד ההלוואות שנתן לחברה, שמוחזרות במכירה.",
+        total: r.members.reduce((sum, m) => sum + m.saleTotalMinor, 0n),
+        totalLabel: "לכל השותפים",
+        lines: r.members.map((m) => ({ key: m.name, title: m.name, hint: `${money(m.saleMinor)} + ${money(m.loansMinor)}`, minor: m.saleTotalMinor })),
+      };
     case "loan":
       return each("הלוואה חדשה", `${bpText(r.assumptions.ltvBp)} מהשווי של כל נכס. נספרים רק נכסים שמשחררים כסף.`, t.newLoanMinor,
         (p) => refi(p, `${bpText(r.assumptions.ltvBp)} × ${money(p.valueMinor)}`, p.newLoanMinor));
@@ -74,7 +128,7 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
       return each("כסף שמשתחרר", "הלוואה חדשה, פחות הסילוק, פחות עלויות הסגירה. נכס שלא משחרר כסף לא ממוחזר.", t.cashOutMinor,
         (p) => refi(p, `${money(p.newLoanMinor)} − ${money(p.loanBalanceMinor)} − ${money(p.closingMinor)}`, p.cashOutMinor));
     case "share": {
-      const whole = mode === "sell" ? t.saleNetMinor : t.cashOutMinor;
+      const whole = mode === "sell" ? t.equityMinor : t.cashOutMinor;
       return {
         title: "החלק של כל שותף",
         help: `אחוז הבעלות של כל שותף כפול ${mode === "sell" ? "ההון הנקי" : "הכסף שמשתחרר"} של החברה.`,

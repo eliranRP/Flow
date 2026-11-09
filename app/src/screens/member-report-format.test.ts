@@ -1,11 +1,25 @@
 import { computeMemberShare } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { MEMBER_CONFIG, MEMBER_PROPERTIES } from "../dev/member-report-sample";
+import { MEMBER_CONFIG, MEMBER_LOANS, MEMBER_PROPERTIES } from "../dev/member-report-sample";
 import { parseMemberReport } from "../use-member-report";
-import { bpText, memberIndex, modeOf, ppmText, quoteRateText, refiFormula, saleFormula, sellingHint, spreadText, verdictText } from "./member-report-format";
+import {
+  bpText,
+  memberIndex,
+  modeOf,
+  ppmText,
+  profitFormula,
+  propertyProfitFormula,
+  propertySaleFormula,
+  quoteRateText,
+  refiFormula,
+  saleFormula,
+  sellingHint,
+  spreadText,
+  verdictText,
+} from "./member-report-format";
 import { drillOf } from "./member-report-parts";
 import { applyPatch } from "./member-report-screen";
-import { draftMembers, draftTotalBp, membersDraft, membersProblem, percentToUnits, spreadOptions } from "./member-report-sheets";
+import { draftMembers, draftTotalBp, membersDraft, membersProblem, percentToUnits, spreadOptions, withLoanOwner } from "./member-report-sheets";
 
 const result = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES);
 
@@ -40,11 +54,11 @@ describe("member report formulas", () => {
   it("ends the sale with the member's part, and with the company's whole before ownership", () => {
     const member = result.members[0];
     if (member == null) throw new Error("no member");
-    const sale = saleFormula(result, { name: member.name, ownershipBp: member.ownershipBp }, member.saleMinor);
+    const sale = saleFormula(result, member);
     expect(sale.rows.map((r) => r.label)).toEqual(["שווי הנכסים", "עלויות מכירה", "סילוק הלוואות", "הון נקי", "החלק של Member A"]);
     expect(sale.rows.at(-1)).toMatchObject({ value: { minor: 17_284_500n } });
     expect(sale.result).toBeNull();
-    const whole = saleFormula(result, null, null);
+    const whole = saleFormula(result, null);
     expect(whole.rows).toHaveLength(4);
     expect(whole.rows.at(-1)).toMatchObject({ label: "לכל השותפים", value: { minor: 34_569_000n } });
   });
@@ -55,12 +69,12 @@ describe("member report formulas", () => {
 
   it("opens every row's parts: each row names its sheet", () => {
     const member = { name: "Member A", ownershipBp: 5000 };
-    expect(saleFormula(result, member, 0n).rows.map((r) => r.target)).toEqual(
+    expect(saleFormula(result, result.members[0] ?? null).rows.map((r) => r.target)).toEqual(
       ["value", "selling", "loans", "net", "share"].map((sheet) => ({ kind: "sheet", sheet })));
     expect(refiFormula(result, member, 0n).rows.map((r) => r.target)).toEqual(
       ["loan", "payoff", "closing", "cash", "share"].map((sheet) => ({ kind: "sheet", sheet })));
     // Before ownership, the company's whole opens the net (or the cash freed).
-    expect(saleFormula(result, null, null).rows.at(-1)?.target).toEqual({ kind: "sheet", sheet: "net" });
+    expect(saleFormula(result, null).rows.at(-1)?.target).toEqual({ kind: "sheet", sheet: "net" });
   });
 
   it("names the selling cost's percent, its range, and the default", () => {
@@ -155,5 +169,65 @@ describe("parseMemberReport", () => {
     expect([read.treasuryFetchedAt, read.treasuryRequestedAt]).toEqual([null, null]);
     const fetched = parseMemberReport({ config: null, properties: [], can_edit: true, treasury_fetched_at: "2026-11-09T07:30:00Z", treasury_requested_at: null });
     expect(fetched.treasuryFetchedAt).toBe("2026-11-09T07:30:00Z");
+  });
+});
+
+describe("all-in, profit and the members' loans (FLOW-1124)", () => {
+  const withLoans = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES, [], MEMBER_LOANS);
+  const a = withLoans.members[0] ?? null;
+
+  it("repays the members' loans, then ends with the member's total", () => {
+    const sale = saleFormula(withLoans, a);
+    expect(sale.rows.map((r) => r.label)).toEqual([
+      "שווי הנכסים", "עלויות מכירה", "סילוק הלוואות", "החזר הלוואות שותפים", "הון נקי", "החלק של Member A", "הלוואות של Member A", "סה״כ ל־Member A",
+    ]);
+    expect(sale.rows.map((r) => (r.value.kind === "money" ? r.value.minor : null))).toEqual([
+      108_300_000n, -7_581_000n, -64_150_000n, -7_000_000n, 29_569_000n, 14_784_500n, 5_000_000n, 19_784_500n,
+    ]);
+    expect(sale.rows.map((r) => r.target)).toEqual(
+      ["value", "selling", "loans", "member_loans", "net", "share", "member_loans", "total"].map((sheet) => ({ kind: "sheet", sheet })));
+  });
+
+  it("counts the profit against the all-in, and the member's part", () => {
+    const profit = profitFormula(withLoans, a);
+    expect(profit.rows.map((r) => [r.label, r.value.kind === "money" ? r.value.minor : null])).toEqual([
+      ["שווי הנכסים", 108_300_000n],
+      ["עלויות מכירה", -7_581_000n],
+      ["עלות כוללת", -82_000_000n],
+      ["רווח", 18_719_000n],
+      ["החלק של Member A", 9_359_500n],
+    ]);
+    expect(profitFormula(withLoans, null).rows.at(-1)).toMatchObject({ label: "רווח לכל השותפים", target: { kind: "sheet", sheet: "profit" } });
+  });
+
+  it("opens each new row's parts", () => {
+    expect(drillOf("all_in", "sell", withLoans, "USD").lines[0]?.hint).toBe("$270,000 + $25,000 + $5,000");
+    expect(drillOf("profit", "sell", withLoans, "USD").lines.map((l) => l.minor)).toEqual([9_060_000n, 2_945_000n, 6_714_000n]);
+    expect(drillOf("member_loans", "sell", withLoans, "USD").lines.map((l) => [l.title, l.hint, l.minor])).toEqual([
+      ["Member A note", "Member A · של החברה", 5_000_000n],
+      ["Member B note", "Member B · Juniper Ct", 2_000_000n],
+    ]);
+    const net = drillOf("net", "sell", withLoans, "USD");
+    expect(net.lines.at(-1)).toMatchObject({ title: "Member A note", minor: -5_000_000n });
+    expect(net.lines.reduce((sum, l) => sum + l.minor, 0n)).toBe(net.total);
+    expect(drillOf("loans", "sell", withLoans, "USD").lines[1]?.hint).toBe("יתרות היום · בלי הלוואת שותף $20,000");
+    expect(drillOf("total", "sell", withLoans, "USD").lines[0]).toMatchObject({ hint: "$147,845 + $50,000", minor: 19_784_500n });
+    expect(drillOf("profit_share", "sell", withLoans, "USD").lines[1]?.minor).toBe(withLoans.members[1]?.profitMinor);
+  });
+
+  it("shows a property's member loan apart, and its profit, or none without a purchase", () => {
+    const juniper = withLoans.properties[1];
+    if (juniper == null) throw new Error("no property");
+    expect(propertySaleFormula(juniper, null).rows.map((r) => r.label)).toEqual(["שווי", "עלויות מכירה", "סילוק הלוואות", "החזר הלוואת שותף"]);
+    expect(propertyProfitFormula(juniper, null)?.result).toMatchObject({ value: { minor: 2_945_000n } });
+    expect(propertyProfitFormula({ ...juniper, allInMinor: null, profitMinor: null }, null)).toBeNull();
+  });
+
+  it("gives a loan to one member in the draft, and saves each member's loans", () => {
+    const draft = membersDraft(MEMBER_CONFIG.members ?? []);
+    const moved = withLoanOwner(draft, "d0000000-0000-4000-8000-000000000001", 2);
+    expect(moved.map((m) => m.loanIds)).toEqual([[], ["d0000000-0000-4000-8000-000000000002"], ["d0000000-0000-4000-8000-000000000001"]]);
+    expect(draftMembers(withLoanOwner(moved, "d0000000-0000-4000-8000-000000000001", -1))[2]).toEqual({ name: "Member C", ownership_bp: 2000 });
+    expect(draftMembers(draft)[0]).toEqual({ name: "Member A", ownership_bp: 5000, loan_ids: ["d0000000-0000-4000-8000-000000000001"] });
   });
 });

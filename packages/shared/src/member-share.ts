@@ -8,6 +8,11 @@
  * before (typed by the owner, else fetched from the Treasury: FLOW-1119), plus the spread; a lender
  * quote at or under it is a good quote. A member's share is their
  * ownership of each total. One calculation for the app and for MCP get_member_share.
+ *
+ * FLOW-1124: each property's all-in (purchase, renovation, holding: the investment page's count) gives
+ * its profit at the sale, value - selling costs - all-in. A member's own loans to the company (the
+ * setting's loan_ids) are repaid before the equity is split, and come back to that member: their total
+ * from a sale is their part of the equity plus their loans.
  */
 import { divHalfEven } from "./money.ts";
 
@@ -45,7 +50,8 @@ export type MemberReportYield = {
 };
 
 export type MemberReportConfig = {
-  readonly members?: readonly { readonly name: string; readonly ownership_bp: number }[];
+  /** loan_ids: the company's loans this member gave it (FLOW-1124). */
+  readonly members?: readonly { readonly name: string; readonly ownership_bp: number; readonly loan_ids?: readonly string[] }[];
   readonly assumptions?: { readonly ltv_bp?: number; readonly closing_bp?: number; readonly term_years?: number };
   readonly rate_rule?: { readonly tenor_years?: 5 | 10; readonly spread_bp?: number };
   readonly quotes?: readonly MemberReportQuote[];
@@ -62,6 +68,31 @@ export type MemberReportProperty = {
   readonly selling_cost_bp: number | null;
   readonly loan_balance_minor: bigint;
   readonly loans_other_currency: boolean;
+  /** FLOW-1124: purchase + renovation + holding, as the investment page counts them; null without a purchase. */
+  readonly all_in_minor?: bigint | null;
+  readonly purchase_minor?: bigint | null;
+  readonly rehab_minor?: bigint | null;
+  readonly holding_minor?: bigint | null;
+};
+
+/** One of the company's open loans (FLOW-1124), as get_member_report returns it. */
+export type MemberReportLoan = {
+  readonly loan_id: string;
+  readonly name: string;
+  readonly kind: string;
+  readonly project_id: string | null;
+  readonly currency: string;
+  readonly balance_minor: bigint;
+};
+
+/** A member's loan the report repays (FLOW-1124). */
+export type MemberLoanShare = {
+  readonly loanId: string;
+  readonly name: string;
+  readonly member: string;
+  /** The property it sits on, when it is one of the report's; null for the company as a whole. */
+  readonly projectId: string | null;
+  readonly balanceMinor: bigint;
 };
 
 export type PropertyShare = {
@@ -73,8 +104,18 @@ export type PropertyShare = {
   readonly sellingCostDefault: boolean;
   readonly sellingCostMinor: bigint;
   readonly loanBalanceMinor: bigint;
+  /** FLOW-1124: of the loans, the members' own; the rest are the banks'. */
+  readonly memberLoanMinor: bigint;
+  readonly bankLoanMinor: bigint;
   /** Value - selling costs - loans: what the company keeps when it sells. Can be below zero. */
   readonly saleNetMinor: bigint;
+  /** FLOW-1124: purchase + renovation + holding; null without a purchase or a renovation figure in its currency. */
+  readonly allInMinor: bigint | null;
+  readonly purchaseMinor: bigint | null;
+  readonly rehabMinor: bigint | null;
+  readonly holdingMinor: bigint | null;
+  /** Value - selling costs - all-in: the profit at the sale; null without the all-in. */
+  readonly profitMinor: bigint | null;
   readonly newLoanMinor: bigint;
   readonly closingMinor: bigint;
   /** New loan - loans - closing costs. Below zero, the property is not refinanced. */
@@ -103,6 +144,16 @@ export type MemberShareResult = {
     readonly sellingCostMinor: bigint;
     readonly loanBalanceMinor: bigint;
     readonly saleNetMinor: bigint;
+    /** FLOW-1124: the banks' loans on the properties, and every member's loan (on a property or the company's). */
+    readonly bankLoanMinor: bigint;
+    readonly memberLoansMinor: bigint;
+    /** Value - selling - bank loans - members' loans: what the members split. */
+    readonly equityMinor: bigint;
+    /** Of the properties with an all-in: their value, selling costs, all-in and profit. */
+    readonly profitValueMinor: bigint;
+    readonly profitSellingMinor: bigint;
+    readonly allInMinor: bigint;
+    readonly profitMinor: bigint;
     readonly newLoanMinor: bigint;
     readonly payoffMinor: bigint;
     readonly closingMinor: bigint;
@@ -123,8 +174,26 @@ export type MemberShareResult = {
     readonly paymentPpm: number | null;
   };
   readonly quotes: readonly QuoteShare[];
-  readonly members: readonly { readonly name: string; readonly ownershipBp: number; readonly saleMinor: bigint; readonly refinanceMinor: bigint }[];
+  readonly members: readonly MemberShare[];
   readonly ownershipSet: boolean;
+  /** FLOW-1124: the members' loans the report repays, and the properties the profit leaves out (no all-in). */
+  readonly memberLoans: readonly MemberLoanShare[];
+  /** reason: no purchase, or no renovation figure in the property's currency. */
+  readonly profitMissing: readonly { readonly projectId: string; readonly name: string; readonly reason: "purchase" | "rehab" }[];
+};
+
+export type MemberShare = {
+  readonly name: string;
+  readonly ownershipBp: number;
+  /** Their part of the equity (FLOW-1124: after every member's loan is repaid). */
+  readonly saleMinor: bigint;
+  /** Their own loans, repaid to them. */
+  readonly loansMinor: bigint;
+  /** saleMinor + loansMinor: what a sale brings them. */
+  readonly saleTotalMinor: bigint;
+  /** Their part of the profit. */
+  readonly profitMinor: bigint;
+  readonly refinanceMinor: bigint;
 };
 
 /** amount × bp / 10000, rounded half to even, either sign. */
@@ -195,6 +264,7 @@ export function computeMemberShare(
   config: MemberReportConfig | null,
   properties: readonly MemberReportProperty[],
   fetchedYields: readonly FetchedTreasuryYield[] = [],
+  loans: readonly MemberReportLoan[] = [],
 ): MemberShareResult {
   const cfg = config ?? {};
   const ltvBp = cfg.assumptions?.ltv_bp ?? MEMBER_REPORT_DEFAULTS.ltvBp;
@@ -223,6 +293,19 @@ export function computeMemberShare(
   const paymentPpm = expectedPpm ?? bestQuote;
 
   const currency = pickCurrency(properties);
+  // FLOW-1124: whose each loan is. A loan in another currency than the report's is left out.
+  const owner = new Map<string, string>();
+  for (const m of cfg.members ?? []) for (const id of m.loan_ids ?? []) owner.set(id, m.name);
+  const reported = new Set(properties.map((p) => p.project_id));
+  const memberLoans: MemberLoanShare[] = loans
+    .filter((l) => owner.has(l.loan_id) && l.currency === currency)
+    .map((l) => ({
+      loanId: l.loan_id,
+      name: l.name,
+      member: owner.get(l.loan_id) ?? "",
+      projectId: l.project_id != null && reported.has(l.project_id) ? l.project_id : null,
+      balanceMinor: l.balance_minor,
+    }));
   const missing: MemberShareResult["missing"][number][] = [];
   const shares: PropertyShare[] = [];
   for (const p of properties) {
@@ -235,6 +318,8 @@ export function computeMemberShare(
     const closingMinor = applyBp(newLoanMinor, closingBp);
     const cashOutMinor = newLoanMinor - p.loan_balance_minor - closingMinor;
     const refinances = cashOutMinor > 0n;
+    const memberLoanMinor = memberLoans.reduce((total, l) => (l.projectId === p.project_id ? total + l.balanceMinor : total), 0n);
+    const allInMinor = p.all_in_minor ?? null;
     shares.push({
       projectId: p.project_id,
       name: p.name,
@@ -244,7 +329,14 @@ export function computeMemberShare(
       sellingCostDefault: p.selling_cost_bp == null,
       sellingCostMinor,
       loanBalanceMinor: p.loan_balance_minor,
+      memberLoanMinor,
+      bankLoanMinor: p.loan_balance_minor - memberLoanMinor,
       saleNetMinor: p.value_minor - sellingCostMinor - p.loan_balance_minor,
+      allInMinor,
+      purchaseMinor: p.purchase_minor ?? null,
+      rehabMinor: p.rehab_minor ?? null,
+      holdingMinor: p.holding_minor ?? null,
+      profitMinor: allInMinor == null ? null : p.value_minor - sellingCostMinor - allInMinor,
       newLoanMinor,
       closingMinor,
       cashOutMinor,
@@ -258,12 +350,27 @@ export function computeMemberShare(
   const refinanced = (s: PropertyShare) => s.refinances;
   const saleNetMinor = sum((s) => s.saleNetMinor);
   const cashOutMinor = sum((s) => s.cashOutMinor, refinanced);
-  const members = (cfg.members ?? []).map((m) => ({
-    name: m.name,
-    ownershipBp: m.ownership_bp,
-    saleMinor: applyBp(saleNetMinor, m.ownership_bp),
-    refinanceMinor: applyBp(cashOutMinor, m.ownership_bp),
-  }));
+  // A member's loan on a property left out (no value, another currency) is left out with it.
+  const included = new Set(shares.map((s) => s.projectId));
+  const counted = memberLoans.filter((l) => l.projectId == null || included.has(l.projectId));
+  const memberLoansMinor = counted.reduce((total, l) => total + l.balanceMinor, 0n);
+  const offPropertyMinor = counted.reduce((total, l) => (l.projectId == null ? total + l.balanceMinor : total), 0n);
+  const equityMinor = saleNetMinor - offPropertyMinor;
+  const withAllIn = (s: PropertyShare) => s.allInMinor != null;
+  const profitMinor = sum((s) => s.profitMinor ?? 0n, withAllIn);
+  const members = (cfg.members ?? []).map((m): MemberShare => {
+    const saleMinor = applyBp(equityMinor, m.ownership_bp);
+    const loansMinor = counted.reduce((total, l) => (l.member === m.name ? total + l.balanceMinor : total), 0n);
+    return {
+      name: m.name,
+      ownershipBp: m.ownership_bp,
+      saleMinor,
+      loansMinor,
+      saleTotalMinor: saleMinor + loansMinor,
+      profitMinor: applyBp(profitMinor, m.ownership_bp),
+      refinanceMinor: applyBp(cashOutMinor, m.ownership_bp),
+    };
+  });
 
   return {
     currency,
@@ -274,6 +381,13 @@ export function computeMemberShare(
       sellingCostMinor: sum((s) => s.sellingCostMinor),
       loanBalanceMinor: sum((s) => s.loanBalanceMinor),
       saleNetMinor,
+      bankLoanMinor: sum((s) => s.bankLoanMinor),
+      memberLoansMinor,
+      equityMinor,
+      profitValueMinor: sum((s) => s.valueMinor, withAllIn),
+      profitSellingMinor: sum((s) => s.sellingCostMinor, withAllIn),
+      allInMinor: sum((s) => s.allInMinor ?? 0n, withAllIn),
+      profitMinor,
       newLoanMinor: sum((s) => s.newLoanMinor, refinanced),
       payoffMinor: sum((s) => s.loanBalanceMinor, refinanced),
       closingMinor: sum((s) => s.closingMinor, refinanced),
@@ -295,5 +409,11 @@ export function computeMemberShare(
     quotes: quoteShares,
     members,
     ownershipSet: members.length > 0,
+    memberLoans: counted,
+    profitMissing: shares.filter((s) => !withAllIn(s)).map((s) => ({
+      projectId: s.projectId,
+      name: s.name,
+      reason: s.purchaseMinor == null ? "purchase" as const : "rehab" as const,
+    })),
   };
 }

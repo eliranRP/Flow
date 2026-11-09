@@ -144,22 +144,23 @@ function ReportCard({ to, title, label, figure, chart, facts, after }: { to: str
  * for a company with no property to count.
  */
 function MemberCard({ read, to }: { read: MemberReportRead; to: string }) {
-  const r = computeMemberShare(read.config, read.properties, read.treasuryYields);
+  const r = computeMemberShare(read.config, read.properties, read.treasuryYields, read.loans);
   if (r.properties.length === 0 || r.currency == null) return null;
   const first = r.members[0];
-  const figure = first?.saleMinor ?? r.totals.saleNetMinor;
+  // FLOW-1124: a member's total from a sale, their part of the equity and their own loans back.
+  const figure = first?.saleTotalMinor ?? r.totals.equityMinor;
   const refinance = first?.refinanceMinor ?? r.totals.cashOutMinor;
   const ownership = first?.ownershipBp ?? 10_000;
   return (
     <ReportCard
       to={to}
       title="דוח שותף"
-      label={first == null ? "הון נקי של החברה · אם מוכרים הכל" : `החלק של ${first.name} (${String(ownership / 100)}%) · אם מוכרים הכל`}
+      label={first == null ? "הון נקי של החברה · אם מוכרים הכל" : `סה״כ ל־${first.name} (${String(ownership / 100)}%) · אם מוכרים הכל`}
       figure={<Amount agorot={figure} currency={r.currency} loss={figure < 0n} size="card" />}
       chart={<SplitBar assets={10_000n} liabilities={BigInt(10_000 - ownership)} />}
       facts={(
         <>
-          <Fact label="הון נקי לכולם"><Amount agorot={r.totals.saleNetMinor} currency={r.currency} loss={r.totals.saleNetMinor < 0n} /></Fact>
+          <Fact label="הון נקי לכולם"><Amount agorot={r.totals.equityMinor} currency={r.currency} loss={r.totals.equityMinor < 0n} /></Fact>
           <Fact label="בריפייננס"><Amount agorot={refinance} currency={r.currency} income /></Fact>
         </>
       )}

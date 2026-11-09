@@ -80,7 +80,8 @@ select is(
   '["Example Birch", "Example Juniper"]'::jsonb,
   'the properties: those with a value or an open loan, not a finished one nor one without either');
 select is(
-  (select p from jsonb_array_elements(public.get_member_report()->'properties') p where p->>'name' = 'Example Birch'),
+  (select p - array['purchase_minor', 'rehab_minor', 'holding_minor', 'all_in_minor']
+   from jsonb_array_elements(public.get_member_report()->'properties') p where p->>'name' = 'Example Birch'),
   jsonb_build_object('project_id', pg_temp.id('birch'), 'name', 'Example Birch', 'currency', 'USD', 'value_minor', 42000000,
     'value_date', '2026-11-01', 'selling_cost_bp', 700, 'loan_balance_minor', 26800000, 'loans_other_currency', false),
   'a property carries its value, date, selling cost and open loan balance');

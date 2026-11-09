@@ -1,4 +1,4 @@
-import type { LoanType, MemberReportConfig, MemberReportQuote, MemberShareResult, PropertyShare } from "@flow/shared";
+import { formatMoney, type LoanType, type MemberReportConfig, type MemberReportLoan, type MemberReportProperty, type MemberReportQuote, type MemberShareResult, type PropertyShare } from "@flow/shared";
 import { useEffect, useState, type ReactNode } from "react";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
@@ -12,7 +12,9 @@ import { TextField } from "../ui/text-field";
 import type { MemberReportPatch } from "../use-member-report";
 import {
   bpText,
+  noAllInText,
   ppmText,
+  propertyProfitFormula,
   propertyRefiFormula,
   propertySaleFormula,
   spreadText,
@@ -44,8 +46,11 @@ function unitsToRaw(units: number | null | undefined, scale: number): string {
 
 /* Members ------------------------------------------------------------------------------------- */
 
-/** A member as typed: the name, and the ownership as a percent with up to two decimals ("33.33"). */
-type DraftMember = { name: string; percent: string };
+/**
+ * A member as typed: the name, the ownership as a percent with up to two decimals ("33.33"), and (FLOW-1124)
+ * the company's loans this member gave it.
+ */
+type DraftMember = { name: string; percent: string; loanIds?: readonly string[] };
 
 const OWNERSHIP_WHOLE = 10_000;
 
@@ -57,12 +62,16 @@ function ownershipBp(percent: string): number | null {
 /** The stored members as the sheet's draft, in their exact basis points (3334 → "33.34"). */
 export function membersDraft(members: NonNullable<MemberReportConfig["members"]>): DraftMember[] {
   if (members.length === 0) return [{ name: "", percent: "50" }, { name: "", percent: "50" }];
-  return members.map((m) => ({ name: m.name, percent: unitsToRaw(m.ownership_bp, 100) }));
+  return members.map((m) => ({ name: m.name, percent: unitsToRaw(m.ownership_bp, 100), loanIds: m.loan_ids ?? [] }));
 }
 
 /** The draft as set_member_report's members; call only when membersProblem is null. */
 export function draftMembers(draft: readonly DraftMember[]): NonNullable<MemberReportConfig["members"]> {
-  return draft.map((m) => ({ name: m.name.trim(), ownership_bp: ownershipBp(m.percent) ?? 0 }));
+  return draft.map((m) => ({
+    name: m.name.trim(),
+    ownership_bp: ownershipBp(m.percent) ?? 0,
+    ...(m.loanIds == null || m.loanIds.length === 0 ? {} : { loan_ids: [...m.loanIds] }),
+  }));
 }
 
 /** The draft's total in basis points, a percent typed wrong counting as none. */
@@ -81,7 +90,20 @@ export function membersProblem(draft: readonly DraftMember[]): string | null {
   return null;
 }
 
-export function MembersSheet({ open, onOpenChange, onSave, members }: SaveProps & { members: NonNullable<MemberReportConfig["members"]> }) {
+/** FLOW-1124: the draft with one loan given to the member at `index`, or to none (-1); a loan is one member's. */
+export function withLoanOwner(draft: readonly DraftMember[], loanId: string, index: number): DraftMember[] {
+  return draft.map((m, i) => {
+    const rest = (m.loanIds ?? []).filter((id) => id !== loanId);
+    return { ...m, loanIds: i === index ? [...rest, loanId] : rest };
+  });
+}
+
+export function MembersSheet({ open, onOpenChange, onSave, members, loans = [], properties = [] }: SaveProps & {
+  members: NonNullable<MemberReportConfig["members"]>;
+  /** FLOW-1124: the company's open loans, to say which a member gave it. */
+  loans?: readonly MemberReportLoan[];
+  properties?: readonly MemberReportProperty[];
+}) {
   const [draft, setDraft] = useState<DraftMember[]>([]);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -128,6 +150,23 @@ export function MembersSheet({ open, onOpenChange, onSave, members }: SaveProps 
         <bdi dir="ltr" className="ui-num">{bpText(total)}</bdi>
       </p>
       {problem == null ? null : <p className="ui-msr-problem">{problem}</p>}
+      {loans.length === 0 ? null : (
+        <section className="ui-msr-member-loans" aria-labelledby="msr-member-loans">
+          <h3 id="msr-member-loans" className="t-section">הלוואות שותפים לחברה</h3>
+          <p className="ui-msr-help">הלוואה ששותף נתן לחברה מוחזרת במכירה, לפני חלוקת ההון, ונספרת בסכום של אותו שותף.</p>
+          {loans.map((loan) => {
+            const owner = draft.findIndex((m) => (m.loanIds ?? []).includes(loan.loan_id));
+            const where = properties.find((p) => p.project_id === loan.project_id)?.name;
+            return (
+              <SelectField key={loan.loan_id}
+                label={`${loan.name} · ${formatMoney(loan.balance_minor, loan.currency)}${where == null ? "" : ` · ${where}`}`}
+                value={owner < 0 ? "" : String(owner)}
+                onChange={(event) => { setDraft((rows) => withLoanOwner(rows, loan.loan_id, event.target.value === "" ? -1 : Number(event.target.value))); }}
+                options={[{ value: "", label: "לא של שותף" }, ...draft.map((m, i) => ({ value: String(i), label: m.name.trim() === "" ? `שותף ${String(i + 1)}` : m.name }))]} />
+            );
+          })}
+        </section>
+      )}
     </Sheet>
   );
 }
@@ -387,6 +426,7 @@ export function PropertySheet({ open, onOpenChange, property, result, member, mo
               <Amount agorot={property.paymentMinor} currency={currency} />
             </p>
           ) : null}
+          {mode === "sell" ? <PropertyProfit property={property} member={member} currency={currency} /> : null}
           {mode === "sell" ? <p className="ui-msr-help">{`עלויות המכירה ${bpText(property.sellingCostBp)}, מהגדרות הנכס. לפני מס.`}</p> : null}
         </>
       )}
@@ -394,3 +434,16 @@ export function PropertySheet({ open, onOpenChange, property, result, member, mo
   );
 }
 
+
+/** FLOW-1124: a property's profit at the sale, against its all-in, or why it has none. */
+function PropertyProfit({ property, member, currency }: { property: PropertyShare; member: Share; currency: string }) {
+  const formula = propertyProfitFormula(property, member);
+  return (
+    <section className="ui-msr-property-profit" aria-label="רווח מול העלות הכוללת">
+      <h3 className="t-section">רווח מול העלות הכוללת</h3>
+      {formula == null
+        ? <p className="ui-msr-help">{`${noAllInText(property)}. אפשר להשלים בעמוד ההשקעה של הנכס כדי לראות את הרווח.`}</p>
+        : <FormulaList formula={formula} currency={currency} resolve={NO_LINKS} label={`רווח · ${property.name}`} />}
+    </section>
+  );
+}

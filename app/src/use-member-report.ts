@@ -1,4 +1,4 @@
-import type { FetchedTreasuryYield, MemberReportConfig, MemberReportProperty } from "@flow/shared";
+import type { FetchedTreasuryYield, MemberReportConfig, MemberReportLoan, MemberReportProperty } from "@flow/shared";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -17,6 +17,8 @@ import { waitForAccessToken } from "./wait-for-session";
 export type MemberReportRead = {
   config: MemberReportConfig | null;
   properties: MemberReportProperty[];
+  /** FLOW-1124: the company's open loans, for the members' own loans. */
+  loans: MemberReportLoan[];
   /** FLOW-1119: the Treasury's fetched yields around the quote dates; a typed yield wins over them. */
   treasuryYields: FetchedTreasuryYield[];
   /** FLOW-1121: when the yields were last fetched from the Treasury, and last asked for; null before either. */
@@ -43,7 +45,20 @@ const readSchema = z.object({
     selling_cost_bp: z.number().int().nullable(),
     loan_balance_minor: MINOR,
     loans_other_currency: z.boolean(),
+    // FLOW-1124: the all-in as the investment page counts it (absent before it deploys).
+    all_in_minor: MINOR.nullable().optional(),
+    purchase_minor: MINOR.nullable().optional(),
+    rehab_minor: MINOR.nullable().optional(),
+    holding_minor: MINOR.nullable().optional(),
   })),
+  loans: z.array(z.object({
+    loan_id: z.string(),
+    name: z.string(),
+    kind: z.string(),
+    project_id: z.string().nullable(),
+    currency: z.string(),
+    balance_minor: MINOR,
+  })).default([]),
   treasury_yields: z.array(z.object({
     on_date: z.string(),
     y5_ppm: z.number().int().nullable(),
@@ -61,6 +76,7 @@ export function parseMemberReport(data: unknown): MemberReportRead {
   return {
     config: parsed.config,
     properties: parsed.properties,
+    loans: parsed.loans,
     treasuryYields: parsed.treasury_yields,
     treasuryFetchedAt: parsed.treasury_fetched_at,
     treasuryRequestedAt: parsed.treasury_requested_at,

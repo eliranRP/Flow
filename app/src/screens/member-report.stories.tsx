@@ -49,8 +49,8 @@ export const HubCard: Story = {
   play: async ({ canvasElement }) => {
     const card = await within(canvasElement).findByRole("link", { name: /דוח שותף/ });
     await expect(card.getAttribute("href")).toContain("/reports/member");
-    // Member A's half of $345,690 if every property is sold.
-    await expect(card.textContent).toContain("172,845");
+    // Member A's half of $295,690 (after the members' loans) and their own $50,000 note, if every property is sold.
+    await expect(card.textContent).toContain("197,845");
     await expect(card.textContent).toContain("Member A");
     await fits(canvasElement);
   },
@@ -73,7 +73,11 @@ export const SellEverything: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("tab", { name: "מכירת הכל", selected: true })).toBeInTheDocument();
     await expect(canvas.getByRole("list", { name: "החישוב" }).textContent).toContain("החלק של Member A");
-    await expect(canvas.getAllByText(/172,845/).length).toBeGreaterThan(0);
+    // FLOW-1124: the band is Member A's total: half the equity, $147,845, and their $50,000 note back.
+    await expect(canvas.getByRole("heading", { level: 1 }).textContent).toBe("סה״כ ל־Member A אם מוכרים הכל");
+    await expect(canvas.getAllByText(/197,845/).length).toBeGreaterThan(0);
+    await expect(canvas.getByRole("list", { name: "החישוב" }).textContent).toContain("הלוואות של Member A");
+    await expect(canvas.getByRole("list", { name: "רווח" })).toBeInTheDocument();
     await expect(canvas.getByText("Birch Lane")).toBeInTheDocument();
     await fits(canvasElement);
   },
@@ -182,6 +186,25 @@ export const MembersSheet: Story = {
   },
 };
 
+/** FLOW-1124: the owner says whose each loan is; the band follows. */
+export const MembersLoans: Story = {
+  render: () => <Report entry="/reports/member?member=2" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /^השותף: Member C, 20%/ }));
+    await userEvent.click(within(await body(canvasElement).findByRole("dialog", { name: "השותף בדוח" })).getByRole("button", { name: "עריכת שותפים ואחוזים" }));
+    const sheet = within(await body(canvasElement).findByRole("dialog", { name: "שותפים ואחוזי בעלות" }));
+    await expect(sheet.getByRole("heading", { name: "הלוואות שותפים לחברה" })).toBeVisible();
+    await expect(sheet.getByLabelText(/^Member A note/)).toHaveValue("0");
+    await userEvent.selectOptions(sheet.getByLabelText(/^Juniper mortgage/), "2");
+    await userEvent.click(sheet.getByRole("button", { name: "שמירה" }));
+    await waitFor(async () => { await expect(body(canvasElement).queryByRole("dialog", { name: "שותפים ואחוזי בעלות" })).toBeNull(); });
+    // The equity is the same (every loan is repaid either way); Member C gets 20% of $295,690, plus $221,500 back.
+    await expect(canvas.getAllByText(/280,638/).length).toBeGreaterThan(0);
+    await expect(canvas.getByRole("list", { name: "החישוב" }).textContent).toContain("הלוואות של Member C");
+  },
+};
+
 export const QuoteSheet: Story = {
   render: () => <Report entry="/reports/member?mode=refi" />,
   play: async ({ canvasElement }) => {
@@ -223,6 +246,8 @@ export const PropertySheet: Story = {
     const sheet = within(await body(canvasElement).findByRole("dialog", { name: "Birch Lane" }));
     // $420,000 − 7% − $268,000 = $122,600; Member A's half is $61,300.
     await expect(sheet.getByRole("list", { name: "Birch Lane" }).textContent).toContain("61,300");
+    // FLOW-1124: $420,000 − $29,400 − $300,000 all-in = $90,600 profit; Member A's half.
+    await expect(sheet.getByRole("list", { name: "רווח · Birch Lane" }).textContent).toContain("45,300");
     await userEvent.click(sheet.getByRole("tab", { name: "ריפייננס" }));
     await expect(await sheet.findByText(/תשלום חודשי חדש/)).toBeVisible();
   },

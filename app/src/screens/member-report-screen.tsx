@@ -1,5 +1,5 @@
 import "../ui/lazy.css";
-import { applyBp, computeMemberShare, formatMoney, type MemberReportConfig, type MemberShareResult, type PropertyShare } from "@flow/shared";
+import { applyBp, computeMemberShare, formatMoney, type MemberReportConfig, type MemberShare, type MemberShareResult, type PropertyShare } from "@flow/shared";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCompanyCurrency } from "../company-currency";
@@ -31,7 +31,10 @@ import {
   bpText,
   memberIndex,
   modeOf,
+  noAllInText,
+  PROFIT_MISSING_WORDS,
   ppmText,
+  profitFormula,
   quoteRateText,
   refiFormula,
   saleFormula,
@@ -77,7 +80,16 @@ export function applyPatch(config: MemberReportConfig | null, patch: MemberRepor
   return Object.fromEntries(Object.entries(merged).filter(([, value]) => value != null));
 }
 
-function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string) {
+function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, member: MemberShare | null) {
+  // FLOW-1124: a member who lent the company sees their equity and their loans apart.
+  if (mode === "sell" && member != null && member.loansMinor !== 0n) {
+    return (
+      <>
+        {"חלק בהון "}<Amount agorot={member.saleMinor} currency={currency} />
+        {" · הלוואות "}<Amount agorot={member.loansMinor} currency={currency} />
+      </>
+    );
+  }
   if (mode === "sell") return "אם מוכרים הכל · אחרי עלויות המכירה וסילוק ההלוואות";
   if (r.totals.refinancedCount === 0) return "אף נכס לא משחרר כסף בריפייננס";
   return (
@@ -111,7 +123,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
   const treasury = useRefreshTreasury(live ? undefined : (refreshSample ?? SAMPLE_REFRESH));
   const phase = live ? screenPhase(preview, query) : { kind: "ready" as const };
 
-  const result = useMemo(() => (data == null ? null : computeMemberShare(data.config, data.properties, data.treasuryYields)), [data]);
+  const result = useMemo(() => (data == null ? null : computeMemberShare(data.config, data.properties, data.treasuryYields, data.loans)), [data]);
   const mode = modeOf(location.search);
   const index = memberIndex(location.search, result?.members.length ?? 0);
   const member = result?.members[index] ?? null;
@@ -199,8 +211,9 @@ export function MemberReportScreen({ sample, refreshSample }: {
   const sellingShown = result.properties.filter((p) => sellingIds.includes(p.projectId));
   const sellingBp = sellingShown.length > 0 && sellingShown.every((p) => !p.sellingCostDefault && p.sellingCostBp === sellingShown[0]?.sellingCostBp)
     ? (sellingShown[0]?.sellingCostBp ?? null) : null;
-  const memberMinor = member == null ? null : mode === "sell" ? member.saleMinor : member.refinanceMinor;
-  const whole = mode === "sell" ? result.totals.saleNetMinor : result.totals.cashOutMinor;
+  // FLOW-1124: a sale brings a member their part of the equity and their own loans back.
+  const memberMinor = member == null ? null : mode === "sell" ? member.saleTotalMinor : member.refinanceMinor;
+  const whole = mode === "sell" ? result.totals.equityMinor : result.totals.cashOutMinor;
   const figure = memberMinor ?? whole;
   // The chip: the owner with one member edits the members; with two or more, or a viewer, it picks one.
   const pickOnly = !canEdit || result.members.length > 1;
@@ -223,7 +236,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
           <>
             <FocusTitle className="ui-band-label ui-msr-band-label">{heroLabel(mode, member?.name ?? null)}</FocusTitle>
             <p className="ui-msr-band-figure ui-band-fade"><Amount agorot={figure} currency={currency} loss={figure < 0n} size="hero" /></p>
-            <p className="ui-msr-band-sub t-meta ui-band-fade">{heroMeta(mode, result, currency)}</p>
+            <p className="ui-msr-band-sub t-meta ui-band-fade">{heroMeta(mode, result, currency, member)}</p>
           </>
         )}
       >
@@ -241,8 +254,9 @@ export function MemberReportScreen({ sample, refreshSample }: {
           </section>
         )}
         <CalcSection title="החישוב" total={null}>
-          <FormulaList formula={mode === "sell" ? saleFormula(result, share, memberMinor) : refiFormula(result, share, memberMinor)} currency={currency} resolve={resolve} label="החישוב" />
+          <FormulaList formula={mode === "sell" ? saleFormula(result, member) : refiFormula(result, share, memberMinor)} currency={currency} resolve={resolve} label="החישוב" />
         </CalcSection>
+        {mode === "sell" ? <ProfitSection result={result} member={member} currency={currency} resolve={resolve} /> : null}
         {mode === "refi" ? <RateSection result={result} canEdit={canEdit} onOpen={setSheet} onSave={save} config={config} updated={updated} /> : null}
         <section className="ui-msr-props" aria-labelledby="msr-props">
           <h2 id="msr-props" className="t-section">לפי נכס</h2>
@@ -252,7 +266,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
               const own = member == null ? whole : applyBp(whole, member.ownershipBp);
               return (
                 <ListRow key={p.projectId} variant="project" title={p.name} agorot={own} currency={currency} loss={own < 0n}
-                  hint={mode === "sell" ? `שווי ${formatMoney(p.valueMinor, currency)} · הלוואה ${formatMoney(p.loanBalanceMinor, currency)}` : p.refinances ? `הלוואה חדשה ${formatMoney(p.newLoanMinor, currency)}` : "לא משתלם למחזר"}
+                  hint={mode === "sell" ? saleHint(p, currency) : p.refinances ? `הלוואה חדשה ${formatMoney(p.newLoanMinor, currency)}` : "לא משתלם למחזר"}
                   onClick={() => { setProperty(p); }} />
               );
             })}
@@ -271,7 +285,8 @@ export function MemberReportScreen({ sample, refreshSample }: {
       <MemberPickSheet open={sheet === "pick"} onOpenChange={(open) => { setSheet(open ? "pick" : null); }} members={result.members} index={index}
         onPick={(next) => { setParam("member", next === 0 ? null : String(next)); }}
         onEdit={canEdit ? () => { setSheet("members"); } : undefined} />
-      <MembersSheet open={sheet === "members"} onOpenChange={(open) => { setSheet(open ? "members" : null); }} onSave={save} members={config.members ?? []} />
+      <MembersSheet open={sheet === "members"} onOpenChange={(open) => { setSheet(open ? "members" : null); }} onSave={save} members={config.members ?? []}
+        loans={data?.loans ?? []} properties={data?.properties ?? []} />
       <QuoteSheet open={sheet === "quote"} onOpenChange={(open) => { setSheet(open ? "quote" : null); }} onSave={save}
         quotes={config.quotes ?? []} quoteDate={result.rate.quoteDate} expectedPpm={result.rate.expectedPpm}
         properties={result.properties.map((p) => ({ projectId: p.projectId, name: p.name }))} />
@@ -294,7 +309,33 @@ export function MemberReportScreen({ sample, refreshSample }: {
 /** The band's label: whose figure it is, and which way. */
 function heroLabel(mode: ReportMode, name: string | null): string {
   if (name == null) return mode === "sell" ? "הון נקי של החברה אם מוכרים הכל" : "כסף שמשתחרר בריפייננס";
-  return mode === "sell" ? `החלק של ${name} אם מוכרים הכל` : `החלק של ${name} מריפייננס`;
+  return mode === "sell" ? `סה״כ ל־${name} אם מוכרים הכל` : `החלק של ${name} מריפייננס`;
+}
+
+/** A property's line on מכירת הכל: its value, its loans, and its profit (FLOW-1124). */
+function saleHint(p: PropertyShare, currency: string): string {
+  const profit = p.profitMinor == null ? noAllInText(p) : `רווח ${formatMoney(p.profitMinor, currency)}`;
+  return `שווי ${formatMoney(p.valueMinor, currency)} · הלוואה ${formatMoney(p.loanBalanceMinor, currency)} · ${profit}`;
+}
+
+/**
+ * FLOW-1124: the profit at the sale, as the investment page's net profit: value − selling − the all-in, each row
+ * opening its parts. The properties without a purchase are left out, and named.
+ */
+function ProfitSection({ result, member, currency, resolve }: { result: MemberShareResult; member: MemberShare | null; currency: string; resolve: Resolve }) {
+  const counted = result.properties.length - result.profitMissing.length;
+  return (
+    <CalcSection title="רווח מול העלות הכוללת" total={null}>
+      {counted === 0 ? (
+        <p className="ui-msr-note">אין עדיין מחיר קנייה לאף נכס. הוסיפו אותו בעמוד ההשקעה של הנכס.</p>
+      ) : (
+        <FormulaList formula={profitFormula(result, member)} currency={currency} resolve={resolve} label="רווח" />
+      )}
+      {counted === 0 || result.profitMissing.length === 0 ? null : (
+        <p className="ui-msr-note">{`לא ברווח: ${result.profitMissing.map((m) => `${m.name} (${PROFIT_MISSING_WORDS[m.reason]})`).join(", ")}.`}</p>
+      )}
+    </CalcSection>
+  );
 }
 
 const YIELDS_AUTO = "תשואות האג״ח מתעדכנות אוטומטית מאתר משרד האוצר.";

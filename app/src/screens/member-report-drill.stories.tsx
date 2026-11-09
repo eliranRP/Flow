@@ -48,7 +48,35 @@ export const SaleRowsOpen: Story = {
     await opens(canvasElement, /עלויות מכירה/, "עלויות מכירה", /7% × \$420,000/);
     await opens(canvasElement, /סילוק הלוואות/, "סילוק הלוואות", /יתרות היום/);
     await opens(canvasElement, /הון נקי/, "הון נקי", /\$420,000 − \$29,400 − \$268,000/);
-    await opens(canvasElement, /החלק של Member A/, "החלק של כל שותף", /30% × \$345,690/);
+    // FLOW-1124: the equity after the members' loans: $345,690 − A's $50,000 note to the company.
+    await opens(canvasElement, /החלק של Member A/, "החלק של כל שותף", /30% × \$295,690/);
+    await opens(canvasElement, /החזר הלוואות שותפים/, "הלוואות שותפים", /Member B · Juniper Ct/);
+    await opens(canvasElement, /סה״כ ל־Member A/, "סה״כ לכל שותף", /\$147,845 \+ \$50,000/);
+  },
+};
+
+/** FLOW-1124: the profit card's rows open their parts. */
+export const ProfitRowsOpen: Story = {
+  render: () => <Report />,
+  play: async ({ canvasElement }) => {
+    const profit = within(await within(canvasElement).findByRole("list", { name: "רווח" }));
+    // $1,083,000 − $75,810 − $820,000 = $187,190; Member A's half.
+    await expect(profit.getByRole("button", { name: /החלק של Member A/ }).textContent).toContain("93,595");
+    await userEvent.click(profit.getByRole("button", { name: /עלות כוללת/ }));
+    const dialog = within(await body(canvasElement).findByRole("dialog", { name: "עלות כוללת" }));
+    await expect(dialog.getByText("$270,000 + $25,000 + $5,000")).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(async () => { await expect(body(canvasElement).queryByRole("dialog", { name: "עלות כוללת" })).toBeNull(); });
+    await userEvent.click(await profit.findByRole("button", { name: /לכל השותפים/ }));
+    await expect(await body(canvasElement).findByText("$420,000 − $29,400 − $300,000")).toBeVisible();
+  },
+};
+
+/** FLOW-1124: a property without a purchase is left out of the profit, and named. */
+export const ProfitMissingPurchase: Story = {
+  render: () => <Report sample={{ ...MEMBER_REPORT, properties: MEMBER_REPORT.properties.map((p, i) => (i === 2 ? { ...p, all_in_minor: null, purchase_minor: null } : p)) }} />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("לא ברווח: Sable Ct (אין מחיר קנייה).")).toBeInTheDocument();
   },
 };
 
