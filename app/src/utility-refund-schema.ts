@@ -45,10 +45,9 @@ const billSchema = z.object({
   amount_minor: minorSchema,
   doc_date: z.string(),
   days: z.number().int(),
+  // FLOW-1143: Flow suggests nothing; "suggested" is still read (and shown nowhere) until the server's change is live.
   state: z.enum(["suggested", "not_refunded", "refunded", "waiting", "seen"]),
   source: z.enum(["auto", "owner"]).nullable().optional().transform((value) => value ?? null),
-  rule: z.enum(["bill", "bills", "rent_and_bills"]).nullable().optional().transform((value) => value ?? null),
-  group_bill_transaction_ids: z.array(z.string()).nullable().optional().transform((value) => value ?? []),
   no_rent: z.boolean(),
   payment: paymentSchema.nullable().optional().transform((value) => value ?? null),
   wrong_category: z.boolean(),

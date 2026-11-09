@@ -18,7 +18,7 @@ import {
   type UtilityBill,
   type UtilityKey,
 } from "../utility-refunds";
-import { cardBillTitle, type LocalAnswer, type RefundCard, type RefundGroup } from "../utility-refund-view";
+import type { RefundCard, RefundGroup } from "../utility-refund-view";
 
 /** The reads an answer changes: the list, Home's count and the property's utilities. */
 export const UTILITY_KEYS = [UTILITY_REFUNDS_KEY, "utility-refund-count", UTILITY_PAYERS_KEY] as const;
@@ -52,19 +52,21 @@ function sameUtility(bill: UtilityBill, key: UtilityKey): boolean {
 export function useUtilityRefundActions() {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
-  const [local, setLocal] = useState<ReadonlyMap<string, LocalAnswer>>(new Map());
+  // The cards and rows answered here: hidden until the next read drops them, or back on ביטול.
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const { leaving, fold, cancel } = useFold();
 
-  const mark = (keys: readonly string[], value: LocalAnswer | null) => {
-    setLocal((before) => {
-      const next = new Map(before);
+  const mark = (keys: readonly string[], hide: boolean) => {
+    setHidden((before) => {
+      const next = new Set(before);
       for (const key of keys) {
-        if (value == null) next.delete(key);
-        else next.set(key, value);
+        if (hide) next.add(key);
+        else next.delete(key);
       }
       return next;
     });
   };
+
 
   const refresh = (ledger: boolean) => {
     void invalidate(ledger ? [...UTILITY_KEYS, ...LEDGER_KEYS] : [...UTILITY_KEYS]);
@@ -83,18 +85,17 @@ export function useUtilityRefundActions() {
     return true;
   }
 
-  /** Folds `keys` away, writes, and offers ביטול; `back` is what the keys show after the ביטול. */
-  async function answer({ keys, run, failure, message, undo, back = null, ledger = false }: {
+  /** Folds `keys` away, writes, and offers ביטול, which brings them back. */
+  async function answer({ keys, run, failure, message, undo, ledger = false }: {
     keys: readonly string[];
     run: () => Promise<unknown>;
     failure: string;
     message: string;
     undo: () => Promise<unknown>;
-    back?: LocalAnswer | null;
     ledger?: boolean;
   }) {
     // Each row is hidden as its own fold ends, unless a failure or ביטול stopped it.
-    const folds = keys.map((key) => fold(key, () => { mark([key], "hidden"); }));
+    const folds = keys.map((key) => fold(key, () => { mark([key], true); }));
     if (!(await write(run, failure, ledger, false))) {
       for (const key of keys) cancel(key);
       return;
@@ -106,7 +107,7 @@ export function useUtilityRefundActions() {
         void (async () => {
           if (!(await write(undo, FAILED.undo, ledger))) return;
           for (const key of keys) cancel(key);
-          mark(keys, back);
+          mark(keys, false);
         })();
       },
     });
@@ -120,47 +121,9 @@ export function useUtilityRefundActions() {
   };
 
   return {
-    local,
+    hidden,
     /** The cards and rows folding away now, by key (a card's key or a bill's id). */
     leaving,
-    /** כן, זה ההחזר: a payment filed elsewhere stays, with the note and its fix; otherwise the card goes. */
-    yes(card: RefundCard) {
-      const pay = card.payment.transaction_id;
-      const run = each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, "matched", pay));
-      const message = `${cardBillTitle(card)} · סומן כהוחזר`;
-      const undo = each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, null, pay));
-      if (!card.wrongCategory) {
-        void answer({ keys: [card.key], run, failure: FAILED.answer, message, undo });
-        return;
-      }
-      void (async () => {
-        mark([card.key], "fix");
-        if (!(await write(run, FAILED.answer))) {
-          mark([card.key], null);
-          return;
-        }
-        toast.show({
-          message,
-          action: "ביטול",
-          onAction: () => {
-            void (async () => {
-              if (await write(undo, FAILED.undo)) mark([card.key], null);
-            })();
-          },
-        });
-      })();
-    },
-    /** לא: never suggested again for these bills. */
-    no(card: RefundCard) {
-      const pay = card.payment.transaction_id;
-      void answer({
-        keys: [card.key],
-        run: each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, "rejected", pay)),
-        failure: FAILED.answer,
-        message: "לא נציע את התשלום הזה שוב",
-        undo: each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, null, pay)),
-      });
-    },
     /** The one-tap fix: the payment (or the bills' part of it) moves to the bills' category. */
     refile(card: RefundCard, category: string) {
       const [first] = card.bills;
@@ -172,7 +135,6 @@ export function useUtilityRefundActions() {
         failure: FAILED.refile,
         message: `נרשם כהחזר ב${category}`,
         undo: () => undoUtilityRefile(rpc(), first.bill_transaction_id, pay),
-        back: "fix",
         ledger: true,
       });
     },
@@ -185,7 +147,6 @@ export function useUtilityRefundActions() {
         failure: FAILED.keep,
         message: "נשאר כמו שהוא",
         undo: each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, "matched", pay, false)),
-        back: "fix",
       });
     },
     /** ראיתי, אין צורך בטיפול: closes this bill. */
@@ -208,7 +169,7 @@ export function useUtilityRefundActions() {
         undo: () => answerUtilityRefund(rpc(), bill.bill_transaction_id, null, paymentId),
       });
     },
-    /** החברה משלמת תמיד: the utility turns company-paid, which closes all its open bills and suggestions. */
+    /** החברה משלמת תמיד: the utility turns company-paid, which closes all its open bills and its cards. */
     company(bill: UtilityBill, groups: readonly RefundGroup[]) {
       const key = keyOf(bill);
       const keys = groups.flatMap((group) => [
@@ -224,7 +185,7 @@ export function useUtilityRefundActions() {
         undo: () => restoreUtilityPayer(rpc(), key, prior),
       });
     },
-    /** סימון הכל כנראה: every open bill of the property, with one ביטול. Suggestions stay. */
+    /** סימון הכל כנראה: every open bill of the property, with one ביטול. A fix card stays. */
     markAll(group: RefundGroup) {
       let closed: string[] = group.open.map((bill) => bill.bill_transaction_id);
       void answer({

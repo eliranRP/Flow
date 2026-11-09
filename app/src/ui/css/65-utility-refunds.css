@@ -1,8 +1,7 @@
-/* FLOW-1135 (V3-UtilityRefunds, decision 0265): החזרי חשבונות. The List pattern: the head, the figure, the
-   segment that docks, then the bills by property. A suggested refund is a surface card with a line border: the bill
-   and the payment as two rows, why Flow pairs them, and "זה ההחזר?" with כן / לא; after a yes on a payment filed
-   elsewhere, the raised note with its one fix. A bill not refunded is a 64px row with the dashed signal ring and
-   a 44px ✓ (ראיתי) on a tint disc. */
+/* FLOW-1135 (V3-UtilityRefunds, decision 0265), FLOW-1143: החזרי חשבונות. The List pattern: the head and the
+   figure, then the bills by property. A refund the owner matched that is filed elsewhere is a surface card with a
+   line border: the bill and the payment as rows, then the raised note with its one fix and להשאיר. A bill not
+   refunded is a 64px row with the dashed signal ring and a 44px ✓ (ראיתי) on a tint disc. */
 .ui-urf-screen {
   display: flex;
   flex-direction: column;
@@ -135,7 +134,6 @@
 }
 
 .ui-urf-leg-meta,
-.ui-urf-why,
 .ui-urf-fix-hint {
   color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
@@ -180,27 +178,12 @@
   list-style: none;
 }
 
-.ui-urf-why {
-  margin: 0;
-  padding-block: var(--space-1) var(--space-3);
-}
-
-.ui-urf-ask,
+/* FLOW-1143: the fix's raised panel, 12px under the payment (or its split). */
 .ui-urf-fix {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.ui-urf-ask-title {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-btn-weight);
-  line-height: var(--type-line2-line);
-}
-
-.ui-urf-fix {
+  margin-block-start: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-card-inner);
   background: var(--color-raised);

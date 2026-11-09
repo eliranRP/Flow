@@ -8,7 +8,7 @@ import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { GEFEN, PINE, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
 import { ToastProvider } from "../ui/toast";
 import { parseUtilityRefundCount } from "../utility-refund-count";
-import { cardWhy, paymentMeta, paymentsTaken, refundDate, refundGroups } from "../utility-refund-view";
+import { fixCopy, paymentMeta, paymentsTaken, refundDate, refundGroups } from "../utility-refund-view";
 import type { UtilityBill } from "../utility-refunds";
 import { utilityRefundsSchema } from "../utility-refund-schema";
 
@@ -97,28 +97,29 @@ async function undo() {
 
 describe("Home's utility refunds row", () => {
   it("counts the bills not refunded with their total, singular for one, and opens החזרי חשבונות", () => {
-    const row = utilityRefundsRow({ notRefunded: 4, suggested: 2, totals: [{ currency: "USD", minor: 29_539n }] }, "/utility-refunds?preview=1");
+    const row = utilityRefundsRow({ notRefunded: 4, totals: [{ currency: "USD", minor: 29_539n }] }, "/utility-refunds?preview=1");
     expect(row?.to).toBe("/utility-refunds?preview=1");
     expect(row?.tag).toBe("$295.39");
-    expect(row?.dismissKey).toBe("utility-refunds:4:2:USD29539");
+    expect(row?.dismissKey).toBe("utility-refunds:4:USD29539");
     render(<p>{row?.title}</p>);
     expect(screen.getByText(/חשבונות לא הוחזרו/).textContent).toBe("4 חשבונות לא הוחזרו · $295.39");
-    const one = utilityRefundsRow({ notRefunded: 1, suggested: 0, totals: [{ currency: "USD", minor: 4_600n }] }, "/utility-refunds");
+    const one = utilityRefundsRow({ notRefunded: 1, totals: [{ currency: "USD", minor: 4_600n }] }, "/utility-refunds");
     render(<p>{one?.title}</p>);
     expect(screen.getByText(/חשבון אחד לא הוחזר/).textContent).toBe("חשבון אחד לא הוחזר · $46");
   });
 
-  it("shows only when there is one; suggestions alone read לבדיקה; two currencies show the count", () => {
-    expect(utilityRefundsRow({ notRefunded: 0, suggested: 0, totals: [] }, "/u")).toBeNull();
-    expect(utilityRefundsRow({ notRefunded: 0, suggested: 1, totals: [] }, "/u")?.title).toBe("החזר אחד לבדיקה");
-    const two = utilityRefundsRow({ notRefunded: 3, suggested: 0, totals: [{ currency: "ILS", minor: 100n }, { currency: "USD", minor: 100n }] }, "/u");
+  it("shows only when a bill is not refunded (FLOW-1143: no לבדיקה variant); two currencies show the count", () => {
+    expect(utilityRefundsRow({ notRefunded: 0, totals: [] }, "/u")).toBeNull();
+    const two = utilityRefundsRow({ notRefunded: 3, totals: [{ currency: "ILS", minor: 100n }, { currency: "USD", minor: 100n }] }, "/u");
     expect(two?.tag).toBe("3 חשבונות");
   });
 
   it("parses count_utility_refunds and refuses a wrong shape", () => {
-    expect(parseUtilityRefundCount({ as_of: "2026-11-09", not_refunded_count: 2, suggested_count: 1, not_refunded_by_currency: [{ currency: "USD", amount_minor: 17_440 }] }))
-      .toEqual({ notRefunded: 2, suggested: 1, totals: [{ currency: "USD", minor: 17_440n }] });
-    expect(() => parseUtilityRefundCount({ not_refunded_count: -1, suggested_count: 0 })).toThrow();
+    // FLOW-1143: no suggested_count is needed (an older server's is ignored).
+    expect(parseUtilityRefundCount({ as_of: "2026-11-09", not_refunded_count: 2, not_refunded_by_currency: [{ currency: "USD", amount_minor: 17_440 }] }))
+      .toEqual({ notRefunded: 2, totals: [{ currency: "USD", minor: 17_440n }] });
+    expect(parseUtilityRefundCount({ not_refunded_count: 1, suggested_count: 3, not_refunded_by_currency: [] })).toEqual({ notRefunded: 1, totals: [] });
+    expect(() => parseUtilityRefundCount({ not_refunded_count: -1 })).toThrow();
     expect(() => parseUtilityRefundCount(null)).toThrow();
   });
 });
@@ -129,45 +130,45 @@ describe("the cards", () => {
     expect(refundGroups(kept).find((group) => group.projectId === GEFEN)?.cards).toEqual([]);
   });
 
-  it("groups by property, suggestions first, and says why and when", () => {
+  it("groups by property, the fix cards first, and words each fix and when", () => {
     const groups = refundGroups(utilityRefundsSample());
     expect(groups.map((group) => [group.name, group.cards.length, group.open.length])).toEqual([["דירת הגפן 3", 1, 2], ["Pine Ave 4", 1, 2]]);
     const [gefen, pine] = groups;
-    expect(gefen && cardWhy(gefen.cards[0] as never)).toBe("השכירות $1,800 + החשבון $84.20");
-    expect(pine && cardWhy(pine.cards[0] as never)).toBe("אותו סכום · התשלום בלי פרויקט");
+    // The rent with the bill is split; a payment the size of the bill moves whole.
+    expect(gefen && fixCopy(gefen.cards[0] as never).label).toBe("פיצול והחזר לחשמל ומים");
+    expect(pine && fixCopy(pine.cards[0] as never).label).toBe("העברה לחשמל ומים כהחזר");
     expect(pine && paymentMeta(pine.cards[0] as never)).toBe("בלי פרויקט · הכנסה אחרת · 12/09/26 · 7 ימים אחרי");
   });
 
   it("shows the summary, the figure and both properties", async () => {
     renderScreen();
-    expect(await screen.findByText("4 לא הוחזרו · 2 לבדיקה")).toBeTruthy();
+    expect(await screen.findByText("4 לא הוחזרו")).toBeTruthy();
     expect(document.querySelector(".ui-urf-figure")?.textContent).toBe("−$295.39");
-    expect(screen.getAllByRole("region", { name: /החזר אפשרי/ })).toHaveLength(2);
+    expect(screen.getAllByRole("region", { name: /החזר לתיקון/ })).toHaveLength(2);
     expect(screen.getByText("לא הוחזר · 90 ימים · 11/08/26 · חודש בלי שכירות")).toBeTruthy();
   });
 
   it("limits the list to one property with ?project=", async () => {
     renderScreen(`/utility-refunds?project=${PINE}`);
-    expect(await screen.findByText("2 לא הוחזרו · 1 לבדיקה")).toBeTruthy();
+    // The page's line and the property's head.
+    expect(await screen.findAllByText("2 לא הוחזרו")).toHaveLength(2);
     expect(screen.queryByText("Gas Co")).toBeNull();
   });
 
-  it("filters to לבדיקה and to לא הוחזרו", async () => {
+  it("asks nothing and has no filter (FLOW-1143): an older server's suggestion shows nowhere", async () => {
+    db.bills = [...utilityRefundsSample(), { ...(utilityRefundsSample()[2] as UtilityBill), bill_transaction_id: "b-suggested", supplier_name: "Old Co", state: "suggested" as const }];
     renderScreen();
-    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
-    fireEvent.click(screen.getByRole("radio", { name: "לבדיקה" }));
-    expect(screen.queryByRole("button", { name: /^ראיתי:/ })).toBeNull();
-    expect(screen.getAllByRole("region", { name: /החזר אפשרי/ })).toHaveLength(2);
-    fireEvent.click(screen.getByRole("radio", { name: "לא הוחזרו" }));
-    expect(screen.queryByRole("region", { name: /החזר אפשרי/ })).toBeNull();
-    expect(screen.getAllByRole("button", { name: /^ראיתי:/ })).toHaveLength(4);
+    await screen.findByText("4 לא הוחזרו");
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByText("זה ההחזר?")).toBeNull();
+    expect(screen.queryByText("Old Co")).toBeNull();
   });
 
   it("gives a viewer no answers", async () => {
     db.hold = true;
     renderScreen();
-    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
-    expect(screen.queryByRole("button", { name: "כן, זה ההחזר" })).toBeNull();
+    await screen.findByText("4 לא הוחזרו");
+    expect(screen.queryByRole("button", { name: "להשאיר" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^ראיתי:/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "סימון הכל כנראה" })).toBeNull();
   });
@@ -178,8 +179,8 @@ describe("opening a transaction (FLOW-1142)", () => {
 
   it("each leg of a card opens its own transaction: the bill and the payment", async () => {
     renderScreen();
-    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
-    const card = screen.getAllByRole("region", { name: /החזר אפשרי: City Water/ })[0] as HTMLElement;
+    await screen.findByText("4 לא הוחזרו");
+    const card = screen.getAllByRole("region", { name: /החזר לתיקון: City Water/ })[0] as HTMLElement;
     const legs = within(card).getAllByRole("link");
     expect(legs.map((leg) => leg.getAttribute("href"))).toEqual(["/transactions/b-water-gefen", "/transactions/pay-zelle-a"]);
     expect(href(/^Tenant B · /)).toBe("/transactions/pay-zelle-b");
@@ -189,11 +190,11 @@ describe("opening a transaction (FLOW-1142)", () => {
     const [first] = utilityRefundsSample();
     const pay = first?.payment;
     db.bills = [
-      { ...first, rule: "bills", wrong_category: false },
-      { ...first, bill_transaction_id: "b-gas-pair", supplier_name: "Gas Co", category_name: "גז", amount_minor: 4_000n, rule: "bills", wrong_category: false, payment: pay },
+      first,
+      { ...first, bill_transaction_id: "b-gas-pair", supplier_name: "Gas Co", category_name: "גז", amount_minor: 4_000n, payment: pay },
     ];
     renderScreen();
-    const card = await screen.findByRole("region", { name: "החזר אפשרי: City Water + Gas Co" });
+    const card = await screen.findByRole("region", { name: "החזר לתיקון: City Water + Gas Co" });
     expect(within(card).getAllByRole("link").map((leg) => leg.getAttribute("href"))).toEqual([
       "/transactions/b-water-gefen", "/transactions/b-gas-pair", "/transactions/pay-zelle-a",
     ]);
@@ -202,7 +203,7 @@ describe("opening a transaction (FLOW-1142)", () => {
 
   it("the bill's sheet opens its transaction", async () => {
     renderScreen();
-    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    await screen.findByText("4 לא הוחזרו");
     fireEvent.click(screen.getByRole("button", { name: /^Gas Co/ }));
     expect((await screen.findByRole("link", { name: "פתיחת התנועה" })).getAttribute("href")).toBe("/transactions/b-gas-gefen");
   });
@@ -210,44 +211,12 @@ describe("opening a transaction (FLOW-1142)", () => {
   it("a viewer's bill row opens its transaction", async () => {
     db.hold = true;
     renderScreen();
-    await screen.findByText("4 לא הוחזרו · 2 לבדיקה");
+    await screen.findByText("4 לא הוחזרו");
     expect(href(/^Gas Co/)).toBe("/transactions/b-gas-gefen");
   });
 });
 
 describe("the answers and their ביטול", () => {
-  it("כן on a refund in its own category matches it; ביטול takes the answer back", async () => {
-    db.bills = utilityRefundsSample().map((bill) => (bill.bill_transaction_id === "b-power-pine" ? { ...bill, wrong_category: false } : bill));
-    renderScreen(`/utility-refunds?project=${PINE}`);
-    fireEvent.click(await screen.findByRole("button", { name: "כן, זה ההחזר" }));
-    expect(await screen.findByText("Power Co · סומן כהוחזר")).toBeTruthy();
-    expect(calls("answer_utility_refund")).toEqual([{ p_bill_transaction_id: "b-power-pine", p_state: "matched", p_payment_transaction_id: "pay-zelle-b" }]);
-    await waitFor(() => { expect(screen.queryByRole("region", { name: /החזר אפשרי/ })).toBeNull(); });
-    await undo();
-    await waitFor(() => { expect(calls("answer_utility_refund")).toHaveLength(2); });
-    expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-power-pine", p_state: null, p_payment_transaction_id: "pay-zelle-b" });
-    expect(await screen.findByRole("region", { name: /החזר אפשרי/ })).toBeTruthy();
-  });
-
-  it("כן on a payment filed elsewhere keeps the card with the note and the fix; ביטול asks again", async () => {
-    renderScreen(`/utility-refunds?project=${GEFEN}`);
-    fireEvent.click(await screen.findByRole("button", { name: "כן, זה ההחזר" }));
-    expect(await screen.findByText("ייתכן שסווג לא נכון")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "פיצול והחזר לחשמל ומים" })).toBeTruthy();
-    await undo();
-    await waitFor(() => { expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-water-gefen", p_state: null, p_payment_transaction_id: "pay-zelle-a" }); });
-    expect(await screen.findByRole("button", { name: "כן, זה ההחזר" })).toBeTruthy();
-  });
-
-  it("לא rejects the pair; ביטול takes it back", async () => {
-    renderScreen(`/utility-refunds?project=${PINE}`);
-    fireEvent.click(await screen.findByRole("button", { name: "לא" }));
-    expect(await screen.findByText("לא נציע את התשלום הזה שוב")).toBeTruthy();
-    expect(calls("answer_utility_refund")).toEqual([{ p_bill_transaction_id: "b-power-pine", p_state: "rejected", p_payment_transaction_id: "pay-zelle-b" }]);
-    await undo();
-    await waitFor(() => { expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-power-pine", p_state: null, p_payment_transaction_id: "pay-zelle-b" }); });
-  });
-
   it("the fix refiles the payment; ביטול undoes the refile and the card shows the fix again", async () => {
     db.bills = utilityRefundsSample().map((bill) => (bill.bill_transaction_id === "b-water-gefen" ? { ...bill, state: "refunded" as const, source: "owner" as const } : bill));
     renderScreen(`/utility-refunds?project=${GEFEN}`);
@@ -395,11 +364,11 @@ describe("the fold", () => {
     await waitFor(() => { expect(screen.queryByRole("button", { name: /^ראיתי:/ })).toBeNull(); });
   });
 
-  it("folds a suggestion card answered לא", async () => {
+  it("folds a fix card kept with להשאיר", async () => {
     renderScreen(`/utility-refunds?project=${PINE}`);
-    fireEvent.click(await screen.findByRole("button", { name: "לא" }));
-    expect(screen.getByRole("region", { name: /החזר אפשרי/ }).closest(".ui-fold")?.hasAttribute("data-leaving")).toBe(true);
-    await waitFor(() => { expect(screen.queryByRole("region", { name: /החזר אפשרי/ })).toBeNull(); });
+    fireEvent.click(await screen.findByRole("button", { name: "להשאיר" }));
+    expect(screen.getByRole("region", { name: /החזר לתיקון/ }).closest(".ui-fold")?.hasAttribute("data-leaving")).toBe(true);
+    await waitFor(() => { expect(screen.queryByRole("region", { name: /החזר לתיקון/ })).toBeNull(); });
   });
 
   it("ביטול mid-fold stops the fold and keeps the row", async () => {
@@ -472,7 +441,7 @@ describe("the payment's project and split", () => {
   it("lists a split payment's parts under its leg, with the project only where it differs", async () => {
     db.bills = utilitySplitSample();
     renderScreen(`/utility-refunds?project=${GEFEN}`);
-    const card = await screen.findByRole("region", { name: /החזר אפשרי/ });
+    const card = await screen.findByRole("region", { name: /החזר לתיקון/ });
     const split = within(card).getByRole("list", { name: "פיצול" });
     expect(within(split).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "שכירות · $1,700",
@@ -483,7 +452,7 @@ describe("the payment's project and split", () => {
 
   it("shows no split for a payment that is not split", async () => {
     renderScreen();
-    const cards = await screen.findAllByRole("region", { name: /החזר אפשרי/ });
+    const cards = await screen.findAllByRole("region", { name: /החזר לתיקון/ });
     for (const card of cards) expect(within(card).queryByText("פיצול")).toBeNull();
   });
 });

@@ -25,8 +25,6 @@ function bill(over: Partial<UtilityBill> & Pick<UtilityBill, "bill_transaction_i
     category_id: "c-power-water",
     category_name: "חשמל ומים",
     source: null,
-    rule: null,
-    group_bill_transaction_ids: [],
     no_rent: false,
     payment: null,
     wrong_category: false,
@@ -36,16 +34,20 @@ function bill(over: Partial<UtilityBill> & Pick<UtilityBill, "bill_transaction_i
   };
 }
 
+/**
+ * Two refunds the owner matched that are filed elsewhere (the fix cards: the rent with the bill, and a payment on
+ * no project), and four bills not refunded.
+ */
 export function utilityRefundsSample(): UtilityBill[] {
   return [
     bill({
       bill_transaction_id: "b-water-gefen", project_id: GEFEN, supplier_name: "City Water", amount_minor: 8_420n, doc_date: "2026-09-14", days: 56,
-      state: "suggested", rule: "rent_and_bills", wrong_category: true,
+      state: "refunded", source: "owner", wrong_category: true,
       payment: payment("pay-zelle-a", "2026-10-02", 188_420n, "Tenant A", "שכירות", GEFEN),
     }),
     bill({
       bill_transaction_id: "b-power-pine", project_id: PINE, supplier_name: "Power Co", amount_minor: 9_710n, doc_date: "2026-09-05", days: 65,
-      state: "suggested", rule: "bill", wrong_category: true,
+      state: "refunded", source: "owner", wrong_category: true,
       payment: payment("pay-zelle-b", "2026-09-12", 9_710n, "Tenant B", "הכנסה אחרת", null),
     }),
     bill({ bill_transaction_id: "b-power-gefen", project_id: GEFEN, supplier_name: "Power Co", amount_minor: 12_840n, doc_date: "2026-09-03", days: 67, state: "not_refunded" }),
@@ -53,12 +55,6 @@ export function utilityRefundsSample(): UtilityBill[] {
     bill({ bill_transaction_id: "b-water-pine", project_id: PINE, supplier_name: "City Water", amount_minor: 6_100n, doc_date: "2026-08-11", days: 90, state: "not_refunded", no_rent: true }),
     bill({ bill_transaction_id: "b-net-pine", project_id: PINE, supplier_name: "Net Co", amount_minor: 5_999n, doc_date: "2026-09-30", days: 40, state: "not_refunded", category_name: "אינטרנט" }),
   ];
-}
-
-/** A suggestion the owner already said yes to: the payment sits under שכירות, so the fix shows. */
-export function utilityFixSample(): UtilityBill[] {
-  const [first] = utilityRefundsSample();
-  return first == null ? [] : [{ ...first, state: "refunded", source: "owner" }];
 }
 
 function payer(name: string, usual: bigint | null, over: Partial<UtilityPayer> = {}): UtilityPayer {
