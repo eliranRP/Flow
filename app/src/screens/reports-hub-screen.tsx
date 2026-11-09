@@ -149,7 +149,8 @@ function MemberCard({ read, to }: { read: MemberReportRead; to: string }) {
   const first = r.members[0];
   // FLOW-1124: a member's total from a sale, their part of the equity and their own loans back.
   const figure = first?.saleTotalMinor ?? r.totals.equityMinor;
-  const refinance = first?.refinanceMinor ?? r.totals.cashOutMinor;
+  // FLOW-1129: as the report's band, the member's part of the cash freed plus their loans a refinance pays off.
+  const refinance = first?.refiTotalMinor ?? r.totals.cashOutMinor;
   const ownership = first?.ownershipBp ?? 10_000;
   return (
     <ReportCard

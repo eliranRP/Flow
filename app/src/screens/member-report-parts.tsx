@@ -64,7 +64,6 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
   const withAllIn = props.filter((p) => p.allInMinor != null);
   const propertyName = (id: string | null) => (id == null ? "של החברה" : props.find((p) => p.projectId === id)?.name ?? "");
   const offProperty = r.memberLoans.filter((l) => l.projectId == null);
-  const refi = (_p: PropertyShare, hint: string, minor: bigint) => ({ hint, minor });
   // FLOW-1129: on ריפייננס, the members' loans are the ones a refinance pays off.
   const refiMode = mode === "refi";
   const memberLoanLines = (refiMode ? r.memberLoans.filter((l) => l.projectId != null && props.some((p) => p.projectId === l.projectId && p.refinances)) : r.memberLoans)
@@ -141,18 +140,18 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
       };
     case "loan":
       return byRefinance(each("הלוואה חדשה", `${bpText(r.assumptions.ltvBp)} מהשווי של כל נכס. נספרים רק נכסים שמשחררים כסף.`, t.newLoanMinor,
-        (p) => refi(p, `${bpText(r.assumptions.ltvBp)} × ${money(p.valueMinor)}`, p.newLoanMinor)));
+        (p) => ({ hint: `${bpText(r.assumptions.ltvBp)} × ${money(p.valueMinor)}`, minor: p.newLoanMinor })));
     case "payoff":
       // A member's loan on a refinanced property is its own row (החזר הלוואות שותפים); here, the rest.
       return byRefinance(each(t.payoffMemberLoansMinor === 0n ? "סילוק ההלוואות הקיימות" : "סילוק הלוואות",
         "ההלוואה החדשה מסלקת את ההלוואות הפתוחות של הנכס.", t.payoffMinor - t.payoffMemberLoansMinor,
-        (p) => refi(p, p.memberLoanMinor === 0n ? "יתרות היום" : `יתרות היום · בלי הלוואת שותף ${money(p.memberLoanMinor)}`, p.bankLoanMinor)));
+        (p) => ({ hint: p.memberLoanMinor === 0n ? "יתרות היום" : `יתרות היום · בלי הלוואת שותף ${money(p.memberLoanMinor)}`, minor: p.bankLoanMinor })));
     case "closing":
       return byRefinance(each("עלויות סגירה", `${bpText(r.assumptions.closingBp)} מההלוואה החדשה של כל נכס.`, t.closingMinor,
-        (p) => refi(p, `${bpText(r.assumptions.closingBp)} × ${money(p.newLoanMinor)}`, p.closingMinor)));
+        (p) => ({ hint: `${bpText(r.assumptions.closingBp)} × ${money(p.newLoanMinor)}`, minor: p.closingMinor })));
     case "cash":
       return byRefinance(each("כסף שמשתחרר", "הלוואה חדשה, פחות הסילוק, פחות עלויות הסגירה. נכס שלא משחרר כסף לא ממוחזר.", t.cashOutMinor,
-        (p) => refi(p, `${money(p.newLoanMinor)} − ${money(p.loanBalanceMinor)} − ${money(p.closingMinor)}`, p.cashOutMinor)));
+        (p) => ({ hint: `${money(p.newLoanMinor)} − ${money(p.loanBalanceMinor)} − ${money(p.closingMinor)}`, minor: p.cashOutMinor })));
     case "share": {
       const whole = mode === "sell" ? t.equityMinor : t.cashOutMinor;
       return {
@@ -187,7 +186,7 @@ export function DrillSheet({ drill, mode, onOpenChange, result, currency, search
   let restRows: ReactNode = null;
   const row = (line: Line) => {
     const p = line.property;
-    const common = { title: line.title, hint: line.hint, agorot: line.minor, currency, loss: line.minor < 0n } as const;
+    const common = { title: line.title, hint: line.hint, agorot: line.minor, currency, loss: line.minor < 0n, muted: line.muted } as const;
     if (p != null && editing != null) {
       return <ListRow key={line.key} variant="project" {...common} onClick={() => { editing(p.projectId); }} />;
     }
@@ -208,8 +207,8 @@ export function DrillSheet({ drill, mode, onOpenChange, result, currency, search
             <Amount agorot={d.total} currency={currency} loss={d.total < 0n} />
           </p>
           {d.rest == null ? null : (
-            <section className="ui-msr-drill-rest" aria-label={d.rest.title}>
-              <h3 className="t-section">{d.rest.title}</h3>
+            <section className="ui-msr-drill-rest" aria-labelledby="msr-drill-rest">
+              <h3 id="msr-drill-rest" className="t-section">{d.rest.title}</h3>
               <List>{restRows}</List>
               <p className="ui-msr-drill-total ui-msr-drill-rest-total">
                 <span>סה״כ, לא נספר</span>
