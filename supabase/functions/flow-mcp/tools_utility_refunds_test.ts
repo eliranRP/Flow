@@ -16,7 +16,7 @@ const LISTED = {
   bills: [{
     bill_transaction_id: BILL, project_id: PROJECT, project_name: "Example Oak House", supplier_id: SUPPLIER,
     supplier_name: "Example Power Co", currency: "ILS", category_id: null, category_name: null, amount_minor: 10000,
-    doc_date: "2026-03-05", days: 117, state: "suggested", source: null, rule: "bill", group_bill_transaction_ids: [BILL],
+    doc_date: "2026-03-05", days: 117, state: "refunded", source: "owner", rule: null, group_bill_transaction_ids: [BILL],
     no_rent: false, wrong_category: true, keep_category: false, refiled: false,
     payment: {
       transaction_id: PAYMENT, doc_date: "2026-03-20", amount_minor: 10000, currency: "ILS", description: "Example refund",

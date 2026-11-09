@@ -1,12 +1,12 @@
--- FLOW-1134 (decision 0265): utility bills the tenant never paid back. The match on read (the three
--- amount rules, the window, the category rule for auto), the owner's answers (matched, rejected, seen,
+-- FLOW-1134 (decision 0265): utility bills the tenant never paid back. The match on read (FLOW-1143: exact
+-- amounts only, in the bill's category, rule 1 and rule 2; Flow suggests nothing), the owner's answers (matched, rejected, seen,
 -- taken back), who pays, a month with no rent, mark all as seen, the refile and its undo, the MCP writes
 -- and their undo, a viewer and another company refused. Every read passes its as-of date.
 -- Invented names, ids and @example.com emails only. Amounts are agorot.
 
 begin;
 
-select plan(124);
+select plan(125);
 
 do $users$
 begin
@@ -66,9 +66,14 @@ insert into ur_lines values
   ('rent3', 'income', 'oak', 'rent', null, '2026-03-01', 200000),
   ('rent4', 'income', 'oak', 'rent', null, '2026-04-01', 200000),
   ('rent5', 'income', 'oak', 'rent', null, '2026-05-01', 200000),
-  -- Rule 1, auto: the bill's amount within one unit, filed to the bill's category.
+  -- Rule 1, auto: the bill's exact amount, filed to the bill's category.
   ('e1', 'expense', 'oak', 'power', 'electric', '2026-03-05', 10000),
-  ('pe1', 'income', 'oak', 'power', null, '2026-03-20', 10050),
+  ('pe1', 'income', 'oak', 'power', null, '2026-03-20', 10000),
+  -- FLOW-1143: one agora off, and the exact amount in another category: neither counts.
+  ('e5', 'expense', 'oak', 'power', 'water', '2026-02-25', 3300),
+  ('pe5', 'income', 'oak', 'power', null, '2026-03-02', 3301),
+  ('g3', 'expense', 'oak', 'gas', 'gasco', '2026-02-20', 4500),
+  ('pg3', 'income', 'oak', 'power', null, '2026-03-01', 4500),
   -- Rule 1 in another category, on no property: a suggestion.
   ('g1', 'expense', 'oak', 'gas', 'gasco', '2026-03-10', 7000),
   ('pg1', 'income', null, 'other_income', null, '2026-03-25', 7000),
@@ -185,14 +190,15 @@ select tests.authenticate_as('ur_owner');
 -- The match.
 select is(pg_temp.st('e1'), 'refunded/bill>pe1', 'rule 1 in the bill''s category counts by itself');
 select is(pg_temp.bill('e1', '2026-06-30')->>'source', 'auto', 'it is counted by Flow (source auto)');
-select is(pg_temp.st('g1'), 'suggested/bill>pg1', 'rule 1 in another category, on no property, is a suggestion');
-select is(pg_temp.bill('g1', '2026-06-30')->>'wrong_category', 'true', 'the suggested payment is flagged as filed elsewhere');
+select is(pg_temp.st('g1'), 'not_refunded', 'the amount in another category, on no property, is neither counted nor suggested');
+select is(pg_temp.st('g3'), 'not_refunded', 'the exact amount on the property in another category is neither counted nor suggested');
+select is(pg_temp.st('e5'), 'not_refunded', 'one agora off is not an exact match');
 select is(pg_temp.st('e2') || ' ' || pg_temp.st('g2'), 'refunded/bills>p2 refunded/bills>p2',
   'rule 2: two bills of the month together, all in the payment''s category, count by themselves');
-select is(pg_temp.st('e0') || ' ' || pg_temp.st('g0'), 'suggested/bills>p0 suggested/bills>p0',
-  'rule 2 with bills in two categories is a suggestion');
+select is(pg_temp.st('e0') || ' ' || pg_temp.st('g0'), 'not_refunded not_refunded',
+  'rule 2 with bills in two categories is not counted');
 select is(jsonb_array_length(pg_temp.bill('e2', '2026-06-30')->'group_bill_transaction_ids'), 2, 'the group names both bills');
-select is(pg_temp.st('e3'), 'suggested/rent_and_bills>p3', 'rule 3: the usual rent plus the bill is always a suggestion');
+select is(pg_temp.st('e3'), 'not_refunded', 'the rent plus the bill is not counted (FLOW-1143: rule 3 is gone)');
 select is(pg_temp.st('w1'), 'not_refunded', 'a payment more than a month before the bill, or after the as-of date, does not count');
 select is(pg_temp.st('w1', '2026-07-10'), 'refunded/bill>pw_late', 'the late payment counts once the as-of date reaches it');
 select is(pg_temp.st('e4'), 'waiting', 'a bill 20 days old with no refund is still waiting');
@@ -205,20 +211,20 @@ select is(pg_temp.st('rent1'), 'absent', 'income lines are not bills');
 select is(pg_temp.st('trash1'), 'waiting', 'a line paid with a card named after the property and utilities makes a utility');
 select is(pg_temp.st('net_card'), 'absent', 'a card named after the property with no utilities word does not');
 select is(pg_temp.st('trash1', '2026-07-30'), 'not_refunded', 'an ILS payment never refunds a USD bill');
-select is(pg_temp.st('be') || ' ' || pg_temp.st('bg'), 'suggested/rent_and_bills>pb suggested/rent_and_bills>pb',
-  'the rent plus two bills of two categories is one suggestion for both');
+select is(pg_temp.st('be') || ' ' || pg_temp.st('bg'), 'not_refunded not_refunded',
+  'the rent plus two bills of two categories is not counted');
 
 -- The app's list: what asks for an answer.
 select is(
   (select string_agg((select x.label from pg_temp.ur x where x.id = (b->>'bill_transaction_id')::uuid), ' '
      order by o)
    from jsonb_array_elements(public.list_utility_refunds(pg_temp.uid('oak'), '2026-06-30')->'bills') with ordinality e(b, o)),
-  'e0 g0 g1 e3 w1', 'the app''s list for Oak: the suggestions first, then the bills not refunded');
+  'e0 g0 w1 g3 e5 g1 e3', 'the app''s list for Oak: the bills not refunded, oldest first');
 select is(public.count_utility_refunds('2026-06-30'),
-  jsonb_build_object('as_of', '2026-06-30', 'not_refunded_count', 4,
-    'not_refunded_by_currency', jsonb_build_array(jsonb_build_object('currency', 'ILS', 'amount_minor', 20100)),
-    'suggested_count', 6),
-  'count_utility_refunds: the bills not refunded (w1, elm_e, elm_e2, elm_g) with their sum, and the suggestions');
+  jsonb_build_object('as_of', '2026-06-30', 'not_refunded_count', 12,
+    'not_refunded_by_currency', jsonb_build_array(jsonb_build_object('currency', 'ILS', 'amount_minor', 58900)),
+    'suggested_count', 0),
+  'count_utility_refunds: the bills not refunded with their sum; no suggestions');
 
 -- Who pays.
 select is(public.set_utility_payer(pg_temp.uid('elm'), pg_temp.uid('gasco'), 'ILS', 'company')->'prior', 'null'::jsonb,
@@ -242,14 +248,14 @@ select is(public.set_utility_payer(pg_temp.uid('elm'), pg_temp.uid('net'), 'ILS'
   jsonb_build_object('payer', 'tenant', 'added', true), 'a null payer removes the row and returns what it was');
 
 -- The answers.
-select is(public.answer_utility_refund(pg_temp.uid('g1'), 'rejected', pg_temp.uid('pg1'))->>'state', 'rejected', 'the owner rejects a suggestion');
-select is(pg_temp.st('g1'), 'not_refunded', 'a rejected pair is never suggested again');
-select is(public.answer_utility_refund(pg_temp.uid('g1'), null, pg_temp.uid('pg1'))->>'prior_state', null,
+select is(public.answer_utility_refund(pg_temp.uid('e2'), 'rejected', pg_temp.uid('p2'))->>'state', 'rejected', 'the owner rejects a pair Flow counted');
+select is(pg_temp.st('e2') || ' ' || pg_temp.st('g2'), 'not_refunded not_refunded', 'a rejected pair is never counted again');
+select is(public.answer_utility_refund(pg_temp.uid('e2'), null, pg_temp.uid('p2'))->>'prior_state', null,
   'taking the rejection back');
-select is(pg_temp.st('g1'), 'suggested/bill>pg1', 'the pair is suggested again');
+select is(pg_temp.st('e2'), 'refunded/bills>p2', 'the pair counts again');
 select is(public.answer_utility_refund(pg_temp.uid('e1'), null)->>'state', 'rejected',
   'taking back an auto-counted refund records the pair as rejected');
-select is(pg_temp.st('e1'), 'not_refunded', 'so it is neither counted nor suggested again');
+select is(pg_temp.st('e1'), 'not_refunded', 'so it is not counted again');
 select is(public.answer_utility_refund(pg_temp.uid('e1'), null, pg_temp.uid('pe1'))->>'state', null, 'removing that rejection');
 select is(pg_temp.st('e1'), 'refunded/bill>pe1', 'counts by itself again');
 select is(public.answer_utility_refund(pg_temp.uid('elm_e2'), 'seen')->>'prior_state', null, 'the owner closes a bill as seen');
@@ -266,12 +272,15 @@ select throws_ok(format('select public.answer_utility_refund(%L, %L, %L)', pg_te
 select throws_ok(format('select public.answer_utility_refund(%L, %L)', pg_temp.uid('rent1'), 'seen'),
   'P0001', 'not a utility bill', 'only a utility''s bill takes an answer');
 
--- Mark all as seen: Oak's open not-refunded bills, suggestions left open.
+-- Mark all as seen: Oak's open not-refunded bills; a bill still waiting stays open.
 select is(public.mark_utility_refunds_seen(pg_temp.uid('oak'), '2026-06-30')->'bill_transaction_ids',
-  to_jsonb(array[pg_temp.uid('w1')]), 'mark_utility_refunds_seen closes Oak''s not-refunded bills and returns them');
-select is(pg_temp.st('w1') || ' ' || pg_temp.st('g1'), 'seen suggested/bill>pg1', 'the suggestion stays open');
-select is(public.unmark_utility_refunds_seen(array[pg_temp.uid('w1'), pg_temp.uid('g1')])->'bill_transaction_ids',
-  to_jsonb(array[pg_temp.uid('w1')]), 'unmark_utility_refunds_seen takes them back');
+  to_jsonb(array[pg_temp.uid('e0'), pg_temp.uid('g0'), pg_temp.uid('w1'), pg_temp.uid('g3'), pg_temp.uid('e5'),
+    pg_temp.uid('g1'), pg_temp.uid('e3')]),
+  'mark_utility_refunds_seen closes Oak''s not-refunded bills and returns them');
+select is(pg_temp.st('w1') || ' ' || pg_temp.st('e4'), 'seen waiting', 'a bill still waiting stays open');
+select is(jsonb_array_length(public.unmark_utility_refunds_seen(array[pg_temp.uid('e0'), pg_temp.uid('g0'), pg_temp.uid('w1'),
+    pg_temp.uid('g3'), pg_temp.uid('e5'), pg_temp.uid('g1'), pg_temp.uid('e3'), pg_temp.uid('e4')])->'bill_transaction_ids'), 7,
+  'unmark_utility_refunds_seen takes them back');
 select is(pg_temp.st('w1'), 'not_refunded', 'the bill is open again');
 
 -- The one-tap fix: the owner says yes to a payment filed elsewhere, then moves it.

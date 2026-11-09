@@ -83,11 +83,11 @@ select isnt(pg_temp.bill('cedar_bill'), null,
   'a bill under "מים וביוב", a child of "12 חשבונות שוטפים", is a utility''s bill');
 select is(pg_temp.bill('cedar_bill')->>'no_rent', 'false',
   'rent under "הכנסות שכירות" in the bill''s month: not a month with no rent');
-select is((pg_temp.bill('cedar_bill')->>'state') || '/' || (pg_temp.bill('cedar_bill')->>'rule'), 'suggested/rent_and_bills',
-  'the usual rent from "הכנסות שכירות" plus the bill matches (rule 3)');
-select is((pg_temp.bill('cedar_bill')->'payment'->>'transaction_id')::uuid, pg_temp.ucid('cedar_pay'), 'with the rent payment');
+select is(pg_temp.bill('cedar_bill')->>'state', 'not_refunded',
+  'the rent plus the bill is not counted (FLOW-1143: only exact matches in the bill''s category)');
+select is(pg_temp.bill('cedar_bill')->'payment', 'null'::jsonb, 'and no payment is suggested');
 select is(pg_temp.bill('pine_bill')->>'no_rent', 'true', '"פיקדונות משוכרים" is not rent: a month with only deposits has no rent');
-select is(pg_temp.bill('pine_bill')->>'state', 'not_refunded', 'a deposit plus the bill is not the usual rent plus the bill');
+select is(pg_temp.bill('pine_bill')->>'state', 'not_refunded', 'a deposit plus the bill is not counted either');
 
 select isnt(pg_temp.bill('parent_bill'), null, 'a bill filed straight under "12 חשבונות שוטפים" is a utility''s bill');
 select is(pg_temp.bill('acct_bill'), null, '"שירותי הנהלת חשבונות" is not the bills'' tree: the accountant is no utility');
