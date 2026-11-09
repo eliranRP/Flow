@@ -97,6 +97,13 @@ export const UnassignedLoading: Story = {
       <ProjectUnassignedScreen />
     </StoryRoute>
   ),
+  // FLOW-1138: after 300ms, the figure, the note and the lines by month.
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("טוען…")).toBeInTheDocument();
+    await expect(canvasElement.querySelector(".ui-skel-lines-figure")).not.toBeNull();
+    await expect(canvasElement.querySelectorAll(".ui-skel-group")).toHaveLength(2);
+    await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
 };
 
 export const UnassignedFailed: Story = {

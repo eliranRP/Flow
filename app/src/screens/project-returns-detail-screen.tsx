@@ -16,6 +16,7 @@ import { RETURNS_EMPTY, useReturnsPage, type RehabRead, type ReturnsSample } fro
 import type { PropertyReturns, RehabRow } from "./project-returns-data";
 import { PAGE_LEARN } from "./project-returns-learn";
 import { LearnButton } from "./project-returns-learn-sheet";
+import { ReturnsSkeleton } from "./project-skeletons";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451: a metric's page (board ConceptAMetricCoc) and a part's page (board
@@ -85,6 +86,7 @@ export function PropertyMetricScreen({ sample, base: baseProp, learnOpen = false
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
+      loading={<ReturnsSkeleton />}
       // FLOW-1091: a failed or offline load shows the full failed card, as the investment page does.
       failed={(retry, offline) => <PageLoadFailed title="החישוב לא נטען" offline={offline} onRetry={retry} />}
     >
@@ -211,6 +213,7 @@ export function PropertyPartScreen({ sample, base: baseProp }: { sample?: Return
       phase={page.phase}
       onRetry={page.retry}
       empty={RETURNS_EMPTY}
+      loading={<ReturnsSkeleton />}
       // FLOW-1091: a failed or offline load shows the full failed card, as the investment page does.
       failed={(retry, offline) => <PageLoadFailed title="החישוב לא נטען" offline={offline} onRetry={retry} />}
     >

@@ -344,6 +344,11 @@
   font-weight: var(--type-sheet-weight);
 }
 
+/* FLOW-1138: a row's name and hint bars in the returns skeleton, 4px apart. */
+.ui-ret-calc .ui-ret-skel-text {
+  gap: var(--space-1);
+}
+
 /* The months under the calculation, one sticky head each. */
 .ui-ret-lines {
   display: flex;
