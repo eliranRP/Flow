@@ -25,18 +25,20 @@ import { BackButton } from "../ui/back";
 import { BandLoadFailed, useOnline } from "../ui/band-states";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
-import { SectionHead } from "../ui/layout";
 import { FocusTitle } from "../ui/focus-title";
 import { ScreenHeader } from "../ui/screen-header";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
-import { ListSkeleton, Skeleton } from "../ui/skeleton";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
+import { Card } from "../ui/card";
+import { List, ListRow } from "../ui/list-row";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { useForecastOverrides, useForecastSkip } from "../forecast-skip";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { investmentLoansRow, ProjectCashOverview, ProjectReportsLink } from "./project-cash-screens";
+import { LineGroupsSkeleton } from "./project-skeletons";
 import type { ProjectLink } from "./project-page-cards";
 import { cashMonthName } from "../cash";
 import { resolveProjectKind } from "../project-list";
@@ -81,12 +83,18 @@ function ProjectLoading({ projectId, search, example }: { projectId: string; sea
           </div>
         }
       />
-      <div className="ui-page-pad ui-stack">
-        <Skeleton width="lg" />
-        <Skeleton width="md" />
-      </div>
-      <SectionHead title="הוצאות לפי קטגוריה" />
-      <ListSkeleton />
+      {/* FLOW-1138: the links' card, then the month's lines, as the loaded page has them. */}
+      <DelayedSkeleton>
+        <div className="ui-project-stack" aria-hidden="true">
+          <Card className="ui-project-card ui-project-links">
+            <List>
+              <ListRow variant="skeleton" />
+              <ListRow variant="skeleton" />
+            </List>
+          </Card>
+        </div>
+        <LineGroupsSkeleton status={false} />
+      </DelayedSkeleton>
       {holdWrites ? null : (
         <Sheet open={menu} onOpenChange={setMenu} title="עוד">
           <p className="t-caption t-muted">הפרויקט עדיין נטען.</p>
@@ -187,6 +195,8 @@ export function ProjectDetailScreen({
   const forecastSkip = useForecastSkip(thisMonth, skipMonth, overrides.data ?? null);
   const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? "";
   const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? "", sample == null && linesMonth !== "");
+  // The schedule and the month's lines are read only for a live page (not a sample or a preview).
+  const linesLive = sample == null && preview === "off";
   const blocked = useBlockedPreview();
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
@@ -294,6 +304,8 @@ export function ProjectDetailScreen({
     value: figures?.valueMinor != null,
   });
   const lifetimeRow = (lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency);
+  // FLOW-1138: while the lifetime read is out, its row keeps its place with a bar for the figure.
+  const lifetimeLoading = sample == null && lifetime.data == null && lifetime.isLoading;
   const investment = investmentLoansRow(investmentData, project);
   // A rental's card is its returns: the investment summary, once its purchase or value is entered.
   const summary = kind === "rental" && figures != null && (figures.purchaseMinor != null || figures.valueMinor != null) ? figures : null;
@@ -306,17 +318,19 @@ export function ProjectDetailScreen({
   const firstMonth = monthRow?.first_month?.slice(0, 7) ?? null;
   const links: ProjectLink[] = [
     ...(investment == null || summary != null ? [] : [{ id: "investment", title: "השקעה והלוואות", hint: investment.hint ?? "מחיר קנייה, שווי והלוואות", text: investment.figure, href: sectionHref("investment") }]),
-    ...(lifetimeRow == null ? [] : [{
+    ...(lifetimeRow == null && !lifetimeLoading ? [] : [{
       id: "since",
       title: "רווח מתחילת הפרויקט",
       hint: firstMonth == null ? "כל התקופה עד היום" : `מאז ${cashMonthName(firstMonth, new Date(0))}`,
-      figures: lifetimeRow.map((row) => ({ currency: row.currency, minor: row.profit_minor })),
+      figures: lifetimeRow?.map((row) => ({ currency: row.currency, minor: row.profit_minor })),
+      loading: lifetimeRow == null,
       href: `/projects/${project.id}/profit${withPeriodSearch(search, ALL_PERIOD)}`,
     }]),
     ...(nextForecast == null && !nextLoading ? [] : [{
       id: "next",
       title: "צפוי לחודש הבא",
-      hint: nextLoading ? "מחשבים…" : "תזרים צפוי, לפי החודשים הקודמים",
+      hint: "תזרים צפוי, לפי החודשים הקודמים",
+      loading: nextLoading,
       text: nextForecast == null ? undefined : formatAmountText(nextForecast.netMinor, next.currency, { plus: nextForecast.netMinor > 0n, direction: nextForecast.netMinor > 0n ? "income" : undefined }),
       href: `/projects/${project.id}/profit/next${search}`,
     }]),
@@ -331,8 +345,11 @@ export function ProjectDetailScreen({
       kindCard={kindCard}
       links={links}
       fresh={fresh}
-      schedule={sampleSchedule ?? schedule.data ?? []}
-      lines={sampleLines ?? (monthLines.data == null ? [] : [...monthLines.data.counted, ...monthLines.data.kept])}
+      schedule={sampleSchedule ?? schedule.data ?? (linesLive ? null : [])}
+      lines={sampleLines ?? (monthLines.data != null
+        ? [...monthLines.data.counted, ...monthLines.data.kept]
+        // FLOW-1138: null while the month's lines are still to come; a month with none to read has none.
+        : linesLive && !(cash.data != null && (linesMonth === "" || cash.data.base_currency === "")) ? null : [])}
       linesRetry={schedule.isError || monthLines.isError ? () => { void schedule.refetch(); void monthLines.refetch(); } : undefined}
       attention={projectAttentionRows({
         projectId: project.id,

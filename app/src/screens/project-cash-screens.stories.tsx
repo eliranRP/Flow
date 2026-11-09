@@ -9,6 +9,7 @@ import { StoryRoute } from "../ui/story-route";
 import { restoreAll } from "../ui/attention-dismiss";
 import { projectLinesSample, projectScheduleSample } from "./project-lines-sample";
 import { ProjectDetailScreen } from "./flow-screens";
+import { ProjectCashOverview } from "./project-cash-screens";
 
 /** FLOW-419 (owner's option A "Like Home"): a project opens on its cash. Invented figures. */
 
@@ -121,4 +122,46 @@ export const ProjectCashNoInvestment: Story = {
       <ProjectDetailScreen example={exampleOnBand} sample={{ ...project, loans: [] }} sampleCash={cash} sectionTo={sectionTo} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-1138: the links whose figures are still out: a bar holds each figure's place. */
+const loadingLinks = [
+  { id: "since", title: "רווח מתחילת הפרויקט", hint: "כל התקופה עד היום", loading: true, href: "/projects/p-c/profit" },
+  { id: "next", title: "צפוי לחודש הבא", hint: "תזרים צפוי, לפי החודשים הקודמים", loading: true, href: "/projects/p-c/profit/next" },
+];
+
+/** FLOW-1138: the band's figure, the links' figures and the month's lines in their skeletons, never "none yet". */
+async function expectLinesSkeleton(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await expect(await canvas.findByText("טוען…")).toBeInTheDocument();
+  await expect(canvasElement.querySelectorAll(".ui-project-lines .ui-skel-group")).toHaveLength(2);
+  await expect(canvas.queryByText("אין עדיין תנועות החודש.")).toBeNull();
+  await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+}
+
+/** FLOW-1138: the project is in, its cash, the charges and the month's lines are not yet. */
+export const ProjectCashLoading: Story = {
+  name: "Project, the cash and lines loading",
+  render: () => (
+    <StoryRoute entry="/projects/p-c" tabs>
+      <ProjectCashOverview project={project} data={null} search="" stateLine={null} menu={null} links={loadingLinks} schedule={null} lines={null} now={new Date()} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectLinesSkeleton(canvasElement);
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: /^רווח מתחילת הפרויקט/ })).toBeInTheDocument();
+    await expect(canvas.queryByText("מחשבים…")).toBeNull();
+  },
+};
+
+/** FLOW-1138: the cash is in, the month's lines are still out. */
+export const ProjectCashLinesLoading: Story = {
+  name: "Project, the month's lines loading",
+  render: () => (
+    <StoryRoute entry="/projects/p-c" tabs>
+      <ProjectCashOverview project={project} data={cash} search="" stateLine={null} menu={null} links={loadingLinks} schedule={schedule} lines={null} now={new Date()} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => { await expectLinesSkeleton(canvasElement); },
 };

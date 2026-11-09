@@ -1,6 +1,7 @@
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
 import { List, ListRow } from "../ui/list-row";
+import { Skeleton } from "../ui/skeleton";
 
 type Figure = { currency: string; minor: bigint };
 
@@ -23,8 +24,11 @@ function Figures({ figures }: { figures: readonly Figure[] }) {
   );
 }
 
-/** One row of the project page's links: a name, a line under it, an optional figure, and where it opens. */
-export type ProjectLink = { id: string; title: string; hint?: string; figures?: readonly Figure[]; text?: string; href: string };
+/**
+ * One row of the project page's links: a name, a line under it, an optional figure, and where it opens.
+ * `loading`: the figure is still out, so a bar holds its place (FLOW-1138).
+ */
+export type ProjectLink = { id: string; title: string; hint?: string; figures?: readonly Figure[]; text?: string; loading?: boolean; href: string };
 
 /**
  * FLOW-1044 (board V3-Project): the rows under the kind's card, each one tap to its page: השקעה והלוואות,
@@ -41,7 +45,7 @@ export function ProjectLinks({ links }: { links: readonly ProjectLink[] }) {
             variant="item"
             title={link.title}
             hint={link.hint}
-            meta={link.figures != null && link.figures.length > 0
+            meta={link.loading === true ? <Skeleton width="sm" /> : link.figures != null && link.figures.length > 0
               ? <Figures figures={link.figures} />
               : link.text == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{link.text}</bdi>}
             href={link.href}
