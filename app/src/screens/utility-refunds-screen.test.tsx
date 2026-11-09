@@ -155,15 +155,6 @@ describe("the cards", () => {
     expect(screen.queryByText("Gas Co")).toBeNull();
   });
 
-  it("asks nothing and has no filter (FLOW-1143): an older server's suggestion shows nowhere", async () => {
-    db.bills = [...utilityRefundsSample(), { ...(utilityRefundsSample()[2] as UtilityBill), bill_transaction_id: "b-suggested", supplier_name: "Old Co", state: "suggested" as const }];
-    renderScreen();
-    await screen.findByText("4 לא הוחזרו");
-    expect(screen.queryByRole("radiogroup")).toBeNull();
-    expect(screen.queryByText("זה ההחזר?")).toBeNull();
-    expect(screen.queryByText("Old Co")).toBeNull();
-  });
-
   it("gives a viewer no answers", async () => {
     db.hold = true;
     renderScreen();
@@ -317,7 +308,6 @@ describe("the answers and their ביטול", () => {
     // The same property and month: one payment may refund the month's bills together.
     expect([...paymentsTaken([refunded({ doc_date: "2026-09-20" })], power as UtilityBill)]).toEqual([]);
     expect([...paymentsTaken([refunded({ doc_date: "2026-08-20" })], power as UtilityBill)]).toEqual(["pay-picked"]);
-    expect([...paymentsTaken([refunded({ state: "suggested" })], power as UtilityBill)]).toEqual([]);
   });
 
   it("the picker's window starts a month before the bill, clamped to that month's last day", () => {

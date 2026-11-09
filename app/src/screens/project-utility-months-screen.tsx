@@ -87,15 +87,17 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
             <List>
               {current.bills.map((bill) => {
                 const back = bill.state === "refunded";
+                // ראיתי: the owner closed it with nothing to do. Not "לא הוחזר", and no warning.
+                const seen = bill.state === "seen";
                 return (
                   <ListRow
                     key={bill.bill_transaction_id}
                     variant="project"
                     layout="flat"
                     title={bill.supplier_name ?? "ספק"}
-                    hint={[bill.category_name, refundDate(bill.doc_date), back ? "הוחזר" : "לא הוחזר"].filter((part): part is string => part != null).join(" · ")}
-                    tone={back ? undefined : "warning"}
-                    icon={<StatusMark kind={back ? "paid" : "late"} />}
+                    hint={[bill.category_name, refundDate(bill.doc_date), back ? "הוחזר" : seen ? "ראיתי" : "לא הוחזר"].filter((part): part is string => part != null).join(" · ")}
+                    tone={back || seen ? undefined : "warning"}
+                    icon={<StatusMark kind={back ? "paid" : seen ? "once" : "late"} />}
                     agorot={-bill.amount_minor}
                     currency={bill.currency}
                     signed

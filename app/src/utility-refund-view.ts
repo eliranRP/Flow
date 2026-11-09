@@ -186,10 +186,12 @@ export function utilityMonthCurrency(month: UtilityMonth, fallback: string): str
 
 /**
  * FLOW-1144: a month's status. No rent came in ("לא נכנסה שכירות"); or bills are not refunded ("חסר $X", their sum,
- * a bill still waiting included); or every bill is back ("כל החשבונות הוחזרו").
+ * a bill still waiting included); or every bill is back ("כל החשבונות הוחזרו"), or closed with ראיתי
+ * ("כל החשבונות נבדקו": the owner's word is closed, not refunded).
  */
 export function utilityMonthStatus(month: UtilityMonth, currency: string): { ok: boolean; text: string } {
   if (month.rent_lines.length === 0 && month.rent_in === 0n) return { ok: false, text: "לא נכנסה שכירות" };
   if (month.not_refunded > 0n) return { ok: false, text: `חסר ${formatAmountText(month.not_refunded, currency, { detail: true })}` };
+  if (month.bills.some((bill) => bill.state === "seen")) return { ok: true, text: "כל החשבונות נבדקו" };
   return { ok: true, text: "כל החשבונות הוחזרו" };
 }
