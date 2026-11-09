@@ -33,7 +33,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
       "create_project", "create_projects", "update_project", "delete_project", "create_project_group",
       "set_project_group", "set_project_investment", "set_overhead_project",
       "get_property_returns", "get_property_return_lines",
-      "get_member_report", "get_member_share", "set_member_report",
+      "get_member_report", "get_member_share", "set_member_report", "refresh_treasury_yields",
     ],
   },
   {
