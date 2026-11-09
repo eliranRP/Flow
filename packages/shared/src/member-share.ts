@@ -156,6 +156,8 @@ export type MemberShareResult = {
     readonly profitMinor: bigint;
     readonly newLoanMinor: bigint;
     readonly payoffMinor: bigint;
+    /** FLOW-1129: of the payoff, the members' loans on the refinanced properties: repaid to them. */
+    readonly payoffMemberLoansMinor: bigint;
     readonly closingMinor: bigint;
     readonly cashOutMinor: bigint;
     readonly paymentMinor: bigint | null;
@@ -194,6 +196,10 @@ export type MemberShare = {
   /** Their part of the profit. */
   readonly profitMinor: bigint;
   readonly refinanceMinor: bigint;
+  /** FLOW-1129: their own loans on the refinanced properties, which the refinance pays off to them. */
+  readonly refiLoansMinor: bigint;
+  /** refinanceMinor + refiLoansMinor: what a refinance brings them. */
+  readonly refiTotalMinor: bigint;
 };
 
 /** amount × bp / 10000, rounded half to even, either sign. */
@@ -358,6 +364,10 @@ export function computeMemberShare(
   const equityMinor = saleNetMinor - offPropertyMinor;
   const withAllIn = (s: PropertyShare) => s.allInMinor != null;
   const profitMinor = sum((s) => s.profitMinor ?? 0n, withAllIn);
+  // FLOW-1129: a refinance pays off each refinanced property's loans; a member's among them goes back to that member.
+  const refinancedIds = new Set(shares.filter((s) => s.refinances).map((s) => s.projectId));
+  const onRefinanced = counted.filter((l) => l.projectId != null && refinancedIds.has(l.projectId));
+  const refiLoans = (name: string) => onRefinanced.reduce((total, l) => (l.member === name ? total + l.balanceMinor : total), 0n);
   const members = (cfg.members ?? []).map((m): MemberShare => {
     const saleMinor = applyBp(equityMinor, m.ownership_bp);
     const loansMinor = counted.reduce((total, l) => (l.member === m.name ? total + l.balanceMinor : total), 0n);
@@ -369,6 +379,8 @@ export function computeMemberShare(
       saleTotalMinor: saleMinor + loansMinor,
       profitMinor: applyBp(profitMinor, m.ownership_bp),
       refinanceMinor: applyBp(cashOutMinor, m.ownership_bp),
+      refiLoansMinor: refiLoans(m.name),
+      refiTotalMinor: applyBp(cashOutMinor, m.ownership_bp) + refiLoans(m.name),
     };
   });
 
@@ -390,6 +402,7 @@ export function computeMemberShare(
       profitMinor,
       newLoanMinor: sum((s) => s.newLoanMinor, refinanced),
       payoffMinor: sum((s) => s.loanBalanceMinor, refinanced),
+      payoffMemberLoansMinor: onRefinanced.reduce((total, l) => total + l.balanceMinor, 0n),
       closingMinor: sum((s) => s.closingMinor, refinanced),
       cashOutMinor,
       paymentMinor: paymentPpm == null ? null : sum((s) => s.paymentMinor ?? 0n, refinanced),

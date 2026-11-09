@@ -34,9 +34,21 @@ export function TreasuryUpdated({ fetchedAt, onRefresh, busy }: { fetchedAt: str
 
 type Line = { key: string; title: string; hint: string; minor: bigint; property?: PropertyShare; muted?: boolean };
 
-type Drill = { title: string; help: string; lines: Line[]; total: bigint; totalLabel: string };
+/**
+ * FLOW-1129: a refinance row's properties that are not refinanced sit apart, under `rest`, with their own sum, so the
+ * total plainly adds up the lines above it.
+ */
+type Drill = { title: string; help: string; lines: Line[]; total: bigint; totalLabel: string; rest?: { title: string; lines: Line[]; total: bigint } };
 
-const NOT_REFINANCED = "לא ממוחזר, לא נספר";
+const NOT_REFINANCED = "לא ממוחזרים · לא נספרים";
+
+/** The refinanced properties' lines, and the others apart. */
+function byRefinance(drill: Drill): Drill {
+  const counted = drill.lines.filter((l) => l.property?.refinances !== false);
+  const rest = drill.lines.filter((l) => l.property?.refinances === false).map((l) => ({ ...l, muted: true }));
+  if (rest.length === 0) return drill;
+  return { ...drill, lines: counted, rest: { title: NOT_REFINANCED, lines: rest, total: rest.reduce((sum, l) => sum + l.minor, 0n) } };
+}
 
 /** What one row of החישוב is made of. Exported for its tests. */
 export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, currency: string): Drill {
@@ -52,7 +64,11 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
   const withAllIn = props.filter((p) => p.allInMinor != null);
   const propertyName = (id: string | null) => (id == null ? "של החברה" : props.find((p) => p.projectId === id)?.name ?? "");
   const offProperty = r.memberLoans.filter((l) => l.projectId == null);
-  const refi = (p: PropertyShare, hint: string, minor: bigint) => (p.refinances ? { hint, minor } : { hint: `${NOT_REFINANCED} · ${hint}`, minor, muted: true });
+  const refi = (_p: PropertyShare, hint: string, minor: bigint) => ({ hint, minor });
+  // FLOW-1129: on ריפייננס, the members' loans are the ones a refinance pays off.
+  const refiMode = mode === "refi";
+  const memberLoanLines = (refiMode ? r.memberLoans.filter((l) => l.projectId != null && props.some((p) => p.projectId === l.projectId && p.refinances)) : r.memberLoans)
+    .map((l) => ({ key: l.loanId, title: l.name, hint: `${l.member} · ${propertyName(l.projectId)}`, minor: l.balanceMinor }));
   switch (key) {
     case "value":
       return each("שווי הנכסים", "השווי מההערכה האחרונה של כל נכס, כפי שנרשם בעמוד הנכס.", t.valueMinor,
@@ -69,10 +85,12 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
     case "member_loans":
       return {
         title: "הלוואות שותפים",
-        help: "הלוואות ששותף נתן לחברה. במכירה הן מוחזרות לפני חלוקת ההון, ונספרות בסכום של אותו שותף.",
-        total: t.memberLoansMinor,
+        help: refiMode
+          ? "הלוואה ששותף נתן לחברה על נכס שממוחזר: ההלוואה החדשה מסלקת אותה, והכסף חוזר לאותו שותף."
+          : "הלוואות ששותף נתן לחברה. במכירה הן מוחזרות לפני חלוקת ההון, ונספרות בסכום של אותו שותף.",
+        total: refiMode ? t.payoffMemberLoansMinor : t.memberLoansMinor,
         totalLabel: "סה״כ",
-        lines: r.memberLoans.map((l) => ({ key: l.loanId, title: l.name, hint: `${l.member} · ${propertyName(l.projectId)}`, minor: l.balanceMinor })),
+        lines: memberLoanLines,
       };
     case "net": {
       // A member's loan to the company, on no property, is repaid from the whole (FLOW-1124).
@@ -108,7 +126,13 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
         lines: r.members.map((m) => ({ key: m.name, title: m.name, hint: `${bpText(m.ownershipBp)} × ${money(t.profitMinor)}`, minor: m.profitMinor })),
       };
     case "total":
-      return {
+      return refiMode ? {
+        title: "סה״כ לכל שותף",
+        help: "החלק של כל שותף בכסף שמשתחרר, ועוד ההלוואות שנתן לחברה על הנכסים הממוחזרים, שמוחזרות לו בריפייננס.",
+        total: r.members.reduce((sum, m) => sum + m.refiTotalMinor, 0n),
+        totalLabel: "לכל השותפים",
+        lines: r.members.map((m) => ({ key: m.name, title: m.name, hint: `${money(m.refinanceMinor)} + ${money(m.refiLoansMinor)}`, minor: m.refiTotalMinor })),
+      } : {
         title: "סה״כ לכל שותף",
         help: "החלק של כל שותף בהון הנקי, ועוד ההלוואות שנתן לחברה, שמוחזרות במכירה.",
         total: r.members.reduce((sum, m) => sum + m.saleTotalMinor, 0n),
@@ -116,17 +140,19 @@ export function drillOf(key: DrillKey, mode: ReportMode, r: MemberShareResult, c
         lines: r.members.map((m) => ({ key: m.name, title: m.name, hint: `${money(m.saleMinor)} + ${money(m.loansMinor)}`, minor: m.saleTotalMinor })),
       };
     case "loan":
-      return each("הלוואה חדשה", `${bpText(r.assumptions.ltvBp)} מהשווי של כל נכס. נספרים רק נכסים שמשחררים כסף.`, t.newLoanMinor,
-        (p) => refi(p, `${bpText(r.assumptions.ltvBp)} × ${money(p.valueMinor)}`, p.newLoanMinor));
+      return byRefinance(each("הלוואה חדשה", `${bpText(r.assumptions.ltvBp)} מהשווי של כל נכס. נספרים רק נכסים שמשחררים כסף.`, t.newLoanMinor,
+        (p) => refi(p, `${bpText(r.assumptions.ltvBp)} × ${money(p.valueMinor)}`, p.newLoanMinor)));
     case "payoff":
-      return each("סילוק ההלוואות הקיימות", "ההלוואה החדשה מסלקת את ההלוואות הפתוחות של הנכס.", t.payoffMinor,
-        (p) => refi(p, "יתרות היום", p.loanBalanceMinor));
+      // A member's loan on a refinanced property is its own row (החזר הלוואות שותפים); here, the rest.
+      return byRefinance(each(t.payoffMemberLoansMinor === 0n ? "סילוק ההלוואות הקיימות" : "סילוק הלוואות",
+        "ההלוואה החדשה מסלקת את ההלוואות הפתוחות של הנכס.", t.payoffMinor - t.payoffMemberLoansMinor,
+        (p) => refi(p, p.memberLoanMinor === 0n ? "יתרות היום" : `יתרות היום · בלי הלוואת שותף ${money(p.memberLoanMinor)}`, p.bankLoanMinor)));
     case "closing":
-      return each("עלויות סגירה", `${bpText(r.assumptions.closingBp)} מההלוואה החדשה של כל נכס.`, t.closingMinor,
-        (p) => refi(p, `${bpText(r.assumptions.closingBp)} × ${money(p.newLoanMinor)}`, p.closingMinor));
+      return byRefinance(each("עלויות סגירה", `${bpText(r.assumptions.closingBp)} מההלוואה החדשה של כל נכס.`, t.closingMinor,
+        (p) => refi(p, `${bpText(r.assumptions.closingBp)} × ${money(p.newLoanMinor)}`, p.closingMinor)));
     case "cash":
-      return each("כסף שמשתחרר", "הלוואה חדשה, פחות הסילוק, פחות עלויות הסגירה. נכס שלא משחרר כסף לא ממוחזר.", t.cashOutMinor,
-        (p) => refi(p, `${money(p.newLoanMinor)} − ${money(p.loanBalanceMinor)} − ${money(p.closingMinor)}`, p.cashOutMinor));
+      return byRefinance(each("כסף שמשתחרר", "הלוואה חדשה, פחות הסילוק, פחות עלויות הסגירה. נכס שלא משחרר כסף לא ממוחזר.", t.cashOutMinor,
+        (p) => refi(p, `${money(p.newLoanMinor)} − ${money(p.loanBalanceMinor)} − ${money(p.closingMinor)}`, p.cashOutMinor)));
     case "share": {
       const whole = mode === "sell" ? t.equityMinor : t.cashOutMinor;
       return {
@@ -158,15 +184,18 @@ export function DrillSheet({ drill, mode, onOpenChange, result, currency, search
   const d = drill == null ? null : drillOf(drill, mode, result, currency);
   const editing = drill === "selling" ? onEditSelling : undefined;
   let rows: ReactNode = null;
+  let restRows: ReactNode = null;
+  const row = (line: Line) => {
+    const p = line.property;
+    const common = { title: line.title, hint: line.hint, agorot: line.minor, currency, loss: line.minor < 0n } as const;
+    if (p != null && editing != null) {
+      return <ListRow key={line.key} variant="project" {...common} onClick={() => { editing(p.projectId); }} />;
+    }
+    return <ListRow key={line.key} variant="project" {...common} href={p == null ? undefined : `${investmentBase(p.projectId)}${search}`} />;
+  };
   if (d != null) {
-    rows = d.lines.map((line) => {
-      const p = line.property;
-      const common = { title: line.title, hint: line.hint, agorot: line.minor, currency, loss: line.minor < 0n } as const;
-      if (p != null && editing != null) {
-        return <ListRow key={line.key} variant="project" {...common} onClick={() => { editing(p.projectId); }} />;
-      }
-      return <ListRow key={line.key} variant="project" {...common} href={p == null ? undefined : `${investmentBase(p.projectId)}${search}`} />;
-    });
+    restRows = d.rest?.lines.map(row) ?? null;
+    rows = d.lines.map(row);
   }
   return (
     <Sheet open={drill != null} onOpenChange={onOpenChange} title={d?.title ?? ""} panelClassName="ui-sheet-wide ui-msr-sheet">
@@ -178,6 +207,16 @@ export function DrillSheet({ drill, mode, onOpenChange, result, currency, search
             <span>{d.totalLabel}</span>
             <Amount agorot={d.total} currency={currency} loss={d.total < 0n} />
           </p>
+          {d.rest == null ? null : (
+            <section className="ui-msr-drill-rest" aria-label={d.rest.title}>
+              <h3 className="t-section">{d.rest.title}</h3>
+              <List>{restRows}</List>
+              <p className="ui-msr-drill-total ui-msr-drill-rest-total">
+                <span>סה״כ, לא נספר</span>
+                <Amount agorot={d.rest.total} currency={currency} loss={d.rest.total < 0n} />
+              </p>
+            </section>
+          )}
           {editing == null ? null : <Button variant="secondary" full onClick={() => { editing(null); }}>שינוי האחוז לכל הנכסים</Button>}
         </>
       )}

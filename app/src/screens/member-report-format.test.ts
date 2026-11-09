@@ -63,14 +63,14 @@ describe("member report formulas", () => {
   });
 
   it("ends the refinance with the cash it frees", () => {
-    expect(refiFormula(result, null, null).rows.at(-1)).toMatchObject({ value: { minor: 13_450_500n } });
+    expect(refiFormula(result, null).rows.at(-1)).toMatchObject({ value: { minor: 13_450_500n } });
   });
 
   it("opens every row's parts: each row names its sheet", () => {
     const member = { name: "Member A", ownershipBp: 5000 };
     expect(saleFormula(result, result.members[0] ?? null).rows.map((r) => r.target)).toEqual(
       ["value", "selling", "loans", "net", "share"].map((sheet) => ({ kind: "sheet", sheet })));
-    expect(refiFormula(result, member, 0n).rows.map((r) => r.target)).toEqual(
+    expect(refiFormula(result, result.members[0] ?? null).rows.map((r) => r.target)).toEqual(
       ["loan", "payoff", "closing", "cash", "share"].map((sheet) => ({ kind: "sheet", sheet })));
     // Before ownership, the company's whole opens the net (or the cash freed).
     expect(saleFormula(result, null).rows.at(-1)?.target).toEqual({ kind: "sheet", sheet: "net" });
@@ -96,11 +96,11 @@ describe("a row's parts", () => {
     expect(drillOf("value", "sell", result, "USD").lines[0]?.hint).toBe("הערכה מ־01/11/2026");
   });
 
-  it("marks a property that is not refinanced, and leaves it out of the total", () => {
+  it("puts a property that is not refinanced apart, and leaves it out of the total", () => {
     const deep = computeMemberShare(MEMBER_CONFIG, [{ ...MEMBER_PROPERTIES[0], loan_balance_minor: 40_000_000n } as typeof MEMBER_PROPERTIES[number], ...MEMBER_PROPERTIES.slice(1)]);
     const cash = drillOf("cash", "refi", deep, "USD");
-    expect(cash.lines[0]).toMatchObject({ muted: true });
-    expect(cash.lines[0]?.hint.startsWith("לא ממוחזר, לא נספר")).toBe(true);
+    expect(cash.lines.map((l) => l.title)).toEqual(["Juniper Ct", "Sable Ct"]);
+    expect(cash.rest?.lines.map((l) => l.title)).toEqual(["Birch Lane"]);
     expect(cash.total).toBe(deep.totals.cashOutMinor);
   });
 
@@ -228,5 +228,30 @@ describe("all-in, profit and the members' loans (FLOW-1124)", () => {
     expect(moved.map((m) => m.loanIds)).toEqual([[], ["d0000000-0000-4000-8000-000000000002"], ["d0000000-0000-4000-8000-000000000001"]]);
     expect(draftMembers(withLoanOwner(moved, "d0000000-0000-4000-8000-000000000001", -1))[2]).toEqual({ name: "Member C", ownership_bp: 2000 });
     expect(draftMembers(draft)[0]).toEqual({ name: "Member A", ownership_bp: 5000, loan_ids: ["d0000000-0000-4000-8000-000000000001"] });
+  });
+});
+
+describe("a refinance pays a member's loan back (FLOW-1129)", () => {
+  const withLoans = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES, [], MEMBER_LOANS);
+  const b = withLoans.members[1] ?? null;
+
+  it("shows the members' loans apart from the payoff, then the member's total", () => {
+    const refi = refiFormula(withLoans, b);
+    expect(refi.rows.map((r) => r.label)).toEqual([
+      "הלוואה חדשה", "סילוק הלוואות", "החזר הלוואות שותפים", "עלויות סגירה", "כסף שמשתחרר", "החלק של Member B", "הלוואות של Member B", "סה״כ ל־Member B",
+    ]);
+    expect(refi.rows.find((r) => r.key === "member_loans")?.value).toMatchObject({ minor: -2_000_000n });
+    expect(refi.rows.at(-1)?.value).toMatchObject({ minor: (b?.refinanceMinor ?? 0n) + 2_000_000n });
+  });
+
+  it("puts the properties not refinanced apart, with their own sum", () => {
+    const deep = computeMemberShare(MEMBER_CONFIG, [{ ...MEMBER_PROPERTIES[0], loan_balance_minor: 40_000_000n } as typeof MEMBER_PROPERTIES[number], ...MEMBER_PROPERTIES.slice(1)], [], MEMBER_LOANS);
+    const payoff = drillOf("payoff", "refi", deep, "USD");
+    expect(payoff.lines.map((l) => l.title)).toEqual(["Juniper Ct", "Sable Ct"]);
+    expect(payoff.lines.reduce((sum, l) => sum + l.minor, 0n)).toBe(payoff.total);
+    expect(payoff.rest).toMatchObject({ title: "לא ממוחזרים · לא נספרים", total: 40_000_000n });
+    expect(payoff.lines[0]?.hint).toBe("יתרות היום · בלי הלוואת שותף $20,000");
+    expect(drillOf("member_loans", "refi", deep, "USD").lines.map((l) => l.title)).toEqual(["Member B note"]);
+    expect(drillOf("total", "refi", deep, "USD").lines[1]?.minor).toBe(deep.members[1]?.refiTotalMinor);
   });
 });
