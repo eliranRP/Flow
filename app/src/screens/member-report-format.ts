@@ -1,4 +1,4 @@
-import { applyBp, type MemberShareResult, type PropertyShare, type QuoteShare } from "@flow/shared";
+import { applyBp, type MemberShare, type MemberShareResult, type PropertyShare, type QuoteShare } from "@flow/shared";
 import type { Formula, FormulaRow } from "./project-returns-info";
 
 /* ------------------------------------------------------------------------------------------------
@@ -59,10 +59,20 @@ function shareRow(key: string, whole: bigint, member: Share, minor: bigint | nul
   return money(key, "=", `החלק של ${member.name}`, minor ?? 0n, bpText(member.ownershipBp), true);
 }
 
-/** FLOW-1121: the part of החישוב a row opens: its figure per property (or per member), and the total. */
-export type DrillKey = "value" | "selling" | "loans" | "net" | "share" | "loan" | "payoff" | "closing" | "cash";
+/**
+ * FLOW-1121: the part of החישוב a row opens: its figure per property (or per member, or per loan), and the total.
+ * FLOW-1124: the members' loans, a member's total, and the profit's rows.
+ */
+export type DrillKey =
+  | "value" | "selling" | "loans" | "member_loans" | "net" | "share" | "total"
+  | "loan" | "payoff" | "closing" | "cash"
+  | "profit_value" | "profit_selling" | "all_in" | "profit" | "profit_share";
 
-export const DRILL_KEYS: readonly DrillKey[] = ["value", "selling", "loans", "net", "share", "loan", "payoff", "closing", "cash"];
+export const DRILL_KEYS: readonly DrillKey[] = [
+  "value", "selling", "loans", "member_loans", "net", "share", "total",
+  "loan", "payoff", "closing", "cash",
+  "profit_value", "profit_selling", "all_in", "profit", "profit_share",
+];
 
 /** The rows open their parts: each row's sheet (the page's resolver opens it). */
 function opens(row: FormulaRow, sheet: DrillKey): FormulaRow {
@@ -84,19 +94,55 @@ export function sellingHint(properties: readonly PropertyShare[]): string {
 }
 
 /**
- * Sell everything: value − selling costs − loans = net, then the member's part of it. Every row opens its parts,
- * the share too, so it is the last row (FormulaList's result row opens nothing).
+ * Sell everything: value − selling costs − the banks' loans − the members' loans = equity, then the member's part
+ * of it, and (FLOW-1124) their own loans back: their total. Every row opens its parts, so the last row is a row
+ * too (FormulaList's result row opens nothing).
  */
-export function saleFormula(r: MemberShareResult, member: Share, memberMinor: bigint | null): Formula {
+export function saleFormula(r: MemberShareResult, member: MemberShare | null): Formula {
   const t = r.totals;
   const count = r.properties.length;
+  const share: Share = member == null ? null : { name: member.name, ownershipBp: member.ownershipBp };
+  const memberLoans = t.memberLoansMinor === 0n ? [] : [
+    opens(money("member_loans", "−", "החזר הלוואות שותפים", -t.memberLoansMinor, "חוזרות לשותף שנתן אותן"), "member_loans"),
+  ];
+  const own = member == null || t.memberLoansMinor === 0n ? [] : [
+    opens(money("own", "+", `הלוואות של ${member.name}`, member.loansMinor, member.loansMinor === 0n ? "אין" : "חוזרות אליו", true), "member_loans"),
+    opens(money("total", "=", `סה״כ ל־${member.name}`, member.saleTotalMinor, "חלק בהון + הלוואות", true), "total"),
+  ];
   return {
     rows: [
       opens(money("value", "", "שווי הנכסים", t.valueMinor, `${String(count)} נכסים`), "value"),
       opens(money("selling", "−", "עלויות מכירה", -t.sellingCostMinor, sellingHint(r.properties)), "selling"),
-      opens(money("loans", "−", "סילוק הלוואות", -t.loanBalanceMinor, "יתרות היום"), "loans"),
-      ...(member == null ? [] : [opens(money("net", "=", "הון נקי", t.saleNetMinor, "לכל השותפים"), "net")]),
-      opens(shareRow("share", t.saleNetMinor, member, memberMinor), member == null ? "net" : "share"),
+      opens(money("loans", "−", "סילוק הלוואות", -t.bankLoanMinor, "יתרות היום"), "loans"),
+      ...memberLoans,
+      ...(member == null ? [] : [opens(money("net", "=", "הון נקי", t.equityMinor, "לכל השותפים"), "net")]),
+      opens(shareRow("share", t.equityMinor, share, member?.saleMinor ?? null), member == null ? "net" : "share"),
+      ...own,
+    ],
+    result: null,
+  };
+}
+
+/** The all-in's hint: what it is made of. */
+export const ALL_IN_HINT = "קנייה, שיפוץ והחזקה";
+
+/**
+ * FLOW-1124: the profit at the sale, as the investment page's net profit: value − selling costs − the all-in
+ * (purchase, renovation, holding), of the properties with an all-in, then the member's part.
+ */
+export function profitFormula(r: MemberShareResult, member: MemberShare | null): Formula {
+  const t = r.totals;
+  const share: Share = member == null ? null : { name: member.name, ownershipBp: member.ownershipBp };
+  const counted = r.properties.length - r.profitMissing.length;
+  return {
+    rows: [
+      opens(money("profit_value", "", "שווי הנכסים", t.profitValueMinor, `${String(counted)} נכסים`), "profit_value"),
+      opens(money("profit_selling", "−", "עלויות מכירה", -t.profitSellingMinor, sellingHint(r.properties.filter((p) => p.allInMinor != null))), "profit_selling"),
+      opens(money("all_in", "−", "עלות כוללת", -t.allInMinor, ALL_IN_HINT), "all_in"),
+      ...(member == null ? [] : [opens(money("profit", "=", "רווח", t.profitMinor, "לכל השותפים"), "profit")]),
+      opens(member == null
+        ? money("profit_share", "=", "רווח לכל השותפים", t.profitMinor)
+        : shareRow("profit_share", t.profitMinor, share, member.profitMinor), member == null ? "profit" : "profit_share"),
     ],
     result: null,
   };
@@ -117,16 +163,42 @@ export function refiFormula(r: MemberShareResult, member: Share, memberMinor: bi
   };
 }
 
-/** One property's sale. */
+/** One property's sale: its loans, a member's loan on it apart (FLOW-1124). */
 export function propertySaleFormula(p: PropertyShare, member: Share): Formula {
   return {
     rows: [
       money("value", "", "שווי", p.valueMinor, p.valueDate == null ? undefined : "הערכה"),
       money("selling", "−", "עלויות מכירה", -p.sellingCostMinor, `${bpText(p.sellingCostBp)}${p.sellingCostDefault ? " · ברירת מחדל" : ""}`),
-      money("loans", "−", "סילוק הלוואות", -p.loanBalanceMinor, "יתרה היום"),
+      money("loans", "−", "סילוק הלוואות", -p.bankLoanMinor, "יתרה היום"),
+      ...(p.memberLoanMinor === 0n ? [] : [money("member_loans", "−", "החזר הלוואת שותף", -p.memberLoanMinor, "חוזרת לשותף")]),
       ...(member == null ? [] : [money("net", "=", "הון נקי", p.saleNetMinor, "לכל השותפים")]),
     ],
     result: shareRow("share", p.saleNetMinor, member, member == null ? null : applyBp(p.saleNetMinor, member.ownershipBp)),
+  };
+}
+
+/** One property's all-in: purchase + renovation + holding (FLOW-1124). */
+export function allInParts(p: PropertyShare): { label: string; minor: bigint }[] {
+  return [
+    { label: "קנייה", minor: p.purchaseMinor ?? 0n },
+    { label: "שיפוץ", minor: p.rehabMinor ?? 0n },
+    { label: "החזקה", minor: p.holdingMinor ?? 0n },
+  ];
+}
+
+/** One property's profit at the sale (FLOW-1124); null without its all-in. */
+export function propertyProfitFormula(p: PropertyShare, member: Share): Formula | null {
+  if (p.allInMinor == null || p.profitMinor == null) return null;
+  return {
+    rows: [
+      money("value", "", "שווי", p.valueMinor),
+      money("selling", "−", "עלויות מכירה", -p.sellingCostMinor, bpText(p.sellingCostBp)),
+      ...allInParts(p).map((part, i) => money(`all_in_${String(i)}`, "−" as const, part.label, -part.minor)),
+      ...(member == null ? [] : [money("profit", "=", "רווח", p.profitMinor, "לכל השותפים")]),
+    ],
+    result: member == null
+      ? money("profit_share", "=", "רווח", p.profitMinor)
+      : shareRow("profit_share", p.profitMinor, member, applyBp(p.profitMinor, member.ownershipBp)),
   };
 }
 
