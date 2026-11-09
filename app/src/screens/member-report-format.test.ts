@@ -1,7 +1,7 @@
 import { computeMemberShare } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { MEMBER_CONFIG, MEMBER_LOANS, MEMBER_PROPERTIES } from "../dev/member-report-sample";
-import { parseMemberReport } from "../use-member-report";
+import { applyPatch, parseMemberReport } from "../use-member-report";
 import {
   bpText,
   memberIndex,
@@ -18,7 +18,6 @@ import {
   verdictText,
 } from "./member-report-format";
 import { drillOf } from "./member-report-parts";
-import { applyPatch } from "./member-report-screen";
 import { draftMembers, draftTotalBp, membersDraft, membersProblem, percentToUnits, spreadOptions, withLoanOwner } from "./member-report-sheets";
 
 const result = computeMemberShare(MEMBER_CONFIG, MEMBER_PROPERTIES);

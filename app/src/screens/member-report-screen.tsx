@@ -10,17 +10,19 @@ import { BackButton } from "../ui/back";
 import { Button } from "../ui/button";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { FocusTitle } from "../ui/focus-title";
-import { ChevronDownIcon } from "../ui/icons";
+import { ChevronDownIcon, ChevronIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useToast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
 import {
+  applyPatch,
   useMemberReport,
   useMemberReportWrite,
   useRefreshTreasury,
   useSellingCostWrite,
+  withSellingCost,
   type MemberReportPatch,
   type MemberReportRead,
   type RefreshAnswer,
@@ -67,17 +69,6 @@ const SAMPLE_REFRESH = (): Promise<RefreshAnswer> => Promise.resolve({ requested
 
 function isDrillKey(value: string): value is DrillKey {
   return (DRILL_KEYS as readonly string[]).includes(value);
-}
-
-/** A sample's selling cost changed the way set_project_investment does (stories). */
-function withSelling(read: MemberReportRead, projectIds: readonly string[], bp: number | null): MemberReportRead {
-  return { ...read, properties: read.properties.map((p) => (projectIds.includes(p.project_id) ? { ...p, selling_cost_bp: bp } : p)) };
-}
-
-/** A patch applied to a sample's setting, the way set_member_report merges it (stories). */
-export function applyPatch(config: MemberReportConfig | null, patch: MemberReportPatch): MemberReportConfig {
-  const merged: Record<string, unknown> = { ...config, ...patch };
-  return Object.fromEntries(Object.entries(merged).filter(([, value]) => value != null));
 }
 
 function heroMeta(mode: ReportMode, r: MemberShareResult, currency: string, member: MemberShare | null) {
@@ -152,7 +143,7 @@ export function MemberReportScreen({ sample, refreshSample }: {
 
   const saveSelling = useCallback(async (projectIds: readonly string[], bp: number | null): Promise<boolean> => {
     if (!live) {
-      setSampled((current) => (current == null ? current : withSelling(current, projectIds, bp)));
+      setSampled((current) => (current == null ? current : withSellingCost(current, projectIds, bp)));
       return true;
     }
     try {
@@ -364,12 +355,19 @@ function RateSection({ result, canEdit, onOpen, onSave, config, updated }: {
   return (
     <CalcSection title="ריבית צפויה מול ההצעות" total={rate.expectedPpm == null ? null : <bdi dir="ltr" className="ui-num">{ppmText(rate.expectedPpm)}</bdi>}>
       <div className="ui-msr-rate">
-        <div className="ui-msr-rate-line">
-          <span className="t-muted">תאריך ההצעות</span>
-          {canEdit ? (
-            <Button variant="secondary" onClick={() => { onOpen("yields"); }}>{date}</Button>
-          ) : <span>{date}</span>}
-        </div>
+        {/* FLOW-1128: the date is one row (its label, the date, a chevron), not a large button beside it. */}
+        {canEdit ? (
+          <button type="button" className="ui-msr-rate-line ui-msr-date ui-hit m-press" aria-label={`תאריך ההצעות: ${date}. שינוי`}
+            onClick={() => { onOpen("yields"); }}>
+            <span className="t-muted">תאריך ההצעות</span>
+            <span className="ui-msr-date-value"><bdi dir="ltr" className="ui-num">{date}</bdi><ChevronIcon size={18} /></span>
+          </button>
+        ) : (
+          <div className="ui-msr-rate-line">
+            <span className="t-muted">תאריך ההצעות</span>
+            <bdi dir="ltr" className="ui-num">{date}</bdi>
+          </div>
+        )}
         <SegmentedControl label="אג״ח ארה״ב" value={String(rate.tenorYears)} disabled={!canEdit}
           options={[{ value: "5", label: "5 שנים" }, { value: "10", label: "10 שנים" }]}
           onChange={(next) => { rule(next === "5" ? 5 : 10, rate.spreadBp); }} />

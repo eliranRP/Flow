@@ -156,13 +156,29 @@ export function useRefreshTreasury(sample?: () => Promise<RefreshAnswer>): { ref
   return { refresh, busy };
 }
 
+/** The report with these properties' selling cost set, as set_project_investment leaves it (null: the default). */
+export function withSellingCost(read: MemberReportRead, projectIds: readonly string[], bp: number | null): MemberReportRead {
+  return { ...read, properties: read.properties.map((p) => (projectIds.includes(p.project_id) ? { ...p, selling_cost_bp: bp } : p)) };
+}
+
 /**
  * FLOW-1121: a property's selling cost from the report, through the same write the investment page makes
  * (set_project_investment's selling_cost_bp; null is the default 8%), for one property or several. Reads the
  * report and the project's own reads (its page and returns sit under "project") again.
  */
 export function useSellingCostWrite() {
+  const client = useQueryClient();
   return useWrite<{ projectIds: readonly string[]; bp: number | null }>({
+    // FLOW-1128: the report shows the new percent at once; a failure puts it back.
+    optimistic: ({ projectIds, bp }) => client.getQueriesData<MemberReportRead>({ queryKey: [MEMBER_REPORT_KEY] })
+      .filter(([, data]) => data != null)
+      .map(([key]) => ({
+        key,
+        update: (old: unknown) => {
+          const read = old as MemberReportRead | undefined;
+          return read == null ? read : withSellingCost(read, projectIds, bp);
+        },
+      })),
     failure: (error) => ((error as { code?: string }).code === "42501"
       ? { message: "רק בעלי החברה יכולים לשנות את עלויות המכירה.", retry: false }
       : "לא הצלחנו לשמור את עלויות המכירה."),
@@ -177,9 +193,30 @@ export function useSellingCostWrite() {
   });
 }
 
-/** Saves a patch, then reads the report again. */
+/** A patch applied to a setting the way set_member_report merges it: a part named replaces it, null clears it. */
+export function applyPatch(config: MemberReportConfig | null, patch: MemberReportPatch): MemberReportConfig {
+  const merged: Record<string, unknown> = { ...config, ...patch };
+  return Object.fromEntries(Object.entries(merged).filter(([, value]) => value != null));
+}
+
+/**
+ * Saves a patch, then reads the report again. FLOW-1128: the tap shows at once (the read takes a second or two,
+ * since each property's all-in is worked out); a failure puts the setting back and says so.
+ */
 export function useMemberReportWrite() {
+  const client = useQueryClient();
   return useWrite<MemberReportPatch>({
+    // Taps in a row reach the server in the order tapped (each sends the whole rate rule).
+    scope: MEMBER_REPORT_KEY,
+    optimistic: (patch) => client.getQueriesData<MemberReportRead>({ queryKey: [MEMBER_REPORT_KEY] })
+      .filter(([, data]) => data != null)
+      .map(([key]) => ({
+        key,
+        update: (old: unknown) => {
+          const read = old as MemberReportRead | undefined;
+          return read == null ? read : { ...read, config: applyPatch(read.config, patch) };
+        },
+      })),
     failure: (error) => ((error as { code?: string }).code === "42501"
       ? { message: "רק בעלי החברה יכולים לשנות את הדוח.", retry: false }
       : error.message.includes("100%") ? { message: "הבעלות צריכה להסתכם ב־100%.", retry: false } : "לא הצלחנו לשמור."),

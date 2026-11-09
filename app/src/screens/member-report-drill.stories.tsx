@@ -190,7 +190,7 @@ export const RateNothingYet: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // No quote and no yield: the date is today's, and the line says where the yields come from.
-    await userEvent.click(await canvas.findByRole("button", { name: today() }));
+    await userEvent.click(await canvas.findByRole("button", { name: `תאריך ההצעות: ${today()}. שינוי` }));
     await expect(await body(canvasElement).findByRole("dialog", { name: "תשואות אג״ח ארה״ב" })).toBeVisible();
     await userEvent.keyboard("{Escape}");
     await expect(canvas.getByText("תשואות האג״ח מתעדכנות אוטומטית מאתר משרד האוצר. אפשר גם להקליד ידנית.")).toBeInTheDocument();
@@ -252,7 +252,7 @@ export const RefreshFetchedToday: Story = {
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByText(/^עודכן ב-\d\d:\d\d$/)).toBeInTheDocument();
     // The yields sheet starts with the same line.
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "03/11/2026" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^תאריך ההצעות: 03\/11\/2026/ }));
     const sheet = within(await body(canvasElement).findByRole("dialog", { name: "תשואות אג״ח ארה״ב" }));
     await expect(sheet.getByText(/^עודכן ב-\d\d:\d\d$/)).toBeInTheDocument();
     await expect(sheet.getByRole("button", { name: "רענון תשואות האג״ח" })).toBeInTheDocument();
