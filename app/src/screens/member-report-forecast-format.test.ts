@@ -2,7 +2,7 @@ import { computeMemberProjection, computeMemberShare } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { MEMBER_CONFIG, MEMBER_LOANS, MEMBER_PROJECTION_INPUTS, MEMBER_PROPERTIES } from "../dev/member-report-sample";
 import { forecastDrill } from "./member-report-forecast";
-import { forecastDraft, forecastFormula, forecastYear, projectionFromDraft, propertyYearFormula, signedBp, untilFormula } from "./member-report-forecast-format";
+import { forecastDraft, forecastFormula, forecastYear, projectionFromDraft, propertyYearFormula, signedBp, untilFormula, withHidden } from "./member-report-forecast-format";
 
 /* FLOW-1127: the forecast tab's formulas and its assumptions draft. */
 
@@ -11,7 +11,7 @@ const projection = computeMemberProjection({
   config: MEMBER_CONFIG, properties: MEMBER_PROPERTIES, loans: MEMBER_LOANS, inputs: MEMBER_PROJECTION_INPUTS.properties,
   asOf: MEMBER_PROJECTION_INPUTS.asOf, today: MEMBER_PROJECTION_INPUTS.today, expectedRatePpm: share.rate.expectedPpm,
 });
-const minor = (v: { kind: string }) => (v.kind === "money" ? (v as { minor: bigint }).minor : 0n);
+const minor = (v: { kind: string }) => (v.kind === "money" ? (v as unknown as { minor: bigint }).minor : 0n);
 
 describe("the forecast's החישוב", () => {
   it("adds up: new loan − loans − members' loans − closing = what the members split; their part, loans and total", () => {
@@ -74,5 +74,16 @@ describe("the assumptions draft", () => {
     expect(projectionFromDraft(d)).toEqual({ invalid: "מס נכס" });
     expect(signedBp("-2.5", -2000, 3000)).toBe(-250);
     expect(signedBp("abc", -2000, 3000)).toBeNull();
+  });
+});
+
+describe("withHidden", () => {
+  it("keeps the refinance's years, LTV, closing and term the sheet doesn't show", () => {
+    expect(withHidden({ years: 5, ltv_bp: 7000, closing_bp: 200, term_years: 25, rent_growth_bp: 300 }, { rent_growth_bp: 400 }))
+      .toEqual({ years: 5, ltv_bp: 7000, closing_bp: 200, term_years: 25, rent_growth_bp: 400 });
+  });
+  it("is null when nothing is set", () => {
+    expect(withHidden(undefined, null)).toBeNull();
+    expect(withHidden({ rent_growth_bp: 300 }, null)).toBeNull();
   });
 });

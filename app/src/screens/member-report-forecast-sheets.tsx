@@ -7,7 +7,7 @@ import { Stepper } from "../ui/stepper";
 import { TextField } from "../ui/text-field";
 import { useToast } from "../ui/toast";
 import type { MemberReportPatch } from "../use-member-report";
-import { forecastDraft, projectionFromDraft, SERIES_LABELS, type ForecastDraft } from "./member-report-forecast-format";
+import { forecastDraft, projectionFromDraft, SERIES_LABELS, withHidden, type ForecastDraft } from "./member-report-forecast-format";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-1127 (FLOW-1125's mockup C): the forecast's assumptions. Every value starts at its default and can be
@@ -52,7 +52,7 @@ export function ForecastAssumptionsSheet({ open, onOpenChange, canEdit, projecti
     if (busy || !("projection" in built)) return;
     setBusy(true);
     const before = projection ?? null;
-    const ok = await onSave({ projection: built.projection });
+    const ok = await onSave({ projection: withHidden(projection, built.projection) });
     setBusy(false);
     if (!ok) return;
     onOpenChange(false);

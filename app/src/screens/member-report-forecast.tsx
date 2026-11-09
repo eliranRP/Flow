@@ -121,7 +121,7 @@ function ForecastPropertySheet({ property, result, onOpenChange }: { property: P
 /** Equity over loan balances, year by year: the refinance year's bar marked. */
 function ForecastBars({ result }: { result: ProjectionResult }) {
   const max = result.totals.reduce((m, t) => (t.valueMinor > m ? t.valueMinor : m), 1n);
-  const pct = (n: bigint) => `${String(Number((n * 1000n) / max) / 10)}%`;
+  const pct = (n: bigint) => `${String(Number(((n > 0n ? n : 0n) * 1000n) / max) / 10)}%`;
   const year = forecastYear(result);
   return (
     <figure className="ui-msr-bars" aria-label={`ההון ויתרת ההלוואות בכל שנה עד ${String(year)}`}>

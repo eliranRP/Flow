@@ -239,3 +239,14 @@ export function forecastPropertyHint(p: PropertyProjection, r: ProjectionResult)
   if (last == null) return "";
   return `שווי ${formatMoney(last.valueMinor, currency)} · יתרה ${formatMoney(last.balanceMinor, currency)}${p.refi.refinances ? "" : " · לא משתלם למחזר"}`;
 }
+
+/** The projection's keys the assumptions sheet doesn't show: the refinance's years, LTV, closing and term. */
+const HIDDEN_KEYS = ["years", "ltv_bp", "closing_bp", "term_years"] as const;
+
+/** What the sheet saves: its own keys over the ones it doesn't show, kept as they were. */
+export function withHidden(before: ProjectionConfig | undefined, edited: ProjectionConfig | null): ProjectionConfig | null {
+  const kept: ProjectionConfig = {};
+  for (const k of HIDDEN_KEYS) if (before?.[k] !== undefined) Object.assign(kept, { [k]: before[k] });
+  if (edited == null && Object.keys(kept).length === 0) return null;
+  return { ...kept, ...(edited ?? {}) };
+}
