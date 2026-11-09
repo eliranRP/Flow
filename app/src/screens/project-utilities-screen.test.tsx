@@ -83,8 +83,9 @@ describe("the property page's row", () => {
 describe("ProjectUtilitiesScreen", () => {
   it("lists each utility with its usual amount, and links the bills not refunded", async () => {
     renderScreen();
-    expect(await screen.findByText("בדרך כלל $120")).toBeTruthy();
-    expect(screen.getByText("נוסף ידנית · לא נבדק")).toBeTruthy();
+    expect(await screen.findByText("חשמל ומים · בדרך כלל $120")).toBeTruthy();
+    expect(screen.getByText("גז · בדרך כלל $45")).toBeTruthy();
+    expect(screen.getByText("אינטרנט · נוסף ידנית · לא נבדק")).toBeTruthy();
     expect(screen.getByRole("link", { name: "2 לא הוחזרו" }).getAttribute("href")).toBe(`/utility-refunds?project=${GEFEN}`);
     const net = screen.getByRole("radiogroup", { name: "מי משלם: Net Co" });
     expect(within(net).getByRole("radio", { name: "חברה" }).getAttribute("aria-checked")).toBe("true");
@@ -138,7 +139,7 @@ describe("ProjectUtilitiesScreen", () => {
   it("gives a viewer no changes", async () => {
     db.hold = true;
     renderScreen();
-    await screen.findByText("בדרך כלל $120");
+    await screen.findByText("חשמל ומים · בדרך כלל $120");
     expect(screen.queryByRole("button", { name: /הוספת ספק/ })).toBeNull();
     expect(within(screen.getByRole("radiogroup", { name: "מי משלם: Power Co" })).getByRole("radio", { name: "חברה" })).toHaveProperty("disabled", true);
   });

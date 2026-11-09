@@ -2,7 +2,6 @@ import { useState } from "react";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { liveRpcClient } from "../recurring-actions";
 import { useInvalidateBooks } from "../use-books";
-import { hideRow, readHidden, showRow, type HiddenRows } from "../ui/attention-dismiss";
 import { useToast } from "../ui/toast";
 import {
   answerUtilityRefund,
@@ -23,11 +22,9 @@ import { cardBillTitle, type LocalAnswer, type RefundCard, type RefundGroup } fr
 /** The reads an answer changes: the list, Home's count and the property's utilities. */
 export const UTILITY_KEYS = [UTILITY_REFUNDS_KEY, "utility-refund-count", UTILITY_PAYERS_KEY] as const;
 
-/** A card the owner kept as filed ("להשאיר"): on this device, as the attention rows' hide (no server write). */
-const KEPT = "utility-refund-kept";
-
 const FAILED = {
   answer: "התשובה לא נשמרה. אפשר לנסות שוב.",
+  keep: "ההשארה לא נשמרה. אפשר לנסות שוב.",
   seen: "הסימון לא נשמר. אפשר לנסות שוב.",
   all: "סימון החשבונות לא נשמר. אפשר לנסות שוב.",
   payer: "השינוי של מי משלם לא נשמר. אפשר לנסות שוב.",
@@ -54,7 +51,6 @@ export function useUtilityRefundActions(live: boolean) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const [local, setLocal] = useState<ReadonlyMap<string, LocalAnswer>>(new Map());
-  const [kept, setKept] = useState<HiddenRows>(() => readHidden(KEPT));
 
   const mark = (keys: readonly string[], value: LocalAnswer | null) => {
     setLocal((before) => {
@@ -113,7 +109,6 @@ export function useUtilityRefundActions(live: boolean) {
 
   return {
     local,
-    kept,
     /** כן, זה ההחזר: a payment filed elsewhere stays, with the note and its fix; otherwise the card goes. */
     yes(card: RefundCard) {
       const pay = card.payment.transaction_id;
@@ -167,13 +162,16 @@ export function useUtilityRefundActions(live: boolean) {
         ledger: true,
       });
     },
-    /** להשאיר: the books stay as they are; the card leaves this device's list. */
+    /** להשאיר: the books stay as they are; the refund keeps its category, so the note goes. ביטול drops the keep. */
     keep(card: RefundCard) {
-      setKept(hideRow(KEPT, card.key, "kept"));
-      toast.show({
+      const pay = card.payment.transaction_id;
+      void answer({
+        keys: [card.key],
+        run: each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, "matched", pay, true)),
+        failure: FAILED.keep,
         message: "נשאר כמו שהוא",
-        action: "ביטול",
-        onAction: () => { setKept(showRow(KEPT, card.key)); },
+        undo: each(card, (bill) => answerUtilityRefund(rpc(), bill.bill_transaction_id, "matched", pay, false)),
+        back: "fix",
       });
     },
     /** ראיתי, אין צורך בטיפול: closes this bill. */

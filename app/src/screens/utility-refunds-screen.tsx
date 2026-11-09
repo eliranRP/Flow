@@ -52,9 +52,7 @@ export function UtilityRefundsScreen({ sample }: { sample?: UtilityBill[] } = {}
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: LIST_BAR });
 
   const bills = (live ? query.data?.bills : sample)?.filter((bill) => projectId == null || bill.project_id === projectId) ?? [];
-  const local = new Map(actions.local);
-  for (const key of Object.keys(actions.kept)) if (!local.has(key)) local.set(key, "hidden");
-  const groups = refundGroups(bills, local);
+  const groups = refundGroups(bills, actions.local);
   const phase = live ? screenPhase(preview, query) : ({ kind: "ready" } as const);
   const loading = phase.kind === "loading";
   const failed = phase.kind === "error";

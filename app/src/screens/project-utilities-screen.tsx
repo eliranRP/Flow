@@ -27,10 +27,10 @@ export type ProjectUtilitiesSample = { projectId: string; name: string; utilitie
 
 const keyText = (row: { supplier_id: string; currency: string }) => `${row.supplier_id}:${row.currency}`;
 
-/** "בדרך כלל $80.00", "נוסף ידנית" for a supplier with no bill yet, and "לא נבדק" while the company pays. */
+/** "חשמל ומים · בדרך כלל $80", "נוסף ידנית" for a supplier with no bill yet, and "לא נבדק" while the company pays. */
 function payerMeta(row: UtilityPayer, payer: Payer): string {
   const usual = row.usual_minor == null ? (row.added ? "נוסף ידנית" : "אין עדיין חשבונות") : `בדרך כלל ${formatAmountText(row.usual_minor, row.currency, { detail: true })}`;
-  return payer === "company" ? `${usual} · לא נבדק` : usual;
+  return [row.category_name, usual, payer === "company" ? "לא נבדק" : null].filter((part): part is string => part != null).join(" · ");
 }
 
 /**
@@ -117,6 +117,7 @@ export function ProjectUtilitiesScreen({ sample }: { sample?: ProjectUtilitiesSa
     const item: UtilityPayer = {
       supplier_id: choice.party_id, supplier_name: choice.party_name, currency: choice.currency, payer: "tenant",
       added: true, found: false, usual_minor: null, bill_count: 0, last_bill_date: null,
+      category_id: choice.category_id, category_name: choice.category_name,
     };
     setAdded((before) => [...before, item]);
     const prior = await write(() => setUtilityPayer(liveRpcClient(), key, "tenant", true), "הספק לא נוסף. אפשר לנסות שוב.");

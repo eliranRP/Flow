@@ -25,6 +25,7 @@ function bill(over: Partial<UtilityBill> & Pick<UtilityBill, "bill_transaction_i
     no_rent: false,
     payment: null,
     wrong_category: false,
+    keep_category: false,
     refiled: false,
     ...over,
   };
@@ -56,15 +57,18 @@ export function utilityFixSample(): UtilityBill[] {
 }
 
 function payer(name: string, usual: bigint | null, over: Partial<UtilityPayer> = {}): UtilityPayer {
-  return { supplier_id: `s-${name}`, supplier_name: name, currency: "USD", payer: "tenant", added: false, found: true, usual_minor: usual, bill_count: usual == null ? 0 : 6, last_bill_date: usual == null ? null : "2026-10-03", ...over };
+  return {
+    supplier_id: `s-${name}`, supplier_name: name, currency: "USD", payer: "tenant", added: false, found: true, usual_minor: usual,
+    bill_count: usual == null ? 0 : 6, last_bill_date: usual == null ? null : "2026-10-03", category_id: "c-power-water", category_name: "חשמל ומים", ...over,
+  };
 }
 
 export function utilityPayersSample(): UtilityPayer[] {
   return [
     payer("City Water", 8_000n),
     payer("Power Co", 12_000n),
-    payer("Gas Co", 4_500n),
-    payer("Net Co", null, { payer: "company", added: true, found: false }),
+    payer("Gas Co", 4_500n, { category_id: "c-gas", category_name: "גז" }),
+    payer("Net Co", null, { payer: "company", added: true, found: false, category_id: "c-net", category_name: "אינטרנט" }),
   ];
 }
 

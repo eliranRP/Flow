@@ -47,7 +47,7 @@ export function refundGroups(bills: readonly UtilityBill[], local: ReadonlyMap<s
       continue;
     }
     const payment = bill.payment;
-    const card = bill.state === "suggested" || (bill.state === "refunded" && bill.source === "owner" && bill.wrong_category && !bill.refiled);
+    const card = bill.state === "suggested" || (bill.state === "refunded" && bill.source === "owner" && bill.wrong_category && !bill.keep_category && !bill.refiled);
     if (payment == null || !card) continue;
     const key = `${bill.project_id}:${payment.transaction_id}`;
     const into = group(bill);

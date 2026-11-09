@@ -39,6 +39,7 @@ const billSchema = z.object({
   no_rent: z.boolean(),
   payment: paymentSchema.nullable().optional().transform((value) => value ?? null),
   wrong_category: z.boolean(),
+  keep_category: z.boolean().optional().default(false),
   refiled: z.boolean(),
 });
 
@@ -57,6 +58,8 @@ export const utilityPayersSchema = z
       usual_minor: minorSchema.nullable().optional().transform((value) => value ?? null),
       bill_count: z.number().int(),
       last_bill_date: text,
+      category_id: text,
+      category_name: text,
     })),
   })
   .transform((body) => body.utilities);

@@ -58,13 +58,17 @@ export function useUtilityPayersQuery(projectId: string, active = true) {
   });
 }
 
-/** One answer on a bill: the payment is its refund, it is not, nothing to do, or null to take the answer back (ביטול). */
-export async function answerUtilityRefund(rpc: RpcClient, billId: string, state: "matched" | "rejected" | "seen" | null, paymentId: string | null): Promise<void> {
+/**
+ * One answer on a bill: the payment is its refund, it is not, nothing to do, or null to take the answer back (ביטול).
+ * `keepCategory` (with matched only) keeps a payment filed elsewhere as it is (להשאיר), or drops that keep (its ביטול).
+ */
+export async function answerUtilityRefund(rpc: RpcClient, billId: string, state: "matched" | "rejected" | "seen" | null, paymentId: string | null, keepCategory?: boolean): Promise<void> {
   assertNoError(await rpc.rpc("answer_utility_refund", {
     p_bill_transaction_id: billId,
     // null takes the answer back; the generated type shows the parameter as text only.
     p_state: state as string,
     ...(paymentId == null ? {} : { p_payment_transaction_id: paymentId }),
+    ...(keepCategory == null ? {} : { p_keep_category: keepCategory }),
   }));
 }
 

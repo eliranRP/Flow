@@ -116,6 +116,11 @@ describe("Home's utility refunds row", () => {
 });
 
 describe("the cards", () => {
+  it("leaves out a refund the owner kept as filed", () => {
+    const kept = utilityRefundsSample().map((bill) => (bill.bill_transaction_id === "b-water-gefen" ? { ...bill, state: "refunded" as const, source: "owner" as const, keep_category: true } : bill));
+    expect(refundGroups(kept).find((group) => group.projectId === GEFEN)?.cards).toEqual([]);
+  });
+
   it("groups by property, suggestions first, and says why and when", () => {
     const groups = refundGroups(utilityRefundsSample());
     expect(groups.map((group) => [group.name, group.cards.length, group.open.length])).toEqual([["דירת הגפן 3", 1, 2], ["Pine Ave 4", 1, 2]]);
@@ -204,14 +209,15 @@ describe("the answers and their ביטול", () => {
     expect(await screen.findByText("ייתכן שסווג לא נכון")).toBeTruthy();
   });
 
-  it("להשאיר keeps the books and hides the card on this device; ביטול shows it", async () => {
+  it("להשאיר keeps the payment's category (the server's keep); ביטול drops the keep and the fix shows again", async () => {
     db.bills = utilityRefundsSample().map((bill) => (bill.bill_transaction_id === "b-water-gefen" ? { ...bill, state: "refunded" as const, source: "owner" as const } : bill));
     renderScreen(`/utility-refunds?project=${GEFEN}`);
     fireEvent.click(await screen.findByRole("button", { name: "להשאיר" }));
     expect(await screen.findByText("נשאר כמו שהוא")).toBeTruthy();
     expect(screen.queryByText("ייתכן שסווג לא נכון")).toBeNull();
-    expect(db.rpcs.filter((call) => call.name.includes("utility"))).toEqual([]);
+    expect(calls("answer_utility_refund")).toEqual([{ p_bill_transaction_id: "b-water-gefen", p_state: "matched", p_payment_transaction_id: "pay-zelle-a", p_keep_category: true }]);
     await undo();
+    await waitFor(() => { expect(calls("answer_utility_refund")[1]).toEqual({ p_bill_transaction_id: "b-water-gefen", p_state: "matched", p_payment_transaction_id: "pay-zelle-a", p_keep_category: false }); });
     expect(await screen.findByText("ייתכן שסווג לא נכון")).toBeTruthy();
   });
 
