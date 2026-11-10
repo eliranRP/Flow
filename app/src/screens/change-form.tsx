@@ -39,14 +39,20 @@ const UNDO_SETTLE_MS = 1000;
  * (decision 0075). The pick rides the payload, so a write queued behind another names its own.
  */
 type Picked = { projectId: string; categoryId: string; remember: boolean };
-type InstantPick = {
-  back: { projectId: string; categoryId: string } | null;
-  next?: Picked;
+type Back = { back: { projectId: string; categoryId: string } | null };
+type InstantPick = Back & {
+  next: Picked;
   /** The line was closed by someone else when the pick was made: the pick reassigns it. */
   closedOutside?: boolean;
   /** Set by the write: which call it made, so its success step knows. */
   mode?: "resolve" | "reassign";
+  /** Set by a reassign: the server's undo id, so this pick's ביטול undoes this pick (FLOW-1165). */
+  undoId?: string | null;
 };
+/** A shared cost's category pick; `fromLine` when the sheet was opened from the card's category line. */
+type SharedCategoryPick = Back & { categoryId: string; fromLine: boolean };
+/** A shared cost's project pick (collapse_split); the write sets the undo id it returned. */
+type CollapsePick = { projectId: string; undoId?: string | null };
 
 /** The name of a chosen project or category, as the screen lists it; null when none is chosen. */
 function choiceName(options: readonly ChangeChoice[], id: string): string | null {
@@ -116,7 +122,6 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const wroteReview = useRef(false);
   const closedReview = useRef(false);
   closedReview.current = wroteReview.current || (kept != null && live == null);
-  const picked = useRef({ projectId, categoryId, remember });
   const sharedTx = useRef<string | null>(null);
   sharedTx.current = row?.transaction_id ?? null;
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
@@ -195,7 +200,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     row?.category_name,
   );
   /** The check goes back to the pick's previous id when an instant write fails. */
-  const restorePick = (payload: InstantPick | undefined) => {
+  const restorePick = (payload: Back | undefined) => {
     if (payload?.back == null) return;
     setProjectId(payload.back.projectId);
     setCategoryId(payload.back.categoryId);
@@ -267,7 +272,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       void navigate(`/transactions/${row.transaction_id}/split-category${search}`, { replace: true });
     },
     onSuccess: (payload) => {
-      const next = payload.next ?? picked.current;
+      const next = payload.next;
       if (payload.mode === "reassign") {
         reassigned(payload, next);
         return;
@@ -286,7 +291,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     },
     run: async (payload) => {
       const supabase = getSupabase();
-      const next = payload.next ?? picked.current;
+      const next = payload.next;
       if (!supabase || item === "") throw new Error("supabase");
       // Decided when the write runs, not at the tap: a pick queued behind a resolve reassigns the closed
       // line, and one queued behind ביטול's reopen resolves the item again.
@@ -300,7 +305,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
           p_category_id: next.categoryId,
         });
         assertNoError(saved);
-        sharedUndoId.current = typeof saved.data === "string" ? saved.data : null;
+        payload.undoId = typeof saved.data === "string" ? saved.data : null;
         return;
       }
       payload.mode = "resolve";
@@ -313,14 +318,13 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       }));
     },
   });
-  const lineField = useRef(false);
-  const setSharedCategory = useWrite<InstantPick>({
+  const setSharedCategory = useWrite<SharedCategoryPick>({
     scope,
     failure: changeSaveFailure,
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
-    optimistic: () => {
+    optimistic: (payload) => {
       const transactionId = sharedTx.current;
-      const nextCategory = picked.current.categoryId;
+      const nextCategory = payload.categoryId;
       if (transactionId == null) return [];
       const name = choiceName(categoryOptions, nextCategory);
       return [
@@ -336,27 +340,27 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       ];
     },
     onError: (_error, payload) => { restorePick(payload); },
-    onSuccess: () => {
-      setCategoryId(picked.current.categoryId);
+    onSuccess: (payload) => {
+      setCategoryId(payload.categoryId);
       toast.show({
         message: "השיוך נשמר",
-        ...(lineField.current ? { place: "page" as const } : {}),
+        ...(payload.fromLine ? { place: "page" as const } : {}),
       });
     },
-    run: async () => {
+    run: async (payload) => {
       const supabase = getSupabase();
       const transactionId = sharedTx.current;
-      const nextCategory = picked.current.categoryId;
+      const nextCategory = payload.categoryId;
       if (!supabase || transactionId == null || nextCategory === "") throw new Error("supabase");
       assertNoError(await supabase.rpc("set_transaction_category", {
         p_id: transactionId,
         p_category_id: nextCategory,
-        ...(lineField.current ? { p_resolve: false } : {}),
+        ...(payload.fromLine ? { p_resolve: false } : {}),
       }));
     },
   });
   const fieldSave = useRef<{ kind: "project" | "category"; id: string } | null>(null);
-  const saveField = useWrite<InstantPick>({
+  const saveField = useWrite<Back>({
     scope,
     failure: changeSaveFailure,
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
@@ -391,8 +395,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       }));
     },
   });
-  const sharedUndoId = useRef<string | null>(null);
-  const undoShared = useWrite<{ back?: { projectId: string; categoryId: string } } | undefined>({
+  /** ביטול carries the undo id of the write it undoes, so a write queued since cannot change it. */
+  const undoShared = useWrite<{ id: string; back?: { projectId: string; categoryId: string } }>({
     scope,
     place: "top",
     failure: "לא הצלחנו לבטל את השיוך.",
@@ -400,16 +404,16 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
     onSuccess: (payload) => {
       // The sheet and its baseline go back to the values before the pick this undoes.
-      const back = payload?.back;
+      const back = payload.back;
       if (back == null) return;
       setProjectId(back.projectId);
       setCategoryId(back.categoryId);
       baseline.current = { ...baseline.current, projectId: back.projectId, categoryId: back.categoryId };
     },
-    run: async () => {
+    run: async (payload) => {
       const supabase = getSupabase();
-      if (!supabase || sharedUndoId.current == null) throw new Error("supabase");
-      assertNoError(await supabase.rpc("undo_reassign", { p_id: sharedUndoId.current }));
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("undo_reassign", { p_id: payload.id }));
     },
   });
   /** A pick that reassigned the closed line: its toast replaces the first pick's, and ביטול undoes this one. */
@@ -418,24 +422,24 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     setProjectId(next.projectId);
     setCategoryId(next.categoryId);
     baseline.current = { ...baseline.current, projectId: next.projectId, categoryId: next.categoryId };
-    const undoId = sharedUndoId.current;
+    const undoId = payload.undoId;
     if (undoId == null) toast.show({ message: "השיוך נשמר", place: "top" });
-    else savedToast(next, () => { sharedUndoId.current = undoId; undoShared.mutate({ back }); });
+    else savedToast(next, () => { undoShared.mutate({ id: undoId, back }); });
   }
-  const collapseShared = useWrite({
+  const collapseShared = useWrite<CollapsePick>({
     scope,
     failure: changeSaveFailure,
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
-    onSuccess: () => {
-      setProjectId(picked.current.projectId);
-      const id = sharedUndoId.current;
+    onSuccess: (payload) => {
+      setProjectId(payload.projectId);
+      const id = payload.undoId;
       toast.show({
         message: "השיוך נשמר",
-        ...(id ? { action: "ביטול", onAction: () => { undoShared.mutate(); } } : {}),
+        ...(id ? { action: "ביטול", onAction: () => { undoShared.mutate({ id }); } } : {}),
       });
     },
-    run: async () => {
-      sharedUndoId.current = await collapseSplit(sharedTx.current ?? "", picked.current.projectId);
+    run: async (payload) => {
+      payload.undoId = await collapseSplit(sharedTx.current ?? "", payload.projectId);
     },
   });
 
@@ -564,7 +568,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
         // A supplier rule never learns a reversal: the next line from this supplier is the usual kind.
-        picked.current = { projectId: nextProject, categoryId: nextCategory, remember: remember && !isReversalId(nextCategory) };
+        const next = { projectId: nextProject, categoryId: nextCategory, remember: remember && !isReversalId(nextCategory) };
         // The check before this tap, for the rollback if the write fails.
         const back = { projectId, categoryId };
         const fromLine = params.get("from") === "line";
@@ -572,11 +576,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
           if (kind === "project") {
             if (!row?.transaction_id || id === "") throw new Error("supabase");
             // collapse_split decides on the server (a shared cost, its undo id), so the row stays busy.
-            return collapseShared.mutateAsync().then(() => undefined);
+            return collapseShared.mutateAsync({ projectId: nextProject }).then(() => undefined);
           }
           if (!row?.transaction_id) throw new Error("supabase");
-          lineField.current = fromLine;
-          setSharedCategory.mutate({ back });
+          setSharedCategory.mutate({ back, categoryId: nextCategory, fromLine });
           return undefined;
         }
         if (fromLine) {
@@ -591,7 +594,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         }
         setHold("");
         // A line closed elsewhere (not by this sheet's own pick) is reassigned, not resolved.
-        save.mutate({ back, next: picked.current, closedOutside: kept != null && live == null && !dropped.current });
+        save.mutate({ back, next, closedOutside: kept != null && live == null && !dropped.current });
         return undefined;
       }}
       onCloseCheck={() => {
@@ -612,8 +615,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         if (sample || holdWrites) return;
         if (blocked()) throw new Error("preview");
         setHold("");
-        picked.current = { projectId, categoryId, remember: remember && !isReversalId(categoryId) };
-        await save.mutateAsync({ back: null });
+        await save.mutateAsync({ back: null, next: { projectId, categoryId, remember: remember && !isReversalId(categoryId) } });
       }}
       onSplit={() => {
         if (row?.transaction_id) {
