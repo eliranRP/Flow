@@ -1,3 +1,4 @@
+import { defineMachine } from "@flow/shared";
 import { useSyncExternalStore } from "react";
 import { shownCompanyId } from "./lib/company-header";
 
@@ -34,10 +35,31 @@ export type DisconnectHold = {
   onEnd: (run: () => void) => void;
 };
 
+/**
+ * One disconnect's wait (FLOW-1167). `waiting` is the ביטול on screen; `send` puts it on the wire, and
+ * every other way out (ביטול, another company, a dropped role, a newer wait on the same connection)
+ * ends it unsent. `sending` ends once, however the write and the redraw after it go.
+ */
+export const disconnectFlow = defineMachine({
+  name: "disconnectFlow",
+  initial: "waiting",
+  final: ["gone"],
+  states: {
+    waiting: { send: "sending", cancel: "gone", refuse: "gone", drop: "gone", replace: "gone" },
+    sending: { settle: "gone" },
+    gone: {},
+  },
+});
+
+type DisconnectState = keyof typeof disconnectFlow.states;
+type DisconnectEvent = "send" | "cancel" | "refuse" | "drop" | "replace" | "settle";
+
 type Entry = {
   job: DisconnectJob;
   /** The company the app showed at the tap: the disconnect is that company's, or nothing. */
   company: string | null;
+  state: DisconnectState;
+  /** The write, once `send` has started it. */
   sending: Promise<void> | null;
   ended: Array<() => void>;
 };
@@ -55,6 +77,13 @@ function changed() {
   for (const listener of listeners) listener();
 }
 
+/** Moves the entry, or answers false when its state does not take the event. */
+function move(entry: Entry, event: DisconnectEvent): boolean {
+  if (!disconnectFlow.can(entry.state, event)) return false;
+  entry.state = disconnectFlow.next(entry.state, event);
+  return true;
+}
+
 function ended(entry: Entry) {
   for (const run of entry.ended.splice(0)) run();
 }
@@ -67,22 +96,30 @@ function remove(key: string, entry: Entry) {
 }
 
 function send(key: string, entry: Entry): Promise<void> {
-  if (entry.sending) return entry.sending;
-  // Set before the end callbacks run: one of them closes the toast, whose onClose ends this wait again.
+  if (entry.state !== "waiting") return entry.sending ?? Promise.resolve();
+  // The state moves before the end callbacks run: one of them closes the toast, whose onClose ends this wait again.
   if (shownCompanyId() !== entry.company) {
     // The header now names another company (or none): the disconnect would land there.
-    entry.sending = Promise.resolve();
+    move(entry, "refuse");
     remove(key, entry);
     ended(entry);
     entry.job.onRefused?.();
-    return entry.sending;
+    return Promise.resolve();
   }
+  move(entry, "send");
   entry.sending = entry.job.send().then(
     async () => {
-      await entry.job.onSent?.();
-      remove(key, entry);
+      try {
+        await entry.job.onSent?.();
+      } catch {
+        // The disconnect went through; only the redraw failed, and the next read draws it.
+      } finally {
+        move(entry, "settle");
+        remove(key, entry);
+      }
     },
     (error: unknown) => {
+      move(entry, "settle");
       remove(key, entry);
       entry.job.onFailed?.(error instanceof Error ? error : new Error("failed"));
     },
@@ -100,20 +137,22 @@ if (typeof document !== "undefined") {
   });
 }
 
-/** Starts a disconnect's wait, for the company the app shows now. A newer wait on the same connection takes the older one's place. */
+/** Starts a disconnect's wait, for the company the app shows now. A newer wait on the same connection takes the older one's place, and the older one's toast goes. */
 export function startDisconnect(job: DisconnectJob): DisconnectHold {
   const key = keyOf(job.provider, job.slot);
-  const entry: Entry = { job, company: shownCompanyId(), sending: null, ended: [] };
+  const entry: Entry = { job, company: shownCompanyId(), state: disconnectFlow.initial, sending: null, ended: [] };
+  const older = entries.get(key);
   entries.set(key, entry);
+  if (older && move(older, "replace")) ended(older);
   changed();
   return {
     cancel: () => {
-      if (entries.get(key) !== entry || entry.sending) return false;
+      if (!move(entry, "cancel")) return false;
       remove(key, entry);
       return true;
     },
-    end: () => (entries.get(key) === entry || entry.sending ? send(key, entry) : Promise.resolve()),
-    onEnd: (run) => { if (entry.sending || entries.get(key) !== entry) run(); else entry.ended.push(run); },
+    end: () => send(key, entry),
+    onEnd: (run) => { if (entry.state === "waiting") entry.ended.push(run); else run(); },
   };
 }
 
@@ -126,7 +165,7 @@ export async function flushDisconnects(provider?: ConnectorProvider): Promise<vo
 export function dropDisconnects(provider?: ConnectorProvider): number {
   let dropped = 0;
   for (const [key, entry] of [...entries]) {
-    if ((provider == null || entry.job.provider === provider) && !entry.sending) {
+    if ((provider == null || entry.job.provider === provider) && move(entry, "drop")) {
       remove(key, entry);
       ended(entry);
       dropped += 1;

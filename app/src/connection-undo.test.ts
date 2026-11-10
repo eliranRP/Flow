@@ -1,6 +1,16 @@
+import { machineProblems } from "@flow/shared";
+import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetShownCompanyForTests, setShownCompany } from "./lib/company-header";
-import { dropDisconnects, flushDisconnects, resetDisconnectsForTests, startDisconnect, type DisconnectJob } from "./connection-undo";
+import {
+  disconnectFlow,
+  dropDisconnects,
+  flushDisconnects,
+  resetDisconnectsForTests,
+  startDisconnect,
+  useLeavingSlots,
+  type DisconnectJob,
+} from "./connection-undo";
 
 const COMPANY_A = "11111111-1111-4111-8111-111111111111";
 const COMPANY_B = "22222222-2222-4222-8222-222222222222";
@@ -132,5 +142,37 @@ describe("a wait and the company it belongs to (decision 0223)", () => {
     const one = job();
     await startDisconnect(one).end();
     expect(one.send).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a disconnect's wait as one machine (FLOW-1167)", () => {
+  it("is a sound table", () => {
+    expect(machineProblems(disconnectFlow)).toEqual([]);
+  });
+
+  it("stops being leaving when onSent fails, and a flush still settles", async () => {
+    const one = job({ onSent: () => Promise.reject(new Error("read failed")) });
+    const leaving = renderHook(() => useLeavingSlots("mercury"));
+    const hold = startDisconnect(one);
+    await vi.waitFor(() => { expect(leaving.result.current.has(1)).toBe(true); });
+    await expect(hold.end()).resolves.toBeUndefined();
+    await expect(flushDisconnects("mercury")).resolves.toBeUndefined();
+    await vi.waitFor(() => { expect(leaving.result.current.has(1)).toBe(false); });
+    expect(one.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("ends the older wait, toast and all, when a newer one on the same connection takes its place", async () => {
+    const first = job();
+    const second = job();
+    const firstEnded = vi.fn();
+    const firstHold = startDisconnect(first);
+    firstHold.onEnd(firstEnded);
+    const secondHold = startDisconnect(second);
+    expect(firstEnded).toHaveBeenCalledTimes(1);
+    expect(firstHold.cancel()).toBe(false);
+    await firstHold.end();
+    expect(first.send).not.toHaveBeenCalled();
+    await secondHold.end();
+    expect(second.send).toHaveBeenCalledTimes(1);
   });
 });
