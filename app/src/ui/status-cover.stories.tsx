@@ -52,9 +52,21 @@ export const OverRowsOnceTheBandScrollsAway: Story = {
     const gap = doc.createElement("div");
     gap.className = "ui-pull-gap";
     gap.dataset.tone = "band";
-    doc.body.append(gap);
+    // In the screens, as PullRefresh draws it: the cover watches the screens' container only (FLOW-1158).
+    const screens = doc.querySelector(".below-tabbar");
+    if (screens == null) throw new Error("no screens container");
+    screens.append(gap);
     await waitFor(() => expect(cover.hasAttribute("data-open")).toBe(true));
     gap.remove();
+    await waitFor(() => expect(cover.hasAttribute("data-open")).toBe(false));
+    // A band that comes in without a scroll (a screen that loads) opens the room, and closes it as it goes.
+    const band = doc.createElement("header");
+    band.className = "ui-band";
+    band.style.cssText = "position: fixed; inset-block-start: 0; inset-inline: 0; block-size: 120px;";
+    screens.append(band);
+    await waitFor(() => expect(cover.hasAttribute("data-open")).toBe(true));
+    band.remove();
+    await waitFor(() => expect(cover.hasAttribute("data-open")).toBe(false));
     doc.defaultView?.scrollTo(0, 0);
     doc.documentElement.style.removeProperty("--safe-top");
   },

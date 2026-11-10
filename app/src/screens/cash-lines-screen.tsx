@@ -30,7 +30,7 @@ import { useHeldOrder } from "../list-hold";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCashLinesQuery, useCashMonthData } from "../use-cash";
-import { useCachedProjectName, useProjectCashMonthsQuery, withProjectSearch } from "../project-cash";
+import { useProjectCashMonthsQuery, useProjectName, withProjectSearch } from "../project-cash";
 import { BandOfflineLine, PageLoadFailed, ReviewButton, useOnline } from "../ui/band-states";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { lineTagText, rowSource } from "../ui/line-marks";
@@ -42,6 +42,7 @@ import { FocusTitle } from "../ui/focus-title";
 import { GroupHead } from "../ui/group-head";
 import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
 import { LinesSkeleton } from "../ui/screen-skeletons";
+import { Skeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { SplitPartsHint } from "../ui/split-parts-hint";
@@ -68,7 +69,14 @@ function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
  * `today` pins the day heads ("היום") for a sample whose lines are dated around a fixed day; `offlineSince`
  * draws the offline line from that moment (FLOW-965).
  */
-type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[]; today?: string; offlineSince?: number };
+type LinesSample = {
+  months: NonNullable<CashMonths>;
+  lines: CashLine[];
+  today?: string;
+  offlineSince?: number;
+  /** FLOW-1157: with ?project=, its name, or null while its read is out. */
+  projectName?: string | null;
+};
 
 export function CashLinesScreen({ sample, at }: { sample?: LinesSample; at?: { month: string; side: CashListSide; currency: string } } = {}) {
   const params = useParams();
@@ -127,7 +135,10 @@ function CashLinesBody({
   const scoped = projectId == null ? search : withProjectSearch(search, projectId);
   const monthData = useCashMonthData(monthKey, sample == null && projectId == null);
   const projectMonths = useProjectCashMonthsQuery(projectId ?? "", sample == null && projectId != null);
-  const projectName = useCachedProjectName(projectId);
+  // FLOW-1157: the project's name from the cache, else its own small read; a sample gives it (null: still read).
+  const named = useProjectName(projectId, monthKey, sample == null);
+  const projectName = sample?.projectName !== undefined ? sample.projectName : named.name;
+  const nameLoading = projectId != null && (sample?.projectName !== undefined ? sample.projectName === null : named.loading);
   const months = projectId == null ? monthData.query : projectMonths;
   const lines = useCashLinesQuery(monthKey, side, currency, sample == null, projectId);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = lines;
@@ -256,7 +267,11 @@ function CashLinesBody({
       <header className="ui-lines-head">
         <BackButton fallback={back} text={backText} />
         <FocusTitle className="t-title">{title}</FocusTitle>
-        <p className="ui-lines-sub t-meta">{side === "kept" || !allLoaded ? subtitle : [subtitle, ...linesCountParts(summary, currency)].join(" • ")}</p>
+        <p className="ui-lines-sub t-meta">
+          {/* FLOW-1157: a bar holds the name's place on the line while its read is out. */}
+          {nameLoading ? <><Skeleton className="ui-lines-sub-name" />{" "}</> : null}
+          {side === "kept" || !allLoaded ? subtitle : [subtitle, ...linesCountParts(summary, currency)].join(" • ")}
+        </p>
         {headBlock}
         {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         <span ref={setHeadEnd} className="ui-compact-mark" aria-hidden="true" />

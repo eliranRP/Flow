@@ -48,6 +48,25 @@ export const ProjectCash: Story = {
     // FLOW-1113: each payment of the month once; the paid charges are listed under קבועים only.
     await expect(canvas.getByRole("heading", { name: "תנועות החודש" })).toBeInTheDocument();
     await expect(canvas.queryByRole("heading", { name: "קבועים ששולמו" })).toBeNull();
+    // FLOW-1156: a recurring charge's payment says so in words, not by its mark alone.
+    await expect(canvas.getByText("10/11 · קבוע · ריבית")).toBeInTheDocument();
+    await expect(canvas.getByText("09/11 · חומרים")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1156: the month's payments in two currencies: the head counts them and names no one net. */
+export const ProjectCashMixedCurrencies: Story = {
+  name: "Project, the month's payments in two currencies",
+  render: () => (
+    <StoryRoute entry="/projects/p-c" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={project} sampleCash={cash} sampleInvestment={investment} sampleMenuRow={flipRow} sampleNext={flipNext} sampleSchedule={schedule} sampleLines={[...lines, ...projectLinesSample("ILS").slice(1, 2).map((line) => ({ ...line, transaction_id: "t-mat-ils" }))]} sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const head = within(canvasElement).getByRole("heading", { name: "תנועות החודש" }).closest(".ui-month");
+    if (!(head instanceof HTMLElement)) throw new Error("no month payments");
+    const summary = head.querySelector(".ui-group-summary")?.textContent ?? "";
+    await expect(summary).toBe("4 · מטבעות שונים");
   },
 };
 
