@@ -11,6 +11,7 @@ import {
   setUtilityPayer,
   undoUtilityRefile,
   unmarkUtilityRefundsSeen,
+  UTILITY_INCOME_KEY,
   UTILITY_MONTHS_KEY,
   UTILITY_PAYERS_KEY,
   UTILITY_REFUNDS_KEY,
@@ -21,8 +22,8 @@ import {
 } from "../utility-refunds";
 import type { RefundCard, RefundGroup } from "../utility-refund-view";
 
-/** The reads an answer changes: the list, Home's count and the property's utilities. */
-export const UTILITY_KEYS = [UTILITY_REFUNDS_KEY, "utility-refund-count", UTILITY_PAYERS_KEY, UTILITY_MONTHS_KEY] as const;
+/** The reads an answer changes: the list, Home's count, the property's utilities and months, and a bill's income. */
+export const UTILITY_KEYS = [UTILITY_REFUNDS_KEY, "utility-refund-count", UTILITY_PAYERS_KEY, UTILITY_MONTHS_KEY, UTILITY_INCOME_KEY] as const;
 
 const FAILED = {
   answer: "התשובה לא נשמרה. אפשר לנסות שוב.",

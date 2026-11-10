@@ -106,8 +106,8 @@ export const TOOL_GROUPS: GuideGroup[] = [
   {
     id: "utility_refunds", title: "Utility refunds", summary: "Utility bills the tenant has not paid back, and who pays each utility.",
     tools: [
-      "list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months", "set_utility_payer", "answer_utility_refund",
-      "mark_utility_refunds_seen", "refile_utility_refund",
+      "list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months", "list_utility_income", "set_utility_payer",
+      "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund",
     ],
   },
   {

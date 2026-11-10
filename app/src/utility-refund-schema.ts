@@ -110,3 +110,52 @@ const monthSchema = z.object({
 export const utilityMonthsSchema = z
   .object({ months: z.array(monthSchema) })
   .transform((body) => [...body.months].sort((a, b) => b.month.localeCompare(a.month)));
+
+/**
+ * FLOW-1159: list_utility_income, a tenant-paid utility bill (with its state) and the money in on its property within
+ * `months` months before and after it, newest first: each line with its parts on the property and the utility bills
+ * it is the refund of.
+ */
+const incomeBillSchema = z.object({
+  bill_transaction_id: z.string(),
+  doc_date: z.string(),
+  amount_minor: minorSchema,
+  currency: z.string(),
+  category_id: text,
+  category_name: text,
+  supplier_name: text,
+  project_id: z.string(),
+  project_name: z.string(),
+  state: z.enum(["not_refunded", "refunded", "waiting", "seen"]),
+  days: z.number().int(),
+  payment_transaction_id: text,
+});
+
+const incomeLineSchema = z.object({
+  transaction_id: z.string(),
+  doc_date: z.string(),
+  amount_minor: minorSchema,
+  currency: z.string(),
+  party: text,
+  description: text,
+  project_id: text,
+  category_id: text,
+  category_name: text,
+  parts: z.array(z.object({ category_id: text, category_name: text, amount_minor: minorSchema })).optional().default([]),
+  refunded_bills: z.array(z.object({
+    bill_transaction_id: z.string(),
+    doc_date: z.string(),
+    amount_minor: minorSchema,
+    category_id: text,
+    category_name: text,
+  })).optional().default([]),
+});
+
+export const utilityIncomeSchema = z.object({
+  as_of: z.string(),
+  months: z.number().int(),
+  from: z.string(),
+  to: z.string(),
+  bill: incomeBillSchema,
+  lines: z.array(incomeLineSchema),
+});

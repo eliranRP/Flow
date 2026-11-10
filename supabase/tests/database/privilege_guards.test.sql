@@ -20,6 +20,7 @@ insert into pg_allowed (sig) values
     -- FLOW-1134 (decision 0265): utility refunds.
     ('answer_utility_refund(uuid,text,uuid,date,boolean)'),
     ('count_utility_refunds(date)'),
+    ('list_utility_income(uuid,integer,date)'),
     ('list_utility_months(uuid,date)'),
     ('list_utility_payers(uuid)'),
     ('list_utility_refunds(uuid,date,boolean)'),

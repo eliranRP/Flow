@@ -5,7 +5,7 @@ import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import type { RpcClient } from "./recurring-actions";
-import type { utilityMonthsSchema, utilityPayersSchema, utilityRefundsSchema } from "./utility-refund-schema";
+import type { utilityIncomeSchema, utilityMonthsSchema, utilityPayersSchema, utilityRefundsSchema } from "./utility-refund-schema";
 import { assertNoError } from "./use-write";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -19,10 +19,15 @@ export type UtilityPayment = NonNullable<UtilityBill["payment"]>;
 export type UtilityPayer = z.output<typeof utilityPayersSchema>[number];
 export type Payer = UtilityPayer["payer"];
 export type UtilityMonth = z.output<typeof utilityMonthsSchema>[number];
+/** FLOW-1159: a bill and the money in around it (list_utility_income). */
+export type UtilityIncome = z.output<typeof utilityIncomeSchema>;
+export type UtilityIncomeBill = UtilityIncome["bill"];
+export type UtilityIncomeLine = UtilityIncome["lines"][number];
 
 export const UTILITY_REFUNDS_KEY = "utility-refunds";
 export const UTILITY_PAYERS_KEY = "utility-payers";
 export const UTILITY_MONTHS_KEY = "utility-months";
+export const UTILITY_INCOME_KEY = "utility-income";
 
 /**
  * Where the utility reads and writes go: Flow's server, or, in a story, a stand-in that answers from sample data
@@ -114,6 +119,25 @@ export function useUtilityMonthsQuery(projectId: string, active = true) {
       const { data, error } = await supabase.rpc("list_utility_months", { p_project: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).utilityMonthsSchema.parse(data);
+    },
+  });
+}
+
+/**
+ * FLOW-1159: the money in on a bill's property within `months` months before and after it (the server clamps it to
+ * 1..6), newest first, with the bill and its state.
+ */
+export function useUtilityIncomeQuery(billId: string, months = 2, active = true) {
+  const preview = useHomePreview();
+  const client = useReadClient();
+  return useQuery({
+    queryKey: [UTILITY_INCOME_KEY, preview, billId, months],
+    enabled: active && preview === "off" && billId !== "",
+    queryFn: async (): Promise<UtilityIncome> => {
+      const supabase = await client();
+      const { data, error } = await supabase.rpc("list_utility_income", { p_bill_transaction_id: billId, p_months: months });
+      if (error) throw error;
+      return (await loadReadSchemas()).utilityIncomeSchema.parse(data);
     },
   });
 }

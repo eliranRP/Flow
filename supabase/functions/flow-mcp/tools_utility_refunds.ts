@@ -1,5 +1,6 @@
-// MCP tools: utility bills the tenant never paid back (FLOW-1134, decision 0265). Three reads,
-// list_utility_refunds, count_utility_refunds and list_utility_payers, and four writes through their mcp_*
+// MCP tools: utility bills the tenant never paid back (FLOW-1134, decision 0265). Five reads,
+// list_utility_refunds, count_utility_refunds, list_utility_payers, list_utility_months and list_utility_income
+// (FLOW-1159), and four writes through their mcp_*
 // functions with the idempotency key, the write rate limit and undo (id: the write): set_utility_payer
 // (kind utility_payer), answer_utility_refund (utility_refund), mark_utility_refunds_seen
 // (utility_refunds_seen) and refile_utility_refund (utility_refile).
@@ -10,7 +11,13 @@ const ID = z.string().regex(UUID);
 const AS_OF = z.string().regex(DATE);
 const KEY = z.string().min(1).max(128);
 
-export const UTILITY_READS = ["list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months"] as const;
+export const UTILITY_READS = [
+  "list_utility_refunds",
+  "count_utility_refunds",
+  "list_utility_payers",
+  "list_utility_months",
+  "list_utility_income",
+] as const;
 export const UTILITY_WRITES = [
   "set_utility_payer",
   "answer_utility_refund",
@@ -25,6 +32,7 @@ export const UTILITY_ALLOWED: Record<string, Set<string>> = {
   count_utility_refunds: new Set(["as_of"]),
   list_utility_payers: new Set(["project_id"]),
   list_utility_months: new Set(["project_id", "as_of"]),
+  list_utility_income: new Set(["bill_transaction_id", "months", "as_of"]),
   set_utility_payer: new Set(["idempotency_key", "project_id", "supplier_id", "currency", "payer", "added"]),
   answer_utility_refund: new Set(["idempotency_key", "bill_transaction_id", "state", "payment_transaction_id", "as_of", "keep_category"]),
   mark_utility_refunds_seen: new Set(["idempotency_key", "project_id", "as_of"]),
@@ -35,6 +43,7 @@ const listSchema = z.object({ project_id: ID.optional(), as_of: AS_OF.optional()
 const countSchema = z.object({ as_of: AS_OF.optional() }).strict();
 const payersSchema = z.object({ project_id: ID }).strict();
 const monthsSchema = z.object({ project_id: ID, as_of: AS_OF.optional() }).strict();
+const incomeSchema = z.object({ bill_transaction_id: ID, months: z.number().int().optional(), as_of: AS_OF.optional() }).strict();
 const payerSchema = z.object({
   idempotency_key: KEY,
   project_id: ID,
@@ -85,6 +94,11 @@ export const UTILITY_READ_SPECS = [
   }, false),
   spec("list_utility_months", `A property's utility bills by month (FLOW-1144; project_id, another company's is refused: project not found): the months, newest first, from its first tenant-paid utility bill or first rent line to the as-of month. At most 600 months are listed (the as-of month and the 599 before it). An as-of date more than a year after today is refused (validation). ${AS_OF_TEXT}. months[]: month (YYYY-MM-01), rent_in (the sum of its rent lines: income under the rent category, as list_utility_refunds reads it), bills_paid (the sum of the tenant-paid utility bills dated in it), not_refunded (the part of those bills not refunded and not closed by the owner, waiting ones included), rent_lines[] (transaction_id, doc_date, amount_minor, currency, party, category_name) and bills[] (bill_transaction_id, doc_date, amount_minor, currency, supplier_name, category_name, state as list_utility_refunds gives it). Company-paid utilities are left out. Any member reads it.`, {
     project_id: { type: "string" },
+    as_of: { type: "string" },
+  }, false),
+  spec("list_utility_income", `The money that came in around one utility bill (FLOW-1159), to see whether the tenant paid it back: bill_transaction_id is a tenant-paid utility bill from list_utility_refunds (another company's line, or a line that is not such a bill, is refused: transaction not found). months (default 2) is how many months before and after the bill's date to read, clamped to 1..6. ${AS_OF_TEXT}. Returns as_of, months (as clamped), from and to (the window), bill (bill_transaction_id, doc_date, amount_minor, currency, category_id, category_name, supplier_name, project_id, project_name, state as list_utility_refunds gives it, days, payment_transaction_id: its refund or null) and lines[], newest first: every posted money-in line in the window that is on the bill's property, or that has a split part on it (a part with no project of its own is on the line's), with transaction_id, doc_date, amount_minor, currency, party, description, project_id, category_id, category_name, parts[] (the line's split parts on the property, in order: category_id, category_name, amount_minor; [] when it is not split) and refunded_bills[] (the utility bills the line is the refund of, oldest first: bill_transaction_id, doc_date, amount_minor, category_id, category_name). Any member reads it.`, {
+    bill_transaction_id: { type: "string" },
+    months: { type: "integer" },
     as_of: { type: "string" },
   }, false),
 ];
@@ -143,6 +157,15 @@ export async function utilityRead(
     const parsed = countSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
     return readOf(await rpc("count_utility_refunds", { p_today: parsed.data.as_of ?? null }), null);
+  }
+  if (name === "list_utility_income") {
+    const income = incomeSchema.safeParse(args);
+    if (!income.success) return fail("validation", "validation");
+    return readOf(await rpc("list_utility_income", {
+      p_bill_transaction_id: income.data.bill_transaction_id,
+      p_months: income.data.months ?? null,
+      p_today: income.data.as_of ?? null,
+    }), "lines");
   }
   if (name === "list_utility_months") {
     const months = monthsSchema.safeParse(args);
