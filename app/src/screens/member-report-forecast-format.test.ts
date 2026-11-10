@@ -2,7 +2,7 @@ import { computeMemberProjection, computeMemberShare } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import { MEMBER_CONFIG, MEMBER_LOANS, MEMBER_PROJECTION_INPUTS, MEMBER_PROPERTIES } from "../dev/member-report-sample";
 import { forecastDrill } from "./member-report-forecast";
-import { forecastDraft, forecastFormula, forecastYear, projectionFromDraft, propertyYearFormula, signedBp, missingByReason, untilFormula, withHidden } from "./member-report-forecast-format";
+import { forecastDraft, forecastFormula, forecastYear, projectionFromDraft, propertyYearFormula, signedBp, missingByReason, untilFormula, withHidden, yearField, yearsText } from "./member-report-forecast-format";
 
 /* FLOW-1127: the forecast tab's formulas and its assumptions draft. */
 
@@ -68,10 +68,15 @@ describe("the assumptions draft", () => {
     expect(forecastDraft(built.projection).byYear.rent[1]).toBe("8");
   });
 
-  it("names the first value that is not valid", () => {
+  it("names every field that is not valid by its key, in the sheet's order (FLOW-1148)", () => {
     const d = forecastDraft(undefined);
     d.growth.tax = "40";
-    expect(projectionFromDraft(d)).toEqual({ invalid: "מס נכס" });
+    d.byYear.rent[2] = "abc";
+    d.capex = "-1";
+    d.rate = "x";
+    expect(projectionFromDraft(d)).toEqual({ invalid: ["year:rent:3", "growth:tax", "capex", "rate"] });
+    expect(yearField("rent", 3)).toBe("year:rent:3");
+    expect([yearsText(1), yearsText(10)]).toEqual(["שנה", "10 שנים"]);
     expect(signedBp("-2.5", -2000, 3000)).toBe(-250);
     expect(signedBp("abc", -2000, 3000)).toBeNull();
   });

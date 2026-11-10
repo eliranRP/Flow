@@ -30,4 +30,12 @@ describe("Stepper (FLOW-106)", () => {
     fireEvent.keyDown(screen.getByRole("spinbutton"), { key: "ArrowUp" });
     expect(screen.getByRole("spinbutton")).toHaveAttribute("aria-valuenow", "1");
   });
+
+  it("shows and reads the value with its unit when given one (FLOW-1149)", () => {
+    render(<Stepper label="ריפייננס בעוד" value={10} min={1} max={10} valueText={(n) => `${String(n)} שנים`} onChange={() => undefined} />);
+    const value = screen.getByRole("spinbutton", { name: "ריפייננס בעוד" });
+    expect(value).toHaveTextContent("10 שנים");
+    expect(value).toHaveAttribute("aria-valuetext", "10 שנים");
+    expect(value).toHaveAttribute("aria-valuenow", "10");
+  });
 });

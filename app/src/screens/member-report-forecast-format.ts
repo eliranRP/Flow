@@ -33,6 +33,11 @@ function opens(row: FormulaRow, sheet: ForecastDrillKey): FormulaRow {
   return { ...row, target: { kind: "sheet", sheet: `forecast:${sheet}` } };
 }
 
+/** The refinance's distance, with its unit: "שנה", "5 שנים" (FLOW-1149, the year stepper's value). */
+export function yearsText(n: number): string {
+  return n === 1 ? "שנה" : `${String(n)} שנים`;
+}
+
 /** The members' loans the refinance repays: on the refinanced properties, and the company's own out of the cash out. */
 export function membersRepaid(r: ProjectionResult): bigint {
   return r.refi.payoffMemberLoansMinor + r.refi.companyLoansRepaidMinor;
@@ -200,43 +205,56 @@ export function signedBp(raw: string, min: number, max: number): number | null {
 }
 
 /**
- * The draft as the setting's projection part: only what differs from a default (null when nothing does), or the
- * name of the first field that is not valid.
+ * A field of the assumptions sheet, by key: `growth:rent`, `year:rent:3` (the rent's own change in year 3),
+ * `maintenance`, `capex`, `emptyMonths`, `turnoverCost` or `rate`.
  */
-export function projectionFromDraft(d: ForecastDraft): { projection: ProjectionConfig | null } | { invalid: string } {
+export type ForecastField = `growth:${ProjectionSeries}` | `year:${ProjectionSeries}:${string}` | "maintenance" | "capex" | "emptyMonths" | "turnoverCost" | "rate";
+
+/** The key of a series' own change in year `n` (1 to 10). */
+export function yearField(s: ProjectionSeries, n: number): ForecastField {
+  return `year:${s}:${String(n)}`;
+}
+
+/**
+ * The draft as the setting's projection part: only what differs from a default (null when nothing does), or
+ * every field that is not valid, in the sheet's order (FLOW-1148: each shows its own error).
+ */
+export function projectionFromDraft(d: ForecastDraft): { projection: ProjectionConfig | null } | { invalid: ForecastField[] } {
   const out: Record<string, unknown> = {};
   const byYear: Record<string, Record<string, number>> = {};
+  const invalid: ForecastField[] = [];
   for (const s of PROJECTION_SERIES) {
     const bp = signedBp(d.growth[s], -2000, 3000);
-    if (bp == null) return { invalid: SERIES_LABELS[s] };
-    if (bp !== SERIES_DEFAULTS[s]) out[SERIES_KEYS[s]] = bp;
+    if (bp == null) invalid.push(`growth:${s}`);
+    else if (bp !== SERIES_DEFAULTS[s]) out[SERIES_KEYS[s]] = bp;
     for (let i = 0; i < 10; i++) {
       const raw = d.byYear[s][i] ?? "";
       if (raw.trim() === "") continue;
       const y = signedBp(raw, -2000, 3000);
-      if (y == null) return { invalid: `${SERIES_LABELS[s]} בשנה ${String(i + 1)}` };
-      (byYear[s] ??= {})[String(i + 1)] = y;
+      if (y == null) invalid.push(yearField(s, i + 1));
+      else (byYear[s] ??= {})[String(i + 1)] = y;
     }
   }
   if (Object.keys(byYear).length > 0) out.by_year = byYear;
   const maintenance = signedBp(d.maintenance, 0, 3000);
-  if (maintenance == null) return { invalid: "תחזוקה" };
-  if (maintenance !== PROJECTION_DEFAULTS.maintenanceBp) out.maintenance_bp = maintenance;
+  if (maintenance == null) invalid.push("maintenance");
+  else if (maintenance !== PROJECTION_DEFAULTS.maintenanceBp) out.maintenance_bp = maintenance;
   const capex = signedBp(d.capex, 0, 3000);
-  if (capex == null) return { invalid: "רזרבה ל־CapEx" };
-  if (capex !== PROJECTION_DEFAULTS.capexBp) out.capex_bp = capex;
+  if (capex == null) invalid.push("capex");
+  else if (capex !== PROJECTION_DEFAULTS.capexBp) out.capex_bp = capex;
   if (d.stayMonths !== PROJECTION_DEFAULTS.stayMonths) out.stay_months = d.stayMonths;
   const empty = /^\d{1,2}(\.\d)?$/.test(d.emptyMonths.trim()) ? Math.round(Number(d.emptyMonths) * 10) : null;
-  if (empty == null || empty > 120) return { invalid: "חודשים ריקים" };
-  if (empty !== PROJECTION_DEFAULTS.emptyMonthsTenths) out.empty_months_tenths = empty;
+  if (empty == null || empty > 120) invalid.push("emptyMonths");
+  else if (empty !== PROJECTION_DEFAULTS.emptyMonthsTenths) out.empty_months_tenths = empty;
   const cost = /^\d{1,6}(\.\d{1,2})?$/.test(d.turnoverCost.trim()) ? Math.round(Number(d.turnoverCost) * 100) : null;
-  if (cost == null || cost > 10_000_000) return { invalid: "עלות תחלופה" };
-  if (cost !== PROJECTION_DEFAULTS.turnoverCostMinor) out.turnover_cost_minor = cost;
+  if (cost == null || cost > 10_000_000) invalid.push("turnoverCost");
+  else if (cost !== PROJECTION_DEFAULTS.turnoverCostMinor) out.turnover_cost_minor = cost;
   if (d.rate.trim() !== "") {
     const rate = /^\d{1,2}(\.\d{1,3})?$/.test(d.rate.trim()) ? Math.round(Number(d.rate) * 10_000) : null;
-    if (rate == null || rate > 300_000) return { invalid: "ריבית" };
-    out.rate_ppm = rate;
+    if (rate == null || rate > 300_000) invalid.push("rate");
+    else out.rate_ppm = rate;
   }
+  if (invalid.length > 0) return { invalid };
   const types = Object.fromEntries(Object.entries(d.categoryTypes).filter(([, t]) => t !== ""));
   if (Object.keys(types).length > 0) out.category_types = types;
   return { projection: Object.keys(out).length === 0 ? null : (out) };
