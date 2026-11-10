@@ -2,7 +2,9 @@
 -- of a split payment, may refund up to 3 bills of one property, currency and category dated within 62 days of
 -- each other, not only of one month, when they add up to it exactly. And the bills the owner matched to a line
 -- count toward it: what is left of the line (or of its part in their category) can refund the other bills, so
--- a payment that covers last month's bills and this month's is read whole. Still exact matches only. The body
+-- a payment that covers last month's bills and this month's is read whole. Single bills are matched first,
+-- across every bill, then the groups, so a group never takes the payment that is one bill's exact amount.
+-- Still exact matches only. The body
 -- is patched in place: each anchor must be found as many times as expected, or the migration fails.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -25,6 +27,8 @@ declare
   pair_anchor text := $a$        and b2.month = b1.month and b2.ord > b1.ord
 $a$;
   triple_anchor text := $a$        and b3.month = b1.month and b3.ord > b2.ord
+$a$;
+  order_anchor text := $a$    order by s.owner, rule, days_apart, s.size, p.id
 $a$;
   pays_anchor text := $a$    pays as materialized (
       -- The owner's note of 2026-11-10: a split line is matched by its parts (a rent payment with the water
@@ -68,13 +72,17 @@ $a$;
 begin
   def := pg_get_functiondef(fn::regprocedure);
   if pg_temp.anchor_count(def, pair_anchor) <> 2 or pg_temp.anchor_count(def, triple_anchor) <> 1
-    or pg_temp.anchor_count(def, pays_anchor) <> 1 then
+    or pg_temp.anchor_count(def, pays_anchor) <> 1 or pg_temp.anchor_count(def, order_anchor) <> 1 then
     raise exception '% is not the expected definition', fn;
   end if;
   -- The pairs and triples: the bills of one property, currency and category within 62 days, not one month.
   def := replace(def, pair_anchor, $n$        and b2.doc_date <= b1.doc_date + 62 and b2.ord > b1.ord
 $n$);
   def := replace(def, triple_anchor, $n$        and b3.doc_date <= b1.doc_date + 62 and b3.ord > b2.ord
+$n$);
+  -- Every bill's own exact match first (rule 1), then the groups (rule 2), each oldest bill first. A bill a
+  -- single match took is done, so its groups clash and are skipped.
+  def := replace(def, order_anchor, $n$    order by rule, s.owner, days_apart, s.size, p.id
 $n$);
   def := replace(def, pays_anchor, $n$    -- FLOW-1147: the bills the owner matched to a line count toward it. Each candidate's amount is what is left
     -- of it after them (a part: the matched bills of its category), so the rest can refund the other bills.

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(6);
+select plan(8);
 
 select tests.create_supabase_user('ux_owner', 'ux-owner@example.com');
 
@@ -21,7 +21,8 @@ insert into ux (label, id) values
   ('rent', tests.fixture_category(pg_temp.uxid('co'), 'הכנסות שכירות', 'income')),
   ('oak', tests.fixture_project(pg_temp.uxid('co'), 'Example Oak House')),
   ('elm', tests.fixture_project(pg_temp.uxid('co'), 'Example Elm House')),
-  ('ash', tests.fixture_project(pg_temp.uxid('co'), 'Example Ash House'));
+  ('ash', tests.fixture_project(pg_temp.uxid('co'), 'Example Ash House')),
+  ('pine', tests.fixture_project(pg_temp.uxid('co'), 'Example Pine House'));
 update public.categories set parent_id = pg_temp.uxid('bills') where id = pg_temp.uxid('water');
 with made as (
   insert into public.suppliers (company_id, name) values (pg_temp.uxid('co'), 'Example Water Co') returning id
@@ -43,7 +44,12 @@ insert into ux_lines values
   -- Ash: two bills three months apart do not group.
   ('aa', 'expense', 'water', 'ash', '2026-05-01', 1000),
   ('ab', 'expense', 'water', 'ash', '2026-08-01', 1100),
-  ('apay', 'income', 'water', 'ash', '2026-08-10', 2100);
+  ('apay', 'income', 'water', 'ash', '2026-08-10', 2100),
+  -- Pine: an older pair adds up to a newer bill's exact amount; the single bill takes the payment.
+  ('pa', 'expense', 'water', 'pine', '2026-08-05', 1000),
+  ('pb', 'expense', 'water', 'pine', '2026-09-01', 500),
+  ('pc', 'expense', 'water', 'pine', '2026-09-10', 1500),
+  ('ppay', 'income', 'water', 'pine', '2026-09-12', 1500);
 insert into ux (label, id)
 select l.label, tests.fixture_line(pg_temp.uxid('co'), 'ux:' || l.label, l.amount, l.direction,
   pg_temp.uxid(l.project), pg_temp.uxid(l.category), l.doc_date)
@@ -81,6 +87,12 @@ select is((select payment_id from ux_rows where bill_id = pg_temp.uxid('eb')), p
 select is(
   (select string_agg(state, ' ' order by doc_date) from ux_rows where bill_id in (pg_temp.uxid('aa'), pg_temp.uxid('ab'))),
   'not_refunded not_refunded', 'bills more than 62 days apart do not group');
+
+select is((select state || ':' || rule from ux_rows where bill_id = pg_temp.uxid('pc')), 'refunded:1',
+  'a single bill''s exact match comes before an older pair''s');
+select is(
+  (select string_agg(state, ' ' order by doc_date) from ux_rows where bill_id in (pg_temp.uxid('pa'), pg_temp.uxid('pb'))),
+  'not_refunded not_refunded', 'the older pair does not take that payment');
 
 select * from finish();
 rollback;
