@@ -12,6 +12,7 @@ export function Stepper({
   min,
   max,
   hint,
+  valueText,
   disabled = false,
   onChange,
 }: {
@@ -21,6 +22,8 @@ export function Stepper({
   max: number;
   /** One line of dates or numbers under the label, such as the dates the value covers; drawn LTR. */
   hint?: string;
+  /** The value in words with its unit, such as "10 שנים" (FLOW-1149); shown and read instead of the bare number. */
+  valueText?: (value: number) => string;
   disabled?: boolean;
   onChange: (value: number) => void;
 }) {
@@ -47,12 +50,13 @@ export function Stepper({
           <MinusIcon />
         </button>
         <span
-          className="ui-stepper-value ui-num"
+          className={valueText ? "ui-stepper-value" : "ui-stepper-value ui-num"}
           role="spinbutton"
           tabIndex={disabled ? -1 : 0}
           aria-labelledby={labelId}
           aria-describedby={hint ? hintId : undefined}
           aria-valuenow={value}
+          aria-valuetext={valueText?.(value)}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-disabled={disabled || undefined}
@@ -63,7 +67,7 @@ export function Stepper({
             if (event.key === "End") { event.preventDefault(); step(max - value); }
           }}
         >
-          {value}
+          {valueText ? valueText(value) : value}
         </span>
         <button
           type="button"

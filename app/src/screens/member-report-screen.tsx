@@ -390,7 +390,7 @@ function MemberReportLoading({ back, mode, onMode }: { back: string; mode: Repor
         </div>
       </TopBand>
       <div className="ui-rep-content ui-msr">
-        <DelayedSkeleton>
+        <DelayedSkeleton offline>
           <p className="sr-only" role="status">טוען…</p>
           <div className="ui-msr-skel" aria-busy="true" aria-hidden="true">
             {[5, 3].map((rows, card) => (
@@ -554,12 +554,12 @@ function RateSection({ result, canEdit, onOpen, onSave, config, updated }: {
       </div>
       <List>
         {result.quotes.map((q) => (
-          <ListRow key={q.id} variant="static" title={q.lender} hint={verdictText(q) ?? formatDisplay(q.quoted_on)}
+          <ListRow key={q.id} variant="static" title={q.lender} wrapTitle hint={verdictText(q) ?? formatDisplay(q.quoted_on)}
             action={(
               <span className="ui-msr-quote-end">
                 <bdi dir="ltr" className="ui-num" data-verdict={q.verdict ?? undefined}>{quoteRateText(q.rate_ppm)}</bdi>
                 {canEdit ? (
-                  <Button variant="danger-link" aria-label={`הסרת ההצעה של ${q.lender}`} onClick={() => { void remove(q.id, q.lender); }}>הסרה</Button>
+                  <Button variant="link" quiet aria-label={`הסרת ההצעה של ${q.lender}`} onClick={() => { void remove(q.id, q.lender); }}>הסרה</Button>
                 ) : null}
               </span>
             )} />

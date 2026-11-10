@@ -3,7 +3,8 @@ import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 /**
  * FLOW-1136: the תחזית tab while its inputs or its code load, in the tab's own shape: the year stepper,
  * the bars, the refinance's calculation and עד אז, then the properties. It waits 300ms like the app's
- * other skeletons (a fast load shows nothing), and says it is loading in one sr-only line.
+ * other skeletons (a fast load shows nothing), and says it is loading in one sr-only line. Offline, while a
+ * read waits for the connection, the offline line stands in its place (FLOW-1150).
  */
 const BARS = [38, 44, 50, 56, 62, 68, 74, 80, 88, 96] as const;
 
@@ -23,7 +24,7 @@ function CalcCardSkeleton({ rows }: { rows: number }) {
 
 export function ForecastSkeleton() {
   return (
-    <DelayedSkeleton>
+    <DelayedSkeleton offline>
       {/* The status line sits outside the busy blocks, so screen readers announce it at once. */}
       <p className="sr-only" role="status">טוען את התחזית…</p>
       <div className="ui-msr-skel" aria-busy="true" aria-hidden="true">

@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
+import { useLayoutEffect } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { MEMBER_REPORT, MEMBER_REPORT_EMPTY, MEMBER_REPORT_LEFT_OUT } from "../dev/member-report-sample";
 import { REPORTS_BALANCE, REPORTS_BY_PROJECT, REPORTS_MONTHS, REPORTS_STATEMENT, REPORTS_TODAY } from "../dev/reports-sample";
+import { OFFLINE_WAIT_WORDS } from "../ui/offline-wait";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import type { MemberReportRead } from "../use-member-report";
@@ -55,6 +58,22 @@ export const Loading: Story = {
     await expect(await canvas.findByText("טוען…")).toHaveAttribute("role", "status");
     await expect(canvasElement.querySelectorAll(".ui-msr-skel-card")).toHaveLength(2);
     await expect(canvasElement.querySelector(".ui-skel-row")).toBeNull();
+  },
+};
+
+/** FLOW-1150: the same wait offline: the offline line in place of the skeleton, under the band. */
+export const LoadingOffline: Story = {
+  render: () => (
+    <StoryRoute entry="/reports/member?preview=loading" tabs>
+      <PausedOffline />
+      <ExampleBar />
+      <MemberReportScreen />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText(`אין חיבור · ${OFFLINE_WAIT_WORDS}`)).toBeVisible();
+    await expect(canvasElement.querySelector(".ui-msr-skel-card")).toBeNull();
   },
 };
 
@@ -113,6 +132,12 @@ export const Refinance: Story = {
     // Member A's half of $134,505 freed: $67,252.50.
     await expect(canvas.getByRole("list", { name: "החישוב" }).textContent).toMatch(/67,25[23]/);
     await expect(canvas.getByText("תשואה מ־03/11/2026 · הוקלד")).toBeInTheDocument();
+    // FLOW-1150: the verdict colour is on the rate only; הסרה is a quiet link, and the lender's name is whole.
+    const remove = canvas.getByRole("button", { name: "הסרת ההצעה של Example Lending" });
+    await expect(remove.className).toContain("ui-btn-quiet");
+    await expect(remove.className).not.toContain("ui-btn-danger-link");
+    const name = canvas.getByText("Example Lending");
+    await expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
     await fits(canvasElement);
   },
 };
@@ -316,3 +341,14 @@ export const ThirdsSplit: Story = {
     await expect(sheet.getByRole("button", { name: "שמירה" })).toBeEnabled();
   },
 };
+
+/** FLOW-1150: offline, with a read waiting for the connection (React Query pauses it), as a phone without signal. */
+function PausedOffline() {
+  const client = useQueryClient();
+  useLayoutEffect(() => {
+    onlineManager.setOnline(false);
+    client.query({ queryKey: ["story-paused-read"], queryFn: () => new Promise<never>(() => undefined) }).catch(() => undefined);
+    return () => { onlineManager.setOnline(true); };
+  }, [client]);
+  return null;
+}

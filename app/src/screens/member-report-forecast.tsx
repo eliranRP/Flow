@@ -16,6 +16,7 @@ import {
   missingByReason,
   propertyYearFormula,
   untilFormula,
+  yearsText,
   type ForecastDrillKey,
 } from "./member-report-forecast-format";
 import { ForecastAssumptionsSheet, type CostCategory } from "./member-report-forecast-sheets";
@@ -118,13 +119,32 @@ function ForecastPropertySheet({ property, result, onOpenChange }: { property: P
   );
 }
 
-/** Equity over loan balances, year by year: the refinance year's bar marked. */
+/**
+ * Equity over loan balances, year by year: the refinance year's bar marked. FLOW-1149: each key matches its bars,
+ * and a screen reader gets each year's figures from a table.
+ */
 function ForecastBars({ result }: { result: ProjectionResult }) {
   const max = result.totals.reduce((m, t) => (t.valueMinor > m ? t.valueMinor : m), 1n);
   const pct = (n: bigint) => `${String(Number(((n > 0n ? n : 0n) * 1000n) / max) / 10)}%`;
   const year = forecastYear(result);
+  const currency = result.currency ?? "USD";
   return (
     <figure className="ui-msr-bars" aria-label={`ההון ויתרת ההלוואות בכל שנה עד ${String(year)}`}>
+      {/* A table takes its content's width whatever its own, so the sr-only box is a block around it. */}
+      <div className="sr-only">
+        <table>
+          <thead><tr><th scope="col">שנה</th><th scope="col">הון</th><th scope="col">יתרת הלוואות</th></tr></thead>
+          <tbody>
+            {result.totals.map((t) => (
+              <tr key={t.year}>
+                <th scope="row">{`${String(forecastYear(result, t.year))}${t.year === result.years ? " · שנת הריפייננס" : ""}`}</th>
+                <td>{formatMoney(t.valueMinor - t.balanceMinor, currency)}</td>
+                <td>{formatMoney(t.balanceMinor, currency)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="ui-msr-bars-plot" aria-hidden="true">
         {result.totals.map((t) => (
           <div key={t.year} className="ui-msr-bar" data-on={t.year === result.years || undefined}>
@@ -136,9 +156,10 @@ function ForecastBars({ result }: { result: ProjectionResult }) {
       <div className="ui-msr-bars-years" aria-hidden="true">
         {result.totals.map((t) => <span key={t.year} data-on={t.year === result.years || undefined}>{String(forecastYear(result, t.year)).slice(2)}</span>)}
       </div>
-      <figcaption className="ui-msr-bars-legend">
+      <figcaption className="ui-msr-bars-legend" aria-hidden="true">
         <span><i className="ui-msr-key-equity" />הון</span>
         <span><i className="ui-msr-key-loan" />יתרת הלוואות</span>
+        <span><i className="ui-msr-key-refi" />שנת הריפייננס</span>
       </figcaption>
     </figure>
   );
@@ -181,7 +202,7 @@ export function ForecastBody({ result, member, years, onYears, canEdit, projecti
   return (
     <>
       <section className="ui-msr-forecast-years" aria-label="שנת הריפייננס">
-        <Stepper label={`ריפייננס בעוד (שנים) · ${String(forecastYear(result))}`} value={years} min={1} max={10} onChange={onYears} />
+        <Stepper label="ריפייננס בעוד" hint={String(forecastYear(result))} value={years} min={1} max={10} valueText={yearsText} onChange={onYears} />
         <ForecastBars result={result} />
       </section>
       <CalcSection title={`ריפייננס ב־${String(forecastYear(result))}`} total={null}>

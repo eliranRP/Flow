@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
+import { useLayoutEffect } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { MEMBER_PROJECTION_INPUTS, MEMBER_REPORT } from "../dev/member-report-sample";
+import { OFFLINE_WAIT_WORDS } from "../ui/offline-wait";
 import { StoryRoute } from "../ui/story-route";
 import type { MemberProjectionInputs, MemberReportRead } from "../use-member-report";
 import { MemberReportScreen } from "./member-report-screen";
@@ -18,15 +21,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function Report({ entry = "/reports/member?mode=forecast", sample = MEMBER_REPORT, inputs = MEMBER_PROJECTION_INPUTS, loading = false }: {
+function Report({ entry = "/reports/member?mode=forecast", sample = MEMBER_REPORT, inputs = MEMBER_PROJECTION_INPUTS, loading = false, offline = false }: {
   entry?: string;
   sample?: MemberReportRead;
   inputs?: MemberProjectionInputs;
   /** The forecast's inputs never arrive: the tab stays on its skeleton (FLOW-1136). */
   loading?: boolean;
+  /** Offline with a read waiting for the connection (FLOW-1150). */
+  offline?: boolean;
 }) {
   return (
     <StoryRoute entry={entry} tabs>
+      {offline ? <PausedOffline /> : null}
       <MemberReportScreen sample={sample} projectionSample={loading ? undefined : inputs} />
     </StoryRoute>
   );
@@ -45,7 +51,18 @@ export const Forecast: Story = {
     const calc = await canvas.findByRole("list", { name: "החישוב" });
     await expect(calc.textContent).toContain("כסף שמשתחרר לשותפים");
     await expect(calc.textContent).toContain("הלוואות של Member A");
-    await expect(canvas.getByRole("figure", { name: /ההון ויתרת ההלוואות בכל שנה עד 2036/ })).toBeInTheDocument();
+    const figure = canvas.getByRole("figure", { name: /ההון ויתרת ההלוואות בכל שנה עד 2036/ });
+    // FLOW-1149: a key per kind of bar, the year in words, and each year's figures for a screen reader.
+    await expect(figure.querySelector(".ui-msr-bars-legend")?.textContent).toBe("הוןיתרת הלוואותשנת הריפייננס");
+    const table = within(figure).getByRole("table");
+    await expect(within(table).getAllByRole("row")).toHaveLength(11);
+    await expect(within(table).getByRole("rowheader", { name: "2036 · שנת הריפייננס" })).toBeInTheDocument();
+    const years = canvas.getByRole("spinbutton", { name: "ריפייננס בעוד" });
+    await expect(years).toHaveTextContent("10 שנים");
+    await expect(years).toHaveAccessibleDescription("2036");
+    // The hidden table takes no width: the page never scrolls sideways.
+    const root = canvasElement.ownerDocument.documentElement;
+    await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
     await expect(canvas.getByRole("list", { name: "עד אז" }).textContent).toContain("הריבית הצפויה היום, לא תחזית");
   },
 };
@@ -106,6 +123,27 @@ export const ForecastAssumptions: Story = {
   },
 };
 
+/** FLOW-1148: bad values say so under their fields; שמירה opens the years that hold one and moves to the first. */
+export const ForecastAssumptionsBadValue: Story = {
+  render: () => <Report />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "הנחות התחזית" }));
+    const sheet = within(await body(canvasElement).findByRole("dialog", { name: "הנחות התחזית" }));
+    const years = sheet.getByRole("button", { name: "ביטוח: שינוי שונה לשנה מסוימת" });
+    await userEvent.click(years);
+    await userEvent.type(sheet.getByLabelText("שנה 4"), "x");
+    await userEvent.click(years);
+    await userEvent.type(sheet.getByLabelText("רזרבה ל־CapEx"), "abc");
+    const save = sheet.getByRole("button", { name: "שמירה" });
+    await expect(save).toBeEnabled();
+    await userEvent.click(save);
+    const year = sheet.getByLabelText("שנה 4");
+    await waitFor(async () => { await expect(year).toHaveFocus(); });
+    await expect(year).toHaveAccessibleDescription("ערך לא תקין");
+    await expect(sheet.getByLabelText("רזרבה ל־CapEx")).toHaveAccessibleDescription("ערך לא תקין");
+  },
+};
+
 export const ForecastViewer: Story = {
   render: () => <Report sample={{ ...MEMBER_REPORT, canEdit: false }} />,
   play: async ({ canvasElement }) => {
@@ -138,3 +176,23 @@ export const ForecastLoading: Story = {
     await expect(canvas.queryByText("$0")).toBeNull();
   },
 };
+
+/** FLOW-1150: the same wait offline: the offline line in place of the tab's skeleton. */
+export const ForecastLoadingOffline: Story = {
+  render: () => <Report loading offline />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText(`אין חיבור · ${OFFLINE_WAIT_WORDS}`)).toBeVisible();
+    await expect(canvasElement.querySelector(".ui-msr-skel")).toBeNull();
+  },
+};
+
+/** FLOW-1150: offline, with a read waiting for the connection (React Query pauses it), as a phone without signal. */
+function PausedOffline() {
+  const client = useQueryClient();
+  useLayoutEffect(() => {
+    onlineManager.setOnline(false);
+    client.query({ queryKey: ["story-paused-read"], queryFn: () => new Promise<never>(() => undefined) }).catch(() => undefined);
+    return () => { onlineManager.setOnline(true); };
+  }, [client]);
+  return null;
+}

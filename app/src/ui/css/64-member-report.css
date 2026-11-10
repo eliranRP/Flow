@@ -107,10 +107,11 @@
   gap: var(--space-1);
 }
 
+/* FLOW-1150: the rate over a quiet הסרה, so the lender's name has the row's width at 320. */
 .ui-msr-quote-end {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .ui-msr-quote-end [data-verdict="good"],
@@ -280,8 +281,10 @@
   background: var(--color-accent);
 }
 
-.ui-msr-bar-loan {
-  background: var(--color-line);
+/* FLOW-1149: a neutral at 3:1 on the card (3.5:1 light, 4.0:1 dark), not the hairline colour. */
+.ui-msr-bar-loan,
+.ui-msr-key-loan {
+  background: color-mix(in srgb, var(--color-text-muted) 80%, var(--color-surface));
 }
 
 .ui-msr-bars-years {
@@ -302,7 +305,8 @@
 
 .ui-msr-bars-legend {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
 }
@@ -314,16 +318,20 @@
 }
 
 .ui-msr-key-equity,
-.ui-msr-key-loan {
+.ui-msr-key-loan,
+.ui-msr-key-refi {
   display: inline-block;
   inline-size: var(--space-3);
   block-size: var(--space-3);
   border-radius: var(--radius-chip);
-  background: var(--color-accent);
 }
 
-.ui-msr-key-loan {
-  background: var(--color-line);
+.ui-msr-key-equity {
+  background: var(--color-tint-strong);
+}
+
+.ui-msr-key-refi {
+  background: var(--color-accent);
 }
 
 /* One property's year: value, balance, equity and DSCR. */
