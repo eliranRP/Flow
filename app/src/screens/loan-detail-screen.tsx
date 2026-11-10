@@ -251,13 +251,14 @@ function LoanDetailReady({
   const [deleting, setDeleting] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [linkSaving, setLinkSaving] = useState(false);
-  const busyClose = useRef(false);
+  /** Saves in flight: the sheet stays open while any runs, so an overlapping save ending first does not release it. */
+  const writesInFlight = useRef(0);
   const returnRef = useRef<HTMLElement | null>(null);
   // A close swaps סגירת ההלוואה for החזרה לפעילות, so focus goes back to whichever is mounted now.
   const statusRef = useRef<HTMLButtonElement | null>(null);
   const setSheet = useSheetHistory("loan-detail", sheet != null, (next) => {
     if (!next) setSheetState(null);
-  }, () => !busyClose.current);
+  }, () => writesInFlight.current === 0);
   const ctx: LoanCopyContext = { currency: loan.currency, closedOn: loan.closedOn, startDate: loan.startDate };
 
   function open(name: SheetName) {
@@ -285,8 +286,8 @@ function LoanDetailReady({
     /** A refusal the open sheet shows on its own line (FLOW-466); null sends it to a toast. */
     inSheet?: (error: Error) => string | null;
   }): Promise<string | null> {
+    writesInFlight.current += 1;
     try {
-      busyClose.current = true;
       await run();
     } catch (raw) {
       const error = raw instanceof Error ? raw : new Error("failed");
@@ -305,7 +306,7 @@ function LoanDetailReady({
       });
       return "";
     } finally {
-      busyClose.current = false;
+      writesInFlight.current -= 1;
     }
     await refresh();
     const undo = options.undo;

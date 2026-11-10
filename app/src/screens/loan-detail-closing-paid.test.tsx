@@ -1,8 +1,8 @@
 // vitest-css: these queries rely on the app's CSS hiding elements.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, renderHook, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sampleLoanStore, SAMPLE_INTEREST_ONLY } from "../dev/loan-detail-sample";
 import { mapleCourtClosingPaidReturns } from "../dev/returns-sample";
@@ -59,6 +59,41 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     await waitFor(() => { expect(closingRow()).toHaveTextContent("$180,000"); });
     fireEvent.click(within(toast("סכום ששולם בסגירה · $180,000") as HTMLElement).getByRole("button", { name: "ביטול", hidden: true }));
     await waitFor(() => { expect(closingOf(store, "loan-bridge")).toBeNull(); });
+  });
+
+  it("keeps the sheet on Back while a save is in flight, though an overlapping save ended first (FLOW-1164)", async () => {
+    const store = sampleLoanStore();
+    let release: () => void = () => undefined;
+    const hold = new Promise<void>((resolve) => { release = resolve; });
+    // The first save fails in a way that can be retried; the second is held; the retry then passes.
+    const write = vi.spyOn(store, "setClosingPaid")
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockImplementationOnce(async () => { await hold; });
+    window.history.replaceState(null, "", "/loans/loan-bridge");
+    const view = renderWithProviders(
+      <BrowserRouter>
+        <Routes>
+          <Route path="/loans/:loanId" element={<LoanDetailScreen store={store} today="2026-10-09" />} />
+        </Routes>
+      </BrowserRouter>,
+      { memoryRouter: false },
+    );
+    fireEvent.click(closingRow());
+    const sheet = () => screen.getByRole("dialog", { name: "סכום ששולם בסגירה" });
+    fireEvent.change(within(sheet()).getByLabelText("סכום"), { target: { value: "180000" } });
+    fireEvent.click(within(sheet()).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(toast("ניסיון חוזר")).toBeDefined(); });
+    fireEvent.change(within(sheet()).getByLabelText("סכום"), { target: { value: "170000" } });
+    fireEvent.click(within(sheet()).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(write).toHaveBeenCalledTimes(2); });
+    fireEvent.click(within(toast("ניסיון חוזר") as HTMLElement).getByRole("button", { name: "ניסיון חוזר", hidden: true }));
+    await waitFor(() => { expect(write).toHaveBeenCalledTimes(3); });
+    await waitFor(() => { expect(toast("סכום ששולם בסגירה · $180,000")).toBeDefined(); });
+    window.history.back();
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 50); }); });
+    expect(sheet()).toBeInTheDocument();
+    await act(async () => { release(); await Promise.resolve(); });
+    view.unmount();
   });
 
   it("saves an empty field as the whole loan (null)", async () => {
