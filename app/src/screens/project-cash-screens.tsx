@@ -116,7 +116,8 @@ function ChargeRow({ row, search, skippedIn }: { row: ScheduleRow; search: strin
 
 /**
  * FLOW-1113: one payment of the month: its cash date and categories, its amount "+" and green when money came in.
- * A recurring charge's payment carries the paid mark; any other the dot.
+ * A recurring charge's payment carries the paid mark; any other the dot. FLOW-1156: its hint says "קבוע" too, as the
+ * mark is hidden from a screen reader and tells it by its shape alone.
  */
 function MonthPaymentRow({ payment, search }: { payment: MonthPayment; search: string }) {
   const date = `${payment.date.slice(8, 10)}/${payment.date.slice(5, 7)}`;
@@ -124,7 +125,7 @@ function MonthPaymentRow({ payment, search }: { payment: MonthPayment; search: s
     <ListRow
       variant="project"
       title={payment.name}
-      hint={[date, ...payment.categories].join(" · ")}
+      hint={[date, ...(payment.recurring ? ["קבוע"] : []), ...payment.categories].join(" · ")}
       icon={<StatusMark kind={payment.recurring ? "paid" : "once"} />}
       agorot={magnitude(payment.signedMinor)}
       currency={payment.currency}
@@ -134,12 +135,19 @@ function MonthPaymentRow({ payment, search }: { payment: MonthPayment; search: s
   );
 }
 
-/** The month's lines' head: the count, and the net in its first line's currency, "+" when more came in. */
-function netSummary(count: number, currency: string | undefined, net: bigint): ReactNode {
+/**
+ * The month's lines' head: the count, and their net, "+" when more came in. FLOW-1156: payments in more than one
+ * currency have no one net, so the head says so after the count rather than add up one currency's.
+ */
+function netSummary(payments: readonly MonthPayment[]): ReactNode {
+  const currency = payments[0]?.currency;
+  const mixed = payments.some((payment) => payment.currency !== currency);
+  // Money in less money out (a credit on an expense is money in).
+  const net = payments.reduce((sum, payment) => sum + payment.signedMinor, 0n);
   return (
     <>
-      <bdi dir="ltr">{String(count)}</bdi>
-      {currency == null ? null : <> · <bdi dir="ltr">{`${net > 0n ? "+" : net < 0n ? "−" : ""}${formatAmountText(net < 0n ? -net : net, currency)}`}</bdi></>}
+      <bdi dir="ltr">{String(payments.length)}</bdi>
+      {currency == null ? null : mixed ? " · מטבעות שונים" : <> ·<bdi dir="ltr">{`${net > 0n ? "+" : net < 0n ? "−" : ""}${formatAmountText(net < 0n ? -net : net, currency)}`}</bdi></>}
     </>
   );
 }
@@ -255,10 +263,6 @@ export function ProjectCashOverview({
   const chargeTotal = (charges: readonly ScheduleRow[]) => charges
     .filter((row) => row.currency === charges[0]?.currency)
     .reduce((sum, row) => sum + magnitude(row.state === "arrived" && row.amount_minor != null ? row.amount_minor : row.typical_amount_minor), 0n);
-  // The month's net in its first payment's currency: money in less money out (a credit on an expense is money in).
-  const paymentsNet = (payments: readonly MonthPayment[]) => payments
-    .filter((payment) => payment.currency === payments[0]?.currency)
-    .reduce((sum, payment) => sum + payment.signedMinor, 0n);
   const hasLines = groups.left.length > 0 || groups.paid.length > 0 || groups.payments.length > 0;
   return (
     <div className="ui-project-cash ui-project-page flex min-h-full flex-1 flex-col">
@@ -366,7 +370,7 @@ export function ProjectCashOverview({
           )}
           {groups.payments.length === 0 ? null : (
             <section className="ui-month" aria-labelledby={`project-month-lines-${project.id}`}>
-              <GroupHead id={`project-month-lines-${project.id}`} title="תנועות החודש" summary={netSummary(groups.payments.length, groups.payments[0]?.currency, paymentsNet(groups.payments))} />
+              <GroupHead id={`project-month-lines-${project.id}`} title="תנועות החודש" summary={netSummary(groups.payments)} />
               <List>{groups.payments.map((payment) => <MonthPaymentRow key={payment.key} payment={payment} search={search} />)}</List>
             </section>
           )}

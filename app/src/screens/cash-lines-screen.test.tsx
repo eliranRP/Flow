@@ -69,6 +69,19 @@ const lines = {
   has_more: false,
 };
 
+// FLOW-1157: the project's row of the month, as projects_cash_month answers for one project.
+const projectsMonth = {
+  month: `${earlier}-01`,
+  base_currency: "ILS",
+  basis: "paid",
+  projects: [{
+    id: "p1", name: "בית לדוגמה", type: null, status: "active", is_overhead: false, group_id: null, created_at: `${earlier}-01T00:00:00Z`,
+    finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_month_minor: 0, profit_all_minor: 0, first_month: null,
+    pending_count: 0, deletable: false,
+  }],
+  unassigned: { count: 0, cash: [] },
+};
+
 function wrap(path: string) {
   return renderWithProviders(
     <Routes>
@@ -113,6 +126,20 @@ describe("Cash lines of one project", () => {
     });
     fireEvent.click(screen.getAllByRole("button", { name: /חזרה|חזור|back/i })[0] as HTMLElement);
     expect(await screen.findByText("דף הפרויקט")).toBeInTheDocument();
+  });
+
+  it("FLOW-1157: on a cold open, with no name in the cache, reads the project's row of the month for its name", async () => {
+    rpc.impl = (name) => {
+      if (name === "project_cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "project_cash_month_lines") return Promise.resolve({ data: lines, error: null });
+      if (name === "projects_cash_month") return Promise.resolve({ data: projectsMonth, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const { container } = wrap(`/cash/${earlier}/out/ILS?project=p1`);
+    expect(await screen.findByText(/^בית לדוגמה • /u)).toBeInTheDocument();
+    expect(rpc.calls.find((c) => c.name === "projects_cash_month")?.args).toMatchObject({ p_month: `${earlier}-01`, p_project: "p1" });
+    expect(container.querySelector(".ui-lines-sub-name")).toBeNull();
+    expect(screen.getAllByRole("button", { name: /בית לדוגמה/ }).length).toBeGreaterThan(0);
   });
 });
 

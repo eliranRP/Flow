@@ -77,6 +77,36 @@ export const Offline: Story = {
   },
 };
 
+/** FLOW-1157: a project's יצא opened from a link or a reload; `name` null while the name's read is out. */
+function ProjectLines({ name }: { name: string | null }) {
+  const data = sampleCashMonths();
+  const key = cashMonthKey(data.months[0]?.month ?? "");
+  return (
+    <StoryRoute entry={`/cash/${key}/out/ILS?project=p-c`} tabs>
+      <CashLinesScreen sample={{ months: data, lines: sampleCashLines("out"), projectName: name }} at={{ month: key, side: "out", currency: "ILS" }} />
+    </StoryRoute>
+  );
+}
+
+/** FLOW-1157: a cold open, the project's name still read: a bar holds its place on the month line. */
+export const ProjectColdOpen: Story = {
+  name: "Project, cold open, the name loading",
+  render: () => <ProjectLines name={null} />,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector(".ui-lines-sub .ui-lines-sub-name")).not.toBeNull();
+  },
+};
+
+/** FLOW-1157: the name's read is in: the month line and Back name the project. */
+export const ProjectColdOpenNamed: Story = {
+  name: "Project, cold open, the name read",
+  render: () => <ProjectLines name="בית ברחוב הדקל" />,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector(".ui-lines-sub-name")).toBeNull();
+    await expect(canvasElement.querySelector(".ui-lines-sub")?.textContent ?? "").toMatch(/^בית ברחוב הדקל • /u);
+  },
+};
+
 /** FLOW-965: the read failed: the figures are hidden, and the card says what did not load, with נסו שוב and צריך עזרה?. */
 export const Failed: Story = {
   render: () => {

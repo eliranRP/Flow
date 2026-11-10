@@ -34,7 +34,7 @@ function projectKeptSearchPath(projectId: string, monthSearch: string): string {
 }
 
 /** A project's name from any projects-cash read already in the cache (no read of its own); null when none has it. */
-export function useCachedProjectName(projectId: string | null): string | null {
+function useCachedProjectName(projectId: string | null): string | null {
   const client = useQueryClient();
   if (projectId == null) return null;
   for (const [, data] of client.getQueriesData<ProjectsCashMonth>({ queryKey: ["projects-cash"] })) {
@@ -42,6 +42,18 @@ export function useCachedProjectName(projectId: string | null): string | null {
     if (name != null) return name;
   }
   return null;
+}
+
+/**
+ * FLOW-1157: a project's name for a page opened from a link or a reload, when no read in the cache has it: its row
+ * of the month (projects_cash_month, as the project page reads it). `loading` while that read is out.
+ */
+export function useProjectName(projectId: string | null, month: string, active = true): { name: string | null; loading: boolean } {
+  const cached = useCachedProjectName(projectId);
+  const read = useProjectsCashMonth(month, projectId ?? undefined, active && projectId != null && cached == null);
+  if (cached != null || projectId == null) return { name: cached, loading: false };
+  const name = read.data?.projects.find((row) => row.id === projectId)?.name ?? null;
+  return { name, loading: name == null && read.isPending && read.fetchStatus === "fetching" };
 }
 
 /** The search with the project, so the month's נכנס and יצא pages list the project's lines (FLOW-1111). */
@@ -134,13 +146,13 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
  * list reads it with no project; the project page reads its own row. `month` is `YYYY-MM`, or the
  * current month when omitted.
  */
-export function useProjectsCashMonth(month?: string, projectId?: string) {
+export function useProjectsCashMonth(month?: string, projectId?: string, active = true) {
   const preview = useHomePreview();
   const client = useQueryClient();
   const listKey = ["projects-cash", month, undefined] as const;
   return useQuery({
     queryKey: ["projects-cash", month, projectId],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     // A project's row starts from the list's read of the same month, as old as that read: it reads
     // again once the list's copy would have, and at once when a write marked the list stale.
     initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),

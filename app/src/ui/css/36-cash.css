@@ -26,6 +26,14 @@
   color: var(--color-text-secondary);
 }
 
+/* FLOW-1157: the project's name while its read is out, a bar on the month line, so the line keeps its height. */
+.ui-lines-sub > .ui-lines-sub-name {
+  display: inline-block;
+  vertical-align: middle;
+  inline-size: var(--skel-sm);
+  block-size: var(--skel-block);
+}
+
 /* The figure (40) sits 6px under the month line (V3-Lines). */
 .ui-lines-head > .ui-breakdown-total {
   margin-block-start: calc(var(--space-1) * 1.5);
