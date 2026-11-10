@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(7);
+select plan(10);
 
 select tests.create_supabase_user('um_owner', 'um-owner@example.com');
 select tests.create_supabase_user('um_outsider', 'um-outsider@example.com');
@@ -84,6 +84,20 @@ select throws_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umi
 select tests.authenticate_as('um_owner');
 select is(jsonb_array_length(public.list_utility_months(pg_temp.umid('court'), '2026-06-30')->'months'), 4,
   'the owner reads their own property''s months');
+
+-- FLOW-474: the as-of date is at most a year after today, and the months stop 600 back from it.
+select throws_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umid('court'),
+    (private.flow_today() + interval '13 months')::date),
+  'P0001', 'validation', 'an as-of date more than a year ahead is refused');
+select lives_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umid('court'),
+    (private.flow_today() + interval '11 months')::date),
+  'an as-of date within the year ahead reads');
+select tests.clear_authentication();
+select tests.fixture_line(pg_temp.umid('co'), 'um:rent-old', 200000, 'income',
+  pg_temp.umid('court'), pg_temp.umid('rent'), '1950-01-01');
+select tests.authenticate_as('um_owner');
+select is(jsonb_array_length(public.list_utility_months(pg_temp.umid('court'), '2026-06-30')->'months'), 600,
+  'a property''s months stop 600 months back from the as-of date');
 
 select * from finish();
 rollback;
