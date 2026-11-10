@@ -48,6 +48,8 @@ export const LEDGER_KEYS = [
   "utility-refunds",
   "utility-refund-count",
   "utility-payers",
+  // FLOW-1159: the money in around a bill, which a sync changes.
+  "utility-income",
   "recurring-schedule",
   "payment-recurring",
   "party-charges",
