@@ -85,7 +85,8 @@ select tests.authenticate_as('um_owner');
 select is(jsonb_array_length(public.list_utility_months(pg_temp.umid('court'), '2026-06-30')->'months'), 4,
   'the owner reads their own property''s months');
 
--- FLOW-474: the as-of date is at most a year after today, and the months stop 600 back from it.
+-- FLOW-474: the as-of date is at most a year after today, and at most 600 months are listed (the as-of month
+-- and the 599 before it).
 select throws_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umid('court'),
     (current_date + interval '13 months')::date),
   'P0001', 'validation', 'an as-of date more than a year ahead is refused');
@@ -100,7 +101,7 @@ select tests.authenticate_as('um_owner');
 select is(public.list_utility_months(pg_temp.umid('bare'), '2026-06-30')->'months', '[]'::jsonb,
   'a property with no bills or rent has no months');
 select is(jsonb_array_length(public.list_utility_months(pg_temp.umid('court'), '2026-06-30')->'months'), 600,
-  'a property''s months stop 600 months back from the as-of date');
+  'at most 600 months are listed: the as-of month and the 599 before it');
 
 select * from finish();
 rollback;

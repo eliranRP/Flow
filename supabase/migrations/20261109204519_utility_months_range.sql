@@ -1,6 +1,6 @@
 -- FLOW-474: list_utility_months covers a bounded range. The as-of date may be at most a year after today
--- (a later one is refused: validation), and the months start no more than 600 months (50 years) before the
--- as-of month. A property's real months read the same. The body is patched in place: each anchor must be
+-- (a later one is refused: validation), and at most 600 months are listed (the as-of month and the 599 before
+-- it). A property's real months read the same. The body is patched in place: each anchor must be
 -- found exactly once, or the migration fails. The signature and grants stay.
 
 begin;
