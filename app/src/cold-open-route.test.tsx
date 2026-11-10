@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ColdOpenSkeleton } from "./cold-open";
@@ -76,5 +76,12 @@ describe("ColdOpenSkeleton (FLOW-1140)", () => {
     const { container } = renderAt("/loans");
     expect(container.querySelector(".ui-band")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+  });
+  it("draws the route's grey blocks after the 300ms wait, from their own file (FLOW-1145)", async () => {
+    const { container } = renderAt("/loans");
+    expect(container.querySelector(".ui-skel-loans-card")).toBeNull();
+    await waitFor(() => {
+      expect(container.querySelector(".ui-skel-loans-card")).not.toBeNull();
+    }, { timeout: 3000 });
   });
 });

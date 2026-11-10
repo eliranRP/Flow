@@ -1,11 +1,9 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { coldOpenRoute, type ColdOpenRoute } from "./cold-open-route";
 import { CashHomeSkeleton } from "./screens/home-skeleton";
-import { FormSkeleton, GroupedSkeleton } from "./ui/loading-shapes";
 import { ScreenHeader } from "./ui/screen-header";
-import { DetailSkeleton, LinesSkeleton, LoansSkeleton, ProfitSkeleton, ProjectsSkeleton, RecurringSkeleton } from "./ui/screen-skeletons";
-import { DelayedSkeleton, ListSkeleton, Skeleton } from "./ui/skeleton";
+import { DelayedSkeleton, Skeleton } from "./ui/skeleton";
 import { TabBar } from "./ui/tab-bar";
 import { TopBand } from "./ui/top-band";
 
@@ -49,32 +47,40 @@ function Band({ route, children }: { route: ColdOpenRoute; children: ReactNode }
   );
 }
 
+type BlocksModule = typeof import("./cold-open-blocks");
+let blocksRead: Promise<BlocksModule> | null = null;
+
+/**
+ * FLOW-1145: the blocks' own file, read once. A frame starts it when it draws, so it loads during the
+ * 300ms wait. A failed read draws no blocks (the frame's bar or band stays) and the next frame tries again.
+ */
+function readBlocks(): Promise<BlocksModule> {
+  blocksRead ??= import("./cold-open-blocks").catch((error: unknown) => {
+    blocksRead = null;
+    throw error;
+  });
+  return blocksRead;
+}
+
+const NoBlocks: ComponentType<{ route: ColdOpenRoute }> = () => null;
+
+const LazyBlocks = lazy(() => readBlocks().then(
+  (m): { default: ComponentType<{ route: ColdOpenRoute }> } => ({ default: m.ColdOpenBlocks }),
+  () => ({ default: NoBlocks }),
+));
+
 function Blocks({ route }: { route: ColdOpenRoute }) {
-  switch (route.shape) {
-    case "projects":
-      return <ProjectsSkeleton />;
-    case "loans":
-      return <LoansSkeleton />;
-    case "settings":
-      return <GroupedSkeleton groups={route.title == null ? [3, 2] : [4, 3]} />;
-    case "recurring":
-      return <RecurringSkeleton />;
-    case "profit":
-      return <ProfitSkeleton />;
-    case "lines":
-      return <LinesSkeleton />;
-    case "detail":
-      return <DetailSkeleton />;
-    case "form":
-      return <FormSkeleton figure fields={3} />;
-    default:
-      return <ListSkeleton />;
-  }
+  return (
+    <Suspense fallback={null}>
+      <LazyBlocks route={route} />
+    </Suspense>
+  );
 }
 
 /** The loading frame's body, inside the route's own outlet (the full-screen fallback draws only this). */
 export function RouteLoadingBody({ route, wait = true }: { route: ColdOpenRoute; /** False when the caller already waited 300ms. */ wait?: boolean }) {
   if (route.shape === "home") return <CashHomeSkeleton />;
+  readBlocks().catch(() => undefined);
   const blocks = wait ? <DelayedSkeleton><Blocks route={route} /></DelayedSkeleton> : <Blocks route={route} />;
   if (route.bar === "band") return <Band route={route}>{blocks}</Band>;
   return (
