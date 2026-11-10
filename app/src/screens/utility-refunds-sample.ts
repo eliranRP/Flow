@@ -128,16 +128,19 @@ export function utilitySplitSample(): UtilityBill[] {
 }
 
 /**
- * FLOW-1144 (the V3-Project-UtilityMonths board's months): November all back, October with Gas Co not refunded, September
+ * FLOW-1144 (the V3-Project-UtilityMonths board's months): November all back (FLOW-1146: its rent split into the rent and
+ * the water the tenant paid with it), October with Gas Co not refunded, September
  * all back, and July with no rent. Newest first, as the read sends them.
  */
 export function utilityMonthsSample(): UtilityMonth[] {
-  const rent = (id: string, date: string, minor: bigint) => ({ transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", party: "RentRedi", category_name: "הכנסות שכירות" });
+  const rent = (id: string, date: string, minor: bigint, parts: { category_name: string; amount_minor: bigint }[] = []) => ({
+    transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", party: "RentRedi", category_name: "הכנסות שכירות", parts,
+  });
   const bill = (id: string, date: string, minor: bigint, supplier: string, category: string, state: string) => ({
     bill_transaction_id: id, doc_date: date, amount_minor: minor, currency: "USD", supplier_name: supplier, category_name: category, state,
   });
   return [
-    { month: "2026-11-01", rent_in: 183_660n, bills_paid: 8_660n, not_refunded: 0n, rent_lines: [rent("m-rent-11", "2026-11-06", 183_660n)], bills: [bill("m-water-11", "2026-11-02", 8_660n, "City Water", "חשמל ומים", "refunded")] },
+    { month: "2026-11-01", rent_in: 183_660n, bills_paid: 8_660n, not_refunded: 0n, rent_lines: [rent("m-rent-11", "2026-11-06", 183_660n, [{ category_name: "הכנסות שכירות", amount_minor: 175_000n }, { category_name: "מים וביוב", amount_minor: 8_660n }])], bills: [bill("m-water-11", "2026-11-02", 8_660n, "City Water", "חשמל ומים", "refunded")] },
     {
       month: "2026-10-01", rent_in: 205_486n, bills_paid: 30_486n, not_refunded: 8_036n, rent_lines: [rent("m-rent-10", "2026-10-07", 205_486n)],
       bills: [bill("m-water-10", "2026-10-04", 22_450n, "City Water", "חשמל ומים", "refunded"), bill("m-gas-10", "2026-10-03", 8_036n, "Gas Co", "גז", "waiting")],

@@ -74,6 +74,14 @@ describe("ProjectUtilityMonthsScreen", () => {
     expect(within(dialog).getByText("גז · 03/10/26 · לא הוחזר")).toBeTruthy();
   });
 
+  it("shows a split rent line's parts: the rent and the bill the tenant paid with it (FLOW-1146)", async () => {
+    renderScreen(storyUtilityClient());
+    fireEvent.click(await screen.findByRole("button", { name: /^נובמבר 2026/ }));
+    const dialog = await screen.findByRole("dialog");
+    const rent = (await within(dialog).findByText("RentRedi")).closest("a");
+    expect(rent?.textContent).toContain("הכנסות שכירות $1,750 · מים וביוב $86.60 · 06/11/26");
+  });
+
   it("says no payment came in, in a month with no rent", async () => {
     renderScreen(storyUtilityClient());
     fireEvent.click(await screen.findByRole("button", { name: /^יולי 2026/ }));

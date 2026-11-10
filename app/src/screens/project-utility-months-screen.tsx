@@ -71,7 +71,23 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
                     variant="project"
                     layout="flat"
                     title={line.party ?? "שכירות"}
-                    hint={[line.category_name, refundDate(line.doc_date)].filter((part): part is string => part != null).join(" · ")}
+                    // FLOW-1146: a split line reads its parts ("הכנסות שכירות $1,700.00 · מים וביוב $136.60").
+                    hint={line.parts.length === 0
+                      ? [line.category_name, refundDate(line.doc_date)].filter((part): part is string => part != null).join(" · ")
+                      : (
+                        <>
+                          {line.parts.map((part, index) => (
+                            <span key={`${String(index)}:${part.category_name ?? ""}`}>
+                              {part.category_name ?? "בלי קטגוריה"}
+                              {" "}
+                              <bdi dir="ltr">{money(part.amount_minor, line.currency)}</bdi>
+                              {" · "}
+                            </span>
+                          ))}
+                          {refundDate(line.doc_date)}
+                        </>
+                      )}
+                    wrapHint
                     icon={<StatusMark kind="paid" />}
                     agorot={line.amount_minor}
                     currency={line.currency}
