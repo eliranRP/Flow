@@ -32,6 +32,8 @@ export const EXAMPLE_QUESTIONS = [
 ];
 
 export const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
+/** The code a revoke failed to take back (the settings page's copy, shared with the setup). */
+export const REVOKE_FAILED = "לא הצלחנו לבטל את המפתח. נסו שוב.";
 export const TOO_MANY_KEYS = "יש כבר 20 מפתחות פעילים. בטלו מפתח שלא בשימוש ונסו שוב.";
 const MINT_REASON = "יוצרים קוד. אי אפשר לשנות עכשיו.";
 const CODE_NOTE = "הקוד מוצג פעם אחת ותקף ל־90 יום. אל תשתפו אותו.";
@@ -165,7 +167,11 @@ export function AssistantSetup({
   const shownScope = secret != null ? scopeChoice(secret.scope) : scope;
   function pickScope(next: AssistantScope) {
     if (next !== shownScope && secret != null) {
-      if (!sample) void revokeKey(secret.id).finally(() => client.invalidateQueries({ queryKey: ["mcp-status"] }));
+      if (!sample) {
+        void revokeKey(secret.id)
+          .catch(() => { toast.show({ tone: "bad", message: REVOKE_FAILED }); })
+          .finally(() => client.invalidateQueries({ queryKey: ["mcp-status"] }));
+      }
       setSecret(null);
     }
     setScope(next);

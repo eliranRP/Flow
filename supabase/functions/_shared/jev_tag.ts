@@ -272,14 +272,15 @@ export async function tagWork(
         usage.tagged += 1;
         if (wrote) report.prefilled += 1;
       } catch {
+        report.failed += 1;
+        usage.failed += 1;
         try {
           await store.deleteSuggestion(expense.id, JEV_MODEL);
         } catch {
-          // The row stays. The next run will see the conflict and skip it.
+          // The suggestion stays, so the line is already tagged. No failure row goes beside it.
+          continue;
         }
         await markFailed(expense);
-        report.failed += 1;
-        usage.failed += 1;
       }
     }
   }
@@ -434,12 +435,6 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
   if (supabaseUrl.trim() === "" || serviceKey.trim() === "") return json({ error: "missing_key" }, 500);
   const requested = await readTagRequest(req);
   if (requested.error) return json({ error: requested.error }, 400);
-  const gate = allowTagRun(deps.rateState ?? tagRateState, deps.now ? deps.now() : Date.now(), deps.intervalMs);
-  if (!gate.ok) {
-    const response = json({ error: "rate_limited", retry_after_seconds: gate.retryAfterSeconds }, 429);
-    response.headers.set("retry-after", String(gate.retryAfterSeconds));
-    return response;
-  }
   const readKey = deps.readKey ?? readJevApiKey;
   const call = deps.call ?? tagJevCall(deps.fetch);
   const jobs = createTagJobStore(deps.fetch, supabaseUrl, serviceKey);
@@ -454,6 +449,13 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
   const usage = new Map<string, CompanyUsage>();
   const reserved: string[] = [];
   try {
+    // Spent only once the lease is held: a run answered busy must not block the next one.
+    const gate = allowTagRun(deps.rateState ?? tagRateState, deps.now ? deps.now() : Date.now(), deps.intervalMs);
+    if (!gate.ok) {
+      const response = json({ error: "rate_limited", retry_after_seconds: gate.retryAfterSeconds }, 429);
+      response.headers.set("retry-after", String(gate.retryAfterSeconds));
+      return response;
+    }
     const store = createTagStore(deps.fetch, supabaseUrl, serviceKey, deps.now);
     const listed = await store.listWork(requested.limit, requested.companyId);
     const capped = await applyDailyCap(listed, jobs, runId, reserved);

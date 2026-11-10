@@ -168,6 +168,20 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
     expect(tab.reload).not.toHaveBeenCalled();
   });
 
+  it("keeps a reload the loop window held back, and makes it on the first move after the window (FLOW-1167)", () => {
+    const tab = fakeWindow();
+    let clock = 100_000;
+    window.sessionStorage.setItem(RELOADED_KEY, String(clock - LOOP_MS + 1));
+    watchServiceWorker(tab.win, () => clock);
+    tab.touch();
+    tab.takeControl();
+    tab.navigate("/projects");
+    expect(tab.reload).not.toHaveBeenCalled();
+    clock += LOOP_MS;
+    tab.navigate("/settings");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
   it("waits while a sheet is open or a field has focus, then reloads on the next move", () => {
     const tab = fakeWindow();
     document.body.innerHTML = '<div role="dialog"></div>';

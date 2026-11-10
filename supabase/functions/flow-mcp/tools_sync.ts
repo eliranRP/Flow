@@ -66,10 +66,16 @@ async function runSyncJob(jobId: string, rpc: ToolRpc, invoke?: ToolInvoke): Pro
     outcome = syncFailure("refused", "The bank sync failed.");
   }
   try {
-    await rpc("mcp_sync_bank_finish", { p_job_id: jobId, p_response: outcome });
+    const finished = await rpc("mcp_sync_bank_finish", { p_job_id: jobId, p_response: outcome });
+    if (finished.status >= 400 || envelopeOf(finished.json).isError) logFinishLost(finished.status);
   } catch {
-    // The job stays running and get_sync_status reports it as retry after the stale window.
+    logFinishLost(null);
   }
+}
+
+/** The job stays running and get_sync_status reports it as retry after the stale window. Logs only the status. */
+function logFinishLost(status: number | null): void {
+  console.error(`sync_bank finish not stored status=${status ?? "error"}`);
 }
 
 export async function syncStatus(jobId: string, rpc: ToolRpc): Promise<ToolResult> {

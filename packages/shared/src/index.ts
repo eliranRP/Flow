@@ -1,3 +1,5 @@
+export { defineMachine, machineEdges, machineProblems } from "./machine.ts";
+export type { Machine, MachineEdge, MachineTable } from "./machine.ts";
 export {
   STANDARD_VAT_RATE_BP,
   allocateByWeights,

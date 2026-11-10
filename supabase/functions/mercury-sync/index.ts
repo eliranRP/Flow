@@ -20,6 +20,7 @@ import { refreshTreasuryYields } from "../_shared/treasury_yields.ts";
 import { edgeWaitUntil } from "../_shared/edge_defer.ts";
 import { treasuryVoidIds } from "../_shared/connectors/mercury/normalize.ts";
 import { isLegacyRow, legacyPatch, rpcWithSlot } from "../_shared/connectors/mercury/legacy.ts";
+import { mercuryCommit } from "../_shared/connectors/mercury/machines.ts";
 import {
   readConnectionScope,
   runScope,
@@ -419,6 +420,7 @@ async function syncConnection(
       throw new Error(plan.code);
     }
     const lines = withinAccountStart(plan.lines, scope.accountFrom);
+    let step = mercuryCommit.initial;
     // The skip records and recheck stamps commit with the lines (FLOW-509).
     const { result: saved } = await rpcWithSlot(
       (args) => admin.rpc("upsert_connector_lines", args as Database["public"]["Functions"]["upsert_connector_lines"]["Args"]),
@@ -447,6 +449,7 @@ async function syncConnection(
       await noteOnce("rejected");
       throw new Error("rejected");
     }
+    step = mercuryCommit.next(step, "saved");
     // FLOW-957: Mercury's notes and attachments into the threads (read only: nothing goes to Mercury).
     await syncMercuryThreadsFor(admin, companyId, session);
     const pendingMissing: Record<string, string> = {};
@@ -463,7 +466,8 @@ async function syncConnection(
       await noteOnce("rejected");
       throw new Error("rejected");
     }
-    if (plan.complete) {
+    step = mercuryCommit.next(step, plan.complete ? "labeled" : "partial");
+    if (step === "stamp") {
       const { result: stamped } = await rpcWithSlot(
         (args) => admin.rpc("stamp_connector_sync", args as Database["public"]["Functions"]["stamp_connector_sync"]["Args"]),
         { p_company: companyId, p_provider: "mercury" },
@@ -474,6 +478,7 @@ async function syncConnection(
         await noteOnce("rejected");
         throw new Error("rejected");
       }
+      step = mercuryCommit.next(step, "stamped");
     }
     if (plan.rateLimited) {
       // A recheck hit Mercury's rate limit. The lines are saved; hold the next run.

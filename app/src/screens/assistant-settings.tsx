@@ -24,13 +24,12 @@ import {
   type Minted,
 } from "./assistant-keys";
 import { KeyList, KeyPage } from "./assistant-key-views";
-import { AssistantSetup } from "./assistant-setup";
+import { AssistantSetup, REVOKE_FAILED } from "./assistant-setup";
 import { useTopToast } from "../ui/top-toast";
 
 const TITLE = "חיבור ל־AI";
 const SUBTITLE = "MCP · העוזר שלכם עובד עם הספרים של Flow";
 const EXPIRED_BOX = "הקוד פג אחרי 90 יום. צרו מפתח חדש כדי להמשיך.";
-const REVOKE_FAILED = "לא הצלחנו לבטל את המפתח. נסו שוב.";
 const RESTORE_FAILED = "לא הצלחנו להחזיר את המפתח.";
 
 type View = { kind: "home" } | { kind: "new" } | { kind: "key"; id: string };

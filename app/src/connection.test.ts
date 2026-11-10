@@ -52,4 +52,24 @@ describe("followConnection (FLOW-1140)", () => {
     target.dispatchEvent(new Event("focus"));
     expect(reach).toHaveBeenCalledTimes(2);
   });
+
+  it("takes a check's answer only for the offline event that started it (FLOW-1167)", async () => {
+    const target = fakeWindow(true);
+    const answers: Array<(reached: boolean) => void> = [];
+    const reach = vi.fn(() => new Promise<boolean>((resolve) => { answers.push(resolve); }));
+    followConnection(target, reach);
+    target.dispatchEvent(new Event("offline"));
+    target.dispatchEvent(new Event("online"));
+    target.dispatchEvent(new Event("offline"));
+    expect(onlineManager.isOnline()).toBe(false);
+    // The first check got through while the connection was briefly back: it says nothing of now.
+    answers[0]?.(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onlineManager.isOnline()).toBe(false);
+    // The second offline has its own check, and its answer counts.
+    expect(reach).toHaveBeenCalledTimes(2);
+    answers[1]?.(true);
+    await vi.waitFor(() => { expect(onlineManager.isOnline()).toBe(true); });
+  });
 });

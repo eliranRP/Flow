@@ -393,6 +393,49 @@ Deno.test("a run that finds the lease taken is 409 and does not call Jev", async
   assertEquals(log.rpc, ["jev_take_lease"]);
 });
 
+Deno.test("a run answered busy does not spend the rate gate, so the next run goes ahead", async () => {
+  const rateState = { lastAt: -1 };
+  let lease = false;
+  let jev = 0;
+  const base = withJobs((input) => {
+    const url = String(input);
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
+    return Promise.resolve(Response.json([]));
+  });
+  const fetch: typeof globalThis.fetch = (input, init) => {
+    if (String(input).endsWith("/rpc/jev_take_lease")) return Promise.resolve(Response.json(lease));
+    return base(input, init);
+  };
+  const run = (now: number) => handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test" },
+  }), {
+    fetch,
+    env: tagEnv,
+    rateState,
+    now: () => now,
+    intervalMs: 60_000,
+    runId: () => RUN,
+    log: () => {},
+    readKey: () => Promise.resolve("jev-test-key"),
+    call: () => {
+      jev += 1;
+      return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: { input_tokens: 5, output_tokens: 1 } });
+    },
+  });
+  const busy = await run(10_000);
+  assertEquals(busy.status, 409);
+  lease = true;
+  const next = await run(11_000);
+  assertEquals(next.status, 200);
+  assertEquals(jev, 1);
+});
+
 Deno.test("the run sends only the calls the cap granted, logs usage, and frees the lease", async () => {
   const { run, log, finished } = jobRun({ grant: () => 1 });
   const response = await run;

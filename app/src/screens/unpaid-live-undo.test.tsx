@@ -65,6 +65,25 @@ describe("Unpaid mark undo on the live path (FLOW-357, FLOW-367)", () => {
     expect(db.rpcs[1]).toEqual({ name: "set_invoice_paid", args: { p_id: "a", p_paid: false } });
   });
 
+  it("sends one write for two taps on the same mark before the row redraws (FLOW-1164)", async () => {
+    db.rows = [invoice("a", "לקוח א")];
+    db.rpcs = [];
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <ToastProvider>
+            <UnpaidScreen />
+          </ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const mark = within(await rowOf("לקוח א")).getByRole("button", { name: /^סימון כשולם/ });
+    fireEvent.click(mark);
+    fireEvent.click(mark);
+    await waitFor(() => { expect(screen.getAllByText("סומן כשולם · ממתין לסנכרון").length).toBeGreaterThan(0); });
+    expect(db.rpcs).toEqual([{ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } }]);
+  });
+
   it("shows the mark before set_invoice_paid answers, and a failed mark goes back with ניסיון חוזר", async () => {
     db.rows = [invoice("a", "לקוח א")];
     db.rpcs = [];

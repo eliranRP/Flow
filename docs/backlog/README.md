@@ -399,6 +399,7 @@ A brief is short. It points the builder to exactly what to read and change:
 | UX rules review | [Runbook](../runbooks/ux-rules-review.md), [the rules](../../.claude/skills/ux-ui-design-review-rules/SKILL.md) |
 | Security scan | [Runbook](../runbooks/security-scan.md), [known attacks](../security/known-attacks.md), [zero-day patterns](../security/zero-day-patterns.md) |
 | Live checks with the read-only test account | [Live test account](../runbooks/live-test-account.md), [smoke user](../runbooks/smoke-user.md) |
+| State machines: every flow's states, moves and open gaps | [state-machines.md](../tech/state-machines.md), decision [0266](../decisions/0266-explicit-state-machines.md) |
 | Connectors | [connector contract](../tech/connector-contract.md), [connector UI states](../tech/connector-ui-states.md), [SUMIT runbook](../runbooks/sumit-connect.md), [Jev runbook](../runbooks/jev.md) |
 | Product spec and calculations | [spec](../module-1-project-pnl/spec.md), [calculations](../module-1-project-pnl/calculations.md) |
 | Migrations | `supabase/migrations/`, `supabase/migrations.lock`, pgTAP tests in `supabase/tests/database/` |

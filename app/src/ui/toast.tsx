@@ -481,6 +481,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           onDismiss={toast ? dismiss : undefined}
           onPause={toast ? pause : undefined}
           onResume={toast ? resume : undefined}
+          toastId={toast?.id}
         >
           {toast?.message ?? ""}
         </Toast>
@@ -497,12 +498,23 @@ type ToastProps = {
   onPause?: () => void;
   onResume?: () => void;
   tone?: "ok" | "bad" | "info";
+  /** The toast on screen: a new one starts with no hover, focus or press held. */
+  toastId?: number;
 };
 
-export function Toast({ children, action, onAction, onDismiss, onPause, onResume, tone = "ok" }: ToastProps) {
+export function Toast({ children, action, onAction, onDismiss, onPause, onResume, tone = "ok", toastId }: ToastProps) {
   const start = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
   const hold = useRef({ hover: false, focus: false, press: false });
+  const releaseOutside = useRef<(() => void) | null>(null);
+
+  // FLOW-1167: a hold belongs to the toast it began on. One that never ended there (a focused action
+  // that went with its toast, a tap's hover on touch) must not leave the next toast unable to pause.
+  useEffect(() => {
+    hold.current = { hover: false, focus: false, press: false };
+  }, [toastId]);
+
+  useEffect(() => () => { releaseOutside.current?.(); }, []);
 
   function setHold(key: "hover" | "focus" | "press", on: boolean) {
     const before = hold.current.hover || hold.current.focus || hold.current.press;
@@ -519,6 +531,19 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
     setHold("press", true);
     start.current = { x: event.clientX, y: event.clientY };
     swiped.current = false;
+    // A mouse released outside the toast reports up there, not here: the press ends wherever it does.
+    releaseOutside.current?.();
+    const release = () => {
+      releaseOutside.current?.();
+      setHold("press", false);
+    };
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    releaseOutside.current = () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+      releaseOutside.current = null;
+    };
   }
 
   function onPointerUp(event: ReactPointerEvent<HTMLDivElement>) {

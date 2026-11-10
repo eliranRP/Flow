@@ -179,4 +179,25 @@ describe("held list order", () => {
     fireEvent.pointerUp(row, { pointerId: 2 });
     expect(holdActive()).toBe(false);
   });
+
+  it("lets go of a press whose up never comes: the window loses focus, or the page is hidden (FLOW-1167)", () => {
+    stop = installListHold();
+    render(<Probe rows={[{ id: "a", name: "אלפא" }]} />);
+    const row = screen.getByText("אלפא");
+    fireEvent.pointerDown(row, { pointerId: 3 });
+    fireEvent.mouseDown(row, { button: 0 });
+    expect(holdActive()).toBe(true);
+    fireEvent.blur(window);
+    expect(holdActive()).toBe(false);
+
+    fireEvent.pointerDown(row, { pointerId: 4 });
+    expect(holdActive()).toBe(true);
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    try {
+      fireEvent(document, new Event("visibilitychange"));
+    } finally {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    }
+    expect(holdActive()).toBe(false);
+  });
 });

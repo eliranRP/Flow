@@ -30,7 +30,9 @@ import { LINE_SPLIT_PARTS_CHANGED, LINE_SPLIT_PLACE, LINE_SPLIT_SAVE_FAILURE, PA
 import { usePreviewSearch } from "../preview";
 import { reviewFocusPath } from "../review-paths";
 import { isReversal, reversalChoices, type KindedCategory } from "../reversal";
+import { saveFlow } from "../save-flow";
 import { useInvalidateBooks } from "../use-books";
+import { useMachine } from "../use-machine";
 import { assertNoError } from "../use-write";
 import { useGoBack } from "../ui/back";
 import { Banner } from "../ui/banner";
@@ -109,7 +111,10 @@ export function LineSplitEditor({
   const [target, setTarget] = useState<PickTarget | null>(initialTarget ? { kind: "part", key: initialTarget.partKey } : null);
   const [pickerStart, setPickerStart] = useState<"category" | "project">(initialTarget?.kind ?? "category");
   const [warned, setWarned] = useState(initialWarned);
-  const [saving, setSaving] = useState(false);
+  // One machine: `saving` lasts until the page has left, so a second tap sends nothing while the reads
+  // refresh. `send` reads the machine's own state, so a toast's retry from an older render is guarded too.
+  const flow = useMachine(saveFlow, sampleSaving ? "saving" : "idle");
+  const saving = flow.state === "saving";
   const [confirmClear, setConfirmClear] = useState(false);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const [lastEdited, setLastEdited] = useState<string | null>(null);
@@ -213,12 +218,11 @@ export function LineSplitEditor({
   }
 
   async function write(next: PayloadPart[], kind: "save" | "clear"): Promise<boolean> {
-    if (busy) return false;
-    setSaving(true);
+    if (!flow.send("start")) return false;
     try {
       await api.save(next);
     } catch (error) {
-      setSaving(false);
+      flow.send("fail");
       const named = lineSplitRefusal(error);
       if (named != null) {
         setServerError({ reason: named, key: kind === "clear" ? null : payloadKey });
@@ -234,7 +238,6 @@ export function LineSplitEditor({
       });
       return false;
     }
-    setSaving(false);
     clearLineDraft(draftId);
     const previous = amountsPayload(split);
     await invalidate(LINE_SPLIT_KEYS);
@@ -250,25 +253,26 @@ export function LineSplitEditor({
     });
     leaving.current = true;
     goBack(fallback);
+    flow.send("done");
     return true;
   }
 
   async function approveWhole() {
-    if (busy || wholeProject == null || api.approveWhole == null) return;
-    setSaving(true);
+    if (wholeProject == null || api.approveWhole == null) return;
+    if (!flow.send("start")) return;
     try {
       await api.approveWhole(wholeProject);
     } catch {
-      setSaving(false);
+      flow.send("fail");
       toast.show({ tone: "bad", message: "האישור לא נשמר", action: "ניסיון חוזר", onAction: () => { void approveWhole(); } });
       return;
     }
-    setSaving(false);
     clearLineDraft(draftId);
     await invalidate(LINE_SPLIT_KEYS);
     toast.show({ message: "אושר בלי פיצול" });
     leaving.current = true;
     goBack(fallback);
+    flow.send("done");
   }
 
   async function leave() {

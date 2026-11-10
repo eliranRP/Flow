@@ -71,6 +71,15 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   assertEquals(broken.suggestions.length, 0);
   assertEquals(broken.failed, [EXPENSE]);
 
+  // The suggestion cannot be removed either: the line keeps it, and no failure row is written beside it.
+  const stuck = memoryStore();
+  stuck.failPrefill = true;
+  stuck.deleteSuggestion = () => Promise.reject(new Error("store"));
+  const stuckReport = await tagWork([company()], stuck, call, "jev-test-key");
+  assertEquals(stuckReport.failed, 1);
+  assertEquals(stuck.suggestions.length, 1);
+  assertEquals(stuck.failed, []);
+
   let calls = 0;
   const again = await tagWork([company()], auto, () => {
     calls += 1;

@@ -34,6 +34,8 @@ import { useLineSplitQuery } from "./line-split";
 import { ReviewThreadEntry } from "./review-thread";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
 import { ProjectPickSheet } from "./review-pick-sheet";
+import { saveFlow } from "../save-flow";
+import { useMachine } from "../use-machine";
 import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, ReviewCardLoading, ReviewMoreFailed, reviewListPath, reviewSuggestion } from "./review-shared";
 
 export type ReviewPreviewWrite = {
@@ -311,7 +313,8 @@ export function ReviewQueue({
   /** FLOW-365: דלג sends the card on screen to the end of the queue. Nothing is written. */
   function skipCard() {
     const target = shown;
-    if (target == null || leaving) return;
+    // FLOW-1165: a card whose אישור is in flight stays until that write answers, as a second אישור does.
+    if (target == null || leaving || approving.current === target.id) return;
     // The pin keeps the card on screen at the head; once it is sent away, the pin moves on.
     pinReviewLine(null);
     // Focus was on this card's דלג; the next card's אישור takes it (FLOW-327 r2).
@@ -326,12 +329,15 @@ export function ReviewQueue({
   const [pickMissing, setPickMissing] = useState(false);
   const [pickQuery, setPickQuery] = useState("");
   const [rememberPick, setRememberPick] = useState(true);
+  // FLOW-1165: the pick is one save; a second pick, or אישור, waits until it and its refresh are done.
+  const pickSave = useMachine(saveFlow);
   async function savePickedProject(choice: ChangeChoice) {
     setPickProject(false);
     setPickMissing(false);
     setPickQuery("");
     const target = shown;
     if (target == null || previewWrite != null) return;
+    if (!pickSave.send("start")) return;
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -343,7 +349,10 @@ export function ReviewQueue({
         p_remember: rememberPick,
       }));
       await invalidate(["review", "dashboard", "project", "project-waiting", "txn"]);
+      pickSave.send("done");
     } catch {
+      // The toast says so; the save has nothing of its own to show.
+      pickSave.send("stop");
       toast.show({ message: "לא הצלחנו לשמור.", tone: "bad", place: "top" });
     }
   }
@@ -419,6 +428,8 @@ export function ReviewQueue({
   const current = card;
   const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
   function openProject() {
+    // A pick is still saving (FLOW-1165): a second one would be dropped, so the picker waits.
+    if (pickSave.state === "saving") return;
     if (reviewIsSplit(current)) {
       if (!current.transaction_id) return;
       if (onShared) {
@@ -495,7 +506,7 @@ export function ReviewQueue({
     }),
   } : null;
   function runApprove() {
-    if (approving.current === current.id || !settled) return;
+    if (approving.current === current.id || !settled || pickSave.state === "saving") return;
     if (nextPick === "project") {
       setPickMissing(true);
       openProject();

@@ -7,7 +7,8 @@ import { readSetupStore, writeSetupStore } from "./storage";
 
 /**
  * Skip all (the sheet, from any screen): a business "העסק שלי" when there is none (or always, in
- * new-company mode: `openNew` then opens it), every step not done skipped, then Home.
+ * new-company mode: `openNew` then opens it), every step not done skipped, then Home. A business
+ * that cannot be created rejects, so the sheet can say so and stay open.
  */
 export async function runSkipAll({
   userId,
@@ -27,9 +28,9 @@ export async function runSkipAll({
   let companyId = openNew ? null : facts.companyId;
   if (companyId == null) {
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) throw new Error("supabase");
     const { data, error } = await supabase.rpc("create_company", { p_name: SKIP_ALL_COMPANY_NAME, p_vat_registered: true });
-    if (error || typeof data !== "string" || data === "") return;
+    if (error || typeof data !== "string" || data === "") throw new Error("create_company");
     companyId = data;
     await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
     if (openNew) await openNew(companyId).catch(() => undefined);

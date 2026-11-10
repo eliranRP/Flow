@@ -7,9 +7,11 @@ import { COMPOSER_KEYS, liveComposerApi, useComposerAccountsQuery, useJournalCop
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { projectChoices } from "../project-groups";
+import { saveFlow } from "../save-flow";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
+import { useMachine } from "../use-machine";
 import { isTransientWriteError } from "../use-write";
 import { Amount } from "../ui/amount";
 import { useGoBack } from "../ui/back";
@@ -107,7 +109,11 @@ export function JournalComposer({
   const [state, setState] = useState<ComposerState>(initial);
   const [sheet, setSheet] = useState(initialSheet);
   const [target, setTarget] = useState<PickTarget>(null);
-  const [saving, setSaving] = useState(initialSaving);
+  // The save is one machine: `saving` lasts until the page has left, so a second tap sends nothing while
+  // the reads are refreshed. `send` reads the machine's own state, so a toast's retry (which resends the
+  // entry that failed) is guarded too.
+  const flow = useMachine(saveFlow, initialSaving ? "saving" : "idle");
+  const saving = flow.state === "saving";
   const [error, setError] = useState<string | null>(initialError);
   const opener = useRef<HTMLElement | null>(null);
   const toast = useToast();
@@ -134,16 +140,16 @@ export function JournalComposer({
   };
 
   async function save() {
-    if (saving || hold.kind !== "balanced") return;
+    if (hold.kind !== "balanced") return;
     const legs = bookingPayload(line.bankAccountId, line.bankMinor, state.legs);
     if (legs == null) return;
-    setSaving(true);
+    if (!flow.send("start")) return;
     setError(null);
     let saved: SavedBooking;
     try {
       saved = await api.save(legs);
     } catch (caught) {
-      setSaving(false);
+      flow.send("fail");
       const failure = caught instanceof Error ? caught : new Error(String(caught));
       if (isTransientWriteError(failure)) {
         toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפקודה.", action: "ניסיון חוזר", onAction: () => { void save(); } });
@@ -152,7 +158,6 @@ export function JournalComposer({
       }
       return;
     }
-    setSaving(false);
     await invalidate(COMPOSER_KEYS);
     toast.show({
       message: "הפקודה נשמרה",
@@ -165,6 +170,7 @@ export function JournalComposer({
       },
     });
     goBack(backTo);
+    flow.send("done");
   }
 
   const figure = line.direction === "income"

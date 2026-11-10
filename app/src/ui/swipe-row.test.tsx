@@ -257,4 +257,23 @@ describe("SwipeRow with reveal (FLOW-363 3c)", () => {
     expect(frame()).not.toHaveAttribute("data-open");
     expect(screen.getByRole("button", { name: "התעלמות מההתראה" })).toHaveAttribute("tabindex", "-1");
   });
+
+  it("does not stay open once its action goes away, and opens closed if it comes back (FLOW-1167)", () => {
+    const reveal = { label: "התעלמות מההתראה", onAct: vi.fn() };
+    const { rerender } = render(<SwipeRow onRemove={vi.fn()} reveal={reveal} defaultOpen><span>שורה</span></SwipeRow>);
+    expect(frame()).toHaveAttribute("data-open");
+    rerender(<SwipeRow onRemove={vi.fn()} defaultOpen><span>שורה</span></SwipeRow>);
+    expect(frame()).not.toHaveAttribute("data-open");
+    rerender(<SwipeRow onRemove={vi.fn()} reveal={reveal} defaultOpen><span>שורה</span></SwipeRow>);
+    expect(frame()).not.toHaveAttribute("data-open");
+  });
+
+  it("does not run its action once the row is disabled (FLOW-1167)", () => {
+    const onAct = vi.fn();
+    const reveal = { label: "התעלמות מההתראה", onAct };
+    const { rerender } = render(<SwipeRow onRemove={vi.fn()} reveal={reveal} defaultOpen><span>שורה</span></SwipeRow>);
+    rerender(<SwipeRow onRemove={vi.fn()} reveal={reveal} defaultOpen disabled><span>שורה</span></SwipeRow>);
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות מההתראה" }));
+    expect(onAct).not.toHaveBeenCalled();
+  });
 });

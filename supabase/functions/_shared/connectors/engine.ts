@@ -224,11 +224,9 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
       } catch (error) {
         const classified = input.port.classifyError(error);
         if (classified.class === "rate_limited" || classified.class === "transient") {
-          if (stored.lineStatus === "pending") {
-            pendingMissing.push({
-              externalId: stored.externalId,
-              missingSince: stored.missingSince ?? checkedAt,
-            });
+          // The provider did not answer that the line is gone: a running clock goes on, none starts.
+          if (stored.lineStatus === "pending" && stored.missingSince) {
+            pendingMissing.push({ externalId: stored.externalId, missingSince: stored.missingSince });
           }
           if (classified.class === "rate_limited") {
             // Back off: every further call would hit the same limit.
@@ -267,6 +265,14 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
       if (stored.lineStatus === "pending" && stored.missingSince) {
         pendingMissing.push({ externalId: stored.externalId, missingSince: stored.missingSince });
       }
+    }
+  } else if (!fetched.complete) {
+    // A run that stopped at the page cap rechecks nothing. A pending line it neither listed nor
+    // voided keeps its stored clock, so the void wait is not restarted by the cap either.
+    for (const stored of input.stored) {
+      if (stored.lineStatus !== "pending" || !stored.missingSince) continue;
+      if (seen.has(stored.externalId) || removed.has(stored.externalId)) continue;
+      pendingMissing.push({ externalId: stored.externalId, missingSince: stored.missingSince });
     }
   }
 

@@ -101,6 +101,8 @@ export function PeriodSwipe({
   }
 
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
+    // A second finger ends a drag that is following the first: the page goes back where it was.
+    if (track.current) settle();
     track.current = null;
     if (!steps || event.touches.length !== 1) return;
     const touch = event.touches[0];

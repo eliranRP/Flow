@@ -11,9 +11,11 @@ import {
   nextPath,
   parseStep,
   previousPath,
+  SETUP_TOTAL,
   settingsEntryVisible,
   skipAllPatch,
   skipPatch,
+  stepsLeft,
   withPatch,
   type SetupFacts,
 } from "./model";
@@ -117,6 +119,14 @@ describe("setup step model (FLOW-514)", () => {
     expect(next.skipped_all_at).toBe(at);
     expect(next.run_started_at).toBe(at);
     expect(next.flow_at).toBe(at);
+  });
+
+  it("counts the steps left out of all seven, not five (FLOW-1161)", () => {
+    expect(stepsLeft(0)).toBe(SETUP_TOTAL);
+    expect(stepsLeft(0)).toBe(7);
+    expect(stepsLeft(2)).toBe(5);
+    expect(stepsLeft(SETUP_TOTAL)).toBe(0);
+    expect(stepsLeft(SETUP_TOTAL + 1)).toBe(0);
   });
 
   it("settings entry is visible while the flow is open, and hidden when finished or without a run", () => {

@@ -49,6 +49,7 @@ import { LINE_UNDO_MS, offersRule, RuleOfferCard, useRuleOffer, type RuleOffer }
 import { TxnJournal, journalEditable, journalOpens, journalShown } from "./transaction-journal";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { projectChoices } from "../project-groups";
+import { assignScope, txnSplitLike, type PickBack } from "./transaction-assign";
 
 function splitProjectLabel(
   txn: { allocations?: Array<{ project_name?: string | null }> },
@@ -136,12 +137,6 @@ const CASH_KEYS = ["txn", "dashboard", "home", "breakdown-lines"];
 
 /** A cash write: the line's own override, with the state before it for the undo. */
 type CashChange = { id: string; party: string; next: boolean | null; previous: boolean | null; on: boolean; undo: boolean };
-
-/** A pick's write: the next ids, and the screen as it was before the tap, for a rollback. */
-type PickBack = {
-  next: { projectId: string; categoryId: string };
-  back: { projectId: string; categoryId: string; projectName: string; categoryName: string; committed: { projectId: string; categoryId: string } };
-};
 
 export function TransactionScreen({
   sample,
@@ -353,11 +348,10 @@ export function TransactionScreen({
   }, [changeOpen, txn]);
   useEffect(() => {
     if (hold === "" || !txn) return;
-    const splitLike = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
-    const complete = splitLike ? categoryId !== "" : projectId !== "" && categoryId !== "";
+    const complete = txnSplitLike(txn) ? categoryId !== "" : projectId !== "" && categoryId !== "";
     if (complete) setHold("");
   }, [hold, txn, categoryId, projectId]);
-  const undoId = useRef<string | null>(null);
+  const scope = assignScope(sample?.id ?? transactionId);
   /** The transaction's cache takes the picked names at once (decision 0180). */
   const pickCache = (payload: PickBack, withProject: boolean) => {
     const current = detail.data;
@@ -374,7 +368,8 @@ export function TransactionScreen({
       }),
     }];
   };
-  const undo = useWrite({
+  const undo = useWrite<{ id: string }>({
+    scope,
     failure: "לא הצלחנו לבטל את השיוך.",
     place: "top",
     keys: ASSIGN_KEYS,
@@ -385,21 +380,21 @@ export function TransactionScreen({
       setCategoryName("");
       ruleOffer.close();
     },
-    run: async () => {
+    run: async ({ id }) => {
       const supabase = getSupabase();
-      if (!supabase || undoId.current == null) throw new Error("supabase");
-      assertNoError(await supabase.rpc("undo_reassign", { p_id: undoId.current }));
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("undo_reassign", { p_id: id }));
     },
   });
   // A saved project or category: the screen takes the write, and ביטול undoes it when the server kept an undo id.
-  const assignSaved = () => {
+  const assignSaved = (payload?: PickBack) => {
     applyRef.current();
-    const id = undoId.current;
+    const id = payload?.undoId;
     toast.show({
       message: "השיוך נשמר",
       place: "top",
       durationMs: LINE_UNDO_MS,
-      ...(!sample && id ? { action: "ביטול", onAction: () => { ruleOffer.close(); undo.mutate(); } } : {}),
+      ...(!sample && id ? { action: "ביטול", onAction: () => { ruleOffer.close(); undo.mutate({ id }); } } : {}),
     });
     // FLOW-965: a new category on a supplier's line offers the supplier's next lines.
     if (offerNext.current) ruleOffer.open(offerNext.current);
@@ -415,6 +410,7 @@ export function TransactionScreen({
     setCategoryName(payload.back.categoryName);
   };
   const reassign = useWrite<PickBack>({
+    scope,
     failure: changeSaveFailure,
     place: "top",
     onError: (_error, payload) => { restorePick(payload); },
@@ -428,7 +424,8 @@ export function TransactionScreen({
     },
     keys: ASSIGN_KEYS,
     onSuccess: assignSaved,
-    run: async ({ next }) => {
+    run: async (payload) => {
+      const { next } = payload;
       const current = sample ?? detail.data;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
@@ -439,10 +436,11 @@ export function TransactionScreen({
         p_category_id: next.categoryId,
       });
       assertNoError(saved);
-      undoId.current = typeof saved.data === "string" ? saved.data : null;
+      payload.undoId = typeof saved.data === "string" ? saved.data : null;
     },
   });
   const setCategory = useWrite<PickBack>({
+    scope,
     failure: changeSaveFailure,
     place: "top",
     onError: (_error, payload) => { restorePick(payload); },
@@ -452,9 +450,9 @@ export function TransactionScreen({
     },
     keys: ASSIGN_KEYS,
     onSuccess: assignSaved,
-    run: async ({ next }) => {
+    run: async (payload) => {
       const current = sample ?? detail.data;
-      const nextCategory = next.categoryId;
+      const nextCategory = payload.next.categoryId;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
       if (!supabase || nextCategory === "") throw new Error("supabase");
@@ -463,7 +461,7 @@ export function TransactionScreen({
         p_category_id: nextCategory,
       });
       assertNoError(saved);
-      undoId.current = typeof saved.data === "string" ? saved.data : null;
+      payload.undoId = typeof saved.data === "string" ? saved.data : null;
     },
   });
   // FLOW-1048 (V3-Transaction): the 56px detail bar slides in once the head has gone under it.
@@ -488,8 +486,7 @@ export function TransactionScreen({
     return frame(<ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />);
   }
   const detailRow = txn;
-  const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
-  const splitRow = serverSplit;
+  const splitRow = txnSplitLike(detailRow);
   const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בחרו פרויקט");
   const shownCategory = categoryName || txn.category_name || "בחרו קטגוריה";
   const shownCategoryId = categoryId || txn.category_id || "";
@@ -592,6 +589,7 @@ export function TransactionScreen({
   const countedLocked = loanLine || pnl.mixed;
   const lockedHint = loanLine ? (loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · לפי הקטגוריה") : "לפי הקטגוריות בפיצול";
   const countedBusy = pnlLine.isPending || cashLine.isPending;
+  const writing = countedBusy || reassign.isPending || setCategory.isPending || undo.isPending || approve.isPending;
   const lineSplitHint = lineSplitRowHint(lineSplit);
   function togglePnl() {
     if (holdWrites || pnlLine.isPending || (sample == null && blocked())) return;
@@ -786,9 +784,10 @@ export function TransactionScreen({
         consequence="למחוק את הרשומה הידנית? אי אפשר לשחזר."
         confirmLabel="מחיקה"
         destructive
-        busy={remove.isPending}
+        busy={remove.isPending || writing}
         onConfirm={() => {
-          if (blocked()) return;
+          // FLOW-1165: not while a pick, the P&L or cash switch, an approve or a ביטול is still writing the line.
+          if (writing || blocked()) return;
           remove.mutate();
         }}
       />

@@ -19,6 +19,8 @@ import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
+import { saveFlow } from "../save-flow";
+import { useMachine } from "../use-machine";
 import { assertNoError } from "../use-write";
 import { pushSupport, subscribeThisDevice, useRecordPushAnswer, type SubscribeOutcome } from "../push";
 import { subscribeDiagnostic, subscribeFailure } from "../screens/push-copy";
@@ -105,31 +107,52 @@ export function StepBusiness({
 }: StepProps & { companyId: string | null; initial: BusinessInitial | null }) {
   const [currency, setCurrency] = useState<"USD" | "ILS">(initial?.currency ?? "USD");
   const [basis, setBasis] = useState<"paid" | "invoice">(initial?.basis ?? "paid");
-  const [saving, setSaving] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const flow = useMachine(saveFlow);
+  const saving = flow.state === "saving";
+  const failed = flow.state === "failed";
   const client = useQueryClient();
+  // The company create_company made, with the name it was sent under. Kept here, so a retry after a
+  // refused setting resumes the follow-up for that company instead of creating another or taking
+  // the existing-company path.
+  const created = useRef<{ id: string; name: string } | null>(null);
+  // The name the form sends with create_company (set at submit, read when it succeeds).
+  const sentName = useRef("");
+
+  // The first settings for the new company, then the run starts. A failure leaves `created` set, so
+  // the next tap comes back here. `wanted` is the name in the field now (renamed first if it changed).
+  async function settleCreated(wanted: string): Promise<void> {
+    const company = created.current;
+    if (company == null) return;
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      if (wanted !== company.name) {
+        assertNoError(await supabase.rpc("rename_company", { p_company_id: company.id, p_name: wanted }));
+        company.name = wanted;
+      }
+      assertNoError(await supabase.rpc("apply_starter_categories", { p_set: "general" }));
+      assertNoError(await supabase.rpc("set_company_currency", { p_currency: currency }));
+      assertNoError(await supabase.rpc("set_cash_basis", { p_basis: basis }));
+      await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
+      const at = nowIso();
+      onDone({ run_started_at: at, flow_at: at }, company.id);
+      flow.send("done");
+    } catch {
+      flow.send("fail");
+    }
+  }
+
   const form = useCompanyForm({
     initialName: initial?.name ?? "",
     namePlaceholder: BUSINESS_NAME_PLACEHOLDER,
-    onCreated: (created) => {
-      // create_company succeeded: the first settings follow, then the run starts.
-      void (async () => {
-        try {
-          const supabase = getSupabase();
-          if (!supabase) throw new Error("supabase");
-          assertNoError(await supabase.rpc("apply_starter_categories", { p_set: "general" }));
-          assertNoError(await supabase.rpc("set_company_currency", { p_currency: currency }));
-          assertNoError(await supabase.rpc("set_cash_basis", { p_basis: basis }));
-          await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
-          const at = nowIso();
-          onDone({ run_started_at: at, flow_at: at }, created);
-        } catch {
-          setFailed(true);
-        } finally {
-          setSaving(false);
-        }
-      })();
+    onCreated: (id) => {
+      // A retry from the form's toast arrives with no save running, so this starts one.
+      created.current = { id, name: sentName.current };
+      flow.send("start");
+      void settleCreated(sentName.current);
     },
+    // create_company failed: the form's toast says so, and the button is free again.
+    onFailed: () => { flow.send("stop"); },
   });
   const name = form.name;
   const empty = name.trim() === "";
@@ -151,23 +174,34 @@ export function StepBusiness({
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving || form.busy) return;
-    setFailed(false);
+    if (form.busy || saving) return;
     // The name rule runs first, for both paths (the form shows its message).
     if (companyNameError(name) != null) {
+      flow.send("clear");
       form.submit(event);
+      return;
+    }
+    if (created.current != null) {
+      // The company exists already: only its settings are left to save.
+      if (!flow.send("start")) return;
+      void settleCreated(name.trim());
       return;
     }
     if (companyId == null) {
-      setSaving(true);
+      sentName.current = name.trim();
+      // A form that may not write (FLOW-506) sends nothing, so no save starts.
+      if (form.holdWrites) flow.send("clear");
+      else if (!flow.send("start")) return;
       form.submit(event);
       return;
     }
-    setSaving(true);
+    if (!flow.send("start")) return;
     void saveExisting()
-      .then(() => { onDone(); })
-      .catch(() => { setFailed(true); })
-      .finally(() => { setSaving(false); });
+      .then(() => {
+        onDone();
+        flow.send("done");
+      })
+      .catch(() => { flow.send("fail"); });
   }
 
   return (
@@ -177,6 +211,7 @@ export function StepBusiness({
       lead={BUSINESS_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
+      saving={saving || form.busy}
       primary={
         <Button type="submit" form="setup-business" full disabled={empty} busy={saving || form.busy}>
           {NEXT}
@@ -349,8 +384,9 @@ export function StepProjects({
 }: StepProps & { companyId: string | null; bankConnected: boolean; existingNames: readonly string[] }) {
   const [draft, setDraft] = useState("");
   const [chips, setChips] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const flow = useMachine(saveFlow);
+  const saving = flow.state === "saving";
+  const failed = flow.state === "failed";
   const [nameNote, setNameNote] = useState<string | null>(null);
   const [noteTap, setNoteTap] = useState(0);
   const suggestions = useSetupSuggestions(companyId, bankConnected);
@@ -366,8 +402,7 @@ export function StepProjects({
   }
 
   async function save() {
-    setSaving(true);
-    setFailed(false);
+    if (!flow.send("start")) return;
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -375,10 +410,9 @@ export function StepProjects({
         assertNoError(await supabase.rpc("upsert_project", { p_name: name, p_status: "active" }));
       }
       onDone({ projects_at: nowIso() });
+      flow.send("done");
     } catch {
-      setFailed(true);
-    } finally {
-      setSaving(false);
+      flow.send("fail");
     }
   }
 
@@ -389,8 +423,9 @@ export function StepProjects({
       lead={PROJECTS_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
+      saving={saving}
       primary={<Button type="button" full busy={saving} onClick={() => { void save(); }}>{projectsPrimary(chips.length)}</Button>}
-      secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
+      secondary={<Button type="button" variant="link" full disabled={saving} onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
       <form
         className="ui-onb-add"
@@ -533,15 +568,17 @@ export function StepLoans({
 /** Step 5 · תיוג חכם. The one switch saves as the Jev settings did in the old step. */
 export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
   const [on, setOn] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const flow = useMachine(saveFlow);
+  const saving = flow.state === "saving";
+  const failed = flow.state === "failed";
   function save() {
-    setSaving(true);
-    setFailed(false);
+    if (!flow.send("start")) return;
     saveJevIntegration(on ? JEV_NEW_COMPANY : { ...JEV_NEW_COMPANY, enabled: false, mode: "off" })
-      .then(() => { onDone({ jev_on: on }); })
-      .catch(() => { setFailed(true); })
-      .finally(() => { setSaving(false); });
+      .then(() => {
+        onDone({ jev_on: on });
+        flow.send("done");
+      })
+      .catch(() => { flow.send("fail"); });
   }
   return (
     <OnboardingFrame
@@ -550,8 +587,9 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
       lead={JEV_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
+      saving={saving}
       primary={<Button type="button" full busy={saving} onClick={save}>{NEXT}</Button>}
-      secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
+      secondary={<Button type="button" variant="link" full disabled={saving} onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={JEV_LABEL} hint={JEV_HINT} checked={on} busy={saving} onChange={setOn} />
@@ -637,7 +675,8 @@ export function StepInstall({
   initialMode,
 }: StepProps & { initialMode?: InstallMode }) {
   const [notify, setNotify] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const flow = useMachine(saveFlow);
+  const saving = flow.state === "saving";
   const [pushFailed, setPushFailed] = useState<SubscribeOutcome | null>(null);
   // One push question (FLOW-976): the step's answer is the review card's asked-once answer. A failed
   // subscribe is not an answer, except a refusal (denied, dismissed).
@@ -656,7 +695,7 @@ export function StepInstall({
           full
           busy={saving}
           onClick={() => {
-            if (saving) return;
+            if (flow.state === "saving") return;
             if (!notify || pushFailed != null || pushSupport() !== "ok") {
               // Turned off here is the answer "no"; a device that cannot push was not asked.
               if (!notify && pushSupport() === "ok") recordAnswer(false);
@@ -665,7 +704,7 @@ export function StepInstall({
             }
             // The permission request runs in this tap, before any state change.
             const pending = subscribeThisDevice();
-            setSaving(true);
+            flow.send("start");
             void pending.then((outcome) => {
               if (outcome.result === "ok") {
                 recordAnswer(true);
@@ -674,7 +713,7 @@ export function StepInstall({
               }
               if (outcome.result === "denied" || outcome.result === "dismissed") recordAnswer(false);
               setPushFailed(outcome);
-            }).finally(() => { setSaving(false); });
+            }).finally(() => { flow.send("stop"); });
           }}
         >
           {INSTALL_FINISH}

@@ -68,6 +68,17 @@ function onMouseUp(): void {
   syncPress();
 }
 
+/** A press whose up will not come here: the window lost focus or the page was hidden mid-press. */
+function onLetGo(): void {
+  pointerIds.clear();
+  mouseDown = false;
+  syncPress();
+}
+
+function onVisibility(): void {
+  if (document.visibilityState === "hidden") onLetGo();
+}
+
 function isEditable(element: Element): boolean {
   return element instanceof HTMLInputElement
     || element instanceof HTMLTextAreaElement
@@ -129,6 +140,8 @@ export function installListHold(): () => void {
   window.addEventListener("pointercancel", onPointerUp);
   window.addEventListener("mousedown", onMouseDown);
   window.addEventListener("mouseup", onMouseUp);
+  window.addEventListener("blur", onLetGo);
+  document.addEventListener("visibilitychange", onVisibility);
   document.addEventListener("focusin", syncFocus);
   document.addEventListener("focusout", syncFocus);
   document.addEventListener("scroll", onScroll, true);
@@ -144,6 +157,8 @@ export function installListHold(): () => void {
     window.removeEventListener("pointercancel", onPointerUp);
     window.removeEventListener("mousedown", onMouseDown);
     window.removeEventListener("mouseup", onMouseUp);
+    window.removeEventListener("blur", onLetGo);
+    document.removeEventListener("visibilitychange", onVisibility);
     document.removeEventListener("focusin", syncFocus);
     document.removeEventListener("focusout", syncFocus);
     document.removeEventListener("scroll", onScroll, true);

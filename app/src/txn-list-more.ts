@@ -43,7 +43,13 @@ export function useTxnListMore(from: string, more: boolean, load: TxnMoreLoad | 
     if (load == null) return;
     const entry = entries.get(from);
     entries.delete(from);
-    entries.set(from, { load, more, extra: entry?.load === load ? entry.extra : [], loading: null });
+    if (entry?.load === load) {
+      // The same list again: a read the card started still lands here, and still answers a second press.
+      entry.more = more;
+      entries.set(from, entry);
+    } else {
+      entries.set(from, { load, more, extra: [], loading: null });
+    }
     while (entries.size > KEEP) {
       const oldest = entries.keys().next().value;
       if (oldest === undefined) break;
