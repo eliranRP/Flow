@@ -208,6 +208,21 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     expect(li).not.toHaveClass("ui-forecast-leaving");
   });
 
+  it("a move saved on the row's page is still sent after the screen closes before the list is back", async () => {
+    rpc.mockClear();
+    const view = renderForecast(board());
+    openNorthgate();
+    fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
+    await sheetGone();
+    // The row folds, then its fold timer sends the move; the screen is gone by then, and the write still goes out.
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+    view.unmount();
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("set_forecast_item", { p_month: "2026-10", p_item_key: "invoice:inv-1043", p_patch: { moved_out: true } });
+    });
+  });
+
   it("Back closes the page and gives the focus back to the row", async () => {
     renderForecast(board());
     openNorthgate();
