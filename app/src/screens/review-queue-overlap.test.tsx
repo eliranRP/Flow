@@ -95,7 +95,7 @@ beforeEach(() => {
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
     dispatchEvent: () => false,
-  }) as MediaQueryList);
+  }) as unknown as MediaQueryList);
 });
 
 afterEach(() => {
