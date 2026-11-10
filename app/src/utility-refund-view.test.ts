@@ -113,7 +113,7 @@ describe("incomeRows", () => {
   it("names the bill's part and the bills it paid back, or that it has none, and the other parts", () => {
     const [november, october, , september, august] = incomeRows(income, income.bill);
     expect(october).toMatchObject({
-      title: "RentRedi · 07/10/26",
+      title: "Rent Pay · 07/10/26",
       hit: "חשמל $180.20 · החזיר את 04/09/26",
       hitMissing: false,
       others: "שכירות $1,750 · מים $122.80 · ביוב $68.40",

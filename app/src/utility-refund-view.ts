@@ -192,7 +192,7 @@ export function billActivity(bill: UtilityBill): string {
 }
 
 /**
- * FLOW-1159 (V3-J boards): a bill's status in plain words. Refunded within 7 days of the bill: "הוחזר באותו חודש ·
+ * FLOW-1159 (V3-J boards): a bill's status in plain words. Refunded in the bill's calendar month: "הוחזר באותו חודש ·
  * 05/11"; later: "הוחזר ב־05/11 · 34 ימים אחרי"; refunded with no payment line: "הוחזר". Seen: "נבדק · ראיתי". Not
  * refunded: "לא הוחזר · 40 ימים"; waiting: "עוד לא הוחזר · 9 ימים". Dates read dd/mm/yy (FLOW-1141).
  */
@@ -202,7 +202,7 @@ export function billStatusLine(bill: Pick<UtilityBill, "state" | "days" | "doc_d
     if (payment == null) return "הוחזר";
     const lag = daysBetween(bill.doc_date, payment.doc_date);
     const date = refundDate(payment.doc_date);
-    return lag <= 7 ? `הוחזר באותו חודש · ${date}` : `הוחזר ב־${date} · ${days(lag)} אחרי`;
+    return payment.doc_date.slice(0, 7) === bill.doc_date.slice(0, 7) ? `הוחזר באותו חודש · ${date}` : `הוחזר ב־${date} · ${days(lag)} אחרי`;
   }
   if (bill.state === "seen") return "נבדק · ראיתי";
   if (bill.state === "not_refunded") return `לא הוחזר · ${days(bill.days)}`;
@@ -310,7 +310,7 @@ export type IncomeRow =
     key: string;
     transactionId: string;
     date: string;
-    /** "RentRedi · 06/11/26": the payer (or description) and the date. */
+    /** "Rent Pay · 06/11/26": the payer (or description) and the date. */
     title: string;
     /** "חשמל $180.20 · החזיר את 04/09, 06/10", or "בלי חשמל" when no part of it is the bill's type. */
     hit: string;

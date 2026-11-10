@@ -154,10 +154,10 @@ describe("ProjectUtilityIncomeScreen", () => {
     expect(screen.getByRole("heading", { level: 1 }).closest("header")?.textContent).toContain("דירת הגפן 3 · חשמל");
     const list = screen.getByRole("list", { name: "תשלומים מהשוכר" });
     expect([...list.children].map((item) => item.textContent)).toEqual([
-      expect.stringContaining("RentRedi · 06/11/26"),
-      expect.stringContaining("RentRedi · 07/10/26"),
+      expect.stringContaining("Rent Pay · 06/11/26"),
+      expect.stringContaining("Rent Pay · 07/10/26"),
       "החשבון · 06/10/26",
-      expect.stringContaining("RentRedi · 10/09/26"),
+      expect.stringContaining("Rent Pay · 10/09/26"),
       expect.stringContaining("Zelle · 12/08/26"),
     ]);
     const october = list.children[1];

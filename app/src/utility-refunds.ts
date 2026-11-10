@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createContext, createElement, useContext, type ReactNode } from "react";
 import type { z } from "zod";
 import { getSupabase } from "./lib/supabase";
@@ -114,7 +114,8 @@ export function useUtilityIncomeQuery(billId: string, months = 2, active = true)
   return useQuery({
     queryKey: [UTILITY_INCOME_KEY, preview, billId, months],
     // A wider window keeps the lines on screen until the new ones arrive.
-    placeholderData: keepPreviousData,
+    // Only the same bill's lines stay on screen while a wider window loads; another bill starts empty.
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[2] === billId ? previous : undefined),
     enabled: active && preview === "off" && billId !== "",
     queryFn: async (): Promise<UtilityIncome> => {
       const supabase = await client();

@@ -165,11 +165,11 @@ export function utilitySplitSample(): UtilityBill[] {
 export function utilityTypesSample(): UtilityBill[] {
   const part = (category: string, name: string, minor: bigint) => ({ category_id: category, category_name: name, project_id: GEFEN, project_name: "דירת הגפן 3", amount_minor: minor });
   const october = {
-    ...payment("pay-rent-10", "2026-10-07", 212_140n, "RentRedi", "שכירות", GEFEN), description: null, split: true,
+    ...payment("pay-rent-10", "2026-10-07", 212_140n, "Rent Pay", "שכירות", GEFEN), description: null, split: true,
     parts: [part("c-שכירות", "שכירות", 175_000n), part("c-power", "חשמל", 18_020n), part("c-water", "מים", 12_280n), part("c-sewer", "ביוב", 6_840n)],
   };
   const november = {
-    ...payment("pay-rent-11", "2026-11-06", 189_370n, "RentRedi", "שכירות", GEFEN), description: null, split: true,
+    ...payment("pay-rent-11", "2026-11-06", 189_370n, "Rent Pay", "שכירות", GEFEN), description: null, split: true,
     parts: [part("c-שכירות", "שכירות", 175_000n), part("c-water", "מים", 14_370n)],
   };
   const type = (category: string, name: string, supplier: string) => ({ category_id: category, category_name: name, supplier_name: supplier, supplier_id: `s-${supplier}` });
@@ -211,12 +211,12 @@ export function utilityIncomeSample(): UtilityIncome {
     },
     lines: [
       {
-        ...line("pay-rent-11", "2026-11-06", 189_370n, "RentRedi", rent),
+        ...line("pay-rent-11", "2026-11-06", 189_370n, "Rent Pay", rent),
         parts: [part("c-שכירות", "שכירות", 175_000n), part("c-water", "מים", 14_370n)],
         refunded_bills: [refunded("t-water-11", "2026-11-04", 14_370n, "c-water", "מים")],
       },
       {
-        ...line("pay-rent-10", "2026-10-07", 212_140n, "RentRedi", rent),
+        ...line("pay-rent-10", "2026-10-07", 212_140n, "Rent Pay", rent),
         parts: [part("c-שכירות", "שכירות", 175_000n), part("c-power", "חשמל", 18_020n), part("c-water", "מים", 12_280n), part("c-sewer", "ביוב", 6_840n)],
         refunded_bills: [
           refunded("t-power-09", "2026-09-04", 18_020n, "c-power", "חשמל"),
@@ -225,7 +225,7 @@ export function utilityIncomeSample(): UtilityIncome {
           refunded("t-water-10", "2026-10-06", 6_050n, "c-water", "מים"),
         ],
       },
-      line("pay-rent-09", "2026-09-10", 175_000n, "RentRedi", rent),
+      line("pay-rent-09", "2026-09-10", 175_000n, "Rent Pay", rent),
       line("pay-power-08", "2026-08-12", 9_500n, null, ["c-power", "חשמל"]),
     ],
   };
