@@ -62,17 +62,28 @@ function readBlocks(): Promise<BlocksModule> {
   return blocksRead;
 }
 
-const NoBlocks: ComponentType<{ route: ColdOpenRoute }> = () => null;
+type BlocksComponent = ComponentType<{ route: ColdOpenRoute }>;
 
-const LazyBlocks = lazy(() => readBlocks().then(
-  (m): { default: ComponentType<{ route: ColdOpenRoute }> } => ({ default: m.ColdOpenBlocks }),
-  () => ({ default: NoBlocks }),
-));
+const NoBlocks: BlocksComponent = () => null;
+
+/** A lazy component keeps its first answer, so a failed read gets a new one for the next frame. */
+function lazyBlocks(): BlocksComponent {
+  return lazy(() => readBlocks().then(
+    (m): { default: BlocksComponent } => ({ default: m.ColdOpenBlocks }),
+    () => {
+      LazyBlocks = lazyBlocks();
+      return { default: NoBlocks };
+    },
+  ));
+}
+
+let LazyBlocks = lazyBlocks();
 
 function Blocks({ route }: { route: ColdOpenRoute }) {
+  const Read = LazyBlocks;
   return (
     <Suspense fallback={null}>
-      <LazyBlocks route={route} />
+      <Read route={route} />
     </Suspense>
   );
 }
@@ -114,6 +125,8 @@ export function ColdOpenSkeleton() {
 /** FullScreen's fallback while a screen's code loads: its bar and blocks after 300ms, so a fast load shows nothing. */
 export function FullScreenFallback() {
   const route = coldOpenRoute(useLocation().pathname);
+  // The 300ms wait below holds the body back; read the blocks' file now so it loads during the wait.
+  if (route.shape !== "home") readBlocks().catch(() => undefined);
   return (
     <DelayedSkeleton>
       <RouteLoadingBody route={route} wait={false} />
