@@ -36,19 +36,25 @@ export const reachBackend: Reach = async () => {
  */
 export function followConnection(target: ConnectionTarget = window, reach: Reach = reachBackend): void {
   onlineManager.setEventListener((setOnline) => {
-    let checking = false;
+    // Each online or offline event starts a new turn. A check answers only for the turn it began in:
+    // one that got through while the connection was briefly back says nothing about a later offline.
+    let turn = 0;
+    let checking: number | null = null;
     const confirm = () => {
-      if (checking) return;
-      checking = true;
+      if (checking === turn) return;
+      const mine = turn;
+      checking = mine;
       void reach().then((reached) => {
-        checking = false;
-        if (reached) setOnline(true);
+        if (checking === mine) checking = null;
+        if (reached && mine === turn) setOnline(true);
       });
     };
     const online = () => {
+      turn += 1;
       setOnline(true);
     };
     const offline = () => {
+      turn += 1;
       setOnline(false);
       confirm();
     };
