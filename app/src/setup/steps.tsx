@@ -210,6 +210,7 @@ export function StepBusiness({
       lead={BUSINESS_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
+      saving={saving || form.busy}
       primary={
         <Button type="submit" form="setup-business" full disabled={empty} busy={saving || form.busy}>
           {NEXT}

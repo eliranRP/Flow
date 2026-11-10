@@ -2,7 +2,7 @@
 
 Every part of Flow that has a small set of states and rules for moving between them, where it lives, and how well the code says so. Decision [0266](../decisions/0266-explicit-state-machines.md) is the rule; this page is the map.
 
-Read this before you change a flow: a save, a sheet, a sync, a status column. If the machine is **explicit**, change its table. If it is **implicit**, the states and moves below are what the code does today, recovered by reading it on 2026-11-10 (commit `4422924`); make it explicit in the PR that changes it, or keep to what is written here.
+Read this before you change a flow: a save, a sheet, a sync, a status column. If the machine is **explicit**, change its table. If it is **implicit**, the states and moves below are what the code does today, recovered by reading it on 2026-11-10 (commit `4422924`), with the gaps closed in #1125 taken out; make it explicit in the PR that changes it, or keep to what is written here.
 
 ## How to write one
 
@@ -32,7 +32,10 @@ export const saveFlow = defineMachine({
 
 | Machine | Where | States | Used by |
 | --- | --- | --- | --- |
-| `saveFlow` | `app/src/save-flow.ts` | `idle`, `saving`, `failed` | Setup steps 1, 3, 5 and 7 (`app/src/setup/steps.tsx`) |
+| `saveFlow` | `app/src/save-flow.ts` | `idle`, `saving`, `failed` | Setup steps 1, 3, 5 and 7 (`app/src/setup/steps.tsx`); the journal composer and the line split editor (`saving` lasts until the page has left); the review card's picked project (`review-queue.tsx`) |
+| `disconnectFlow` | `app/src/connection-undo.ts` | `waiting`, `sending`, `gone` | A disconnect's undo window: `send` puts it on the wire; ביטול, another company, a dropped role or a newer wait end it unsent |
+| `mercuryFetchPhases` | `supabase/functions/_shared/connectors/mercury/machines.ts` | `window`, `pending`, `treasury`, `done` | Which lists a Mercury fetch runs, and which run after a resume (`mercuryPhasesFrom`) |
+| `mercuryCommit` | the same file | `lines`, `labels`, `stamp`, `done` | The order mercury-sync writes a plan in; a partial fetch skips `stamp`. Three steps, not one transaction |
 
 These already keep one union and one place that moves it, without `defineMachine`. They are fine as they are; move one onto the helper when you next change it.
 
@@ -57,20 +60,19 @@ Held in booleans, refs, nullable timestamps or scattered `WHERE` clauses. "Open 
 | Machine | Where | States (how held) | Open gaps |
 | --- | --- | --- | --- |
 | Change sheet | `ui/change-sheet.tsx` | View `summary`, `project`, `category`, `new`, derived from 12 state values, 13 refs and `?pick=` | `new` is not a history entry, so the browser's Back and the sheet's back land in different places ([FLOW-1167](../backlog/tasks/FLOW-1167.md)) |
-| Sheet and its history entry | `ui/sheet.tsx`, `ui/back.tsx`, `ui/route-sheet.tsx` | closed, open, busy (close queued), deciding, closing; 8 refs, plus the history layer's unpushed, pushing, pushed, popped | A parent that ignores `onOpenChange(false)` leaves `closing` set, and later closes do nothing; a `onBeforeClose` that never settles blocks every close (FLOW-1167) |
-| Toast | `ui/toast.tsx` | `off`, `measure`, `pad`, `fade`, `in`, `out`: one union set from six places, plus `hold {hover, focus, press}` | A mouse press released outside the toast leaves `press` set and the timer paused (FLOW-1167) |
-| Setup wizard | `setup/model.ts`, `setup/storage.ts`, `setup/route.tsx`, `setup/steps.tsx` | Per step: done, skipped, neither or both, from stamps and server facts. Run: not started, started, resumed, skipped-all, finished. The step is the URL | A setting refused after the company was created loses the run's start; skip-all fails without a word; the step's skip and back stay live during a save ([FLOW-1161](../backlog/tasks/FLOW-1161.md)) |
-| Disconnect with an undo window | `connection-undo.ts`, `use-connector-disconnect.ts` | absent, waiting, sending, gone; map membership and a nullable `sending` | A rejected `onSent` leaves the entry forever, so the slot reads as leaving (FLOW-1167) |
-| New version reload | `sw-reload.ts` | current, behind, reload now or on the next move, reloaded; closure flags and two session keys | The loop guard drops a pending reload (FLOW-1167) |
+| Sheet and its history entry | `ui/sheet.tsx`, `ui/back.tsx`, `ui/route-sheet.tsx` | closed, open, busy (close queued), deciding, closing; 8 refs, plus the history layer's unpushed, pushing, pushed, popped | A parent that ignores `onOpenChange(false)` leaves `closing` set, and later closes do nothing: six loan sheets do, when their save fails ([FLOW-1164](../backlog/tasks/FLOW-1164.md)) |
+| Toast | `ui/toast.tsx` | `off`, `measure`, `pad`, `fade`, `in`, `out`: one union set from six places, plus `hold {hover, focus, press}` | None open; the phases are still set from six places (FLOW-1167) |
+| Setup wizard | `setup/model.ts`, `setup/storage.ts`, `setup/route.tsx`, `setup/steps.tsx` | Per step: done, skipped, neither or both, from stamps and server facts. Run: not started, started, resumed, skipped-all, finished. The step is the URL | After skip-all the Settings entry's link lands on Home; step 2's "no bank" is neither done nor skipped; the run and step states are not a table yet ([FLOW-1161](../backlog/tasks/FLOW-1161.md)) |
+| New version reload | `sw-reload.ts` | current, behind, reload now or on the next move, reloaded; closure flags and two session keys | None open |
 | Push subscribe | `push.ts` (`SubscribeStep`) | permission, worker, controller, lookup, unsubscribe, subscribe, save, done; one variable in one function | The step reported with a timeout is not always the step reached (FLOW-1167) |
-| Touch gestures | `ui/swipe-row.tsx`, `ui/card-swipe.tsx`, `ui/period-swipe.tsx`, `ui/edge-back.tsx`, `ui/code-field.tsx` | idle, tracking, axis locked, commit or settle; a `track` ref each | `PeriodSwipe` drops a second finger without settling (FLOW-1167) |
-| List order hold | `list-hold.tsx` | held is the OR of `press`, `focus`, `sheet`, `scrolling` | A pointer that never reports up keeps `press` (FLOW-1167) |
-| Online state | `connection.ts` | online, offline, offline and checking | A check started for one offline event can answer after a later one (FLOW-1167) |
+| Touch gestures | `ui/swipe-row.tsx`, `ui/card-swipe.tsx`, `ui/period-swipe.tsx`, `ui/edge-back.tsx`, `ui/code-field.tsx` | idle, tracking, axis locked, commit or settle; a `track` ref each | None open |
+| List order hold | `list-hold.tsx` | held is the OR of `press`, `focus`, `sheet`, `scrolling` | None open |
+| Online state | `connection.ts` | online, offline, offline and checking | None open |
 | Screen read phase | `ui/screen-phase.ts`, `query-phase.ts` | `loading`, `error`, `empty`, `ready`, from an if-chain over the query's flags | `empty` comes only from a preview; each screen checks real emptiness itself |
 | Skeleton timing | `ui/skeleton.tsx`, `ui/offline-wait.tsx` | nothing (under 300 ms), skeleton, fading, gone, or the offline line | None found |
 | Company role | `use-is-viewer.tsx` | `loading`, `viewer`, `editor`, `owner`, `unknown`, from the query, a stored copy and the pinned context | Not signed in reads as `owner` |
 | Write with retry and undo | `use-write.ts`, `project-forecast-writes.ts`, `forecast-skip.ts` | React Query's mutation states plus a retry toast, a snapshot and "undo asked before the write answered" flags | None found |
-| Transaction stepping | `txn-step-nav.tsx`, `txn-list-more.ts` | Position from the route state plus `{more, extra, loading}` | A load in flight when the entry is replaced loses its result (FLOW-1167) |
+| Transaction stepping | `txn-step-nav.tsx`, `txn-list-more.ts` | Position from the route state plus `{more, extra, loading}` | None open |
 | Attention rows | `ui/attention-cards.tsx`, `ui/fold.tsx` | shown, leaving (240 ms), hidden (4 s undo), restored | None found |
 | Install prompt | `ui/install-prompt.ts` (`InstallMode`) | Derived on each call from the device and a saved browser event | A dismissed native prompt switches to manual steps without a word |
 | Mercury connection view | `mercury-state.ts` | Per connection: `chosen` × `keyWorks` × `syncing` | `!chosen && syncing` and `!keyWorks && syncing` can be built; the server's `connected` is not read |
@@ -81,22 +83,22 @@ Status read from data, with no moves on the client (pure functions): a month `pa
 
 | Machine | Where | States (how held) | Open gaps |
 | --- | --- | --- | --- |
-| Review's change sheet | `change-form.tsx` | open, resolved here, closed elsewhere, dropped, seeded by Jev, on hold; seven writes in one scope and about twelve refs | Picks queue with no pending guard, and each write reads its payload from a single-slot ref a later pick overwrites ([FLOW-1165](../backlog/tasks/FLOW-1165.md)) |
-| Transaction page | `transaction-screen.tsx`, `transaction-approve.tsx`, `transaction-rule-offer.tsx` | Draft project and category, committed target, hold, review pending, rule offer, four sheets | Picks can overlap and share one undo slot; delete is not blocked by a write in flight (FLOW-1165) |
-| Review queue card | `review-queue.tsx`, `review-swap.ts` | Card `still`, `out`, `in`; approving; skipped list; project picker | Skip is gated by the swap only, not by an approve in flight (FLOW-1165) |
-| Line split editor | `line-split-editor.tsx`, `split-back.ts` | clean, dirty, invalid, warned, saving, refused, blocked | `saving` clears before the reads are refreshed and the page leaves, so a second write is not blocked; the retry toast runs a stale closure ([FLOW-1164](../backlog/tasks/FLOW-1164.md)) |
-| Journal composer | `journal-composer-screen.tsx` | Start `jev`, `copy`, `free`; balanced or held; `saving`; `error` | The same early `saving` clear and stale retry (FLOW-1164) |
-| Loan match on a line | `loan-match-row.tsx`, `loan-match.tsx`, `loan-match-api.tsx` | none, matched, matched and to review; sheet, draft, correcting, undo sent | Edit and the undo's rematch check no write in flight (FLOW-1164) |
-| Loan page | `loan-detail-screen.tsx` and its sheets | One sheet of eight, four busy flags, a close guard | The close guard is one boolean, so overlapping saves release it early (FLOW-1164) |
+| Review's change sheet | `change-form.tsx` | open, resolved here, closed elsewhere, dropped, seeded by Jev, on hold; seven writes in one scope and about twelve refs | None open: each pick and its ביטול carry their own values and undo id ([FLOW-1165](../backlog/tasks/FLOW-1165.md)) |
+| Transaction page | `transaction-screen.tsx`, `transaction-approve.tsx`, `transaction-rule-offer.tsx` | Draft project and category, committed target, hold, review pending, rule offer, four sheets | None open: the picks run in one scope with their own undo id, and delete waits for a write |
+| Review queue card | `review-queue.tsx`, `review-swap.ts` | Card `still`, `out`, `in`; approving; skipped list; project picker | None open |
+| Line split editor | `line-split-editor.tsx`, `split-back.ts` | clean, dirty, invalid, warned, refused, blocked; the save itself is `saveFlow` | None open ([FLOW-1164](../backlog/tasks/FLOW-1164.md)) |
+| Journal composer | `journal-composer-screen.tsx` | Start `jev`, `copy`, `free`; balanced or held; `error`; the save itself is `saveFlow` | Editing legs keeps start `jev`, so the "Jev's suggestion" note stays on edited legs |
+| Loan match on a line | `loan-match-row.tsx`, `loan-match.tsx`, `loan-match-api.tsx` | none, matched, matched and to review; sheet, draft, correcting, undo sent | The rematch is not checked by `canSave`; no reachable case was found (FLOW-1164) |
+| Loan page | `loan-detail-screen.tsx` and its sheets | One sheet of eight, four busy flags, a close guard | None open: the close guard counts the saves in flight |
 | New loan sheet | `loans-host.tsx`, `loan-setup.tsx` | View `form`, `project`; draft in refs; posted | None found |
 | Jev connector scope | `jev-connector-scope.ts` (`JevScopePhase`) | `off`, `pending`, `ready`, `miss`, with four module variables beside it | `off` with a bound scope can be built; after a miss a scope binds but the phase stays `miss` (FLOW-1164) |
 | Jev settings card | `jev-settings.tsx` | `enabled` × mode `off`, `shadow`, `auto` × status `ready`, `error`, `loading` | `enabled` with mode `off` is storable and reads as off ([FLOW-1166](../backlog/tasks/FLOW-1166.md)) |
 | Mercury connection page | `mercury-connection-screen.tsx`, `mercury-accounts-step.tsx` | A ladder over URL params, server fields and `replacing`: key form, list, reconnect, accounts, editing, connected | `replacing` is not reset when the slot changes |
 | SUMIT connection page | `connection-pages.tsx`, `connections-status.ts` | `new`, `problem`, `connected`, `loading`, `error`, `viewer` | None found |
-| AI assistant keys | `assistant-settings.tsx`, `assistant-setup.tsx` | Server `empty`, `connected`, `expired`; view `home`, `new`, `key`; minting, secret shown, first use | A failed revoke after a mint is silent (FLOW-1164) |
-| Forecast moves | `forecast-screen.tsx`, `forecast-item-page.tsx` | Pending move: toast, fold timer, sent or cancelled | The toast shows before the write; a screen that unmounts first never sends it (FLOW-1164) |
-| Recurring charge page | `recurring-charge-screen.tsx` and its sheets | Alert active or ignored, match unanswered, same or never, pace; local overrides | Local overrides are never cleared, and the writes have no guard (FLOW-1164) |
-| Unpaid invoices | `unpaid-actions.ts` | open, marked, linked, match dismissed | No pending guards on mark, link and dismiss (FLOW-1164) |
+| AI assistant keys | `assistant-settings.tsx`, `assistant-setup.tsx` | Server `empty`, `connected`, `expired`; view `home`, `new`, `key`; minting, secret shown, first use | None open |
+| Forecast moves | `forecast-screen.tsx`, `forecast-item-page.tsx` | Pending move: toast, fold timer, sent or cancelled | The fold timer is not cleared on unmount (it still sends the write) (FLOW-1164) |
+| Recurring charge page | `recurring-charge-screen.tsx` and its sheets | Alert active or ignored, match unanswered, same or never, pace; local overrides | Local overrides are never cleared, so they carry over to a new alert (FLOW-1164) |
+| Unpaid invoices | `unpaid-actions.ts` | open, marked, linked, match dismissed | None open: one write per action at a time |
 | Notifications | `notifications-screen.tsx`, `review-push-prompt.tsx` | Device `subscribed`, `not-subscribed`, `no-worker`, `unsupported`, `ios-home-screen`; per-key save loop | None verified |
 
 Patterns many screens share, each a candidate for one shared machine:
@@ -110,14 +112,14 @@ Patterns many screens share, each a candidate for one shared machine:
 
 | Machine | Where | States (how held) | Open gaps |
 | --- | --- | --- | --- |
-| Mercury connection sync | `mercury-sync/index.ts`, `_shared/cron_claim.ts` | not chosen, auth-stopped, held, quiet, claimed, due, running, mid-pagination; all read from the connection row's nullable fields | A page-capped run clears every pending line's missing-since clock; the commit is three steps, not one ([FLOW-1162](../backlog/tasks/FLOW-1162.md)) |
-| Mercury fetch cursor | `_shared/connectors/mercury/client.ts` (`MercuryCursorPhase`) | idle (a timestamp) or resuming in `window`, `pending` or `treasury` (JSON) | A treasury resume whose account is gone restarts at the first account with the old page token; a loop cap never leaves (FLOW-1162) |
-| Bank line and its recheck | `_shared/connectors/engine.ts`, `mercury-sync/stored.ts` | `pending`, `posted`, `void`, and "missing since" for a pending line the fetch no longer lists | A passing recheck error starts the missing clock without a 404 (FLOW-1162) |
+| Mercury connection sync | `mercury-sync/index.ts`, `_shared/cron_claim.ts` | not chosen, auth-stopped, held, quiet, claimed, due, running, mid-pagination; all read from the connection row's nullable fields | The commit is three named steps (`mercuryCommit`), not one transaction ([FLOW-1162](../backlog/tasks/FLOW-1162.md)) |
+| Mercury fetch cursor | `_shared/connectors/mercury/client.ts` (`MercuryCursorPhase`) | idle (a timestamp) or resuming in `window`, `pending` or `treasury` (JSON) | A repeated page token fails the run and every later run repeats it: a decision is needed (FLOW-1162) |
+| Bank line and its recheck | `_shared/connectors/engine.ts`, `mercury-sync/stored.ts` | `pending`, `posted`, `void`, and "missing since" for a pending line the fetch no longer lists | A resumed run spends its 50 rechecks on lines the earlier partial run listed: a decision is needed (FLOW-1162) |
 | Refresh request queue | `mercury-sync/index.ts`, `sumit-sync/index.ts` | queued, claimed (also the end) | A skipped run uses up the request; the drain ignores `forced` ([FLOW-1163](../backlog/tasks/FLOW-1163.md)) |
 | SUMIT sync | `sumit-sync/index.ts`, `_shared/sumit-policy.ts` | auth-stopped, held, quiet, busy, running | No resumable cursor: past 20 pages every run fails the same way (FLOW-1163) |
-| Jev tagging job | `_shared/jev_tag.ts`, `jev_tag_rest.ts`, `jev_tag_plan.ts` | Connector disabled, `shadow`, `auto`; run gated, leased, listed, capped, tagging, finished; line untagged, tagged, prefilled, failed until retry | The rate gate is spent before the lease; a failure that will never pass retries daily and spends a call ([FLOW-1168](../backlog/tasks/FLOW-1168.md)) |
+| Jev tagging job | `_shared/jev_tag.ts`, `jev_tag_rest.ts`, `jev_tag_plan.ts` | Connector disabled, `shadow`, `auto`; run gated, leased, listed, capped, tagging, finished; line untagged, tagged, prefilled, failed until retry | A failure that will never pass retries daily and spends a call; the lease is not renewed (both need SQL, [FLOW-1168](../backlog/tasks/FLOW-1168.md)) |
 | `flow-mcp` request | `flow-mcp/handler.ts`, `preauth.ts`, `sign.ts` | Key active, expired, revoked, restorable; session current or stale; a fixed order of gates | A stale session stays stale until the client initialises again (by design) |
-| `flow-mcp` `sync_bank` job | `flow-mcp/tools_sync.ts` | `proceed`, `replay`, running, finished ok or error, stale | A refused `finish` is not noticed; a page-capped pull is stored as a success (FLOW-1168) |
+| `flow-mcp` `sync_bank` job | `flow-mcp/tools_sync.ts` | `proceed`, `replay`, running, finished ok or error, stale | A refused `finish` is logged but the job still reads as running until stale; a page-capped pull is stored as a success (FLOW-1168) |
 | Mercury connect | `mercury-connect/index.ts`, `_shared/connectors/mercury/scope.ts`, `legacy.ts` | Slot choice `replace`, `add`, `refused`; old-schema mode | The cursor is cleared before the new key is stored, so a failure between them stops the old connection (FLOW-1163) |
 | Push send | `_shared/push_send.ts` | Evening marks after the send (at least once); new and weekly mark before it (at most once) | A failed new or weekly send is lost (FLOW-1168) |
 | Invite email | `_shared/invite_email.ts` | lookup, claim (3 per invite), send | The claim is spent before the send (FLOW-1168) |

@@ -111,8 +111,7 @@ export function LineSplitEditor({
   const [target, setTarget] = useState<PickTarget | null>(initialTarget ? { kind: "part", key: initialTarget.partKey } : null);
   const [pickerStart, setPickerStart] = useState<"category" | "project">(initialTarget?.kind ?? "category");
   const [warned, setWarned] = useState(initialWarned);
-  // The save is one machine. `saving` ends on a refusal, and never otherwise on this screen (a saved
-  // split leaves the page), so a second tap or a retry sends nothing while the reads are refreshed.
+  // One machine: `saving` lasts until the page has left, so a second tap or a retry sends nothing while the reads refresh.
   const flow = useMachine(saveFlow, sampleSaving ? "saving" : "idle");
   const saving = flow.state === "saving";
   const [confirmClear, setConfirmClear] = useState(false);
@@ -126,7 +125,6 @@ export function LineSplitEditor({
   const pickerOpener = useRef<HTMLElement | null>(null);
   /** Set once the screen goes back itself, so its own pop is not held. */
   const leaving = useRef(false);
-  /** The toast's retry runs the latest render's write, so it sends what the form shows now. */
   const retries = useRef<Record<"save" | "clear" | "approve", () => void>>({ save: () => undefined, clear: () => undefined, approve: () => undefined });
   const lineMinor = absAgorot(line.amountNet);
   const currency = line.currency;
@@ -255,6 +253,7 @@ export function LineSplitEditor({
     });
     leaving.current = true;
     goBack(fallback);
+    flow.send("done");
     return true;
   }
 
@@ -273,6 +272,7 @@ export function LineSplitEditor({
     toast.show({ message: "אושר בלי פיצול" });
     leaving.current = true;
     goBack(fallback);
+    flow.send("done");
   }
 
   async function leave() {

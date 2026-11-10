@@ -109,9 +109,8 @@ export function JournalComposer({
   const [state, setState] = useState<ComposerState>(initial);
   const [sheet, setSheet] = useState(initialSheet);
   const [target, setTarget] = useState<PickTarget>(null);
-  // The save is one machine. `saving` ends on a refusal, and on this screen never otherwise: a booked
-  // entry leaves the page. So a second tap, or a retry from the toast, sends nothing while the reads
-  // are refreshed.
+  // The save is one machine: `saving` lasts until the page has left, so a second tap, or a retry from
+  // the toast, sends nothing while the reads are refreshed.
   const flow = useMachine(saveFlow, initialSaving ? "saving" : "idle");
   const saving = flow.state === "saving";
   const [error, setError] = useState<string | null>(initialError);
@@ -174,6 +173,7 @@ export function JournalComposer({
       },
     });
     goBack(backTo);
+    flow.send("done");
   }
 
   const figure = line.direction === "income"

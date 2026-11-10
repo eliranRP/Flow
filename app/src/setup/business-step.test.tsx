@@ -147,3 +147,16 @@ describe("setup step 1 · a setting refused after create_company", () => {
     expect(count(calls, "apply_starter_categories")).toBe(2);
   });
 });
+
+describe("setup step 1 · the other controls while it saves", () => {
+  it("disables דילוג על הכל while create_company runs, so skip-all cannot create a second company", async () => {
+    vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
+      rpc: () => new Promise(() => undefined),
+    } as never);
+    const button = show(null);
+    const skipAll = screen.getByRole("button", { name: "דילוג על הכל" });
+    expect(skipAll).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() => { expect(skipAll).toBeDisabled(); });
+  });
+});
