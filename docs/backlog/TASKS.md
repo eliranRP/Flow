@@ -295,6 +295,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-218"></a>[FLOW-218](tasks/FLOW-218.md) | MCP keys can't invite or change roles; agents treat returned text as data | MCP |
 | <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
 | <a id="flow-939"></a>[FLOW-939](tasks/FLOW-939.md) | Several AI (MCP) keys: the key list, one key, a new named key | UI (design approved) |
+| <a id="flow-1168"></a>[FLOW-1168](tasks/FLOW-1168.md) | Jobs: a `sync_bank` that never finishes, a tagging failure with no end, sends claimed before they are sent | BUG |
 
 ## Transactions and app UX
 
@@ -482,6 +483,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1024"></a>[FLOW-1024](tasks/FLOW-1024.md) | On iPhone a sheet with a field rises off the top of the screen when the keyboard opens | BUG |
 | <a id="flow-1030"></a>[FLOW-1030](tasks/FLOW-1030.md) | The changed-charges list loads under its own title, and Back names where it goes | SMALL UI |
 | <a id="flow-1031"></a>[FLOW-1031](tasks/FLOW-1031.md) | Home keeps the forecast row's place while it loads | SMALL UI |
+| <a id="flow-1164"></a>[FLOW-1164](tasks/FLOW-1164.md) | Editors and sheets: move the saves that can run twice onto `saveFlow` | BUG |
+| <a id="flow-1165"></a>[FLOW-1165](tasks/FLOW-1165.md) | Review and transaction picks: one undo slot shared by overlapping picks; delete during a write | BUG |
+| <a id="flow-1167"></a>[FLOW-1167](tasks/FLOW-1167.md) | Shared UI parts: holds and flags that can stay set (toast, sheet, list hold, swipes, disconnect, reload) | BUG |
 
 ## Projects and reports
 
@@ -649,6 +653,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-941"></a>[FLOW-941](tasks/FLOW-941.md) | Mercury: suggest a transfer between two connections, and let the user decide | FEATURE |
 | <a id="flow-519"></a>[FLOW-519](tasks/FLOW-519.md) | The legal links on sign-in and Settings: rows that fit 320 and clear the tab bar | SMALL UI |
 | <a id="flow-520"></a>[FLOW-520](tasks/FLOW-520.md) | Legal pages: a tappable contact, jump links, clear sections, readable offline | SMALL UI |
+| <a id="flow-1160"></a>[FLOW-1160](tasks/FLOW-1160.md) | Explicit state machines: the helper, the setup's saves, and the map of every machine | SMALL CYCLE |
+| <a id="flow-1161"></a>[FLOW-1161](tasks/FLOW-1161.md) | Setup wizard: a refused setting after the company exists, a silent skip-all, and controls live during a save | BUG |
+| <a id="flow-1162"></a>[FLOW-1162](tasks/FLOW-1162.md) | Mercury sync: a page-capped run resets the missing-since clocks; the cursor's phases as one table | BUG |
+| <a id="flow-1163"></a>[FLOW-1163](tasks/FLOW-1163.md) | Refresh queue and connections: a skipped run uses up the request, `forced` is dropped, claims are not per slot | BUG |
 
 ## Multi-company and team
 
@@ -756,6 +764,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-928"></a>[FLOW-928](tasks/FLOW-928.md) | Invite send caps and redundant indexes (advisors review) | SMALL CYCLE |
 | <a id="flow-929"></a>[FLOW-929](tasks/FLOW-929.md) | Cross-company sweep: every client function, called as another company | SMALL CYCLE |
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
+| <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 

@@ -17,11 +17,14 @@ export function useCompanyForm({
   initialName = "",
   namePlaceholder,
   onCreated,
+  onFailed,
 }: {
   initialName?: string;
   /** FLOW-514: the setup's placeholder, an invented name (never a board sample). */
   namePlaceholder?: string;
   onCreated: (companyId: string) => void;
+  /** create_company did not go through (the form's toast says so). A toast retry may still create it. */
+  onFailed?: () => void;
 }): { submit: (event: SubmitEvent<HTMLFormElement>) => void; busy: boolean; holdWrites: boolean; name: string; fields: ReactElement } {
   const client = useQueryClient();
   const holdWrites = useHoldWrites();
@@ -35,6 +38,7 @@ export function useCompanyForm({
     onSuccess: () => {
       if (created.current) onCreated(created.current);
     },
+    onError: () => { onFailed?.(); },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

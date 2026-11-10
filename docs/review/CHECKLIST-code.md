@@ -34,3 +34,4 @@ Use this with [PITFALLS.md](PITFALLS.md) at the start of a cycle, and again befo
 - [ ] Tests assert their own call or screen, not another feature's query.
 - [ ] Renamed ops-visible objects are listed under "Ops changes" in the pull request.
 - [ ] Database tests use the fixtures in `supabase/tests/helpers.sql` where they fit.
+- [ ] A flow whose states or moves change has its row in `docs/tech/state-machines.md` updated; a new flow with a save or three or more states is a `defineMachine` table whose test asserts `machineProblems` is empty (decision 0266).

@@ -38,6 +38,16 @@ Do not rewrite history by editing an accepted decision into a different one.
 
 Every new feature or user action ships with a `flow-mcp` tool in the same pull request, before or together with the UI (write tools: idempotency key, write rate limit, `undo`). When it can also be an API (RPC or edge endpoint), add that too, and list the tool in `docs/mcp/TOOLS.md`. A user action without MCP support is Blocking. See [0095](docs/decisions/0095-mcp-first.md).
 
+## State machines
+
+A flow with a small set of states and rules for moving between them (a save, a sheet, a sync, a status column) is written as one table, not as several booleans and an `if` in each handler ([0266](docs/decisions/0266-explicit-state-machines.md)).
+
+- Before you change a flow, find its row in [docs/tech/state-machines.md](docs/tech/state-machines.md): its states, where it lives, and the gaps already known.
+- A new flow with three or more states, or with a save, starts as a table: `defineMachine` (`packages/shared/src/machine.ts`), and `useMachine` (`app/src/use-machine.ts`) in a component. A form's own save uses `saveFlow` (`app/src/save-flow.ts`).
+- Guard a write with the machine, not a flag: `if (!flow.send("start")) return;`.
+- The machine's test asserts `machineProblems(machine)` is empty.
+- A PR that adds a machine or changes one's states or moves updates its row in the map. An existing flow moves onto the table in the PR that next changes it, with its behaviour unchanged.
+
 ## File size
 
 Small files keep builders reading less and stop parallel PRs from colliding. This applies to code, stories and CSS (not to generated files such as `database.types.ts`).
