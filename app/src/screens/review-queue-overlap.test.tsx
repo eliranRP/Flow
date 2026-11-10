@@ -92,8 +92,6 @@ beforeEach(() => {
     matches: query.includes("prefers-reduced-motion"),
     media: query,
     onchange: null,
-    addListener: () => undefined,
-    removeListener: () => undefined,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
     dispatchEvent: () => false,

@@ -190,7 +190,7 @@ describe("the transaction page's picks (FLOW-1165)", () => {
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     fireEvent.click(await screen.findByRole("button", { name: "מחיקה" }));
     const confirm = await screen.findByRole("dialog", { name: "למחוק את הרשומה?" });
-    const button = Array.from(confirm.querySelectorAll("button")).find((element) => element.textContent?.includes("מחיקה"));
+    const button = Array.from(confirm.querySelectorAll("button")).find((element) => element.textContent.includes("מחיקה"));
     if (button == null) throw new Error("no confirm button");
     fireEvent.click(button);
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
