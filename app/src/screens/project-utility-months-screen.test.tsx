@@ -38,6 +38,8 @@ describe("a month's status", () => {
     // A month whose open bill the owner closed with ראיתי: checked, not refunded.
     const seen = { ...sample(0), not_refunded: 0n, bills: sample(0).bills.map((bill, index) => (index === 0 ? { ...bill, state: "seen" as const } : bill)) };
     expect(utilityMonthStatus(seen, "USD")).toEqual({ ok: true, text: "כל החשבונות נבדקו" });
+    // A month with rent and no tenant-paid bill: nothing to refund.
+    expect(utilityMonthStatus({ ...sample(0), bills: [], bills_paid: 0n, not_refunded: 0n }, "USD")).toEqual({ ok: true, text: "לא שולמו חשבונות" });
     expect(utilityMonthLabel("2026-10-01")).toBe("אוקטובר 2026");
   });
 });

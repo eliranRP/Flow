@@ -433,3 +433,11 @@
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
 }
+
+/* The owner, 2026-11-10: in the sheet a group head does not pin. The page's bar sets --month-sticky-top for
+   the page under the sheet, so a pinned head stood below the sheet's top and covered the first row. The sheet
+   is short, and its head sits on the sheet's surface, not the page's. */
+.ui-utm-group .ui-month-head {
+  position: static;
+  background: none;
+}
