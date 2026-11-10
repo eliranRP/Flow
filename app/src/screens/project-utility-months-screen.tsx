@@ -7,10 +7,11 @@ import { useProjectsCashMonth } from "../project-cash";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { BackButton } from "../ui/back";
-import { PageLoadFailed, useOnline } from "../ui/band-states";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { CompactBar } from "../ui/compact-bar";
 import { EmptyState } from "../ui/empty-state";
 import { GroupHead } from "../ui/group-head";
+import { HintParts } from "../ui/hint-parts";
 import { CheckIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { useScrolledPast } from "../ui/screen-header";
@@ -25,17 +26,20 @@ const LIST_BAR = 44;
 
 const money = (minor: bigint, currency: string) => formatAmountText(minor, currency, { detail: true });
 
-/** A month's row: "שכירות $X · חשבונות $Y", then its status, in the signal colour unless every bill is back. */
+/**
+ * A month's row: "שכירות $X · חשבונות $Y", then its status, in the signal colour unless every bill is back. FLOW-1153:
+ * each label keeps its amount; a narrow line breaks only between the two, with no "·" at either end.
+ */
 function MonthHint({ month, currency }: { month: UtilityMonth; currency: string }) {
   const status = utilityMonthStatus(month, currency);
   const rent = month.rent_lines.length === 0 && month.rent_in === 0n ? "—" : money(month.rent_in, currency);
   return (
     <>
       <span className="ui-utm-sums">
-        {"שכירות "}
-        <bdi dir="ltr" className="ui-utm-rent">{rent}</bdi>
-        {" · חשבונות "}
-        <bdi dir="ltr">{money(month.bills_paid, currency)}</bdi>
+        <HintParts parts={[
+          <span key="rent">{"שכירות "}<bdi dir="ltr" className="ui-utm-rent">{rent}</bdi></span>,
+          <span key="bills">{"חשבונות "}<bdi dir="ltr">{money(month.bills_paid, currency)}</bdi></span>,
+        ]} />
       </span>
       <span className="ui-utm-status" data-ok={status.ok || undefined}>{status.text}</span>
     </>
@@ -71,22 +75,21 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
                     variant="project"
                     layout="flat"
                     title={line.party ?? "שכירות"}
-                    // FLOW-1146: a split line reads its parts ("הכנסות שכירות $1,750 · מים וביוב $86.60").
-                    hint={line.parts.length === 0
-                      ? [line.category_name, refundDate(line.doc_date)].filter((part): part is string => part != null).join(" · ")
-                      : (
-                        <>
-                          {line.parts.map((part, index) => (
+                    // FLOW-1146: a split line reads its parts ("הכנסות שכירות $1,750 · מים וביוב $86.60"). FLOW-1153:
+                    // a part keeps its amount, and a line breaks only between parts.
+                    hint={(
+                      <HintParts parts={line.parts.length === 0
+                        ? [line.category_name, refundDate(line.doc_date)].filter((part): part is string => part != null)
+                        : [
+                          ...line.parts.map((part, index) => (
                             <span key={`${String(index)}:${part.category_name ?? ""}`}>
-                              {part.category_name ?? "בלי קטגוריה"}
-                              {" "}
+                              {`${part.category_name ?? "בלי קטגוריה"} `}
                               <bdi dir="ltr">{money(part.amount_minor, line.currency)}</bdi>
-                              {" · "}
                             </span>
-                          ))}
-                          {refundDate(line.doc_date)}
-                        </>
-                      )}
+                          )),
+                          refundDate(line.doc_date),
+                        ]} />
+                    )}
                     wrapHint
                     icon={<StatusMark kind="paid" />}
                     agorot={line.amount_minor}
@@ -114,7 +117,12 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
                     variant="project"
                     layout="flat"
                     title={bill.supplier_name ?? "ספק"}
-                    hint={[bill.category_name, refundDate(bill.doc_date), back ? "הוחזר" : seen ? "ראיתי" : "לא הוחזר"].filter((part): part is string => part != null).join(" · ")}
+                    // FLOW-1153: the date and the state are one part, so "· הוחזר" never starts a line alone.
+                    hint={<HintParts parts={[
+                      ...(bill.category_name == null ? [] : [bill.category_name]),
+                      `${refundDate(bill.doc_date)} · ${back ? "הוחזר" : seen ? "ראיתי" : "לא הוחזר"}`,
+                    ]} />}
+                    wrapHint
                     tone={back || seen ? undefined : "warning"}
                     icon={<StatusMark kind={back ? "paid" : seen ? "once" : "late"} />}
                     agorot={-bill.amount_minor}
@@ -152,6 +160,8 @@ export function ProjectUtilityMonthsScreen() {
   const phase = screenPhase(preview, query);
   const months = query.data ?? [];
   const back = `/projects/${projectId}/utilities${search}`;
+  // FLOW-1154: offline, the months stay with the moment they are from, as on the refunds page.
+  const since = !online && query.data != null ? query.dataUpdatedAt : undefined;
   return (
     <div className="ui-urf-screen">
       <CompactBar title="לפי חודש" label="חשבונות · מי משלם" backTo={back} shown={barShown} />
@@ -171,6 +181,7 @@ export function ProjectUtilityMonthsScreen() {
         <EmptyState icon={<CheckIcon size={40} stroke={2.2} />} title="אין עדיין חשבונות בנכס" body="חודש שבו שולם חשבון שהשוכר מחזיר יופיע כאן, עם השכירות שנכנסה." />
       ) : (
         <>
+          {since == null ? null : <BandOfflineLine since={since} onPage />}
           <List className="ui-utm-list">
             {months.map((month) => {
               const cur = utilityMonthCurrency(month, currency);

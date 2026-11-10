@@ -76,6 +76,9 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
+/** A bill row's line (FLOW-1153: whole parts, so its text spans the parts). */
+const hintText = (text: string) => (_: string, element: Element | null) => element?.classList.contains("ui-hint-wrap") === true && element.textContent === text;
+
 function renderScreen(entry = "/utility-refunds") {
   db.bills = db.bills.length > 0 ? db.bills : utilityRefundsSample();
   render(
@@ -145,7 +148,7 @@ describe("the cards", () => {
     expect(await screen.findByText("4 לא הוחזרו")).toBeTruthy();
     expect(document.querySelector(".ui-urf-figure")?.textContent).toBe("−$295.39");
     expect(screen.getAllByRole("region", { name: /החזר לתיקון/ })).toHaveLength(2);
-    expect(screen.getByText("לא הוחזר · 90 ימים · 11/08/26 · חודש בלי שכירות")).toBeTruthy();
+    expect(screen.getByText(hintText("לא הוחזר · 90 ימים · 11/08/26 · חודש בלי שכירות"))).toBeTruthy();
   });
 
   it("limits the list to one property with ?project=", async () => {
@@ -393,7 +396,7 @@ describe("the dates", () => {
 
   it("shows the bills', the payments' and the picker's dates as dd/mm/yy", async () => {
     renderScreen(`/utility-refunds?project=${GEFEN}`);
-    expect(await screen.findByText("לא הוחזר · 67 ימים · 03/09/26")).toBeTruthy();
+    expect(await screen.findByText(hintText("לא הוחזר · 67 ימים · 03/09/26"))).toBeTruthy();
     expect(screen.getByText("חשמל ומים · 14/09/26")).toBeTruthy();
     expect(screen.getByText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
     const [row] = screen.getAllByRole("button", { name: /^Power Co/ });
@@ -433,11 +436,21 @@ describe("the payment's project and split", () => {
     renderScreen(`/utility-refunds?project=${GEFEN}`);
     const card = await screen.findByRole("region", { name: /החזר לתיקון/ });
     const split = within(card).getByRole("list", { name: "פיצול" });
-    expect(within(split).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "שכירות · $1,700",
-      "חשמל ומים · $84.20",
-      "שכירות · Pine Ave 4 · $100",
+    // FLOW-1153: two columns, the name and its amount, with no "·" between them.
+    const items = within(split).getAllByRole("listitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      "שכירות $1,700",
+      "חשמל ומים $84.20",
+      "שכירות · Pine Ave 4 $100",
     ]);
+    expect(items.map((item) => item.querySelector(".ui-urf-split-amount")?.textContent)).toEqual(["$1,700", "$84.20", "$100"]);
+  });
+
+  it("says ראיתי in words on its button, not a bare ✓ (FLOW-1155)", async () => {
+    renderScreen();
+    const seen = await screen.findByRole("button", { name: "ראיתי: Gas Co" });
+    expect(seen.textContent).toBe("ראיתי");
+    expect(seen.querySelector("svg")).toBeNull();
   });
 
   it("shows no split for a payment that is not split", async () => {

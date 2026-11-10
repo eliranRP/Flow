@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { Button } from "../ui/button";
 import { FoldItem } from "../ui/fold";
-import { IconButton } from "../ui/icon-button";
+import { HintParts } from "../ui/hint-parts";
 import { CheckIcon, ChevronIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { StatusMark } from "../ui/status-mark";
@@ -72,10 +72,11 @@ export function RefundCardView({ card, readOnly, leaving, onRefile, onKeep }: {
             <p className="ui-urf-split-head" id={`split-${card.key}`}>פיצול</p>
             <ul className="ui-urf-split-list" aria-labelledby={`split-${card.key}`}>
               {parts.map((part) => (
+                // FLOW-1153: two columns, the part's name at the start and its amount at the end, never split.
                 <li key={part.key} className="ui-urf-split-line">
-                  {part.text}
-                  {" · "}
-                  <bdi dir="ltr">{part.amount}</bdi>
+                  <span className="ui-urf-split-text">{part.text}</span>
+                  {" "}
+                  <bdi dir="ltr" className="ui-urf-split-amount">{part.amount}</bdi>
                 </li>
               ))}
             </ul>
@@ -99,8 +100,8 @@ export function RefundCardView({ card, readOnly, leaving, onRefile, onKeep }: {
 
 /**
  * A bill not refunded: the dashed ring in the signal colour, the supplier, "לא הוחזר · N ימים · dd/mm", the amount.
- * The row opens the bill's sheet; the ✓ beside it is ראיתי. A viewer's row opens the bill's transaction and has no ✓. FLOW-1141:
- * closed, it slides toward its ✓ and folds away.
+ * The row opens the bill's sheet; the text button beside it is ראיתי (FLOW-1155: a word, since ✓ means הוחזר elsewhere).
+ * A viewer's row opens the bill's transaction and has no ראיתי. FLOW-1141: closed, it slides toward ראיתי and folds away.
  */
 export function OpenBillRow({ bill, readOnly, leaving, onOpen, onSeen }: { bill: UtilityBill; readOnly: boolean; leaving: boolean; onOpen: () => void; onSeen: () => void }) {
   const name = bill.supplier_name ?? "ספק";
@@ -111,7 +112,9 @@ export function OpenBillRow({ bill, readOnly, leaving, onOpen, onSeen }: { bill:
         variant="project"
         layout="flat"
         title={name}
-        hint={openMeta(bill)}
+        // FLOW-1153: a narrow line breaks only between whole parts, with no "·" at either end.
+        hint={<HintParts text={openMeta(bill)} />}
+        wrapHint
         tone="warning"
         icon={<StatusMark kind="late" />}
         agorot={-bill.amount_minor}
@@ -121,9 +124,7 @@ export function OpenBillRow({ bill, readOnly, leaving, onOpen, onSeen }: { bill:
         onClick={readOnly ? undefined : onOpen}
       />
       {readOnly ? null : (
-        <IconButton label={`ראיתי: ${name}`} className="ui-urf-seen" onClick={onSeen}>
-          <CheckIcon size={20} stroke={2.2} />
-        </IconButton>
+        <button type="button" className="ui-urf-seen m-press" aria-label={`ראיתי: ${name}`} onClick={onSeen}>ראיתי</button>
       )}
     </FoldItem>
   );

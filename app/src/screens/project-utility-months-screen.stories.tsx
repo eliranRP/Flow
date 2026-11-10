@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Route, Routes } from "react-router-dom";
 import { expect, userEvent, within } from "storybook/test";
 import { ProjectUtilityMonthsScreen } from "./project-utility-months-screen";
-import { GEFEN, storyUtilityClient, utilityMonthsSample } from "./utility-refunds-sample";
+import { GEFEN, storyUtilityClient, useOfflineOnceRead, utilityMonthsSample } from "./utility-refunds-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
-import { UtilityClientProvider, type UtilityMonth } from "../utility-refunds";
+import { UTILITY_MONTHS_KEY, UtilityClientProvider, type UtilityMonth } from "../utility-refunds";
 
 const meta = {
   title: "Screens/ProjectUtilityMonths",
@@ -15,11 +15,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function GoOffline() {
+  useOfflineOnceRead(UTILITY_MONTHS_KEY);
+  return null;
+}
+
 /** The page at its route, reading through a stand-in for Flow's server. */
-function MonthsStory({ query = "", months = utilityMonthsSample() }: { query?: string; months?: UtilityMonth[] }) {
+function MonthsStory({ query = "", months = utilityMonthsSample(), offline = false }: { query?: string; months?: UtilityMonth[]; offline?: boolean }) {
   return (
     <StoryRoute entry={`/projects/${GEFEN}/utilities/months${query}`} tabs>
       <UtilityClientProvider client={storyUtilityClient(undefined, undefined, months)}>
+        {offline ? <GoOffline /> : null}
         <ExampleBar />
         <Routes>
           <Route path="/projects/:projectId/utilities/months" element={<ProjectUtilityMonthsScreen />} />
@@ -55,19 +61,43 @@ export const ProjectUtilityMonthsNoRent: Story = {
   },
 };
 
-/** Large amounts and long names wrap at 320 and are never cut. */
+/** Large amounts and long names: each month and its sheet's lines wrap only between whole parts. */
+const longMonths = () => utilityMonthsSample().map((month) => ({
+  ...month,
+  rent_in: month.rent_in * 1000n + 7n,
+  bills_paid: month.bills_paid * 1000n + 3n,
+  not_refunded: month.not_refunded === 0n ? 0n : month.not_refunded * 1000n + 3n,
+  rent_lines: month.rent_lines.map((line) => ({
+    ...line,
+    amount_minor: line.amount_minor * 1000n + 7n,
+    parts: line.parts.map((part) => ({ ...part, category_name: `${String(part.category_name)} לבניין`, amount_minor: part.amount_minor * 1000n + 7n })),
+  })),
+  bills: month.bills.map((bill) => ({ ...bill, category_name: `${String(bill.category_name)} ושירותים משותפים`, amount_minor: bill.amount_minor * 1000n + 3n })),
+}));
+
+/** FLOW-1153: at 320 a label keeps its amount ("חשבונות $304,863.00") and no line starts with "·". */
 export const ProjectUtilityMonthsLong: Story = {
   name: "ProjectUtilityMonths, long content",
-  render: () => (
-    <MonthsStory
-      months={utilityMonthsSample().map((month) => ({
-        ...month,
-        rent_in: month.rent_in * 1000n + 7n,
-        bills_paid: month.bills_paid * 1000n + 3n,
-        not_refunded: month.not_refunded === 0n ? 0n : month.not_refunded * 1000n + 3n,
-      }))}
-    />
-  ),
+  render: () => <MonthsStory months={longMonths()} />,
+};
+
+/** FLOW-1153: in the sheet a bill's date and state stay together, and a split rent line breaks only between parts. */
+export const ProjectUtilityMonthsLongSheet: Story = {
+  name: "ProjectUtilityMonths, long content, a month's sheet",
+  render: () => <MonthsStory months={longMonths()} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^אוקטובר 2026/ }));
+    await expect(await within(document.body).findByText(/· הוחזר$/)).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1154: offline, the months stay with the moment they are from. */
+export const ProjectUtilityMonthsOffline: Story = {
+  name: "ProjectUtilityMonths, offline",
+  render: () => <MonthsStory offline />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText(/אין חיבור · מוצג המצב/)).toBeInTheDocument();
+  },
 };
 
 export const ProjectUtilityMonthsEmpty: Story = {

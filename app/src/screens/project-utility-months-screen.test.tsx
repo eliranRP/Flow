@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ProjectUtilityMonthsScreen } from "./project-utility-months-screen";
@@ -70,8 +70,30 @@ describe("ProjectUtilityMonthsScreen", () => {
     expect(within(dialog).getByText("$304.86")).toBeTruthy();
     const links = within(dialog).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual(["/transactions/m-rent-10", "/transactions/m-water-10", "/transactions/m-gas-10"]);
-    expect(within(dialog).getByText("חשמל ומים · 04/10/26 · הוחזר")).toBeTruthy();
-    expect(within(dialog).getByText("גז · 03/10/26 · לא הוחזר")).toBeTruthy();
+    // FLOW-1153: the date and the state are one part, so a narrow line never starts with "· הוחזר".
+    const parts = (href: string) => [...(dialog.querySelector(`a[href="${href}"]`)?.querySelectorAll(".ui-hint-wrap-part") ?? [])]
+      .map((part) => part.textContent.replace(/^ · /, ""));
+    expect(parts("/transactions/m-water-10")).toEqual(["חשמל ומים", "04/10/26 · הוחזר"]);
+    expect(parts("/transactions/m-gas-10")).toEqual(["גז", "03/10/26 · לא הוחזר"]);
+  });
+
+  it("offline, says from when the months are shown (FLOW-1154)", async () => {
+    renderScreen(storyUtilityClient());
+    await screen.findByRole("button", { name: /^אוקטובר 2026/ });
+    expect(screen.queryByText(/אין חיבור/)).toBeNull();
+    act(() => { onlineManager.setOnline(false); });
+    try {
+      expect((await screen.findByText(/אין חיבור/)).closest(".ui-band-offline")?.textContent).toMatch(/^אין חיבור · מוצג המצב מ־\d\d:\d\dמתחבר מחדש…$/);
+    } finally {
+      act(() => { onlineManager.setOnline(true); });
+    }
+  });
+
+  it("keeps each label with its amount in a month's hint (FLOW-1153)", async () => {
+    renderScreen(storyUtilityClient());
+    const row = await screen.findByRole("button", { name: /^אוקטובר 2026/ });
+    const parts = [...row.querySelectorAll(".ui-hint-wrap-part")].map((part) => part.textContent.replace(/^ · /, ""));
+    expect(parts).toEqual(["שכירות $2,054.86", "חשבונות $304.86"]);
   });
 
   it("shows a split rent line's parts: the rent and the bill the tenant paid with it (FLOW-1146)", async () => {

@@ -1,7 +1,7 @@
 /* FLOW-1135 (V3-UtilityRefunds, decision 0265), FLOW-1143: החזרי חשבונות. The List pattern: the head and the
    figure, then the bills by property. A refund the owner matched that is filed elsewhere is a surface card with a
    line border: the bill and the payment as rows, then the raised note with its one fix and להשאיר. A bill not
-   refunded is a 64px row with the dashed signal ring and a 44px ✓ (ראיתי) on a tint disc. */
+   refunded is a 64px row with the dashed signal ring and a 44px ראיתי text button on a tint pill (FLOW-1155). */
 /* The owner, 2026-11-10: the page starts under the status bar (the safe area), so its back button is not under
    the clock and can be tapped, as on every other page (.ui-page). */
 .ui-urf-screen {
@@ -154,7 +154,8 @@
 }
 
 /* FLOW-1142: a split payment's parts, under its leg: a short head, then one caption line per part. They wrap and
-   are never cut. */
+   are never cut. FLOW-1153: a part's line is two columns, its name at the start (it wraps) and its amount at the
+   end (whole), so an amount never sits alone on a line. */
 .ui-urf-split {
   padding-block: var(--space-1) 0;
   border-top: 1px solid var(--color-line);
@@ -180,6 +181,23 @@
   list-style: none;
 }
 
+.ui-urf-split-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-urf-split-text {
+  min-inline-size: 0;
+}
+
+.ui-urf-split-amount {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* FLOW-1143: the fix's raised panel, 12px under the payment (or its split). */
 .ui-urf-fix {
   display: flex;
@@ -191,11 +209,12 @@
   background: var(--color-raised);
 }
 
+/* FLOW-1151: a good state is neutral (green is money in): the ✓ and הוחזר in the secondary text colour. */
 .ui-urf-fix-done {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--color-income);
+  color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   font-weight: var(--type-btn-weight);
 }
@@ -247,12 +266,26 @@
   min-block-size: var(--row-height);
 }
 
+/* FLOW-1155: ראיתי is a word on a tint pill, 44px tall, not a bare ✓ (✓ means הוחזר on the card and in the sheet). */
 .ui-urf-seen {
   flex: none;
+  min-block-size: var(--touch-min);
   margin-inline-start: var(--space-1);
-  border-radius: 50%;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-weight);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ui-urf-seen:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 /* The bill's sheet: its line, the no-rent note, and the three answers. */
@@ -350,10 +383,14 @@
   min-width: 0;
 }
 
+/* FLOW-1152: a supplier's name is its identity: it wraps to two lines, never cut at its start. The name reads in its
+   own direction (a <bdi> inside), and its lines line up with the row's start. */
 .ui-utl-name {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* The usual amount is in this line: it wraps, it is never cut. */
@@ -381,6 +418,19 @@
   padding-inline: var(--space-3);
 }
 
+/* FLOW-1152: below 374 the שוכר / חברה switch moves under the text when the name has no room beside it. The usual
+   line wraps and does not count toward the text's width; only the name does. */
+@media (max-width: 373px) {
+  .ui-utl-row {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .ui-utl-meta {
+    contain: inline-size;
+  }
+}
+
 .ui-utl-add {
   display: flex;
   align-items: center;
@@ -397,7 +447,8 @@
 }
 
 /* FLOW-1144 (V3-Project-UtilityMonths): לפי חודש. A month's row carries two lines under its name: the rent and the
-   bills, then its status (signal, or the income colour when every bill is back). They wrap, never cut. */
+   bills, then its status (signal, or the secondary text colour when every bill is back, FLOW-1151). They wrap,
+   never cut; FLOW-1153: a label and its amount wrap together (HintParts). */
 .ui-utm-sums,
 .ui-utm-status {
   display: block;
@@ -413,7 +464,7 @@
 }
 
 .ui-utm-status[data-ok] {
-  color: var(--color-income);
+  color: var(--color-text-secondary);
 }
 
 /* The sheet: the status under the month, then its two groups. */
