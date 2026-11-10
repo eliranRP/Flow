@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SAMPLE_COMPOSER_ACCOUNTS,
   SAMPLE_COMPOSER_PROJECTS,
@@ -16,6 +16,33 @@ import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { initialComposer, JournalComposerScreen, type ComposerState } from "./journal-composer-screen";
 import { journalEditable } from "./transaction-journal";
+
+/**
+ * The books' refresh can be held open by a test: `gate` makes every invalidate wait, and `waiting`
+ * counts the calls that are waiting. Off (null) by default, so the other tests see the real refresh.
+ */
+const books = vi.hoisted(() => ({ gate: null as Promise<void> | null, waiting: 0 }));
+vi.mock("../use-books", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../use-books")>();
+  return {
+    ...actual,
+    useInvalidateBooks: () => {
+      const invalidate = actual.useInvalidateBooks();
+      return async (keys?: readonly string[]) => {
+        if (books.gate != null) {
+          books.waiting += 1;
+          await books.gate;
+        }
+        return invalidate(keys);
+      };
+    },
+  };
+});
+
+afterEach(() => {
+  books.gate = null;
+  books.waiting = 0;
+});
 
 /** FLOW-955. The composer: save waits for a balanced entry, books it, and keeps a refused entry. Invented data. */
 function renderComposer(initial: ComposerState, api: ComposerApi) {
@@ -73,6 +100,17 @@ describe("the journal entry composer", () => {
     ]);
     expect(await screen.findByText("הפקודה נשמרה")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "השורה" })).toBeInTheDocument();
+  });
+
+  it("sends one save for a second tap while the books are still refreshing after the save resolved", async () => {
+    books.gate = new Promise<void>(() => undefined);
+    const save = vi.fn(() => Promise.resolve({ transactionId: "t-loan", before: [] }));
+    renderComposer(SAMPLE_JEV_START, api(save));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת הפקודה" }));
+    await waitFor(() => { expect(books.waiting).toBe(1); });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת הפקודה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת הפקודה" }));
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   it("keeps save off while the sides differ, and says what is missing", () => {

@@ -1,15 +1,17 @@
 import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { dayMonth, copySidePairs, composerHold, legNote, legsFromEntry, legsFromJournal, bookingPayload, composerRefusal, nextLeg, type ComposerAccount, type ComposerLeg, type JournalCopies, type JournalSuggestion, type SavedBooking } from "../line-composer";
 import { COMPOSER_KEYS, liveComposerApi, useComposerAccountsQuery, useJournalCopiesQuery, useJournalSuggestionQuery, type ComposerApi } from "../line-composer-api";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { projectChoices } from "../project-groups";
+import { saveFlow } from "../save-flow";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
+import { useMachine } from "../use-machine";
 import { isTransientWriteError } from "../use-write";
 import { Amount } from "../ui/amount";
 import { useGoBack } from "../ui/back";
@@ -107,9 +109,15 @@ export function JournalComposer({
   const [state, setState] = useState<ComposerState>(initial);
   const [sheet, setSheet] = useState(initialSheet);
   const [target, setTarget] = useState<PickTarget>(null);
-  const [saving, setSaving] = useState(initialSaving);
+  // The save is one machine. `saving` ends on a refusal, and on this screen never otherwise: a booked
+  // entry leaves the page. So a second tap, or a retry from the toast, sends nothing while the reads
+  // are refreshed.
+  const flow = useMachine(saveFlow, initialSaving ? "saving" : "idle");
+  const saving = flow.state === "saving";
   const [error, setError] = useState<string | null>(initialError);
   const opener = useRef<HTMLElement | null>(null);
+  // The toast's retry runs the save of the render it was shown in; this points it at the latest one.
+  const retry = useRef<() => void>(() => undefined);
   const toast = useToast();
   const goBack = useGoBack();
   const invalidate = useInvalidateBooks();
@@ -133,26 +141,27 @@ export function JournalComposer({
     setLegs(state.legs.map((leg) => (leg.key === key ? { ...leg, ...change } : leg)));
   };
 
+  useEffect(() => { retry.current = () => { void save(); }; });
+
   async function save() {
-    if (saving || hold.kind !== "balanced") return;
+    if (hold.kind !== "balanced") return;
     const legs = bookingPayload(line.bankAccountId, line.bankMinor, state.legs);
     if (legs == null) return;
-    setSaving(true);
+    if (!flow.send("start")) return;
     setError(null);
     let saved: SavedBooking;
     try {
       saved = await api.save(legs);
     } catch (caught) {
-      setSaving(false);
+      flow.send("fail");
       const failure = caught instanceof Error ? caught : new Error(String(caught));
       if (isTransientWriteError(failure)) {
-        toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפקודה.", action: "ניסיון חוזר", onAction: () => { void save(); } });
+        toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפקודה.", action: "ניסיון חוזר", onAction: () => { retry.current(); } });
       } else {
         setError(composerRefusal(failure.message));
       }
       return;
     }
-    setSaving(false);
     await invalidate(COMPOSER_KEYS);
     toast.show({
       message: "הפקודה נשמרה",
