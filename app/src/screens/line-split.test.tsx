@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SAMPLE_EXPENSE_LINE,
   SAMPLE_REFUND_LINE,
@@ -11,6 +11,33 @@ import {
 import type { LineSplitRead, PartDraft, PayloadPart } from "../line-split";
 import { renderWithProviders } from "../test-render";
 import { LineSplitScreen, type LineInfo, type LineSplitApi, type LineSplitSample } from "./line-split";
+
+/**
+ * FLOW-1164: `gate` holds the books' refresh after a save resolved; `waiting` counts the calls held.
+ * Null by default, so the other tests see the real refresh.
+ */
+const books = vi.hoisted(() => ({ gate: null as Promise<void> | null, waiting: 0 }));
+vi.mock("../use-books", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../use-books")>();
+  return {
+    ...actual,
+    useInvalidateBooks: () => {
+      const invalidate = actual.useInvalidateBooks();
+      return async (keys?: readonly string[]) => {
+        if (books.gate != null) {
+          books.waiting += 1;
+          await books.gate;
+        }
+        return invalidate(keys);
+      };
+    },
+  };
+});
+
+afterEach(() => {
+  books.gate = null;
+  books.waiting = 0;
+});
 
 function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {}) {
   const line = sample.line ?? SAMPLE_EXPENSE_LINE;
@@ -99,6 +126,18 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(await screen.findByText("הפיצול הקודם חזר")).toBeInTheDocument();
     expect(saved[1]).toEqual([]);
+  });
+
+  it("sends one save for a second ✕ while the books are still refreshing after the save resolved (FLOW-1164)", async () => {
+    books.gate = new Promise<void>(() => undefined);
+    const { api, saved } = recordingApi(SAMPLE_EXPENSE_LINE);
+    showEditor({ parts: expenseParts, api });
+    await waitFor(() => { expect(restRow()).toHaveTextContent("₪2,860"); });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(books.waiting).toBe(1); });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(saved).toHaveLength(1);
   });
 
   it("a reversal part with no project holds the first ✕, and the second discards", async () => {

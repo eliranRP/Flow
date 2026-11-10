@@ -30,7 +30,9 @@ import { LINE_SPLIT_PARTS_CHANGED, LINE_SPLIT_PLACE, LINE_SPLIT_SAVE_FAILURE, PA
 import { usePreviewSearch } from "../preview";
 import { reviewFocusPath } from "../review-paths";
 import { isReversal, reversalChoices, type KindedCategory } from "../reversal";
+import { saveFlow } from "../save-flow";
 import { useInvalidateBooks } from "../use-books";
+import { useMachine } from "../use-machine";
 import { assertNoError } from "../use-write";
 import { useGoBack } from "../ui/back";
 import { Banner } from "../ui/banner";
@@ -109,7 +111,10 @@ export function LineSplitEditor({
   const [target, setTarget] = useState<PickTarget | null>(initialTarget ? { kind: "part", key: initialTarget.partKey } : null);
   const [pickerStart, setPickerStart] = useState<"category" | "project">(initialTarget?.kind ?? "category");
   const [warned, setWarned] = useState(initialWarned);
-  const [saving, setSaving] = useState(false);
+  // The save is one machine. `saving` ends on a refusal, and never otherwise on this screen (a saved
+  // split leaves the page), so a second tap or a retry sends nothing while the reads are refreshed.
+  const flow = useMachine(saveFlow, sampleSaving ? "saving" : "idle");
+  const saving = flow.state === "saving";
   const [confirmClear, setConfirmClear] = useState(false);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const [lastEdited, setLastEdited] = useState<string | null>(null);
@@ -121,6 +126,8 @@ export function LineSplitEditor({
   const pickerOpener = useRef<HTMLElement | null>(null);
   /** Set once the screen goes back itself, so its own pop is not held. */
   const leaving = useRef(false);
+  /** The toast's retry runs the latest render's write, so it sends what the form shows now. */
+  const retries = useRef<Record<"save" | "clear" | "approve", () => void>>({ save: () => undefined, clear: () => undefined, approve: () => undefined });
   const lineMinor = absAgorot(line.amountNet);
   const currency = line.currency;
   const busy = sampleSaving || saving;
@@ -213,12 +220,11 @@ export function LineSplitEditor({
   }
 
   async function write(next: PayloadPart[], kind: "save" | "clear"): Promise<boolean> {
-    if (busy) return false;
-    setSaving(true);
+    if (!flow.send("start")) return false;
     try {
       await api.save(next);
     } catch (error) {
-      setSaving(false);
+      flow.send("fail");
       const named = lineSplitRefusal(error);
       if (named != null) {
         setServerError({ reason: named, key: kind === "clear" ? null : payloadKey });
@@ -230,11 +236,10 @@ export function LineSplitEditor({
         tone: "bad",
         message: LINE_SPLIT_SAVE_FAILURE,
         action: "ניסיון חוזר",
-        onAction: () => { void write(next, kind); },
+        onAction: () => { retries.current[kind](); },
       });
       return false;
     }
-    setSaving(false);
     clearLineDraft(draftId);
     const previous = amountsPayload(split);
     await invalidate(LINE_SPLIT_KEYS);
@@ -254,16 +259,15 @@ export function LineSplitEditor({
   }
 
   async function approveWhole() {
-    if (busy || wholeProject == null || api.approveWhole == null) return;
-    setSaving(true);
+    if (wholeProject == null || api.approveWhole == null) return;
+    if (!flow.send("start")) return;
     try {
       await api.approveWhole(wholeProject);
     } catch {
-      setSaving(false);
-      toast.show({ tone: "bad", message: "האישור לא נשמר", action: "ניסיון חוזר", onAction: () => { void approveWhole(); } });
+      flow.send("fail");
+      toast.show({ tone: "bad", message: "האישור לא נשמר", action: "ניסיון חוזר", onAction: () => { retries.current.approve(); } });
       return;
     }
-    setSaving(false);
     clearLineDraft(draftId);
     await invalidate(LINE_SPLIT_KEYS);
     toast.show({ message: "אושר בלי פיצול" });
@@ -289,6 +293,14 @@ export function LineSplitEditor({
   }
 
   useSaveOnBack({ dirty, busy, leave, leaving });
+
+  useEffect(() => {
+    retries.current = {
+      save: () => { if (payload != null && canPreview) void write(payload, "save"); },
+      clear: () => { void write([], "clear"); },
+      approve: () => { void approveWhole(); },
+    };
+  });
 
   const categoryName = (id: string | null) => (id == null ? line.categoryName : categories.find((category) => category.id === id)?.name ?? null);
   const projectName = (id: string | null) => (id == null ? null : projects.find((project) => project.id === id)?.name ?? null);
