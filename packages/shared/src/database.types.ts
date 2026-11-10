@@ -2011,6 +2011,9 @@ isOneToOne: false
 "list_unpaid":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"list_utility_income":
+{ Args: { "p_bill_transaction_id": string,"p_months"?: number,"p_today"?: string }; Returns: Json
+                           },
 "list_utility_months":
 { Args: { "p_project": string,"p_today"?: string }; Returns: Json
                            },

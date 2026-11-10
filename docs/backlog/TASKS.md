@@ -609,6 +609,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1144"></a>[FLOW-1144](tasks/FLOW-1144.md) | Utility refunds: a property's bills by month, with a drawer per month | SMALL UI (owner's ask) |
 | <a id="flow-1146"></a>[FLOW-1146](tasks/FLOW-1146.md) | Utility refunds: a split payment counts by its parts | SMALL UI (owner's ask) |
 | <a id="flow-1147"></a>[FLOW-1147](tasks/FLOW-1147.md) | Utility refunds: exact sums across months, and the owner's matches count toward a line | SMALL (owner's pick) |
+| <a id="flow-1159"></a>[FLOW-1159](tasks/FLOW-1159.md) | Utility refunds: what was paid back and what was not, and a bill in the context of its payments | SMALL UI (owner approved, 2026-11-10) |
 | <a id="flow-1136"></a>[FLOW-1136](tasks/FLOW-1136.md) | Member report תחזית: a skeleton while the forecast loads, not "טוען…" | SMALL UI |
 | <a id="flow-1137"></a>[FLOW-1137](tasks/FLOW-1137.md) | Skeletons in the content's shape: review, forms, sheets and settings | SMALL UI |
 | <a id="flow-1138"></a>[FLOW-1138](tasks/FLOW-1138.md) | Skeletons in the content's shape: projects and property returns | SMALL UI |

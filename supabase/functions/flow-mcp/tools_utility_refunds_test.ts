@@ -1,5 +1,5 @@
 // Flow MCP tools tests: utility bills the tenant never paid back (FLOW-1134, decision 0265):
-// list_utility_refunds, count_utility_refunds, list_utility_payers, set_utility_payer, answer_utility_refund,
+// list_utility_refunds, count_utility_refunds, list_utility_payers, list_utility_income, set_utility_payer, answer_utility_refund,
 // mark_utility_refunds_seen and refile_utility_refund. Invented ids and amounts only.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool, toolsFor } from "./tools.ts";
@@ -175,7 +175,9 @@ Deno.test("the writes need write scope; another company's ids and an expired key
 Deno.test("the tools are listed for their scope, and undo takes the four kinds", async () => {
   const reads = toolsFor(["read"]).map((tool) => tool.name);
   const writes = toolsFor(["write"]).map((tool) => tool.name);
-  for (const name of ["list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months"]) assertEquals(reads.includes(name), true, name);
+  for (const name of ["list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months", "list_utility_income"]) {
+    assertEquals(reads.includes(name), true, name);
+  }
   for (const name of ["set_utility_payer", "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund"]) {
     assertEquals(writes.includes(name), true, name);
   }
@@ -215,4 +217,39 @@ Deno.test("list_utility_months reads a property's months, checks its arguments, 
   assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT }, ["read"], malformed.rpc)), "refused");
   const future = rpcOf(() => ({ status: 400, json: { message: "validation" } }));
   assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT, as_of: "2099-01-01" }, ["read"], future.rpc)), "validation");
+});
+
+Deno.test("list_utility_income reads the income around a bill, checks its arguments, and refuses another company's bill", async () => {
+  const INCOME = {
+    as_of: "2026-06-30", months: 2, from: "2026-01-05", to: "2026-05-05",
+    bill: {
+      bill_transaction_id: BILL, doc_date: "2026-03-05", amount_minor: 10000, currency: "ILS", category_id: null, category_name: null,
+      supplier_name: "Example Power Co", project_id: PROJECT, project_name: "Example Oak House", state: "refunded", days: 117,
+      payment_transaction_id: PAYMENT,
+    },
+    lines: [{
+      transaction_id: PAYMENT, doc_date: "2026-03-20", amount_minor: 210000, currency: "ILS", party: null, description: "Example rent",
+      project_id: PROJECT, category_id: null, category_name: "Example rent",
+      parts: [{ category_id: null, category_name: "Example rent", amount_minor: 200000 }, { category_id: null, category_name: null, amount_minor: 10000 }],
+      refunded_bills: [{ bill_transaction_id: BILL, doc_date: "2026-03-05", amount_minor: 10000, category_id: null, category_name: null }],
+    }],
+  };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: INCOME }));
+  const read = await callTool("list_utility_income", { bill_transaction_id: BILL, months: 3, as_of: "2026-06-30" }, ["read"], rpc);
+  assertEquals(read.isError, false);
+  if (read.structuredContent.ok) assertEquals(read.structuredContent.data, INCOME);
+  await callTool("list_utility_income", { bill_transaction_id: BILL }, ["read"], rpc);
+  assertEquals(calls, [
+    { name: "list_utility_income", body: { p_bill_transaction_id: BILL, p_months: 3, p_today: "2026-06-30" } },
+    { name: "list_utility_income", body: { p_bill_transaction_id: BILL, p_months: null, p_today: null } },
+  ]);
+  assertEquals(codeOf(await callTool("list_utility_income", {}, ["read"], rpc)), "validation");
+  assertEquals(codeOf(await callTool("list_utility_income", { bill_transaction_id: BILL, months: 1.5 }, ["read"], rpc)), "validation");
+  assertEquals(codeOf(await callTool("list_utility_income", { bill_transaction_id: BILL, project_id: PROJECT }, ["read"], rpc)), "validation");
+  assertEquals(codeOf(await callTool("list_utility_income", { bill_transaction_id: BILL }, ["write"], rpc)), "forbidden");
+  assertEquals(calls.length, 2);
+  const other = rpcOf(() => ({ status: 400, json: { message: "transaction not found" } }));
+  assertEquals(codeOf(await callTool("list_utility_income", { bill_transaction_id: BILL }, ["read"], other.rpc)), "refused");
+  const malformed = rpcOf(() => ({ status: 200, json: { lines: "nope" } }));
+  assertEquals(codeOf(await callTool("list_utility_income", { bill_transaction_id: BILL }, ["read"], malformed.rpc)), "refused");
 });

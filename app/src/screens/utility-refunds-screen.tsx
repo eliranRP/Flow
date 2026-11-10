@@ -29,7 +29,8 @@ const LIST_BAR = 44;
  * the title, "N לא הוחזרו", the sum not refunded, then the bills by property under sticky heads: סימון הכל כנראה
  * under the head, a refund the owner matched that is filed elsewhere (its fix card), then the bills not refunded.
  * FLOW-1143 (the owner, 2026-11-09): Flow suggests no refund, so there are no "זה ההחזר?" cards and no filter.
- * `?project=` limits it to one property (its page's row opens it so).
+ * `?project=` limits it to one property (its page's row opens it so). FLOW-1159: each property's head has כל החשבונות, its
+ * bills by type; a bill opens its drawer (status, pattern, history, the income around it).
  */
 export function UtilityRefundsScreen() {
   const search = usePreviewSearch();
@@ -109,11 +110,13 @@ export function UtilityRefundsScreen() {
           {groups.map((group) => (
             <section key={group.projectId} className="ui-month ui-urf-group" aria-labelledby={`urf-${group.projectId}`}>
               <GroupHead id={`urf-${group.projectId}`} title={group.name} summary={groupSummary(group)} />
-              {readOnly || group.open.length < 2 ? null : (
-                <div className="ui-urf-mark-all">
+              {/* FLOW-1159: the way into the property's bills by type, beside סימון הכל כנראה. */}
+              <div className="ui-urf-head-links">
+                {readOnly || group.open.length < 2 ? <span /> : (
                   <Button variant="link" onClick={() => { actions.markAll(group); }}>סימון הכל כנראה</Button>
-                </div>
-              )}
+                )}
+                <Button variant="link" chevron to={`/projects/${group.projectId}/utilities/bills${search}`}>כל החשבונות</Button>
+              </div>
               {group.cards.map((card) => (
                 <RefundCardView
                   key={card.key}

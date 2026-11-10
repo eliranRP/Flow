@@ -8,7 +8,8 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ListSkeleton } from "../ui/skeleton";
 import { useUtilityRefundsQuery, type UtilityBill } from "../utility-refunds";
-import { openMeta, paymentsTaken, refundDate } from "../utility-refund-view";
+import { billStatusLine, isOpenBill, paymentsTaken, refundDate } from "../utility-refund-view";
+import { BillContext } from "./utility-bill-context";
 
 /**
  * A month before the bill: where a refund may start (decision 0265's window). The same day a month earlier,
@@ -82,10 +83,12 @@ function PaymentChoices({ bill, onPick }: { bill: UtilityBill; onPick: (paymentI
 }
 
 /**
- * FLOW-1135 (V3-UtilityRefunds): a bill not refunded, opened from its row. ראיתי, אין צורך בטיפול first (it is
- * the answer most bills get, and the board's first for a month with no rent), then החברה משלמת תמיד for the
- * supplier, then הוחזר · בחירת התשלום, which lists the money in that may be its refund. FLOW-1142: פתיחת התנועה
- * opens the bill's transaction page, to check it before answering.
+ * FLOW-1135 (V3-UtilityRefunds), FLOW-1159 (V3-J-A3-Bill): a bill's drawer, opened from its row on the list or on the
+ * property's bills by type. Its line and status, the type's pattern and history and the way into the income around it
+ * (BillContext), then the answers: ראיתי, אין צורך בטיפול (the answer most bills get, and the board's first for a month
+ * with no rent), החברה משלמת תמיד for the supplier, then הוחזר · בחירת התשלום, which lists the money in that may be its
+ * refund. A refunded bill has no answers; a bill closed with ראיתי may still be matched. FLOW-1142: פתיחת התנועה opens
+ * the bill's transaction page, to check it before answering.
  */
 export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPicked }: {
   bill: UtilityBill | null;
@@ -123,12 +126,14 @@ export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPick
         </>
       ) : (
         <>
-          <p className="ui-urf-sheet-line">{`${current.project_name} · ${openMeta(current)}`}</p>
+          <p className="ui-urf-sheet-line">{[current.category_name, refundDate(current.doc_date), current.project_name].filter(Boolean).join(" · ")}</p>
+          <p className="ui-urf-sheet-status" data-open={isOpenBill(current) || undefined}>{billStatusLine(current)}</p>
           {current.no_rent ? <span className="ui-urf-no-rent">חודש בלי שכירות בנכס</span> : null}
+          <BillContext bill={current} />
           <div className="ui-urf-sheet-actions">
-            <Button full onClick={() => { onSeen(current); }}>ראיתי, אין צורך בטיפול</Button>
-            <Button full variant="secondary" onClick={() => { onCompany(current); }}>{`החברה משלמת תמיד · ${name}`}</Button>
-            <Button full variant="link" onClick={() => { setPicking(true); }}>הוחזר · בחירת התשלום</Button>
+            {isOpenBill(current) ? <Button full onClick={() => { onSeen(current); }}>ראיתי, אין צורך בטיפול</Button> : null}
+            {isOpenBill(current) ? <Button full variant="secondary" onClick={() => { onCompany(current); }}>{`החברה משלמת תמיד · ${name}`}</Button> : null}
+            {current.state === "refunded" ? null : <Button full variant="link" onClick={() => { setPicking(true); }}>הוחזר · בחירת התשלום</Button>}
             <Button full variant="link" to={`/transactions/${current.bill_transaction_id}${search}`}>פתיחת התנועה</Button>
           </div>
         </>

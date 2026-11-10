@@ -161,7 +161,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_member_report",
     "get_member_share",
     "get_member_projection",
-    "list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months",
+    "list_utility_refunds", "count_utility_refunds", "list_utility_payers", "list_utility_months", "list_utility_income",
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",

@@ -151,6 +151,24 @@ describe("the cards", () => {
     expect(screen.getByText(hintText("לא הוחזר · 90 ימים · 11/08/26 · חודש בלי שכירות"))).toBeTruthy();
   });
 
+  it("links each property's head to its bills by type, a viewer too (FLOW-1159)", async () => {
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו");
+    expect(screen.getAllByRole("link", { name: "כל החשבונות" }).map((link) => link.getAttribute("href"))).toEqual([
+      `/projects/${GEFEN}/utilities/bills`,
+      `/projects/${PINE}/utilities/bills`,
+    ]);
+  });
+
+  it("a bill's sheet shows its status and the way into the income around it (FLOW-1159)", async () => {
+    renderScreen();
+    await screen.findByText("4 לא הוחזרו");
+    fireEvent.click(screen.getByRole("button", { name: /^Gas Co/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("לא הוחזר · 81 ימים", { selector: "p" })).toBeTruthy();
+    expect((await within(dialog).findByRole("link", { name: /מה נכנס סביב החשבון הזה/ })).getAttribute("href")).toBe(`/projects/${GEFEN}/utilities/bills/b-gas-gefen/income`);
+  });
+
   it("limits the list to one property with ?project=", async () => {
     renderScreen(`/utility-refunds?project=${PINE}`);
     // The page's line and the property's head.

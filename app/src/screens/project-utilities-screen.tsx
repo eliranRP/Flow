@@ -174,9 +174,9 @@ export function ProjectUtilitiesScreen() {
                   : "הכול הוחזר"}
           />
           <p className="ui-utl-lead">מי משלם כל חשבון. שוכר: בודקים שהחזיר. חברה: לא בודקים.</p>
-          {/* FLOW-1144: the bills by month, with the rent that came in, near the top. */}
+          {/* FLOW-1159: all the bills by type, and what was paid back, near the top. */}
           <List>
-            <ListRow variant="item" title="לפי חודש" hint="שכירות וחשבונות בכל חודש, והאם הוחזרו" href={`/projects/${projectId}/utilities/months${search}`} chevron />
+            <ListRow variant="item" title="כל החשבונות" hint="לפי סוג חשבון, ומה הוחזר" href={`/projects/${projectId}/utilities/bills${search}`} chevron />
           </List>
           {utilities.length === 0 ? (
             <p className="ui-utl-lead">עוד לא נמצאו חשבונות בנכס. Flow מוצא אותם מהשורות בקטגוריות החשבונות.</p>

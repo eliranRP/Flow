@@ -1,0 +1,221 @@
+/* FLOW-1159 (V3-J boards): a property's bills by type, a bill's drawer, and the income around a bill. */
+
+/* The refunds list's head links: סימון הכל כנראה at the start, כל החשבונות at the end, under the property's head. */
+.ui-urf-head-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-urf-head-links > .ui-btn {
+  min-block-size: var(--touch-min);
+}
+
+/* A type's head: what is missing reads in the signal colour. */
+.ui-urb-missing {
+  color: var(--color-signal);
+  font-weight: var(--type-btn-weight);
+}
+
+/* The bill's drawer: its status (the warning tone while owed), the type's pattern in a box, and the history. */
+.ui-urf-sheet-status {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-meta-line);
+}
+
+.ui-urf-sheet-status[data-open] {
+  color: var(--color-signal);
+}
+
+.ui-urf-pattern {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-card-inner);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+/* The owner, 2026-11-10: in a sheet a group head does not pin. The page's bar sets --month-sticky-top for the page
+   under the sheet, so a pinned head stood below the sheet's top and covered the first row. The head sits on the
+   sheet's surface, not the page's. */
+.ui-urf-sheet-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-urf-sheet-group .ui-month-head {
+  position: static;
+  background: none;
+}
+
+/* The open bill among its type's bills sits on the tint. */
+.ui-urf-hist[data-current] {
+  border-radius: var(--radius-card-inner);
+  background: var(--color-tint);
+}
+
+/* V3-J-Income: the checked bill, pinned in a dashed signal card. */
+.ui-uri-bill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px dashed var(--color-signal);
+  border-radius: var(--radius-card);
+}
+
+.ui-uri-bill-label {
+  margin: 0;
+  color: var(--color-signal);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-uri-bill-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-uri-bill-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-uri-bill-title {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-uri-bill-status {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-uri-bill-status[data-open] {
+  color: var(--color-signal);
+}
+
+.ui-uri-bill-amount {
+  flex: none;
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The payments: a link row each, text at the start, the amount in the income colour, a chevron. */
+.ui-uri-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-uri-item {
+  border-block-end: 1px solid var(--color-line);
+}
+
+.ui-uri-link {
+  display: flex;
+  min-inline-size: 0;
+  min-block-size: var(--row-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-uri-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-input);
+}
+
+.ui-uri-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-uri-title {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-uri-hit {
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-caption-line);
+}
+
+.ui-uri-hit[data-missing] {
+  color: var(--color-signal);
+}
+
+.ui-uri-others {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-uri-amount {
+  flex: none;
+  color: var(--color-income);
+  font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-uri-chevron {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
+/* Where the bill is: a dashed signal line with its label. */
+.ui-uri-marker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  color: var(--color-signal);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-uri-marker::before,
+.ui-uri-marker::after {
+  content: "";
+  flex: 1 1 var(--space-4);
+  border-block-start: 2px dashed var(--color-signal);
+}
+
+.ui-uri-marker-label {
+  flex: none;
+}
+
+.ui-uri-none {
+  margin: 0;
+  padding-block: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}

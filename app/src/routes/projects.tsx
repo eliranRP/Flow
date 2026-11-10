@@ -15,7 +15,8 @@ const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().t
 const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
 const ProjectNextEditScreen = lazy(() => screenLoaders.projectNextEdit().then((m) => ({ default: m.ProjectNextEditScreen })));
 const ProjectUtilitiesScreen = lazy(() => screenLoaders.projectUtilities().then((m) => ({ default: m.ProjectUtilitiesScreen })));
-const ProjectUtilityMonthsScreen = lazy(() => screenLoaders.projectUtilityMonths().then((m) => ({ default: m.ProjectUtilityMonthsScreen })));
+const ProjectUtilityBillsScreen = lazy(() => screenLoaders.projectUtilityBills().then((m) => ({ default: m.ProjectUtilityBillsScreen })));
+const ProjectUtilityIncomeScreen = lazy(() => screenLoaders.projectUtilityIncome().then((m) => ({ default: m.ProjectUtilityIncomeScreen })));
 const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
 const PropertyStatementScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyStatementScreen })));
 const PropertyReturnLineScreen = lazy(() => screenLoaders.propertyReturns().then((m) => ({ default: m.PropertyReturnLineScreen })));
@@ -59,8 +60,9 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
       {/* FLOW-1135: the property's utilities, who pays each (tenant or company). */}
       <Route path="projects/:projectId/utilities" element={<ProjectUtilitiesScreen />} />
-      {/* FLOW-1144: the property's bills by month, with the rent that came in. */}
-      <Route path="projects/:projectId/utilities/months" element={<ProjectUtilityMonthsScreen />} />
+      {/* FLOW-1159: the property's bills by type, what the tenant owes, and (a bill's drawer opens) the income around a bill. */}
+      <Route path="projects/:projectId/utilities/bills" element={<ProjectUtilityBillsScreen />} />
+      <Route path="projects/:projectId/utilities/bills/:billId/income" element={<ProjectUtilityIncomeScreen />} />
       {/* FLOW-451: what the investment page's figures are made of: the statement, a line, a metric, a part. */}
       {/* Two paths, not four: Cloudflare Pages takes at most 100 dynamic _redirects rules. */}
       <Route path="projects/:projectId/investment/:section" element={<PropertyReturnsSection />} />
