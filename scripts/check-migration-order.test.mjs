@@ -73,3 +73,15 @@ test("a rename, a removal, a content change, or an inserted version fails, and a
   const drifted = { ...hashes, [files[1]]: "e".repeat(64) };
   assert.ok(migrationOrderProblems(files, lock, null, drifted).some((line) => line.includes("sha256 does not match")));
 });
+
+test("a scrubbed applied file passes only with its exact amended change (FLOW-1146)", () => {
+  const name = names(lock)[1];
+  const before = lock[1].split(" ")[1];
+  const changed = [...lock];
+  changed[1] = `${name} ${"a".repeat(64)}`;
+  assert.deepEqual(migrationOrderProblems(names(changed), changed, lock, null, [`${name} ${before} ${"a".repeat(64)}`]), []);
+  assert.ok(migrationOrderProblems(names(changed), changed, lock, null, [`${name} ${before} ${"c".repeat(64)}`])
+    .some((line) => line.includes("content changed")));
+  assert.ok(migrationOrderProblems(names(changed), changed, lock, null, [`${name} ${"d".repeat(64)} ${"a".repeat(64)}`])
+    .some((line) => line.includes("content changed")));
+});

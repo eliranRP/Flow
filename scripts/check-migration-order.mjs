@@ -5,15 +5,19 @@
  * An existing filename and its sha256 stay put.
  * An appended version is YYYYMMDDHHmmss and its hour is 00-23.
  * Locked files that already use hour 24-29 stay, because they are not appended.
+ * One exception: supabase/migrations.amended lists "<file> <old sha256> <new sha256>" for an applied file
+ * whose comments had to be scrubbed (real data the deny-list caught). Only that exact change passes; the
+ * statements must stay the same, which the review checks, since an applied migration never runs again.
  */
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = path.join(root, "supabase/migrations");
 const lockPath = path.join(root, "supabase/migrations.lock");
+const amendedPath = path.join(root, "supabase/migrations.amended");
 const filename = /^[0-9]{14}_[a-z0-9_]+\.sql$/;
 const lockEntry = /^([0-9]{14}_[a-z0-9_]+\.sql) ([0-9a-f]{64})$/;
 
@@ -42,9 +46,10 @@ export function parseLockEntry(line) {
  * @param {string[]} lock filename and sha256 lines
  * @param {string[] | null} base lock from the base branch, or null when that file does not exist yet
  * @param {Record<string, string> | null} [hashes] sha256 of each migration file, when the bytes are available
+ * @param {string[]} [amended] "<file> <old sha256> <new sha256>" lines: a scrubbed applied file's allowed change
  * @returns {string[]}
  */
-export function migrationOrderProblems(files, lock, base, hashes = null) {
+export function migrationOrderProblems(files, lock, base, hashes = null, amended = []) {
   /** @type {string[]} */
   const problems = [];
   for (const name of files) {
@@ -91,7 +96,7 @@ export function migrationOrderProblems(files, lock, base, hashes = null) {
       problems.push(`${previous.name} was renamed, removed, or reordered`);
       return problems;
     }
-    if (current.hash !== previous.hash) {
+    if (current.hash !== previous.hash && !amended.includes(`${current.name} ${previous.hash} ${current.hash}`)) {
       problems.push(`${previous.name} content changed`);
       return problems;
     }
@@ -150,7 +155,10 @@ if (isMain) {
   const baseArg = baseFlag >= 0 ? process.argv[baseFlag + 1] : "";
   const base = baseArg ? lockLines(readFileSync(baseArg, "utf8")) : null;
   const files = migrationFiles();
-  const problems = migrationOrderProblems(files, lockLines(readFileSync(lockPath, "utf8")), base, migrationHashes(files));
+  const amended = existsSync(amendedPath)
+    ? lockLines(readFileSync(amendedPath, "utf8")).filter((line) => !line.startsWith("#"))
+    : [];
+  const problems = migrationOrderProblems(files, lockLines(readFileSync(lockPath, "utf8")), base, migrationHashes(files), amended);
   if (problems.length > 0) {
     console.error(problems.join("\n"));
     process.exit(1);
