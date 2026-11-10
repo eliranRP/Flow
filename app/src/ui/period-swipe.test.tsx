@@ -186,6 +186,21 @@ describe("PeriodSwipe", () => {
     expect(node.style.transform).toBe("");
   });
 
+  it("settles back when a second finger lands mid-drag, and does not step (FLOW-1167)", () => {
+    setReducedMotion(false);
+    const onStep = vi.fn();
+    render(<Harness start={months3} onStep={onStep} />);
+    const node = figure();
+    fireEvent.touchStart(node, { touches: [{ clientX: 100, clientY: 160 }] });
+    fireEvent.touchMove(node, { touches: [{ clientX: 160, clientY: 162 }] });
+    expect(node.style.transform).toBe("translateX(30px)");
+    fireEvent.touchStart(node, { touches: [{ clientX: 160, clientY: 162 }, { clientX: 60, clientY: 300 }] });
+    expect(node.style.transform).toBe("");
+    expect(node).not.toHaveClass("ui-pswipe-drag");
+    fireEvent.touchEnd(node, { touches: [], changedTouches: [{ clientX: 260, clientY: 162 }] });
+    expect(onStep).not.toHaveBeenCalled();
+  });
+
   it("with reduced motion, stays put while dragging and swaps the period on release", () => {
     setReducedMotion(true);
     const onStep = vi.fn();

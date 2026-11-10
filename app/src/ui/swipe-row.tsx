@@ -105,6 +105,15 @@ export function SwipeRow({
     if (leaving.current != null) window.clearTimeout(leaving.current);
   }, []);
 
+  // A row whose action went away rests closed, and stays closed if the action comes back.
+  const revealed = reveal != null;
+  useEffect(() => {
+    if (!revealed && openRef.current) {
+      openRef.current = false;
+      setOpen(false);
+    }
+  }, [revealed]);
+
   useEffect(() => {
     const box = frame.current;
     if (!peek || !box || reducedMotion()) return;
@@ -268,6 +277,8 @@ export function SwipeRow({
             aria-label={reveal.label}
             tabIndex={open ? 0 : -1}
             onClick={() => {
+              // While the editor is busy or locked the row's action waits, as its swipe does.
+              if (off.current) return;
               setOpenState(false);
               reveal.onAct();
             }}
