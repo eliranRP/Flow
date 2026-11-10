@@ -79,6 +79,11 @@ export function doneCount(store: SetupStore, facts: SetupFacts): number {
   return STEP_NUMBERS.filter((step) => isDone(step, store, facts)).length;
 }
 
+/** The steps not done yet, out of SETUP_TOTAL (Settings' "N להשלמה"). */
+export function stepsLeft(done: number): number {
+  return Math.max(0, SETUP_TOTAL - done);
+}
+
 export function allDone(store: SetupStore, facts: SetupFacts): boolean {
   return doneCount(store, facts) === SETUP_TOTAL;
 }

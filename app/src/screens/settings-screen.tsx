@@ -18,6 +18,7 @@ import { CompanySheet } from "./company-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
 import { type LoanCurrency } from "./loan-setup";
+import { stepsLeft } from "../setup/model";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
 import { PeopleIcon } from "../ui/icons";
@@ -310,7 +311,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const companyCount = sample
     ? sample.companyCount
     : (companies.data?.companies.length ?? (companies.isPending && companies.fetchStatus !== "idle" ? "loading" : undefined));
-  const setupLeft = setupEntry != null ? Math.max(0, 5 - setupEntry.done) : null;
+  const setupLeft = setupEntry != null ? stepsLeft(setupEntry.done) : null;
 
   return (
     <ViewerScope>

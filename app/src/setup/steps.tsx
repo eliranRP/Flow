@@ -111,28 +111,45 @@ export function StepBusiness({
   const saving = flow.state === "saving";
   const failed = flow.state === "failed";
   const client = useQueryClient();
+  // The company create_company made, with the name it was sent under. Kept here, so a retry after a
+  // refused setting resumes the follow-up for that company instead of creating another or taking
+  // the existing-company path.
+  const created = useRef<{ id: string; name: string } | null>(null);
+  // The name the form sends with create_company (set at submit, read when it succeeds).
+  const sentName = useRef("");
+
+  // The first settings for the new company, then the run starts. A failure leaves `created` set, so
+  // the next tap comes back here. `wanted` is the name in the field now (renamed first if it changed).
+  async function settleCreated(wanted: string): Promise<void> {
+    const company = created.current;
+    if (company == null) return;
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      if (wanted !== company.name) {
+        assertNoError(await supabase.rpc("rename_company", { p_company_id: company.id, p_name: wanted }));
+        company.name = wanted;
+      }
+      assertNoError(await supabase.rpc("apply_starter_categories", { p_set: "general" }));
+      assertNoError(await supabase.rpc("set_company_currency", { p_currency: currency }));
+      assertNoError(await supabase.rpc("set_cash_basis", { p_basis: basis }));
+      await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
+      const at = nowIso();
+      onDone({ run_started_at: at, flow_at: at }, company.id);
+      flow.send("done");
+    } catch {
+      flow.send("fail");
+    }
+  }
+
   const form = useCompanyForm({
     initialName: initial?.name ?? "",
     namePlaceholder: BUSINESS_NAME_PLACEHOLDER,
-    onCreated: (created) => {
-      // create_company succeeded: the first settings follow, then the run starts. A retry from the
-      // form's toast arrives here with no save running, so it starts one.
+    onCreated: (id) => {
+      // A retry from the form's toast arrives with no save running, so this starts one.
+      created.current = { id, name: sentName.current };
       flow.send("start");
-      void (async () => {
-        try {
-          const supabase = getSupabase();
-          if (!supabase) throw new Error("supabase");
-          assertNoError(await supabase.rpc("apply_starter_categories", { p_set: "general" }));
-          assertNoError(await supabase.rpc("set_company_currency", { p_currency: currency }));
-          assertNoError(await supabase.rpc("set_cash_basis", { p_basis: basis }));
-          await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
-          const at = nowIso();
-          onDone({ run_started_at: at, flow_at: at }, created);
-          flow.send("done");
-        } catch {
-          flow.send("fail");
-        }
-      })();
+      void settleCreated(sentName.current);
     },
     // create_company failed: the form's toast says so, and the button is free again.
     onFailed: () => { flow.send("stop"); },
@@ -164,7 +181,14 @@ export function StepBusiness({
       form.submit(event);
       return;
     }
+    if (created.current != null) {
+      // The company exists already: only its settings are left to save.
+      if (!flow.send("start")) return;
+      void settleCreated(name.trim());
+      return;
+    }
     if (companyId == null) {
+      sentName.current = name.trim();
       // A form that may not write (FLOW-506) sends nothing, so no save starts.
       flow.send(form.holdWrites ? "clear" : "start");
       form.submit(event);
@@ -397,8 +421,9 @@ export function StepProjects({
       lead={PROJECTS_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
+      saving={saving}
       primary={<Button type="button" full busy={saving} onClick={() => { void save(); }}>{projectsPrimary(chips.length)}</Button>}
-      secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
+      secondary={<Button type="button" variant="link" full disabled={saving} onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
       <form
         className="ui-onb-add"
@@ -560,8 +585,9 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
       lead={JEV_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
+      saving={saving}
       primary={<Button type="button" full busy={saving} onClick={save}>{NEXT}</Button>}
-      secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
+      secondary={<Button type="button" variant="link" full disabled={saving} onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={JEV_LABEL} hint={JEV_HINT} checked={on} busy={saving} onChange={setOn} />

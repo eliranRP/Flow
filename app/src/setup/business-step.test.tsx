@@ -42,6 +42,14 @@ function count(calls: string[], name: string): number {
   return calls.filter((call) => call === name).length;
 }
 
+/** The one onDone call: the run's start stamped (both fields, an ISO time) and the company it is for. */
+function expectRunStarted(companyId: string) {
+  const call = onDone.mock.calls[0] as [{ run_started_at?: string; flow_at?: string } | undefined, string | undefined] | undefined;
+  expect(call?.[0]?.run_started_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  expect(call?.[0]?.flow_at).toBe(call?.[0]?.run_started_at);
+  expect(call?.[1]).toBe(companyId);
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   onDone.mockReset();
@@ -82,5 +90,60 @@ describe("setup step 1 · the save", () => {
     await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
     expect(screen.queryByText(SAVE_ERROR)).toBeNull();
     expect(count(calls, "set_cash_basis")).toBe(2);
+  });
+});
+
+describe("setup step 1 · a setting refused after create_company", () => {
+  function refusedBasisOnce() {
+    return mockRpc((name, nth) => {
+      if (name === "create_company") return { data: "company-1", error: null };
+      if (name === "set_cash_basis" && nth === 1) return { data: null, error: { message: "refused" } };
+      return ok;
+    });
+  }
+
+  it("retries the follow-up settings for the company already created, without a second create", async () => {
+    const calls = refusedBasisOnce();
+    const button = show(null);
+    fireEvent.click(button);
+    expect(await screen.findByText(SAVE_ERROR)).toBeInTheDocument();
+    expect(onDone).not.toHaveBeenCalled();
+    fireEvent.click(button);
+    await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
+    expectRunStarted("company-1");
+    expect(count(calls, "create_company")).toBe(1);
+    expect(count(calls, "apply_starter_categories")).toBe(2);
+  });
+
+  it("renames the company on the retry when the name was edited after the create", async () => {
+    const calls = refusedBasisOnce();
+    const button = show(null);
+    fireEvent.click(button);
+    expect(await screen.findByText(SAVE_ERROR)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "שם העסק" }), { target: { value: "עסק אחר" } });
+    fireEvent.click(button);
+    await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
+    expect(count(calls, "rename_company")).toBe(1);
+    expect(count(calls, "create_company")).toBe(1);
+  });
+
+  it("keeps the same retry once the route has the company id", async () => {
+    const calls = refusedBasisOnce();
+    const initial = { name: "עסק לדוגמה", currency: "ILS" as const, basis: "paid" as const };
+    const view = renderWithProviders(
+      <StepBusiness companyId={null} initial={initial} onDone={onDone} onStamp={() => undefined} onSkipStep={() => undefined} onSkipAll={() => undefined} />,
+      { route: "/setup/1?new=1" },
+    );
+    const button = screen.getByRole("button", { name: "המשך" });
+    fireEvent.click(button);
+    expect(await screen.findByText(SAVE_ERROR)).toBeInTheDocument();
+    view.rerender(
+      <StepBusiness companyId="company-1" initial={initial} onDone={onDone} onStamp={() => undefined} onSkipStep={() => undefined} onSkipAll={() => undefined} />,
+    );
+    fireEvent.click(button);
+    await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
+    expectRunStarted("company-1");
+    expect(count(calls, "create_company")).toBe(1);
+    expect(count(calls, "apply_starter_categories")).toBe(2);
   });
 });

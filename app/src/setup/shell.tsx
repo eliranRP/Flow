@@ -17,6 +17,7 @@ export function OnboardingFrame({
   lead,
   onBack,
   onSkipAll,
+  saving = false,
   top,
   primary,
   secondary,
@@ -30,6 +31,8 @@ export function OnboardingFrame({
   onBack?: () => void;
   /** Runs when the skip sheet's confirm is tapped. Steps 1 to 7 and welcome have the sheet; done does not. */
   onSkipAll?: () => Promise<void> | void;
+  /** A save runs on this step (FLOW-1161): הקודם and דילוג על הכל are disabled until it ends. */
+  saving?: boolean;
   /** Above the title (welcome's logo). */
   top?: ReactNode;
   primary: ReactNode;
@@ -46,7 +49,7 @@ export function OnboardingFrame({
         <div className="ui-onb-top">
           <div className="ui-onb-row">
             {onBack ? (
-              <Button variant="link" onClick={onBack} className="ui-onb-link">
+              <Button variant="link" onClick={onBack} disabled={saving} className="ui-onb-link">
                 {BACK}
               </Button>
             ) : (
@@ -55,7 +58,7 @@ export function OnboardingFrame({
             <span className="t-caption t-muted ui-onb-counter" aria-live="polite">
               שלב <bdi dir="ltr">{String(step)}</bdi> מתוך <bdi dir="ltr">{String(SETUP_TOTAL)}</bdi>
             </span>
-            <Button variant="link" onClick={() => { setSkipOpen(true); }} className="ui-onb-link">
+            <Button variant="link" onClick={() => { setSkipOpen(true); }} disabled={saving} className="ui-onb-link">
               {SKIP_ALL}
             </Button>
           </div>
