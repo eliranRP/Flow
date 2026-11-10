@@ -1,6 +1,6 @@
 import { formatAmountText } from "@flow/shared";
-import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
-import type { UtilityBill, UtilityIncome, UtilityIncomeBill, UtilityMonth, UtilityPayment } from "./utility-refunds";
+import { formatDayMonth } from "./ui/date-math";
+import type { UtilityBill, UtilityIncome, UtilityIncomeBill, UtilityPayment } from "./utility-refunds";
 
 /**
  * FLOW-1135 (V3-UtilityRefunds), FLOW-1143: the list's cards, worked out from list_utility_refunds. Flow suggests
@@ -175,31 +175,6 @@ export function paymentParts(payment: UtilityPayment): { key: string; text: stri
   }));
 }
 
-/** FLOW-1144: "אוקטובר 2026", a month of list_utility_months (YYYY-MM-01). */
-export function utilityMonthLabel(month: string): string {
-  const name = HEBREW_MONTHS[Number(month.slice(5, 7)) - 1];
-  return name == null ? month : `${name} ${month.slice(0, 4)}`;
-}
-
-/** The month's currency: its first line's, else the company's. */
-export function utilityMonthCurrency(month: UtilityMonth, fallback: string): string {
-  return month.rent_lines[0]?.currency ?? month.bills[0]?.currency ?? fallback;
-}
-
-/**
- * FLOW-1144: a month's status. No rent came in ("לא נכנסה שכירות"); or bills are not refunded ("חסר $X", their sum,
- * a bill still waiting included); or every bill is back ("כל החשבונות הוחזרו"), or closed with ראיתי
- * ("כל החשבונות נבדקו": the owner's word is closed, not refunded).
- */
-export function utilityMonthStatus(month: UtilityMonth, currency: string): { ok: boolean; text: string } {
-  if (month.rent_lines.length === 0 && month.rent_in === 0n) return { ok: false, text: "לא נכנסה שכירות" };
-  if (month.not_refunded > 0n) return { ok: false, text: `חסר ${formatAmountText(month.not_refunded, currency, { detail: true })}` };
-  // The owner, 2026-11-10: a month with no tenant-paid bill has nothing to refund, so it does not read "הוחזרו".
-  if (month.bills.length === 0) return { ok: true, text: "לא שולמו חשבונות" };
-  if (month.bills.some((bill) => bill.state === "seen")) return { ok: true, text: "כל החשבונות נבדקו" };
-  return { ok: true, text: "כל החשבונות הוחזרו" };
-}
-
 /** Whole days from one ISO date to another (negative when `to` is earlier). */
 function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
@@ -219,14 +194,14 @@ export function billActivity(bill: UtilityBill): string {
 /**
  * FLOW-1159 (V3-J boards): a bill's status in plain words. Refunded within 7 days of the bill: "הוחזר באותו חודש ·
  * 05/11"; later: "הוחזר ב־05/11 · 34 ימים אחרי"; refunded with no payment line: "הוחזר". Seen: "נבדק · ראיתי". Not
- * refunded: "לא הוחזר · 40 ימים"; waiting: "עוד לא הוחזר · 9 ימים". Dates read dd/mm (the year when not this one).
+ * refunded: "לא הוחזר · 40 ימים"; waiting: "עוד לא הוחזר · 9 ימים". Dates read dd/mm/yy (FLOW-1141).
  */
-export function billStatusLine(bill: UtilityBill, now = new Date()): string {
+export function billStatusLine(bill: Pick<UtilityBill, "state" | "days" | "doc_date"> & { payment?: { doc_date: string } | null }): string {
   if (bill.state === "refunded") {
     const payment = bill.payment;
     if (payment == null) return "הוחזר";
     const lag = daysBetween(bill.doc_date, payment.doc_date);
-    const date = formatDayMonth(payment.doc_date, now);
+    const date = refundDate(payment.doc_date);
     return lag <= 7 ? `הוחזר באותו חודש · ${date}` : `הוחזר ב־${date} · ${days(lag)} אחרי`;
   }
   if (bill.state === "seen") return "נבדק · ראיתי";
@@ -234,10 +209,20 @@ export function billStatusLine(bill: UtilityBill, now = new Date()): string {
   return `עוד לא הוחזר · ${days(bill.days)}`;
 }
 
+/**
+ * FLOW-1159: the checked bill's status line on the income page. The bill carries only its payment's id, so the
+ * payment's date comes from the line in the window (a refund outside the window reads just "הוחזר").
+ */
+export function incomeBillStatus(income: UtilityIncome): string {
+  const bill = income.bill;
+  const line = income.lines.find((item) => item.transaction_id === bill.payment_transaction_id);
+  return billStatusLine({ ...bill, payment: line == null ? null : { doc_date: line.doc_date } });
+}
+
 export type Totals = { currency: string; minor: bigint }[];
 
-/** The bills the tenant still owes: not refunded, or still waiting. */
-function owed(bill: UtilityBill): boolean {
+/** The bills the tenant still owes: not refunded, or still waiting. They read in the warning tone. */
+export function isOpenBill(bill: UtilityBill): boolean {
   return bill.state === "not_refunded" || bill.state === "waiting";
 }
 
@@ -280,7 +265,7 @@ export function billsByType(bills: readonly UtilityBill[]): BillType[] {
         name,
         categoryId: sorted[0]?.category_id ?? null,
         bills: sorted,
-        missing: totals(sorted.filter(owed)),
+        missing: totals(sorted.filter(isOpenBill)),
         latest: sorted[0] == null ? "" : billActivity(sorted[0]),
       };
     })
@@ -289,7 +274,7 @@ export function billsByType(bills: readonly UtilityBill[]): BillType[] {
 
 /** FLOW-1159: what the tenant owes on these bills (not refunded and waiting), per currency. */
 export function tenantOwes(bills: readonly UtilityBill[]): Totals {
-  return totals(bills.filter(owed));
+  return totals(bills.filter(isOpenBill));
 }
 
 function sameType(bill: UtilityBill, other: UtilityBill): boolean {
@@ -344,7 +329,7 @@ export type IncomeRow =
  * 04/10"; a payment on the bill's day sits above it). Each payment names the part of the bill's type (a line not
  * split, filed to the bill's category, counts whole) and the bills of that type it refunded, then its other parts.
  */
-export function incomeRows(income: UtilityIncome, bill: UtilityIncomeBill = income.bill, now = new Date()): IncomeRow[] {
+export function incomeRows(income: UtilityIncome, bill: UtilityIncomeBill = income.bill): IncomeRow[] {
   const type = typeName(bill);
   const money = (minor: bigint, currency: string) => formatAmountText(minor, currency, { detail: true });
   const payments: IncomeRow[] = income.lines.map((line) => {
@@ -357,7 +342,7 @@ export function incomeRows(income: UtilityIncome, bill: UtilityIncomeBill = inco
     const hit = own.length === 0
       ? `בלי ${type}`
       : `${type} ${money(own.reduce((sum, part) => sum + part.amount_minor, 0n), line.currency)}`
-        + (refunded.length === 0 ? "" : ` · החזיר את ${refunded.map((item) => formatDayMonth(item.doc_date, now)).join(", ")}`);
+        + (refunded.length === 0 ? "" : ` · החזיר את ${refunded.map((item) => refundDate(item.doc_date)).join(", ")}`);
     return {
       kind: "payment",
       key: line.transaction_id,
@@ -373,7 +358,7 @@ export function incomeRows(income: UtilityIncome, bill: UtilityIncomeBill = inco
       refund: line.transaction_id === bill.payment_transaction_id,
     };
   });
-  const marker: IncomeRow = { kind: "bill", key: `bill:${bill.bill_transaction_id}`, date: bill.doc_date, label: `החשבון · ${formatDayMonth(bill.doc_date, now)}` };
+  const marker: IncomeRow = { kind: "bill", key: `bill:${bill.bill_transaction_id}`, date: bill.doc_date, label: `החשבון · ${refundDate(bill.doc_date)}` };
   const after = payments.filter((row) => row.date >= bill.doc_date);
   const before = payments.filter((row) => row.date < bill.doc_date);
   return [...after, marker, ...before];

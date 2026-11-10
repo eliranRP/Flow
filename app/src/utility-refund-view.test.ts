@@ -5,6 +5,7 @@ import {
   billActivity,
   billsByType,
   billStatusLine,
+  incomeBillStatus,
   incomeRows,
   refundGroups,
   tenantOwes,
@@ -14,7 +15,6 @@ import {
 import { utilityIncomeSample, utilityRefundsSample, utilityTypesSample } from "./screens/utility-refunds-sample";
 
 // FLOW-1159: the bill views' pure helpers, on the invented sample (as of 2026-11-09).
-const NOW = new Date("2026-11-09T12:00:00Z");
 const types = utilityTypesSample();
 const byId = (id: string): UtilityBill => {
   const found = types.find((bill) => bill.bill_transaction_id === id);
@@ -31,17 +31,17 @@ describe("billActivity", () => {
 
 describe("billStatusLine", () => {
   it("says when a refund came back: the same month within a week, else the date and the days after", () => {
-    expect(billStatusLine(byId("t-water-11"), NOW)).toBe("הוחזר באותו חודש · 06/11");
-    expect(billStatusLine(byId("t-water-10"), NOW)).toBe("הוחזר באותו חודש · 07/10");
-    expect(billStatusLine(byId("t-power-09"), NOW)).toBe("הוחזר ב־07/10 · 33 ימים אחרי");
-    expect(billStatusLine({ ...byId("t-power-09"), payment: null }, NOW)).toBe("הוחזר");
+    expect(billStatusLine(byId("t-water-11"))).toBe("הוחזר באותו חודש · 06/11/26");
+    expect(billStatusLine(byId("t-water-10"))).toBe("הוחזר באותו חודש · 07/10/26");
+    expect(billStatusLine(byId("t-power-09"))).toBe("הוחזר ב־07/10/26 · 33 ימים אחרי");
+    expect(billStatusLine({ ...byId("t-power-09"), payment: null })).toBe("הוחזר");
   });
 
   it("words the other states, one day included", () => {
-    expect(billStatusLine(byId("t-sewer-08"), NOW)).toBe("נבדק · ראיתי");
-    expect(billStatusLine(byId("t-power-10"), NOW)).toBe("לא הוחזר · 34 ימים");
-    expect(billStatusLine(byId("t-sewer-10"), NOW)).toBe("עוד לא הוחזר · 19 ימים");
-    expect(billStatusLine({ ...byId("t-power-11"), days: 1 }, NOW)).toBe("עוד לא הוחזר · יום אחד");
+    expect(billStatusLine(byId("t-sewer-08"))).toBe("נבדק · ראיתי");
+    expect(billStatusLine(byId("t-power-10"))).toBe("לא הוחזר · 34 ימים");
+    expect(billStatusLine(byId("t-sewer-10"))).toBe("עוד לא הוחזר · 19 ימים");
+    expect(billStatusLine({ ...byId("t-power-11"), days: 1 })).toBe("עוד לא הוחזר · יום אחד");
   });
 });
 
@@ -91,20 +91,30 @@ describe("typePattern and typeHistory", () => {
   });
 });
 
+describe("incomeBillStatus", () => {
+  it("reads the bill's state, with its refund's date from the line in the window", () => {
+    const income = utilityIncomeSample();
+    expect(incomeBillStatus(income)).toBe("לא הוחזר · 34 ימים");
+    expect(incomeBillStatus({ ...income, bill: { ...income.bill, state: "refunded", payment_transaction_id: "pay-rent-10" } })).toBe("הוחזר באותו חודש · 07/10/26");
+    // A refund outside the window has no line: just "הוחזר".
+    expect(incomeBillStatus({ ...income, bill: { ...income.bill, state: "refunded", payment_transaction_id: "pay-far" } })).toBe("הוחזר");
+  });
+});
+
 describe("incomeRows", () => {
   const income = utilityIncomeSample();
 
   it("lists the payments newest first with the bill's marker at its date", () => {
-    const rows = incomeRows(income, income.bill, NOW);
+    const rows = incomeRows(income, income.bill);
     expect(rows.map((row) => row.key)).toEqual(["pay-rent-11", "pay-rent-10", "bill:t-power-10", "pay-rent-09", "pay-power-08"]);
-    expect(rows[2]).toEqual({ kind: "bill", key: "bill:t-power-10", date: "2026-10-06", label: "החשבון · 06/10" });
+    expect(rows[2]).toEqual({ kind: "bill", key: "bill:t-power-10", date: "2026-10-06", label: "החשבון · 06/10/26" });
   });
 
   it("names the bill's part and the bills it paid back, or that it has none, and the other parts", () => {
-    const [november, october, , september, august] = incomeRows(income, income.bill, NOW);
+    const [november, october, , september, august] = incomeRows(income, income.bill);
     expect(october).toMatchObject({
       title: "RentRedi · 07/10/26",
-      hit: "חשמל $180.20 · החזיר את 04/09",
+      hit: "חשמל $180.20 · החזיר את 04/09/26",
       hitMissing: false,
       others: "שכירות $1,750 · מים $122.80 · ביוב $68.40",
       amount: "+$2,121.40",
@@ -117,7 +127,7 @@ describe("incomeRows", () => {
   });
 
   it("marks the bill's own refund", () => {
-    const rows = incomeRows(income, { ...income.bill, payment_transaction_id: "pay-rent-11" }, NOW);
+    const rows = incomeRows(income, { ...income.bill, payment_transaction_id: "pay-rent-11" });
     expect(rows.filter((row) => row.kind === "payment" && row.refund).map((row) => row.key)).toEqual(["pay-rent-11"]);
   });
 

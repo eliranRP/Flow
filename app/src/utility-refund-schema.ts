@@ -77,41 +77,6 @@ export const utilityPayersSchema = z
   .transform((body) => body.utilities);
 
 /**
- * FLOW-1144: list_utility_months, a property's months, newest first: the rent that came in, the tenant-paid bills
- * paid, the sum not refunded (a bill still waiting counts; a refunded or seen one does not), and the lines behind
- * them, each with its currency.
- */
-const monthSchema = z.object({
-  month: z.string(),
-  rent_in: minorSchema,
-  bills_paid: minorSchema,
-  not_refunded: minorSchema,
-  rent_lines: z.array(z.object({
-    transaction_id: z.string(),
-    doc_date: z.string(),
-    amount_minor: minorSchema,
-    currency: z.string(),
-    party: text,
-    category_name: text,
-    // FLOW-1146: a split line's parts (the rent and the bill the tenant paid with it), in order.
-    parts: z.array(z.object({ category_name: text, amount_minor: minorSchema })).optional().default([]),
-  })).optional().default([]),
-  bills: z.array(z.object({
-    bill_transaction_id: z.string(),
-    doc_date: z.string(),
-    amount_minor: minorSchema,
-    currency: z.string(),
-    supplier_name: text,
-    category_name: text,
-    state: z.string(),
-  })).optional().default([]),
-});
-
-export const utilityMonthsSchema = z
-  .object({ months: z.array(monthSchema) })
-  .transform((body) => [...body.months].sort((a, b) => b.month.localeCompare(a.month)));
-
-/**
  * FLOW-1159: list_utility_income, a tenant-paid utility bill (with its state) and the money in on its property within
  * `months` months before and after it, newest first: each line with its parts on the property and the utility bills
  * it is the refund of.

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
-import { PINE, storyUtilityClient, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
+import { PINE, storyUtilityClient, utilityRefundsSample, utilitySplitSample, utilityTypesSample } from "./utility-refunds-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { UtilityClientProvider, type UtilityBill } from "../utility-refunds";
@@ -124,6 +124,17 @@ export const UtilityRefundsSheet: Story = {
     const [row] = await within(canvasElement).findAllByRole("button", { name: /^City Water/ });
     await userEvent.click(row as HTMLElement);
     await expect(await within(document.body).findByRole("button", { name: "ראיתי, אין צורך בטיפול" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1159: a bill's drawer on the list: its status, the type's pattern, the type's history and the income link, above the answers. */
+export const UtilityRefundsSheetContext: Story = {
+  name: "UtilityRefunds, bill sheet with its history",
+  render: () => <RefundsStory bills={utilityTypesSample()} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^City Light/ }));
+    const dialog = await within(document.body).findByRole("dialog");
+    await expect(await within(dialog).findByRole("heading", { name: "כל חשבונות החשמל בנכס" })).toBeInTheDocument();
   },
 };
 
