@@ -68,7 +68,7 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     // The first save fails in a way that can be retried; the second is held; the retry then passes.
     const write = vi.spyOn(store, "setClosingPaid")
       .mockRejectedValueOnce(new Error("Failed to fetch"))
-      .mockImplementationOnce(async () => { await hold; });
+      .mockImplementationOnce(async () => { await hold; return { prior: null }; });
     window.history.replaceState(null, "", "/loans/loan-bridge");
     const view = renderWithProviders(
       <BrowserRouter>
