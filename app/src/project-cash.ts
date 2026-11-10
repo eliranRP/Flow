@@ -53,7 +53,7 @@ export function useProjectName(projectId: string | null, month: string, active =
   const read = useProjectsCashMonth(month, projectId ?? undefined, active && projectId != null && cached == null);
   if (cached != null || projectId == null) return { name: cached, loading: false };
   const name = read.data?.projects.find((row) => row.id === projectId)?.name ?? null;
-  return { name, loading: name == null && read.isPending && read.fetchStatus !== "idle" };
+  return { name, loading: name == null && read.isPending && read.fetchStatus === "fetching" };
 }
 
 /** The search with the project, so the month's נכנס and יצא pages list the project's lines (FLOW-1111). */
