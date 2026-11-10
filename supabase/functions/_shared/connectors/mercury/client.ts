@@ -8,6 +8,7 @@ import { addCalendarDays, jerusalemDate } from "./dates.ts";
 import { redactMercury } from "./redact.ts";
 import { dollarsToCents } from "./money.ts";
 import { isVoidMercuryStatus } from "./rules.ts";
+import { mercuryPhasesFrom, type MercuryFetchPhase } from "./machines.ts";
 import type {
   AccountLabel,
   CardLabel,
@@ -427,7 +428,8 @@ export function timestampFromCursor(cursor: string | null): string | null {
   return new Date(time).toISOString();
 }
 
-export type MercuryCursorPhase = "window" | "pending" | "treasury";
+/** The phase a page cap stopped in (`mercuryFetchPhases`). */
+export type MercuryCursorPhase = Exclude<MercuryFetchPhase, "done">;
 
 export interface MercuryCursor {
   /** ISO time of the run that opened this window. Plain cursors use this as lastSyncAt. */
@@ -627,12 +629,15 @@ async function fetchTreasuryLedger(
   const accounts = await listTreasuryAccounts(session);
   const ids = accounts.map((account) => requireTreasuryLabel(account).id);
   stateOf(session).treasuryIds = ids;
-  const startAt = resumeId && ids.includes(resumeId) ? ids.indexOf(resumeId) : 0;
+  // A page token belongs to its own account's ledger: when that account is no longer listed, the
+  // ledgers start again from the first account with no token.
+  const resuming = resumeId != null && ids.includes(resumeId);
+  const startAt = resuming ? ids.indexOf(resumeId) : 0;
   const lines: unknown[] = [];
   for (let index = startAt; index < ids.length; index += 1) {
     const treasuryId = ids[index];
     if (!treasuryId) continue;
-    const cursor = index === startAt ? resumeCursor : undefined;
+    const cursor = resuming && index === startAt ? resumeCursor : undefined;
     try {
       lines.push(...await listTreasuryTransactions(session, treasuryId, cursor, start));
     } catch (error) {
@@ -674,8 +679,10 @@ async function fetchMercuryPages(
       lookbackDays: input.lookbackDays,
     });
 
+  // Every resume runs its own phase and the later ones; treasury, the last, is in every list.
+  const phases = mercuryPhasesFrom(decoded.phase);
   let windowRows: unknown[] = [];
-  if (decoded.phase === "window") {
+  if (phases.includes("window")) {
     try {
       windowRows = await listCollection(session, "/transactions", "transactions", {
         start: start ?? undefined,
@@ -688,7 +695,7 @@ async function fetchMercuryPages(
   }
 
   let pendingRows: unknown[] = [];
-  if (decoded.phase !== "treasury") {
+  if (phases.includes("pending")) {
     try {
       pendingRows = await listCollection(session, "/transactions", "transactions", {
         status: "pending",

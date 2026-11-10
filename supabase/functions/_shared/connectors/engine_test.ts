@@ -720,3 +720,84 @@ Deno.test("a skipped transfer that was never stored voids nothing, and a failed 
   });
   assertEquals(failed.ok, false);
 });
+
+Deno.test("a run that stops at the page cap keeps every stored missing clock and rechecks nothing", async () => {
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [{ id: "pending-listed" }],
+      removedIds: ["pending-voided"],
+      nextCursor: '{"at":"2026-10-04T08:00:00.000Z","start":"2026-09-04","page":"next","phase":"window"}',
+      complete: false,
+      windowStart: "2026-09-04",
+    },
+  });
+  const calls: string[] = [];
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [
+      { externalId: "pending-waiting", lineStatus: "pending", docDate: "2026-09-20", missingSince: "2026-09-28T00:00:00.000Z" },
+      { externalId: "pending-new", lineStatus: "pending", docDate: "2026-09-21", missingSince: null },
+      { externalId: "pending-listed", lineStatus: "pending", docDate: "2026-09-22", missingSince: "2026-09-29T00:00:00.000Z" },
+      { externalId: "pending-voided", lineStatus: "pending", docDate: "2026-09-23", missingSince: "2026-09-30T00:00:00.000Z" },
+      { externalId: "old-posted", lineStatus: "posted", docDate: "2026-08-01", missingSince: null },
+    ],
+    now: () => NOW,
+    confirmLine(line) {
+      calls.push(line.externalId);
+      return Promise.resolve({ action: "void" });
+    },
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(plan.complete, false);
+  assertEquals(calls, []);
+  assertEquals(plan.rechecked, []);
+  // Only the clock of a pending line this partial fetch neither listed nor voided carries over.
+  assertEquals(plan.pendingMissing, [{ externalId: "pending-waiting", missingSince: "2026-09-28T00:00:00.000Z" }]);
+  assertEquals(plan.removedIds, ["pending-voided"]);
+});
+
+for (const errorClass of ["transient", "rate_limited"] as const) {
+  Deno.test(`a ${errorClass} recheck error keeps a running missing clock and starts none`, async () => {
+    const built = port({
+      accounts,
+      fetched: { lines: [], removedIds: [], nextCursor: NOW.toISOString(), complete: true, windowStart: "2026-09-04" },
+    });
+    built.port.classifyError = () => ({ class: errorClass, retry_after: null });
+    const calls: string[] = [];
+    const plan = await planConnectorSync({
+      port: built.port,
+      session: session(),
+      cursor: null,
+      importFrom: null,
+      lookbackDays: 30,
+      ownCounterpartyIds: [],
+      vatRateBp: 0,
+      exemptSupplierNames: [],
+      exemptSupplierIds: [],
+      stored: [
+        { externalId: "pending-new", lineStatus: "pending", docDate: "2026-09-20", missingSince: null },
+        { externalId: "pending-waiting", lineStatus: "pending", docDate: "2026-09-21", missingSince: "2026-09-28T00:00:00.000Z" },
+      ],
+      now: () => NOW,
+      confirmLine(line) {
+        calls.push(line.externalId);
+        return Promise.reject(new Error(errorClass));
+      },
+    });
+    assertEquals(plan.ok, true);
+    if (!plan.ok) return;
+    assertEquals(calls, errorClass === "transient" ? ["pending-new", "pending-waiting"] : ["pending-new"]);
+    assertEquals(plan.pendingMissing, [{ externalId: "pending-waiting", missingSince: "2026-09-28T00:00:00.000Z" }]);
+    assertEquals(plan.removedIds, []);
+  });
+}
