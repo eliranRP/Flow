@@ -111,7 +111,8 @@ export function LineSplitEditor({
   const [target, setTarget] = useState<PickTarget | null>(initialTarget ? { kind: "part", key: initialTarget.partKey } : null);
   const [pickerStart, setPickerStart] = useState<"category" | "project">(initialTarget?.kind ?? "category");
   const [warned, setWarned] = useState(initialWarned);
-  // One machine: `saving` lasts until the page has left, so a second tap or a retry sends nothing while the reads refresh.
+  // One machine: `saving` lasts until the page has left, so a second tap sends nothing while the reads
+  // refresh. `send` reads the machine's own state, so a toast's retry from an older render is guarded too.
   const flow = useMachine(saveFlow, sampleSaving ? "saving" : "idle");
   const saving = flow.state === "saving";
   const [confirmClear, setConfirmClear] = useState(false);
@@ -125,7 +126,6 @@ export function LineSplitEditor({
   const pickerOpener = useRef<HTMLElement | null>(null);
   /** Set once the screen goes back itself, so its own pop is not held. */
   const leaving = useRef(false);
-  const retries = useRef<Record<"save" | "clear" | "approve", () => void>>({ save: () => undefined, clear: () => undefined, approve: () => undefined });
   const lineMinor = absAgorot(line.amountNet);
   const currency = line.currency;
   const busy = sampleSaving || saving;
@@ -234,7 +234,7 @@ export function LineSplitEditor({
         tone: "bad",
         message: LINE_SPLIT_SAVE_FAILURE,
         action: "ניסיון חוזר",
-        onAction: () => { retries.current[kind](); },
+        onAction: () => { void write(next, kind); },
       });
       return false;
     }
@@ -264,7 +264,7 @@ export function LineSplitEditor({
       await api.approveWhole(wholeProject);
     } catch {
       flow.send("fail");
-      toast.show({ tone: "bad", message: "האישור לא נשמר", action: "ניסיון חוזר", onAction: () => { retries.current.approve(); } });
+      toast.show({ tone: "bad", message: "האישור לא נשמר", action: "ניסיון חוזר", onAction: () => { void approveWhole(); } });
       return;
     }
     clearLineDraft(draftId);
@@ -293,14 +293,6 @@ export function LineSplitEditor({
   }
 
   useSaveOnBack({ dirty, busy, leave, leaving });
-
-  useEffect(() => {
-    retries.current = {
-      save: () => { if (payload != null && canPreview) void write(payload, "save"); },
-      clear: () => { void write([], "clear"); },
-      approve: () => { void approveWhole(); },
-    };
-  });
 
   const categoryName = (id: string | null) => (id == null ? line.categoryName : categories.find((category) => category.id === id)?.name ?? null);
   const projectName = (id: string | null) => (id == null ? null : projects.find((project) => project.id === id)?.name ?? null);

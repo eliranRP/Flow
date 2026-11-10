@@ -127,19 +127,24 @@ describe("the review card's skip and project pick (FLOW-1165)", () => {
     });
   });
 
-  it("a project picked on the card is one save: אישור and a second pick wait for it", async () => {
+  it("a project picked on the card is one save: אישור and the picker wait for it", async () => {
     state.hold.add("resolve_review");
     renderWithProviders(<ReviewQueue rows={[row("a", "ספק א")]} search="" openPicker />);
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
     await waitFor(() => { expect(argsOf("resolve_review")).toHaveLength(1); });
     // אישור now would approve the project the card still shows, not the one being saved.
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    // The picker stays closed too: a second pick now would be dropped without a word.
     fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/ }));
-    fireEvent.click(await screen.findByRole("radio", { name: "הרצל" }));
     await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole("radio", { name: "הרצל" })).not.toBeInTheDocument();
     expect(argsOf("approve_review_item")).toHaveLength(0);
     expect(argsOf("resolve_review")).toHaveLength(1);
     await releaseAll();
     expect(argsOf("resolve_review")[0]).toMatchObject({ p_id: "a", p_project_id: "p2", p_resolve: false });
+    // Once the save is done the picker opens again, and a second pick is sent.
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הרצל" }));
+    await waitFor(() => { expect(argsOf("resolve_review")).toHaveLength(2); });
   });
 });

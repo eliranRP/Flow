@@ -428,6 +428,8 @@ export function ReviewQueue({
   const current = card;
   const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
   function openProject() {
+    // A pick is still saving (FLOW-1165): a second one would be dropped, so the picker waits.
+    if (pickSave.state === "saving") return;
     if (reviewIsSplit(current)) {
       if (!current.transaction_id) return;
       if (onShared) {

@@ -20,7 +20,7 @@ export function SkipSheet({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={SKIP_SHEET_TITLE} busy={busy} closeButton={false} panelClassName="ui-skip-sheet">
+    <Sheet open={open} onOpenChange={(next) => { if (!next) setFailed(false); onOpenChange(next); }} title={SKIP_SHEET_TITLE} busy={busy} closeButton={false} panelClassName="ui-skip-sheet">
       <p className="t-line2 ui-skip-body" role={failed ? "alert" : undefined}>{failed ? SAVE_ERROR : SKIP_SHEET_BODY}</p>
       <Button
         type="button"

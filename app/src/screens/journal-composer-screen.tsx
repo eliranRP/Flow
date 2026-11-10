@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { dayMonth, copySidePairs, composerHold, legNote, legsFromEntry, legsFromJournal, bookingPayload, composerRefusal, nextLeg, type ComposerAccount, type ComposerLeg, type JournalCopies, type JournalSuggestion, type SavedBooking } from "../line-composer";
 import { COMPOSER_KEYS, liveComposerApi, useComposerAccountsQuery, useJournalCopiesQuery, useJournalSuggestionQuery, type ComposerApi } from "../line-composer-api";
@@ -109,14 +109,13 @@ export function JournalComposer({
   const [state, setState] = useState<ComposerState>(initial);
   const [sheet, setSheet] = useState(initialSheet);
   const [target, setTarget] = useState<PickTarget>(null);
-  // The save is one machine: `saving` lasts until the page has left, so a second tap, or a retry from
-  // the toast, sends nothing while the reads are refreshed.
+  // The save is one machine: `saving` lasts until the page has left, so a second tap sends nothing while
+  // the reads are refreshed. `send` reads the machine's own state, so a toast's retry (which resends the
+  // entry that failed) is guarded too.
   const flow = useMachine(saveFlow, initialSaving ? "saving" : "idle");
   const saving = flow.state === "saving";
   const [error, setError] = useState<string | null>(initialError);
   const opener = useRef<HTMLElement | null>(null);
-  // The toast's retry runs the save of the render it was shown in; this points it at the latest one.
-  const retry = useRef<() => void>(() => undefined);
   const toast = useToast();
   const goBack = useGoBack();
   const invalidate = useInvalidateBooks();
@@ -140,8 +139,6 @@ export function JournalComposer({
     setLegs(state.legs.map((leg) => (leg.key === key ? { ...leg, ...change } : leg)));
   };
 
-  useEffect(() => { retry.current = () => { void save(); }; });
-
   async function save() {
     if (hold.kind !== "balanced") return;
     const legs = bookingPayload(line.bankAccountId, line.bankMinor, state.legs);
@@ -155,7 +152,7 @@ export function JournalComposer({
       flow.send("fail");
       const failure = caught instanceof Error ? caught : new Error(String(caught));
       if (isTransientWriteError(failure)) {
-        toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפקודה.", action: "ניסיון חוזר", onAction: () => { retry.current(); } });
+        toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפקודה.", action: "ניסיון חוזר", onAction: () => { void save(); } });
       } else {
         setError(composerRefusal(failure.message));
       }

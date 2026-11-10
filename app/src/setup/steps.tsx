@@ -190,7 +190,8 @@ export function StepBusiness({
     if (companyId == null) {
       sentName.current = name.trim();
       // A form that may not write (FLOW-506) sends nothing, so no save starts.
-      flow.send(form.holdWrites ? "clear" : "start");
+      if (form.holdWrites) flow.send("clear");
+      else if (!flow.send("start")) return;
       form.submit(event);
       return;
     }
