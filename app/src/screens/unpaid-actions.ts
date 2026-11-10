@@ -99,10 +99,18 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return;
     }
     if (blocked()) return;
-    mark.mutate({ id, paid, undoable });
+    sendOnce(mark.mutate, { id, paid, undoable });
   }
   const setPaidRef = useRef(setPaid);
   setPaidRef.current = setPaid;
+
+  // One write per invoice at a time: a second tap on it, before the row redraws, sends nothing (FLOW-1164).
+  const inFlight = useRef(new Set<string>());
+  function sendOnce<T extends { id: string }>(write: (vars: T, options: { onSettled: () => void }) => void, vars: T) {
+    if (inFlight.current.has(vars.id)) return;
+    inFlight.current.add(vars.id);
+    write(vars, { onSettled: () => { inFlight.current.delete(vars.id); } });
+  }
 
   // FLOW-367: "זה התשלום" links the invoice to the deposit (the row leaves the list); "לא זה" dismisses that one pairing.
   const link = useWrite<{ id: string; transaction: string }>({
@@ -176,7 +184,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return;
     }
     if (blocked()) return;
-    link.mutate({ id, transaction });
+    sendOnce(link.mutate, { id, transaction });
   }
 
   function dismissMatch(id: string) {
@@ -195,7 +203,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return;
     }
     if (blocked()) return;
-    dismiss.mutate({ id, transaction });
+    sendOnce(dismiss.mutate, { id, transaction });
   }
 
   function startSync() {
