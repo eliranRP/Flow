@@ -83,7 +83,7 @@ export const UTILITY_READ_SPECS = [
   spec("list_utility_payers", "A property's utilities (project_id; another company's is refused: project not found): found from its חשבונות lines or added by the owner. utilities[]: supplier_id, supplier_name, currency, payer (tenant: the tenant pays it back, the default; company: the company pays and its bills are never checked), added, found, usual_minor (the median of its last 3 bills, null with none), bill_count, last_bill_date, and category_id and category_name (the latest bill's). Any member reads it.", {
     project_id: { type: "string" },
   }, false),
-  spec("list_utility_months", `A property's utility bills by month (FLOW-1144; project_id, another company's is refused: project not found): the months, newest first, from its first tenant-paid utility bill or first rent line to the as-of month. ${AS_OF_TEXT}. months[]: month (YYYY-MM-01), rent_in (the sum of its rent lines: income under the rent category, as list_utility_refunds reads it), bills_paid (the sum of the tenant-paid utility bills dated in it), not_refunded (the part of those bills not refunded and not closed by the owner, waiting ones included), rent_lines[] (transaction_id, doc_date, amount_minor, currency, party, category_name) and bills[] (bill_transaction_id, doc_date, amount_minor, currency, supplier_name, category_name, state as list_utility_refunds gives it). Company-paid utilities are left out. Any member reads it.`, {
+  spec("list_utility_months", `A property's utility bills by month (FLOW-1144; project_id, another company's is refused: project not found): the months, newest first, from its first tenant-paid utility bill or first rent line to the as-of month. At most 600 months are listed (the as-of month and the 599 before it). An as-of date more than a year after today is refused (validation). ${AS_OF_TEXT}. months[]: month (YYYY-MM-01), rent_in (the sum of its rent lines: income under the rent category, as list_utility_refunds reads it), bills_paid (the sum of the tenant-paid utility bills dated in it), not_refunded (the part of those bills not refunded and not closed by the owner, waiting ones included), rent_lines[] (transaction_id, doc_date, amount_minor, currency, party, category_name) and bills[] (bill_transaction_id, doc_date, amount_minor, currency, supplier_name, category_name, state as list_utility_refunds gives it). Company-paid utilities are left out. Any member reads it.`, {
     project_id: { type: "string" },
     as_of: { type: "string" },
   }, false),
@@ -147,7 +147,11 @@ export async function utilityRead(
   if (name === "list_utility_months") {
     const months = monthsSchema.safeParse(args);
     if (!months.success) return fail("validation", "validation");
-    return readOf(await rpc("list_utility_months", { p_project: months.data.project_id, p_today: months.data.as_of ?? null }), "months");
+    const result = await rpc("list_utility_months", { p_project: months.data.project_id, p_today: months.data.as_of ?? null });
+    // FLOW-474: an as-of date more than a year ahead is the database's validation, not a refusal.
+    if (result.status >= 400 && typeof result.json === "object" && result.json !== null
+      && (result.json as Record<string, unknown>).message === "validation") return fail("validation", "validation");
+    return readOf(result, "months");
   }
   const parsed = payersSchema.safeParse(args);
   if (!parsed.success) return fail("validation", "validation");

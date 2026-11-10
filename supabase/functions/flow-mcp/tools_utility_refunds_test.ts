@@ -213,4 +213,6 @@ Deno.test("list_utility_months reads a property's months, checks its arguments, 
   assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT }, ["read"], other.rpc)), "refused");
   const malformed = rpcOf(() => ({ status: 200, json: { months: "nope" } }));
   assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT }, ["read"], malformed.rpc)), "refused");
+  const future = rpcOf(() => ({ status: 400, json: { message: "validation" } }));
+  assertEquals(codeOf(await callTool("list_utility_months", { project_id: PROJECT, as_of: "2099-01-01" }, ["read"], future.rpc)), "validation");
 });

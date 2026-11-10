@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(7);
+select plan(11);
 
 select tests.create_supabase_user('um_owner', 'um-owner@example.com');
 select tests.create_supabase_user('um_outsider', 'um-outsider@example.com');
@@ -84,6 +84,24 @@ select throws_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umi
 select tests.authenticate_as('um_owner');
 select is(jsonb_array_length(public.list_utility_months(pg_temp.umid('court'), '2026-06-30')->'months'), 4,
   'the owner reads their own property''s months');
+
+-- FLOW-474: the as-of date is at most a year after today, and at most 600 months are listed (the as-of month
+-- and the 599 before it).
+select throws_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umid('court'),
+    (current_date + interval '13 months')::date),
+  'P0001', 'validation', 'an as-of date more than a year ahead is refused');
+select lives_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umid('court'),
+    (current_date + interval '11 months')::date),
+  'an as-of date within the year ahead reads');
+reset role;
+insert into um (label, id) values ('bare', tests.fixture_project(pg_temp.umid('co'), 'Example Bare Lot'));
+select tests.fixture_line(pg_temp.umid('co'), 'um:rent-old', 200000, 'income',
+  pg_temp.umid('court'), pg_temp.umid('rent'), '1950-01-01');
+select tests.authenticate_as('um_owner');
+select is(public.list_utility_months(pg_temp.umid('bare'), '2026-06-30')->'months', '[]'::jsonb,
+  'a property with no bills or rent has no months');
+select is(jsonb_array_length(public.list_utility_months(pg_temp.umid('court'), '2026-06-30')->'months'), 600,
+  'at most 600 months are listed: the as-of month and the 599 before it');
 
 select * from finish();
 rollback;
