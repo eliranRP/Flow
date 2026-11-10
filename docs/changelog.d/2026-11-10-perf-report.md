@@ -1,0 +1,1 @@
+The 2026-11-10 daily perf report is in `docs/qa/perf/`. Home's first load had grown to 247.1 of 248 KB in a day; FLOW-1145 (#1112) took it back to 245.4 KB by loading the other screens' skeleton blocks in their own file.
