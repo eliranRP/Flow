@@ -9,9 +9,10 @@ import { useRecurringScheduleQuery, type ScheduleRow } from "../recurring-schedu
 import { useInvalidateBooks } from "../use-books";
 import { useHoldWrites } from "../use-is-viewer";
 import { BackButton } from "../ui/back";
-import { PageLoadFailed, useOnline } from "../ui/band-states";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { FocusTitle } from "../ui/focus-title";
 import { GroupHead } from "../ui/group-head";
+import { HintParts } from "../ui/hint-parts";
 import { List, ListRow } from "../ui/list-row";
 import { PlusIcon } from "../ui/icons";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -65,6 +66,8 @@ export function ProjectUtilitiesScreen() {
   // The head's "הכול הוחזר" is a claim: it waits for the bills, and says so when they did not load.
   const refundsPhase = screenPhase(preview, refunds);
   const back = `/projects/${projectId}${search}`;
+  // FLOW-1154: offline, the page keeps what it last read and says from when, as the refunds page does.
+  const since = !online && payers.data != null ? payers.dataUpdatedAt : undefined;
 
   const pick = (key: string, payer: Payer | null) => {
     setPicked((before) => {
@@ -145,6 +148,7 @@ export function ProjectUtilitiesScreen() {
           <>
             <FocusTitle className="t-name">חשבונות · מי משלם</FocusTitle>
             <p className="ui-band-label t-caption">{name}</p>
+            {since == null ? null : <BandOfflineLine since={since} />}
           </>
         )}
       />
@@ -183,8 +187,8 @@ export function ProjectUtilitiesScreen() {
                 return (
                   <li key={keyText(item)} className="ui-utl-row m-page-enter">
                     <span className="ui-utl-text">
-                      <span className="ui-utl-name" data-clip-ok="">{item.supplier_name}</span>
-                      <span className="ui-utl-meta">{payerMeta(item, payer)}</span>
+                      <span className="ui-utl-name"><bdi>{item.supplier_name}</bdi></span>
+                      <span className="ui-utl-meta"><HintParts text={payerMeta(item, payer)} /></span>
                     </span>
                     <div className="ui-utl-payer">
                       <SegmentedControl<Payer>

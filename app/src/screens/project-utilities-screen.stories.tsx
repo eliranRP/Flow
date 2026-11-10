@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import { expect, userEvent, within } from "storybook/test";
 import { ProjectUtilitiesScreen } from "./project-utilities-screen";
-import { GEFEN, storyUtilityClient, utilityPayersSample, utilityRefundsSample, utilityScheduleSample } from "./utility-refunds-sample";
+import { GEFEN, storyUtilityClient, useOfflineOnceRead, utilityPayersSample, utilityRefundsSample, utilityScheduleSample } from "./utility-refunds-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
-import { UtilityClientProvider, type UtilityBill, type UtilityPayer } from "../utility-refunds";
+import { UTILITY_PAYERS_KEY, UtilityClientProvider, type UtilityBill, type UtilityPayer } from "../utility-refunds";
 
 const meta = {
   title: "Screens/ProjectUtilities",
@@ -27,17 +27,24 @@ function SeedSchedule() {
   return null;
 }
 
+function GoOffline() {
+  useOfflineOnceRead(UTILITY_PAYERS_KEY);
+  return null;
+}
+
 /** The page at its route, reading through a stand-in for Flow's server (every change succeeds). */
-function UtilitiesStory({ query = "", utilities = utilityPayersSample(), bills = utilityRefundsSample(), viewer = false }: {
+function UtilitiesStory({ query = "", utilities = utilityPayersSample(), bills = utilityRefundsSample(), viewer = false, offline = false }: {
   query?: string;
   utilities?: UtilityPayer[];
   bills?: UtilityBill[];
   viewer?: boolean;
+  offline?: boolean;
 }) {
   return (
     <StoryRoute entry={`/projects/${GEFEN}/utilities${query}`} tabs viewer={viewer}>
       <UtilityClientProvider client={storyUtilityClient(bills, utilities)}>
         <SeedSchedule />
+        {offline ? <GoOffline /> : null}
         <ExampleBar />
         <Routes>
           <Route path="/projects/:projectId/utilities" element={<ProjectUtilitiesScreen />} />
@@ -69,7 +76,11 @@ export const ProjectUtilitiesEmpty: Story = {
   render: () => <UtilitiesStory utilities={[]} bills={[]} />,
 };
 
-/** Long names end in an ellipsis; the category and the usual amount wrap and are never cut; the switch keeps its size. */
+/**
+ * FLOW-1152: a long name wraps to two lines in its own direction, so at 320 each reads whole ("Power Co Regional
+ * Utilities Authority"); below 374 the switch moves under the text when the name has no room. The category and the
+ * usual amount wrap and are never cut; the switch keeps its size.
+ */
 export const ProjectUtilitiesLong: Story = {
   name: "ProjectUtilities, long content",
   render: () => (
@@ -82,6 +93,15 @@ export const ProjectUtilitiesLong: Story = {
       }))}
     />
   ),
+};
+
+/** FLOW-1154: offline, the band says from when the payers are shown. */
+export const ProjectUtilitiesOffline: Story = {
+  name: "ProjectUtilities, offline",
+  render: () => <UtilitiesStory offline />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText(/אין חיבור · מוצג המצב/)).toBeInTheDocument();
+  },
 };
 
 export const ProjectUtilitiesLoading: Story = {

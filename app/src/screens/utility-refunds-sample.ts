@@ -1,6 +1,28 @@
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import type { RpcClient } from "../recurring-actions";
 import type { ScheduleRow } from "../recurring-schedule";
 import type { UtilityBill, UtilityMonth, UtilityPayer, UtilityPayment } from "../utility-refunds";
+
+/**
+ * FLOW-1154: a story's page goes offline once its read (the query key's first part) has data, so it shows that data
+ * with the offline line and the moment it is from. The network comes back when the story leaves.
+ */
+export function useOfflineOnceRead(key: string): void {
+  const client = useQueryClient();
+  useEffect(() => {
+    const cache = client.getQueryCache();
+    const check = () => {
+      if (cache.findAll({ queryKey: [key] }).some((query) => query.state.data != null)) onlineManager.setOnline(false);
+    };
+    check();
+    const stop = cache.subscribe(check);
+    return () => {
+      stop();
+      onlineManager.setOnline(true);
+    };
+  }, [client, key]);
+}
 
 /**
  * FLOW-1135: the V3-UtilityRefunds board's sample, for the stories and the tests. Invented properties, suppliers,

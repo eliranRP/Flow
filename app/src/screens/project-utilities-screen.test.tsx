@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager, QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectAttentionRows } from "./project-attention";
@@ -77,6 +77,8 @@ function renderScreen() {
 }
 
 const payerCalls = () => db.rpcs.filter((call) => call.name === "set_utility_payer").map((call) => call.args);
+/** A utility's line under its name (FLOW-1153: whole parts, so its text spans the parts). */
+const meta = (text: string) => (_: string, element: Element | null) => element?.className === "ui-utl-meta" && element.textContent === text;
 
 describe("the property page's row", () => {
   it("adds Home's row for the property's bills, opening the list on the property", () => {
@@ -92,12 +94,32 @@ describe("the property page's row", () => {
 describe("ProjectUtilitiesScreen", () => {
   it("lists each utility with its usual amount, and links the bills not refunded", async () => {
     renderScreen();
-    expect(await screen.findByText("חשמל ומים · בדרך כלל $120")).toBeTruthy();
-    expect(screen.getByText("גז · בדרך כלל $45")).toBeTruthy();
-    expect(screen.getByText("אינטרנט · נוסף ידנית · לא נבדק")).toBeTruthy();
+    expect(await screen.findByText(meta("חשמל ומים · בדרך כלל $120"))).toBeTruthy();
+    expect(screen.getByText(meta("גז · בדרך כלל $45"))).toBeTruthy();
+    expect(screen.getByText(meta("אינטרנט · נוסף ידנית · לא נבדק"))).toBeTruthy();
     expect(screen.getByRole("link", { name: "2 לא הוחזרו" }).getAttribute("href")).toBe(`/utility-refunds?project=${GEFEN}`);
     const net = screen.getByRole("radiogroup", { name: "מי משלם: Net Co" });
     expect(within(net).getByRole("radio", { name: "חברה" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("draws a supplier's name in its own direction, wrapping and never marked as a designed cut (FLOW-1152)", async () => {
+    renderScreen();
+    const name = await screen.findByText("Power Co");
+    expect(name.tagName).toBe("BDI");
+    expect(name.parentElement?.className).toBe("ui-utl-name");
+    expect(name.parentElement?.hasAttribute("data-clip-ok")).toBe(false);
+  });
+
+  it("offline, says from when the payers are shown (FLOW-1154)", async () => {
+    renderScreen();
+    await screen.findByText("Power Co");
+    expect(screen.queryByText(/אין חיבור/)).toBeNull();
+    act(() => { onlineManager.setOnline(false); });
+    try {
+      expect((await screen.findByText(/אין חיבור/)).closest(".ui-band-offline")?.textContent).toMatch(/^אין חיבור · מוצג המצב מ־\d\d:\d\d$/);
+    } finally {
+      act(() => { onlineManager.setOnline(true); });
+    }
   });
 
   it("חברה makes the utility company-paid and closes its bills; ביטול puts the tenant back", async () => {
@@ -168,7 +190,7 @@ describe("ProjectUtilitiesScreen", () => {
   it("gives a viewer no changes", async () => {
     db.hold = true;
     renderScreen();
-    await screen.findByText("חשמל ומים · בדרך כלל $120");
+    await screen.findByText(meta("חשמל ומים · בדרך כלל $120"));
     expect(screen.queryByRole("button", { name: /הוספת ספק/ })).toBeNull();
     expect(within(screen.getByRole("radiogroup", { name: "מי משלם: Power Co" })).getByRole("radio", { name: "חברה" })).toHaveProperty("disabled", true);
   });
