@@ -80,13 +80,14 @@ export function watchServiceWorker(win: Win = window, now: () => number = Date.n
 
   const tryReload = () => {
     if (!pending || busy(win.document)) return;
-    pending = false;
     try {
+      // Too soon after the last reload: held for the next safe moment after the window, not dropped.
       if (now() - Number(win.sessionStorage.getItem(RELOADED_KEY)) < LOOP_MS) return;
       win.sessionStorage.setItem(RELOADED_KEY, String(now()));
     } catch {
       // No storage (a private window): this page still reloads only once, since `pending` clears.
     }
+    pending = false;
     win.location.reload();
   };
 
