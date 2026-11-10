@@ -99,17 +99,21 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return;
     }
     if (blocked()) return;
-    sendOnce(mark.mutate, { id, paid, undoable });
+    sendOnce(mark, `mark:${id}:${String(paid)}`, { id, paid, undoable });
   }
   const setPaidRef = useRef(setPaid);
   setPaidRef.current = setPaid;
 
-  // One write per invoice at a time: a second tap on it, before the row redraws, sends nothing (FLOW-1164).
+  // One write per action at a time: a second tap on the same mark, link or dismissal, before the row
+  // redraws, sends nothing (FLOW-1164). The key names the action, so its ביטול (the opposite mark) is
+  // never held back by it. The key is freed by the write's own promise: a per-call callback runs only
+  // for the latest of several calls, which would leave an earlier invoice's key held for good.
   const inFlight = useRef(new Set<string>());
-  function sendOnce<T extends { id: string }>(write: (vars: T, options: { onSettled: () => void }) => void, vars: T) {
-    if (inFlight.current.has(vars.id)) return;
-    inFlight.current.add(vars.id);
-    write(vars, { onSettled: () => { inFlight.current.delete(vars.id); } });
+  function sendOnce<T>(write: { mutateAsync: (vars: T) => Promise<unknown> }, key: string, vars: T) {
+    if (inFlight.current.has(key)) return;
+    inFlight.current.add(key);
+    const free = () => { inFlight.current.delete(key); };
+    void write.mutateAsync(vars).then(free, free);
   }
 
   // FLOW-367: "זה התשלום" links the invoice to the deposit (the row leaves the list); "לא זה" dismisses that one pairing.
@@ -184,7 +188,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return;
     }
     if (blocked()) return;
-    sendOnce(link.mutate, { id, transaction });
+    sendOnce(link, `link:${id}:${transaction}`, { id, transaction });
   }
 
   function dismissMatch(id: string) {
@@ -203,7 +207,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return;
     }
     if (blocked()) return;
-    sendOnce(dismiss.mutate, { id, transaction });
+    sendOnce(dismiss, `dismiss:${id}:${transaction}`, { id, transaction });
   }
 
   function startSync() {
