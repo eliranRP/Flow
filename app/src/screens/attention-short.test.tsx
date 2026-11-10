@@ -72,7 +72,7 @@ describe("loansAttention's short titles", () => {
       ["לבדיקה", "2 תשלומים"],
       ["לבדיקה", "תשלום אחד"],
       ["גישור", "היום"],
-      ["הלוואת ציוד", "בעוד 8 ימים"],
+      ["הלוואת ציוד", "8 ימים"],
     ]);
     // The full title is still the card's name.
     expect(cards[0]?.title).toBe("2 תשלומים ממתינים לבדיקה · משכנתא אלון");
