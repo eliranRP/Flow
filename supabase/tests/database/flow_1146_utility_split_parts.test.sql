@@ -45,10 +45,12 @@ select tests.line_split(pg_temp.usid('rent1'), jsonb_build_array(
   jsonb_build_object('category_id', pg_temp.usid('rent'), 'project_id', null, 'amount_minor', 170000, 'gross_up', false),
   jsonb_build_object('category_id', pg_temp.usid('water'), 'project_id', null, 'amount_minor', 13660, 'gross_up', false)));
 
-select tests.authenticate_as('us_owner');
-
+-- The private rows, read as the test's owner role (members reach them only through the public reads).
 create temp table us_rows as
   select * from private.utility_refund_rows(pg_temp.usid('co'), '2026-11-10');
+grant select on us_rows to authenticated;
+
+select tests.authenticate_as('us_owner');
 
 select is((select state || ':' || source || ':' || rule from us_rows where bill_id = pg_temp.usid('w1')), 'refunded:auto:1',
   'the water part of a split rent line refunds the water bill, by itself');
