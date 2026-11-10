@@ -192,6 +192,8 @@ export function utilityMonthCurrency(month: UtilityMonth, fallback: string): str
 export function utilityMonthStatus(month: UtilityMonth, currency: string): { ok: boolean; text: string } {
   if (month.rent_lines.length === 0 && month.rent_in === 0n) return { ok: false, text: "לא נכנסה שכירות" };
   if (month.not_refunded > 0n) return { ok: false, text: `חסר ${formatAmountText(month.not_refunded, currency, { detail: true })}` };
+  // The owner, 2026-11-10: a month with no tenant-paid bill has nothing to refund, so it does not read "הוחזרו".
+  if (month.bills.length === 0) return { ok: true, text: "לא שולמו חשבונות" };
   if (month.bills.some((bill) => bill.state === "seen")) return { ok: true, text: "כל החשבונות נבדקו" };
   return { ok: true, text: "כל החשבונות הוחזרו" };
 }

@@ -84,6 +84,9 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
           </section>
           <section className="ui-utm-group" aria-labelledby="utm-bills">
             <GroupHead id="utm-bills" title="חשבונות ששולמו" summary={<bdi dir="ltr">{money(current.bills_paid, cur)}</bdi>} />
+            {current.bills.length === 0 ? (
+              <p className="ui-utm-none">לא שולמו חשבונות החודש</p>
+            ) : (
             <List>
               {current.bills.map((bill) => {
                 const back = bill.state === "refunded";
@@ -106,6 +109,7 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
                 );
               })}
             </List>
+            )}
           </section>
         </>
       )}
