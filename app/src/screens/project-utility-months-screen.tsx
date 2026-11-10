@@ -71,7 +71,7 @@ function MonthSheet({ month, currency, search, onOpenChange }: { month: UtilityM
                     variant="project"
                     layout="flat"
                     title={line.party ?? "שכירות"}
-                    // FLOW-1146: a split line reads its parts ("הכנסות שכירות $1,700.00 · מים וביוב $136.60").
+                    // FLOW-1146: a split line reads its parts ("הכנסות שכירות $1,750 · מים וביוב $86.60").
                     hint={line.parts.length === 0
                       ? [line.category_name, refundDate(line.doc_date)].filter((part): part is string => part != null).join(" · ")
                       : (

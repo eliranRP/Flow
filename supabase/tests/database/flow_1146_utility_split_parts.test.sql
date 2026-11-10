@@ -1,5 +1,5 @@
--- FLOW-1146: a split payment counts by its parts. A rent line of 1,836.60 split into 1,700 rent and 136.60 water
--- refunds the 136.60 water bill (its exact amount, its category, its project); the line's whole amount does not
+-- FLOW-1146: a split payment counts by its parts. A rent line of 1,598.50 split into 1,500 rent and 98.50 water
+-- refunds the 98.50 water bill (its exact amount, its category, its project); the line's whole amount does not
 -- match. list_utility_months shows the line's parts. Invented names, ids and @example.com emails only.
 
 begin;
@@ -31,10 +31,10 @@ insert into us (label, id) select v.label, m.id from made m join us_suppliers v 
 -- label, direction, category, supplier, date, amount. As of 2026-11-10.
 create temp table us_lines (label text, direction text, category text, supplier text, doc_date date, amount bigint);
 insert into us_lines values
-  ('w1', 'expense', 'water', 'waterco', '2026-11-04', 13660),   -- refunded by the water part of rent1
-  ('e1', 'expense', 'power', 'lightco', '2026-11-04', 10318),   -- nothing pays it: waiting
-  ('rent1', 'income', 'rent', null, '2026-11-06', 183660),       -- split: 170000 rent + 13660 water
-  ('w2', 'expense', 'water', 'waterco', '2026-10-04', 183660);   -- the split line's whole amount does not match it
+  ('w1', 'expense', 'water', 'waterco', '2026-11-04', 9850),   -- refunded by the water part of rent1
+  ('e1', 'expense', 'power', 'lightco', '2026-11-04', 7700),   -- nothing pays it: waiting
+  ('rent1', 'income', 'rent', null, '2026-11-06', 159850),       -- split: 150000 rent + 9850 water
+  ('w2', 'expense', 'water', 'waterco', '2026-10-04', 159850);   -- the split line's whole amount does not match it
 insert into us (label, id)
 select l.label, tests.fixture_line(pg_temp.usid('co'), 'us:' || l.label, l.amount, l.direction,
   pg_temp.usid('house'), pg_temp.usid(l.category), l.doc_date)
@@ -42,8 +42,8 @@ from us_lines l;
 update public.transactions t set supplier_id = pg_temp.usid(l.supplier)
 from us_lines l where t.id = pg_temp.usid(l.label) and l.supplier is not null;
 select tests.line_split(pg_temp.usid('rent1'), jsonb_build_array(
-  jsonb_build_object('category_id', pg_temp.usid('rent'), 'project_id', null, 'amount_minor', 170000, 'gross_up', false),
-  jsonb_build_object('category_id', pg_temp.usid('water'), 'project_id', null, 'amount_minor', 13660, 'gross_up', false)));
+  jsonb_build_object('category_id', pg_temp.usid('rent'), 'project_id', null, 'amount_minor', 150000, 'gross_up', false),
+  jsonb_build_object('category_id', pg_temp.usid('water'), 'project_id', null, 'amount_minor', 9850, 'gross_up', false)));
 
 -- The private rows, read as the test's owner role (members reach them only through the public reads).
 create temp table us_rows as
@@ -69,12 +69,12 @@ create temp table us_months as select public.list_utility_months(pg_temp.usid('h
 select is(
   (select l->'parts' from us_months, jsonb_array_elements(r->'months') m, jsonb_array_elements(m->'rent_lines') l
    where m->>'month' = '2026-11-01'),
-  '[{"category_name": "הכנסות שכירות", "amount_minor": 170000}, {"category_name": "מים וביוב", "amount_minor": 13660}]'::jsonb,
+  '[{"category_name": "הכנסות שכירות", "amount_minor": 150000}, {"category_name": "מים וביוב", "amount_minor": 9850}]'::jsonb,
   'the month''s rent line carries its parts, in order');
 select is(
   (select (m->>'rent_in') || ':' || (m->>'not_refunded') from us_months, jsonb_array_elements(r->'months') m
    where m->>'month' = '2026-11-01'),
-  '183660:10318', 'the rent in is the whole line; only the power bill is not refunded yet');
+  '159850:7700', 'the rent in is the whole line; only the power bill is not refunded yet');
 
 select * from finish();
 rollback;

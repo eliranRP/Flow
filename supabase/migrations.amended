@@ -1,0 +1,3 @@
+# An applied migration whose comments were scrubbed: "<file> <old sha256> <new sha256>". Its statements are unchanged.
+# FLOW-1146: the comment named a real property and its amounts (the deny-list check, 2026-11-10).
+20261109204600_utility_split_parts.sql 7ca32725d09ddf06e59bbbafd17fe9c5323e77e2453d96948b390bf0882c9061 80f02cdd997ba2ad100840e00499c2ff5dc8711882b128ed936a53f890b620a3

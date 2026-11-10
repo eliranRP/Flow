@@ -1,5 +1,5 @@
--- FLOW-1146 (the owner's note of 2026-11-10, decision 0265): a split payment counts by its parts. Hayson's
--- November rent came in as one line of $1,836.60, split in the books into $1,700 rent and $136.60 water; the
+-- FLOW-1146 (the owner's note of 2026-11-10, decision 0265): a split payment counts by its parts. A property's
+-- rent came in as one line, split in the books into the rent and the water bill the tenant paid with it; the
 -- water bill stayed "not refunded" because the matching read only a line's whole amount and category. Now a
 -- line with parts meets the bills by each part (its amount, its category, its project or the line's), and an
 -- unsplit line by its whole, as before: still exact matches only. list_utility_months' rent lines carry their
