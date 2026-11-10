@@ -93,6 +93,8 @@ const monthSchema = z.object({
     currency: z.string(),
     party: text,
     category_name: text,
+    // FLOW-1146: a split line's parts (the rent and the bill the tenant paid with it), in order.
+    parts: z.array(z.object({ category_name: text, amount_minor: minorSchema })).optional().default([]),
   })).optional().default([]),
   bills: z.array(z.object({
     bill_transaction_id: z.string(),
