@@ -1,3 +1,4 @@
+import "./ui/lazy.css";
 import type { ColdOpenRoute } from "./cold-open-route";
 import { FormSkeleton, GroupedSkeleton } from "./ui/loading-shapes";
 import { DetailSkeleton, LinesSkeleton, LoansSkeleton, ProfitSkeleton, ProjectsSkeleton, RecurringSkeleton } from "./ui/screen-skeletons";
