@@ -272,14 +272,15 @@ export async function tagWork(
         usage.tagged += 1;
         if (wrote) report.prefilled += 1;
       } catch {
+        report.failed += 1;
+        usage.failed += 1;
         try {
           await store.deleteSuggestion(expense.id, JEV_MODEL);
         } catch {
-          // The row stays. The next run will see the conflict and skip it.
+          // The suggestion stays, so the line is already tagged. No failure row goes beside it.
+          continue;
         }
         await markFailed(expense);
-        report.failed += 1;
-        usage.failed += 1;
       }
     }
   }
