@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { grownIds, resetTxnListMore, useTxnListMore, type TxnMoreLoad } from "./txn-list-more";
+import { grownIds, resetTxnListMore, useTxnListMore, useTxnListMoreFor, type TxnListMore, type TxnMoreLoad } from "./txn-list-more";
 import { TxnStepNav, usePrefetchNextPage, useTxnNav } from "./txn-step-nav";
 
 function Card({ prefetch }: { prefetch: boolean }) {
@@ -132,5 +132,32 @@ describe("list ids", () => {
     const ids = ["a", "b"];
     expect(grownIds(ids, [])).toBe(ids);
     expect(grownIds(ids, ["b", "c"])).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("a list that registers again while the card loads (FLOW-1167)", () => {
+  it("keeps the read in flight and lands its rows on the entry the card reads", async () => {
+    const page = deferred<{ ids: readonly string[]; more: boolean } | null>();
+    const load = vi.fn(() => page.promise);
+    const seen: { current: TxnListMore | null } = { current: null };
+    function Reader() {
+      seen.current = useTxnListMoreFor("/list", ["a", "b"]);
+      return null;
+    }
+    const view = render(<><List more load={load} /><Reader /></>);
+    let first: Promise<void> | undefined;
+    act(() => { first = seen.current?.loadMore(); });
+    expect(load).toHaveBeenCalledTimes(1);
+    // The list's own query refetched and registered again with the same loader.
+    view.rerender(<><List more={false} load={load} /><Reader /></>);
+    expect(seen.current?.loading).toBe(true);
+    act(() => { void seen.current?.loadMore(); });
+    expect(load).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      page.resolve({ ids: ["a", "b", "c", "d"], more: false });
+      await first;
+    });
+    expect(seen.current?.extra).toEqual(["c", "d"]);
+    expect(seen.current?.loading).toBe(false);
   });
 });
