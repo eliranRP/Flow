@@ -87,9 +87,10 @@ export function loansAttention(rows: readonly LoanListRow[], today: string, loan
       id: `soon:${row.id}`,
       to: loanHref(row.id),
       title: `תשלום ${row.name} ${when} · ${money(row.next.amountMinor, row.currency)}`,
-      // Under 360px the loan and when; the amount is on its page.
+      // Under 360px the loan and when ("10 ימים", not "בעוד 10 ימים", so a loan's name fits beside it at 320);
+      // the amount is on its page.
       short: row.name,
-      tag: when,
+      tag: days > 1 ? `${String(days)} ימים` : when,
       icon: <CalendarIcon size={20} />,
       dismissKey: `soon:${row.next.dueDate}`,
     }];
