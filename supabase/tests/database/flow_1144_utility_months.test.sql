@@ -92,7 +92,7 @@ select throws_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umi
 select lives_ok(format('select public.list_utility_months(%L, %L)', pg_temp.umid('court'),
     (current_date + interval '11 months')::date),
   'an as-of date within the year ahead reads');
-select tests.clear_authentication();
+reset role;
 insert into um (label, id) values ('bare', tests.fixture_project(pg_temp.umid('co'), 'Example Bare Lot'));
 select tests.fixture_line(pg_temp.umid('co'), 'um:rent-old', 200000, 'income',
   pg_temp.umid('court'), pg_temp.umid('rent'), '1950-01-01');
