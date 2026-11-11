@@ -701,6 +701,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-847"></a>[FLOW-847](tasks/FLOW-847.md) | The security checklist says the CSP is enforced | SMALL CYCLE (docs) |
 | <a id="flow-848"></a>[FLOW-848](tasks/FLOW-848.md) | The offline shell keeps only HTML pages | SMALL CYCLE (infra) |
 | <a id="flow-849"></a>[FLOW-849](tasks/FLOW-849.md) | Red-team research step and new hunt patterns | SMALL CYCLE (docs) |
+| <a id="flow-850"></a>[FLOW-850](tasks/FLOW-850.md) | The support address is flowusappsupport@gmail.com | SMALL CYCLE |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
