@@ -120,7 +120,7 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** for each allow/deny check, feed it a value of the wrong type and check that it fails closed.
 
 ### P19. A decision that outlives its revocation
-- **Seen in:** sessions and tokens that stay valid after a password reset or a role removal, (OWASP ASVS V3.3, session termination).
+- **Seen in:** sessions and tokens that stay valid after a password reset or a role removal (OWASP ASVS V3.3, session termination).
 - **Pattern:** access is decided once, cached or signed, and nothing re-checks it when the grant is withdrawn.
 - **In Flow:** MCP tokens, invite links, membership-derived helpers, push subscriptions.
 - **Hunt:** revoke mid-flow in a local test (remove the member, revoke the token) and check what the next step still allows, and for how long.
