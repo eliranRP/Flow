@@ -33,6 +33,7 @@ import { bytesPrefix, decodeKek, openApiKey, type Envelope } from "../_shared/en
 import { empty, json } from "../_shared/http.ts";
 import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
 import { runWithClaim } from "../_shared/cron_claim.ts";
+import { refreshSettle, settleRefresh, type RefreshSettle } from "../_shared/refresh_queue.ts";
 import { edgeDefer, kickJev, syncAddedLines } from "../_shared/jev_kick.ts";
 import { confirmStored, loadStored, storedExternalIds } from "./stored.ts";
 import { THREAD_BUCKET, syncMercuryThreadsFor } from "./threads.ts";
@@ -102,22 +103,36 @@ Deno.serve(async (req) => {
       const due = await admin.rpc("claim_connector_refreshes", { p_limit: 20, p_provider: "mercury" });
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
       const results = [];
-      for (const row of (due.data ?? []) as Array<{ id: number; company_id: string; provider: string }>) {
+      // `forced` is missing until the FLOW-1163 migration is pushed: then every request is unforced.
+      for (const row of (due.data ?? []) as Array<{ id: number; company_id: string; provider: string; forced?: boolean }>) {
         if (row.provider !== "mercury") continue;
+        // The request's moves (refresh_queue.ts): a run that threw goes back to the queue; one that
+        // synced, or skipped inside the quiet gap or with no accounts chosen, finishes it.
+        const settle = (move: RefreshSettle) => settleRefresh(
+          (args) => admin.rpc("settle_connector_refresh", args),
+          {
+            requeue: () => admin.from("connector_refresh_requests").update({ claimed_at: null }).eq("id", row.id),
+            finish: () => admin.from("connector_refresh_requests").delete().eq("id", row.id),
+          },
+          row.id,
+          move,
+        );
         try {
           // claim_connector_refreshes took the connection claim; an early skip or throw
           // inside syncCompany returns before its own release (FLOW-510). note_connector_failure
           // and upsert_connector_lines clear the claim mid-run, and a manual run can take it
           // then, so only a claim stamped before this run started is released.
           const startedAt = new Date().toISOString();
-          results.push(await runWithClaim(
-            () => syncCompany(admin, row.company_id, decodeKek(kekSecret), false, true),
+          const result = await runWithClaim(
+            () => syncCompany(admin, row.company_id, decodeKek(kekSecret), row.forced === true, true),
             () => admin.from("connector_connections").update({ sync_claimed_at: null })
               .eq("company_id", row.company_id).eq("provider", "mercury")
               .lte("sync_claimed_at", startedAt),
-          ));
+          );
+          results.push(result);
+          await settle(refreshSettle(result));
         } catch (error) {
-          await admin.from("connector_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
+          await settle(refreshSettle("threw"));
           logFailure("mercury-sync cron", error, "");
         }
       }
@@ -521,11 +536,13 @@ async function noteFailure(admin: Admin, companyId: string, slot: number, code: 
     legacy,
   );
   if (noted.error) {
+    // An auth stop stays until a reconnect, as note_connector_failure keeps it (FLOW-1163).
     const query = admin
       .from("connector_connections")
       .update({ last_error: code })
       .eq("company_id", companyId)
-      .eq("provider", "mercury");
+      .eq("provider", "mercury")
+      .or("last_error.is.null,last_error.neq.auth");
     await (legacy ? query : query.eq("slot", slot));
   }
 }

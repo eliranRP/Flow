@@ -1744,11 +1744,11 @@ isOneToOne: false
                            },
 "claim_connector_refreshes":
 { Args: { "p_limit": number }; Returns: {
-              "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
+              "company_id": string,"forced": boolean,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
                            } |
 { Args: { "p_limit": number,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: {
-              "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
+              "company_id": string,"forced": boolean,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
                            },
 "claim_invite_email":
@@ -1978,7 +1978,7 @@ isOneToOne: false
                            },
 "list_due_refresh_requests":
 { Args: { "p_limit": number }; Returns: {
-              "company_id": string,"id": number
+              "company_id": string,"forced": boolean,"id": number
             }[]
                            },
 "list_jev_bookings":
@@ -2691,6 +2691,9 @@ isOneToOne: false
                            },
 "set_utility_payer":
 { Args: { "p_added"?: boolean,"p_currency": string,"p_payer": string,"p_project_id": string,"p_supplier_id": string }; Returns: Json
+                           },
+"settle_connector_refresh":
+{ Args: { "p_id": number,"p_requeue": boolean }; Returns: string
                            },
 "stamp_connector_sync":
 { Args: { "p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: undefined

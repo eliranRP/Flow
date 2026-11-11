@@ -18,6 +18,7 @@ import {
 } from "../_shared/ledger.ts";
 import { companyHint, ownedCompany } from "../_shared/owner.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
+import { refreshSettle, settleRefresh, type RefreshSettle } from "../_shared/refresh_queue.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -55,7 +56,8 @@ Deno.serve(async (req) => {
       const due = await admin.rpc("list_due_refresh_requests", { p_limit: 20 });
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
       const results = [];
-      for (const row of (due.data ?? []) as Array<{ id: number; company_id: string }>) {
+      // `forced` is missing until the FLOW-1163 migration is pushed: then every request is unforced.
+      for (const row of (due.data ?? []) as Array<{ id: number; company_id: string; forced?: boolean }>) {
         const claim = await admin
           .from("sumit_refresh_requests")
           .update({ claimed_at: new Date().toISOString() })
@@ -63,17 +65,27 @@ Deno.serve(async (req) => {
           .is("claimed_at", null)
           .select("id");
         if (claim.error || claim.data == null || claim.data.length === 0) continue;
+        // The request's moves (refresh_queue.ts): a run that threw, or found a manual run holding
+        // the connection, goes back to the queue; one that synced, or skipped inside the quiet gap,
+        // finishes it.
+        const settle = (move: RefreshSettle) => settleRefresh(
+          (args) => admin.rpc("settle_connector_refresh", args),
+          {
+            requeue: () => admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id),
+            finish: () => admin.from("sumit_refresh_requests").delete().eq("id", row.id),
+          },
+          row.id,
+          move,
+        );
         try {
-          // The cron path claims the connection too, so it never overlaps a manual run
-          // (FLOW-510). When a manual run holds it, the request goes back to the queue.
-          const synced = await syncCompany(admin, row.company_id, decodeKek(kekSecret), false, true);
-          if (synced.busy === true) {
-            await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
-            continue;
-          }
+          // The cron path claims the connection too, so it never overlaps a manual run (FLOW-510).
+          const synced = await syncCompany(admin, row.company_id, decodeKek(kekSecret), row.forced === true, true);
+          const move = refreshSettle(synced);
+          await settle(move);
+          if (move === "requeue") continue;
           results.push(synced);
         } catch (error) {
-          await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
+          await settle(refreshSettle("threw"));
           const message = error instanceof Error ? error.message : "sync failed";
           if (message !== "sumit_rejected" && message !== "sumit_auth") {
             const code = message === "sync_page_cap" || message === "sync_schema_drift" ? message : "sync_failed";
