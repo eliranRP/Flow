@@ -116,6 +116,21 @@ describe("Mercury page: states (FLOW-918, FLOW-938)", () => {
     expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
   });
 
+  it("shows the page-cap warning on the affected connection only, with the refresh still there (FLOW-1162)", async () => {
+    const second = mercuryStatus({ connected: true, slot: 2, org_label: "Cedar Lane Holdings LLC", account_labels: [{ id: "acct-hold", label: "Ops", kind: "checking" }], sync_account_ids: ["acct-hold"] });
+    serveWith([{ ...CONNECTED, last_error: "sync_page_cap" }, second]);
+    renderPage("mercury");
+    const capped = await screen.findByRole("link", { name: /Cedar Lane Homes LLC/ });
+    expect(within(capped).getByText("יש יותר מדי שורות לרענון אחד. פנו לתמיכה.")).toBeInTheDocument();
+    expect(capped).toHaveClass("ui-row-tone-warning");
+    expect(screen.getByRole("link", { name: /Cedar Lane Holdings LLC/ })).not.toHaveClass("ui-row-tone-warning");
+    expect(screen.queryByText(/Mercury הפסיק לקבל את המפתח/)).not.toBeInTheDocument();
+    fireEvent.click(capped);
+    expect(await screen.findByText("יש יותר מדי שורות לרענון אחד. פנו לתמיכה.")).toHaveClass("ui-connection-problem");
+    expect(screen.getByRole("button", { name: "רענון עכשיו" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "חיבור מחדש" })).not.toBeInTheDocument();
+  });
+
   it("shows a viewer a static page: the facts and the accounts, nothing to change", async () => {
     serveWith(CONNECTED);
     renderPage("mercury", { wrap: (page) => <ViewerPreview>{page}</ViewerPreview> });

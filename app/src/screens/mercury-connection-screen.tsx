@@ -10,7 +10,7 @@ import { rereadJevAfterSync } from "../jev-after-sync";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
 import { accountName, connectionName } from "../mercury-connections";
-import { MERCURY_NONE, type MercuryAccount, type MercuryConnection } from "../mercury-state";
+import { MERCURY_NONE, mercuryProblem, type MercuryAccount, type MercuryConnection } from "../mercury-state";
 import { israelSyncPhrase } from "../sumit-copy";
 import { useRefreshingNow } from "../israel-clock";
 import { useWrite } from "../use-write";
@@ -196,6 +196,8 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
 
   const viewerOnly = holdOwner;
   const keyOk = key.trim().length >= MIN_KEY;
+  // FLOW-1162: a connection that hit the page cap says so from its first capped run; its refresh stays.
+  const pageCap = target != null && mercuryProblem(target) === "page_cap" ? hebrewMercuryError("sync_page_cap") : null;
   const busyKey = connect.isPending || disconnect.connecting;
 
   /** A sample keeps a save in memory; live writes go to the server. */
@@ -298,8 +300,8 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
               icon={<BankIcon size={24} />}
               title={connectionName(connection)}
               ltrTitle
-              hint={connectionSub(connection, now)}
-              tone={connection.keyWorks ? undefined : "warning"}
+              hint={mercuryProblem(connection) === "page_cap" ? hebrewMercuryError("sync_page_cap") : connectionSub(connection, now)}
+              tone={mercuryProblem(connection) == null ? undefined : "warning"}
               chevron
             />
           ))}
@@ -343,7 +345,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
 
   return (
     <ViewerScope>
-      <ConnectionPage title={TITLE} subtitle={SUBTITLE} backTo={backTo} problem={problem}>
+      <ConnectionPage title={TITLE} subtitle={SUBTITLE} backTo={backTo} problem={problem ?? pageCap ?? undefined}>
         <ViewerNote />
         {body}
       </ConnectionPage>
