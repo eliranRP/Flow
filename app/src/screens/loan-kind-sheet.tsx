@@ -100,7 +100,7 @@ export function LoanKindSheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next && busy) return;
+        if (!next && busy) return false;
         onOpenChange(next);
       }}
       title="סוג ההלוואה"

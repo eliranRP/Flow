@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { invokeEdge, resetBackend } from "../screens/connection-page-test-backend";
 import { renderWithProviders } from "../test-render";
+import { CONNECT_NO_BANK } from "./copy";
 import { StepConnect } from "./steps";
 
 vi.mock("../lib/supabase", async () => (await import("../screens/connection-page-test-backend")).supabaseModule());
@@ -13,11 +14,12 @@ const KEY = "sample-key-123";
 
 function renderStep() {
   const onDone = vi.fn();
+  const onSkipStep = vi.fn();
   renderWithProviders(
-    <StepConnect mercuryConnected={false} sumitConnected={false} onDone={onDone} onStamp={() => undefined} onSkipStep={() => undefined} onSkipAll={() => undefined} onBack={() => undefined} />,
+    <StepConnect mercuryConnected={false} sumitConnected={false} onDone={onDone} onStamp={() => undefined} onSkipStep={onSkipStep} onSkipAll={() => undefined} onBack={() => undefined} />,
     { route: "/setup/2" },
   );
-  return { onDone };
+  return { onDone, onSkipStep };
 }
 
 async function openSheet(name: "SUMIT" | "Mercury") {
@@ -42,6 +44,13 @@ describe("setup step 2 connects through the shared hooks (FLOW-918)", () => {
     expect(invokeEdge).toHaveBeenCalledOnce();
     expect(invokeEdge.mock.calls[0]?.[1]).toEqual({ companyId: 1234567, apiKey: KEY, importFrom: undefined });
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "חיבור SUMIT" })).not.toBeInTheDocument(); });
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("continues without a bank as a skipped step, not a done one (FLOW-1161)", () => {
+    const { onDone, onSkipStep } = renderStep();
+    fireEvent.click(screen.getByRole("button", { name: CONNECT_NO_BANK }));
+    expect(onSkipStep).toHaveBeenCalledOnce();
     expect(onDone).not.toHaveBeenCalled();
   });
 

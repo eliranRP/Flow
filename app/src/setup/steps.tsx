@@ -307,7 +307,7 @@ export function StepConnect({
       onBack={onBack}
       onSkipAll={onSkipAll}
       primary={
-        <Button type="button" full onClick={() => { onDone(); }}>
+        <Button type="button" full onClick={() => { if (connected) onDone(); else onSkipStep(); }}>
           {connected ? NEXT : CONNECT_NO_BANK}
         </Button>
       }

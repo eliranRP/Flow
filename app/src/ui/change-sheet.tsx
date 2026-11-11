@@ -12,7 +12,8 @@ import { Sheet } from "./sheet";
 import { TextField } from "./text-field";
 import { Toggle } from "./toggle";
 import type { ChangeChoice } from "./change-sheet-copy";
-import { Picker } from "./change-picker";
+import { Picker, ordered } from "./change-picker";
+import { historyIndex } from "./back";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
 export { CHANGE_SAVE_FAILURE, CHANGE_SAVE_REFUSAL, SHARED_SPLIT_FAILURE, COLLAPSE_SPLIT_NOTE, changeSaveFailure, type ChangeChoice } from "./change-sheet-copy";
@@ -143,26 +144,6 @@ function keptState(current: { readonly state: unknown }): unknown {
   return current.state;
 }
 
-function ordered(options: ChangeChoice[], suggestionId: string, currentId: string, query: string, kind: "project" | "category", keepOrder = false): ChangeChoice[] {
-  const active = options.filter((option) => {
-    if (option.hidden && option.id !== currentId && option.id !== suggestionId) return false;
-    return option.status !== "finished" || option.id === currentId || option.id === suggestionId;
-  });
-  const needle = query.trim();
-  const matched = needle === ""
-    ? active
-    : active.filter((option) => option.name.includes(needle)
-      || (option.code ?? "").toLowerCase().includes(needle.toLowerCase())
-      || (option.group ?? "").includes(needle));
-  if (needle !== "" || keepOrder) return matched;
-  const suggestion = matched.find((option) => option.id === suggestionId);
-  const rest = matched.filter((option) => option.id !== suggestionId);
-  if (kind === "category") return suggestion ? [suggestion, ...rest] : rest;
-  const recent = rest.filter((option) => option.recent);
-  const others = rest.filter((option) => !option.recent);
-  return [...(suggestion ? [suggestion] : []), ...recent, ...others];
-}
-
 export function ChangeAssignment(props: Props) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -197,6 +178,8 @@ export function ChangeAssignment(props: Props) {
   const depth = useRef(0);
   const ignorePop = useRef(0);
   const afterPop = useRef<(() => void) | null>(null);
+  /** FLOW-1167: the new view's own browser entry is on top, so Back from it lands on the picker. */
+  const newEntry = useRef(false);
   const guardPop = useRef<((here: typeof location) => Promise<boolean>) | null>(null);
   const locationRef = useRef(location);
   locationRef.current = location;
@@ -258,12 +241,12 @@ export function ChangeAssignment(props: Props) {
         run?.();
         return;
       }
-      if (depth.current === 0 && guardPop.current) {
+      if (newEntry.current) newEntry.current = false;
+      else if (depth.current === 0 && guardPop.current) {
         const here = locationRef.current;
         void guardPop.current(here);
         return;
-      }
-      depth.current = Math.max(0, depth.current - 1);
+      } else depth.current = Math.max(0, depth.current - 1);
       setCreatingNew(false);
     }
     window.addEventListener("popstate", onPop);
@@ -350,7 +333,7 @@ export function ChangeAssignment(props: Props) {
   function back() {
     if (creatingNew) {
       setCreatingNew(false);
-      if (props.contained && !landed) setContainedView("summary");
+      void dropNew();
       return;
     }
     if (props.contained) {
@@ -379,6 +362,15 @@ export function ChangeAssignment(props: Props) {
     depth.current = 0;
     ignorePop.current += 1;
     void navigate(-steps);
+  }
+
+  /** Pops the new view's entry, then resolves, so a close or a pick after it moves history as from the picker. */
+  function dropNew(): Promise<void> {
+    if (!newEntry.current) return Promise.resolve();
+    newEntry.current = false;
+    ignorePop.current += 1;
+    void navigate(-1);
+    return new Promise((resolve) => { afterPop.current = resolve; });
   }
 
   function afterHistory(run: () => void) {
@@ -484,6 +476,7 @@ export function ChangeAssignment(props: Props) {
     const previous = props.projectId;
     try {
       const created = await props.onCreateProject(clean);
+      await dropNew();
       props.onProjectId(created.id);
       opener.current = "project";
       pendingFocus.current = "project";
@@ -543,7 +536,8 @@ export function ChangeAssignment(props: Props) {
   const propsRef = useRef(props);
   propsRef.current = props;
 
-  function closeSheet(discard: boolean): boolean {
+  async function closeSheet(discard: boolean): Promise<boolean> {
+    await dropNew();
     forceDiscard.current = false;
     if (discard) propsRef.current.onDiscard?.();
     settled.current = true;
@@ -571,6 +565,7 @@ export function ChangeAssignment(props: Props) {
     }
     if (landedOnPicker()) return closeSheet(true);
     if (summaryUnderPicker()) {
+      await dropNew();
       closePickLevel();
       const current = propsRef.current;
       if (current.onCloseCheck) {
@@ -609,6 +604,7 @@ export function ChangeAssignment(props: Props) {
         return false;
       }
     }
+    await dropNew();
     settled.current = true;
     discardPicker();
     return true;
@@ -729,6 +725,10 @@ export function ChangeAssignment(props: Props) {
             setNewName("");
             setNameError("");
             setCreatingNew(true);
+            // A browser entry only: MemoryRouter (stories, unit tests) fires no popstate to take it back.
+            if (newEntry.current || historyIndex() == null) return;
+            newEntry.current = true;
+            go(locationRef.current.search, false);
           } : undefined}
           onSplit={pickerKind === "project" && props.hideSplitLink !== true && !compact ? () => {
             afterHistory(props.onSplit);

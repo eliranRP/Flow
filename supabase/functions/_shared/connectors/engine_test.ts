@@ -46,6 +46,7 @@ function port(options: {
   fetched: FetchSinceResult;
   onNormalize?: (ctx: NormalizeContext) => void;
   failValidate?: boolean;
+  lineFor?: (id: string) => CanonicalLine;
 }): { port: ConnectorPort; validateCalls: () => number } {
   let validateCalls = 0;
   const adapter: ConnectorPort = {
@@ -63,7 +64,7 @@ function port(options: {
       options.onNormalize?.(ctx);
       const id = raw && typeof raw === "object" && "id" in raw && typeof raw.id === "string" ? raw.id : "";
       if (!id) return { ok: false, skip: "not_a_line" };
-      return { ok: true, line: line(id) };
+      return { ok: true, line: options.lineFor ? options.lineFor(id) : line(id) };
     },
     classifyError() {
       return { class: "rejected", retry_after: null };
@@ -801,3 +802,77 @@ for (const errorClass of ["transient", "rate_limited"] as const) {
     assertEquals(plan.removedIds, []);
   });
 }
+
+Deno.test("FLOW-1162: an incomplete fetch lists the ids a later recheck could pick; a complete one lists none", async () => {
+  const lineFor = (id: string): CanonicalLine => ({
+    ...line(id),
+    line_status: id.startsWith("pending") ? "pending" : "posted",
+    doc_date: id.startsWith("old") ? "2026-08-01" : "2026-09-20",
+  });
+  const fetched = (complete: boolean): FetchSinceResult => ({
+    lines: [{ id: "pending-a" }, { id: "posted-in-window" }, { id: "old-posted" }, { note: "no id" }],
+    removedIds: [],
+    nextCursor: complete ? NOW.toISOString() : '{"at":"2026-10-04T08:00:00.000Z","start":"2026-09-04","page":"next","phase":"window"}',
+    complete,
+    windowStart: "2026-09-04",
+  });
+  for (const complete of [false, true]) {
+    const plan = await planConnectorSync({
+      port: port({ accounts, fetched: fetched(complete), lineFor }).port,
+      session: session(),
+      cursor: null,
+      importFrom: null,
+      lookbackDays: 30,
+      ownCounterpartyIds: [],
+      vatRateBp: 0,
+      exemptSupplierNames: [],
+      exemptSupplierIds: [],
+      stored: [],
+      now: () => NOW,
+    });
+    assertEquals(plan.ok, true);
+    if (!plan.ok) return;
+    // A posted line inside the window is never a recheck candidate, so it is not kept.
+    assertEquals(plan.listed, complete ? [] : ["old-posted", "pending-a"]);
+  }
+});
+
+Deno.test("FLOW-1162: the run that finishes a resumed window skips what the partial run listed, and still rechecks a line nobody listed", async () => {
+  const built = port({
+    accounts,
+    fetched: { lines: [{ id: "listed-now" }], removedIds: [], nextCursor: NOW.toISOString(), complete: true, windowStart: "2026-09-04" },
+  });
+  const calls: string[] = [];
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: '{"at":"2026-10-03T08:00:00.000Z","start":"2026-09-03","page":"next","phase":"pending"}',
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [
+      // The partial run listed it, so it is not missing: no recheck, and an old clock does not carry on.
+      { externalId: "listed-before", lineStatus: "pending", docDate: "2026-09-20", missingSince: "2026-09-25T00:00:00.000Z" },
+      // Neither run listed these: one clock starts, the other goes on.
+      { externalId: "missing-new", lineStatus: "pending", docDate: "2026-09-21", missingSince: null },
+      { externalId: "missing-waiting", lineStatus: "pending", docDate: "2026-09-22", missingSince: "2026-09-28T00:00:00.000Z" },
+    ],
+    listedEarlier: ["listed-before"],
+    now: () => NOW,
+    confirmLine(stored) {
+      calls.push(stored.externalId);
+      return Promise.resolve({ action: "keep", missingSince: stored.missingSince ?? NOW.toISOString() });
+    },
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(calls, ["missing-new", "missing-waiting"]);
+  assertEquals(plan.rechecked.map((item) => item.externalId), ["missing-new", "missing-waiting"]);
+  assertEquals(plan.pendingMissing, [
+    { externalId: "missing-new", missingSince: NOW.toISOString() },
+    { externalId: "missing-waiting", missingSince: "2026-09-28T00:00:00.000Z" },
+  ]);
+});

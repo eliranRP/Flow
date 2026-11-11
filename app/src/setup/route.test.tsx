@@ -7,8 +7,9 @@ import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupStepScreen, SetupWelcomeScreen } from "./route-screens";
-import { SKIP_ALL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
+import { CONNECT_NO_BANK, SKIP_ALL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
 import { SETUP_TOTAL } from "./model";
+import { emptySetupStore, writeSetupStore } from "./storage";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
@@ -163,6 +164,15 @@ describe("setup route (FLOW-514)", () => {
     });
     expect(created.calls).toEqual([{ p_name: "העסק שלי", p_vat_registered: true }]);
     expect(SETUP_TOTAL).toBe(7);
+  });
+
+  it("a step opened from Settings after skip all stays on the step, not Home (FLOW-1161)", async () => {
+    const at = "2026-10-16T00:00:00.000Z";
+    const skippedAll = { ...emptySetupStore(), run_started_at: at, flow_at: at, skipped_all_at: at, skipped: { "1": at, "2": at, "3": at, "4": at, "5": at, "6": at, "7": at } };
+    writeSetupStore(userId, companyId, skippedAll);
+    const router = renderRoute("/setup/2");
+    expect(await screen.findByRole("button", { name: CONNECT_NO_BANK })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/setup/2");
   });
 
   it("sends a viewer home from the new-company step", async () => {

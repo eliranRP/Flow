@@ -105,7 +105,7 @@ export function LoanCloseSheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next && saving) return;
+        if (!next && saving) return false;
         onOpenChange(next);
       }}
       title={`סגירת ${loanName}`}

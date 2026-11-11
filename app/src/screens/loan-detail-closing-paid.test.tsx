@@ -96,6 +96,29 @@ describe("loan page: the amount paid at closing (FLOW-466)", () => {
     view.unmount();
   });
 
+  it("a ✕ tapped during a save that then fails still closes the sheet on the next ✕ (FLOW-1164)", async () => {
+    // The Back test above leaves its history traversal in flight; let it land before this sheet opens.
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 100); }); });
+    const store = sampleLoanStore();
+    let fail: () => void = () => undefined;
+    const hold = new Promise<void>((resolve) => { fail = resolve; });
+    vi.spyOn(store, "setClosingPaid").mockImplementationOnce(async () => {
+      await hold;
+      throw new Error("Failed to fetch");
+    });
+    renderLoan(store, "loan-bridge");
+    fireEvent.click(closingRow());
+    const sheet = () => screen.getByRole("dialog", { name: "סכום ששולם בסגירה" });
+    fireEvent.change(within(sheet()).getByLabelText("סכום"), { target: { value: "180000" } });
+    fireEvent.click(within(sheet()).getByRole("button", { name: "שמירה" }));
+    fireEvent.click(within(sheet()).getByRole("button", { name: "סגירה" }));
+    await act(async () => { fail(); await Promise.resolve(); });
+    await waitFor(() => { expect(toast("ניסיון חוזר")).toBeDefined(); });
+    expect(sheet()).toBeInTheDocument();
+    fireEvent.click(within(sheet()).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "סכום ששולם בסגירה" })).not.toBeInTheDocument(); });
+  });
+
   it("saves an empty field as the whole loan (null)", async () => {
     const store = sampleLoanStore();
     await store.setClosingPaid("loan-bridge", 15_000_000n);

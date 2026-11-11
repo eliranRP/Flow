@@ -494,7 +494,7 @@ function LoanDetailReady({
             <Sheet
               open={sheet === "link"}
               onOpenChange={(next) => {
-                if (!next && linkSaving) return;
+                if (!next && linkSaving) return false;
                 setSheet(next);
               }}
               title="ההלוואה החדשה"
@@ -536,7 +536,7 @@ function LoanDetailReady({
             <Sheet
               open={sheet === "project"}
               onOpenChange={(next) => {
-                if (!next && projectSaving != null) return;
+                if (!next && projectSaving != null) return false;
                 setSheet(next);
               }}
               title="פרויקט"
