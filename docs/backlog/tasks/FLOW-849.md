@@ -1,0 +1,10 @@
+<a id="flow-849"></a>
+# FLOW-849 · Red-team research step and new hunt patterns
+- **Type:** SMALL CYCLE (docs) · **Status:** in-progress (#1130) · **Source:** the owner's request, 2026-11-11: two research agents that read recent security articles and turn them into attack cases (asked for daily, then the owner chose weekly only).
+- **Files:** `docs/runbooks/security-scan.md` (Stage 2), `docs/security/zero-day-patterns.md` (P16–P19), `docs/backlog/README.md` (merging), a changelog fragment.
+
+- [x] The weekly scan has a red-team research step: two agents, three to five articles each, three cases each, five or six together after duplicates are merged, local tests only, every case checked by the scan agent.
+- [x] Four new patterns from the first run, in general terms.
+- [x] A review verdict counts only from the agents' account with the full head sha; patches from other authors are never applied.
+
+**Acceptance:** the next weekly scan runs the research step from the runbook. The owner chose weekly only (2026-11-11), and asked for the agents to run on Fable.
