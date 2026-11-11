@@ -44,6 +44,16 @@ Go through [known-attacks.md](../security/known-attacks.md) section by section. 
 3. A hypothesis that survives becomes a candidate. One that fails gets one line in the report ("P8 on invite accept: unique constraint holds").
 4. When a hunt teaches something new, add a row to known-attacks.md or an entry to zero-day-patterns.md, in the fix PR or in a docs PR of its own, in general terms only.
 
+### Red-team research (every run)
+
+Two research agents (Fable 5.2) add fresh ideas to the hunt. Each one:
+
+1. Reads three to five recent articles on security, cybersecurity or offensive security (write-ups, advisories, conference talks, new CVEs), preferring the stack in step 4 of [zero-day-patterns.md](../security/zero-day-patterns.md).
+2. Turns what it read into three attack cases against Flow, each as a hypothesis in the Stage 2 shape, with the article it came from.
+3. Tries each case locally only: reading the code, a local test, or a local build in a local browser. Never production, never GitHub write actions, never a secret's value.
+
+Together the two agents bring five or six cases. The scan agent checks every case itself before it counts as a candidate, and lists each case in the report with its source and outcome. A case that teaches a new pattern goes into zero-day-patterns.md, as in step 4 above.
+
 ## Triage
 
 A candidate is **confirmed** only when a test fails because of it, or a precise trace shows the path from an input an attacker controls to the harm, with every guard on the way accounted for. Rate it with the severity guide at the top of known-attacks.md. Anything else is either "not a flaw" (record why in the session, so later runs don't repeat it) or "unsure" (report it to the owner as a question, without exploit steps).
