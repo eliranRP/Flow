@@ -168,7 +168,7 @@ export default defineConfig(({ mode }) => {
                 {
                   cacheWillUpdate: ({ response }) =>
                     Promise.resolve(
-                      (response.headers.get("content-type") ?? "").includes("text/html") ? response : null,
+                      (response.headers.get("content-type") ?? "").toLowerCase().includes("text/html") ? response : null,
                     ),
                 },
               ],

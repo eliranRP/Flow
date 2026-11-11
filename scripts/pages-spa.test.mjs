@@ -216,10 +216,11 @@ test("the offline shell cache stores only HTML pages", () => {
   // opened in a tab) would replace the stored app and show up as the offline page.
   const vite = readFileSync(path.join(root, "app/vite.config.ts"), "utf8");
   const shell = vite.slice(vite.indexOf('cacheName: "flow-shell"'));
-  assert.ok(shell.length > 0 && vite.includes('cacheName: "flow-shell"'));
+  assert.ok(vite.includes('cacheName: "flow-shell"'));
   const plugins = shell.slice(0, shell.indexOf("],") + 1);
   assert.match(plugins, /cacheWillUpdate/);
-  assert.match(plugins, /content-type[\s\S]*text\/html/i);
+  // Media types are case-insensitive, and only an HTML response is kept (not the reverse).
+  assert.match(plugins, /get\("content-type"\)[^?]*\?\? ""\)\.toLowerCase\(\)\.includes\("text\/html"\) \? response : null/);
 });
 
 test("nested relative routes resolve, and a path that is not a double-quoted literal fails", () => {
