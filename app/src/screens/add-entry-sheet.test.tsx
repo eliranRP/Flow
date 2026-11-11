@@ -4,6 +4,7 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttachedDocument, BankMatch } from "../add-entry";
+import { booksClosedNote } from "../company-role-cache";
 import { ToastProvider } from "../ui/toast";
 import { AddEntrySheet } from "./add-entry-sheet";
 
@@ -117,6 +118,27 @@ describe("AddEntrySheet toasts and offline (FLOW-966)", () => {
     const toast = await screen.findByText("ההוצאה נשמרה · Oak Ridge");
     expect(toast.closest("[data-place]")).toHaveAttribute("data-place", "top");
     expect(mocks.toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: "ההוצאה נשמרה · Oak Ridge", place: "top", durationMs: 5000, action: "ביטול" }));
+  });
+
+  it("says the books are closed through the date when the save is refused, and keeps the form open", async () => {
+    mocks.saveManualLine.mockRejectedValueOnce(new Error("the books are closed through 2026-10-31"));
+    const { onDone } = renderSheet();
+    fillCash();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(booksClosedNote("2026-10-31"));
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("says the books are closed when undoing a saved line is refused", async () => {
+    const { onDone } = renderSheet();
+    fillCash();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
+    await waitFor(() => { expect(onDone).toHaveBeenCalled(); });
+    mocks.undoManualLine.mockRejectedValueOnce(new Error("the books are closed through 2026-10-31"));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText(booksClosedNote("2026-10-31"))).toBeInTheDocument();
   });
 
   it("offline, keeps the form open and says why instead of failing", () => {

@@ -13,6 +13,8 @@ import { formatAmount } from "../ui/amount";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
 import { attachDocument, createCategoryNamed, createProjectNamed, saveManualLine, undoAttach, undoManualLine, useReceiptMatch } from "../use-add-entry";
 import { useCompanyCurrency } from "../company-currency";
+import { booksClosedNote } from "../company-role-cache";
+import { booksClosedThrough } from "../use-write";
 import { SAMPLE_CATEGORIES, SAMPLE_CURRENCY, SAMPLE_PROJECTS, type SampleEntryFill } from "../add-entry-sample";
 import { AddEntryView } from "./add-entry-view";
 
@@ -76,6 +78,18 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
     return projects.find((p) => p.id === id)?.name ?? "";
   }
 
+  /** The undo of a saved line. A refusal because the books closed says so; any other failure stays as it was. */
+  async function undoLine(id: string) {
+    try {
+      await undoManualLine(id);
+      await invalidate();
+    } catch (error) {
+      const closedThrough = error instanceof Error ? booksClosedThrough(error) : null;
+      if (closedThrough == null) throw error;
+      toast.show({ place: "top", tone: "info", message: booksClosedNote(closedThrough) });
+    }
+  }
+
   async function save(next: EntryDraft) {
     if (busy) return;
     if (!online && preview === "off") {
@@ -106,13 +120,14 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
             ...UNDO_TOAST,
             message: `${word} נשמרה · ${projectName(next.projectId)}`,
             action: "ביטול",
-            onAction: () => { void undoManualLine(id).then(() => invalidate()); },
+            onAction: () => { void undoLine(id); },
           });
         }
       }
       onDone();
-    } catch {
-      setError("לא הצלחנו לשמור. נסו שוב.");
+    } catch (error) {
+      const closedThrough = error instanceof Error ? booksClosedThrough(error) : null;
+      setError(closedThrough == null ? "לא הצלחנו לשמור. נסו שוב." : booksClosedNote(closedThrough));
     } finally {
       setBusy(false);
     }

@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
+import { booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { ToastProvider } from "./ui/toast";
 import { changeSaveFailure } from "./ui/change-sheet";
-import { useWrite } from "./use-write";
+import { booksClosedThrough, useWrite } from "./use-write";
 
 vi.mock("./use-books", () => ({
   useInvalidateBooks: () => () => Promise.resolve(),
@@ -14,12 +14,14 @@ function Save({
   run,
   failure,
   onSplit,
+  onError,
 }: {
   run: () => Promise<void>;
   failure: typeof changeSaveFailure | string;
   onSplit?: () => void;
+  onError?: (error: Error) => void;
 }) {
-  const save = useWrite({ keys: [], failure, run, onSplit });
+  const save = useWrite({ keys: [], failure, run, onSplit, onError: (error) => { onError?.(error); } });
   return <button type="button" onClick={() => { save.mutate(); }}>שמירה</button>;
 }
 
@@ -27,19 +29,53 @@ function renderSave(
   run: () => Promise<void>,
   failure: typeof changeSaveFailure | string = changeSaveFailure,
   onSplit?: () => void,
+  onError?: (error: Error) => void,
 ): QueryClient {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <Save run={run} failure={failure} onSplit={onSplit} />
+        <Save run={run} failure={failure} onSplit={onSplit} onError={onError} />
       </ToastProvider>
     </QueryClientProvider>,
   );
   return client;
 }
 
+describe("booksClosedThrough", () => {
+  it("reads the closed date from the database's message", () => {
+    expect(booksClosedThrough(new Error("the books are closed through 2026-10-31"))).toBe("2026-10-31");
+  });
+
+  it("reads it when PostgREST wraps the message", () => {
+    expect(booksClosedThrough(new Error("ERROR: the books are closed through 2026-10-31 (SQLSTATE P0001)"))).toBe("2026-10-31");
+  });
+
+  it("returns null for any other refusal", () => {
+    expect(booksClosedThrough(new Error("category kind must match the direction"))).toBeNull();
+    expect(booksClosedThrough(new Error("no company"))).toBeNull();
+    expect(booksClosedThrough(new Error("the books are closed"))).toBeNull();
+  });
+
+  it("returns null for a malformed date", () => {
+    expect(booksClosedThrough(new Error("the books are closed through 2026-10-3"))).toBeNull();
+    expect(booksClosedThrough(new Error("the books are closed through 2026-13-45"))).toBeNull();
+    expect(booksClosedThrough(new Error("the books are closed through 31/10/2026"))).toBeNull();
+  });
+});
+
 describe("useWrite", () => {
+  it("says the books are closed through the date, with no retry, and still runs onError", async () => {
+    const onError = vi.fn();
+    renderSave(() => Promise.reject(new Error("the books are closed through 2026-10-31")), "לא הצלחנו למחוק.", undefined, onError);
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText(booksClosedNote("2026-10-31"))).toBeInTheDocument();
+    expect(screen.queryByText("לא הצלחנו למחוק.")).not.toBeInTheDocument();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: "the books are closed through 2026-10-31" }));
+  });
+
   it("offers לפיצול, not a retry, when the database refuses a shared cost", async () => {
     const onSplit = vi.fn();
     renderSave(() => Promise.reject(new Error("shared costs are split, not assigned to one project")), changeSaveFailure, onSplit);
