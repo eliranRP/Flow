@@ -167,7 +167,7 @@ select throws_ok($$select public.invite_member('ta-new@example.com', 'editor')$$
 select is(public.mcp_undo('ta-4c', 'invite', pg_temp.ta_id('inv'))->'error'->>'code', 'not_found',
   'and cannot undo (cancel) the owner''s own invite');
 reset role;
-update public.company_invites set status = 'cancelled' where id = pg_temp.ta_id('mcp_inv');
+update public.company_invites set status = 'cancelled', decided_at = now() where id = pg_temp.ta_id('mcp_inv');
 select pg_temp.ta_mcp();
 select is(public.mcp_undo('ta-5', 'invite', pg_temp.ta_id('mcp_inv'))->'error'->>'code', 'conflict',
   'undo of an invite that is no longer pending is a conflict');
@@ -195,8 +195,8 @@ select pg_temp.ta_mcp();
 select is(public.mcp_undo('ta-10', 'member_role', pg_temp.ta_id('editor'))->'error'->>'code', 'not_found',
   'a token for b does not undo a''s role change');
 reset role;
-update public.company_invites set status = 'pending' where id = pg_temp.ta_id('mcp_inv');
-update public.company_invites set status = 'cancelled' where company_id = pg_temp.ta_id('a') and email = 'ta-undo@example.com' and id <> pg_temp.ta_id('mcp_inv');
+update public.company_invites set status = 'pending', decided_at = null where id = pg_temp.ta_id('mcp_inv');
+update public.company_invites set status = 'cancelled', decided_at = now() where company_id = pg_temp.ta_id('a') and email = 'ta-undo@example.com' and id <> pg_temp.ta_id('mcp_inv');
 select pg_temp.ta_mcp();
 select is(public.mcp_undo('ta-11', 'invite', pg_temp.ta_id('mcp_inv'))->'error'->>'code', 'not_found',
   'nor a''s invite');

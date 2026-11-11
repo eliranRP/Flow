@@ -110,3 +110,12 @@ export function mercuryState(rows: readonly MercuryStatus[]): MercuryState {
     syncing: connections.some((connection) => connection.syncing),
   };
 }
+
+/** What a connection's own row and page say it needs (FLOW-1162): a new key, or the page-cap warning from its first capped run. */
+export type MercuryProblem = "reconnect" | "page_cap" | null;
+
+export function mercuryProblem(connection: MercuryConnection): MercuryProblem {
+  if (!connection.keyWorks) return "reconnect";
+  if (connection.lastError === "sync_page_cap") return "page_cap";
+  return null;
+}

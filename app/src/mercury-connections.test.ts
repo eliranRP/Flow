@@ -1,6 +1,6 @@
 import type { MercuryStatus } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { MERCURY_NONE, mercuryAccounts, mercuryState } from "./mercury-state";
+import { MERCURY_NONE, mercuryAccounts, mercuryProblem, mercuryState } from "./mercury-state";
 import {
   accountName,
   balanceText,
@@ -116,5 +116,26 @@ describe("Mercury connections (FLOW-938)", () => {
     expect(fromOptions(false, "2026-06-01", NOW)[0]?.note).toContain("נובמבר 2024");
     expect(fromRow("start", "2026-06-01", NOW)).toEqual({ label: "מההתחלה", note: "בפעם הראשונה זה לוקח כמה דקות" });
     expect(fromRow("date", "2026-06-01", NOW)).toEqual({ label: "מתאריך", note: "מ־01/06/2026" });
+  });
+});
+
+describe("Mercury page-cap warning (FLOW-1162)", () => {
+  it("reads a connection that hit the page cap as the warning, not as a reconnect", () => {
+    const connection = only([row({ last_error: "sync_page_cap" })]);
+    expect(connection.keyWorks).toBe(true);
+    expect(mercuryProblem(connection)).toBe("page_cap");
+    expect(mercuryState([row({ last_error: "sync_page_cap" })]).connected).toBe(true);
+  });
+
+  it("keeps a rejected key as the reconnect, and a healthy connection shows nothing", () => {
+    expect(mercuryProblem(only([row({ last_error: "auth" })]))).toBe("reconnect");
+    expect(mercuryProblem(only([row()]))).toBeNull();
+  });
+
+  it("marks only the affected connection of two", () => {
+    const state = mercuryState([row({ slot: 1, last_error: null }), row({ slot: 2, last_error: "sync_page_cap", org_label: "Cedar Lane Holdings LLC" })]);
+    expect(state.connections.map(mercuryProblem)).toEqual([null, "page_cap"]);
+    // The summary still takes the first connection's error (the Settings row reads it).
+    expect(state.last_error).toBeNull();
   });
 });

@@ -11,7 +11,9 @@ const MERCURY_ERRORS: Record<string, string> = {
   rate_limited: "הרענון נכשל. נסו שוב.",
   rejected: "Mercury דחה את המפתח. צריך מפתח Read Only חדש.",
   auth: "החיבור ל־Mercury נכשל.",
-  sync_page_cap: "יש יותר מדי שורות לרענון אחד. פנו לתמיכה.",
+  // The run could not go on from where it stopped (Mercury sent a page marker twice). A long list is
+  // not this: it is read over several runs and shows nothing (FLOW-1162).
+  sync_page_cap: "הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.",
   sync_skipped: "הרענון דילג. אפשר שוב בעוד דקה.",
   sync_cursor_conflict: "הרענון נכשל. נסו שוב.",
   connect_failed: "לא הצלחנו להתחבר. נסו שוב.",
