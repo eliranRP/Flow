@@ -121,12 +121,12 @@ describe("Mercury page: states (FLOW-918, FLOW-938)", () => {
     serveWith([{ ...CONNECTED, last_error: "sync_page_cap" }, second]);
     renderPage("mercury");
     const capped = await screen.findByRole("link", { name: /Cedar Lane Homes LLC/ });
-    expect(within(capped).getByText("יש יותר מדי שורות לרענון אחד. פנו לתמיכה.")).toBeInTheDocument();
+    expect(within(capped).getByText("הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.")).toBeInTheDocument();
     expect(capped).toHaveClass("ui-row-tone-warning");
     expect(screen.getByRole("link", { name: /Cedar Lane Holdings LLC/ })).not.toHaveClass("ui-row-tone-warning");
     expect(screen.queryByText(/Mercury הפסיק לקבל את המפתח/)).not.toBeInTheDocument();
     fireEvent.click(capped);
-    expect(await screen.findByText("יש יותר מדי שורות לרענון אחד. פנו לתמיכה.")).toHaveClass("ui-connection-problem");
+    expect(await screen.findByText("הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.")).toHaveClass("ui-connection-problem");
     expect(screen.getByRole("button", { name: "רענון עכשיו" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חיבור מחדש" })).not.toBeInTheDocument();
   });
