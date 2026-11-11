@@ -38,6 +38,10 @@ function BillsStory({ query = "", bills = utilityTypesSample(), offline = false,
 /** FLOW-1159 (V3-J-B3-ByType): what the tenant owes, then the bills by type: water all back, power and sewer missing some. */
 export const ProjectUtilityBills: Story = {
   render: () => <BillsStory />,
+  // FLOW-1169 (V3-J-B3-ByType): מי משלם ends the page, a link to the payers page.
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByRole("link", { name: /^מי משלם/ })).toHaveAttribute("href", `/projects/${GEFEN}/utilities`);
+  },
 };
 
 /** A bill not refunded opens its drawer: its status, the type's pattern and history, the income around it, the answers. */

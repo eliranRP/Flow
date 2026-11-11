@@ -31,6 +31,7 @@ function renderAt(entry: string, client: RpcClient) {
         <ToastProvider>
           <UtilityClientProvider client={client}>
             <Routes>
+              <Route path="/projects/:projectId" element={<p>project page</p>} />
               <Route path="/projects/:projectId/utilities" element={<ProjectUtilitiesScreen />} />
               <Route path="/projects/:projectId/utilities/bills" element={<ProjectUtilityBillsScreen />} />
               <Route path="/projects/:projectId/utilities/bills/:billId/income" element={<ProjectUtilityIncomeScreen />} />
@@ -135,10 +136,29 @@ describe("ProjectUtilityBillsScreen", () => {
     expect(screen.getByRole("button", { name: /ניסיון חוזר|נסו שוב/ })).toBeTruthy();
   });
 
-  it("is linked from the property's חשבונות · מי משלם page, in place of לפי חודש", async () => {
+  it("ends with מי משלם, a link to the payers page; the back goes to the project, named (FLOW-1169)", async () => {
+    renderBills();
+    const link = await screen.findByRole("link", { name: /^מי משלם/ });
+    expect(link.getAttribute("href")).toBe(`/projects/${GEFEN}/utilities`);
+    expect(link.textContent).toContain("שוכר או חברה, לכל ספק");
+    fireEvent.click(screen.getAllByRole("button", { name: "חזרה לדירת הגפן 3" })[0] as HTMLElement);
+    expect(await screen.findByText("project page")).toBeTruthy();
+  });
+
+  it("keeps מי משלם in the empty state, and names a project it does not know as פרויקט", async () => {
+    renderBills(storyUtilityClient([]));
+    expect(await screen.findByText("אין עדיין חשבונות בנכס")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^מי משלם/ }).getAttribute("href")).toBe(`/projects/${GEFEN}/utilities`);
+    expect(screen.getAllByRole("button", { name: "חזרה לפרויקט" }).length).toBeGreaterThan(0);
+  });
+
+  it("the payers page has no כל החשבונות row; its back goes to the bills by type, named so (FLOW-1169)", async () => {
     renderAt(`/projects/${GEFEN}/utilities`, storyUtilityClient());
-    expect((await screen.findByRole("link", { name: /^כל החשבונות/ })).getAttribute("href")).toBe(billsEntry);
+    await screen.findByRole("heading", { name: "חשבונות" });
+    expect(screen.queryByRole("link", { name: /^כל החשבונות/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /לפי חודש/ })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "חזרה לחשבונות מול השוכר" })[0] as HTMLElement);
+    expect(await screen.findByRole("heading", { name: "חשבונות מול השוכר" })).toBeTruthy();
   });
 });
 
