@@ -20,7 +20,15 @@ import { refreshTreasuryYields } from "../_shared/treasury_yields.ts";
 import { edgeWaitUntil } from "../_shared/edge_defer.ts";
 import { treasuryVoidIds } from "../_shared/connectors/mercury/normalize.ts";
 import { isLegacyRow, legacyPatch, rpcWithSlot } from "../_shared/connectors/mercury/legacy.ts";
-import { mercuryCommit } from "../_shared/connectors/mercury/machines.ts";
+import { mercuryCommit, mercuryRepeatedPage, type MercuryRepeatedPage } from "../_shared/connectors/mercury/machines.ts";
+import {
+  listedEarlier,
+  repeatedPageEvent,
+  repeatedPageSkips,
+  repeatedPageState,
+  withRepeatedPage,
+  withResumeListed,
+} from "../_shared/connectors/mercury/sync_settings.ts";
 import {
   readConnectionScope,
   runScope,
@@ -260,8 +268,14 @@ async function syncCompany(
   }
 
   const minGap = force ? FORCE_GAP_MS : QUIET_GAP_MS;
+  // FLOW-1162: after 3 runs in a row on a repeated page token the sync stops retrying: the drain
+  // (forced or not) and an unforced run skip the connection. The owner's own forced refresh still
+  // runs it: a run that fails there writes no line.
+  const stopped = (row: ConnectionRow) =>
+    repeatedPageSkips(isRecord(row.settings) ? row.settings : {}, { force, drained: alreadyClaimed });
   const due = chosen.filter((row) => {
     if (row.last_error === "auth") return false;
+    if (stopped(row)) return false;
     if (typeof row.next_attempt_at === "string" && Date.parse(row.next_attempt_at) > Date.now()) return false;
     const last = row.last_sync_at ? Date.parse(row.last_sync_at) : 0;
     return !(last && Date.now() - last < minGap);
@@ -269,6 +283,10 @@ async function syncCompany(
   if (due.length === 0) {
     // As one connection did: a rejected key first, then a hold, else nothing is due yet.
     if (chosen.every((row) => row.last_error === "auth")) throw new Error("auth");
+    // Asked by hand: say why (the page cap's own sentence) rather than skip without a word.
+    if (!alreadyClaimed && chosen.some(stopped) && chosen.every((row) => row.last_error === "auth" || stopped(row))) {
+      throw new Error("sync_page_cap");
+    }
     const held = chosen
       .map((row) => row.next_attempt_at)
       .filter((at): at is string => typeof at === "string" && Date.parse(at) > Date.now())
@@ -390,6 +408,22 @@ async function syncConnection(
   const settings = isRecord(row.settings) ? row.settings : {};
   const ownCounterpartyIds = stringList(settings.own_counterparty_ids);
   const missing = pendingMap(settings.pending_missing);
+  // FLOW-1162: the runs in a row on a repeated page token (mercuryRepeatedPage). A run that ends
+  // any other way clears it: the labels step writes the settings without it, or, when the run fails
+  // before its lines are saved, the catch below does. Once the lines are saved the catch writes no
+  // settings, so it never puts back what a labels step may have written.
+  const repeated = repeatedPageState(settings);
+  let endedRepeated = false;
+  let linesSaved = false;
+  const keepRepeated = async (next: MercuryRepeatedPage) => {
+    if (next === repeated) return;
+    try {
+      const kept = await updateRow({ settings: withRepeatedPage(settings, next) as NonNullable<Json> });
+      if (kept.error) console.error("mercury_repeated_page_unsaved");
+    } catch {
+      console.error("mercury_repeated_page_unsaved");
+    }
+  };
   let apiKey = "";
   try {
     apiKey = await openApiKey(envelope, kek, companyId, "mercury");
@@ -421,6 +455,8 @@ async function syncConnection(
       stored: loaded.stored,
       now: () => now,
       confirmLine: (line) => confirmStored(session, line, now),
+      // FLOW-1162: what earlier partial runs of the window this cursor resumes listed.
+      listedEarlier: listedEarlier(settings, typeof row.sync_cursor === "string" ? row.sync_cursor : null),
       resolveRemovedIds: (rawLines) =>
         treasuryVoidIds(rawLines, loaded.treasury, mercuryTreasuryAccountCount(session)),
       // An account newly synced (the answer yes, the edit list, set_bank_accounts) turns a transfer
@@ -432,6 +468,10 @@ async function syncConnection(
     });
     if (!plan.ok) {
       await noteOnce(plan.code);
+      if (repeatedPageEvent(plan.code) === "repeated") {
+        endedRepeated = true;
+        await keepRepeated(mercuryRepeatedPage.next(repeated, "repeated"));
+      }
       throw new Error(plan.code);
     }
     const lines = withinAccountStart(plan.lines, scope.accountFrom);
@@ -465,6 +505,7 @@ async function syncConnection(
       throw new Error("rejected");
     }
     step = mercuryCommit.next(step, "saved");
+    linesSaved = true;
     // FLOW-957: Mercury's notes and attachments into the threads (read only: nothing goes to Mercury).
     await syncMercuryThreadsFor(admin, companyId, session);
     const pendingMissing: Record<string, string> = {};
@@ -475,7 +516,11 @@ async function syncConnection(
       account_labels: storedLabels(plan.accounts) as unknown as NonNullable<Json>,
       ...(plan.org ? { org_label: plan.org } : {}),
       ...cardLabelsUpdate(cardLabels),
-      settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
+      settings: {
+        ...withResumeListed(withRepeatedPage(settings, mercuryRepeatedPage.next(repeated, "other")), plan),
+        own_counterparty_ids: ownCounterpartyIds,
+        pending_missing: pendingMissing,
+      } as NonNullable<Json>,
     });
     if (labeled.error) {
       await noteOnce("rejected");
@@ -512,6 +557,7 @@ async function syncConnection(
     };
   } catch (error) {
     logFailure("mercury sync failed", error, apiKey);
+    if (!endedRepeated && !linesSaved) await keepRepeated(mercuryRepeatedPage.next(repeated, "other"));
     const message = error instanceof Error ? error.message : "";
     const specific = error instanceof MercuryRequestError ? error.code : message;
     const kept = specific === "sync_cursor_conflict" || specific === "auth" || specific === "rejected" ||

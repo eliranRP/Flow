@@ -27,6 +27,27 @@ export function mercuryPhasesFrom(phase: Exclude<MercuryFetchPhase, "done">): Ex
 }
 
 /**
+ * One connection's runs in a row that failed on a repeated page token (FLOW-1162; the owner,
+ * 2026-11-11: stop after 3). Such a run is `repeated`; a run that ends any other way is `other`.
+ * In `stopped` the cron and an unforced run skip the connection, so the sync stops retrying; the
+ * owner's forced refresh still runs it (a failed run writes no line), and a reconnect replaces the
+ * settings that hold the step. mercury-sync keeps the step as `settings.repeated_page_runs`
+ * (sync_settings.ts).
+ */
+export const mercuryRepeatedPage = defineMachine({
+  name: "mercuryRepeatedPage",
+  initial: "clear",
+  states: {
+    clear: { repeated: "once" },
+    once: { repeated: "twice", other: "clear" },
+    twice: { repeated: "stopped", other: "clear" },
+    stopped: { other: "clear" },
+  },
+});
+
+export type MercuryRepeatedPage = keyof typeof mercuryRepeatedPage.states;
+
+/**
  * The steps mercury-sync commits a plan in, one after the other (not one transaction):
  * - `lines`: the lines, voids, skips, recheck stamps and the cursor (`upsert_connector_lines`).
  * - `labels`: the account and card labels and the pending lines' missing clocks.

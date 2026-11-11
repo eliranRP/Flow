@@ -62,6 +62,12 @@ export interface PlanSyncInput {
    */
   confirmLine?: (line: StoredLine) => Promise<ConfirmResult>;
   /**
+   * External ids that earlier page-capped runs of this same window listed (FLOW-1162; the caller
+   * keeps them, see `listed`). A complete fetch counts them as seen before it picks the recheck
+   * candidates, so the run that finishes a resumed window does not spend its rechecks on them.
+   */
+  listedEarlier?: readonly string[];
+  /**
    * Provider-specific voids, such as a treasury cancel of a stored yield.
    * Ids are voided with the upsert. They are not fetched again.
    */
@@ -96,6 +102,12 @@ export interface PlannedSync {
   complete: boolean;
   pendingMissing: { externalId: string; missingSince: string }[];
   rechecked: { externalId: string; checkedAt: string }[];
+  /**
+   * On an incomplete fetch, the ids of the lines this run listed that a later run could pick for a
+   * recheck: a pending line, or one dated before the window (FLOW-1162). Ids only. Empty on a
+   * complete fetch.
+   */
+  listed: string[];
   /**
    * Set when a recheck hit a rate limit. The run stopped rechecking there;
    * the caller backs off until retryAfter (null when the provider sent none).
@@ -181,9 +193,11 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     return failure(input.port, error);
   }
 
+  const windowStart = fetched.windowStart ?? null;
   const lines: CanonicalLine[] = [];
   const skips: PlannedSkip[] = [];
   const seen = new Set<string>();
+  const listedNow = new Set<string>();
   for (const raw of fetched.lines) {
     const id = rawId(raw);
     if (id) seen.add(id);
@@ -193,8 +207,11 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     } catch (error) {
       return failure(input.port, error);
     }
-    if (normalized.ok) lines.push(normalized.line);
-    else skips.push({ externalId: id, reason: normalized.skip });
+    if (normalized.ok) {
+      lines.push(normalized.line);
+      const { external_id: lineId, line_status: status, doc_date: docDate } = normalized.line;
+      if (!fetched.complete && (status === "pending" || (windowStart != null && docDate < windowStart))) listedNow.add(lineId);
+    } else skips.push({ externalId: id, reason: normalized.skip });
   }
 
   const removed = new Set(fetched.removedIds);
@@ -207,7 +224,8 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
   const rechecked: { externalId: string; checkedAt: string }[] = [];
   let rateLimited: PlannedSync["rateLimited"] = null;
   if (fetched.complete && input.confirmLine) {
-    const windowStart = fetched.windowStart ?? null;
+    // Lines an earlier partial run of this window listed were seen; a line neither run listed is not.
+    for (const id of input.listedEarlier ?? []) seen.add(id);
     const candidates = input.stored.filter((stored) => {
       if (seen.has(stored.externalId) || removed.has(stored.externalId)) return false;
       const outsideWindow = windowStart != null && stored.docDate < windowStart;
@@ -307,6 +325,7 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     complete: fetched.complete,
     pendingMissing,
     rechecked,
+    listed: [...listedNow].sort(),
     rateLimited,
   };
 }
