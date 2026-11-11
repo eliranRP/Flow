@@ -62,7 +62,7 @@ export function ProjectMenu({
   hasInvestment: boolean;
   /** FLOW-1044: the profit since the start, the menu's third row. */
   profitTo: string;
-  /** FLOW-1135: a property's חשבונות (who pays each utility), on a rental or a project with utilities. */
+  /** FLOW-1135, FLOW-1169: a property's חשבונות (its bills by type, what was paid back), on a rental or a project with utilities. */
   utilitiesTo?: string;
 }) {
   const blocked = useBlockedPreview();
@@ -213,7 +213,7 @@ export function ProjectMenu({
             <ListRow
               variant="item"
               title="חשבונות"
-              hint="מי משלם כל חשבון: שוכר או חברה"
+              hint="מה הוחזר ומה לא"
               icon={<BoltIcon />}
               href={utilitiesTo}
               chevron

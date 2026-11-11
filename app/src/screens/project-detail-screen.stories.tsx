@@ -330,6 +330,9 @@ export const ProjectRentalUtilities: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("link", { name: /2 חשבונות לא הוחזרו/ })).toBeInTheDocument();
-    await expect(canvas.getByText("מי משלם · 4 ספקים · 2 לא הוחזרו")).toBeInTheDocument();
+    // FLOW-1169 (V3-J-B1-Project): the row opens the bills by type and says what is missing.
+    const row = canvas.getByRole("link", { name: /^חשבונות/ });
+    await expect(row).toHaveAttribute("href", expect.stringMatching(/\/utilities\/bills$/));
+    await expect(row.textContent).toMatch(/מה הוחזר ומה לא · חסר/);
   },
 };
