@@ -1,1 +1,1 @@
-The 2026-11-11 daily perf report is in `docs/qa/perf/`. No fix shipped: pausing the screen preload while a screen reads did not help Review. Review's first card shows at about 0.7 to 0.9 s; the sweep's 1.5 to 2 s is its second wave. All JavaScript has 3.5 KB left under 740 KB.
+The 2026-11-11 daily perf report is in `docs/qa/perf/`. No fix shipped: pausing the screen preload while a screen reads did not help Review. Review's first card shows at about 0.7 to 0.9 s; the sweep's 1.5 to 2.1 s is its second wave. All JavaScript has 3.5 KB left under 740 KB.
