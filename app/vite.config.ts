@@ -161,7 +161,17 @@ export default defineConfig(({ mode }) => {
               networkTimeoutSeconds: 3,
               cacheableResponse: { statuses: [200] },
               precacheFallback: { fallbackURL: "/index.html" },
-              plugins: [{ cacheKeyWillBeUsed: () => Promise.resolve("/app-shell") }],
+              plugins: [
+                { cacheKeyWillBeUsed: () => Promise.resolve("/app-shell") },
+                // FLOW-848: every navigation shares the one key, so only an HTML page may replace it;
+                // opening build.txt, sw.js or an icon in a tab must not become the offline page.
+                {
+                  cacheWillUpdate: ({ response }) =>
+                    Promise.resolve(
+                      (response.headers.get("content-type") ?? "").toLowerCase().includes("text/html") ? response : null,
+                    ),
+                },
+              ],
             },
           },
         ],
