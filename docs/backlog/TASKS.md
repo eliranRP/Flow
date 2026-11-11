@@ -767,6 +767,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-929"></a>[FLOW-929](tasks/FLOW-929.md) | Cross-company sweep: every client function, called as another company | SMALL CYCLE |
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
 | <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
+| <a id="flow-1169"></a>[FLOW-1169](tasks/FLOW-1169.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
 
 ## Data hygiene (public repo)
 
