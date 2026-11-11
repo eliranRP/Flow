@@ -49,10 +49,10 @@ Go through [known-attacks.md](../security/known-attacks.md) section by section. 
 Two research agents (Fable 5.2) add fresh ideas to the hunt. Each one:
 
 1. Reads three to five recent articles on security, cybersecurity or offensive security (write-ups, advisories, conference talks, new CVEs), preferring the stack in step 4 of [zero-day-patterns.md](../security/zero-day-patterns.md).
-2. Turns what it read into three attack cases against Flow, each as a hypothesis in the Stage 2 shape, with the article it came from.
+2. Turns what it read into two or three attack cases against Flow, each as a hypothesis in the Stage 2 shape, with the article it came from.
 3. Tries each case locally only: reading the code, a local test, or a local build in a local browser. Never production, never GitHub write actions, never a secret's value.
 
-Together the two agents bring five or six cases. The scan agent checks every case itself before it counts as a candidate, and lists each case in the report with its source and outcome. A case that teaches a new pattern goes into zero-day-patterns.md, as in step 4 above.
+Together the two agents bring five or six cases. The scan agent checks every case itself before it counts as a candidate, and lists each case in the report with its source and outcome. The case text stays in this session and the report, never in the repo (see Disclosure); only a general pattern goes in, into zero-day-patterns.md as in Stage 2 step 4 above.
 
 ## Triage
 

@@ -114,13 +114,13 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** for each signal an agent acts on, ask who can write it. Check that the agent checks the author and the exact head sha, and that a server-side rule backs the gate.
 
 ### P18. A check that passes on the wrong type
-- **Seen in:** PHP "magic hashes" (loose `==` between hash strings); JWT libraries that skipped `exp` when it was not a number.
+- **Seen in:** PHP "magic hashes" (loose `==` between hash strings that start with `0e`, so different hashes compare equal).
 - **Pattern:** a comparison with `NaN`, `null` or a string is false, and the code reads false as "allowed".
 - **In Flow:** date and expiry checks, numeric limits read from JSON, flags read as strings in edge functions.
 - **Hunt:** for each allow/deny check, feed it a value of the wrong type and check that it fails closed.
 
 ### P19. A decision that outlives its revocation
-- **Seen in:** sessions and tokens that stay valid after a password reset or a role removal, a recurring bug bounty finding (OWASP ASVS, session management).
+- **Seen in:** sessions and tokens that stay valid after a password reset or a role removal, a recurring bug bounty finding (OWASP ASVS V3.3, session termination).
 - **Pattern:** access is decided once, cached or signed, and nothing re-checks it when the grant is withdrawn.
 - **In Flow:** MCP tokens, invite links, membership-derived helpers, push subscriptions.
 - **Hunt:** revoke mid-flow in a local test (remove the member, revoke the token) and check what the next step still allows, and for how long.
