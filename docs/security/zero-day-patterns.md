@@ -114,7 +114,7 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** for each signal an agent acts on, ask who can write it. Check that the agent checks the author and the exact head sha, and that a server-side rule backs the gate.
 
 ### P18. A check that passes on the wrong type
-- **Seen in:** PHP "magic hashes" (loose `==` between hash strings that start with `0e`, so different hashes compare equal).
+- **Seen in:** PHP "magic hashes" (Robert Hansen, WhiteHat Security, 2015; the PHP manual's "Comparison Operators" page): with loose `==`, two hash strings that start with `0e` compare as the number zero, so different hashes compare equal.
 - **Pattern:** a comparison with `NaN`, `null` or a string is false, and the code reads false as "allowed".
 - **In Flow:** date and expiry checks, numeric limits read from JSON, flags read as strings in edge functions.
 - **Hunt:** for each allow/deny check, feed it a value of the wrong type and check that it fails closed.

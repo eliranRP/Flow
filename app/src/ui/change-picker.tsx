@@ -12,6 +12,27 @@ const skeletonKeys = ["a", "b", "c", "d", "e"] as const;
 /** The rest's heading under the project groups (FLOW-406, picker). */
 export const PICK_REST_HEADING = "שאר הפרויקטים";
 
+/** A picker's rows: finished and hidden ones out; with no search, the suggestion first, then recent, then the rest. */
+export function ordered(options: ChangeChoice[], suggestionId: string, currentId: string, query: string, kind: "project" | "category", keepOrder = false): ChangeChoice[] {
+  const active = options.filter((option) => {
+    if (option.hidden && option.id !== currentId && option.id !== suggestionId) return false;
+    return option.status !== "finished" || option.id === currentId || option.id === suggestionId;
+  });
+  const needle = query.trim();
+  const matched = needle === ""
+    ? active
+    : active.filter((option) => option.name.includes(needle)
+      || (option.code ?? "").toLowerCase().includes(needle.toLowerCase())
+      || (option.group ?? "").includes(needle));
+  if (needle !== "" || keepOrder) return matched;
+  const suggestion = matched.find((option) => option.id === suggestionId);
+  const rest = matched.filter((option) => option.id !== suggestionId);
+  if (kind === "category") return suggestion ? [suggestion, ...rest] : rest;
+  const recent = rest.filter((option) => option.recent);
+  const others = rest.filter((option) => !option.recent);
+  return [...(suggestion ? [suggestion] : []), ...recent, ...others];
+}
+
 /**
  * FLOW-406 (picker): with any grouped project, each group's projects under its name, in the order
  * its first project is listed, then שאר הפרויקטים. Groups are told apart by id, so two groups that

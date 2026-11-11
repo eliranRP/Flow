@@ -79,7 +79,7 @@ export function LoanRateSheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next && busy != null) return;
+        if (!next && busy != null) return false;
         onOpenChange(next);
       }}
       title={rate ? "שינוי ריבית" : "קביעת ריבית"}
