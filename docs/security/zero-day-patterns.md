@@ -101,6 +101,30 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **In Flow:** page sizes, date ranges in reports, `limit` in MCP list tools, import row counts, upload sizes.
 - **Hunt:** E4. Send huge, negative and zero values, and check that the server caps them.
 
+### P16. Many addresses share one cache entry
+- **Seen in:** web cache poisoning and web cache deception (PortSwigger research, 2018; Omer Gil, 2017): a cache keyed on less than the full request stored one response and served it for others.
+- **Pattern:** a cache stores many URLs under one key, so the least trusted URL can replace what the most trusted one shows.
+- **In Flow:** the service worker's navigation cache, the offline page, any runtime cache with a fixed `cacheKeyWillBeUsed`, CDN rules in `_headers`.
+- **Hunt:** for each shared key, list every request that can write it. Check that only the expected kind of response (content type, status) is stored.
+
+### P17. A gate that anyone can write to
+- **Seen in:** GitHub Actions "pwn requests" (GitHub Security Lab, 2021): workflows that trusted a comment command or a label without checking who posted it.
+- **Pattern:** a gate is a text convention in a channel that outsiders can also write to, and nothing checks who wrote it.
+- **In Flow:** review verdicts and other agent signals carried in PR comments, labels or commit messages; branch rules and required checks.
+- **Hunt:** for each signal an agent acts on, ask who can write it. Check that the agent checks the author and the exact head sha, and that a server-side rule backs the gate.
+
+### P18. A check that passes on the wrong type
+- **Seen in:** PHP "magic hashes" (Robert Hansen, WhiteHat Security; the PHP manual's "Comparison Operators" page): with loose `==`, two hash strings that start with `0e` compare as the number zero, so different hashes compare equal.
+- **Pattern:** a comparison coerces a value of the wrong type (a string, `null`, `NaN`), so the check passes or fails the wrong way, and the code reads the result as "allowed".
+- **In Flow:** date and expiry checks, numeric limits read from JSON, flags read as strings in edge functions.
+- **Hunt:** for each allow/deny check, feed it a value of the wrong type and check that it fails closed.
+
+### P19. A decision that outlives its revocation
+- **Seen in:** sessions and tokens that stay valid after a password reset or a role removal (OWASP ASVS V3.3, session termination).
+- **Pattern:** access is decided once, cached or signed, and nothing re-checks it when the grant is withdrawn.
+- **In Flow:** MCP tokens, invite links, membership-derived helpers, push subscriptions.
+- **Hunt:** revoke mid-flow in a local test (remove the member, revoke the token) and check what the next step still allows, and for how long.
+
 ## Adding a pattern
 
 Add a new entry when a Stage 2 hunt or a new advisory teaches one. Keep the same shape: what happened (with a public reference), the pattern in one line, where in Flow, how to hunt. Write it in general terms. Never describe how to exploit Flow code that isn't fixed yet.

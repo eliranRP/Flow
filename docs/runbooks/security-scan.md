@@ -28,7 +28,7 @@ Both runs fire into one long-running cloud session, the same setup the perf stew
 
 **Daily.** The base is the `main` sha recorded at the end of the last run. With none, use `git rev-list -1 --before="26 hours ago" origin/main`. Review `git diff <base>..origin/main`, and for each changed file read enough around it to follow the data: the callers of a changed function, and the policies and grants of a changed table. A change to a migration, an edge function, `flow-mcp`, `_headers`, `_redirects`, `config.toml`, `.github/workflows/`, `package.json`, the lockfile or a `deno.json` always gets the full Stage 1 sections that apply to it. If the diff is empty, run the Stage 2 pattern that was tried least recently on one area of the repo instead, and say so in the report.
 
-**Weekly.** Everything: all of Stage 1 across the repo, then at least six Stage 2 patterns (those tried least recently first), the advisory reading (step 4 of [zero-day-patterns.md](../security/zero-day-patterns.md)), `pnpm audit`, and a read-only `curl -sI` of the live Pages site to compare its headers with `_headers` as the build fills it (the policy `scripts/security-headers.mjs` builds). Use subagents for the sweep: one per Stage 1 section, on a cheaper model (Sonnet 5.5 for B and D, Haiku 5.5 for the rest). Give each one its section, the paths and the rule "report candidates with file:line and the data path, don't fix". Then check every candidate yourself before you count it.
+**Weekly.** Everything: all of Stage 1 across the repo, then at least six Stage 2 patterns (those tried least recently first), the advisory reading (step 4 of [zero-day-patterns.md](../security/zero-day-patterns.md)), `pnpm audit`, the red-team research step (below), and a read-only `curl -sI` of the live Pages site to compare its headers with `_headers` as the build fills it (the policy `scripts/security-headers.mjs` builds). Use subagents for the sweep: one per Stage 1 section, on a cheaper model (Sonnet 5.5 for B and D, Haiku 5.5 for the rest). Give each one its section, the paths and the rule "report candidates with file:line and the data path, don't fix". Then check every candidate yourself before you count it.
 
 ## Stage 1: known attacks
 
@@ -43,6 +43,16 @@ Go through [known-attacks.md](../security/known-attacks.md) section by section. 
 2. Try to prove it wrong. Read the code first. If the code doesn't settle it, write a local test: pgTAP in `supabase/tests/database/`, a Deno test beside the function, or a vitest test. Never test against production.
 3. A hypothesis that survives becomes a candidate. One that fails gets one line in the report ("P8 on invite accept: unique constraint holds").
 4. When a hunt teaches something new, add a row to known-attacks.md or an entry to zero-day-patterns.md, in the fix PR or in a docs PR of its own, in general terms only.
+
+### Red-team research (weekly)
+
+On the weekly scan, two research agents (Fable 5.2) add fresh ideas to the hunt. Each one:
+
+1. Reads three to five recent articles on security, cybersecurity or offensive security (write-ups, advisories, conference talks, new CVEs), preferring the stack in step 4 of [zero-day-patterns.md](../security/zero-day-patterns.md).
+2. Turns what it read into three attack cases against Flow, each as a hypothesis in the Stage 2 shape, with the article it came from.
+3. Tries each case locally only: reading the code, a local test, or a local build in a local browser. Never production, never GitHub write actions, never a secret's value.
+
+Together, once duplicates are merged, the two agents bring five or six cases. The scan agent checks every case itself before it counts as a candidate, and lists each case in the report with its source and outcome. The case text stays in this session and the report, never in the repo (see Disclosure); only a general pattern goes in, into zero-day-patterns.md as in Stage 2 step 4 above.
 
 ## Triage
 

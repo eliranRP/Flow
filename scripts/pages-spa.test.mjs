@@ -211,6 +211,18 @@ test("the Pages fallback lists app routes and does not use the rejected splat", 
   assert.equal(all.has("content-type"), false);
 });
 
+test("the offline shell cache stores only HTML pages", () => {
+  // Every navigation shares one cache key, so a 200 that is not HTML (build.txt, sw.js, an icon
+  // opened in a tab) would replace the stored app and show up as the offline page.
+  const vite = readFileSync(path.join(root, "app/vite.config.ts"), "utf8");
+  const shell = vite.slice(vite.indexOf('cacheName: "flow-shell"'));
+  assert.ok(vite.includes('cacheName: "flow-shell"'));
+  const plugins = shell.slice(0, shell.indexOf("],") + 1);
+  assert.match(plugins, /cacheWillUpdate/);
+  // Media types are case-insensitive, and only an HTML response is kept (not the reverse).
+  assert.match(plugins, /get\("content-type"\)[^?]*\?\? ""\)\.toLowerCase\(\)\.includes\("text\/html"\) \? response : null/);
+});
+
 test("nested relative routes resolve, and a path that is not a double-quoted literal fails", () => {
   const nested = `<Route path="projects"><Route path=":projectId"><Route path="categories/:categoryId" /></Route></Route><Route path="/absolute" />`;
   assert.deepEqual(productionRoutes(nested), [
