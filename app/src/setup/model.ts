@@ -132,6 +132,12 @@ export function indexTarget(store: SetupStore, facts: SetupFacts): string {
   return step == null ? "/setup/done" : stepPath(step);
 }
 
+/** Settings' הגדרה ראשונה after skip all: the first step not done, skipped ones included (FLOW-1161). Home once every step is done. */
+export function settingsEntryTarget(store: SetupStore, facts: SetupFacts): string {
+  const step = firstNotDone(store, facts);
+  return step == null ? "/" : stepPath(step);
+}
+
 /** The next screen after a step: the next step, or done after step 7. */
 export function nextPath(step: StepNumber): string {
   return step === 7 ? "/setup/done" : stepPath((step + 1) as StepNumber);

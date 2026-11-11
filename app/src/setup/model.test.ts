@@ -12,6 +12,7 @@ import {
   parseStep,
   previousPath,
   SETUP_TOTAL,
+  settingsEntryTarget,
   settingsEntryVisible,
   skipAllPatch,
   skipPatch,
@@ -133,6 +134,14 @@ describe("setup step model (FLOW-514)", () => {
     expect(settingsEntryVisible(started(), facts())).toBe(true);
     expect(settingsEntryVisible(started({ finished_at: at }), facts())).toBe(false);
     expect(settingsEntryVisible(emptySetupStore(), facts())).toBe(false);
+  });
+
+  it("settings entry opens the first step not done, skipped ones included, even after skip all (FLOW-1161)", () => {
+    const skippedAll = skipAllPatch(started(), facts(), at);
+    expect(indexTarget(skippedAll, facts())).toBe("/");
+    expect(settingsEntryTarget(skippedAll, facts())).toBe("/setup/2");
+    expect(settingsEntryTarget(skippedAll, facts({ mercuryConnected: true, projectCount: 1 }))).toBe("/setup/4");
+    expect(settingsEntryTarget(started(), facts({ mercuryConnected: true, projectCount: 1, loanCount: 1, jevSaved: true, hasResolvedReview: true, standalone: true }))).toBe("/");
   });
 
   it("withPatch keeps the stored skips unless the patch brings its own", () => {
