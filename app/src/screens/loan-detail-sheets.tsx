@@ -79,7 +79,7 @@ export function LoanPartSheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next && saving != null) return;
+        if (!next && saving != null) return false;
         onOpenChange(next);
       }}
       title={LOAN_PART_LABEL[part]}
