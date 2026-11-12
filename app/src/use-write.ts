@@ -1,6 +1,6 @@
 import { type MutationOptions, type QueryKey, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
+import { booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
@@ -32,6 +32,12 @@ export function isTransientWriteError(error: Error): boolean {
  */
 export function isReadOnlyRefusal(error: Error): boolean {
   return error.message.trim() === "no company";
+}
+
+/** FLOW-1166: the books' lock refuses a line dated on or before the closed date. Returns that date (ISO), or null. */
+export function booksClosedThrough(error: Error): string | null {
+  const match = /the books are closed through (\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))(?!\d)/.exec(error.message);
+  return match?.[1] ?? null;
 }
 
 /** Any refusal of this user's role. The screen's own copy still words a "forbidden". */
@@ -132,6 +138,12 @@ export function useWrite<T = void>(options: {
       if (options.silent?.(failure) === true) return;
       if (isReadOnlyRefusal(failure)) {
         toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", message: VIEWER_NOTE });
+        return;
+      }
+      const closedThrough = booksClosedThrough(failure);
+      if (closedThrough != null) {
+        // The lock gives the same answer for every write, so the write's own copy and retry do not apply.
+        toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", message: booksClosedNote(closedThrough) });
         return;
       }
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
