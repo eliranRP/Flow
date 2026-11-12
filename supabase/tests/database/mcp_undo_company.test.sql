@@ -253,7 +253,7 @@ from unnest(array[
   'loan_category_from', 'journal_entry', 'category_account', 'account_create', 'account_update',
   'account_archive', 'account_restore', 'account_merge', 'prepaid_create', 'prepaid_refund', 'prepaid_update',
   'prepaid_end', 'prepaid_delete', 'books_closed', 'journal_entry_update', 'tax_bracket', 'land_account', 'loan_closing_paid', 'member_report',
-  'utility_payer', 'utility_refund', 'utility_refunds_seen', 'utility_refile'
+  'utility_payer', 'utility_refund', 'utility_refunds_seen', 'utility_refile', 'held_change_left'
 ]) k;
 update muc_sweep set p_id = write_id where p_id is null;
 
@@ -270,7 +270,8 @@ select s.write_id, pg_temp.id('tok_b'), tests.get_supabase_uid('muc_user'),
     'move_id', t.id, 'effective_date', '2026-01-01', 'written_at', null, 'parts', '[]'::jsonb,
     'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense', 'connection_id', t.id,
     'in_transaction_id', t.id, 'note_id', t.id, 'file_id', t.id, 'supplier_id', t.id,
-    'part', 'interest', 'moved', '[]'::jsonb, 'account_id', t.id, 'schedule_id', t.id
+    'part', 'interest', 'moved', '[]'::jsonb, 'account_id', t.id, 'schedule_id', t.id,
+    'review_id', t.id, 'fingerprint', 'example-fingerprint'
   )
 from muc_sweep s cross join (select pg_temp.id('target') as id) t;
 
@@ -292,7 +293,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  82,
+  83,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -300,7 +301,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  82,
+  83,
   'the swept writes keep the company they were stored with'
 );
 select is(

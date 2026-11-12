@@ -4,7 +4,8 @@
 -- split, a manual booking, a delete, a bulk category move (refused whole), an MCP tool (the `refused`
 -- envelope), an undo, and a line's parts. A change of cash_date alone into an open month is allowed;
 -- a pending line is free until it posts; a receipt in the closed month keeps its filing when its open
--- invoice is filed; the service-role sync still writes a closed line. The undo of the closed date
+-- invoice is filed; the service-role sync holds its change to a closed line (part 2b,
+-- closed_line_holds.test.sql covers the rest). The undo of the closed date
 -- works, and with no date nothing is refused.
 -- Invented names and figures, @example.com only. Dates follow current_date.
 
@@ -306,7 +307,8 @@ select is(
   'the closed receipt keeps its filing and the open one follows the invoice');
 
 -- ---------------------------------------------------------------------------------------------
--- The service-role sync still writes a closed line (holding it is part 2b).
+-- The service-role sync brings a new line in the closed month, and holds a later change to it
+-- (part 2b).
 -- ---------------------------------------------------------------------------------------------
 create or replace function pg_temp.sync(p_amount bigint)
 returns integer language plpgsql set search_path = '' as $$
@@ -328,9 +330,9 @@ begin
 end; $$;
 grant execute on function pg_temp.sync(bigint) to service_role;
 select is(pg_temp.sync(7000), 1, 'the sync brings a new line dated in the closed month');
-select is(pg_temp.sync(7100), 1, 'and changes it later');
+select is(pg_temp.sync(7100), 0, 'a later change to it is held, not written');
 select is((select amount_original from public.transactions where company_id = pg_temp.id('co') and external_id = 'bc-sync-1'),
-  7100::bigint, 'so the closed line carries the new amount');
+  7000::bigint, 'so the closed line keeps its stored amount');
 
 -- ---------------------------------------------------------------------------------------------
 -- The undo of the closed date writes only the company; then nothing is refused.
