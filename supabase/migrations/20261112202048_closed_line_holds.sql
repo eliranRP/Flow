@@ -17,10 +17,10 @@
 --      the dates, line_status and removed_at as the update would write them) are laid over the stored
 --      row. When that is a hit under private.books_closed_hit, the line, its allocations and its
 --      overhead are not touched: the change is held and the run goes on. When it is not a hit but the
---      line is (or stays) in a closed period, the update runs with the stored category, project and
---      role (the filing the sync re-derives from a supplier rule, a SUMIT section or a hint) and the
---      parts are left as they are; the other columns update as before. A line that is not closed is
---      written as before. A new line is inserted as before, whatever its date (decided).
+--      line is (or stays) in a closed period, the update runs with the stored category, project, role,
+--      supplier and customer (the filing the sync re-derives from a supplier rule, a SUMIT section or a
+--      hint) and the parts are left as they are; the other columns update as before. A line that is
+--      not closed is written as before. A new line is inserted as before, whatever its date (decided).
 --    - The removed ids' void and the SUMIT sweep's removal leave closed lines out and hold them.
 --    - A line written normally drops its hold (the provider's latest word replaces the held one).
 --    - The forecast line match skips closed lines (it re-derives filing).
@@ -30,7 +30,11 @@
 --    replace_sumit_connection (a SUMIT company switch removes every SUMIT line), the sync's own cascades
 --    (follow_invoice through line_receipt_pairing, sync_review_queue's category_suggested) and other
 --    service-role writers that were not all traced; the sync diverts its own writes above instead.
--- 4. jev_prefill is unchanged (it is only refused once the triggers are widened).
+--    The sync's cascades: follow_invoice keeps a closed receipt's stored filing for every writer (part
+--    2a: only a person), unless the receipt was inserted in this transaction; its "invoice waits" rule
+--    keeps a held change's row.
+-- 4. jev_prefill is not refused (the triggers are not widened); it leaves a line with a held change
+--    alone (skipped: closed), since the held change's open row would otherwise let Jev file it.
 -- 5. sync_review_queue: one open row with the reason closed_month_change per held change (an open row
 --    the line already has takes that reason; no second open row); the row of a hold that was applied
 --    or dropped is deleted in the same run, before the other reasons are queued again. The delete of
@@ -133,6 +137,9 @@ $a$;
       update public.transactions t
       set direction = direction,
 $a$;
+  a_party constant text := $a$          customer_id = customer,
+          supplier_id = supplier,
+$a$;
   a_project constant text := $a$          project_id = case
             when existing_user or existing_project_assigned then t.project_id
 $a$;
@@ -175,6 +182,7 @@ begin
     or pg_temp.anchor_count(def, a_category) <> 1 or pg_temp.anchor_count(def, a_role) <> 1
     or pg_temp.anchor_count(def, a_parts) <> 1 or pg_temp.anchor_count(def, a_void) <> 1
     or pg_temp.anchor_count(def, a_sweep) <> 1 or pg_temp.anchor_count(def, a_forecast) <> 1
+    or pg_temp.anchor_count(def, a_party) <> 1
   then
     raise exception 'upsert_connector_lines is not the expected definition';
   end if;
@@ -305,6 +313,9 @@ $n$ || a_insert);
       set direction = direction,
 $n$);
 
+  def := replace(def, a_party, $n$          customer_id = case when keep_filing then t.customer_id else customer end,
+          supplier_id = case when keep_filing then t.supplier_id else supplier end,
+$n$);
   def := replace(def, a_project, $n$          project_id = case
             when keep_filing or existing_user or existing_project_assigned then t.project_id
 $n$);
@@ -474,6 +485,45 @@ $n$);
   execute def;
 end
 $sync$;
+
+-- The sync's cascades. follow_invoice (run by the receipt and invoice pairing triggers, also when the
+-- sync writes a line or queues a row) keeps a closed receipt's stored filing for every writer, not only
+-- a person, unless the receipt is new in this transaction (a brand-new line enters as any other); its
+-- rule 1 no longer deletes a held change's row. jev_prefill leaves a line with a held change alone.
+do $cascades$
+declare
+  def text;
+  a_who constant text := $a$    -- FLOW-1166: a receipt in a closed period keeps its stored filing when a person files.
+    if auth.uid() is not null and exists ($a$;
+  a_wait constant text := $a$      and q.reason is distinct from 'split_mismatch';
+    return;$a$;
+  a_jev constant text := $a$  if review is distinct from 'open' or line.user_assigned then$a$;
+begin
+  def := pg_get_functiondef('private.follow_invoice(uuid,boolean)'::regprocedure);
+  if pg_temp.anchor_count(def, a_who) <> 1 or pg_temp.anchor_count(def, a_wait) <> 1 then
+    raise exception 'follow_invoice is not the expected definition';
+  end if;
+  def := replace(def, a_who, $n$    -- FLOW-1166: a receipt in a closed period keeps its stored filing when a person files, and when
+    -- a sync or a job does (part 2b), unless the receipt is new in this transaction.
+    if (auth.uid() is not null or r.created_at < pg_catalog.now()) and exists ($n$);
+  def := replace(def, a_wait, $n$      and q.reason is distinct from 'split_mismatch'
+      -- FLOW-1166 part 2b: a held sync change's row stays.
+      and q.reason is distinct from 'closed_month_change';
+    return;$n$);
+  execute def;
+
+  def := pg_get_functiondef('public.jev_prefill(uuid,uuid,uuid,uuid,text,numeric)'::regprocedure);
+  if pg_temp.anchor_count(def, a_jev) <> 1 then
+    raise exception 'jev_prefill is not the expected definition';
+  end if;
+  def := replace(def, a_jev, $n$  -- FLOW-1166 part 2b: a line whose sync change is held keeps its filing.
+  if review is distinct from 'open' or line.user_assigned or exists (
+    select 1 from private.closed_line_holds h
+    where h.company_id = p_company and h.transaction_id = p_transaction
+  ) then$n$);
+  execute def;
+end
+$cascades$;
 
 -- The held change of each line, for review_row_items (an invoker function read by the app's role).
 create function private.review_held_changes(p_ids uuid[])
@@ -875,6 +925,10 @@ grant execute on function public.list_review_page(integer, date, timestamptz, uu
 revoke all on function private.mcp_refused(text) from public, anon, authenticated;
 revoke all on function public.mcp_undo(text, text, uuid) from public, anon, authenticated, service_role;
 grant execute on function public.mcp_undo(text, text, uuid) to authenticated;
+revoke all on function private.follow_invoice(uuid, boolean) from public, anon, authenticated;
+grant execute on function private.follow_invoice(uuid, boolean) to service_role;
+revoke all on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric) from public, anon, authenticated;
+grant execute on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric) to service_role;
 revoke all on function public.mcp_set_books_closed_through(text, date) from public, anon, authenticated;
 grant execute on function public.mcp_set_books_closed_through(text, date) to authenticated;
 

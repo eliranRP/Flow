@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(47);
+select plan(52);
 
 do $users$
 begin
@@ -224,6 +224,66 @@ select is((select p.name from public.projects p where p.id = (pg_temp.line('s-2'
   'a re-derived SUMIT section on a closed line keeps the stored project');
 select ok((pg_temp.hold('s-2')).transaction_id is null, 'with no hold');
 select is((pg_temp.line('s-3')).amount_original, 7250::bigint, 'the open document takes its change');
+
+-- A closed line paid in an open month, and a closed line whose supplier the sync re-derives: two new
+-- lines dated in the closed month (let in), then sent again.
+insert into res values ('cash_new', pg_temp.run('mercury', jsonb_build_array(
+  pg_temp.ml('m-cash', 5900, pg_temp.shut()),
+  pg_temp.ml('m-party', 5950, pg_temp.shut()) || jsonb_build_object('counterparty',
+    jsonb_build_object('name', 'Example Supplier One', 'kind', 'supplier')))));
+insert into ch (label, id) values ('party_one', (pg_temp.line('m-party')).supplier_id);
+insert into res values ('cash_again', pg_temp.run('mercury', jsonb_build_array(
+  pg_temp.ml('m-cash', 5900, pg_temp.shut()) || jsonb_build_object('cash_date', pg_temp.open()),
+  pg_temp.ml('m-party', 5950, pg_temp.shut()) || jsonb_build_object('counterparty',
+    jsonb_build_object('name', 'Example Supplier Two', 'kind', 'supplier')))));
+select is((select r - 'skipped' from res where label = 'cash_again'),
+  '{"inserted": 0, "updated": 2, "removed": 0, "held": 0}'::jsonb, 'neither a payment date in an open month nor a new supplier is held');
+select is((pg_temp.line('m-cash')).cash_date, pg_temp.open(), 'a closed line takes a payment date in an open month');
+select ok((pg_temp.line('m-party')).supplier_id = pg_temp.id('party_one') and pg_temp.id('party_one') is not null,
+  'a re-derived supplier on a closed line keeps the stored one');
+
+-- A sync or a job filing an open invoice: its receipt in the closed period keeps its filing, the open
+-- one follows (bank lines here, stored before this transaction as a real sync finds them).
+insert into ch (label, id) values
+  ('oak', tests.fixture_project(pg_temp.id('co'), 'Example Oak project')),
+  ('rent', tests.fixture_category(pg_temp.id('co'), 'Example rent', 'income')),
+  ('inv', tests.fixture_line(pg_temp.id('co'), 'ch:inv', 50000, 'income', null, null, pg_temp.open(), 'USD', 'posted',
+    'mercury', 'project', 'invoice')),
+  ('rcpt_s', tests.fixture_line(pg_temp.id('co'), 'ch:rcpt-s', 20000, 'income', null, null, pg_temp.shut(), 'USD', 'posted',
+    'mercury', 'project', 'receipt')),
+  ('rcpt_o', tests.fixture_line(pg_temp.id('co'), 'ch:rcpt-o', 30000, 'income', null, null, pg_temp.open(), 'USD', 'posted',
+    'mercury', 'project', 'receipt'));
+update public.transactions set external_id = 'ch-inv-1', user_assigned = false, category_assigned = false,
+  project_id = null, category_id = null where id = pg_temp.id('inv');
+update public.transactions set linked_external_id = 'ch-inv-1', user_assigned = false, category_assigned = false,
+  project_id = null, category_id = null, created_at = now() - interval '1 day'
+where id in (pg_temp.id('rcpt_s'), pg_temp.id('rcpt_o'));
+insert into ch (label, id) select 'rcpt_s_cat', t.category_id from public.transactions t where t.id = pg_temp.id('rcpt_s');
+do $file$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  update public.transactions set project_id = pg_temp.id('oak'), category_id = pg_temp.id('rent')
+  where id = pg_temp.id('inv');
+end
+$file$;
+select is(
+  (select array_agg(coalesce(t.project_id::text, '-') || ':' || coalesce(t.category_id::text, '-') order by t.doc_date)
+   from public.transactions t where t.id in (pg_temp.id('rcpt_s'), pg_temp.id('rcpt_o'))),
+  array['-:' || coalesce(pg_temp.id('rcpt_s_cat')::text, '-'), pg_temp.id('oak') || ':' || pg_temp.id('rent')],
+  'a non-person filing of an open invoice leaves its closed receipt and files the open one');
+
+-- Jev leaves a line whose change is held.
+do $jev$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  insert into pg_temp.res values ('jev', public.jev_prefill(pg_temp.id('co'), (pg_temp.line('m-0')).id, null,
+    pg_temp.id('supplies'), 'example-model', 0.9));
+end
+$jev$;
+select is((select r->>'skipped' from res where label = 'jev') || ':' || ((pg_temp.line('m-0')).category_id
+  is distinct from pg_temp.id('supplies'))::text, 'closed:true', 'Jev does not file a line whose change is held');
 
 -- ---------------------------------------------------------------------------------------------
 -- The review queue: one open row per held change, and list_review carries it.
