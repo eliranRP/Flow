@@ -614,6 +614,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1146"></a>[FLOW-1146](tasks/FLOW-1146.md) | Utility refunds: a split payment counts by its parts | SMALL UI (owner's ask) |
 | <a id="flow-1147"></a>[FLOW-1147](tasks/FLOW-1147.md) | Utility refunds: exact sums across months, and the owner's matches count toward a line | SMALL (owner's pick) |
 | <a id="flow-1159"></a>[FLOW-1159](tasks/FLOW-1159.md) | Utility refunds: what was paid back and what was not, and a bill in the context of its payments | SMALL UI (owner approved, 2026-11-10) |
+| <a id="flow-1169"></a>[FLOW-1169](tasks/FLOW-1169.md) | Utility refunds: the project page opens the bills by type, and מי משלם is a link at its end | SMALL UI (owner approved, 2026-11-11) |
 | <a id="flow-1136"></a>[FLOW-1136](tasks/FLOW-1136.md) | Member report תחזית: a skeleton while the forecast loads, not "טוען…" | SMALL UI |
 | <a id="flow-1137"></a>[FLOW-1137](tasks/FLOW-1137.md) | Skeletons in the content's shape: review, forms, sheets and settings | SMALL UI |
 | <a id="flow-1138"></a>[FLOW-1138](tasks/FLOW-1138.md) | Skeletons in the content's shape: projects and property returns | SMALL UI |
@@ -701,6 +702,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-847"></a>[FLOW-847](tasks/FLOW-847.md) | The security checklist says the CSP is enforced | SMALL CYCLE (docs) |
 | <a id="flow-848"></a>[FLOW-848](tasks/FLOW-848.md) | The offline shell keeps only HTML pages | SMALL CYCLE (infra) |
 | <a id="flow-849"></a>[FLOW-849](tasks/FLOW-849.md) | Red-team research step and new hunt patterns | SMALL CYCLE (docs) |
+| <a id="flow-850"></a>[FLOW-850](tasks/FLOW-850.md) | The support address is flowusappsupport@gmail.com | SMALL CYCLE |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
@@ -767,7 +769,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-929"></a>[FLOW-929](tasks/FLOW-929.md) | Cross-company sweep: every client function, called as another company | SMALL CYCLE |
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
 | <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
-| <a id="flow-1169"></a>[FLOW-1169](tasks/FLOW-1169.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
+| <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
 
 ## Data hygiene (public repo)
 

@@ -13,7 +13,6 @@ import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { FocusTitle } from "../ui/focus-title";
 import { GroupHead } from "../ui/group-head";
 import { HintParts } from "../ui/hint-parts";
-import { List, ListRow } from "../ui/list-row";
 import { PlusIcon } from "../ui/icons";
 import { SegmentedControl } from "../ui/segmented-control";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
@@ -32,7 +31,7 @@ function payerMeta(row: UtilityPayer, payer: Payer): string {
 }
 
 /**
- * FLOW-1135 (V3-Project-Utilities; decision 0265): the property's חשבונות, who pays each. Every utility with its usual
+ * FLOW-1135 (V3-Project-Utilities; decision 0265): who pays each of the property's utilities, opened from the end of its bills by type (FLOW-1169). Every utility with its usual
  * amount (the median of its last 3 bills) and a שוכר / חברה radiogroup: שוכר checks that the tenant paid each bill
  * back, חברה checks none and closes its open bills. הוספת ספק adds one of the property's recurring expenses. Every
  * change toasts with ביטול (set_utility_payer back to what it was). A viewer sees who pays and changes nothing.
@@ -65,7 +64,7 @@ export function ProjectUtilitiesScreen() {
   const phase = screenPhase(preview, payers);
   // The head's "הכול הוחזר" is a claim: it waits for the bills, and says so when they did not load.
   const refundsPhase = screenPhase(preview, refunds);
-  const back = `/projects/${projectId}${search}`;
+  const back = `/projects/${projectId}/utilities/bills${search}`;
   // FLOW-1154: offline, the page keeps what it last read and says from when, as the refunds page does.
   const since = !online && payers.data != null ? payers.dataUpdatedAt : undefined;
 
@@ -143,7 +142,7 @@ export function ProjectUtilitiesScreen() {
     <div>
       <TopBand
         wordmark={false}
-        leading={<BackButton fallback={back} text={name} onBand />}
+        leading={<BackButton fallback={back} text="חשבונות מול השוכר" onBand />}
         hero={(
           <>
             <FocusTitle className="t-name">חשבונות · מי משלם</FocusTitle>
@@ -174,10 +173,6 @@ export function ProjectUtilitiesScreen() {
                   : "הכול הוחזר"}
           />
           <p className="ui-utl-lead">מי משלם כל חשבון. שוכר: בודקים שהחזיר. חברה: לא בודקים.</p>
-          {/* FLOW-1159: all the bills by type, and what was paid back, near the top. */}
-          <List>
-            <ListRow variant="item" title="כל החשבונות" hint="לפי סוג חשבון, ומה הוחזר" href={`/projects/${projectId}/utilities/bills${search}`} chevron />
-          </List>
           {utilities.length === 0 ? (
             <p className="ui-utl-lead">עוד לא נמצאו חשבונות בנכס. Flow מוצא אותם מהשורות בקטגוריות החשבונות.</p>
           ) : (

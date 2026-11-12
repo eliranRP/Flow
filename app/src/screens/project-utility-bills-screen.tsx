@@ -36,8 +36,8 @@ function TypeSummary({ type }: { type: BillType }) {
 }
 
 /**
- * FLOW-1159 (V3-J-B3-ByType, the List pattern): a property's bills by type, opened from its חשבונות · מי משלם page and
- * from כל החשבונות on the refunds list. Under the title, what the tenant owes ("השוכר חייב $X", or "הכול הוחזר");
+ * FLOW-1159 (V3-J-B3-ByType, the List pattern): a property's bills by type, opened from the property page's חשבונות row and
+ * from כל החשבונות on the refunds list; מי משלם at its end opens the payers page (FLOW-1169). Under the title, what the tenant owes ("השוכר חייב $X", or "הכול הוחזר");
  * then one head per type (the bill's category) with what is missing, and its bills newest activity first: the mark
  * (✓ refunded, a dashed ring while owed, a dot for ראיתי), "dd/mm/yy · supplier", its status line and its amount.
  * A bill opens its drawer; a viewer's row opens its transaction. It replaces the by-month page (FLOW-1144).
@@ -59,20 +59,29 @@ export function ProjectUtilityBillsScreen() {
   const types = billsByType(bills);
   const owes = tenantOwes(bills);
   const name = bills[0]?.project_name ?? cash;
-  const back = `/projects/${projectId}/utilities${search}`;
+  const back = `/projects/${projectId}${search}`;
+  const backText = name ?? "פרויקט";
   const since = !online && query.data != null ? query.dataUpdatedAt : undefined;
   const [firstOwed] = owes;
+  // V3-J-B3-ByType: the way to who pays each supplier, at the end of the page.
+  const payers = (
+    <section className="ui-month ui-urf-group">
+      <List>
+        <ListRow variant="item" title="מי משלם" hint="שוכר או חברה, לכל ספק" href={`/projects/${projectId}/utilities${search}`} chevron />
+      </List>
+    </section>
+  );
   return (
     <div className="ui-urf-screen">
       <CompactBar
         title="חשבונות מול השוכר"
         figure={firstOwed == null ? undefined : <Amount agorot={firstOwed.minor} currency={firstOwed.currency} direction="expense" cents="always" />}
-        label="חשבונות · מי משלם"
+        label={backText}
         backTo={back}
         shown={barShown}
       />
       <header className="ui-urf-head">
-        <BackButton fallback={back} text="חשבונות · מי משלם" />
+        <BackButton fallback={back} text={backText} />
         <h1 className="t-title">חשבונות מול השוכר</h1>
         <p className="ui-urf-sub t-meta">{name == null ? "לפי סוג חשבון" : `${name} · לפי סוג חשבון`}</p>
         {phase.kind !== "ready" || bills.length === 0 ? null : owes.length === 0 ? (
@@ -96,7 +105,10 @@ export function ProjectUtilityBillsScreen() {
       ) : phase.kind === "error" ? (
         <PageLoadFailed title="החשבונות לא נטענו" offline={!online || phase.offline} onRetry={() => void query.refetch()} />
       ) : bills.length === 0 ? (
-        <EmptyState icon={<CheckIcon size={40} stroke={2.2} />} title="אין עדיין חשבונות בנכס" body="חשבון שהחברה שילמה והשוכר מחזיר יופיע כאן, לפי סוג." />
+        <>
+          <EmptyState icon={<CheckIcon size={40} stroke={2.2} />} title="אין עדיין חשבונות בנכס" body="חשבון שהחברה שילמה והשוכר מחזיר יופיע כאן, לפי סוג." />
+          {payers}
+        </>
       ) : (
         <>
           {since == null ? null : <BandOfflineLine since={since} onPage />}
@@ -126,6 +138,7 @@ export function ProjectUtilityBillsScreen() {
               </List>
             </section>
           ))}
+          {payers}
         </>
       )}
       {readOnly ? null : (

@@ -299,7 +299,12 @@ export function ProjectDetailScreen({
   });
   // FLOW-1135 (V3-Project-Rent-Utilities): a rental, or any project with utilities, has its חשבונות page.
   const utilityCount = refundCount(refundBills);
-  const utilitiesTo = kind === "rental" || utilities.length > 0 ? `/projects/${project.id}/utilities${search}` : null;
+  const utilitiesTo = kind === "rental" || utilities.length > 0 ? `/projects/${project.id}/utilities/bills${search}` : null;
+  // V3-J-B1-Project: what was paid back and what was not; the amount still missing when the bills read has one currency.
+  const [missing] = utilityCount.totals;
+  const utilityHint = utilityCount.notRefunded === 0
+    ? "מה הוחזר ומה לא"
+    : `מה הוחזר ומה לא · ${utilityCount.totals.length === 1 && missing != null ? `חסר ${formatAmountText(missing.minor, missing.currency, { detail: true })}` : `${String(utilityCount.notRefunded)} לא הוחזרו`}`;
   const menu = holdWrites ? <ReservedMenuSlot /> : (
     <ProjectMenu
       projectId={project.id}
@@ -351,13 +356,7 @@ export function ProjectDetailScreen({
     ...(utilitiesTo == null ? [] : [{
       id: "utilities",
       title: "חשבונות",
-      hint: utilities.length === 0
-        ? "מי משלם כל חשבון: שוכר או חברה"
-        : [
-          "מי משלם",
-          utilities.length === 1 ? "ספק אחד" : `${String(utilities.length)} ספקים`,
-          utilityCount.notRefunded > 0 ? `${String(utilityCount.notRefunded)} לא הוחזרו` : null,
-        ].filter((part): part is string => part != null).join(" · "),
+      hint: utilityHint,
       href: utilitiesTo,
     }]),
   ];
