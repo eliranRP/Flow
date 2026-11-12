@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(52);
+select plan(54);
 
 do $users$
 begin
@@ -242,6 +242,19 @@ select is((pg_temp.line('m-cash')).cash_date, pg_temp.open(), 'a closed line tak
 select ok((pg_temp.line('m-party')).supplier_id = pg_temp.id('party_one') and pg_temp.id('party_one') is not null,
   'a re-derived supplier on a closed line keeps the stored one');
 
+-- A closed line split by category whose amount changes: held, its open row takes the held reason.
+insert into res values ('split_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-split', 6000, pg_temp.shut()))));
+do $split$
+begin
+  perform tests.line_split((pg_temp.line('m-split')).id, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.id('repairs'), 'project_id', null, 'amount_minor', 3000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.id('supplies'), 'project_id', null, 'amount_minor', 3000, 'gross_up', false)));
+end
+$split$;
+insert into res values ('split_change', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-split', 6600, pg_temp.shut()))));
+select is((pg_temp.line('m-split')).amount_original || ':' || array_to_string(pg_temp.open_rows('m-split'), ','),
+  '6000:closed_month_change', 'a split line''s held change keeps its amount and has one open row');
+
 -- A sync or a job filing an open invoice: its receipt in the closed period keeps its filing, the open
 -- one follows (bank lines here, stored before this transaction as a real sync finds them).
 insert into ch (label, id) values
@@ -382,6 +395,8 @@ select is((select count(*)::integer from private.closed_line_holds where company
 select is((select count(*)::integer from public.review_queue q where q.company_id = pg_temp.id('co') and q.status = 'open'
   and q.reason = 'closed_month_change' and q.transaction_id in (select id from public.transactions where source = 'mercury')),
   0, 'and their review rows are closed in the same run');
+select is((pg_temp.line('m-split')).amount_original || ':' || array_to_string(pg_temp.open_rows('m-split'), ','),
+  '6600:split_mismatch', 'the split line takes its amount and its split_mismatch row comes back');
 insert into res values ('replay_sumit', pg_temp.run('sumit', jsonb_build_array(
   pg_temp.sl('s-2', 7100, pg_temp.shut(), 'Example Oak house'), pg_temp.sl('s-3', 7250, pg_temp.open())),
   '[]'::jsonb, true));
