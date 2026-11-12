@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(58);
+select plan(71);
 
 do $users$
 begin
@@ -209,7 +209,8 @@ select is((pg_temp.line('m-cat')).category_id, pg_temp.id('repairs'),
 select ok((pg_temp.hold('m-cat')).transaction_id is null and (pg_temp.hold('m-same')).transaction_id is null,
   'neither the re-derived category nor the same values make a hold');
 select is((pg_temp.line('m-new')).amount_original, 5800::bigint, 'a new line dated in the closed month is inserted');
-select ok((pg_temp.hold('m-new')).transaction_id is null, 'and is not held');
+select ok((pg_temp.hold('m-new')).transaction_id is null and (pg_temp.line('m-new')).category_id is not null,
+  'and is not held, and gets its suggested category');
 select is((pg_temp.hold('m-0')).state, 'held', 're-sending the held values keeps one hold, still held');
 
 -- SUMIT: every document every run. s-1 is gone (the sweep), s-2's section changed, s-3 is open.
@@ -241,6 +242,19 @@ select is((select r - 'skipped' from res where label = 'cash_again'),
 select is((pg_temp.line('m-cash')).cash_date, pg_temp.open(), 'a closed line takes a payment date in an open month');
 select ok((pg_temp.line('m-party')).supplier_id = pg_temp.id('party_one') and pg_temp.id('party_one') is not null,
   'a re-derived supplier on a closed line keeps the stored one');
+
+-- A closed line stored with no category (no default to guess when it came in): the sync sending it
+-- again leaves it empty, so no suggested category and no review row appear in the closed period.
+create temp table hid as select c.id from public.categories c
+where c.company_id = pg_temp.id('co') and c.kind = 'expense' and c.is_default and not c.hidden;
+update public.categories set hidden = true where id in (select id from hid);
+insert into res values ('nocat_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-nocat', 5990, pg_temp.shut()))));
+update public.categories set hidden = false where id in (select id from hid);
+insert into res values ('nocat_rows', to_jsonb(pg_temp.open_rows('m-nocat')));
+insert into res values ('nocat_again', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-nocat', 5990, pg_temp.shut()))));
+select is(coalesce((pg_temp.line('m-nocat')).category_id::text, '-') || ':' || (pg_temp.line('m-nocat')).category_suggested
+  || ':' || (to_jsonb(pg_temp.open_rows('m-nocat')) = (select r from res where label = 'nocat_rows'))::text,
+  '-:false:true', 'a sync sending a closed line again does not fill its empty category, nor queue it again');
 
 -- A closed line split by category whose amount changes: held, its open row takes the held reason.
 insert into res values ('split_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-split', 6000, pg_temp.shut()))));
@@ -380,6 +394,42 @@ select ok((pg_temp.line('m-into')).category_id is not distinct from pg_temp.id('
   and (pg_temp.line('m-into')).pnl_role = 'overhead'
   and exists (select 1 from public.overhead o where o.transaction_id = (pg_temp.line('m-into')).id),
   'the reopen keeps the line''s filing');
+-- Jev is kept off a line only while its change waits, not once the owner left it.
+do $jev_left$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  insert into pg_temp.res values ('jev_left', public.jev_prefill(pg_temp.id('co'), (pg_temp.line('m-into')).id, null,
+    pg_temp.id('supplies'), 'example-model', 0.9));
+end
+$jev_left$;
+select isnt((select coalesce(r->>'skipped', '-') from res where label = 'jev_left'), 'closed',
+  'Jev may file a line whose held change the owner left');
+
+-- A line that is itself open but has a held change (the bank moved it into the closed month): a
+-- person's filing of it goes through, and the held change still waits in the queue.
+insert into res values ('into2_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-into2', 5985, pg_temp.open()))));
+insert into res values ('into2_move', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-into2', 5985, pg_temp.shut()))));
+select is(pg_temp.try(format('select public.reassign_transaction(%L, %L, %L)', (pg_temp.line('m-into2')).id,
+  pg_temp.id('oak'), pg_temp.id('supplies'))), 'ok', 'a person files an open line whose change is held');
+select is((pg_temp.line('m-into2')).category_id::text || ':' || array_to_string(pg_temp.open_rows('m-into2'), ','),
+  pg_temp.id('supplies')::text || ':closed_month_change', 'the filing is written and the held change still waits');
+-- The same for an open receipt that follows the invoice a person files.
+create or replace function pg_temp.income(p_ext text, p_kind text, p_date date, p_invoice text default null)
+returns jsonb language sql set search_path = '' as $$
+  select pg_temp.ml(p_ext, 4000, p_date) || jsonb_strip_nulls(jsonb_build_object('direction', 'income',
+    'doc_kind', p_kind, 'amount_negated', false, 'linked_external_id', p_invoice));
+$$;
+insert into res values ('pair_new', pg_temp.run('mercury', jsonb_build_array(
+  pg_temp.income('m-inv2', 'invoice', pg_temp.open()), pg_temp.income('m-rcpt2', 'receipt', pg_temp.open(), 'm-inv2'))));
+insert into res values ('pair_move', pg_temp.run('mercury', jsonb_build_array(
+  pg_temp.income('m-rcpt2', 'receipt', pg_temp.shut(), 'm-inv2'))));
+select is(array_to_string(pg_temp.open_rows('m-rcpt2'), ','), 'closed_month_change', 'the open receipt''s change is held');
+select is(pg_temp.try(format('select public.reassign_transaction(%L, %L, %L)', (pg_temp.line('m-inv2')).id,
+  pg_temp.id('oak'), pg_temp.id('rent'))), 'ok', 'a person files the invoice of a receipt whose change is held');
+select is((pg_temp.line('m-rcpt2')).category_id::text || ':' || array_to_string(pg_temp.open_rows('m-rcpt2'), ','),
+  pg_temp.id('rent')::text || ':closed_month_change', 'the receipt follows, and its held change still waits');
 
 -- The hold's state and left_at go together (decision 0266).
 select throws_ok(format($$update private.closed_line_holds set state = 'left' where transaction_id = %L$$,
@@ -388,6 +438,12 @@ select throws_ok(format($$update private.closed_line_holds set state = 'left' wh
 -- ---------------------------------------------------------------------------------------------
 -- The close waits for the open review lines; moving the date back does not.
 -- ---------------------------------------------------------------------------------------------
+-- Only the lines a move newly closes count: m-new, let in after the close, waits for review and
+-- does not block a move forward that closes no line with an open review row.
+select ok(exists (select 1 from public.review_queue q where q.transaction_id = (pg_temp.line('m-new')).id
+  and q.status = 'open' and q.reason is distinct from 'closed_month_change'), 'a closed line is open for review');
+select is((select r->>'ok' from (select pg_temp.ask(format('select public.mcp_set_books_closed_through(%L, %L::date)',
+  'ch-close-0', pg_temp.m1(-5))) r) x), 'true', 'it does not block moving the date forward over no line open for review');
 insert into res values ('close_more', pg_temp.ask(format('select public.mcp_set_books_closed_through(%L, %L::date)',
   'ch-close-1', pg_temp.open())));
 select is((select r->'error'->>'code' || ':' || (r->'error'->>'message') from res where label = 'close_more'),
@@ -395,6 +451,15 @@ select is((select r->'error'->>'code' || ':' || (r->'error'->>'message') from re
 insert into res values ('reopen', pg_temp.ask(format('select public.mcp_set_books_closed_through(%L, %L::date)',
   'ch-close-2', pg_temp.m1(-9))));
 select is((select r->>'ok' from res where label = 'reopen'), 'true', 'moving the closed date back is never refused by it');
+-- (The test is one transaction, so the writes share now(): the move back is made the latest.)
+update private.mcp_writes set created_at = created_at + interval '1 second'
+where company_id = pg_temp.id('co') and kind = 'books_closed' and prior->>'after' = pg_temp.m1(-9)::text;
+insert into res values ('reopen_undo', pg_temp.ask(format('select public.mcp_undo(%L, %L, %L::uuid)',
+  'ch-close-undo-1', 'books_closed', pg_temp.id('co'))));
+select is((select r->'error'->>'code' || ':' || (r->'error'->>'message') from res where label = 'reopen_undo')
+  || ':' || (select c.books_closed_through from public.companies c where c.id = pg_temp.id('co')),
+  'refused:approve the open review lines first:' || pg_temp.m1(-9),
+  'undoing the move back is refused the same way while a line it would close is open for review');
 
 -- ---------------------------------------------------------------------------------------------
 -- The next syncs apply every held change, a left one too; a fetched line wins over its hold.
@@ -419,6 +484,45 @@ insert into res values ('replay_sumit', pg_temp.run('sumit', jsonb_build_array(
 select ok((pg_temp.line('s-1')).removed_at is not null and (pg_temp.hold('s-1')).transaction_id is null
   and pg_temp.open_rows('s-1') = '{}', 'the held SUMIT removal is applied, its hold and row gone');
 select is((select (r->>'removed')::integer from res where label = 'replay_sumit'), 1, 'and counted as removed');
+
+-- ---------------------------------------------------------------------------------------------
+-- A removed line's held change is not shown and is not applied: removed here directly, then by a
+-- SUMIT company switch (which removes every SUMIT line and sets their open rows aside).
+-- ---------------------------------------------------------------------------------------------
+create or replace function pg_temp.svc(p_sql text)
+returns void language plpgsql set search_path = '' as $$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  execute p_sql;
+end; $$;
+update public.companies set books_closed_through = pg_temp.closed(), last_sumit_company_id = 111
+where id = pg_temp.id('co');
+insert into res values ('gone_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-gone', 5000, pg_temp.shut()))));
+insert into res values ('gone_held', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-gone', 5100, pg_temp.shut()))));
+update public.transactions set removed_at = now() where id = (pg_temp.line('m-gone')).id;
+select pg_temp.svc(format('select public.sync_review_queue(%L)', pg_temp.id('co')));
+select is((pg_temp.hold('m-gone')).kind || ':' || array_to_string(pg_temp.open_rows('m-gone'), ','), 'update:',
+  'a held change of a removed line has no open review row');
+
+insert into res values ('switch_held', pg_temp.run('sumit', jsonb_build_array(
+  pg_temp.sl('s-2', 7300, pg_temp.shut(), 'Example Oak house'), pg_temp.sl('s-3', 7250, pg_temp.open())), '[]'::jsonb, true));
+insert into ch (label, id) values ('s2_row', pg_temp.review_of('s-2'));
+select pg_temp.svc(format('select public.replace_sumit_connection(%L, 222, %L, %L, %L, %L, %L, %L, true)',
+  pg_temp.id('co'), 'aa', 'aa', 'aa', 'aa', '1', '2'));
+select is(coalesce((pg_temp.hold('s-2')).kind, '-') || ':'
+  || (select q.status::text from public.review_queue q where q.id = pg_temp.id('s2_row'))
+  || ':' || ((pg_temp.line('s-2')).removed_at is not null)::text, '-:skipped:true',
+  'a SUMIT company switch drops the held change of each line it removes and sets its row aside');
+
+update public.companies set books_closed_through = pg_temp.m1(-9) where id = pg_temp.id('co');
+insert into res values ('gone_replay', pg_temp.run('mercury', '[]'::jsonb));
+insert into res values ('switch_replay', pg_temp.run('sumit', '[]'::jsonb, '[]'::jsonb, true));
+select is(array_to_string(array[(pg_temp.line('m-gone')).amount_original, (pg_temp.line('s-2')).amount_original]::bigint[], ',')
+  || ':' || ((pg_temp.line('m-gone')).removed_at is not null and (pg_temp.line('s-2')).removed_at is not null)::text
+  || ':' || (select count(*) from private.closed_line_holds where company_id = pg_temp.id('co')),
+  '5000,7100:true:0', 'reopening the period brings neither removed line back: their held changes are dropped');
 
 select * from finish();
 rollback;

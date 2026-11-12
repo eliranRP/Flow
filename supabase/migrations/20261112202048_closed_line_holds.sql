@@ -11,8 +11,12 @@
 -- 2. upsert_connector_lines, patched in place with counted anchors:
 --    - Replay first, inside the advisory lock: a held void or removal whose line is no longer closed is
 --      applied as the bulk statements below would apply it; each held update goes through the per-line
---      path ahead of the fetched lines, and is applied there when it is no longer a hit (otherwise it is
---      left as it is). An applied hold is deleted. The fetched lines come after and win.
+--      path ahead of the fetched lines, on the hold's own line (found by its id), and is applied there
+--      when it is no longer a hit (otherwise it is left as it is). An applied hold is deleted. A held
+--      update whose line was removed since (a SUMIT company switch) is deleted, not applied. The
+--      fetched lines come after, and a fetched line's amounts, dates and status win over a replayed
+--      update; a replayed void is not undone by them, since a void is permanent here (a line fetched
+--      alive in the same run stays void).
 --    - An existing line: the incoming provider facts (direction, doc_kind, the amounts, VAT, currency,
 --      the dates, line_status and removed_at as the update would write them) are laid over the stored
 --      row. When that is a hit under private.books_closed_hit, the line, its allocations and its
@@ -32,24 +36,31 @@
 --    service-role writers that were not all traced; the sync diverts its own writes above instead.
 --    The sync's cascades: follow_invoice keeps a closed receipt's stored filing for every writer (part
 --    2a: only a person), unless the receipt was inserted in this transaction; its "invoice waits" rule
---    keeps a held change's row.
--- 4. jev_prefill is not refused (the triggers are not widened); it leaves a line with a held change
---    alone (skipped: closed), since the held change's open row would otherwise let Jev file it.
--- 5. sync_review_queue: one open row with the reason closed_month_change per held change (an open row
---    the line already has takes that reason; no second open row); the row of a hold that was applied
---    or dropped is deleted in the same run, before the other reasons are queued again. The delete of
+--    keeps a held change's row. fill_suggested_category never fills the empty category of a closed
+--    line on an update (a sync writing the line again); a new line still gets its guess.
+--    replace_sumit_connection deletes the company's SUMIT holds with the lines it removes (their rows
+--    are set aside with the others), so a reopened period does not bring a removed line back.
+-- 4. jev_prefill is not refused (the triggers are not widened); it leaves a line whose change is still
+--    held alone (skipped: closed), since the held change's open row would otherwise let Jev file it.
+-- 5. sync_review_queue: one open row with the reason closed_month_change per held change of a line not
+--    removed (an open row the line already has takes that reason; no second open row); the row of a
+--    hold that was applied, dropped or whose line was removed is deleted in the same run, before the
+--    other reasons are queued again. The delete of
 --    rows whose line is void, pending or removed, and category_suggested on open income rows, leave
 --    these rows alone; a left change's approved row does not settle the line for income review.
 --    review_row_items and list_review_page show such a row whatever its line's state, and the item
 --    carries held: {kind, amount_minor, currency, doc_date, cash_date, line_status, provider}.
---    A person cannot close such a row while its change is held (review_queue_held_change), so an
---    app that does not know the reason is refused cleanly.
+--    A person cannot close such a row while its change is held (review_queue_held_change): on a
+--    closed line an app that does not know the reason is refused cleanly; on a line that is itself
+--    open (the held change would move it into the closed period, or post it there) the person's edit
+--    goes through and the row stays open.
 -- 6. leave_held_change (app, owner or editor) and mcp_leave_held_change (flow-mcp, undo kind
 --    held_change_left): the hold becomes left and its row approved. The same change does not reopen
 --    it; a different one does. The undo puts the hold back to held and reopens the row.
--- 7. mcp_set_books_closed_through refuses a close while a line the new date would close has an open
---    review row (any reason but closed_month_change): `approve the open review lines first`. Moving the
---    date back or clearing it is never refused by this.
+-- 7. mcp_set_books_closed_through, and the undo of a move back (undo_prepaid_write), refuse a close
+--    while a line the new date newly closes (closed by it and not by the current date) has an open
+--    review row (any reason but closed_month_change): `approve the open review lines first`, through
+--    private.books_close_review_check. Moving the date back or clearing it is never refused by this.
 --
 -- Rows: a new table, empty; no row is rewritten. With books_closed_through null for every company
 -- nothing is held. Signatures do not change; new functions are listed in the privilege allowlist.
@@ -173,6 +184,10 @@ $a$;
   a_forecast constant text := $a$      and t.external_id = any (seen_ids)
   ));
 $a$;
+  a_lookup constant text := $a$      and t.external_id = ext
+    for update;
+    if existing_id is null then
+$a$;
 begin
   def := pg_get_functiondef(
     'public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text,smallint)'::regprocedure);
@@ -182,7 +197,7 @@ begin
     or pg_temp.anchor_count(def, a_category) <> 1 or pg_temp.anchor_count(def, a_role) <> 1
     or pg_temp.anchor_count(def, a_parts) <> 1 or pg_temp.anchor_count(def, a_void) <> 1
     or pg_temp.anchor_count(def, a_sweep) <> 1 or pg_temp.anchor_count(def, a_forecast) <> 1
-    or pg_temp.anchor_count(def, a_party) <> 1
+    or pg_temp.anchor_count(def, a_party) <> 1 or pg_temp.anchor_count(def, a_lookup) <> 1
   then
     raise exception 'upsert_connector_lines is not the expected definition';
   end if;
@@ -192,6 +207,7 @@ begin
   closed_through date;
   holds_exist boolean := false;
   is_replay boolean;
+  replay_txn uuid;
   keep_filing boolean := false;
   cur_row public.transactions;
   prov_row public.transactions;
@@ -244,24 +260,43 @@ $n$);
 $n$);
 
   def := replace(def, a_loop, $n$  -- FLOW-1166 part 2b: the held updates first (oldest first), then the fetched lines in their order.
-  for line, is_replay in
-    select x.l, x.r
+  -- A fetched line comes after its replayed hold, so its amounts, dates and status win; a replayed
+  -- void (applied above) stays, as any void does here.
+  for line, is_replay, replay_txn in
+    select x.l, x.r, x.t
     from (
-      select h.line as l, true as r, 0 as g,
+      select h.line as l, true as r, h.transaction_id as t, 0 as g,
              row_number() over (order by h.held_at, h.transaction_id) as n
       from private.closed_line_holds h
       where holds_exist and h.company_id = p_company and h.provider = p_provider and h.kind = 'update'
       union all
-      select e.value, false, 1, e.n
+      select e.value, false, null::uuid, 1, e.n
       from jsonb_array_elements(p_lines->'lines') with ordinality as e(value, n)
     ) x
     order by x.g, x.n
   loop
 $n$);
 
+  def := replace(def, a_lookup, $n$      and t.external_id = ext
+      and not is_replay
+    for update;
+    -- FLOW-1166 part 2b: a held update is applied to the hold's own line.
+    if is_replay then
+      select t.id, t.line_status = 'void', t.removed_at,
+             t.user_assigned, t.project_assigned, t.category_assigned
+      into existing_id, existing_void, existing_removed,
+           existing_user, existing_project_assigned, existing_category_assigned
+      from public.transactions t
+      where t.company_id = p_company and t.id = replay_txn
+      for update;
+    elsif existing_id is null then
+$n$);
+
   def := replace(def, a_insert, $n$    keep_filing := false;
-    -- A held update whose line cannot be found any more is not a new line.
-    if is_replay and existing_id is null then
+    -- A held update whose line is gone is not a new line; one whose line was removed since (a SUMIT
+    -- company switch) is dropped, not applied, so the line is not brought back.
+    if is_replay and (existing_id is null or existing_removed is not null) then
+      delete from private.closed_line_holds h where h.company_id = p_company and h.transaction_id = replay_txn;
       continue;
     end if;
 $n$ || a_insert);
@@ -440,15 +475,17 @@ begin
   end if;
 
   -- FLOW-1166 part 2b, before the other reasons: the row of a change no longer held (applied, dropped
-  -- or left) closes; an open row of a line with a held change takes the reason closed_month_change;
-  -- a held change with no open row gets one.
+  -- or left), or held for a line removed since, closes; an open row of a line with a held change
+  -- takes the reason closed_month_change; a held change with no open row gets one.
   delete from public.review_queue q
   where q.company_id = p_company_id
     and q.status = 'open'
     and q.reason = 'closed_month_change'
     and not exists (
       select 1 from private.closed_line_holds h
+      join public.transactions t on t.id = h.transaction_id and t.company_id = h.company_id
       where h.company_id = p_company_id and h.transaction_id = q.transaction_id and h.state = 'held'
+        and t.removed_at is null
     );
   update public.review_queue q
   set reason = 'closed_month_change'
@@ -457,13 +494,17 @@ begin
     and q.reason is distinct from 'closed_month_change'
     and exists (
       select 1 from private.closed_line_holds h
+      join public.transactions t on t.id = h.transaction_id and t.company_id = h.company_id
       where h.company_id = p_company_id and h.transaction_id = q.transaction_id and h.state = 'held'
+        and t.removed_at is null
     );
   insert into public.review_queue (company_id, transaction_id, status, reason)
   select h.company_id, h.transaction_id, 'open', 'closed_month_change'
   from private.closed_line_holds h
+  join public.transactions t on t.id = h.transaction_id and t.company_id = h.company_id
   where h.company_id = p_company_id
     and h.state = 'held'
+    and t.removed_at is null
     and not exists (
       select 1 from public.review_queue q where q.transaction_id = h.transaction_id and q.status = 'open'
     );
@@ -489,7 +530,10 @@ $sync$;
 -- The sync's cascades. follow_invoice (run by the receipt and invoice pairing triggers, also when the
 -- sync writes a line or queues a row) keeps a closed receipt's stored filing for every writer, not only
 -- a person, unless the receipt is new in this transaction (a brand-new line enters as any other); its
--- rule 1 no longer deletes a held change's row. jev_prefill leaves a line with a held change alone.
+-- rule 1 no longer deletes a held change's row. jev_prefill leaves a line whose change is held alone.
+-- fill_suggested_category (transactions_fill_category) does not fill a closed line's empty category on
+-- an update: the sync writes a closed line with its stored filing, and the trigger would guess one.
+-- replace_sumit_connection deletes the SUMIT holds with the lines it removes.
 do $cascades$
 declare
   def text;
@@ -498,6 +542,15 @@ declare
   a_wait constant text := $a$      and q.reason is distinct from 'split_mismatch';
     return;$a$;
   a_jev constant text := $a$  if review is distinct from 'open' or line.user_assigned then$a$;
+  a_fill constant text := $a$  picked := null;
+  if new.supplier_id is not null then
+$a$;
+  a_switch constant text := $a$    update public.transactions t
+    set removed_at = pg_catalog.now()
+    where t.company_id = p_company
+      and t.source = 'sumit'
+      and t.removed_at is null;
+$a$;
 begin
   def := pg_get_functiondef('private.follow_invoice(uuid,boolean)'::regprocedure);
   if pg_temp.anchor_count(def, a_who) <> 1 or pg_temp.anchor_count(def, a_wait) <> 1 then
@@ -516,11 +569,40 @@ begin
   if pg_temp.anchor_count(def, a_jev) <> 1 then
     raise exception 'jev_prefill is not the expected definition';
   end if;
-  def := replace(def, a_jev, $n$  -- FLOW-1166 part 2b: a line whose sync change is held keeps its filing.
+  def := replace(def, a_jev, $n$  -- FLOW-1166 part 2b: a line whose sync change is held keeps its filing (a change the owner left
+  -- does not keep Jev off the line).
   if review is distinct from 'open' or line.user_assigned or exists (
     select 1 from private.closed_line_holds h
-    where h.company_id = p_company and h.transaction_id = p_transaction
+    where h.company_id = p_company and h.transaction_id = p_transaction and h.state = 'held'
   ) then$n$);
+  execute def;
+
+  def := pg_get_functiondef('private.fill_suggested_category()'::regprocedure);
+  if pg_temp.anchor_count(def, a_fill) <> 1 then
+    raise exception 'fill_suggested_category is not the expected definition';
+  end if;
+  def := replace(def, a_fill, $n$  -- FLOW-1166 part 2b: an update never fills the empty category of a closed line (the sync writes
+  -- such a line again with its stored filing). A new line, whatever its date, still gets its guess.
+  if tg_op = 'UPDATE' and private.books_closed_hit(
+    (select c.books_closed_through from public.companies c where c.id = old.company_id), old, null)
+  then
+    return new;
+  end if;
+
+$n$ || a_fill);
+  execute def;
+
+  def := pg_get_functiondef(
+    'public.replace_sumit_connection(uuid,bigint,text,text,text,text,text,text,boolean)'::regprocedure);
+  if pg_temp.anchor_count(def, a_switch) <> 1 then
+    raise exception 'replace_sumit_connection is not the expected definition';
+  end if;
+  def := replace(def, a_switch, $n$    -- FLOW-1166 part 2b: the held changes of the old SUMIT company go with its lines (their open rows
+    -- are set aside above with the others), so a reopened period does not bring a removed line back.
+    delete from private.closed_line_holds h
+    where h.company_id = p_company and h.provider = 'sumit';
+
+$n$ || a_switch);
   execute def;
 end
 $cascades$;
@@ -588,8 +670,11 @@ end
 $items$;
 
 -- A person cannot close the row of a change that is still held: the owner leaves it with
--- leave_held_change, or takes it by moving the closed date back. An app that does not know the reason
--- gets the books-closed message it already shows.
+-- leave_held_change, or takes it by moving the closed date back. On a closed line, an app that does
+-- not know the reason gets the books-closed message it already shows. On a line that is itself open
+-- (the held change would move it into the closed period, or post it there) a person's edit is allowed
+-- (part 2a), so the edit goes through and the row's update is skipped: it stays open as it was (and
+-- fires no pairing trigger), and the change still waits.
 create function private.review_held_change_guard()
 returns trigger
 language plpgsql
@@ -609,10 +694,14 @@ begin
     return new;
   end if;
   select c.books_closed_through into closed from public.companies c where c.id = old.company_id;
-  if closed is not null then
+  if exists (
+    select 1 from public.transactions t
+    where t.id = old.transaction_id and t.company_id = old.company_id
+      and private.books_closed_hit(closed, t, null)
+  ) then
     raise exception '%', private.prepaid_closed_reason(closed);
   end if;
-  raise exception 'the line has a held change';
+  return null;
 end;
 $$;
 
@@ -855,8 +944,8 @@ begin
   if pg_temp.anchor_count(def, anchor) <> 1 then
     raise exception 'mcp_refused is not the expected definition';
   end if;
-  def := replace(def, anchor, $n$      -- FLOW-1166: held sync changes and the close with open review lines.
-      when p_message in ('the line has a held change', 'approve the open review lines first') then p_message
+  def := replace(def, anchor, $n$      -- FLOW-1166: the close with open review lines.
+      when p_message = 'approve the open review lines first' then p_message
 $n$ || anchor);
   execute def;
 end
@@ -888,12 +977,44 @@ $undo$;
 -- ---------------------------------------------------------------------------
 -- 7. No close while the period still has open review lines.
 -- ---------------------------------------------------------------------------
+-- FLOW-1166 (the owner, 2026-11-12): moving the closed date from p_before to p_after waits for the open
+-- review lines the move newly closes: closed under p_after and not under p_before, as books_closed_hit
+-- decides a line's period. A line already closed (a new bank line let in after the close) does not
+-- block it, since the owner cannot approve it until the period reopens. A held sync change's row does
+-- not count. Moving the date back or clearing it is never refused here. The caller holds the
+-- company's row.
+create function private.books_close_review_check(p_company uuid, p_before date, p_after date)
+returns void
+language plpgsql
+stable
+set search_path = ''
+as $$
+begin
+  if p_after is not null and (p_before is null or p_after > p_before) and exists (
+    select 1
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id and t.company_id = q.company_id
+    where q.company_id = p_company
+      and q.status = 'open'
+      and q.reason is distinct from 'closed_month_change'
+      and private.books_closed_hit(p_after, t, null)
+      and not private.books_closed_hit(p_before, t, null)
+  ) then
+    raise exception 'approve the open review lines first';
+  end if;
+end;
+$$;
+
 do $close$
 declare
   def text;
   anchor constant text := $a$      raise exception 'post the due prepaid rows first';
     end if;
     update public.companies c set books_closed_through = p_date where c.id = cid;
+$a$;
+  a_undo constant text := $a$      raise exception 'post the due prepaid rows first';
+    end if;
+    update public.companies c set books_closed_through = (rec.prior->>'before')::date where c.id = cid;
 $a$;
 begin
   def := pg_get_functiondef('public.mcp_set_books_closed_through(text,date)'::regprocedure);
@@ -902,20 +1023,22 @@ begin
   end if;
   def := replace(def, anchor, $n$      raise exception 'post the due prepaid rows first';
     end if;
-    -- FLOW-1166 (the owner, 2026-11-12): a close waits for the open review lines it would lock. A held
-    -- sync change's row does not count; moving the date back or clearing it is never refused here.
-    if p_date is not null and (before is null or p_date > before) and exists (
-      select 1
-      from public.review_queue q
-      join public.transactions t on t.id = q.transaction_id and t.company_id = q.company_id
-      where q.company_id = cid
-        and q.status = 'open'
-        and q.reason is distinct from 'closed_month_change'
-        and private.books_closed_hit(p_date, t, null)
-    ) then
-      raise exception 'approve the open review lines first';
-    end if;
+    -- FLOW-1166: a close waits for the open review lines it newly locks.
+    perform private.books_close_review_check(cid, before, p_date);
     update public.companies c set books_closed_through = p_date where c.id = cid;
+$n$);
+  execute def;
+
+  -- The undo of a move back closes the period again: the same check.
+  def := pg_get_functiondef('private.undo_prepaid_write(uuid,private.mcp_writes)'::regprocedure);
+  if pg_temp.anchor_count(def, a_undo) <> 1 then
+    raise exception 'undo_prepaid_write is not the expected definition';
+  end if;
+  def := replace(def, a_undo, $n$      raise exception 'post the due prepaid rows first';
+    end if;
+    -- FLOW-1166: a close waits for the open review lines it newly locks.
+    perform private.books_close_review_check(cid, cur, (rec.prior->>'before')::date);
+    update public.companies c set books_closed_through = (rec.prior->>'before')::date where c.id = cid;
 $n$);
   execute def;
 end
@@ -928,6 +1051,7 @@ revoke all on function private.closed_line_hold(uuid, uuid, public.connector_pro
 revoke all on function private.review_held_changes(uuid[]) from public, anon;
 grant execute on function private.review_held_changes(uuid[]) to authenticated, service_role;
 revoke all on function private.review_held_change_guard() from public, anon, authenticated, service_role;
+revoke all on function private.books_close_review_check(uuid, date, date) from public, anon, authenticated, service_role;
 revoke all on function private.leave_held(uuid, uuid) from public, anon, authenticated, service_role;
 revoke all on function private.undo_held_change_left(uuid, private.mcp_writes) from public, anon, authenticated, service_role;
 
@@ -953,6 +1077,10 @@ revoke all on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric)
 grant execute on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric) to service_role;
 revoke all on function public.mcp_set_books_closed_through(text, date) from public, anon, authenticated;
 grant execute on function public.mcp_set_books_closed_through(text, date) to authenticated;
+revoke all on function private.undo_prepaid_write(uuid, private.mcp_writes) from public, anon, authenticated;
+revoke all on function private.fill_suggested_category() from public, anon, authenticated;
+revoke all on function public.replace_sumit_connection(uuid, bigint, text, text, text, text, text, text, boolean) from public, anon, authenticated;
+grant execute on function public.replace_sumit_connection(uuid, bigint, text, text, text, text, text, text, boolean) to service_role;
 
 drop function pg_temp.anchor_count(text, text);
 
