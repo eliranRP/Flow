@@ -644,10 +644,32 @@ begin
   if fp is null then
     raise exception 'review item not found';
   end if;
+  -- The row's snapshot is the line as it stands (leaving changes nothing on it), so a reopen of the
+  -- approved row (reopen_review, undo_reassign) writes the same filing back instead of empty priors.
   with closed_rows as (
     update public.review_queue q
-    set status = 'approved', resolved_at = pg_catalog.now()
+    set status = 'approved',
+        resolved_at = pg_catalog.now(),
+        prior_project_id = t.project_id,
+        prior_category_id = t.category_id,
+        prior_pnl_role = t.pnl_role,
+        prior_user_assigned = t.user_assigned,
+        prior_category_suggested = t.category_suggested,
+        prior_category_assigned = t.category_assigned,
+        prior_project_assigned = t.project_assigned,
+        prior_allocations = (
+          select coalesce(jsonb_agg(jsonb_build_object(
+            'project_id', a.project_id, 'share_bp', a.share_bp, 'amount_net', a.amount_net)), '[]'::jsonb)
+          from public.allocations a
+          where a.transaction_id = t.id
+        ),
+        prior_remembered_category_id = null,
+        written_remembered_category_id = null,
+        doc_fingerprint = private.doc_fingerprint(t.direction::text, t.doc_kind::text, t.amount_gross, t.doc_date,
+          t.description, t.external_id)
+    from public.transactions t
     where q.company_id = p_company and q.transaction_id = p_txn
+      and t.id = q.transaction_id and t.company_id = q.company_id
       and q.status = 'open' and q.reason = 'closed_month_change'
     returning q.id, q.created_at
   )

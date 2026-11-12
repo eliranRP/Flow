@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(54);
+select plan(58);
 
 do $users$
 begin
@@ -364,6 +364,22 @@ insert into res values ('fifth', pg_temp.run('mercury', jsonb_build_array(pg_tem
 select is((pg_temp.hold('m-2')).state || ':' || array_to_string(pg_temp.open_rows('m-2'), ',')
   || ':' || ((pg_temp.hold('m-2')).line->>'amount_original'),
   'held:closed_month_change:6400', 'a different change is held again and reopens a row');
+
+-- A line moved into the closed period by the bank is held while it still reads as open. Leaving it
+-- keeps its filing, and a person's reopen of the left row writes the same filing back.
+insert into res values ('into_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-into', 5980, pg_temp.open()))));
+insert into ch (label, id) values ('into_cat', (pg_temp.line('m-into')).category_id);
+insert into res values ('into_move', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-into', 5980, pg_temp.shut()))));
+select is((pg_temp.line('m-into')).doc_date || ':' || (pg_temp.hold('m-into')).kind, pg_temp.open() || ':update',
+  'a line the bank moves into the closed period is held');
+select is(pg_temp.try(format('select public.leave_held_change(%L)', pg_temp.review_of('m-into'))), 'ok',
+  'the owner leaves it');
+select is(pg_temp.try(format('select public.reopen_review(%L)', pg_temp.review_of('m-into'))), 'ok',
+  'and reopens the left row');
+select ok((pg_temp.line('m-into')).category_id is not distinct from pg_temp.id('into_cat')
+  and (pg_temp.line('m-into')).pnl_role = 'overhead'
+  and exists (select 1 from public.overhead o where o.transaction_id = (pg_temp.line('m-into')).id),
+  'the reopen keeps the line''s filing');
 
 -- The hold's state and left_at go together (decision 0266).
 select throws_ok(format($$update private.closed_line_holds set state = 'left' where transaction_id = %L$$,
