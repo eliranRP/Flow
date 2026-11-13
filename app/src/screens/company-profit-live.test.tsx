@@ -6,15 +6,17 @@ import { CompanyProfitScreen } from "./company-profit-screen";
 
 // The page's live path for a past month (owner 21/10): the reads answer from a mocked client. Invented data only.
 // `held` (FLOW-1080) holds get_dashboard's answer until the test lets it go. `keys` is each read's answer key, in the
-// order the reads went out (FLOW-1171: a get_breakdown reads as its grouping and direction).
-type Calls = { names: string[]; keys: string[]; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null };
-const calls = vi.hoisted((): Calls => ({ names: [], keys: [], answer: {}, company: { data: null, error: null }, held: null }));
+// order the reads went out (FLOW-1171: a get_breakdown reads as its grouping and direction); `args` each read's
+// arguments by name.
+type Calls = { names: string[]; keys: string[]; args: Record<string, unknown[]>; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null };
+const calls = vi.hoisted((): Calls => ({ names: [], keys: [], args: {}, answer: {}, company: { data: null, error: null }, held: null }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: Record<string, unknown>) => {
       calls.names.push(name);
+      (calls.args[name] ??= []).push(args);
       const key = name === "get_breakdown" ? `${name}:${String(args?.p_group_by)}:${String(args?.p_direction)}` : name;
       calls.keys.push(key);
       const held = name === "get_dashboard" && calls.held != null ? calls.held : Promise.resolve();
@@ -53,6 +55,7 @@ const dashboard = {
 
 beforeEach(() => {
   calls.names.length = 0;
+  calls.args = {};
   calls.keys.length = 0;
   calls.held = null;
   calls.answer = {
@@ -183,5 +186,25 @@ describe("CompanyProfitScreen live, the current month's next-month reads (FLOW-1
     await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
     await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
     expect(calls.names).toContain("expected_months");
+  });
+});
+
+describe("CompanyProfitScreen live, the next-month read's size (FLOW-1171)", () => {
+  it("the month view reads next month without every later month's edits, and only next month's overrides", async () => {
+    answerBreakdowns();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
+    await waitFor(() => { expect(calls.names).toContain("forecast_overrides_for"); });
+    expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: false }]);
+    expect(calls.args.forecast_overrides_for).toEqual([{ p_month: "2026-11" }]);
+  });
+
+  it("the year view asks for every later month's edits and reads each month left in the year", async () => {
+    answerBreakdowns();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year" });
+    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
+    await waitFor(() => { expect(calls.args.forecast_overrides_for?.length).toBe(2); });
+    expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: true }]);
+    expect((calls.args.forecast_overrides_for as Array<{ p_month: string }>).map((arg) => arg.p_month).sort()).toEqual(["2026-11", "2026-12"]);
   });
 });
