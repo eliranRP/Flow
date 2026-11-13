@@ -1,1 +1,0 @@
-**FLOW-1171 (perf queue).** Home's לאישור count reads the Review queue's own `list_jev_bookings` query (the same key), so a visit to Review after Home finds the list already loaded instead of reading it again. The count now goes through the list's parse: a booking the app cannot read hides Home's count, as it already fails Review's list.
