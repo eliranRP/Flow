@@ -10,7 +10,7 @@
    v2's sizes as Home's band does (decision 0258): the name 20/600, the pill 16/500, the label 16/500, the sub 13,
    the rows 16/500; the figure 52. */
 .ui-rep-v3 > .ui-band {
-  padding-block-end: calc(var(--space-5) + var(--space-half));
+  padding-block-end: var(--space-6);
 }
 
 .ui-rep-v3 > .ui-band .ui-band-hero {
@@ -20,7 +20,7 @@
 .ui-rep-band {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   min-inline-size: 0;
 }
 
@@ -38,7 +38,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--label-gap);
+  gap: var(--space-2);
   inline-size: 100%;
   min-block-size: calc(var(--touch-min) + var(--space-1));
   border: 0;
@@ -113,7 +113,7 @@
 
 /* The board's two rows read as one block: the second 6px under the first (the band's 14 less 8). */
 .ui-rep-band-row + .ui-rep-band-row {
-  margin-block-start: calc(var(--space-inset-row) - var(--space-2));
+  margin-block-start: var(--space-2);
 }
 
 /* The amounts with no sign (V3-Report), at the rows' 16/500 as Home's (decision 0258), not the list's 17. */
@@ -225,7 +225,7 @@
    name and the line fit the 60px as the board's do; the balance by project cuts its line the same way. */
 .ui-rep-v3-group .ui-row {
   min-block-size: calc(var(--space-10) + var(--space-5));
-  padding-block: calc(var(--space-1) + var(--space-half));
+  padding-block: var(--space-2);
 }
 
 .ui-rep-v3-group .ui-row-text {
@@ -386,10 +386,10 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
   min-block-size: var(--touch-min);
   max-inline-size: 100%;
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   border: var(--stroke-hairline) solid var(--color-line);
   border-radius: var(--radius-chip);
   background: transparent;
@@ -412,9 +412,9 @@
 .ui-rep-hub-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   min-inline-size: 0;
-  padding-block-start: var(--space-inset-row);
+  padding-block-start: var(--space-4);
   padding-inline: var(--space-side);
 }
 
@@ -427,13 +427,13 @@
 
 /* The board's card: 16px 18px inside, 10px between its blocks, the title row its text (17/500) and no more. */
 .ui-rep-hub-card.ui-card {
-  padding-inline: calc(var(--space-4) + var(--space-half));
+  padding-inline: var(--space-5);
 }
 
 .ui-rep-hub-link {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   min-inline-size: 0;
   color: inherit;
   text-decoration: none;
@@ -475,7 +475,7 @@
 .ui-rep-hub-figure {
   display: flex;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -538,7 +538,7 @@
 }
 
 .ui-rep-hub-cuts-title {
-  margin: calc(var(--space-1) + var(--space-half)) 0 var(--space-half);
+  margin: var(--space-2) 0 var(--space-1);
   line-height: var(--type-title-line);
 }
 

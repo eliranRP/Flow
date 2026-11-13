@@ -6,7 +6,7 @@
 .ui-ret-bar {
   display: flex;
   block-size: var(--bar-job);
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   border-radius: var(--radius-chip);
   overflow: hidden;
 }
@@ -143,7 +143,7 @@
   min-inline-size: 0;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
 }
 
 .ui-ret-label {
@@ -277,7 +277,7 @@
 
 .ui-rep-content > .ui-ret-hero {
   gap: var(--space-1);
-  padding-block: calc(var(--space-1) + var(--space-half)) var(--space-4);
+  padding-block: var(--space-2) var(--space-4);
 }
 
 .ui-rep-content > .ui-ret-hero .ui-ret-hero-meta {
@@ -293,6 +293,7 @@
   padding: var(--space-1) var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-ret-calc-head {
@@ -322,7 +323,7 @@
    the "=" rows' name and figure at 600, the figure 20px. */
 .ui-ret-calc .ui-ret-row {
   min-block-size: calc(var(--touch-min) + var(--space-4));
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   padding-block: var(--space-1);
 }
 
