@@ -3,7 +3,9 @@
 -- twice per pair) and recurring_handover re-read this month's line parts each time. Both now answer for every
 -- charge in one statement: each party's words are made once, this month's line parts are read once, and the
 -- earlier lines are read only when a candidate exists. The matching rules, the tie-breaks and the answers are
--- the per-charge functions' (kept, and the pgTAP file recurring_setwise compares them).
+-- the per-charge functions'. Those two and private.party_names_alike (only they called it) are dropped at the
+-- end: the "alike" rule now lives once, in recurring_match_suggestions, on private.party_name_words. The pgTAP
+-- file recurring_setwise keeps the old bodies as pg_temp functions and compares the answers.
 
 -- 1. The suggestion of every charge. p_charges: a json array of {direction, party_id, currency, due_month,
 -- typical}; one row back per distinct charge, its suggestion null when none.
@@ -19,7 +21,7 @@ as $$
     from jsonb_to_recordset(p_charges)
       as c(direction public.txn_direction, party_id uuid, currency text, due_month date, typical bigint)
   ),
-  -- Every party's name, its words made once (private.party_names_alike's rule, below).
+  -- Every party's name, its words made once (private.party_name_words).
   names as (
     select 'expense'::public.txn_direction as direction, s.id, s.name, private.party_name_words(s.name) as words
     from public.suppliers s where s.company_id = p_company
@@ -27,7 +29,7 @@ as $$
     select 'income'::public.txn_direction, cu.id, cu.name, private.party_name_words(cu.name)
     from public.customers cu where cu.company_id = p_company
   ),
-  -- Same rule as private.party_names_alike, on the words: neither empty, and the same first word of 3 letters
+  -- The one definition of two names that may be one party, on the words: neither empty, and the same first word of 3 letters
   -- or more, or one name inside the other.
   alike as (
     select me.direction, me.id as party_id, n.id, n.name
@@ -105,6 +107,7 @@ as $$
   parts as (
     select lp.*
     from b, private.recurring_line_parts(p_company, b.this_month, p_today) lp
+    where exists (select 1 from ch)
   ),
   found as (
     select ch.direction, ch.party_id, ch.currency, ch.project_id, ch.typical,
@@ -364,3 +367,9 @@ begin
   );
 end;
 $function$;
+
+-- 5. The per-charge helpers and the name comparison have no caller left (the live bodies of missing_bills
+-- and expected_months are the ones above). The matching rule is recurring_match_suggestions's.
+drop function if exists private.recurring_match_suggestion(uuid, public.txn_direction, uuid, text, date, bigint, date);
+drop function if exists private.recurring_handover(uuid, public.txn_direction, uuid, text, uuid, bigint, date);
+drop function if exists private.party_names_alike(text, text);
