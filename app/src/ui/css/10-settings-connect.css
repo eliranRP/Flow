@@ -17,7 +17,7 @@
 }
 
 .ui-connection-page .ui-settings-head {
-  padding-top: calc(var(--space-1) * 1.5);
+  padding-top: var(--space-2);
   line-height: calc(var(--type-title-line) - 0.015);
 }
 
@@ -28,7 +28,7 @@
 }
 
 .ui-step-list {
-  gap: calc(var(--space-2) + var(--space-1) / 2);
+  gap: var(--space-3);
 }
 
 .ui-step-item .ui-install-num {
@@ -48,7 +48,7 @@
 
 .ui-connection-page .ui-secret-wrap .ui-field-control {
   min-block-size: 50px;
-  padding-inline: calc(var(--space-10) + var(--space-3)) var(--space-inset-row);
+  padding-inline: calc(var(--space-10) + var(--space-3)) var(--space-4);
   font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
   font-size: var(--type-line2-size);
   text-align: right;
@@ -60,8 +60,8 @@
 }
 
 .ui-connection-page .ui-seg {
-  padding: calc(var(--space-1) / 2);
-  gap: calc(var(--space-1) / 2);
+  padding: var(--space-1);
+  gap: var(--space-1);
   border-radius: var(--radius-input);
   background: var(--color-surface);
 }
@@ -80,7 +80,7 @@
 }
 
 .ui-ai-questions {
-  gap: calc(var(--space-2) + var(--space-1) / 2);
+  gap: var(--space-3);
 }
 
 .ui-ai-questions-head,
@@ -92,7 +92,7 @@
 .ui-ai-scope .ui-radio-row {
   min-block-size: 60px;
   padding-block: var(--space-2);
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   border-radius: var(--radius-toast);
 }
 
@@ -105,7 +105,7 @@
 }
 
 .ui-ai-scope .ui-row-text {
-  gap: calc(var(--space-1) * 0.75);
+  gap: var(--space-1);
 }
 
 .ui-ai-scope .ui-row-title {
@@ -114,7 +114,7 @@
 }
 
 .ui-ai-scope .ui-radio-desc {
-  font-size: calc(var(--type-cents-size) + 1px);
+  font-size: var(--type-label-size);
   line-height: var(--type-meta-line);
 }
 
@@ -164,7 +164,7 @@
 
 /* Four assistants in one row at 13: the tab text fits without clipping. */
 .ui-connection-page .ui-seg-btn {
-  padding-inline: calc(var(--space-1) / 2);
+  padding-inline: var(--space-1);
   font-size: var(--type-caption-size);
 }
 

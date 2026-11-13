@@ -35,7 +35,7 @@
   align-items: center;
   gap: var(--space-3);
   min-block-size: calc(var(--touch-min) + var(--space-6));
-  padding: var(--space-3) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border: 0;
   background: transparent;
   color: var(--color-text);
@@ -76,7 +76,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) * 0.75);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -115,7 +115,7 @@
   align-items: center;
   gap: var(--space-3);
   min-block-size: calc(var(--touch-min) + var(--space-5));
-  padding: var(--space-3) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border: 0;
   border-radius: var(--radius-card-tight);
   color: var(--color-text);
@@ -139,7 +139,7 @@ button.ui-merc-row {
 
 .ui-merc-row-sub {
   color: var(--color-text-muted);
-  font-size: calc(var(--type-cents-size) + 1px);
+  font-size: var(--type-label-size);
 }
 
 .ui-merc-row-names {
@@ -151,7 +151,7 @@ button.ui-merc-row {
 
 .ui-merc-row-value {
   flex: none;
-  padding: var(--space-1) calc(var(--space-2) + var(--space-half));
+  padding: var(--space-1) var(--space-3);
   color: var(--color-accent-text);
   font-size: var(--type-caption-size);
   font-weight: var(--type-btn-2-weight);
@@ -168,8 +168,8 @@ button.ui-merc-row {
 .ui-merc-offer {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-half));
-  padding: var(--space-inset-row) var(--space-4);
+  gap: var(--space-3);
+  padding: var(--space-4);
   border-radius: var(--radius-card-tight);
   background: var(--color-tint);
   font-size: var(--type-line2-size);
@@ -189,7 +189,7 @@ button.ui-merc-row {
 .ui-merc-sheet {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   padding-block-end: var(--space-4);
 }
 
