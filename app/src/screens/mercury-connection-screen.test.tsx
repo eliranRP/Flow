@@ -116,17 +116,22 @@ describe("Mercury page: states (FLOW-918, FLOW-938)", () => {
     expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
   });
 
-  it("shows the page-cap warning on the affected connection only, with the refresh still there (FLOW-1162)", async () => {
+  it("shows the page-cap warning on the affected connection only, with the refresh still there (FLOW-1162, FLOW-1178)", async () => {
+    const synced = "2026-10-03T09:05:00.000Z";
     const second = mercuryStatus({ connected: true, slot: 2, org_label: "Cedar Lane Holdings LLC", account_labels: [{ id: "acct-hold", label: "Ops", kind: "checking" }], sync_account_ids: ["acct-hold"] });
-    serveWith([{ ...CONNECTED, last_error: "sync_page_cap" }, second]);
+    serveWith([{ ...CONNECTED, last_error: "sync_page_cap", last_sync_at: synced }, second]);
     renderPage("mercury");
     const capped = await screen.findByRole("link", { name: /Cedar Lane Homes LLC/ });
-    expect(within(capped).getByText("הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.")).toBeInTheDocument();
+    // The row keeps its last good update beside the warning.
+    expect(within(capped).getByText(/^הרענון נתקע · 3 מתוך 4 חשבונות · עודכן /)).toBeInTheDocument();
     expect(capped).toHaveClass("ui-row-tone-warning");
     expect(screen.getByRole("link", { name: /Cedar Lane Holdings LLC/ })).not.toHaveClass("ui-row-tone-warning");
     expect(screen.queryByText(/Mercury הפסיק לקבל את המפתח/)).not.toBeInTheDocument();
     fireEvent.click(capped);
-    expect(await screen.findByText("הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.")).toHaveClass("ui-connection-problem");
+    const box = (await screen.findByText("הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.")).closest(".ui-connection-problem");
+    expect(box).toHaveClass("ui-connection-problem-warning");
+    expect(box).toHaveAttribute("role", "status");
+    expect(within(box as HTMLElement).getByRole("link", { name: "פנייה לתמיכה" })).toHaveAttribute("href", "mailto:flowusappsupport@gmail.com");
     expect(screen.getByRole("button", { name: "רענון עכשיו" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חיבור מחדש" })).not.toBeInTheDocument();
   });

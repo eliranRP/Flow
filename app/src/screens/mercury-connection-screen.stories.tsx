@@ -72,15 +72,24 @@ export const OneOfTwo: Story = {
   render: () => page({ connections: [sampleConnection(), SAMPLE_SECOND], lastSync: "לפני 12 דקות" }, "/settings/connections/mercury?slot=2"),
 };
 
-/** FLOW-1162: a connection that hit the page cap shows the warning; its refresh stays. */
+/** FLOW-1162: a connection that hit the page cap shows the warning; its refresh stays. FLOW-1178: the box has the warning marker and the support link. */
 export const PageCap: Story = {
   name: "Connected, at the page cap",
   render: () => page({ connections: [sampleConnection({ lastError: "sync_page_cap" })], lastSync: "לפני 5 דקות", imported: "1,284 תנועות" }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: "פנייה לתמיכה" })).toHaveAttribute("href", "mailto:flowusappsupport@gmail.com");
+  },
 };
 
+/** FLOW-1178: the capped row keeps its accounts and last update beside the warning. */
 export const TwoConnectionsOneAtPageCap: Story = {
   name: "Two connections, one at the page cap",
   render: () => page({ connections: [sampleConnection({ lastError: "sync_page_cap" }), SAMPLE_SECOND] }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/^הרענון נתקע · .* · עודכן /)).toBeInTheDocument();
+  },
 };
 
 export const Viewer: Story = { name: "Connected, viewer", render: () => page(CONNECTED, undefined, true) };
