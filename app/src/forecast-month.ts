@@ -52,7 +52,7 @@ export function useSetForecastItem(month: string) {
       const result = await supabase.rpc("set_forecast_item", { p_month: month, p_item_key: key, p_patch: body });
       assertNoError(result);
     },
-    keys: ["month-forecast"],
+    keys: ["month-forecast", "expected-months"],
     // No success toast: the screen's own one carries ביטול, and a later toast would replace it (0182).
     failure: "לא הצלחנו לעדכן את הצפי",
     place: "top",
@@ -73,7 +73,7 @@ export function useResetForecastMonth(month: string) {
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("reset_forecast_month", { p_month: month }));
     },
-    keys: ["month-forecast"],
+    keys: ["month-forecast", "expected-months"],
     failure: "לא הצלחנו לאפס את הצפי",
     place: "top",
     scope: forecastScope(month),
@@ -91,7 +91,7 @@ export function useRestoreForecast(month: string) {
         assertNoError(await supabase.rpc("set_forecast_item", { p_month: month, p_item_key: row.item_key, p_patch: patch }));
       }
     },
-    keys: ["month-forecast"],
+    keys: ["month-forecast", "expected-months"],
     failure: "לא הצלחנו להחזיר את הצפי",
     place: "top",
     scope: forecastScope(month),

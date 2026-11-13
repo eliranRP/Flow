@@ -121,7 +121,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     month,
     ytd: customRange(`${year}-01-01`, month.to ?? today),
     currency: companyCurrency,
-    linesOn: by !== "project",
+    categoriesOn: by !== "project",
     overhead: monthByProject ? overhead : overhead ?? null,
   });
   const model: ProfitModel | null = sample ? buildProfitModel(sample, sample.overhead) : live.model;
