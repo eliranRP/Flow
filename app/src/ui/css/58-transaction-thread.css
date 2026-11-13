@@ -58,6 +58,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-card-inner);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-thread-mercury .ui-thread-bubble {

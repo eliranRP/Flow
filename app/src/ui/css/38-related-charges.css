@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-inset-row) var(--space-inset-row) var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
   border-top: 1px solid var(--color-line);
 }
 
@@ -23,7 +23,7 @@
   flex-direction: column;
   justify-content: flex-end;
   /* board: the bars sit 6px above their month label. */
-  gap: var(--status-gap);
+  gap: var(--space-2);
 }
 
 .ui-charge-bar-track {
@@ -221,6 +221,7 @@
   overflow: hidden;
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 /* The board's recurring row has no small label: the value is the title, and the accessible name keeps the label. */
@@ -271,7 +272,7 @@
 }
 
 .ui-charges-sheet .ui-charges-summary {
-  padding: calc(var(--space-1) * 2.5) var(--space-3);
+  padding: var(--space-3);
   line-height: calc(var(--type-meta-size) * 1.2);
 }
 
@@ -282,12 +283,12 @@
 
 .ui-charges-sheet .ui-charges-row {
   min-height: 52px;
-  padding-inline: calc(var(--space-1) * 2.5);
+  padding-inline: var(--space-3);
   border-radius: var(--radius-seg-btn);
 }
 
 .ui-charges-sheet .ui-charges-badge {
-  padding: var(--space-half) calc(var(--space-1) * 1.5);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-block);
   background: var(--color-tint);
   font-size: var(--type-cents-size);
@@ -311,11 +312,11 @@
 .ui-pace-sheet .ui-choice-sheet {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-1) * 2.5);
+  gap: var(--space-3);
 }
 
 /* board: a 56px option (8px above and below its text), 14px sides, 12px between the radio and its
-   text. The title is 16px and the note 12px under it, 2px apart. */
+   text. The title is 16px and the note 12px under it, 4px apart. */
 .ui-pace-sheet .ui-radio-row {
   min-block-size: 56px;
   padding-block: var(--space-2);
@@ -325,7 +326,7 @@
 }
 
 .ui-pace-sheet .ui-row-text {
-  gap: var(--space-half);
+  gap: var(--space-1);
 }
 
 .ui-pace-sheet .ui-row-title {
@@ -335,7 +336,7 @@
 
 .ui-pace-sheet .ui-radio-desc {
   margin-top: 0;
-  font-size: calc(var(--type-cents-size) + 1px);
+  font-size: var(--type-label-size);
   line-height: var(--type-card-line);
 }
 
