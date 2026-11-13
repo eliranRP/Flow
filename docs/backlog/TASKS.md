@@ -779,6 +779,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1176"></a>[FLOW-1176](tasks/FLOW-1176.md) | A closed month's refusal stays long enough to read | SMALL UI |
 | <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | PLAN FIRST |
 | <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
+| <a id="flow-1181"></a>[FLOW-1181](tasks/FLOW-1181.md) | Five-token sweep, MEDIUM refactor: controls, fields and base screens use their tokens (no visual change) | SMALL UI |
 | <a id="flow-1182"></a>[FLOW-1182](tasks/FLOW-1182.md) | Five-token sweep: review, transaction and search use their tokens (no visual change) | SMALL UI |
 
 ## Data hygiene (public repo)
