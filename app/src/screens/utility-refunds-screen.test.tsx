@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { utilityRefundsRow } from "./attention-rows";
 import { refundWindowStart } from "./utility-refund-sheet";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { GEFEN, PINE, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
+import { FOLD_MS } from "../ui/fold";
 import { ToastProvider } from "../ui/toast";
 import { parseUtilityRefundCount } from "../utility-refund-count";
 import { fixCopy, paymentMeta, paymentsTaken, refundDate, refundGroups } from "../utility-refund-view";
@@ -357,6 +358,14 @@ describe("the fold", () => {
   });
 
   it("keeps a row closed with ✓ in the list while it folds, then drops it", async () => {
+    // The fold's own timer is held, so a slow runner cannot end the fold before the write's toast shows.
+    const realTimeout = globalThis.setTimeout;
+    const folds: (() => void)[] = [];
+    vi.stubGlobal("setTimeout", ((run: () => void, ms?: number) => {
+      if (ms !== FOLD_MS) return realTimeout(run, ms);
+      folds.push(run);
+      return 0;
+    }));
     renderScreen();
     fireEvent.click(await screen.findByRole("button", { name: "ראיתי: Gas Co" }));
     expect(item("ראיתי: Gas Co")?.hasAttribute("data-leaving")).toBe(true);
@@ -364,6 +373,7 @@ describe("the fold", () => {
     expect(await screen.findByText("Gas Co · ראיתי")).toBeTruthy();
     // The write answered; the row is still folding.
     expect(screen.getByRole("button", { name: "ראיתי: Gas Co" })).toBeTruthy();
+    act(() => { for (const end of folds) end(); });
     await waitFor(() => { expect(screen.queryByRole("button", { name: "ראיתי: Gas Co" })).toBeNull(); });
   });
 
