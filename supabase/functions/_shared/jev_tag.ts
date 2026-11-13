@@ -482,12 +482,14 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
     if (error instanceof JevError && error.code === "missing_key") return json({ error: "missing_key" }, 500);
     return json({ error: "tag_failed" }, 500);
   } finally {
-    // A reservation with no finish keeps counting in full for the day, which is the safe side.
+    // A reservation with no finish counts in full for 15 minutes from when it was made, then not
+    // at all (private.jev_calls_today, FLOW-1166 part 5).
     for (const companyId of reserved) {
       try {
         await jobs.finishUsage(companyId, runId, usage.get(companyId) ?? emptyUsage());
       } catch {
-        // The reservation stays counted.
+        // The reservation counts for 15 minutes and then stops, and this run's real calls with it,
+        // so the company can go over its daily cap by up to this reservation.
       }
     }
     try {
