@@ -80,9 +80,9 @@ export function cardBillTitle(card: RefundCard): string {
   return card.bills.map((bill) => bill.supplier_name ?? "ספק").join(" + ");
 }
 
-/** A bill's leg on its card: its category and its date. */
-export function billMeta(bill: UtilityBill): string {
-  return [bill.category_name, refundDate(bill.doc_date)].filter((part): part is string => part != null).join(" · ");
+/** A bill's leg on its card: its category and its date, as HintParts parts (FLOW-1173). */
+export function billMeta(bill: UtilityBill): string[] {
+  return [bill.category_name, refundDate(bill.doc_date)].filter((part): part is string => part != null);
 }
 
 /** The payment's payer (or its description). */
@@ -92,9 +92,9 @@ export function paymentTitle(payment: UtilityPayment): string {
 
 /**
  * "דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי" (FLOW-1142: the project the payment is filed to), or
- * "בלי פרויקט · הכנסה · 12/09/26 · …" for a payment on no property.
+ * "בלי פרויקט · הכנסה · 12/09/26 · …" for a payment on no property. The parts, for HintParts (FLOW-1173).
  */
-export function paymentMeta(card: RefundCard): string {
+export function paymentMeta(card: RefundCard): string[] {
   const [first] = card.bills;
   const gap = first == null ? 0 : Math.round((Date.parse(card.payment.doc_date) - Date.parse(first.doc_date)) / 86_400_000);
   return [
@@ -102,7 +102,7 @@ export function paymentMeta(card: RefundCard): string {
     card.payment.category_name ?? "בלי קטגוריה",
     refundDate(card.payment.doc_date),
     gap === 0 ? "באותו יום" : gap > 0 ? `${days(gap)} אחרי` : `${days(-gap)} לפני`,
-  ].filter((part): part is string => part != null).join(" · ");
+  ].filter((part): part is string => part != null);
 }
 
 function cardBillTotal(card: RefundCard): bigint {
@@ -310,14 +310,16 @@ export type IncomeRow =
     key: string;
     transactionId: string;
     date: string;
-    /** "Rent Pay · 06/11/26": the payer (or description) and the date. */
+    /** "Rent Pay": the payer (or description). */
     title: string;
-    /** "חשמל $180.20 · החזיר את 04/09, 06/10", or "בלי חשמל" when no part of it is the bill's type. */
+    /** "חשמל $180.20", or "בלי חשמל" when no part of it is the bill's type. */
     hit: string;
     /** No part is the bill's type: the hit reads in the signal colour. */
     hitMissing: boolean;
-    /** The other parts: "שכירות $1,750.00 · מים $122.80"; null when there are none. */
-    others: string | null;
+    /** "החזיר את 04/09/26, 06/10/26": the bills of the type it paid back; null when none. */
+    refunded: string | null;
+    /** The other parts, one HintParts part each: ["שכירות $1,750.00", "מים $122.80"]; empty when there are none. */
+    others: string[];
     /** "+$2,121.40". */
     amount: string;
     /** This line is the bill's refund. */
@@ -339,21 +341,18 @@ export function incomeRows(income: UtilityIncome, bill: UtilityIncomeBill = inco
     const own = parts.filter((part) => part.category_id === bill.category_id);
     const rest = parts.filter((part) => part.category_id !== bill.category_id);
     const refunded = line.refunded_bills.filter((item) => item.category_id === bill.category_id);
-    const hit = own.length === 0
-      ? `בלי ${type}`
-      : `${type} ${money(own.reduce((sum, part) => sum + part.amount_minor, 0n), line.currency)}`
-        + (refunded.length === 0 ? "" : ` · החזיר את ${refunded.map((item) => refundDate(item.doc_date)).join(", ")}`);
     return {
       kind: "payment",
       key: line.transaction_id,
       transactionId: line.transaction_id,
       date: line.doc_date,
-      title: `${line.party ?? line.description ?? "תשלום"} · ${refundDate(line.doc_date)}`,
-      hit,
+      title: line.party ?? line.description ?? "תשלום",
+      hit: own.length === 0 ? `בלי ${type}` : `${type} ${money(own.reduce((sum, part) => sum + part.amount_minor, 0n), line.currency)}`,
       hitMissing: own.length === 0,
+      refunded: refunded.length === 0 ? null : `החזיר את ${refunded.map((item) => refundDate(item.doc_date)).join(", ")}`,
       others: line.parts.length === 0
-        ? own.length === 0 ? typeName(line) : null
-        : rest.map((part) => `${typeName(part)} ${money(part.amount_minor, line.currency)}`).join(" · ") || null,
+        ? own.length === 0 ? [typeName(line)] : []
+        : rest.map((part) => `${typeName(part)} ${money(part.amount_minor, line.currency)}`),
       amount: formatAmountText(line.amount_minor, line.currency, { detail: true, direction: "income", plus: true }),
       refund: line.transaction_id === bill.payment_transaction_id,
     };

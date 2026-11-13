@@ -113,17 +113,19 @@ describe("incomeRows", () => {
   it("names the bill's part and the bills it paid back, or that it has none, and the other parts", () => {
     const [november, october, , september, august] = incomeRows(income, income.bill);
     expect(october).toMatchObject({
-      title: "Rent Pay · 07/10/26",
-      hit: "חשמל $180.20 · החזיר את 04/09/26",
+      title: "Rent Pay",
+      date: "2026-10-07",
+      hit: "חשמל $180.20",
       hitMissing: false,
-      others: "שכירות $1,750 · מים $122.80 · ביוב $68.40",
+      refunded: "החזיר את 04/09/26",
+      others: ["שכירות $1,750", "מים $122.80", "ביוב $68.40"],
       amount: "+$2,121.40",
       refund: false,
     });
-    expect(november).toMatchObject({ hit: "בלי חשמל", hitMissing: true, others: "שכירות $1,750 · מים $143.70" });
-    expect(september).toMatchObject({ hit: "בלי חשמל", hitMissing: true, others: "שכירות" });
+    expect(november).toMatchObject({ hit: "בלי חשמל", hitMissing: true, refunded: null, others: ["שכירות $1,750", "מים $143.70"] });
+    expect(september).toMatchObject({ hit: "בלי חשמל", hitMissing: true, others: ["שכירות"] });
     // A line not split, filed to the bill's category, counts whole.
-    expect(august).toMatchObject({ title: "Zelle · 12/08/26", hit: "חשמל $95", hitMissing: false, others: null });
+    expect(august).toMatchObject({ title: "Zelle", hit: "חשמל $95", hitMissing: false, others: [] });
   });
 
   it("marks the bill's own refund", () => {

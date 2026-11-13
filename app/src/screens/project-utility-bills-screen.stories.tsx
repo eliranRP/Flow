@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { expect, userEvent, within } from "storybook/test";
 import { ProjectUtilityBillsScreen } from "./project-utility-bills-screen";
 import { GEFEN, storyUtilityClient, useOfflineOnceRead, utilityTypesSample } from "./utility-refunds-sample";
+import { expectNoOrphanDots } from "../ui/hint-parts.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { UTILITY_REFUNDS_KEY, UtilityClientProvider, type UtilityBill } from "../utility-refunds";
@@ -49,7 +50,7 @@ export const ProjectUtilityBillsDrawer: Story = {
   name: "ProjectUtilityBills, a bill's drawer",
   render: () => <BillsStory />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: /06\/10\/26 · City Light/ }));
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /City Light.*06\/10\/26/ }));
     const dialog = await within(document.body).findByRole("dialog");
     await expect(await within(dialog).findByText(/החשבון הזה כבר מעבר לזה/)).toBeInTheDocument();
     await expect(within(dialog).getByRole("link", { name: /מה נכנס סביב החשבון הזה/ })).toBeInTheDocument();
@@ -61,7 +62,7 @@ export const ProjectUtilityBillsDrawerRefunded: Story = {
   name: "ProjectUtilityBills, a refunded bill's drawer",
   render: () => <BillsStory />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: /04\/11\/26 · City Water/ }));
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /City Water.*04\/11\/26/ }));
     const dialog = await within(document.body).findByRole("dialog");
     await expect(await within(dialog).findByText(/בדרך כלל מים מוחזר/)).toBeInTheDocument();
   },
@@ -73,9 +74,13 @@ export const ProjectUtilityBillsAllBack: Story = {
   render: () => <BillsStory bills={utilityTypesSample().filter((bill) => bill.state === "refunded" || bill.state === "seen")} />,
 };
 
-/** Long names and large amounts: a row's title wraps and its line breaks only between whole parts. */
+/**
+ * Long names and large amounts: the supplier, the row's title, wraps; its line, the date first, breaks only between
+ * whole parts, with no "·" at either end of a line (FLOW-1175).
+ */
 export const ProjectUtilityBillsLong: Story = {
   name: "ProjectUtilityBills, long content",
+  globals: { viewport: { value: "flow320", isRotated: false } },
   render: () => (
     <BillsStory
       bills={utilityTypesSample().map((bill) => ({
@@ -86,6 +91,10 @@ export const ProjectUtilityBillsLong: Story = {
       }))}
     />
   ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("link", { name: /^מי משלם/ });
+    await expectNoOrphanDots(canvasElement.querySelector(".ui-urf-screen") as Element);
+  },
 };
 
 /** A viewer's rows open the bill's transaction, with no drawer. */
