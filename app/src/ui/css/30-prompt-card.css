@@ -15,7 +15,7 @@
 }
 
 .ui-prompt-note {
-  margin: var(--label-gap) 0 0;
+  margin: var(--space-2) 0 0;
   overflow-wrap: anywhere;
 }
 

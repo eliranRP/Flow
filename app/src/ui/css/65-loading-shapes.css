@@ -31,7 +31,7 @@
 .ui-chips-skel {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(var(--space-1) * 1.5);
+  gap: var(--space-2);
 }
 
 .ui-chip-skel {

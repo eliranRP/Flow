@@ -119,7 +119,7 @@
 
 .ui-empty-line {
   max-inline-size: min(100%, var(--empty-measure));
-  margin-top: var(--label-gap);
+  margin-top: var(--space-2);
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
   font-weight: var(--type-line2-weight);
@@ -172,46 +172,47 @@
   /* The body scrolls, never the panel: clip stops a click's scroll-into-view or scroll anchoring
      from scrolling the panel mid tall-to-short change, which hid the header's padding. */
   overflow: clip;
-  padding: var(--sheet-pad-top) 0 calc(var(--sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-3) 0 calc(var(--sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
   outline: none;
+  box-shadow: var(--shadow-lg);
 }
 
 /* Opt-in panel classes: a sheet whose board block differs from the default (12 between blocks, 16 at the sides,
-   24 below) sets one or more of these. Later rules win, so a choice sheet's 10 can be raised by its caller. */
+   24 below) sets one or more of these. Later rules win. */
 .ui-sheet-choice {
-  --sheet-gap-y: 10px;
-  --sheet-pad-bottom: 28px;
+  --sheet-gap-y: var(--space-3);
+  --sheet-pad-bottom: var(--space-6);
 }
 
 .ui-sheet-g8 {
-  --sheet-gap-y: 8px;
+  --sheet-gap-y: var(--space-2);
 }
 
 .ui-sheet-g10 {
-  --sheet-gap-y: 10px;
+  --sheet-gap-y: var(--space-3);
 }
 
 .ui-sheet-g12 {
-  --sheet-gap-y: 12px;
+  --sheet-gap-y: var(--space-3);
 }
 
 .ui-sheet-g14 {
-  --sheet-gap-y: 14px;
+  --sheet-gap-y: var(--space-4);
 }
 
 .ui-sheet-g16 {
-  --sheet-gap-y: 16px;
+  --sheet-gap-y: var(--space-4);
 }
 
 .ui-sheet-wide {
   --sheet-side: var(--space-side);
 }
 
-/* A sheet whose board panel keeps the older 28px below its content (the month drawer, the review picker). */
+/* A sheet that keeps the older, deeper panel bottom (the month drawer, the review picker); on the 4-pt grid it is the 24 of the default. */
 .ui-sheet-pad28 {
-  --sheet-pad-bottom: 28px;
+  --sheet-pad-bottom: var(--space-6);
 }
 
 /* A dialog focused for the screen reader is not a control, so it never draws a ring. */
@@ -295,7 +296,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-half); /* the board's 2px: half the 4px step, no raw value */
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -338,7 +339,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-notice-icon {
   display: grid;
-  padding-top: var(--note-icon-nudge);
+  padding-top: var(--space-1);
   color: var(--color-accent-text);
 }
 
@@ -354,7 +355,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-notice-body {
-  margin-top: var(--note-body-gap);
+  margin-top: var(--space-1);
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
   font-weight: var(--type-line2-weight);
@@ -400,12 +401,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-sync-pill {
   position: absolute;
-  top: calc(var(--space-4) - var(--space-half));
+  top: var(--space-3);
   inset-inline: 0;
   margin-inline: auto;
   inline-size: max-content;
   /* The board's pill is 210px wide for "מסנכרן עם Mercury…". */
-  min-inline-size: calc(var(--space-10) * 5 + var(--space-2) + var(--space-half));
+  min-inline-size: calc(var(--space-10) * 5 + var(--space-2) + var(--space-1));
   max-inline-size: calc(100% - var(--space-10));
   block-size: 36px;
   padding-inline: var(--space-5);
@@ -420,7 +421,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   line-height: var(--type-chip-line);
   font-weight: var(--type-chip-weight);
   white-space: nowrap;
-  box-shadow: var(--shadow-pill);
+  box-shadow: var(--shadow-lg);
 }
 
 .ui-sync-spin {
