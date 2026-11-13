@@ -119,7 +119,7 @@
   padding: var(--space-3) var(--space-side) calc(var(--space-6) + var(--space-1));
 }
 
-/* The welcome tile: 56px, 16px corners, a white 26/600 F, on the reading start edge. */
+/* The welcome tile: 56px, 16px corners, a white 28/600 F, on the reading start edge. */
 .ui-onb-logo {
   align-self: flex-start;
   inline-size: calc(var(--size-seg) + var(--space-4));
