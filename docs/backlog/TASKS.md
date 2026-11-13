@@ -499,6 +499,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1102"></a>[FLOW-1102](tasks/FLOW-1102.md) | Two "ביטול" with different effects when every attention card is hidden; small follow-ups | SMALL UI |
 | <a id="flow-1120"></a>[FLOW-1120](tasks/FLOW-1120.md) | Reports month drill: the arrows wait with no visible word while the months load | SMALL UI |
 | <a id="flow-1123"></a>[FLOW-1123](tasks/FLOW-1123.md) | Reports month drill: the month pill shimmers while the months load, in place of "טוען חודשים…" | SMALL UI |
+| <a id="flow-1180"></a>[FLOW-1180](tasks/FLOW-1180.md) | The band's month stepper: its text reaches 4.5:1 | SMALL UI |
 | <a id="flow-1104"></a>[FLOW-1104](tasks/FLOW-1104.md) | A project month's profit shows a credit on an expense with a minus | BUG |
 | <a id="flow-1105"></a>[FLOW-1105](tasks/FLOW-1105.md) | Review nits from #1044, #1045 and #1046 | SMALL UI |
 | <a id="flow-1088"></a>[FLOW-1088](tasks/FLOW-1088.md) | New project: a missing name does not move focus to the field or announce the error | SMALL UI |
@@ -598,6 +599,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1148"></a>[FLOW-1148](tasks/FLOW-1148.md) | Member report תחזית assumptions: say which field is wrong, next to it | SMALL UI |
 | <a id="flow-1149"></a>[FLOW-1149](tasks/FLOW-1149.md) | Member report תחזית chart: a legend that matches its bars, the loan visible, values for a screen reader; the stepper's words | SMALL UI |
 | <a id="flow-1150"></a>[FLOW-1150](tasks/FLOW-1150.md) | Member report: quiet colour on the rate quotes; offline line while the report loads | SMALL UI |
+| <a id="flow-1179"></a>[FLOW-1179](tasks/FLOW-1179.md) | Member report forecast: the equity bars reach 3:1 on the card | SMALL UI |
 | <a id="flow-1132"></a>[FLOW-1132](tasks/FLOW-1132.md) | Member report תחזית: an icon for a year's own change, and the properties left out grouped by reason | SMALL UI |
 | <a id="flow-1133"></a>[FLOW-1133](tasks/FLOW-1133.md) | Utility bills the tenant never paid back (plan) | PLAN FIRST |
 | <a id="flow-1134"></a>[FLOW-1134](tasks/FLOW-1134.md) | Utility refunds: the data, the match and MCP | MCP |
@@ -607,6 +609,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1153"></a>[FLOW-1153](tasks/FLOW-1153.md) | Utility months and payment split: a figure stays with its label at 320 | SMALL UI |
 | <a id="flow-1154"></a>[FLOW-1154](tasks/FLOW-1154.md) | Utility months and the property's חשבונות: the offline line with its time | SMALL UI |
 | <a id="flow-1155"></a>[FLOW-1155](tasks/FLOW-1155.md) | Utility refunds: the ראיתי button says what it does | SMALL UI |
+| <a id="flow-1173"></a>[FLOW-1173](tasks/FLOW-1173.md) | Utility refunds and the bill drawer: a pair never breaks around its "·" | SMALL UI |
+| <a id="flow-1174"></a>[FLOW-1174](tasks/FLOW-1174.md) | Income around a bill: rows within the row rule; a way on when nothing came in | SMALL UI |
+| <a id="flow-1175"></a>[FLOW-1175](tasks/FLOW-1175.md) | A property's bills by type: the supplier is the title, the date goes in the hint | SMALL UI |
 | <a id="flow-1141"></a>[FLOW-1141](tasks/FLOW-1141.md) | Utility refunds: rent and bills found by part of the category name; a ראיתי row folds away; dates with the year | BUG (owner's ask) |
 | <a id="flow-1142"></a>[FLOW-1142](tasks/FLOW-1142.md) | Utility refunds: each bill and payment opens its transaction page | SMALL UI (owner's ask) |
 | <a id="flow-1143"></a>[FLOW-1143](tasks/FLOW-1143.md) | Utility refunds: exact matches only, and no suggestions | SMALL UI (owner's decision) |
@@ -657,6 +662,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1160"></a>[FLOW-1160](tasks/FLOW-1160.md) | Explicit state machines: the helper, the setup's saves, and the map of every machine | SMALL CYCLE |
 | <a id="flow-1161"></a>[FLOW-1161](tasks/FLOW-1161.md) | Setup wizard: a refused setting after the company exists, a silent skip-all, and controls live during a save | BUG |
 | <a id="flow-1162"></a>[FLOW-1162](tasks/FLOW-1162.md) | Mercury sync: a page-capped run resets the missing-since clocks; the cursor's phases as one table | BUG |
+| <a id="flow-1178"></a>[FLOW-1178](tasks/FLOW-1178.md) | A stuck Mercury refresh keeps its last good time and says what to do | SMALL UI |
 | <a id="flow-1163"></a>[FLOW-1163](tasks/FLOW-1163.md) | Refresh queue and connections: a skipped run uses up the request, `forced` is dropped, claims are not per slot | BUG |
 
 ## Multi-company and team
@@ -770,8 +776,12 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-929"></a>[FLOW-929](tasks/FLOW-929.md) | Cross-company sweep: every client function, called as another company | SMALL CYCLE |
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
 | <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
+| <a id="flow-1176"></a>[FLOW-1176](tasks/FLOW-1176.md) | A closed month's refusal stays long enough to read | SMALL UI |
+| <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | PLAN FIRST |
 | <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
 | <a id="flow-1172"></a>[FLOW-1172](tasks/FLOW-1172.md) | Loans: move the app's direct table writes onto RPCs | SMALL CYCLE |
+| <a id="flow-1181"></a>[FLOW-1181](tasks/FLOW-1181.md) | Five-token sweep, MEDIUM refactor: controls, fields and base screens use their tokens (no visual change) | SMALL UI |
+| <a id="flow-1182"></a>[FLOW-1182](tasks/FLOW-1182.md) | Five-token sweep: review, transaction and search use their tokens (no visual change) | SMALL UI |
 
 ## Data hygiene (public repo)
 

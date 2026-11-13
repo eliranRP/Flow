@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AlertIcon } from "./icons";
 import { ScreenHeader } from "./screen-header";
 // The connection pages' and the Mercury account picker's styles load with them, not with Home.
 import "./css/53-mercury-connections.css";
@@ -14,6 +15,7 @@ export function ConnectionPage({
   subtitle,
   backTo,
   problem,
+  problemTone,
   children,
 }: {
   title: string;
@@ -23,12 +25,21 @@ export function ConnectionPage({
   backText?: string;
   /** The tinted box a reconnect opens with: what stopped, and that what came in is kept. */
   problem?: ReactNode;
+  /** FLOW-1178: a problem the page cannot fix itself (a stuck refresh) draws the warning marker. */
+  problemTone?: "warning";
   children: ReactNode;
 }) {
   return (
     <div className="ui-connection-page">
       <ScreenHeader title={title} subtitle={subtitle} backTo={backTo} backText="חיבורים" />
-      {problem != null ? <div className="ui-connection-problem" role="status">{problem}</div> : null}
+      {problem != null ? (
+        problemTone === "warning" ? (
+          <div className="ui-connection-problem ui-connection-problem-warning" role="status">
+            <span className="ui-connection-problem-icon" aria-hidden="true"><AlertIcon size={20} /></span>
+            <div className="ui-connection-problem-text">{problem}</div>
+          </div>
+        ) : <div className="ui-connection-problem" role="status">{problem}</div>
+      ) : null}
       {children}
     </div>
   );

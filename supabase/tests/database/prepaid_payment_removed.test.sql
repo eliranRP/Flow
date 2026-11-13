@@ -1,4 +1,4 @@
--- FLOW-1166 part 5 (20261113080500_lifecycle_last_rules.sql, A): a prepaid schedule whose payment
+-- FLOW-1166 part 5 (20261113160900_lifecycle_last_rules.sql, A): a prepaid schedule whose payment
 -- line is removed is ended at that point, its posted months stay, and it is listed as ended because
 -- its payment was removed (the owner's decision, 2026-11-13). Every way the sync removes a line: a
 -- bank void, the SUMIT sweep, a SUMIT company switch (replace_sumit_connection), and a void held in a

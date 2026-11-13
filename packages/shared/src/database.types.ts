@@ -1770,7 +1770,7 @@ isOneToOne: false
 { Args: { "p_month": string }; Returns: Json
                            },
 "company_next_month_inputs":
-{ Args: { "p_today"?: string }; Returns: Json
+{ Args: { "p_rest"?: boolean,"p_today"?: string }; Returns: Json
                            },
 "company_pnl":
 { Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json

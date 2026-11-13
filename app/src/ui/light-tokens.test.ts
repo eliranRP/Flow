@@ -183,3 +183,22 @@ describe("dark values are unchanged by FLOW-372", () => {
     expect(dark.get("--shadow-toast")).toBe("0 8px 24px rgba(0, 0, 0, 0.4)");
   });
 });
+
+// FLOW-1180: the band's month pill names its month in white on its translucent white track over the band, in both
+// themes. The track composited over the band keeps the white name at 4.5:1 (the 16% track was 4.2:1).
+describe("the band's month pill (WCAG AA 4.5:1)", () => {
+  /** A #RRGGBB of rgba(r, g, b, a) drawn over a #RRGGBB, in 8-bit channels as the browser paints it. */
+  function over(rgba: string, under: string): string {
+    const [r = 0, g = 0, b = 0, a = 0] = (/^rgba\(([^)]+)\)$/.exec(rgba)?.[1] ?? "").split(",").map(Number);
+    const base = [1, 3, 5].map((at) => parseInt(under.slice(at, at + 2), 16));
+    return `#${[r, g, b].map((c, i) => Math.round(c * a + (base[i] ?? 0) * (1 - a)).toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  for (const [theme, map] of [["light", light], ["dark", dark]] as const) {
+    it(`${theme}: --color-on-band on --band-pill-track over --color-band reaches 4.5:1`, () => {
+      const track = map.get("--band-pill-track") ?? light.get("--band-pill-track") ?? "";
+      const ratio = contrast(hexOf(map, "--color-on-band"), over(track, hexOf(map, "--color-band")));
+      expect(ratio, `the month's name is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+    });
+  }
+});

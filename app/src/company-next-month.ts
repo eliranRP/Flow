@@ -35,7 +35,8 @@ export type CompanyNextMonthInputs = {
   /**
    * The later months' edits (decision 0200; FLOW-1066, decision 0260: every month of the forecast, next month to
    * forecastLastMonth, no longer only the rest of the year): every edit that applies to any of them, an added one
-   * with its matched line by month. Older payloads and fixtures omit it: next month's `edits` stand in.
+   * with its matched line by month. Older payloads and fixtures omit it: next month's `edits` stand in. FLOW-1171:
+   * the read leaves it out (p_rest false) for next month's own card, which builds from `edits`.
    */
   rest_edits?: RestOfYearEdit[];
 };

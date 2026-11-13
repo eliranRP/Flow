@@ -268,13 +268,20 @@
   flex: 1;
   flex-direction: column;
   justify-content: flex-end;
+  gap: var(--space-half); /* FLOW-1179: a card-coloured seam, so equity and loan part without telling hue apart */
   block-size: 100%;
+}
+
+/* FLOW-1179: the accent paled into the card, 3:1 on it (3.4:1 light, 3.8:1 dark), and about 2:1 from the accent's
+   refinance year. The loan's grey is as light, so the seam above parts the two. */
+.ui-msr-bar-equity,
+.ui-msr-key-equity {
+  background: color-mix(in srgb, var(--color-accent) 65%, var(--color-surface));
 }
 
 .ui-msr-bar-equity {
   border-start-start-radius: var(--radius-chip);
   border-start-end-radius: var(--radius-chip);
-  background: var(--color-tint-strong);
 }
 
 .ui-msr-bar[data-on] .ui-msr-bar-equity {
@@ -324,10 +331,6 @@
   inline-size: var(--space-3);
   block-size: var(--space-3);
   border-radius: var(--radius-chip);
-}
-
-.ui-msr-key-equity {
-  background: var(--color-tint-strong);
 }
 
 .ui-msr-key-refi {

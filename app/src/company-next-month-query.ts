@@ -5,6 +5,7 @@ import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import { companyMonthInput, companyRestOfYear, restOfYearMonths, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
+import { expectedMonthsQueryOptions } from "./expected-months-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { shiftMonthKey } from "./period";
@@ -62,27 +63,24 @@ const NO_LOANS: readonly ForecastLoan[] = [];
  * on top) and the general costs', summed; and the same for each month left in the year (`rest`, null in
  * December). Null until the reads are in; `enabled` false reads nothing. FLOW-1066: with `month` (a month of the
  * forecast, inForecastHorizon), `forecast` and `input` are that month's, from the same reads.
+ * FLOW-1171: `withRest` (the year and since-start views) also reads every later month's edits and builds `rest`;
+ * a month after next month needs them too. Next month's own card reads without them, under its own cache key,
+ * and skips only next month's overrides.
  */
-export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string) {
+export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string, withRest = false) {
   const preview = useHomePreview();
   const live = enabled && sample == null && preview === "off";
-  const expected = useQuery({
-    queryKey: ["expected-months", preview, "company", 2],
-    enabled: live,
-    queryFn: async (): Promise<ExpectedMonths> => {
-      const supabase = await readyClient();
-      const { data, error } = await supabase.rpc("expected_months", { p_months: 2 });
-      if (error) throw error;
-      return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
-    },
-  });
+  // FLOW-1171: the same read as Home's forecast (expected-months-query), so one request serves both.
+  const expected = useQuery({ ...expectedMonthsQueryOptions(preview), enabled: live });
   const loans = useQuery({ queryKey: ["loans", "company-forecast", preview], enabled: live, queryFn: () => readForecastLoans(null) });
+  // A later month is built from rest_edits; the slim answer (no rest_edits) holds next month's edits only.
+  const full = withRest || (month != null && month !== nextMonthKey(today));
   const inputs = useQuery({
-    queryKey: [FORECAST_EDITS_KEY, preview, "company", today],
+    queryKey: [FORECAST_EDITS_KEY, preview, "company", today, full],
     enabled: live,
     queryFn: async (): Promise<CompanyNextMonthInputs> => {
       const supabase = await readyClient();
-      const { data, error } = await supabase.rpc("company_next_month_inputs", { p_today: today });
+      const { data, error } = await supabase.rpc("company_next_month_inputs", { p_today: today, p_rest: full });
       if (error) throw error;
       return inputsSchema.parse(data);
     },
@@ -93,7 +91,7 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const skipList = overrides.data;
   // FLOW-1096: without a month (the profit page), next month and each month left in the year count what was taken
   // out of them, from the same reads; until those are in, every charge.
-  const yearMonths = useMemo(() => [...new Set([nextMonthKey(today), ...restOfYearMonths(today)])], [today]);
+  const yearMonths = useMemo(() => [...new Set([nextMonthKey(today), ...(full ? restOfYearMonths(today) : [])])], [today, full]);
   const skipsByMonth = useSkipsByMonth(yearMonths, live && month == null);
   const skips = useMemo(
     () => (month == null ? skipsByMonth?.[nextMonthKey(today)] : skipList == null ? undefined : [...skippedKeys(skipList)]),
@@ -115,10 +113,10 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const forecast: CompanyNextMonth | null = useMemo(() => (input == null ? null : companyNextMonthForecast(input)), [input]);
   // The year view's rest of the year (decision 0200): the same reads, built again for each month left.
   const rest: RestOfYear | null = useMemo(
-    () => (recurring != null && loanList != null && categoryList != null && inputData != null
+    () => (full && recurring != null && loanList != null && categoryList != null && inputData != null
       ? companyRestOfYear({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData, skipsByMonth })
       : null),
-    [recurring, loanList, categoryList, inputData, currency, today, skipsByMonth],
+    [full, recurring, loanList, categoryList, inputData, currency, today, skipsByMonth],
   );
   const reads = month == null || sample != null ? [expected, loans, inputs, categories] : [expected, loans, inputs, categories, overrides];
   return {
