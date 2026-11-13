@@ -516,7 +516,7 @@
 
 .ui-search-results .ui-month-title {
   font-weight: var(--type-section-weight);
-  line-height: calc(var(--space-1) * 6);
+  line-height: var(--space-6);
 }
 
 .ui-search-results .ui-month-signed {
@@ -534,7 +534,7 @@
 }
 
 .ui-search-results .ui-statement-title {
-  line-height: calc(var(--space-1) * 5);
+  line-height: var(--space-5);
 }
 
 .ui-search-results .ui-statement-line {
