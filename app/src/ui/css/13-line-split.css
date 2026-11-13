@@ -49,7 +49,6 @@
   font: inherit;
   text-align: start;
   box-shadow: var(--shadow-sm);
-
 }
 
 .ui-lsplit-pick {
@@ -227,7 +226,6 @@
   background: var(--color-surface);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-
 }
 
 .ui-lsplit-rest-msg {
@@ -380,7 +378,6 @@
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-
 }
 
 .ui-lsplit-board .ui-lsplit-part[data-invalid] {
@@ -592,7 +589,6 @@
   text-align: start;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-
 }
 
 .ui-lsplit-rest[data-empty] {

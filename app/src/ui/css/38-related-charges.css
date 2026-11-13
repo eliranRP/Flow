@@ -222,7 +222,6 @@
   border-radius: var(--radius-card);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-
 }
 
 /* The board's recurring row has no small label: the value is the title, and the accessible name keeps the label. */

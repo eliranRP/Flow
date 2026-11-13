@@ -266,5 +266,5 @@
 .ui-review-pick .ui-pick-name .ui-suggest-tag { margin-inline-start: auto; background: none; padding: 0; color: var(--color-text-muted); font-weight: var(--type-line2-weight); }
 .ui-review-pick .ui-change-links { margin-top: calc(-1 * var(--space-3)); border-top: 0; }
 .ui-review-pick .ui-change-links .ui-btn-link { min-block-size: var(--control-height); padding-inline: var(--space-1); font-weight: var(--type-btn-weight); }
-.ui-review-pick .ui-switch-row { min-block-size: 52px; padding-block: 0; padding-inline: var(--space-4); border-radius: var(--radius-toast); background: var(--color-raised); }
+.ui-review-pick .ui-switch-row { min-block-size: var(--control-height); padding-block: 0; padding-inline: var(--space-4); border-radius: var(--radius-toast); background: var(--color-raised); }
 .ui-review-pick .ui-switch-label { font-size: var(--type-line2-size); }

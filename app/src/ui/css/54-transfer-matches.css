@@ -24,7 +24,6 @@
   border-radius: var(--radius-card);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-
 }
 
 .ui-xfer-legs {

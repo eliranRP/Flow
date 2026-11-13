@@ -35,7 +35,6 @@
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-
 }
 
 .ui-journal-head {
