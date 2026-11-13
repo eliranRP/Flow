@@ -100,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding-block: calc(var(--space-1) + var(--space-half));
+  padding-block: var(--space-2);
   padding-inline: var(--space-3);
 }
 

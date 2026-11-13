@@ -31,7 +31,7 @@
    always has, so nothing moves when the read lands. */
 .ui-loan-skel .ui-row {
   min-height: calc(
-    2 * var(--row-pad)
+    2 * var(--space-4)
     + 2 * var(--type-line2-size) * var(--type-line2-line)
     + var(--type-btn-size) * var(--type-btn-line)
   );
@@ -41,7 +41,7 @@
    (title and hint, or eyebrow and title), so the list does not grow when the read lands. */
 .ui-loan-skel-rows .ui-row {
   min-height: calc(
-    2 * var(--row-pad)
+    2 * var(--space-4)
     + var(--type-line2-size) * var(--type-line2-line)
     + var(--type-btn-size) * var(--type-btn-line)
   );
@@ -422,7 +422,7 @@
 .ui-field {
   display: flex;
   flex-direction: column;
-  gap: var(--label-gap);
+  gap: var(--space-2);
   inline-size: 100%;
   min-inline-size: 0;
 }
@@ -439,7 +439,7 @@
 .ui-code-field {
   display: flex;
   flex-direction: column;
-  gap: var(--label-gap);
+  gap: var(--space-2);
   inline-size: 100%;
   min-inline-size: 0;
 }
@@ -494,7 +494,7 @@
   justify-content: center;
   block-size: var(--control-height-sm);
   inline-size: 100%;
-  padding-inline: var(--field-btn-pad);
+  padding-inline: var(--space-3);
   border-radius: var(--radius-field-btn);
   background: var(--color-tint);
   color: var(--color-accent-text);
@@ -526,7 +526,7 @@
   min-width: 0;
   block-size: var(--field-height);
   min-height: var(--touch-min);
-  padding-inline: var(--field-pad);
+  padding-inline: var(--space-4);
   /* FLOW-972: the edge is the control edge, 3:1 and more on the card (the tint was 1.35:1). */
   border: var(--stroke-strong) solid var(--color-control-edge);
   border-radius: var(--radius-input);
@@ -544,7 +544,7 @@
 }
 
 .ui-code-field-box[data-copy="off"] .ui-code-field-input.ui-field-control {
-  padding-inline-end: var(--field-pad);
+  padding-inline-end: var(--space-4);
 }
 
 .ui-money-field.ui-field-control {
@@ -609,7 +609,7 @@
 /* The prefix sits just to the left of the right-aligned digits: the lead lays out the prefix and a
    hidden copy of the digits in the input's own font, so commas and the dot keep the gap at 0.35em. */
 .ui-money-lead {
-  inset-inline: var(--field-pad);
+  inset-inline: var(--space-4);
   justify-content: flex-end;
   gap: 0.35em;
   overflow: hidden;
@@ -635,7 +635,7 @@
   block-size: 100%;
   min-block-size: var(--touch-min);
   margin: 0;
-  padding-inline: var(--field-pad);
+  padding-inline: var(--space-4);
   border: 0;
   background: transparent;
   color: inherit;
@@ -677,7 +677,7 @@
   min-inline-size: 96px;
   block-size: var(--field-height);
   height: var(--field-height);
-  padding-inline: var(--field-pad);
+  padding-inline: var(--space-4);
   border-radius: var(--radius-input);
   font-size: var(--type-btn-size);
 }

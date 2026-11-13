@@ -82,13 +82,9 @@
 }
 
 /* A period switch on the page (the loans summary, the company profit page): its track is the card tone (the
-   board's), with 9px segments. */
+   board's). Its segments take the track's radius less its 4px padding, as every segment does. */
 .ui-period-switch .ui-seg {
   background: var(--color-surface);
-}
-
-.ui-period-switch .ui-seg-btn {
-  border-radius: var(--radius-seg-btn-page);
 }
 
 /* A save is running (busy): the other segments read as unavailable, but stay focusable. */
@@ -109,7 +105,7 @@
   min-block-size: var(--size-chip);
   align-items: center;
   gap: var(--space-1);
-  padding-inline: var(--field-pad);
+  padding-inline: var(--space-4);
   border-radius: var(--radius-chip);
   border: var(--stroke-strong) solid var(--color-tint-strong);
   background: transparent;
@@ -163,7 +159,7 @@
   max-inline-size: 100%;
   min-inline-size: 0;
   align-items: center;
-  gap: var(--status-gap);
+  gap: var(--space-2);
   color: var(--color-text-secondary);
 }
 
@@ -238,7 +234,7 @@
   block-size: var(--touch-min);
   min-block-size: var(--touch-min);
   gap: var(--space-2);
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   border-width: var(--stroke-strong);
   font-size: var(--type-line2-size);
   line-height: var(--type-chip-line);

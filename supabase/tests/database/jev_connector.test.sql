@@ -492,9 +492,10 @@ select is(
 );
 
 select tests.authenticate_as('jev_owner');
+-- The owner stored mode off above, which keeps enabled false (FLOW-1166 part 5).
 select is(
-  (select enabled from public.company_integrations),
-  true,
+  (select enabled::text || ':' || mode from public.company_integrations),
+  'false:off',
   'the owner still reads their own integration after the other owner writes'
 );
 select is(

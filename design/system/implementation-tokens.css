@@ -188,7 +188,6 @@
   --rise-toast: 12px;
   --radius-toast: 14px;
   --radius-seg-btn: 10px;
-  --radius-seg-btn-page: 9px;    /* the loans summary's period switch on the page (board, FLOW-142) */
   --radius-seg-btn-small: 8px;   /* the loan page's small period switch in its paid card (board, FLOW-142) */
   --radius-bar-hair: 2px;        /* a 4px progress bar, a loan's row on the loans summary (board, FLOW-142) */
   --radius-chart-bar: 4px;       /* a bar of the month chart (Profit and Projects boards, FLOW-449) */

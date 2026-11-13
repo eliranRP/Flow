@@ -949,13 +949,13 @@ isOneToOne: false
                   ]
                 },"prepaid_schedules": {
                   Row: {
-                    "company_id": string,"created_at": string,"created_by": string | null,"currency": string,"day_of_month": number,"description": string,"end_mode": string | null,"ended_on": string | null,"expense_category_id": string,"id": string,"months": number,"prepaid_account_id": string,"prepaid_category_id": string,"prior": NonNullable<Json>,"project_id": string | null,"start_month": string,"status": string,"total_minor": number,"transaction_id": string
+                    "company_id": string,"created_at": string,"created_by": string | null,"currency": string,"day_of_month": number,"description": string,"end_mode": string | null,"ended_by": string | null,"ended_on": string | null,"expense_category_id": string,"id": string,"months": number,"prepaid_account_id": string,"prepaid_category_id": string,"prior": NonNullable<Json>,"project_id": string | null,"start_month": string,"status": string,"total_minor": number,"transaction_id": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"currency": string,"day_of_month": number,"description": string,"end_mode"?: string | null,"ended_on"?: string | null,"expense_category_id": string,"id"?: string,"months": number,"prepaid_account_id": string,"prepaid_category_id": string,"prior": NonNullable<Json>,"project_id"?: string | null,"start_month": string,"status"?: string,"total_minor": number,"transaction_id": string
+                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"currency": string,"day_of_month": number,"description": string,"end_mode"?: string | null,"ended_by"?: string | null,"ended_on"?: string | null,"expense_category_id": string,"id"?: string,"months": number,"prepaid_account_id": string,"prepaid_category_id": string,"prior": NonNullable<Json>,"project_id"?: string | null,"start_month": string,"status"?: string,"total_minor": number,"transaction_id": string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"day_of_month"?: number,"description"?: string,"end_mode"?: string | null,"ended_on"?: string | null,"expense_category_id"?: string,"id"?: string,"months"?: number,"prepaid_account_id"?: string,"prepaid_category_id"?: string,"prior"?: NonNullable<Json>,"project_id"?: string | null,"start_month"?: string,"status"?: string,"total_minor"?: number,"transaction_id"?: string
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"day_of_month"?: number,"description"?: string,"end_mode"?: string | null,"ended_by"?: string | null,"ended_on"?: string | null,"expense_category_id"?: string,"id"?: string,"months"?: number,"prepaid_account_id"?: string,"prepaid_category_id"?: string,"prior"?: NonNullable<Json>,"project_id"?: string | null,"start_month"?: string,"status"?: string,"total_minor"?: number,"transaction_id"?: string
                   }
                   Relationships: [
                     {
@@ -1897,7 +1897,7 @@ isOneToOne: false
 "get_project":
 { Args: { "p_id": string }; Returns: Json
                            } |
-{ Args: { "p_basis": string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
+{ Args: { "p_basis": string,"p_from"?: string,"p_id": string,"p_lines"?: boolean,"p_to"?: string }; Returns: Json
                            },
 "get_project_group":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json

@@ -14,7 +14,7 @@
 }
 
 .ui-signin-tagline {
-  margin-top: var(--label-gap);
+  margin-top: var(--space-2);
   font-size: var(--type-btn-size);
   line-height: var(--type-btn-line);
   font-weight: var(--type-body-weight);

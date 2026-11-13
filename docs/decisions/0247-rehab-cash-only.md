@@ -6,5 +6,5 @@
 
 ## Decision
 
-- Renovation so far (`rehab_minor`, `rehab_by_category`) sums only the lines the cash view counts: the owner's switch on the line, else the category (`private.line_in_cash`). A journal entry such as depreciation, which moves no money, is out, as it is from the property's returns since [0245](0245-returns-from-the-lines.md).
+- Renovation so far (`rehab_minor`, `rehab_by_category`) sums only the lines the cash view counts: the owner's switch on the line, else the category (the cash rule inside `private.project_investment`; `private.line_in_cash` until FLOW-1171). A journal entry such as depreciation, which moves no money, is out, as it is from the property's returns since [0245](0245-returns-from-the-lines.md).
 - The figure opens the same page as the other investment figures: what it counts, the categories that count adding up to it, and their transactions. What is kept out is one link to the category settings, not a list.

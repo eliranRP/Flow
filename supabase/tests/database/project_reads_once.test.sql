@@ -79,13 +79,13 @@ reset role;
 -- The structure the speed depends on: one read of the view and one category pass.
 select is(
   (select (length(d) - length(replace(d, 'from private.pnl_lines u', ''))) / length('from private.pnl_lines u')
-   from pg_get_functiondef('public.get_project(uuid,text,date,date)'::regprocedure) d),
+   from pg_get_functiondef('public.get_project(uuid,text,date,date,boolean)'::regprocedure) d),
   1,
   'get_project reads private.pnl_lines for its totals once'
 );
 select is(
   (select (length(d) - length(replace(d, 'project_category_entries_by_currency(', ''))) / length('project_category_entries_by_currency(')
-   from pg_get_functiondef('public.get_project(uuid,text,date,date)'::regprocedure) d),
+   from pg_get_functiondef('public.get_project(uuid,text,date,date,boolean)'::regprocedure) d),
   1,
   'get_project runs the category entries once'
 );
