@@ -192,3 +192,26 @@ button.ui-merc-row {
   gap: var(--space-inset-row);
   padding-block-end: var(--space-4);
 }
+
+/* FLOW-1178: a problem the page cannot fix (a stuck refresh) has the warning marker and a support link. */
+.ui-connection-problem-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.ui-connection-problem-icon {
+  display: grid;
+  flex: none;
+  padding-top: var(--note-icon-nudge);
+  color: var(--color-warning);
+}
+
+.ui-connection-problem-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}

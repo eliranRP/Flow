@@ -4,7 +4,7 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttachedDocument, BankMatch } from "../add-entry";
-import { booksClosedNote } from "../company-role-cache";
+import { BOOKS_CLOSED_MS, booksClosedNote } from "../company-role-cache";
 import { ToastProvider } from "../ui/toast";
 import { AddEntrySheet } from "./add-entry-sheet";
 
@@ -139,6 +139,7 @@ describe("AddEntrySheet toasts and offline (FLOW-966)", () => {
     mocks.undoManualLine.mockRejectedValueOnce(new Error("the books are closed through 2026-10-31"));
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     expect(await screen.findByText(booksClosedNote("2026-10-31"))).toBeInTheDocument();
+    expect(mocks.toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: booksClosedNote("2026-10-31"), durationMs: BOOKS_CLOSED_MS }));
   });
 
   it("offline, keeps the form open and says why instead of failing", () => {
