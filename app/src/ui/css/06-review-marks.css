@@ -54,3 +54,30 @@
   background: var(--color-accent);
   transition: inline-size var(--motion-fast) var(--ease-standard);
 }
+
+/* FLOW-1166: a sync's change held for a line in a closed period. The box says what waits, in place of
+   the project and category rows; the hint under it says how to take it. */
+.ui-review-held {
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+}
+
+.ui-review-held-reason {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--type-name-weight);
+}
+
+.ui-review-held-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-review-held-hint {
+  margin: var(--space-2) 0 0;
+}

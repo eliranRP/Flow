@@ -274,6 +274,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "answer_utility_refund",
     "mark_utility_refunds_seen",
     "refile_utility_refund",
+    "leave_held_change",
   ], "read and write tools");
   const lookup = calls.find((call) => call.url.endsWith("/lookup_mcp_credential"));
   assertEquals(lookup?.body?.p_token_hash, hash, "lookup hash");

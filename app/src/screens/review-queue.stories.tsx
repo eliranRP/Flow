@@ -32,6 +32,20 @@ const plainRow: ReviewRow = { ...sampleReview, auto_approved_today: 0 };
 const mismatchRow: ReviewRow = { ...plainRow, reason: "split_mismatch" };
 export const ReviewBarSplitMismatch375: Story = { ...se, render: () => <ReviewQueueStory row={mismatchRow} /> };
 export const ReviewBarViewer375: Story = { ...se, render: () => <ReviewQueueStory viewer /> };
+/** FLOW-1166: a bank change held in a closed month: the card says what waits, and אישור is the bar's one action. */
+const heldRow: ReviewRow = {
+  ...plainRow,
+  reason: "closed_month_change",
+  source: "mercury",
+  currency: "USD",
+  vat_agorot: 0n,
+  amount_net: -120_000n,
+  doc_date: "2026-03-14",
+  line_status: "posted",
+  held: { kind: "update", amount_minor: 135_050, currency: "USD", doc_date: "2026-03-29", line_status: "posted", provider: "mercury" },
+};
+export const ReviewBarHeld375: Story = { ...se, render: () => <ReviewQueueStory row={heldRow} /> };
+export const ReviewBarHeldViewer375: Story = { ...se, render: () => <ReviewQueueStory row={heldRow} viewer /> };
 
 /** Puts flags in the story's cache under the key the real read uses. */
 function SeedFlags({ ids, flags }: { ids: string[]; flags: ReviewFlagsData }) {

@@ -1,5 +1,5 @@
-import { formatAmountText } from "@flow/shared";
-import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
+import { formatAmountText, type ReviewHeld } from "@flow/shared";
+import { formatDayMonth, formatDisplay, HEBREW_MONTHS } from "./ui/date-math";
 
 /**
  * FLOW-327 / FLOW-701. The words on the review card for Jev's reason (decision 0134) and the
@@ -253,4 +253,58 @@ export function reviewPaidView(
     line: [`${word} · ${REVIEW_RECEIPT} `, { num: day }],
     spoken: `${word}, ${REVIEW_RECEIPT} מ־${day}`,
   };
+}
+
+/** FLOW-1166 (decision 0266): the reason of a review row that holds a sync's change to a line in a closed period. */
+export const REVIEW_HELD = "closed_month_change";
+export const REVIEW_HELD_REASON_BANK = "שינוי מהבנק ממתין: התקופה סגורה בספרים.";
+export const REVIEW_HELD_REASON_SUMIT = "שינוי מ־SUMIT ממתין: התקופה סגורה בספרים.";
+export const REVIEW_HELD_HINT = "כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו.";
+/** The toast after אישור leaves the line as it is (leave_held_change). */
+export const REVIEW_HELD_LEFT = "השורה נשארת כמו שהיא.";
+
+/** The review row's fields the held card reads: the line as it stands, and the change held for it. */
+export type ReviewHeldRow = {
+  held?: ReviewHeld | null;
+  source?: string;
+  amount_net: bigint;
+  vat_agorot?: bigint;
+  currency?: string;
+  doc_date: string;
+  line_status?: string;
+};
+
+/** The reason line, the detail lines that apply (amount, date, void or removal, posted) and the hint. */
+export type ReviewHeldView = { reason: string; details: CopyPart[][]; hint: string };
+
+const abs = (value: bigint) => (value < 0n ? -value : value);
+
+/**
+ * The card's words for a held change (the owner's wording of 2026-11-11). An update says only what differs
+ * from the line as it stands; a held field that is missing, odd or of an unknown kind adds no line, so the
+ * card still shows its reason and hint.
+ */
+export function reviewHeldView(row: ReviewHeldRow): ReviewHeldView {
+  const held = row.held ?? null;
+  const provider = held?.provider === "sumit" || held?.provider === "mercury" ? held.provider : row.source;
+  const sumit = provider === "sumit";
+  const details: CopyPart[][] = [];
+  if (held?.kind === "void" || held?.kind === "remove") {
+    details.push([sumit ? "המסמך נמחק ב־SUMIT." : "הבנק ביטל את השורה."]);
+  } else if (held?.kind === "update") {
+    const currency = held.currency ?? row.currency ?? "ILS";
+    const amount = held.amount_minor;
+    if (typeof amount === "number" && Number.isSafeInteger(amount)) {
+      const stored = abs(row.amount_net) + abs(row.vat_agorot ?? 0n);
+      if (BigInt(Math.abs(amount)) !== stored || currency !== (row.currency ?? "ILS")) {
+        details.push(["סכום חדש: ", { num: formatAmountText(BigInt(Math.abs(amount)), currency, { detail: true }) }]);
+      }
+    }
+    const date = held.doc_date;
+    if (date != null && /^\d{4}-\d{2}-\d{2}$/.test(date) && date !== row.doc_date.slice(0, 10)) {
+      details.push(["תאריך חדש: ", { num: formatDisplay(date) }]);
+    }
+    if (row.line_status === "pending" && held.line_status === "posted") details.push(["השורה עברה לסופית."]);
+  }
+  return { reason: sumit ? REVIEW_HELD_REASON_SUMIT : REVIEW_HELD_REASON_BANK, details, hint: REVIEW_HELD_HINT };
 }

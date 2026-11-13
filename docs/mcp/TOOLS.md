@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `set_loan_closing_paid`, `set_member_report`, `refresh_treasury_yields`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `answer_recurring_handover`, `set_utility_payer`, `answer_utility_refund`, `mark_utility_refunds_seen`, `refile_utility_refund`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_journal_entry_leg_project`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `set_tax_bracket`, `set_land_account`, `set_loan_closing_paid`, `set_member_report`, `refresh_treasury_yields`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `answer_recurring_handover`, `set_utility_payer`, `answer_utility_refund`, `mark_utility_refunds_seen`, `refile_utility_refund`, `leave_held_change`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -137,6 +137,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `attach_prepaid_refund` | `transaction_id` | the refund line: a posted income line |
 | `undo` `kind: "prepaid_create"`, `"prepaid_update"`, `"prepaid_refund"`, `"prepaid_end"`, `"prepaid_delete"` | `id` | the schedule id the write returned |
 | `undo` `kind: "books_closed"` | `id` | the company id `set_books_closed_through` used |
+| `leave_held_change` | `transaction_id` | `list_review.transaction_id` of a row with `reason` `closed_month_change` |
+| `undo` `kind: "held_change_left"` | `id` | the transaction id `leave_held_change` used |
 | `book_line`, `get_line_legs` | `transaction_id` | `list_review.transaction_id`, `get_cash_lines` `rows[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
 | `undo` `kind: "book_line"` / `kind: "line_split"` | `id` | the line id `book_line` returned (`data.id`) |
 | `remove_member` | `member_id` | `list_team` `members[].user_id` |
@@ -255,6 +257,8 @@ A connector invoice and the receipt that pays it are one item ([FLOW-309](../bac
 Income that already has a project but only a guess of a kept-out category is queued with `reason` `suggested`: the guess counts in the P&L until it is confirmed, and approving it (or `assign_expense` / `set_expense_category`) confirms it ([FLOW-126](../backlog/TASKS.md#flow-126), [0114](../decisions/0114-kept-out-guesses.md)). A guessed loan category is not queued: it is out of the P&L even as a guess ([FLOW-127](../backlog/TASKS.md#flow-127)).
 
 A line split with `split_line` whose amount the bank sync changed is queued with `reason` `split_mismatch`: its parts no longer sum to it, so it counts whole until new parts are sent (see [split_line](#split_line)).
+
+A bank (Mercury) or SUMIT change to a line in the closed period (on or before `set_books_closed_through`'s date) is not written: the line stays as it is and the item is queued with `reason` `closed_month_change` ([FLOW-1166](../backlog/tasks/FLOW-1166.md), [0266](../decisions/0266-explicit-state-machines.md)). Its `held` says what waits: `kind` (`update`: new provider facts; `void`: the bank dropped the line; `remove`: the SUMIT document is gone), `amount_minor` (the new gross, unsigned, in `currency`; null unless `update`), `currency`, `doc_date`, `cash_date`, `line_status` (the status the change brings: `pending` or `posted`) and `provider` (`mercury` or `sumit`); `held` is null on every other item, and `line_status` on the item is the line's own. Such an item cannot be assigned, split, recategorized or skipped (`the books are closed through YYYY-MM-DD`). It is settled in one of two ways: [leave_held_change](#leave_held_change) keeps the line as it is and approves the item, or moving the closed date back with [set_books_closed_through](#set_books_closed_through) lets the next sync apply the change, which removes the item.
 
 ### get_expense
 
@@ -469,7 +473,7 @@ Either way the server checks that the legs it derived equal the request, per acc
 
 ## Prepaid schedules and the books-closed date · FLOW-155, FLOW-156
 
-A payment made up front (a year of insurance) is spread over months. Rules for all eight tools:
+A payment made up front (a year of insurance) is spread over months. Rules for the eight prepaid and closed-date tools (`leave_held_change` has its own section below):
 
 - A posted month is a normal journal entry: a debit to the expense category on the project, a credit to the Prepaid expenses asset account (reference `prepaid:<schedule>:<seq>`). It moves no cash, so no cash view and no bank total changes. Planned months are not on the books and are in no report.
 - A daily job posts every planned month that is due; a re-run posts nothing. Create, refund, update and end also post what is already due at once, so a start month in the past backfills with the original dates.
@@ -541,7 +545,15 @@ Removes every posted entry and the schedule, and restores the payment and refund
 { "idempotency_key": "close-1", "date": "2026-03-31" }
 ```
 
-Owner only. `date` is `YYYY-MM-DD`, or `null` to open the books. Refused: `only the owner can close the books`, `the date is after today`, `post the due prepaid rows first`. Output `data`: `{ "books_closed_through", "previous", "undo_kind": "books_closed" }`; undo `books_closed` takes the company id and puts the previous date back while it reads as written.
+Owner only. `date` is `YYYY-MM-DD`, or `null` to open the books. Refused: `only the owner can close the books`, `the date is after today`, `post the due prepaid rows first`, `approve the open review lines first` (a line the new date would close is still open in `list_review`; a `closed_month_change` item does not count). Output `data`: `{ "books_closed_through", "previous", "undo_kind": "books_closed" }`; undo `books_closed` takes the company id and puts the previous date back while it reads as written.
+
+### leave_held_change
+
+```json
+{ "idempotency_key": "held-1", "transaction_id": "<line with a closed_month_change item>" }
+```
+
+[FLOW-1166](../backlog/tasks/FLOW-1166.md). Owner or editor. Keeps a line in the closed period as it is: the held bank or SUMIT change becomes left and the line's `closed_month_change` item is approved. The same change does not open the item again; a different change from a later sync does. To take the change instead, move the closed date back with `set_books_closed_through`: the next sync applies it. Refused: `review item not found` (no held change on the line, another company's line, or a review id in place of the line's). Output `data`: `{ "transaction_id", "review_id", "state": "left", "undo_kind": "held_change_left" }`; undo `held_change_left` takes the line's id and puts the change back to held with its item open, while the change still reads as left (`conflict` once a newer change replaced it).
 
 ## Lines from the add sheet · FLOW-369
 

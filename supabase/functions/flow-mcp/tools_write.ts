@@ -92,6 +92,7 @@ import { memberShareWrite } from "./tools_member_share.ts";
 import { PROPERTY_WRITES, propertyWrite } from "./tools_property.ts";
 import { HANDOVER_WRITES, handoverWrite } from "./tools_handover.ts";
 import { UTILITY_WRITES, utilityWrite } from "./tools_utility_refunds.ts";
+import { HELD_WRITES, heldWrite } from "./tools_held.ts";
 
 /** The largest usual amount a charge takes, in minor units (decision 0189; the database checks it too). */
 const USUAL_AMOUNT_MAX_MINOR = 999_999_999_999n;
@@ -118,6 +119,7 @@ export async function callWrite(
   if (name === "set_member_report" || name === "refresh_treasury_yields") return memberShareWrite(args, rpc, name);
   if ((HANDOVER_WRITES as readonly string[]).includes(name)) return handoverWrite(name as typeof HANDOVER_WRITES[number], args, rpc);
   if ((UTILITY_WRITES as readonly string[]).includes(name)) return utilityWrite(name as typeof UTILITY_WRITES[number], args, rpc);
+  if ((HELD_WRITES as readonly string[]).includes(name)) return heldWrite(name as typeof HELD_WRITES[number], args, rpc);
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");

@@ -83,6 +83,8 @@ export type SettingsSample = {
   renameSaving?: boolean;
   /** Setup steps still to do (the הגדרה ראשונה row shows only while any is left). */
   setupLeft?: number;
+  /** FLOW-1166: the העסק page's closed date (YYYY-MM-DD; a sample only, live reads the company). */
+  booksClosedThrough?: string | null;
 };
 
 /** One connector as the Settings חיבורים row counts it (FLOW-501). */

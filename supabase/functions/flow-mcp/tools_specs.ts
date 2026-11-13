@@ -8,6 +8,7 @@ import { MEMBER_SHARE_READ_SPECS, MEMBER_SHARE_WRITE_SPECS } from "./tools_membe
 import { PROPERTY_READ_SPECS, PROPERTY_WRITE_SPECS } from "./tools_property.ts";
 import { HANDOVER_UNDO_KINDS, HANDOVER_WRITE_SPECS } from "./tools_handover.ts";
 import { UTILITY_READ_SPECS, UTILITY_UNDO_KINDS, UTILITY_WRITE_SPECS } from "./tools_utility_refunds.ts";
+import { HELD_REVIEW_NOTE, HELD_UNDO_KINDS, HELD_WRITE_SPECS } from "./tools_held.ts";
 
 function toolSpec(
   name: string,
@@ -55,7 +56,7 @@ function readTools() {
       to: { type: "string" },
     }),
     toolSpec("list_categories", "The company's categories. rehab is the category's rehab switch (true, false, or null for the default) and in_rehab whether it counts as rehab (set_category_rehab). lines is how many lines on the books are in it (whole or by a split part; delete_category sends these back to review), split_lines how many of them have a split part in it, and loan_used whether a loan uses it (delete_category refuses). in_cash says whether the category counts in the cash view (set_category_cash).", {}),
-    toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense). supplier matches part of the supplier's name, or of the customer's (customer_name) on an income line. An invoice and the receipts that pay it are one item: receipts lists them (transaction_id, doc_date, amount_gross, currency), paid is true when they cover the invoice, paid_on is the last receipt's date; approving the invoice files its receipts too. forecast_match is null, or the line the user added to a project's forecast that this bank line came as (month YYYY-MM, amount_minor expected, unsigned, category_name, project_name): the sync suggested that category and, on a bank expense, that project (on other lines the project stays empty).", {
+    toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense). supplier matches part of the supplier's name, or of the customer's (customer_name) on an income line. An invoice and the receipts that pay it are one item: receipts lists them (transaction_id, doc_date, amount_gross, currency), paid is true when they cover the invoice, paid_on is the last receipt's date; approving the invoice files its receipts too. forecast_match is null, or the line the user added to a project's forecast that this bank line came as (month YYYY-MM, amount_minor expected, unsigned, category_name, project_name): the sync suggested that category and, on a bank expense, that project (on other lines the project stays empty). line_status is the line's own status (pending, posted or void). held is null except on a row with " + HELD_REVIEW_NOTE, {
       direction: { type: "string", enum: ["expense", "income"] },
       reason: { type: "string" },
       supplier: { type: "string" },
@@ -778,14 +779,14 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS, ...HELD_UNDO_KINDS] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects, create_categories or reassign_recurring_charge batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
-    ...THREAD_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS,
+    ...THREAD_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS, ...HELD_WRITE_SPECS,
   ];
 }
 

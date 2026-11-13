@@ -66,6 +66,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
     tools: [
       "create_prepaid_schedule", "list_prepaid_schedules", "get_prepaid_schedule", "attach_prepaid_refund",
       "update_prepaid_schedule", "end_prepaid_schedule", "delete_prepaid_schedule", "set_books_closed_through",
+      "leave_held_change",
     ],
   },
   {
@@ -178,6 +179,15 @@ export const WORKFLOWS: GuideWorkflow[] = [
       "create_prepaid_schedule: the start month (YYYY-MM), the number of months and, optionally, part of the amount; a past start posts the months already due.",
       "get_prepaid_schedule: read the rows (posted or planned); each posted month is a journal entry Prepaid to expense and moves no cash.",
       "attach_prepaid_refund, update_prepaid_schedule or end_prepaid_schedule when the cost changes; set_books_closed_through (owner) locks posted months.",
+    ],
+  },
+  {
+    id: "held_change", title: "A bank or SUMIT change to a closed month",
+    steps: [
+      "list_review: a row whose reason is the closed-month change carries held, what the sync brought (a new amount or date, a void, a removal, a posting); the line itself did not change.",
+      "Ask the owner: keep the line as it is, or take the change.",
+      "Keep it: leave_held_change with the line's id; the row is approved and the same change does not come back.",
+      "Take it: set_books_closed_through (owner) to a date before the line; the next sync applies the change and the row goes.",
     ],
   },
   {
