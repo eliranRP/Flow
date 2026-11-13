@@ -454,7 +454,7 @@ select ok(
   not has_table_privilege('authenticated', 'public.recurring_handovers', 'select')
   and not has_function_privilege('anon', 'public.answer_recurring_handover(text, uuid, text, uuid, uuid, boolean, date)', 'execute')
   and not has_function_privilege('anon', 'public.mcp_answer_recurring_handover(text, text, uuid, text, uuid, uuid, boolean)', 'execute')
-  and not has_function_privilege('authenticated', 'private.recurring_handover(uuid, public.txn_direction, uuid, text, uuid, bigint, date)', 'execute'),
+  and not has_function_privilege('authenticated', 'private.recurring_handovers(uuid, date, jsonb)', 'execute'),
   'the answers are read and written only through the functions'
 );
 

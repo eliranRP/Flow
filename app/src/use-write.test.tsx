@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
+import { BOOKS_CLOSED_MS, booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { ToastProvider } from "./ui/toast";
 import { changeSaveFailure } from "./ui/change-sheet";
 import { booksClosedThrough, useWrite } from "./use-write";
@@ -9,6 +9,20 @@ import { booksClosedThrough, useWrite } from "./use-write";
 vi.mock("./use-books", () => ({
   useInvalidateBooks: () => () => Promise.resolve(),
 }));
+
+const toastShow = vi.hoisted(() => vi.fn());
+
+// Every show() is recorded, so a test can read a toast's time.
+vi.mock("./ui/toast", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./ui/toast")>();
+  return {
+    ...actual,
+    useToast: () => {
+      const toast = actual.useToast();
+      return { ...toast, show: (input: Parameters<typeof toast.show>[0]) => { toastShow(input); return toast.show(input); } };
+    },
+  };
+});
 
 function Save({
   run,
@@ -74,6 +88,7 @@ describe("useWrite", () => {
     expect(document.querySelector(".ui-toast-bad")).toBeNull();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: "the books are closed through 2026-10-31" }));
+    expect(toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: booksClosedNote("2026-10-31"), durationMs: BOOKS_CLOSED_MS }));
   });
 
   it("offers לפיצול, not a retry, when the database refuses a shared cost", async () => {
