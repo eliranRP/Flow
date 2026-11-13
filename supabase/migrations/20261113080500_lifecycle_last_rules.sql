@@ -28,25 +28,40 @@
 --      planned rows and marks the schedule ended with end_mode keep, ended_on the first month that
 --      will not post, ended_by payment_removed. It never posts or removes an entry (the `expense`
 --      end would post through post_journal_entry, which can refuse a closed period or a missing
---      account), so the posted months stay as they are and what is left stays on the Prepaid
---      account, as `keep` does. It takes the schedule and its planned rows with SKIP LOCKED and
---      waits for no lock: when a prepaid write or the daily job holds one of them, it does nothing
+--      account), so it writes nothing to the ledger and the books are the same as before this file.
+--      What they show: the removed payment's own legs leave the ledger with the line (its debit on
+--      Prepaid expenses is gone), and the posted months stay expensed, each with its credit on
+--      Prepaid, against a payment that was removed, until the schedule is deleted. remaining_minor
+--      still reads the unposted amount, so it is not a balance for a payment_removed schedule. To
+--      clear the posted months, delete the schedule (delete_prepaid_schedule); that delete is
+--      refused while a posted month is in a closed period. keep stays the mode: expensing the rest
+--      would expense more of a payment that no longer exists. It takes the schedule and its planned
+--      rows with SKIP LOCKED and waits for no lock: when a prepaid write or the daily job holds one of them, it does nothing
 --      and the daily job ends the schedule on its next run (prepaid_end_removed_all, called first by
 --      prepaid_post_due for all schedules). So it raises nothing a sync could fail on, and it catches
 --      nothing.
+--    - An ended schedule on a removed line keeps no planned row either: the daily job posts none of
+--      them, and set_books_closed_through counts every planned row due as unposted. Two ways one
+--      can have them: the owner's end from a later month leaves the months before it planned (and
+--      an `expense` end its end row), and the undo of a delete (prepaid_apply) puts the deleted
+--      schedule's months back as planned rows, to be posted again, which on a removed line they
+--      never are. The same function drops them and marks the schedule ended there (ended_on the
+--      first dropped month, keep, payment_removed: the removal is why those months stop). So the undo of a delete of a payment_removed schedule puts it back with
+--      no month posted or planned, its ledger as the delete left it.
 --    - The trigger transactions_prepaid_removed (after update of removed_at, null to non-null) ends
---      the line's active schedule in the sync's own statement.
+--      the line's schedule in the sync's own statement.
 --    - A line that comes back (a swept SUMIT document sent again clears removed_at) leaves the
 --      schedule ended: its planned rows are gone, so nothing posts. The owner deletes the ended
 --      schedule (delete_prepaid_schedule) and makes a new one if the payment is real again.
 --    - prepaid_apply (every prepaid undo) restores ended_by with the rest and, when the schedule it
---      puts back is active on a removed line, ends it the same way. prepaid_snapshot leaves ended_by
+--      puts back is on a removed line with planned rows, ends it the same way. prepaid_snapshot leaves ended_by
 --      out while it is null, so the undo tickets written before this file still compare equal.
 --    - prepaid_json (list_prepaid_schedules, get_prepaid_schedule) returns ended_by.
---    - The schedules already active on a removed line are ended here, by the same function. Count,
---      read-only: select count(*) from public.prepaid_schedules s join public.transactions t
---        on t.company_id = s.company_id and t.id = s.transaction_id
---        where s.status = 'active' and t.removed_at is not null;
+--    - The schedules already active, or ended with planned rows, on a removed line are ended here,
+--      by the same function. Count, read-only: select count(*) from public.prepaid_schedules s
+--        join public.transactions t on t.company_id = s.company_id and t.id = s.transaction_id
+--        where t.removed_at is not null and (s.status = 'active' or (s.status = 'ended' and exists (
+--          select 1 from public.prepaid_rows r where r.schedule_id = s.id and r.entry_id is null)));
 --
 -- B. loans: loans_close_check fires on INSERT too, so a loan inserted closed or paid off runs the same
 --    check as a close. Writers that insert a loan: the app's two new-loan forms (loans-host.tsx:193,
@@ -88,7 +103,11 @@
 --    always keeps its reservation. A late finish of a run past it still records its real calls
 --    (jev_finish_usage writes any unfinished row), so nothing is counted twice. The calls a killed
 --    run made before it died are not known; they stop counting with the reservation (the cap is a
---    daily cost guard, and the next day's cap would have released them anyway).
+--    daily cost guard, and the next day's cap would have released them anyway). The same holds for
+--    a run that lives but whose finishUsage call fails (jev_tag.ts catches and ignores it): its real
+--    calls stop counting after 15 minutes too. So a company can go over its daily cap by up to that
+--    run's reservation for each such run. Until this file such a reservation counted in full for
+--    the rest of the day.
 --    (2) jev_finish_usage deletes the company's jev_line_failures rows of lines that now have a
 --    suggestion of the same model version. Readers of jev_line_failures: the run's work list and
 --    jev_has_work (skip a failed line until retry_after; neither reads a line that has a suggestion)
@@ -141,10 +160,12 @@ comment on column public.prepaid_schedules.ended_by is
   'FLOW-1166: why the schedule ended: person (end_prepaid_schedule) or payment_removed (its payment line '
   'was removed, private.prepaid_end_removed); null while not ended, and for schedules ended before 2026-11-13.';
 
--- Ends one active schedule whose payment line is removed, without waiting for a lock: its planned
--- rows are dropped and it is marked ended (keep, payment_removed). Posted months and the ledger are
--- not touched. Returns false, changing nothing, when the schedule is not such a schedule or a lock on
--- it or on one of its planned rows is held elsewhere (the daily job ends it later).
+-- Ends one schedule whose payment line is removed, without waiting for a lock: an active one, or an
+-- ended one that still has planned rows. Its planned rows are dropped and it is marked ended (keep,
+-- payment_removed). Posted months and the ledger are not touched: the posted months stay expensed
+-- against a payment that was removed until the schedule is deleted. Returns false, changing
+-- nothing, when the schedule is not such a schedule or a lock on it or on one of its planned rows is
+-- held elsewhere (the daily job ends it later).
 create function private.prepaid_end_removed(p_company uuid, p_schedule uuid)
 returns boolean
 language plpgsql
@@ -159,7 +180,7 @@ declare
 begin
   select x.* into s
   from public.prepaid_schedules x
-  where x.company_id = p_company and x.id = p_schedule and x.status = 'active'
+  where x.company_id = p_company and x.id = p_schedule and x.status in ('active', 'ended')
     and exists (
       select 1 from public.transactions t
       where t.company_id = x.company_id and t.id = x.transaction_id and t.removed_at is not null)
@@ -180,7 +201,12 @@ begin
     -- A planned row is being posted by another session right now.
     return false;
   end if;
+  if s.status = 'ended' and cardinality(planned) = 0 then
+    -- Ended with nothing planned: nothing waits to post.
+    return false;
+  end if;
   -- The first month that will not post: the first planned one, else the month after the last posted.
+  -- (An ended schedule's planned rows all fall before its ended_on, or in it for an end row.)
   from_month := coalesce(from_month,
     (select (max(date_trunc('month', x.due_date)) + interval '1 month')::date from public.prepaid_rows x
      where x.company_id = p_company and x.schedule_id = s.id),
@@ -194,11 +220,12 @@ end;
 $$;
 
 comment on function private.prepaid_end_removed(uuid, uuid) is
-  'FLOW-1166: ends an active prepaid schedule whose payment line is removed (planned rows dropped, posted '
-  'months kept, end_mode keep, ended_by payment_removed). Takes no lock it would wait for; false when it did nothing.';
+  'FLOW-1166: ends a prepaid schedule whose payment line is removed, active or ended with planned rows (planned '
+  'rows dropped, posted months kept, end_mode keep, ended_by payment_removed). Takes no lock it would wait for; '
+  'false when it did nothing.';
 
--- Every active schedule whose payment line is removed: the daily job's catch-up and this file's
--- clean-up. Returns the number ended.
+-- Every schedule whose payment line is removed and that is active or still has planned rows: the
+-- daily job's catch-up and this file's clean-up. Returns the number ended.
 create function private.prepaid_end_removed_all()
 returns integer
 language plpgsql
@@ -213,7 +240,10 @@ begin
     select s.company_id, s.id
     from public.prepaid_schedules s
     join public.transactions t on t.company_id = s.company_id and t.id = s.transaction_id
-    where s.status = 'active' and t.removed_at is not null
+    where t.removed_at is not null
+      and (s.status = 'active' or (s.status = 'ended' and exists (
+        select 1 from public.prepaid_rows x
+        where x.company_id = s.company_id and x.schedule_id = s.id and x.entry_id is null)))
     order by s.company_id, s.id
   loop
     if private.prepaid_end_removed(r.company_id, r.id) then
@@ -224,8 +254,9 @@ begin
 end;
 $$;
 
--- The line's removal ends its schedule in the same statement. A line that comes back later (removed_at
--- cleared) leaves the schedule ended: this fires only on null to non-null, and nothing reopens it.
+-- The line's removal ends its schedule in the same statement (an active one, or an ended one with
+-- planned rows). A line that comes back later (removed_at cleared) leaves the schedule ended: this
+-- fires only on null to non-null, and nothing reopens it.
 create function private.prepaid_line_removed()
 returns trigger
 language plpgsql
@@ -235,7 +266,7 @@ as $$
 begin
   perform private.prepaid_end_removed(s.company_id, s.id)
   from public.prepaid_schedules s
-  where s.company_id = new.company_id and s.transaction_id = new.id and s.status = 'active';
+  where s.company_id = new.company_id and s.transaction_id = new.id and s.status in ('active', 'ended');
   return null;
 end;
 $$;
@@ -254,8 +285,8 @@ revoke all on function private.prepaid_line_removed() from public, anon, authent
 select pg_temp.patch('public.mcp_end_prepaid_schedule(text,uuid,text,text)',
   array[$a$set status = 'ended', ended_on = from_month, end_mode = p_remaining$a$],
   array[$n$set status = 'ended', ended_on = from_month, end_mode = p_remaining, ended_by = 'person'$n$]);
-revoke all on function public.mcp_end_prepaid_schedule(text, uuid, text, text) from public, anon;
-grant execute on function public.mcp_end_prepaid_schedule(text, uuid, text, text) to authenticated, service_role;
+revoke all on function public.mcp_end_prepaid_schedule(text, uuid, text, text) from public, anon, authenticated;
+grant execute on function public.mcp_end_prepaid_schedule(text, uuid, text, text) to authenticated;
 
 -- The tools show why.
 select pg_temp.patch('private.prepaid_json(uuid,uuid)',
@@ -271,7 +302,8 @@ select pg_temp.patch('private.prepaid_snapshot(uuid,uuid,uuid[])',
   array[$n$      select (case when s.ended_by is null then to_jsonb(s) - 'ended_by' else to_jsonb(s) end) || jsonb_build_object($n$]);
 revoke all on function private.prepaid_snapshot(uuid, uuid, uuid[]) from public, anon, authenticated;
 
--- An undo puts ended_by back with the rest; a schedule it puts back active on a removed line is ended.
+-- An undo puts ended_by back with the rest; a schedule it puts back on a removed line is ended with no
+-- planned row (an active one, or an ended one whose months a delete's undo planned again).
 select pg_temp.patch('private.prepaid_apply(uuid,uuid,jsonb)',
   array[$a$      end_mode = excluded.end_mode,$a$,
     $a$    perform private.prepaid_settle_status(p_company, p_schedule);
@@ -279,7 +311,8 @@ select pg_temp.patch('private.prepaid_apply(uuid,uuid,jsonb)',
   array[$n$      end_mode = excluded.end_mode,
       ended_by = excluded.ended_by,$n$,
     $n$    perform private.prepaid_settle_status(p_company, p_schedule);
-    -- FLOW-1166 part 5: a schedule put back active on a removed payment line ends as the removal does.
+    -- FLOW-1166 part 5: a schedule put back on a removed payment line with planned rows (active, or
+    -- ended with its months planned again) ends as the removal does.
     perform private.prepaid_end_removed(p_company, p_schedule);
   end if;$n$]);
 revoke all on function private.prepaid_apply(uuid, uuid, jsonb) from public, anon, authenticated;
@@ -296,7 +329,7 @@ select pg_temp.patch('private.prepaid_post_due(date,uuid)',
   for r in$n$]);
 revoke all on function private.prepaid_post_due(date, uuid) from public, anon, authenticated;
 
--- The schedules already active on a removed payment line.
+-- The schedules already active, or ended with planned rows, on a removed payment line.
 do $clean$
 declare
   n integer;
@@ -330,7 +363,7 @@ select pg_temp.patch('public.set_company_integration(boolean,text,numeric,text)'
   array[$n$  -- FLOW-1166 part 5: mode off is off; enabled is stored only with a mode that is on.
   values (cid, p_provider, p_enabled and next_mode <> 'off', next_mode, next_threshold)$n$]);
 revoke all on function public.set_company_integration(boolean, text, numeric, text) from public, anon;
-grant execute on function public.set_company_integration(boolean, text, numeric, text) to authenticated, service_role;
+grant execute on function public.set_company_integration(boolean, text, numeric, text) to authenticated;
 
 select pg_temp.patch('public.mcp_undo(text,text,uuid)',
   array[$a$        elsif jsonb_build_object('enabled', jev_row.enabled, 'mode', jev_row.mode, 'threshold', jev_row.threshold)
@@ -363,6 +396,8 @@ select pg_temp.patch('private.jev_calls_today(uuid)',
     when u.finished_at is not null then u.calls
     -- FLOW-1166 part 5: a reservation its run never settled stops counting 15 minutes after it was
     -- made, more than twice the longest an Edge run lives; a late finish still records its calls.
+    -- A run killed, or one whose finish failed, stops counting then: the cap can be passed by up
+    -- to that run's reservation.
     when u.started_at > pg_catalog.now() - interval '15 minutes' then u.reserved
     else 0
   end$n$]);

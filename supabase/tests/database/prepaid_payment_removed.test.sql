@@ -4,12 +4,14 @@
 -- bank void, the SUMIT sweep, a SUMIT company switch (replace_sumit_connection), and a void held in a
 -- closed month, which ends the schedule only once the replay writes it. A line that comes back leaves
 -- the schedule ended. The owner's end says person. The daily job and the migration end the schedules
--- a removal left active. ended_by is tied to the status. Invented names and figures; dates follow
--- current_date.
+-- a removal left active. ended_by is tied to the status. What the books show after an automatic end
+-- and after the delete. An ended schedule on a removed payment keeps no planned row (the undo of a
+-- delete, an owner's end from a later month), so the books close. Invented names and figures; dates
+-- follow current_date.
 
 begin;
 
-select plan(45);
+select plan(60);
 
 do $users$
 begin
@@ -120,6 +122,20 @@ returns bigint language sql set search_path = '' as $$
   join public.accounts a on a.id = l.account_id and a.name = 'Prepaid expenses'
   join public.journal_entries j on j.company_id = l.company_id and j.transaction_id = l.transaction_id
   where l.company_id = pg_temp.id('co') and not l.draft;
+$$;
+-- What the books show for a schedule, as the ledger reads them (posted lines that are not removed):
+-- the Prepaid account and the expense category, over the payment line and the schedule's months.
+create or replace function pg_temp.books(p_sid uuid, p_ext text)
+returns text language sql set search_path = '' as $$
+  select 'prepaid ' || coalesce(sum(l.amount_minor) filter (where a.name = 'Prepaid expenses'), 0)
+    || ', expense ' || coalesce(sum(l.amount_minor) filter (where l.category_id = pg_temp.id('insurance')), 0)
+  from public.legs l
+  join public.accounts a on a.id = l.account_id
+  join public.transactions t on t.company_id = l.company_id and t.id = l.transaction_id
+    and t.removed_at is null and t.line_status = 'posted'
+  where l.company_id = pg_temp.id('co') and not l.draft
+    and (t.id = pg_temp.line(p_ext)
+      or t.id in (select j.transaction_id from public.journal_entries j where j.reference like 'prepaid:' || p_sid || ':%'));
 $$;
 grant execute on all functions in schema pg_temp to authenticated, service_role;
 
@@ -282,6 +298,55 @@ select is(pg_temp.mcp(format('select public.mcp_undo(%L, %L, %L::uuid)', 'pr-14'
   'true', 'the owner''s end is undone');
 select is(pg_temp.state(pg_temp.id('s_undo')), 'ended:' || pg_temp.ym(1) || ':keep:payment_removed:3:0',
   'and the schedule it put back ends because the payment was removed');
+
+-- ---------------------------------------------------------------------------------------------
+-- What the books show. The automatic end writes nothing: the removed payment's own legs leave the
+-- ledger with the line, the posted months stay (expense, and a credit on Prepaid) against a payment
+-- that no longer exists, until the owner deletes the schedule.
+-- ---------------------------------------------------------------------------------------------
+insert into res values ('more', pg_temp.run('mercury', jsonb_build_array(
+  pg_temp.ml('b-del', 60000, pg_temp.m1(-3)), pg_temp.ml('b-late', 60000, pg_temp.m1(-3)))));
+insert into pr (label, id) values ('s_del', pg_temp.create_pp('pr-20', 'b-del')), ('s_late', pg_temp.create_pp('pr-21', 'b-late'));
+select is(pg_temp.books(pg_temp.id('s_del'), 'b-del'), 'prepaid 30000, expense 30000',
+  'three of six months posted: half the payment is still on Prepaid, half is expensed');
+insert into res values ('del_void', pg_temp.run('mercury', '[]'::jsonb, '["b-del"]'::jsonb));
+select is(pg_temp.state(pg_temp.id('s_del')), 'ended:' || pg_temp.ym(1) || ':keep:payment_removed:3:0',
+  'the bank voids the payment and the schedule ends');
+select is(pg_temp.books(pg_temp.id('s_del'), 'b-del'), 'prepaid -30000, expense 30000',
+  'the payment''s own legs leave the books; the posted months stay expensed, credited to Prepaid');
+select is(pg_temp.mcp(format('select public.mcp_get_prepaid_schedule(%L::uuid)', pg_temp.id('s_del')))->'data'->>'remaining_minor',
+  '30000', 'remaining_minor still reads the unposted amount, though nothing is left on the account');
+select is(pg_temp.mcp(format('select public.mcp_delete_prepaid_schedule(%L, %L::uuid)', 'pr-22', pg_temp.id('s_del')))->>'ok',
+  'true', 'the owner deletes the schedule');
+select is(pg_temp.books(pg_temp.id('s_del'), 'b-del'), 'prepaid 0, expense 0', 'which takes the posted months out of the books');
+
+-- The delete undone: its months come back as planned rows, which can never post on a removed payment.
+select is(pg_temp.mcp(format('select public.mcp_undo(%L, %L, %L::uuid)', 'pr-23', 'prepaid_delete', pg_temp.id('s_del')))->>'ok',
+  'true', 'the delete is undone');
+select is(pg_temp.state(pg_temp.id('s_del')), 'ended:' || pg_temp.ym(-2) || ':keep:payment_removed:0:0',
+  'the schedule is back, ended because its payment was removed, from its first month, with no month posted or planned');
+select is(pg_temp.books(pg_temp.id('s_del'), 'b-del'), 'prepaid 0, expense 0', 'and the books are as the delete left them');
+
+-- An owner's end from a later month leaves planned months before it; a removal then drops them.
+select is(pg_temp.mcp(format('select public.mcp_end_prepaid_schedule(%L, %L::uuid, %L, %L)', 'pr-24',
+  pg_temp.id('s_late'), pg_temp.ym(2), 'expense'))->>'ok', 'true', 'the owner ends a schedule from the month after next, expensing the rest');
+select is(pg_temp.state(pg_temp.id('s_late')), 'ended:' || pg_temp.ym(2) || ':expense:person:3:2',
+  'a planned month and the end row wait to post');
+insert into res values ('late_void', pg_temp.run('mercury', '[]'::jsonb, '["b-late"]'::jsonb));
+select is(pg_temp.state(pg_temp.id('s_late')), 'ended:' || pg_temp.ym(1) || ':keep:payment_removed:3:0',
+  'when its payment is removed they are dropped, and the schedule ended there because the payment was removed');
+
+-- The daily job drops planned rows an ended schedule on a removed payment still has.
+insert into public.prepaid_rows (company_id, schedule_id, seq, due_date, amount_minor)
+values (pg_temp.id('co'), pg_temp.id('s_late'), 9, pg_temp.m1(1), 10000);
+select is(private.prepaid_post_due(), 0, 'the daily job posts nothing for it');
+select is(pg_temp.state(pg_temp.id('s_late')), 'ended:' || pg_temp.ym(1) || ':keep:payment_removed:3:0', 'and drops the planned row');
+
+-- The owner has dealt with the synced lines' review rows; the close checks those first.
+update public.review_queue set status = 'skipped', skipped_by = 'person', resolved_at = now()
+where company_id = pg_temp.id('co') and status = 'open';
+select is(pg_temp.mcp(format('select public.mcp_set_books_closed_through(%L, %L::date)', 'pr-25', current_date))->>'ok',
+  'true', 'nothing is left that counts as due: the books close through today');
 
 select * from finish();
 rollback;
