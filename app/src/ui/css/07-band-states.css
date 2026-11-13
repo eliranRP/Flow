@@ -103,6 +103,7 @@
   color: var(--color-text);
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-page-offline svg {

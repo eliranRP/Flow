@@ -80,8 +80,8 @@
 /* FLOW-1051 (V3-Home): Home's band row is 52px under 6px of band, the company and the actions 8px apart. */
 .ui-band:has(.ui-band-body) > .ui-band-row {
   gap: var(--space-2);
-  min-block-size: calc(var(--touch-min) + var(--space-2) + var(--space-1) + var(--space-half));
-  padding-top: calc(var(--space-1) + var(--space-half));
+  min-block-size: calc(var(--touch-min) + var(--space-4));
+  padding-top: var(--space-2);
 }
 
 .ui-band-row > .text-wordmark {
@@ -228,7 +228,7 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-band-company {
   display: inline-flex;
   align-items: center;
-  gap: var(--label-gap);
+  gap: var(--space-2);
   min-inline-size: 0;
   max-inline-size: 100%;
   min-block-size: var(--touch-min);
@@ -298,7 +298,7 @@ html[data-kb="open"] .ui-sheet-body {
   border-radius: var(--radius-card);
   background: var(--color-text);
   color: var(--color-bg);
-  box-shadow: var(--shadow-toast);
+  box-shadow: var(--shadow-lg);
 }
 
 .ui-band-tip::before {
@@ -315,7 +315,7 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-band-tip-text {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   margin: 0;
   padding-block-start: var(--space-2);
   font-size: var(--type-meta-size);
@@ -451,7 +451,7 @@ html[data-kb="open"] .ui-sheet-body {
 .ui-band-rows {
   display: flex;
   flex-direction: column;
-  gap: var(--label-gap);
+  gap: var(--space-2);
   padding-top: var(--space-4);
 }
 
@@ -502,7 +502,7 @@ html[data-kb="open"] .ui-sheet-body {
 }
 
 .ui-band-caption {
-  margin: var(--label-gap) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--color-on-band-secondary);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
@@ -557,7 +557,7 @@ html[data-kb="open"] .ui-sheet-body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 

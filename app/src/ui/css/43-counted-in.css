@@ -8,7 +8,7 @@
 
 .ui-counted-switch {
   min-block-size: var(--row-height);
-  padding: var(--space-2) var(--space-inset-row);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-seg-btn);
   background: var(--color-raised);
 }

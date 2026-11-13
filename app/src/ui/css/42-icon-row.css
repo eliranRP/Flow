@@ -7,7 +7,7 @@
   gap: var(--space-3);
   min-height: var(--touch-min);
   padding-block: var(--space-3);
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   border: 0;
   background: transparent;
   font: inherit;

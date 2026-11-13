@@ -9,7 +9,7 @@
 
 /* -- The page: OnboardingFrame (shell.tsx) ----------------------------------------------------- */
 /* The onboarding tile is the board's #7B3FE4, the band token in both themes. Measures are the board's
- * (Onboarding.dc.html); 10px, 14px, 6px and 2px are token steps in calc(). */
+ * (Onboarding.dc.html), snapped to the 4-pt space tokens. */
 .ui-onb {
   display: flex;
   flex-direction: column;
@@ -25,7 +25,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4) var(--space-1);
 }
 
@@ -71,7 +71,7 @@
 .ui-onb-enter {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
   animation: ui-onb-rise var(--motion-page) var(--ease-enter) both;
 }
 
@@ -96,7 +96,7 @@
 .ui-onb-copy {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) - var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-onb-title {
@@ -116,7 +116,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-3) var(--space-side) calc(var(--space-6) + var(--space-1));
+  padding: var(--space-3) var(--space-side) var(--space-6);
 }
 
 /* The welcome tile: 56px, 16px corners, a white 28/600 F, on the reading start edge. */
@@ -138,18 +138,18 @@
 .ui-onb-form {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
 }
 
 .ui-onb-field {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) - var(--space-half));
+  gap: var(--space-2);
 }
 
-/* Business step: the board's 48px field, 1.5px border, 6px label gap; 44px track with 2px padding. */
+/* Business step: the board's 48px field, 1.5px border, 8px label gap; 48px track with 4px padding. */
 .ui-onb-form .ui-field {
-  gap: calc(var(--space-2) - var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-onb-form .ui-field-label {
@@ -159,15 +159,19 @@
 .ui-onb-form .ui-field-control {
   block-size: calc(var(--size-seg) + var(--space-2));
   min-block-size: calc(var(--size-seg) + var(--space-2));
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   font-size: var(--type-body-size);
 }
 
 .ui-onb-form .ui-seg {
-  gap: var(--space-half);
-  padding: var(--space-half);
+  gap: var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-input);
   background: var(--color-surface);
+}
+
+.ui-onb-form .ui-seg-btn {
+  border-radius: var(--radius-seg-btn-small);
 }
 
 .ui-onb-form .ui-seg-btn[aria-checked="true"] {
@@ -187,7 +191,7 @@
 
 /* The basis note under the segments is 12px on the board. */
 .ui-onb-field .ui-onb-note {
-  font-size: calc(var(--type-caption-size) - var(--space-1) / 4);
+  font-size: var(--type-label-size);
   line-height: var(--onb-line-natural);
 }
 
@@ -208,6 +212,7 @@
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-onb-chips,
@@ -217,9 +222,9 @@
   gap: var(--space-2);
 }
 
-/* The board's chips wrap 6px apart. */
+/* The chips wrap 8px apart. */
 .ui-onb-chips {
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-onb-chip {
@@ -244,9 +249,9 @@
 }
 
 .ui-onb-chip-added {
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
   block-size: var(--control-height-sm);
-  padding-inline: var(--space-2) calc(var(--space-3) + var(--space-half));
+  padding-inline: var(--space-2) var(--space-4);
   background: var(--color-tint);
   font-weight: var(--type-body-weight);
 }
@@ -336,7 +341,7 @@
   align-items: center;
   gap: var(--space-3);
   min-block-size: calc(var(--space-10) * 2);
-  padding: var(--space-2) var(--space-inset-row);
+  padding: var(--space-2) var(--space-4);
   box-sizing: border-box;
 }
 
@@ -347,7 +352,7 @@
 .ui-onb-conn-text {
   display: flex;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   flex: 1 1 auto;
   min-width: 0;
   text-align: start;
@@ -391,7 +396,7 @@
 .ui-onb-done {
   display: flex;
   flex-direction: column;
-  padding: calc(var(--space-1) + var(--space-half)) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   margin: 0;
   list-style: none;
 }
@@ -399,7 +404,7 @@
 .ui-onb-done-row {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   min-height: calc(var(--touch-min) + var(--space-1) + 1px);
   border-top: 1px solid var(--color-line);
   font-size: var(--type-line2-size);
@@ -419,7 +424,7 @@
 }
 
 .ui-onb-mark {
-  inline-size: calc(var(--space-5) + var(--space-half));
+  inline-size: var(--space-6);
   text-align: center;
   /* FLOW-976: a skipped row's "—" reads at 4.5:1 (the disabled-button grey was 3.22:1). */
   color: var(--color-text-muted);
@@ -444,7 +449,7 @@
   align-items: center;
   gap: var(--space-3);
   min-height: calc(var(--touch-min) + var(--space-8));
-  padding: var(--space-2) var(--space-inset-row);
+  padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--color-line);
 }
 
@@ -469,7 +474,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   min-height: calc(var(--touch-min) + var(--space-5));
-  padding: var(--space-2) var(--space-inset-row);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-card-row);
 }
 
@@ -479,7 +484,7 @@
 }
 
 .ui-onb-switch .ui-switch-copy {
-  gap: calc(var(--space-1) - var(--space-half) / 2);
+  gap: var(--space-1);
 }
 
 .ui-onb-switch .ui-switch-label {
@@ -488,7 +493,7 @@
 }
 
 .ui-onb-switch .ui-switch-copy .t-muted {
-  font-size: calc(var(--type-caption-size) - var(--space-1) / 4);
+  font-size: var(--type-label-size);
   line-height: var(--onb-line-natural);
 }
 
@@ -542,6 +547,7 @@
   border: 1px solid var(--color-line);
   background: var(--color-surface);
   text-align: start;
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-sample-head {
@@ -606,7 +612,7 @@
 /* -- Skip sheet body and errors ---------------------------------------------------------------- */
 /* The board's skip sheet: 20px sides, the title at its natural line height. */
 .ui-skip-sheet.ui-sheet-panel {
-  padding-bottom: calc(var(--space-6) + var(--space-1));
+  padding-bottom: var(--space-6);
 }
 
 .ui-skip-sheet .ui-sheet-surface {
