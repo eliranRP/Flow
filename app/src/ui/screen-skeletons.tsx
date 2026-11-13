@@ -7,15 +7,18 @@ import type { CSSProperties } from "react";
  * decides when to show one; each caller waits 300ms first (ScreenState's SkeletonSwap, or DelayedSkeleton).
  */
 
-/** `r`: the board's own corner radius in px, for the blocks that are not the 6px default. */
-type BarProps = { w: string; h: number; pill?: boolean; r?: number; className?: string };
+/**
+ * `r`: the board's own corner radius for the blocks that are not the 6px default, as the name of a
+ * `--radius-*` token. The 8px figure bars stay a number until the skeleton-figure radius token exists.
+ */
+type BarProps = { w: string; h: number; pill?: boolean; r?: "card" | "band" | "chart-bar" | 8; className?: string };
 
 function Bar({ w, h, pill = false, r, className }: BarProps) {
   const style: CSSProperties = {
     inlineSize: w,
     blockSize: h,
     flex: "none",
-    ...(pill ? { borderRadius: "var(--radius-chip)" } : r == null ? {} : { borderRadius: `${String(r)}px` }),
+    ...(pill ? { borderRadius: "var(--radius-chip)" } : r == null ? {} : { borderRadius: typeof r === "number" ? `${String(r)}px` : `var(--radius-${r})` }),
   };
   return <span aria-hidden="true" className={`ui-skeleton-bar ${className ?? ""}`.trim()} style={style} />;
 }
@@ -37,7 +40,7 @@ const cards = [0, 1, 2] as const;
 function ListRowSkeleton({ first, second, avatar = true }: { first: string; second: string; avatar?: boolean }) {
   return (
     <div className="ui-skel-list-row">
-      {avatar ? <Bar w="40px" h={40} r={20} /> : null}
+      {avatar ? <Bar w="40px" h={40} r="card" /> : null}
       <div className="ui-skel-list-lines">
         <Bar w={first} h={12} />
         <Bar w={second} h={10} />
@@ -109,7 +112,7 @@ export function LoansSkeleton() {
           <Bar w="100px" h={12} />
           <Bar w="80px" h={12} />
         </div>
-        <Bar w="100%" h={8} r={4} />
+        <Bar w="100%" h={8} r="chart-bar" />
       </section>
       <div className="ui-skel-group">
         <Bar w="70px" h={16} />
@@ -260,7 +263,7 @@ export function DetailSkeleton() {
     <div className="ui-state-skel ui-skel-detail" aria-busy="true">
       <Loading />
       <div className="ui-skel-detail-head">
-        <Bar w="56px" h={56} r={28} />
+        <Bar w="56px" h={56} r="band" />
         <Bar w="150px" h={22} r={8} />
         <Bar w="170px" h={40} r={8} />
         <Bar w="120px" h={12} />

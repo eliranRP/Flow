@@ -12,7 +12,7 @@
   min-block-size: var(--touch-min);
   align-items: center;
   padding-inline: var(--space-4);
-  border: 1.5px solid var(--color-control-edge);
+  border: var(--stroke-strong) solid var(--color-control-edge);
   border-radius: var(--radius-chip);
   background: transparent;
   color: var(--color-text);

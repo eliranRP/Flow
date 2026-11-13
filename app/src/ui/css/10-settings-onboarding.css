@@ -33,7 +33,7 @@
   min-inline-size: 0;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
 }
 
 /* The switch label reads like a row title, 17/400 (FLOW-326, decision 0120 option C). */
@@ -345,7 +345,7 @@
 .ui-connection-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   padding: var(--space-3) var(--space-4) calc(var(--space-6) + var(--space-1));
 }
 
@@ -353,6 +353,7 @@
   overflow: hidden;
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-connection-card,
@@ -406,7 +407,7 @@
 
 /* The reconnect box: a tint, 14 in, 14 radius, 15/1.5. */
 .ui-connection-problem {
-  padding: var(--space-inset-row);
+  padding: var(--space-4);
   border-radius: var(--radius-toast);
   background: var(--color-tint);
   color: var(--color-text);
@@ -547,7 +548,7 @@
 
 /* FLOW-512b C: the segmented track is 2px around its 40px buttons (44px), as on the board. */
 .ui-cat-seg .ui-seg {
-  padding: calc(var(--space-1) / 2);
+  padding: var(--space-1);
 }
 
 /* FLOW-512b C: the theme sheet's board block: 24px under the last option, options 60px tall, 12px apart. */
@@ -579,15 +580,10 @@
 }
 
 /* The settings list page (settings-screen.tsx root .ui-settings-page): cards inset 16 with a 16px radius,
-   14px between them, 56px rows with hairlines, as on the board. */
+   16px between them, 56px rows with hairlines, as on the board. */
 .ui-settings-page > .ui-page-stacked {
   padding-top: calc(var(--safe-top) + var(--space-3));
-  padding-bottom: calc(var(--space-3) - 1px);
-}
-
-/* A subtitle sits 1px higher (the board's), and the header's end keeps the cards where they were plus 1px. */
-.ui-settings-page > .ui-page-stacked:has(.ui-compact-mark):has(.ui-focus-title + p) {
-  padding-bottom: calc(var(--space-3) + 1px);
+  padding-bottom: var(--space-3);
 }
 
 .ui-settings-page > .ui-page-stacked .ui-focus-title {
@@ -599,7 +595,7 @@
 }
 
 .ui-settings-page > .ui-page-stacked:has(.ui-compact-mark) .ui-focus-title + p {
-  margin-top: calc(var(--space-1) * 3 / 4);
+  margin-top: var(--space-1);
 }
 
 /* FLOW-1049 (V3-Settings): each group is a 14/500 secondary label, 8px over its card; the cards sit on the
@@ -623,7 +619,7 @@
 }
 
 .ui-settings-page > .ui-list-inset + .ui-list-inset {
-  margin-top: var(--space-inset-row);
+  margin-top: var(--space-4);
 }
 
 .ui-settings-page .ui-list-inset .ui-row {
@@ -631,7 +627,7 @@
 }
 
 .ui-settings-page .ui-settings-page-row > .ui-row {
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
 }
 
 .ui-settings-page .ui-settings-page-row:not(:last-child) > .ui-row {
@@ -640,7 +636,7 @@
 }
 
 .ui-settings-page .ui-settings-signout {
-  margin-top: var(--space-inset-row);
+  margin-top: var(--space-4);
   padding-inline: var(--space-side);
 }
 
@@ -650,7 +646,7 @@
 }
 
 .ui-settings-page .ui-poc {
-  padding-top: calc(var(--space-3) - var(--space-1) / 2);
+  padding-top: var(--space-3);
 }
 
 /* FLOW-512b C: the rename sheet's board block: a 44px title row, 12px to the field and 12px to the note. */
@@ -672,7 +668,7 @@
 }
 
 .ui-settings-page .ui-list-inset .ui-switch-row {
-  padding-block: calc(var(--space-2) - 1px);
+  padding-block: var(--space-2);
 }
 
 .ui-settings-page .ui-switch-row .ui-row-text {
