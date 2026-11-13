@@ -104,14 +104,14 @@ begin;
 
 set local lock_timeout = '5s';
 
-create function pg_temp.anchor_count(p_def text, p_anchor text)
+create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer
 language sql
 immutable
 as $$ select (length(p_def) - length(replace(p_def, p_anchor, ''))) / length(p_anchor); $$;
 
 -- Replaces each anchor (found exactly once) in a function's definition and runs the result.
-create function pg_temp.patch(p_fn text, p_from text[], p_to text[])
+create or replace function pg_temp.patch(p_fn text, p_from text[], p_to text[])
 returns void
 language plpgsql
 as $$
@@ -383,5 +383,9 @@ end;$a$],
 end;$n$]);
 revoke all on function public.jev_finish_usage(uuid, uuid, integer, bigint, bigint, integer, integer) from public, anon, authenticated;
 grant execute on function public.jev_finish_usage(uuid, uuid, integer, bigint, bigint, integer, integer) to service_role;
+
+-- The helpers are session-wide: a later migration in the same session can make its own.
+drop function pg_temp.patch(text, text[], text[]);
+drop function pg_temp.anchor_count(text, text);
 
 commit;
