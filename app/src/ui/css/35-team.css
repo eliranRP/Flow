@@ -92,7 +92,7 @@
 
 .ui-team-alone .ui-empty-state {
   gap: var(--space-3);
-  padding-block-start: calc(var(--space-6) * 2);
+  padding-block-start: var(--space-12);
 }
 
 .ui-team-alone .ui-empty-icon {
