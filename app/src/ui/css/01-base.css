@@ -6,11 +6,8 @@
   --switch-inset: 3px;
   --radius-check: 7px;
   --radius-segment: 14px;
-  --field-pad: 14px;
-  --toast-gap: 10px;
   --icon-app: 72px;
   --radius-app: 18px;
-  --radius-note: 9px;
   --sheet-gap: 56px;
   --spinner: 18px;
   --spinner-radio: 12px;
@@ -24,7 +21,6 @@
   --skel-lg: 220px;
   --skel-hero: 52px;
   --skel-pill: 88px;
-  --review-gap: 14px;
   --review-tile-w: 58px;
   --review-tile-h: 74px;
 }
@@ -118,7 +114,7 @@
 }
 
 .ui-btn-link {
-  gap: var(--space-half);
+  gap: var(--space-1);
   color: var(--color-accent-text);
 }
 
@@ -302,7 +298,7 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
   min-inline-size: 0;
   overflow: visible;
   min-height: var(--touch-min);
-  padding-block: var(--row-pad);
+  padding-block: var(--space-4);
   padding-inline: 0;
   /* No row hairlines anywhere: rows are separated by their padding (decision 0120, option C). */
   border-bottom: 0;

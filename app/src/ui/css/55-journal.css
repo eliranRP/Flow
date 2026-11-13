@@ -6,7 +6,7 @@
   display: flex;
   align-self: flex-start;
   align-items: center;
-  gap: calc(var(--space-1) * 1.5);
+  gap: var(--space-2);
   min-block-size: var(--touch-min);
   padding: 0 var(--space-1);
   border: 0;
@@ -34,14 +34,15 @@
   overflow: hidden;
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-journal-head {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   min-block-size: calc(var(--touch-min) + var(--space-3));
-  padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   box-sizing: border-box;
 }
 
@@ -55,7 +56,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -68,17 +69,17 @@
 /* board: the sub line and the badge are 12px (no 12px token). */
 .ui-journal-sub {
   color: var(--color-text-muted);
-  font-size: calc(var(--type-caption-size) - 1px);
+  font-size: var(--type-label-size);
   line-height: var(--type-caption-line);
 }
 
 .ui-journal-badge {
   flex: none;
-  padding: calc(var(--space-1) * 0.75) calc(var(--space-2) + var(--space-half));
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-tint-strong);
   border-radius: var(--radius-field-btn);
   color: var(--color-accent-text);
-  font-size: calc(var(--type-caption-size) - 1px);
+  font-size: var(--type-label-size);
   font-weight: var(--type-btn-weight);
   line-height: var(--type-caption-line);
   white-space: nowrap;
@@ -90,7 +91,7 @@
 
 .ui-journal-side-title {
   margin: 0;
-  padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row) 0;
+  padding: var(--space-3) var(--space-4) 0;
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
@@ -108,7 +109,7 @@
   align-items: center;
   gap: var(--space-3);
   min-block-size: calc(var(--touch-min) + var(--space-2));
-  padding: calc(var(--space-1) * 1.5) var(--space-inset-row);
+  padding: var(--space-2) var(--space-4);
   box-sizing: border-box;
 }
 
@@ -116,7 +117,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -176,7 +177,7 @@
   gap: var(--space-2);
   min-block-size: calc(var(--touch-min) + var(--space-1));
   margin: 0;
-  padding: 0 var(--space-inset-row);
+  padding: 0 var(--space-4);
   border-top: 1px solid var(--color-line);
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
@@ -196,7 +197,7 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-block-size: var(--touch-min);
   margin-inline-start: auto;
   color: var(--color-accent-text);
@@ -225,14 +226,14 @@
 }
 
 .ui-journal[data-proposed] .ui-journal-side-title {
-  padding-block-start: calc(var(--space-1) * 1.5);
-  font-size: calc(var(--type-caption-size) - 1px);
+  padding-block-start: var(--space-2);
+  font-size: var(--type-label-size);
 }
 
 .ui-journal[data-proposed] .ui-journal-row {
   min-block-size: var(--field-height);
   padding-block: var(--space-1);
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
 }
 
 .ui-journal[data-proposed] :is(.ui-journal-name, .ui-journal-amount) {
@@ -240,7 +241,7 @@
 }
 
 .ui-journal[data-proposed] .ui-journal-meta {
-  font-size: calc(var(--type-caption-size) - 1px);
+  font-size: var(--type-label-size);
 }
 
 .ui-journal[data-proposed] .ui-journal-foot {

@@ -104,7 +104,7 @@ select ok(
   (
     select 'plan_cache_mode=force_generic_plan' = any(p.proconfig)
     from pg_proc p
-    where p.oid = 'public.get_project(uuid, text, date, date)'::regprocedure
+    where p.oid = 'public.get_project(uuid, text, date, date, boolean)'::regprocedure
   ),
   'get_project reuses one generic plan per connection'
 );

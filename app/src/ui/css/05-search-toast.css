@@ -17,7 +17,7 @@
   gap: var(--space-2);
   min-inline-size: 0;
   min-block-size: 100%;
-  padding-inline: var(--field-pad);
+  padding-inline: var(--space-4);
   cursor: text;
 }
 
@@ -86,7 +86,7 @@
 .ui-toast {
   display: flex;
   align-items: center;
-  gap: var(--toast-gap);
+  gap: var(--space-3);
   inline-size: 100%;
   max-inline-size: var(--content-max);
   min-block-size: var(--control-height);
@@ -98,7 +98,7 @@
   line-height: var(--type-line2-line);
   font-weight: var(--type-line2-weight);
   pointer-events: auto;
-  box-shadow: var(--shadow-toast);
+  box-shadow: var(--shadow-lg);
 }
 
 /* FLOW-363 (3c): ביטול is 15/500 with no underline, in a 44px target. */

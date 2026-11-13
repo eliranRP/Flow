@@ -3,7 +3,7 @@
 .ui-fc-block {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
 }
 
 /* On a profit page it sits 20px under the chips, in the page's side padding. */
@@ -17,8 +17,8 @@
   gap: var(--space-3);
   box-sizing: border-box;
   inline-size: 100%;
-  padding: calc(var(--space-3) + var(--space-half)) var(--space-4) var(--space-4);
-  border: 1.5px dashed var(--color-outline-forecast);
+  padding: var(--space-4) var(--space-4) var(--space-4);
+  border: var(--stroke-strong) dashed var(--color-outline-forecast);
   border-radius: var(--radius-card);
   color: var(--color-text);
   text-decoration: none;
@@ -65,7 +65,7 @@
 .ui-fc-chart-link {
   display: flex;
   align-items: center;
-  gap: var(--space-half);
+  gap: var(--space-1);
   color: var(--color-accent-text);
 }
 
@@ -83,7 +83,7 @@
 .ui-fc-cols {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
 }
 
 .ui-fc-col {
@@ -108,7 +108,7 @@
 
 /* The net is grey, never green: it is a forecast. */
 .ui-fc-net {
-  padding-block-start: calc(var(--space-2) + var(--space-half));
+  padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--color-line);
   font-size: var(--type-line2-size);
   color: var(--color-text-secondary);
@@ -125,7 +125,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  padding-block-end: calc(var(--space-2) + var(--space-half));
+  padding-block-end: var(--space-3);
   border-block-end: 1px solid var(--color-line);
   font-size: var(--type-line2-size);
   color: var(--color-text-secondary);
@@ -151,9 +151,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: calc(var(--space-3) + var(--space-half)) var(--space-4) var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 /* At 320 the sub drops under the title instead of either one breaking. */
@@ -193,14 +194,14 @@
 .ui-fc-bars {
   display: grid;
   align-items: start;
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-fc-month-bars {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
   min-inline-size: 0;
 }
 
@@ -209,7 +210,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: calc(var(--space-1) * 0.75);
+  gap: var(--space-1);
   inline-size: 100%;
   block-size: calc(var(--space-10) * 2.7);
 }
@@ -231,12 +232,12 @@
 
 /* Next month has not happened: both bars dashed and unfilled. */
 .ui-fc-ahead .ui-fc-bar-in {
-  border: 1.5px dashed var(--color-accent);
+  border: var(--stroke-strong) dashed var(--color-accent);
   background: var(--color-tint);
 }
 
 .ui-fc-ahead .ui-fc-bar-out {
-  border: 1.5px dashed var(--color-chart-expense);
+  border: var(--stroke-strong) dashed var(--color-chart-expense);
   background: transparent;
 }
 
@@ -260,7 +261,7 @@
 
 .ui-fc-cap {
   box-sizing: border-box;
-  border: 1.5px dashed var(--color-accent);
+  border: var(--stroke-strong) dashed var(--color-accent);
   border-block-end: 0;
   border-radius: var(--radius-chart-bar) var(--radius-chart-bar) 0 0;
 }
@@ -286,15 +287,15 @@
 
 .ui-fc-legend {
   display: flex;
-  gap: var(--space-inset-row);
-  font-size: calc(var(--type-caption-size) - 1px);
+  gap: var(--space-4);
+  font-size: var(--type-label-size);
   color: var(--color-text-muted);
 }
 
 .ui-fc-legend > span {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-fc-swatch {
@@ -306,7 +307,7 @@
 }
 
 .ui-fc-swatch-ahead {
-  border: 1.5px dashed var(--color-accent);
+  border: var(--stroke-strong) dashed var(--color-accent);
 }
 
 /* "רווח לפי חודש ›": the board's 36px line, with a 44px hit area. */
@@ -375,7 +376,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  min-block-size: 44px;
+  min-block-size: var(--touch-min);
   color: var(--color-accent-text);
   font-size: var(--type-caption-size);
   text-decoration: none;

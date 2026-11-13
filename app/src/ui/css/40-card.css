@@ -3,6 +3,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-card-tint {

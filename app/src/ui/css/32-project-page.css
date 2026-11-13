@@ -37,7 +37,7 @@
 .ui-budget-bar {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   block-size: var(--space-4);
 }
 
@@ -96,7 +96,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   padding-inline-end: calc(var(--space-4) + var(--touch-min));
-  border: 1.5px dashed var(--color-track-outline);
+  border: var(--stroke-strong) dashed var(--color-track-outline);
   border-radius: var(--radius-card);
 }
 
@@ -187,7 +187,7 @@
 
 .ui-investment-bar {
   display: flex;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   height: var(--space-2);
   border-radius: var(--radius-block);
   overflow: hidden;
@@ -266,7 +266,7 @@
 .ui-projects-body .ui-row-project .ui-row-text,
 .ui-unassigned .ui-row-project .ui-row-text,
 .ui-project-lines .ui-row-project .ui-row-text {
-  gap: var(--space-half);
+  gap: var(--space-1);
 }
 
 .ui-projects-body .ui-row-project .ui-row-title,
@@ -382,7 +382,7 @@
 }
 
 .ui-unassigned-figure {
-  margin: calc(var(--space-2) + var(--space-half)) 0 0;
+  margin: var(--space-3) 0 0;
 }
 
 .ui-unassigned-note {
@@ -394,7 +394,7 @@
 .ui-unassigned-row > .ui-btn {
   min-block-size: var(--touch-min);
   block-size: var(--touch-min);
-  padding-inline: calc(var(--space-3) + var(--space-half));
+  padding-inline: var(--space-4);
   border: 0;
   background: var(--color-tint);
   color: var(--color-accent);
@@ -429,7 +429,7 @@
 /* The board's finished row: a tick in an outlined circle. FLOW-961: the row keeps full contrast (its line meets 4.5:1). */
 .ui-row-initials.ui-row-done {
   box-sizing: border-box;
-  border: 1.5px solid var(--color-text-muted);
+  border: var(--stroke-strong) solid var(--color-text-muted);
   background: transparent;
   color: var(--color-text-secondary);
 }
@@ -442,7 +442,7 @@
    each row 64px with a 40px icon circle in the raised colour, the name 17 over its line 13 in secondary. The
    delete row takes the bad colour on its circle too. */
 .ui-project-menu {
-  --sheet-gap-y: calc(var(--space-1) + var(--space-half));
+  --sheet-gap-y: var(--space-2);
 }
 
 .ui-project-menu .ui-sheet-title {
@@ -450,7 +450,7 @@
 }
 
 .ui-project-menu .ui-row {
-  min-block-size: 64px;
+  min-block-size: var(--row-height);
   padding-block: var(--space-2);
   padding-inline: 0;
   gap: var(--space-3);
@@ -516,7 +516,7 @@
 }
 
 .ui-project-new .ui-field {
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-project-new .ui-field-label {
@@ -537,7 +537,7 @@
 }
 
 .ui-project-new .ui-project-kind {
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-project-new .ui-muted:has(+ .ui-muted) {
@@ -595,7 +595,7 @@
 /* A tab root's header under its "+ new" row (board Projects): the title keeps a 4px lead and 2px under it, and the
    subtitle takes its 15px at the natural 1.2 line (18px), not the 1.4 label line. */
 .ui-tab-root-head .t-title {
-  margin-block: calc(var(--space-1)) calc(var(--space-1) / 2);
+  margin-block: var(--space-1) var(--space-1);
 }
 
 .ui-tab-root-head > p {

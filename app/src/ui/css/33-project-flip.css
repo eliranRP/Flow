@@ -5,7 +5,7 @@
    and the profit page). The board's lines are the font's own (about 1.2). The text keeps v2's sizes (decision
    0258): the name 24/600 and its line 15, the label 15, the rows 16 with the amount at 500. */
 .ui-project-page > .ui-band {
-  padding-bottom: calc(var(--space-5) + var(--space-half));
+  padding-bottom: var(--space-6);
 }
 
 .ui-project-cash > .ui-band {
@@ -14,7 +14,7 @@
 
 .ui-project-page > .ui-band > .ui-band-row {
   min-block-size: calc(var(--touch-min) + var(--space-2) + var(--space-1) + var(--space-half));
-  padding-block-start: calc(var(--space-1) + var(--space-half));
+  padding-block-start: var(--space-2);
 }
 
 .ui-projects-page > .ui-band > .ui-band-row {
@@ -23,16 +23,12 @@
 }
 
 .ui-project-page .ui-band-hero-project {
-  --project-band-gap: var(--space-inset-row);
+  --project-band-gap: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--project-band-gap);
   margin: 0;
   padding: var(--project-band-gap) var(--space-side) 0;
-}
-
-.ui-projects-page .ui-band-hero-project {
-  --project-band-gap: var(--space-4);
 }
 
 .ui-project-page .ui-band-hero-project > * {
@@ -118,7 +114,7 @@
 
 .ui-project-stack > .ui-banner {
   min-block-size: 56px;
-  padding: calc(var(--space-3) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
+  padding: var(--space-4) var(--space-5);
 }
 
 .ui-project-stack > .ui-banner .ui-row-title {
@@ -128,14 +124,14 @@
 /* FLOW-1053 (V3-Project, V3-Project-Rent): the kind's card is 16px over 18px sides. */
 .ui-project-stack .ui-budget-card,
 .ui-project-stack .ui-investment-summary {
-  padding: var(--space-4) calc(var(--space-4) + var(--space-half));
+  padding: var(--space-4) var(--space-5);
   line-height: calc(var(--type-title-line) - 0.015);
 }
 
 /* FLOW-1053 (V3-Project): the budget and the contract card, 16px over 18px sides and 10px between the head (44px,
    20/500 with עריכה 15 in the accent), the line 17, the 8px bar and the note 14. */
 .ui-project-stack .ui-budget-card {
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
 }
 
 .ui-project-stack .ui-budget-head {
@@ -156,7 +152,7 @@
 }
 
 .ui-project-stack .ui-investment-summary {
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
 }
 
 .ui-project-stack .ui-budget-head h2,
@@ -177,12 +173,12 @@
 }
 
 .ui-project-stack .ui-investment-grid {
-  gap: calc(var(--space-3) + var(--space-1) / 2) var(--space-4);
+  gap: var(--space-4) var(--space-4);
 }
 
 .ui-project-stack .ui-investment-equity {
-  gap: calc(var(--space-2) + var(--space-1) / 2);
-  padding-top: calc(var(--space-3) + var(--space-1) / 2);
+  gap: var(--space-3);
+  padding-top: var(--space-4);
 }
 
 .ui-project-stack .ui-investment-equity-label {
@@ -254,8 +250,8 @@
 .ui-project-empty-card {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-1) / 2);
-  padding: calc(var(--space-5) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-5);
 }
 
 .ui-project-empty-card .ui-project-card-title {
@@ -296,7 +292,7 @@
 }
 
 .ui-confirm-roomy .ui-sheet-body {
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
 }
 
 .ui-confirm-roomy .ui-sheet-title {
@@ -315,7 +311,7 @@
 
 /* The menu's title sits 5px under the handle's gap and 5px above the first row, as the board draws it. */
 .ui-project-menu .ui-sheet-head {
-  margin-block: calc(var(--space-1) + var(--space-1) / 4);
+  margin-block: var(--space-1);
 }
 
 /* The Projects list: a zero amount is muted, and the general-expenses circle is dashed with its icon. */
@@ -324,7 +320,7 @@
 }
 
 .ui-row-initials.ui-row-dashed {
-  border-width: 1.5px;
+  border-width: var(--stroke-strong);
   border-color: var(--color-text-muted);
   color: var(--color-text-muted);
   background: transparent;
@@ -334,7 +330,7 @@
 .ui-projects-skel {
   display: flex;
   flex-direction: column;
-  padding-block-start: calc(var(--space-3) + var(--space-1) / 2);
+  padding-block-start: var(--space-4);
 }
 
 .ui-projects-skel-cards {
@@ -350,6 +346,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-projects-skel-row {
@@ -381,7 +378,7 @@
 .ui-state-empty .ui-empty-state {
   flex: none;
   justify-content: flex-start;
-  gap: calc(var(--space-2) + var(--space-1) / 2 * 1);
+  gap: var(--space-3);
   padding: calc(var(--space-10) + var(--space-4)) var(--space-3) 0;
 }
 

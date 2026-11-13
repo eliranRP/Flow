@@ -230,6 +230,7 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-rep-warning-icon {
