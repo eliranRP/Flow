@@ -42,6 +42,26 @@ function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
+/** An element's computed background as 0–255 sRGB channels: rgb() or the color(srgb …) a color-mix() computes to. */
+function fill(el: Element | null): number[] {
+  const value = el == null ? "" : getComputedStyle(el).backgroundColor;
+  const srgb = /^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/.exec(value);
+  if (srgb != null) return srgb.slice(1).map((c) => Number(c) * 255);
+  const rgb = /^rgba?\((\d+), (\d+), (\d+)/.exec(value);
+  if (rgb != null) return rgb.slice(1).map(Number);
+  throw new Error(`no fill: ${value}`);
+}
+
+/** WCAG 2 contrast between two sRGB fills. */
+function ratio(a: number[], b: number[]): number {
+  const lum = (c: number[]) => {
+    const [r = 0, g = 0, bl = 0] = c.map((v) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 export const Forecast: Story = {
   render: () => <Report />,
   play: async ({ canvasElement }) => {
@@ -54,6 +74,18 @@ export const Forecast: Story = {
     const figure = canvas.getByRole("figure", { name: /ההון ויתרת ההלוואות בכל שנה עד 2036/ });
     // FLOW-1149: a key per kind of bar, the year in words, and each year's figures for a screen reader.
     await expect(figure.querySelector(".ui-msr-bars-legend")?.textContent).toBe("הוןיתרת הלוואותשנת הריפייננס");
+    // FLOW-1179: the equity bars reach 3:1 on the card, part from the loan and the refinance year, and the keys match.
+    const card = fill(figure);
+    const equity = fill(figure.querySelector(".ui-msr-bar:not([data-on]) .ui-msr-bar-equity"));
+    const loan = fill(figure.querySelector(".ui-msr-bar-loan"));
+    const refi = fill(figure.querySelector(".ui-msr-bar[data-on] .ui-msr-bar-equity"));
+    await expect(ratio(equity, card)).toBeGreaterThanOrEqual(3);
+    await expect(ratio(loan, card)).toBeGreaterThanOrEqual(3);
+    await expect(ratio(equity, refi)).toBeGreaterThanOrEqual(1.5);
+    await expect(equity).not.toEqual(loan);
+    await expect(fill(figure.querySelector(".ui-msr-key-equity"))).toEqual(equity);
+    await expect(fill(figure.querySelector(".ui-msr-key-loan"))).toEqual(loan);
+    await expect(fill(figure.querySelector(".ui-msr-key-refi"))).toEqual(refi);
     const table = within(figure).getByRole("table");
     await expect(within(table).getAllByRole("row")).toHaveLength(11);
     await expect(within(table).getByRole("rowheader", { name: "2036 · שנת הריפייננס" })).toBeInTheDocument();

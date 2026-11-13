@@ -90,9 +90,10 @@
   padding-inline: var(--space-1);
 }
 
-/* FLOW-1123: the months are still loading: the track is the skeleton's band block (the same white as the track) and
-   breathes with every skeleton (ui-skel-pulse, still with reduced motion), under the month's name and the chevrons,
-   which stay whole. It lightens nothing: at its brightest it is the track, so the name keeps the loaded contrast. */
+/* FLOW-1123: the months are still loading: the track is the skeleton's band block and breathes with every skeleton
+   (ui-skel-pulse, still with reduced motion), under the month's name and the chevrons, which stay whole. It lightens
+   nothing: the block is drawn in the track's own white (FLOW-1180: 12%, under the skeleton's 16%), so at its
+   brightest it is the track and the name keeps the loaded 4.5:1. */
 .ui-month-step-band:has(> .ui-month-step-shimmer) {
   position: relative;
   isolation: isolate;
@@ -105,6 +106,7 @@
   inset: 0;
   max-inline-size: none;
   border-radius: inherit;
+  background: var(--band-pill-track);
 }
 
 /* Reduced motion: the pulse stops, and the shimmer stays at the pulse's trough, so the loading pill reads as dimmer
