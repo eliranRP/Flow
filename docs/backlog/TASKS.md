@@ -770,6 +770,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
 | <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
 | <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
+| <a id="flow-1171"></a>[FLOW-1171](tasks/FLOW-1171.md) | Loans: move the app's direct table writes onto RPCs | SMALL CYCLE |
 
 ## Data hygiene (public repo)
 

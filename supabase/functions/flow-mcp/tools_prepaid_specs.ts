@@ -28,7 +28,7 @@ const FOREIGN =
 export const PREPAID_READ_SPECS = [
   spec(
     "list_prepaid_schedules",
-    `The company's prepaid amortization schedules (FLOW-155; any member reads it), newest first: books_closed_through (YYYY-MM-DD or null) and schedules[] with schedule_id, transaction_id (the payment line), description, project_id and project_name, expense_category_id and expense_category_name, currency, total_minor, posted_minor (on the books so far), refunded_minor, remaining_minor, months, months_posted, next_date (the next planned month, null when none) and status (active, completed or ended). status (optional) keeps one status. ${RULES}`,
+    `The company's prepaid amortization schedules (FLOW-155; any member reads it), newest first: books_closed_through (YYYY-MM-DD or null) and schedules[] with schedule_id, transaction_id (the payment line), description, project_id and project_name, expense_category_id and expense_category_name, currency, total_minor, posted_minor (on the books so far), refunded_minor, remaining_minor, months, months_posted, next_date (the next planned month, null when none), status (active, completed or ended), ended_on, end_mode and ended_by: why an ended schedule ended, person (end_prepaid_schedule) or payment_removed (its payment line was removed by a bank or SUMIT sync: the planned months were dropped, the posted months stay, what is left stays on the Prepaid account; it stays ended if the line comes back, so delete it and create a new one if the payment is real again), null when not ended or ended before 2026-11-13. status (optional) keeps one status. ${RULES}`,
     {
       status: {
         type: ["string", "null"],
@@ -90,7 +90,7 @@ export const PREPAID_WRITE_SPECS = [
   ),
   spec(
     "end_prepaid_schedule",
-    `Stop a prepaid schedule early (FLOW-155; owner or editor), e.g. a policy cancelled: the planned rows from from_month (YYYY-MM) on are dropped. remaining is expense (one last row in from_month, on the schedule's day, takes everything left and is posted at once if due) or keep (what is left stays on the Prepaid account as an asset, for example a refund still to come). The schedule becomes ended. It never removes a posted month. Refused: (the schedule is not active ; from_month is before the last posted month ; the books are closed through YYYY-MM-DD). Another company's schedule is refused as "The write was refused." ${RULES} Returns the schedule, rows[] and undo_kind prepaid_end; undo is kind prepaid_end with the schedule id and restores the planned rows while it reads as written.`,
+    `Stop a prepaid schedule early (FLOW-155; owner or editor), e.g. a policy cancelled: the planned rows from from_month (YYYY-MM) on are dropped. remaining is expense (one last row in from_month, on the schedule's day, takes everything left and is posted at once if due) or keep (what is left stays on the Prepaid account as an asset, for example a refund still to come). The schedule becomes ended, with ended_by person. It never removes a posted month. Refused: (the schedule is not active ; from_month is before the last posted month ; the books are closed through YYYY-MM-DD). Another company's schedule is refused as "The write was refused." ${RULES} Returns the schedule, rows[] and undo_kind prepaid_end; undo is kind prepaid_end with the schedule id and restores the planned rows while it reads as written.`,
     {
       idempotency_key: { type: "string" },
       schedule_id: { type: "string" },
