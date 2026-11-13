@@ -92,12 +92,13 @@ const CASH_LINES_PAGE = 200;
 
 /**
  * One month's נכנס, יצא or לא נספר ברווח lines in one currency, newest first. FLOW-1111: with a project, that
- * project's lines (project_cash_month_lines, the same rows; a shared line at the project's share).
+ * project's lines (project_cash_month_lines, the same rows; a shared line at the project's share). `pageSize` is the
+ * lines per call (FLOW-1189: Home reads 20 a side; the month's lines screen keeps the server's cap of 200).
  */
-export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true, projectId: string | null = null) {
+export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true, projectId: string | null = null, pageSize = CASH_LINES_PAGE) {
   const preview = useHomePreview();
   return useInfiniteQuery({
-    queryKey: ["breakdown-lines", "cash", preview, month, side, currency, projectId],
+    queryKey: ["breakdown-lines", "cash", preview, month, side, currency, projectId, pageSize],
     enabled: active && preview === "off",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<CashLinesPage> => {
@@ -108,7 +109,7 @@ export function useCashLinesQuery(month: string, side: CashListSide, currency: s
         p_month: `${month}-01`,
         p_side: side === "kept" ? "not_in_profit" : side,
         p_currency: currency,
-        p_limit: CASH_LINES_PAGE,
+        p_limit: pageSize,
         p_offset: pageParam,
       };
       const { data, error } = projectId == null
@@ -117,7 +118,7 @@ export function useCashLinesQuery(month: string, side: CashListSide, currency: s
       if (error) throw error;
       return (await loadReadSchemas()).cashLinesSchema.parse(data);
     },
-    getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * CASH_LINES_PAGE : undefined),
+    getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * pageSize : undefined),
   });
 }
 

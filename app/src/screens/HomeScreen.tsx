@@ -52,6 +52,9 @@ const WeeklySummaryCardSlot = /* @__PURE__ */ lazy(() => import("./weekly-summar
 // FLOW-1056: Home on next month: its forecast's reads load in their own chunk too.
 const HomeFutureReads = /* @__PURE__ */ lazy(() => import("./home-future-month").then((m) => ({ default: m.HomeFutureReads })));
 
+/** FLOW-1189 (owner, 2026-11-13): Home lists 20 lines a side; the "more" row opens the month's lines screen for the rest. */
+const HOME_LINES_PAGE = 20;
+
 /** Next month while its chunk and its reads are on their way. */
 const FUTURE_LOADING: HomeFuture = { phase: "loading", offline: false, onRetry: () => undefined, figures: null, groups: [] };
 
@@ -227,8 +230,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const schedule = useRecurringScheduleQuery(isCurrent && !previewing);
   // FLOW-1056 (owner): a past month shows its own lines the same way (no schedule: that is the current month's).
   const linesKey = isFuture ? currentKey : monthKey;
-  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint);
-  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint);
+  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
+  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
+  // FLOW-1189: the "more" row opens the month's lines screen on the side that runs past its first page (out first).
+  const linesMore = linesIn.hasNextPage || linesOut.hasNextPage;
+  const linesMoreHref = linesMore ? cashLinesPath(linesKey, linesOut.hasNextPage ? "out" : "in", base, search) : null;
 
   function retry() {
     if (previewing) {
@@ -301,6 +307,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     scheduleFailed: schedule.isError,
     lines: linesData,
     linesFailed: linesIn.isError || linesOut.isError,
+    moreHref: linesMoreHref,
     onRetry: () => {
       if (schedule.isError) void schedule.refetch();
       if (linesIn.isError) void linesIn.refetch();
@@ -315,7 +322,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       if (linesIn.isError) void linesIn.refetch();
       if (linesOut.isError) void linesOut.refetch();
     },
-    past: { more: linesIn.hasNextPage || linesOut.hasNextPage },
+    past: { more: linesMore },
+    moreHref: linesMoreHref,
   };
 
   const home = (future: HomeFuture | null) => (
@@ -621,7 +629,7 @@ export function CashHome({
               name: monthName(monthKey),
               inMinor: baseRow?.in_minor ?? 0n,
               outMinor: baseRow?.out_minor ?? 0n,
-              linesHref: cashLinesPath(monthKey, "out", base, search),
+              linesHref: activity.moreHref ?? cashLinesPath(monthKey, "out", base, search),
             } : null}
           />
         </div>

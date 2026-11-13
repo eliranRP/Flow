@@ -371,3 +371,67 @@ describe("Home's first paint waits on cash_months alone", () => {
   });
 });
 
+describe("Home's lines (FLOW-1189)", () => {
+  // Invented lines; a page answers what the call asks for (p_limit, p_offset), as cash_month_lines does.
+  function line(id: string, side: "in" | "out") {
+    return {
+      transaction_id: `${side}-${id}`,
+      part: "principal",
+      description: id,
+      supplier_name: "Example Supplier",
+      project_name: null,
+      category_name: "Example category",
+      doc_date: `${current}-02`,
+      cash_month_date: `${current}-03`,
+      currency: "ILS",
+      amount_minor: 1_000,
+      side,
+      shared: false,
+      source: "mercury",
+      kept_out: false,
+    };
+  }
+
+  function linesPage(args: unknown, side: "in" | "out", total: number) {
+    const { p_limit: limit, p_offset: offset } = args as { p_limit: number; p_offset: number };
+    const count = Math.max(0, Math.min(limit, total - offset));
+    return { rows: Array.from({ length: count }, (_, i) => line(String(offset + i), side)), has_more: offset + limit < total };
+  }
+
+  function readLines(totals: { in: number; out: number }) {
+    rpc.impl = (name, args) => {
+      if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
+      if (name === "cash_month_lines") {
+        const side = (args as { p_side: "in" | "out" }).p_side;
+        return Promise.resolve({ data: linesPage(args, side, totals[side]), error: null });
+      }
+      if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+  }
+
+  it("asks for 20 lines a side and no further page (the month's lines screen keeps 200)", async () => {
+    readLines({ in: 45, out: 45 });
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    const reads = rpc.calls.filter((c) => c.name === "cash_month_lines").map((c) => c.args as { p_side: string; p_limit: number; p_offset: number });
+    expect(reads.map((read) => [read.p_side, read.p_limit, read.p_offset]).sort()).toEqual([["in", 20, 0], ["out", 20, 0]]);
+  });
+
+  it("the more row opens the month's lines on the side with more: the rest is on that screen", async () => {
+    readLines({ in: 3, out: 45 });
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    const more = await screen.findByRole("link", { name: "כל התנועות" });
+    expect(more).toHaveAttribute("href", `/cash/${current}/out/ILS`);
+    expect(screen.getByRole("link", { name: "כל הקבועים" })).toBeInTheDocument();
+  });
+
+  it("a past month's more row names the month and opens its lines (FLOW-1056)", async () => {
+    readLines({ in: 45, out: 3 });
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: `/?month=${month(1)}` });
+    const more = await screen.findByRole("link", { name: `כל התנועות ב${homeMonthLabel(month(1)).split(" ")[0] ?? ""}` });
+    expect(more).toHaveAttribute("href", `/cash/${month(1)}/in/ILS`);
+  });
+});
+

@@ -105,6 +105,8 @@ export type HomeActivityData = {
    * month's totals. `more`: the lines run past their first page, so the list ends with a row to the month's lines.
    */
   past?: { more: boolean } | null;
+  /** FLOW-1189: the current month's lines page, the "more" row when a side runs past its first 20 lines. */
+  moreHref?: string | null;
 };
 
 /** FLOW-1056: a past month's close, for the activity's title: what came in and went out, and its lines page. */
@@ -368,6 +370,11 @@ export function HomeActivity({ activity, filter: picked, onFilter, markRef, dock
         ) : null
       ) : (
         <div className="ui-home-act-foot">
+          {activity.moreHref != null && !loading ? (
+            <Button variant="link" to={activity.moreHref} chevron>
+              כל התנועות
+            </Button>
+          ) : null}
           <Button variant="link" to={recurringHref} chevron>
             כל הקבועים
           </Button>
