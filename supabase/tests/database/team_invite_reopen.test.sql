@@ -1,10 +1,10 @@
 -- FLOW-601 (decision 0167). A declined invite comes back only as the toast's undo, within 10 minutes
--- of the decline: the owner neither sees nor can cancel a declined invite. Invented names and
--- @example.com emails only.
+-- of the decline: the owner neither sees nor can cancel a declined invite. Since FLOW-1166 part 4, not
+-- once the invite has expired. Invented names and @example.com emails only.
 
 begin;
 
-select plan(7);
+select plan(9);
 
 do $users$
 begin
@@ -34,6 +34,17 @@ select is(public.decline_invite((select id from tv where label = 'inv'))->>'stat
 select is(public.reopen_invite((select id from tv where label = 'inv'))->>'status', 'pending',
   'the toast''s undo right after brings it back (positive control)');
 select is(public.decline_invite((select id from tv where label = 'inv'))->>'status', 'declined', 'and declines again');
+
+-- FLOW-1166 part 4: within the ten minutes, but past the invite's expiry, the decline stands.
+reset role;
+update public.company_invites set expires_at = now() - interval '1 minute' where id = (select id from tv where label = 'inv');
+select tests.authenticate_as('tv_invitee');
+select throws_ok(format('select public.reopen_invite(%L)', (select id from tv where label = 'inv')), 'P0001',
+  'invite is not declined', 'an expired invite is not put back to pending');
+reset role;
+select is((select status from public.company_invites where id = (select id from tv where label = 'inv')), 'declined',
+  'it stays declined');
+update public.company_invites set expires_at = now() + interval '7 days' where id = (select id from tv where label = 'inv');
 
 -- Eleven minutes later the decline stands.
 reset role;

@@ -35,7 +35,8 @@ export function chargePickToast(party: string, target: string, result: Pick<Char
 /** The undo's failure: a payment changed since the pick, or the write failed. */
 export function chargeUndoFailure(error: unknown): string {
   const text = error instanceof Error ? error.message : typeof error === "object" && error != null && "message" in error ? String(error.message) : "";
-  return text.includes("conflict") ? "תשלום השתנה מאז, אז הביטול לא בוצע." : "לא הצלחנו לבטל.";
+  // FLOW-1166: undo_reassign refuses a payment whose shares or flags changed since, in its own words.
+  return text.includes("conflict") || text.includes("line changed since") ? "תשלום השתנה מאז, אז הביטול לא בוצע." : "לא הצלחנו לבטל.";
 }
 
 /**

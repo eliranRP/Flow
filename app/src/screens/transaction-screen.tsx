@@ -15,6 +15,7 @@ import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInva
 import { type TxnMeta } from "../txn-meta";
 import { txnParty } from "../txn-nav";
 import { TxnStepNav, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-step-nav";
+import { reassignUndoFailure } from "../review-copy";
 import { assertNoError, useWrite } from "../use-write";
 import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
@@ -370,7 +371,7 @@ export function TransactionScreen({
   };
   const undo = useWrite<{ id: string }>({
     scope,
-    failure: "לא הצלחנו לבטל את השיוך.",
+    failure: reassignUndoFailure,
     place: "top",
     keys: ASSIGN_KEYS,
     success: "השיוך הקודם חזר",

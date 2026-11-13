@@ -16,7 +16,9 @@ const state = vi.hoisted((): {
   hold: Set<string>;
   release: Array<() => void>;
   undoIds: string[];
-} => ({ calls: [], txn: {}, hold: new Set(), release: [], undoIds: [] }));
+  /** undo_reassign's refusal, when set. */
+  undoError: string | null;
+} => ({ calls: [], txn: {}, hold: new Set(), release: [], undoIds: [], undoError: null }));
 
 function project(id: string, name: string) {
   return {
@@ -95,6 +97,7 @@ function answer(name: string): Reply {
     };
   }
   if (name === "reassign_transaction") return { data: state.undoIds.shift() ?? null, error: null };
+  if (name === "undo_reassign" && state.undoError != null) return { data: null, error: { message: state.undoError } };
   return { data: null, error: null };
 }
 
@@ -147,6 +150,7 @@ afterEach(() => {
   state.hold.clear();
   state.release = [];
   state.undoIds = [];
+  state.undoError = null;
 });
 
 describe("the transaction page's picks (FLOW-1165)", () => {
@@ -179,6 +183,17 @@ describe("the transaction page's picks (FLOW-1165)", () => {
     await releaseAll();
     await waitFor(() => { expect(argsOf("undo_reassign")).toHaveLength(1); });
     expect(argsOf("undo_reassign")[0]).toEqual({ p_id: "undo-1" });
+  });
+
+  it("ביטול of a filing the line has changed since says so, with no retry (FLOW-1166)", async () => {
+    state.undoIds = ["undo-1"];
+    state.undoError = "line changed since";
+    mountTxn();
+    await pick(/חולון/, "וילה");
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText("השורה שונתה מאז. הביטול לא בוצע.")).toBeInTheDocument();
+    expect(argsOf("undo_reassign")).toEqual([{ p_id: "undo-1" }]);
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });
 
   it("the delete confirm sends nothing while a pick's write is in flight", async () => {
