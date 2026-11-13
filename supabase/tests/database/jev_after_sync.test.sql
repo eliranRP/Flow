@@ -65,7 +65,7 @@ insert into jas_ref (label, id)
 select 'txn_b', id from public.transactions where idempotency_key = 'sumit:jas-b';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'test'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t
 where t.idempotency_key in ('sumit:jas-a', 'sumit:jas-b')
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);

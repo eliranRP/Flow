@@ -68,11 +68,11 @@ insert into jo_ref (label, id)
 select 't' || substr(idempotency_key, 10), id from public.transactions where idempotency_key like 'sumit:jo-%';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'test'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t
 where t.idempotency_key like 'sumit:jo-%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
-update public.review_queue q set status = 'open'
+update public.review_queue q set status = 'open', resolved_at = null
 from public.transactions t
 where t.id = q.transaction_id and t.idempotency_key like 'sumit:jo-%';
 set constraints all immediate;
@@ -98,35 +98,35 @@ from jo_ref r join public.transactions t on t.id = r.id where r.label = 't6';
 update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
   category_id = (select id from jo_ref where label = 'c1')
 where id = (select id from jo_ref where label = 't1');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't1');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't1');
 -- t2: another project, same category, changed.
 update public.transactions set project_id = (select id from jo_ref where label = 'p2'),
   category_id = (select id from jo_ref where label = 'c1')
 where id = (select id from jo_ref where label = 't2');
-update public.review_queue set status = 'changed' where transaction_id = (select id from jo_ref where label = 't2');
+update public.review_queue set status = 'changed', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't2');
 -- t3: a shared cost, category matched.
 update public.transactions set pnl_role = 'shared', project_id = null,
   category_id = (select id from jo_ref where label = 'c1')
 where id = (select id from jo_ref where label = 't3');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't3');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't3');
 -- t4: skipped.
-update public.review_queue set status = 'skipped' where transaction_id = (select id from jo_ref where label = 't4');
+update public.review_queue set status = 'skipped', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't4');
 -- t5: approved with no Jev suggestion.
 update public.transactions set category_id = (select id from jo_ref where label = 'c2')
 where id = (select id from jo_ref where label = 't5');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't5');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't5');
 -- t6: approved, Jev's answer was not an id.
 update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
   category_id = (select id from jo_ref where label = 'c2')
 where id = (select id from jo_ref where label = 't6');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't6');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't6');
 -- t7: approved, category changed in the same transaction after the review row moved.
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't7');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't7');
 update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
   category_id = (select id from jo_ref where label = 'c2')
 where id = (select id from jo_ref where label = 't7');
 -- tb: company B, approved as suggested ids (which are not B's).
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 'tb');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 'tb');
 
 select is(
   (select count(*)::integer from public.jev_outcomes o join jo_ref r on r.id = o.transaction_id),
@@ -178,7 +178,7 @@ select is(
 );
 
 -- Undo: the line goes back to open, so its outcome goes away; approving again brings it back.
-update public.review_queue set status = 'open' where transaction_id = (select id from jo_ref where label = 't7');
+update public.review_queue set status = 'open', resolved_at = null where transaction_id = (select id from jo_ref where label = 't7');
 set constraints all immediate;
 set constraints all deferred;
 select is(
@@ -187,7 +187,7 @@ select is(
 );
 update public.transactions set category_id = (select id from jo_ref where label = 'c1')
 where id = (select id from jo_ref where label = 't7');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't7');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't7');
 set constraints all immediate;
 set constraints all deferred;
 select is(
@@ -198,7 +198,7 @@ select is(
 -- A split by category is not compared on category.
 select tests.line_split((select id from jo_ref where label = 't1'),
   jsonb_build_array(jsonb_build_object('category_id', (select id from jo_ref where label = 'c1'), 'amount_minor', 10000)));
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't1');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't1');
 set constraints all immediate;
 set constraints all deferred;
 select ok(
@@ -206,7 +206,7 @@ select ok(
   'a line split by category is not compared on category'
 );
 select tests.line_split((select id from jo_ref where label = 't1'), '[]');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't1');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't1');
 set constraints all immediate;
 set constraints all deferred;
 
@@ -312,12 +312,12 @@ select is(
 update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
   category_id = (select id from jo_ref where label = 'c1')
 where id = (select id from jo_ref where label = 't9');
-update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't9');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from jo_ref where label = 't9');
 set constraints all immediate;
 set constraints all deferred;
 -- One test transaction shares now(), so the later row is dated a second on.
 insert into public.review_queue (company_id, transaction_id, status, reason, created_at)
-select company_id, id, 'open', 'test reopen', now() + interval '1 second' from public.transactions where id = (select id from jo_ref where label = 't9');
+select company_id, id, 'open', 'suggested', now() + interval '1 second' from public.transactions where id = (select id from jo_ref where label = 't9');
 update public.transactions set category_id = (select id from jo_ref where label = 'c2')
 where id = (select id from jo_ref where label = 't9');
 set constraints all immediate;
@@ -326,8 +326,8 @@ select is(
   (select count(*)::integer from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't9')),
   0, 'a line back in review has no outcome, even with an older approved row'
 );
-update public.review_queue set status = 'skipped'
-where transaction_id = (select id from jo_ref where label = 't9') and reason = 'test reopen';
+update public.review_queue set status = 'skipped', resolved_at = coalesce(resolved_at, now())
+where transaction_id = (select id from jo_ref where label = 't9') and created_at > now();
 set constraints all immediate;
 set constraints all deferred;
 select is(
@@ -339,7 +339,7 @@ select is(
 update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
   category_id = (select id from jo_ref where label = 'c1')
 where id in (select id from jo_ref where label in ('t10', 't11', 't12'));
-update public.review_queue set status = 'approved'
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now())
 where transaction_id in (select id from jo_ref where label in ('t10', 't11', 't12'));
 set constraints all immediate;
 set constraints all deferred;
@@ -397,7 +397,7 @@ select ok(
 
 -- Deleting the newest review row makes the older one current again.
 delete from public.review_queue
-where transaction_id = (select id from jo_ref where label = 't9') and reason = 'test reopen';
+where transaction_id = (select id from jo_ref where label = 't9') and created_at > now();
 set constraints all immediate;
 set constraints all deferred;
 select is(

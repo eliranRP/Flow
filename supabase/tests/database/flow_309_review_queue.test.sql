@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(13);
+select plan(12);
 
 do $users$
 begin
@@ -48,7 +48,6 @@ from (values
   (5000, 'frq:open', null),
   (6000, 'frq:filed', 'harbor'),
   (7000, 'frq:changed', null),
-  (8000, 'frq:legacy', null),
   (9000, 'frq:kept_out', 'harbor')
 ) as v(amount, ikey, project);
 insert into frq (label, id) select replace(idempotency_key, 'frq:', 'txn_'), id
@@ -94,13 +93,13 @@ reset role;
 select is(pg_temp.open_reason('txn_open'), 'none', 'a pending income line is not queued (0184)');
 select is(pg_temp.open_reason('txn_filed'), 'none', 'nor is the filed one');
 
--- Rows from before 0184: the owner resolved two pending lines as changed, and one pending line
--- still has an open row.
+-- Rows from before 0184: the owner resolved a pending line as changed (its row with no reason), and
+-- one pending line still has an open row. (The reason pending_income those rows had is gone: none is
+-- stored, and review_queue_reason_chk refuses it, FLOW-1166.)
 insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
-select pg_temp.id('co'), pg_temp.id(v.label), 'changed', 'pending_income', now()
-from (values ('txn_changed'), ('txn_legacy')) as v(label);
+values (pg_temp.id('co'), pg_temp.id('txn_changed'), 'changed', null, now());
 insert into public.review_queue (company_id, transaction_id, status, reason)
-values (pg_temp.id('co'), pg_temp.id('txn_open'), 'open', 'pending_income');
+values (pg_temp.id('co'), pg_temp.id('txn_open'), 'open', 'missing_category');
 select pg_temp.sync();
 reset role;
 select is(pg_temp.open_reason('txn_open'), 'none', 'the open row of a line still pending is removed (0184)');
@@ -110,9 +109,6 @@ select pg_temp.sync();
 reset role;
 select is(pg_temp.open_reason('txn_changed'), 'none', 'a pending line resolved as changed is not queued again');
 
--- An open row the old code queued after a changed row.
-insert into public.review_queue (company_id, transaction_id, status, reason)
-values (pg_temp.id('co'), pg_temp.id('txn_legacy'), 'open', 'pending_income');
 update public.transactions set line_status = 'posted' where idempotency_key like 'frq:%';
 
 select pg_temp.sync();
@@ -124,7 +120,6 @@ select is(
 select is(pg_temp.open_reason('txn_filed'), 'none', 'a posted line the owner already filed leaves review');
 select is(pg_temp.open_reason('txn_changed'), 'none', 'a row resolved as changed is not queued again');
 select is(pg_temp.open_reason('txn_kept_out'), 'suggested', 'a guessed kept-out category with a project takes suggested');
-select is(pg_temp.open_reason('txn_legacy'), 'none', 'an open row queued after a changed row leaves review on post');
 select is(
   (select count(*)::integer from public.review_queue where transaction_id = pg_temp.id('txn_changed')),
   1, 'the changed row stays as it was');
@@ -133,7 +128,7 @@ select is(
    and company_id = pg_temp.id('co')),
   0, 'no open row from this sync is left without a reason');
 
--- The owner reopens the changed row after its line posted; its reason was dropped on post.
+-- The owner reopens the changed row after its line posted.
 -- (A reopened row on a line that no longer needs review keeps no reason; it is never removed.)
 update public.review_queue set status = 'open', resolved_at = null
 where transaction_id = pg_temp.id('txn_changed');

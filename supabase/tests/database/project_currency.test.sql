@@ -60,7 +60,7 @@ select c.id, v.direction::public.txn_direction, v.doc_kind::public.doc_kind, v.p
   v.doc_date::date, v.source::public.txn_source, v.ikey,
   (select id from pc_ref where label = v.project),
   (select k.id from public.categories k where k.company_id = c.id and k.name = v.category),
-  v.suggested, v.ikey, case when v.removed then now() end
+  v.suggested, v.ikey, case when v.removed or v.line_status = 'void' then now() end
 from (values
   -- Dock: USD only
   ('co', 'income',  'invoice',         null,       'posted',  'USD',  400000, '2026-09-01', 'mercury', 'dock:invoice',   'dock', null,               false, false),
@@ -121,7 +121,7 @@ join pc_ref p on p.label = v.project;
 update public.transactions set category_suggested = true where idempotency_key = 'dock:suggested';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'sample'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t where t.idempotency_key = 'dock:in_review';
 
 select tests.authenticate_as('pc_owner');
@@ -187,8 +187,8 @@ select is(
   (select jsonb_agg('USD'::text order by t.idempotency_key)
    from public.transactions t
    where t.idempotency_key in ('dock:invoice', 'dock:receipt', 'dock:materials', 'dock:fuel', 'dock:suggested', 'dock:in_review',
-                               'dock:overhead', 'dock:void', 'co:shared_usd')),
-  'usd-only project: every transaction row says USD (pending lines are not listed, 0184)'
+                               'dock:overhead', 'co:shared_usd')),
+  'usd-only project: every transaction row says USD (pending lines are not listed, 0184; a void line is removed)'
 );
 
 select is(

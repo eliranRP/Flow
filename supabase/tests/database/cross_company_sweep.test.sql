@@ -129,7 +129,7 @@ begin
   insert into public.review_queue (company_id, transaction_id, status) values (a, suggested, 'open')
   returning id into token;
   perform pg_temp.put('review', token);
-  insert into public.review_queue (company_id, transaction_id, status) values (a, line2, 'approved')
+  insert into public.review_queue (company_id, transaction_id, status, resolved_at) values (a, line2, 'approved', now())
   returning id into token;
   perform pg_temp.put('review_done', token);
 

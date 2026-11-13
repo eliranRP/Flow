@@ -31,10 +31,10 @@ insert into rpi (label, id) values
   ('exp', tests.fixture_line(pg_temp.id('co'), 'rpi:exp', 20000)),
   ('done', tests.fixture_line(pg_temp.id('co'), 'rpi:done', 30000));
 update public.transactions set customer_id = pg_temp.id('tenant') where id = pg_temp.id('inc');
-insert into public.review_queue (company_id, transaction_id, status, reason) values
-  (pg_temp.id('co'), pg_temp.id('inc'), 'open', 'missing_project'),
-  (pg_temp.id('co'), pg_temp.id('exp'), 'open', 'missing_category'),
-  (pg_temp.id('co'), pg_temp.id('done'), 'approved', 'missing_category');
+insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at) values
+  (pg_temp.id('co'), pg_temp.id('inc'), 'open', 'missing_project', null),
+  (pg_temp.id('co'), pg_temp.id('exp'), 'open', 'missing_category', null),
+  (pg_temp.id('co'), pg_temp.id('done'), 'approved', 'missing_category', now());
 insert into rpi (label, id) select 'q_exp', id from public.review_queue where transaction_id = pg_temp.id('exp');
 
 create function pg_temp.review_field(p_line text, p_field text) returns text

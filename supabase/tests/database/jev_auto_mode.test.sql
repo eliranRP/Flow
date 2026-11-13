@@ -120,11 +120,12 @@ from public.transactions t, unnest(array['p1', 'p2']) p
 where t.id = (select id from ja_ref where label = 'sp');
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'test'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t
 where t.idempotency_key like 'sumit:ja-%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
-update public.review_queue q set status = l.status::public.review_status
+update public.review_queue q set status = l.status::public.review_status,
+  resolved_at = case when l.status = 'open' then null else coalesce(q.resolved_at, now()) end
 from ja_lines l
 where q.transaction_id = (select id from ja_ref where label = l.label);
 
@@ -335,7 +336,7 @@ select throws_ok(
 );
 reset role;
 update public.transactions set user_assigned = true where id = (select id from ja_ref where label = 'a4');
-update public.review_queue set status = 'approved' where transaction_id = (select id from ja_ref where label = 'i1');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = (select id from ja_ref where label = 'i1');
 select tests.authenticate_as('ja_owner');
 select throws_ok(
   format($$select public.undo_jev_prefill(%L)$$, (select id from ja_ref where label = 'a4')),

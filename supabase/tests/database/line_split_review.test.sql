@@ -218,7 +218,7 @@ select is(pg_temp.open_reviews('txn_gone'), '[]'::jsonb, 'a removed line opens n
 
 update public.transactions set removed_at = null where id = (select id from lsr where label = 'txn_gone');
 select is(pg_temp.open_reviews('txn_gone'), '["split_mismatch"]'::jsonb, 'the line coming back opens its review');
-update public.transactions set line_status = 'void' where id = (select id from lsr where label = 'txn_gone');
+update public.transactions set line_status = 'void', removed_at = now() where id = (select id from lsr where label = 'txn_gone');
 select is(pg_temp.open_reviews('txn_gone'), '[]'::jsonb, 'a voided line loses it');
 
 -- The helper the backfill runs is idempotent.

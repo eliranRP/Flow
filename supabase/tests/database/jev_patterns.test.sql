@@ -122,14 +122,17 @@ select company_id, direction, doc_kind, pnl_role, supplier_id, amount_gross, amo
 from public.transactions where id = (select id from jp_ref where label = 'rent_03');
 
 -- Open review rows for two lines; every other line is filed.
-insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'approved', 'test'
+insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+select t.company_id, t.id, 'approved', 'suggested', now()
 from public.transactions t
 where t.idempotency_key like 'sumit:jp-%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
 update public.review_queue q set status = case
     when q.transaction_id in (select id from jp_ref where label in ('dup_a', 'spike_04')) then 'open'::public.review_status
-    else 'approved'::public.review_status end
+    else 'approved'::public.review_status end,
+  resolved_at = case
+    when q.transaction_id in (select id from jp_ref where label in ('dup_a', 'spike_04')) then null
+    else coalesce(q.resolved_at, now()) end
 where q.transaction_id in (select id from jp_ref);
 set constraints all immediate;
 

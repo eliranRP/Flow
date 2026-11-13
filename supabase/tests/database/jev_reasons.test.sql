@@ -93,7 +93,7 @@ insert into jr_lines values
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role, supplier_id, customer_id, project_id, category_id,
   amount_gross, amount_net, vat_amount, vat_status, line_status, external_id, linked_external_id,
-  doc_date, cash_date, source, idempotency_key, description
+  doc_date, cash_date, source, idempotency_key, description, removed_at
 )
 select (select id from jr_ref where label = 'co'), l.dir::public.txn_direction, l.kind::public.doc_kind,
   case when l.dir = 'expense' then 'project' end::public.pnl_role,
@@ -102,17 +102,19 @@ select (select id from jr_ref where label = 'co'), l.dir::public.txn_direction, 
   (select id from jr_ref where label = l.project), (select id from jr_ref where label = l.category),
   l.gross, (l.gross * 100) / 118, l.gross - (l.gross * 100) / 118, 'assumed',
   l.line_status::public.line_status, l.ext, l.linked,
-  l.doc_date, l.doc_date, 'sumit', 'sumit:jr-' || l.label, l.label
+  l.doc_date, l.doc_date, 'sumit', 'sumit:jr-' || l.label, l.label,
+  case when l.line_status = 'void' then now() end
 from jr_lines l;
 insert into jr_ref (label, id)
 select substr(idempotency_key, 10), id from public.transactions where idempotency_key like 'sumit:jr-%';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'test'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t
 where t.idempotency_key like 'sumit:jr-%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
-update public.review_queue q set status = l.status::public.review_status
+update public.review_queue q set status = l.status::public.review_status,
+  resolved_at = case when l.status = 'open' then null else coalesce(q.resolved_at, now()) end
 from jr_lines l
 where q.transaction_id = (select id from jr_ref where label = l.label);
 set constraints all immediate;

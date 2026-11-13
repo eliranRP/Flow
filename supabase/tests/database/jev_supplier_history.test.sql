@@ -70,7 +70,7 @@ insert into jsh_ref (label, id)
 select 't' || substr(idempotency_key, 11), id from public.transactions where idempotency_key like 'sumit:jsh-%';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'test'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t
 where t.idempotency_key like 'sumit:jsh-%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
@@ -80,7 +80,8 @@ update public.review_queue q set status = case
     when t.idempotency_key = 'sumit:jsh-7' then 'skipped'::public.review_status
     when t.idempotency_key = 'sumit:jsh-6' then 'changed'::public.review_status
     else 'approved'::public.review_status
-  end
+  end,
+  resolved_at = case when t.idempotency_key = 'sumit:jsh-8' then null else coalesce(q.resolved_at, now()) end
 from public.transactions t
 where t.id = q.transaction_id and t.idempotency_key like 'sumit:jsh-%';
 -- An income line of s1, filed, dated last: it is left out.
@@ -92,8 +93,8 @@ insert into public.transactions (
 values ((select id from jsh_ref where label = 'company_a'), 'income', 'invoice', 'project',
   (select id from jsh_ref where label = 's1'),
   1180, 1000, 180, 'assumed', '2026-04-30', '2026-04-30', 'sumit', 'sumit:jsh-in', 'income line');
-insert into public.review_queue (company_id, transaction_id, status, reason)
-select company_id, id, 'approved', 'test' from public.transactions where idempotency_key = 'sumit:jsh-in';
+insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+select company_id, id, 'approved', 'suggested', now() from public.transactions where idempotency_key = 'sumit:jsh-in';
 -- t3 is split by category.
 select tests.line_split((select id from jsh_ref where label = 't3'), jsonb_build_array(jsonb_build_object(
   'category_id', (select c.id from public.categories c join public.transactions t on t.company_id = c.company_id
@@ -102,7 +103,7 @@ select tests.line_split((select id from jsh_ref where label = 't3'), jsonb_build
 -- t5 is removed; t4 is back in review with a newer open row.
 update public.transactions set removed_at = now() where id = (select id from jsh_ref where label = 't5');
 insert into public.review_queue (company_id, transaction_id, status, reason, created_at)
-select company_id, id, 'open', 'test reopen', now() + interval '1 second'
+select company_id, id, 'open', 'suggested', now() + interval '1 second'
 from public.transactions where id = (select id from jsh_ref where label = 't4');
 set constraints all immediate;
 

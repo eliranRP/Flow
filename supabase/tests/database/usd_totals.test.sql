@@ -62,7 +62,7 @@ select c.id, v.direction::public.txn_direction, v.doc_kind::public.doc_kind, v.p
   v.amount, v.amount, abs(v.amount), 0, 'source',
   v.doc_date::date, v.cash_date::date, v.source::public.txn_source, v.ikey,
   case when v.project then (select id from usd_ref where label = v.co || case v.co when 'a' then '_alpha' else '_beta' end) end,
-  v.ikey, case when v.removed then now() end
+  v.ikey, case when v.removed or v.line_status = 'void' then now() end
 from (values
   -- A, USD only
   ('a', 'income',  'receipt', null,       'posted',  'USD', 100000, '2026-09-10', '2026-09-10', 'mercury', 'a:income',     true,  false),

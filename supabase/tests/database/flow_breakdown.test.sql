@@ -249,8 +249,8 @@ where t.idempotency_key = 'fb:CAD:split';
 -- One open expense review, one open income review, one closed expense review, an open
 -- review on the GBP outflow under an income category (it counts as income), and an open
 -- review on a pending line, which is not in the totals and so not in the count.
-insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, v.status::public.review_status, 'example'
+insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+select t.company_id, t.id, v.status::public.review_status, 'suggested', case when v.status <> 'open' then now() end
 from public.transactions t
 join (values
   ('fb:ILS:ex-alpha', 'open'),

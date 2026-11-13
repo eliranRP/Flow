@@ -512,7 +512,7 @@ select throws_ok(
 );
 
 update public.transactions
-set line_status = 'void'
+set line_status = 'void', removed_at = now()
 where idempotency_key = 'loan:paid';
 
 select is(
@@ -526,7 +526,7 @@ select is(
 );
 
 update public.transactions
-set line_status = 'posted'
+set line_status = 'posted', removed_at = null
 where idempotency_key = 'loan:paid';
 
 select is(

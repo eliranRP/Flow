@@ -57,7 +57,7 @@ begin
     p_doc, p_cash, 'manual', 'ml:' || p_label, 'ml:' || p_label,
     case when p_direction = 'expense' and p_company = pg_temp.id('co') then pg_temp.id('supplier') end,
     case when p_direction = 'income' and p_company = pg_temp.id('co') then pg_temp.id('customer') end,
-    case when p_removed then now() end
+    case when p_removed or p_status = 'void' then now() end
   ) returning id into new_id;
   insert into ml (label, id) values (p_label, new_id);
 end;
