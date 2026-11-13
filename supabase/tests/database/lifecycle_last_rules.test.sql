@@ -1,4 +1,4 @@
--- FLOW-1166 part 5 (20261113141500_lifecycle_last_rules.sql, B to D). B: loans_close_check fires on
+-- FLOW-1166 part 5 (20261113080500_lifecycle_last_rules.sql, B to D). B: loans_close_check fires on
 -- an insert too, and every writer that inserts a loan (the app's forms, mcp_add_loan, restore_loan
 -- of a closed loan) still does. C: company_integrations_on_chk (enabled only with a mode that is
 -- on); set_company_integration and set_jev_mode store enabled false with mode off, the card's
