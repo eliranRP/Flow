@@ -89,8 +89,9 @@ select ok(not (pg_temp.many(array['house', 'shop', 'yard']) ? pg_temp.id('yard')
 select is(
   (select x->'categories' from jsonb_array_elements(public.company_next_month_inputs('2026-09-20')->'projects') x
    where (x->>'project_id')::uuid = pg_temp.id('house')),
-  public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories',
-  'company_next_month_inputs takes each project''s categories from the one pass');
+  (select jsonb_agg(jsonb_build_object('id', e->'id', 'name', e->'name', 'currency', e->'currency', 'months_minor', e->'months_minor') order by o)
+   from jsonb_array_elements(public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories') with ordinality t(e, o)),
+  'company_next_month_inputs takes each project''s categories from the one pass, as the four fields it needs (FLOW-1171)');
 select is(pg_temp.many(array['other_house']), '{}'::jsonb, 'another company''s project reads nothing');
 
 select tests.authenticate_as('pmo_nobody');
