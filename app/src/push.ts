@@ -259,9 +259,13 @@ export const subscribeFlow = defineMachine({
 type SubscribeState = keyof typeof subscribeFlow.states;
 type SubscribeEvent = Parameters<typeof subscribeFlow.next>[1];
 
-/** Per state: the step shown, and the reason for a call there that never answers or that throws. */
+/**
+ * Per state: the step shown, and the reason for a call there that never answers or that throws.
+ * A throw at `permission` is not the user's no (only the browser's "denied" answer is, and the
+ * setup and the review prompt record "denied" as one), so it reads as a failed subscribe.
+ */
 const SUBSCRIBE_STATES: Record<SubscribeState, { step: SubscribeStep; timeout: SubscribeResult; threw: SubscribeResult }> = {
-  permission: { step: "permission", timeout: "permission-timeout", threw: "denied" },
+  permission: { step: "permission", timeout: "permission-timeout", threw: "subscribe-threw" },
   worker: { step: "worker", timeout: "worker-timeout", threw: "worker-timeout" },
   controller: { step: "controller", timeout: "worker-timeout", threw: "worker-timeout" },
   lookup: { step: "lookup", timeout: "lookup-timeout", threw: "lookup-threw" },

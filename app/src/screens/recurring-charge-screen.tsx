@@ -186,8 +186,17 @@ function ChargeBody({
   const [matchLocal, setMatchLocal] = useState<{ key: string; answer: "same" | "never" } | null>(null);
   // "Not this one" picks the ask's hint after the read has dropped the suggestion too.
   const [saidNever, setSaidNever] = useState<string | null>(null);
-  // The alert's writes (ignore, restore, the match answer): one at a time, so a second tap sends nothing.
+  // The alert's writes (ignore, restore, the match answer): one at a time. While one runs the alert's
+  // controls are disabled; a toast's ביטול, which cannot be, waits and runs once when it settles.
   const alertWrite = useMachine(saveFlow);
+  const alertBusy = alertWrite.state === "saving";
+  const afterAlertWrite = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (alertBusy) return;
+    const next = afterAlertWrite.current;
+    afterAlertWrite.current = null;
+    next?.();
+  }, [alertBusy]);
   const [paceLocal, setPaceLocal] = useState<{ recurring: boolean; pace: RecurringPace } | null>(null);
   const [paceOpen, setPaceOpen] = useState(openSheet === "pace");
   const [allOpen, setAllOpen] = useState(openSheet === "all");
@@ -218,9 +227,8 @@ function ChargeBody({
   // A late bill with no match to offer (or one the owner said is not it) asks whether it still recurs.
   const showAsk = alert?.kind === "missing" && !ignored && alert.key != null && !showMatch && !holdWrites && (suggestion == null || matchHere === "never");
   // Once no write runs, a local answer the read now has (or that answered another alert) goes.
-  const settled = alertWrite.state !== "saving";
-  const ignoreRead = settled && ignoredLocal != null && (ignoredLocal.key !== alertKey || alert == null || ignoredLocal.ignored === !alert.active);
-  const matchRead = settled && matchLocal != null && (matchLocal.key !== alertKey || readSuggestion == null);
+  const ignoreRead = !alertBusy && ignoredLocal != null && (ignoredLocal.key !== alertKey || alert == null || ignoredLocal.ignored === !alert.active);
+  const matchRead = !alertBusy && matchLocal != null && (matchLocal.key !== alertKey || readSuggestion == null);
   useEffect(() => {
     if (ignoreRead) setIgnoredLocal(null);
     if (matchRead) setMatchLocal(null);
@@ -261,7 +269,10 @@ function ChargeBody({
   }
 
   async function restore(key: string, kind: AlertKind) {
-    if (!alertWrite.send("start")) return;
+    if (!alertWrite.send("start")) {
+      afterAlertWrite.current = () => void restore(key, kind);
+      return;
+    }
     setIgnoredLocal({ key, ignored: false });
     try {
       if (live) await restoreRecurringAlert(liveRpcClient(), key, kind);
@@ -276,7 +287,11 @@ function ChargeBody({
   }
 
   async function answer(same: boolean | null) {
-    if (suggestion == null || !alertWrite.send("start")) return;
+    if (suggestion == null) return;
+    if (!alertWrite.send("start")) {
+      afterAlertWrite.current = () => void answer(same);
+      return;
+    }
     setMatchLocal(same === null ? null : { key: alertKey, answer: same ? "same" : "never" });
     setSaidNever(same === false ? alertKey : null);
     try {
@@ -353,15 +368,16 @@ function ChargeBody({
         />
         {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         {alert != null && alertText != null && !ignored ? (
-          <ChargeBanner text={alertText} onIgnore={() => void ignore()} disabled={alert.key == null} />
+          <ChargeBanner text={alertText} onIgnore={() => void ignore()} disabled={alert.key == null || alertBusy} />
         ) : null}
         {alert != null && ignored && alertText != null ? (
-          <ChargeIgnored text={alertText} onRestore={() => void restore(alert.key ?? "", alert.kind)} disabled={alert.key == null} />
+          <ChargeIgnored text={alertText} onRestore={() => void restore(alert.key ?? "", alert.kind)} disabled={alert.key == null || alertBusy} />
         ) : null}
         {showAsk ? (
           <RecurringAskBox
             text={askText(row, today)}
             hint={saidNever === alertKey ? "אמרת שהשורה שהצענו היא לא זה." : "הגיע בשם אחר? אפשר לשייך אותו מדף השורה."}
+            disabled={alertBusy}
             onStill={() => void ignore("נמשיך לצפות לו")}
             onEnded={() => {
               if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
@@ -376,6 +392,7 @@ function ChargeBody({
             date={dayMonth(suggestion.doc_date)}
             onYes={() => void answer(true)}
             onNo={() => void answer(false)}
+            disabled={alertBusy}
             {...(alert?.key == null ? {} : { onIgnore: () => void ignore() })}
           />
         ) : null}

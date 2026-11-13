@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
@@ -168,9 +168,11 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
   const setupEntry = useSetupSettingsEntry(signedInUserId ?? null, signedInCompanyId ?? null);
-  if (signedInUserId && signedInCompanyId) {
-    bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
-  }
+  // After commit, not while drawing: a bind that leaves a miss tells the review card (FLOW-1164).
+  // Every commit, as the card's own bind: a lookup or an auth drop elsewhere may have moved it.
+  useLayoutEffect(() => {
+    if (signedInUserId && signedInCompanyId) bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
+  });
   const live = sample == null && preview === "off";
   const liveCompanyId = live ? (signedInCompanyId ?? null) : null;
   const liveCompany = liveCompanyId != null;

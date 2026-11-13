@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { machineProblems } from "@flow/shared";
-import { Sheet, SheetSurface, sheetClose } from "./sheet";
+import { SHEET_CLOSE_SETTLE_MS, Sheet, SheetSurface, sheetClose } from "./sheet";
 import { expectRtl, expectTarget } from "./test-support";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { sheetStack, useSheetHistory } from "./back";
@@ -88,6 +88,9 @@ describe("Sheet", () => {
 
 describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
   const tick = () => act(async () => { await Promise.resolve(); });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("has no ✕ and marks the dialog busy; a closed sheet shows ✕ again", () => {
     const { rerender } = render(
@@ -202,20 +205,105 @@ describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
     expect(sheetClose.next("open", "allow")).toBe("open");
     expect(sheetClose.next("deciding", "request")).toBe("deciding");
     expect(sheetClose.next("closing", "request")).toBe("closing");
+    // A render does not move a close the parent accepted; only a late tap (`retry`) or the parent does.
+    expect(sheetClose.next("closing", "shown")).toBe("closing");
+    expect(sheetClose.next("closing", "retry")).toBe("deciding");
+    expect(sheetClose.next("open", "retry")).toBe("open");
   });
 
-  it("hears the next close after a parent ignored an accepted one, and sends one close for two taps in a tick", async () => {
+  it("hears a close after the window when the parent ignored an accepted one; two taps in a tick send one", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(1_000_000);
+    const onBeforeClose = vi.fn(() => undefined);
     const onOpenChange = vi.fn();
-    render(<Sheet open onOpenChange={onOpenChange} title="תקופה"><p>תוכן</p></Sheet>);
+    render(<Sheet open onOpenChange={onOpenChange} onBeforeClose={onBeforeClose} title="תקופה"><p>תוכן</p></Sheet>);
     const close = screen.getByRole("button", { name: "סגירה" });
     fireEvent.click(close);
     fireEvent.click(close);
     await tick();
     expect(onOpenChange).toHaveBeenCalledTimes(1);
-    // The parent drew the sheet open again: the close gave up, so the next ✕ is heard.
+    // Inside the window the parent may still be closing (a history pop): the ✕ is the same close.
+    vi.setSystemTime(1_000_000 + SHEET_CLOSE_SETTLE_MS - 1);
     fireEvent.click(close);
     await tick();
+    expect(onBeforeClose).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    // After it, the parent ignored the close: the ✕ is a fresh request and asks again.
+    vi.setSystemTime(1_000_000 + SHEET_CLOSE_SETTLE_MS);
+    fireEvent.click(close);
+    await tick();
+    expect(onBeforeClose).toHaveBeenCalledTimes(2);
     expect(onOpenChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes once for an async parent however many taps land before it closes", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const onBeforeClose = vi.fn(() => undefined);
+    const onCloseKind = vi.fn();
+    const onOpenChange = vi.fn();
+    function Late() {
+      const [open, setOpen] = useState(true);
+      return (
+        <Sheet
+          open={open}
+          onOpenChange={(next) => { onOpenChange(next); window.setTimeout(() => { setOpen(next); }, 30); }}
+          onBeforeClose={onBeforeClose}
+          onCloseKind={onCloseKind}
+          title="תקופה"
+        >
+          <p>תוכן</p>
+        </Sheet>
+      );
+    }
+    render(<Late />);
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "תקופה" })).toBeNull(); });
+    expect(onBeforeClose).toHaveBeenCalledTimes(1);
+    expect(onCloseKind).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("hears a programmatic close in the same commit that opens the sheet", async () => {
+    const onOpenChange = vi.fn();
+    function SameTick() {
+      const [open, setOpen] = useState(false);
+      const requestClose = useRef<(() => void) | null>(null);
+      useLayoutEffect(() => {
+        if (open) requestClose.current?.();
+      }, [open]);
+      return (
+        <>
+          <button type="button" onClick={() => { setOpen(true); }}>פתיחה</button>
+          <Sheet open={open} onOpenChange={(next) => { onOpenChange(next); setOpen(next); }} onRequestClose={requestClose} title="תקופה">
+            <p>תוכן</p>
+          </Sheet>
+        </>
+      );
+    }
+    render(<SameTick />);
+    fireEvent.click(screen.getByRole("button", { name: "פתיחה" }));
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("sends nothing for a decision that settles after the sheet unmounted", async () => {
+    let decide: (verdict: undefined) => void = () => undefined;
+    const onCloseKind = vi.fn();
+    const onOpenChange = vi.fn();
+    const { unmount } = render(
+      <Sheet open onOpenChange={onOpenChange} onCloseKind={onCloseKind} title="תקופה" onBeforeClose={() => new Promise<undefined>((resolve) => { decide = resolve; })}>
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    unmount();
+    await act(async () => { decide(undefined); await Promise.resolve(); });
+    expect(onCloseKind).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("drops a decision that lands after the parent closed the sheet", async () => {
@@ -294,7 +382,7 @@ function sheetFocusRule(): string {
   return "";
 }
 
-function ReturnHarness({ onEscape, veto }: { onEscape?: () => void; veto?: { current: boolean } }) {
+function ReturnHarness({ onEscape, veto, lateClose = false }: { onEscape?: () => void; veto?: { current: boolean }; lateClose?: boolean }) {
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   return (
@@ -302,7 +390,7 @@ function ReturnHarness({ onEscape, veto }: { onEscape?: () => void; veto?: { cur
       <button type="button" ref={opener} onClick={() => { setOpen(true); }}>ניתוק</button>
       <Sheet
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={lateClose ? (next) => { window.setTimeout(() => { setOpen(next); }, 0); } : setOpen}
         title="לנתק?"
         returnFocusRef={opener}
         onEscape={onEscape}
@@ -324,6 +412,15 @@ describe("Sheet focus return (FLOW-310)", () => {
     expect(opener).toHaveAttribute("data-focus-ring");
     act(() => { opener.blur(); });
     expect(opener).not.toHaveAttribute("data-focus-ring");
+  });
+
+  it("keeps the Escape ring when the parent closes a moment later", async () => {
+    render(<ReturnHarness lateClose />);
+    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "לנתק?" }), { key: "Escape" });
+    const opener = screen.getByRole("button", { name: "ניתוק", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).toHaveAttribute("data-focus-ring");
   });
 
   it("returns focus after ✕ with no forced ring", async () => {
@@ -457,5 +554,58 @@ describe("sheet close history", () => {
       expect(router.state.location.pathname).toBe("/settings");
       expect(router.state.location.key).toBe(settingsKey);
     });
+  });
+});
+
+function HistorySheet({ onBeforeClose }: { onBeforeClose: () => undefined }) {
+  const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
+  const setSheet = useSheetHistory("history-sheet", open, setOpen);
+  return (
+    <>
+      <button type="button" ref={opener} onClick={() => { setSheet(true); }}>בחירה</button>
+      <Sheet open={open} onOpenChange={setSheet} title="בחירה" returnFocusRef={opener} onBeforeClose={onBeforeClose}>
+        <p>תוכן</p>
+      </Sheet>
+    </>
+  );
+}
+
+describe("Sheet closed by a history pop (useSheetHistory)", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "");
+  });
+
+  it("closes once for taps before the pop lands, and keeps the Escape ring", async () => {
+    const onBeforeClose = vi.fn(() => undefined);
+    const router = createMemoryRouter(
+      [
+        { path: "/", element: <h1>בית</h1> },
+        { path: "/settings", element: <HistorySheet onBeforeClose={onBeforeClose} /> },
+      ],
+      { initialEntries: ["/", "/settings"], initialIndex: 1 },
+    );
+    render(<RouterProvider router={router} />);
+    const settingsKey = router.state.location.key;
+    window.history.replaceState({ idx: 1 }, "");
+    fireEvent.click(screen.getByRole("button", { name: "בחירה" }));
+    await waitFor(() => {
+      expect(router.state.location.state).toMatchObject({ flowLayer: "history-sheet" });
+    });
+    window.history.replaceState({ idx: 2 }, "");
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "בחירה" }), { key: "Escape" });
+    await waitFor(() => { expect(router.state.location.key).toBe(settingsKey); });
+    // The pop has not reached the sheet yet: it is still drawn open, and a ✕ is the same close.
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await act(async () => { await Promise.resolve(); });
+    expect(onBeforeClose).toHaveBeenCalledTimes(1);
+    expect(router.state.location.key).toBe(settingsKey);
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    const opener = screen.getByRole("button", { name: "בחירה", hidden: true });
+    await waitFor(() => { expect(opener).toHaveFocus(); });
+    expect(opener).toHaveAttribute("data-focus-ring");
+    expect(router.state.location.pathname).toBe("/settings");
   });
 });

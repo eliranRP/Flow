@@ -8,10 +8,17 @@ import { AuthProvider } from "../auth";
 import { defaultPeriod } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { ReviewQueue, SettingsScreen } from "./flow-screens";
+import { useSyncExternalStore } from "react";
+import { ConnectionsScreen, ReviewQueue, SettingsScreen } from "./flow-screens";
 import {
+  beginJevScopeLookup,
   bindJevConnectorScope,
   boundJevConnectorScope,
+  completeJevScopeLookup,
+  jevScopePhase,
+  noteJevAuthUser,
+  resetJevScopeMemory,
+  subscribeJevScope,
   jevConnectorQueryKey,
   jevConnectorStorageKey,
   readJevConnectorFlag,
@@ -113,14 +120,21 @@ const open: ReviewRow = {
   category_suggested: false,
 };
 
-function renderSettings(client: QueryClient) {
+/** Reads the scope's phase the way the review card does, so a bind that tells it is seen. */
+function PhaseProbe() {
+  const phase = useSyncExternalStore(subscribeJevScope, jevScopePhase, jevScopePhase);
+  return <p data-testid="phase">{phase}</p>;
+}
+
+function renderSettings(client: QueryClient, screenElement = <SettingsScreen />) {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <AuthProvider>
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings"]}>
-              <SettingsScreen />
+              <PhaseProbe />
+              {screenElement}
             </MemoryRouter>
           </BooksProvider>
         </AuthProvider>
@@ -152,6 +166,34 @@ describe("Jev connector scope", () => {
     await waitFor(() => {
       expect(boundJevConnectorScope()).toEqual(scope);
     });
+  });
+
+  // FLOW-1164 review: leaving a miss tells the card, so a screen binds after commit, not while it draws.
+  it.each([
+    ["settings", <SettingsScreen key="settings" />],
+    ["connections", <ConnectionsScreen key="connections" />],
+  ])("binds after a miss from %s with a subscriber mounted, with no render-phase update", async (_name, screenElement) => {
+    resetJevScopeMemory();
+    noteJevAuthUser(scope.userId);
+    completeJevScopeLookup(beginJevScopeLookup(), null);
+    expect(jevScopePhase()).toBe("miss");
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      renderSettings(new QueryClient({ defaultOptions: { queries: { retry: false } } }), screenElement);
+      await waitFor(() => {
+        expect(screen.getByTestId("phase")).toHaveTextContent("ready");
+      });
+      expect(boundJevConnectorScope()).toEqual(scope);
+      const renderPhase = errors.mock.calls.filter((call) => String(call[0]).includes("Cannot update a component"));
+      expect(renderPhase).toEqual([]);
+    } finally {
+      errors.mockRestore();
+      resetJevScopeMemory();
+    }
   });
 
   it("binds the scope from the review queue when the dashboard is already cached", async () => {

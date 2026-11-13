@@ -16,6 +16,7 @@ import {
   jevConnectorQueryKey,
   readJevConnectorFlag,
   writeJevConnectorFlag,
+  type JevConnectorScope,
 } from "./jev-review";
 
 export type JevMode = "off" | "shadow" | "auto";
@@ -335,9 +336,12 @@ export function JevSettings({
   blocked,
   optionsOpen = false,
   readOnly = false,
+  scope = null,
 }: {
   sample?: JevCardState;
   noCompany?: boolean;
+  /** The screen's user and company. Its bind lands after this first draw, so the card reads it here. */
+  scope?: JevConnectorScope | null;
   blocked?: () => boolean;
   /** Stories open אפשרויות on first draw. */
   optionsOpen?: boolean;
@@ -345,7 +349,7 @@ export function JevSettings({
 }) {
   if (noCompany) return null;
   if (sample) return <JevSettingsSample sample={sample} optionsOpen={optionsOpen} readOnly={readOnly} />;
-  return <JevSettingsLive blocked={blocked} readOnly={readOnly} />;
+  return <JevSettingsLive blocked={blocked} readOnly={readOnly} scope={scope} />;
 }
 
 function JevSettingsSample({ sample, optionsOpen, readOnly }: { sample: JevCardState; optionsOpen: boolean; readOnly: boolean }) {
@@ -367,7 +371,7 @@ function JevSettingsSample({ sample, optionsOpen, readOnly }: { sample: JevCardS
   );
 }
 
-function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readOnly: boolean }) {
+function JevSettingsLive({ blocked, readOnly, scope: screenScope }: { blocked?: () => boolean; readOnly: boolean; scope: JevConnectorScope | null }) {
   const client = useQueryClient();
   const query = useJevIntegrationQuery(true);
   const keyMissing = useJevKeyStatusQuery(true).data === "missing";
@@ -385,9 +389,9 @@ function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readO
   });
   // Read once on mount: the cached or remembered connector flag is the last known state.
   const [lastKnownOn] = useState(() => {
-    const cached = client.getQueryData<boolean>(jevConnectorQueryKey());
+    const scope = screenScope ?? boundJevConnectorScope();
+    const cached = client.getQueryData<boolean>(jevConnectorQueryKey(scope));
     if (cached !== undefined) return cached;
-    const scope = boundJevConnectorScope();
     return scope != null && readJevConnectorFlag(scope) === true;
   });
   const retryRef = useRef<HTMLButtonElement>(null);

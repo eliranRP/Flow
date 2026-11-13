@@ -169,6 +169,13 @@ describe("subscribeThisDevice", () => {
     expect(await subscribeThisDevice(FAST)).toEqual({ result: "permission-timeout", step: "permission" });
   });
 
+  it("does not read a permission request that throws as the user's no: only the browser's denied is", async () => {
+    browser({ request: () => Promise.reject(new DOMException("Not allowed here", "SecurityError")) });
+    expect(await subscribeThisDevice(FAST)).toEqual({ result: "subscribe-threw", step: "permission", detail: "SecurityError: Not allowed here" });
+    browser({ request: () => { throw new TypeError("no prompt"); } });
+    expect((await subscribeThisDevice(FAST)).result).toBe("subscribe-threw");
+  });
+
   it("times out a worker that never gets ready", async () => {
     browser({ ready: never() });
     expect(await subscribeThisDevice(FAST)).toEqual({ result: "worker-timeout", step: "worker" });

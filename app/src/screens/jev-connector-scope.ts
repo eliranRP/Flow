@@ -146,8 +146,9 @@ export function resetJevScopeMemory(): void {
 
 /**
  * A screen that knows the company binds it: `ready`, from `off` or a miss. While a lookup runs
- * the bind waits beside it, and the lookup's finish decides. Null unbinds. Settings binds while it
- * draws, so only the move that changes what the card reads (leaving a miss) tells the listeners.
+ * the bind waits beside it, and the lookup's finish decides. Null unbinds. Only the move that
+ * changes what the card reads (leaving a miss) tells the listeners, so a caller binds after commit
+ * (a layout effect, as Settings, Connections and the card do), never while it draws.
  */
 export function bindJevConnectorScope(scope: JevConnectorScope | null): void {
   if (scopeState.phase === "pending") {

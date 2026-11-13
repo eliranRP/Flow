@@ -254,7 +254,9 @@ export function withPatch(store: SetupStore, patch: Partial<SetupStore> | null):
       continue;
     }
     next[key] = store[key];
-    if (event === "start") next.flow_at = store.flow_at;
+    // A refused start keeps a stored `flow_at`, but a run from before FLOW-514 (started, no
+    // `flow_at`) still takes it, as before the table: that is how such a run upgrades.
+    if (event === "start" && store.flow_at != null) next.flow_at = store.flow_at;
   }
   return next;
 }

@@ -200,6 +200,14 @@ describe("the run and step tables (FLOW-1161)", () => {
     expect(previousPath(1)).toBeNull();
   });
 
+  it("upgrades a run from before FLOW-514 on a second start, without moving its start", () => {
+    const older = { ...emptySetupStore(), run_started_at: at, flow_at: null };
+    const next = withPatch(older, { run_started_at: later, flow_at: later });
+    expect(next.run_started_at).toBe(at);
+    expect(next.flow_at).toBe(later);
+    expect(runState(next)).toBe("started");
+  });
+
   it("still moves in order: start, resume, skip all, finish", () => {
     const run = withPatch(emptySetupStore(), { run_started_at: at, flow_at: at });
     expect(runState(run)).toBe("started");
