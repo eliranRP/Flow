@@ -1,6 +1,6 @@
 import { type MutationOptions, type QueryKey, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
+import { BOOKS_CLOSED_MS, booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
@@ -143,7 +143,7 @@ export function useWrite<T = void>(options: {
       const closedThrough = booksClosedThrough(failure);
       if (closedThrough != null) {
         // The lock gives the same answer for every write, so the write's own copy and retry do not apply.
-        toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", message: booksClosedNote(closedThrough) });
+        toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", durationMs: BOOKS_CLOSED_MS, message: booksClosedNote(closedThrough) });
         return;
       }
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
