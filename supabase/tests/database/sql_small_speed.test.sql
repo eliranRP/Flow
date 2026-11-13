@@ -151,8 +151,10 @@ select ok(
   'a project of another company is refused'
 );
 
--- The forecast helpers keep their answers. The month index counts months from year zero.
+-- The forecast helpers keep their answers. The month index counts months from year zero. They are private, so
+-- as the table owner.
 select tests.clear_authentication();
+reset role;
 
 select is(private.pfe_month_index('2026-03'), 2026 * 12 + 2, 'pfe_month_index counts the month');
 select ok(private.pfe_hits('2026-01', 'month', '2026-05'), 'a monthly edit applies in every later month');
