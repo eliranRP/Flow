@@ -29,6 +29,12 @@ const MERCURY_ERRORS: Record<string, string> = {
   "import date is after today": "התאריך עוד לא הגיע. בחרו תאריך אחר.",
 };
 
+/** FLOW-1178: the connections list says the refresh is stuck before the row's last good update. */
+export const MERCURY_STUCK = "הרענון נתקע";
+
+/** FLOW-1178: the stuck refresh's box links to the support address (FLOW-850). */
+export const MERCURY_SUPPORT = "פנייה לתמיכה";
+
 /** Hebrew for a known Mercury code. An unknown code becomes the generic sentence. */
 export function hebrewMercuryError(code: string | null | undefined): string | null {
   if (!code) return null;

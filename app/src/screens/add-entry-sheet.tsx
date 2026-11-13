@@ -13,7 +13,7 @@ import { formatAmount } from "../ui/amount";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
 import { attachDocument, createCategoryNamed, createProjectNamed, saveManualLine, undoAttach, undoManualLine, useReceiptMatch } from "../use-add-entry";
 import { useCompanyCurrency } from "../company-currency";
-import { booksClosedNote } from "../company-role-cache";
+import { BOOKS_CLOSED_MS, booksClosedNote } from "../company-role-cache";
 import { booksClosedThrough } from "../use-write";
 import { SAMPLE_CATEGORIES, SAMPLE_CURRENCY, SAMPLE_PROJECTS, type SampleEntryFill } from "../add-entry-sample";
 import { AddEntryView } from "./add-entry-view";
@@ -86,7 +86,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
     } catch (error) {
       const closedThrough = error instanceof Error ? booksClosedThrough(error) : null;
       if (closedThrough == null) throw error;
-      toast.show({ place: "top", tone: "info", message: booksClosedNote(closedThrough) });
+      toast.show({ place: "top", tone: "info", durationMs: BOOKS_CLOSED_MS, message: booksClosedNote(closedThrough) });
     }
   }
 
