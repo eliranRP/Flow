@@ -377,7 +377,7 @@ describe("Home's lines (FLOW-1189)", () => {
     return {
       transaction_id: `${side}-${id}`,
       part: "principal",
-      description: id,
+      description: `Example line ${id}`,
       supplier_name: "Example Supplier",
       project_name: null,
       category_name: "Example category",
@@ -389,6 +389,7 @@ describe("Home's lines (FLOW-1189)", () => {
       shared: false,
       source: "mercury",
       kept_out: false,
+      recurring: false,
     };
   }
 
@@ -423,6 +424,8 @@ describe("Home's lines (FLOW-1189)", () => {
     readLines({ in: 3, out: 45 });
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
     await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    await screen.findByRole("link", { name: "כל הקבועים" });
+    await screen.findAllByText(/Example (line|Supplier)/);
     expect(screen.queryByRole("link", { name: "כל התנועות" })).not.toBeInTheDocument();
   });
 
@@ -442,4 +445,3 @@ describe("Home's lines (FLOW-1189)", () => {
     expect(screen.queryByRole("link", { name: /^כל התנועות ב/ })).not.toBeInTheDocument();
   });
 });
-
