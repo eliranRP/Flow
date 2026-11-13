@@ -214,7 +214,7 @@ $$;
 -- leaves the category and the project a guess (category_suggested is set after the insert:
 -- the insert trigger clears it). A filed line with no category stays without one (the default
 -- category fill is skipped), and pnl_role is 'project' even with no project unless given. A
--- Mercury line must be USD.
+-- Mercury line must be USD. A void line is removed, as every writer stores one (FLOW-1166).
 create or replace function tests.fixture_line(
   p_company uuid,
   p_key text,
@@ -243,14 +243,15 @@ begin
     company_id, direction, doc_kind, line_status, currency,
     amount_gross, amount_net, amount_original, vat_amount, vat_status,
     doc_date, cash_date, source, idempotency_key, project_id, category_id, description,
-    user_assigned, category_assigned, category_suggested, pnl_role
+    user_assigned, category_assigned, category_suggested, pnl_role, removed_at
   )
   values (
     p_company, p_direction::public.txn_direction, p_doc_kind::public.doc_kind,
     p_line_status::public.line_status, p_currency,
     signed, signed, abs(p_amount), 0, 'source',
     p_doc_date, p_doc_date, p_source::public.txn_source, p_key, p_project, p_category, p_key,
-    not p_suggested, not p_suggested, false, p_pnl_role::public.pnl_role
+    not p_suggested, not p_suggested, false, p_pnl_role::public.pnl_role,
+    case when p_line_status = 'void' then now() end
   )
   returning id into line;
   if p_suggested then

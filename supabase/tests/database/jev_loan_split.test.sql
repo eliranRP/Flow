@@ -99,12 +99,13 @@ values (pg_temp.id('co'), pg_temp.id('l_dup2'), '{"anomaly": {"type": "noul", "n
 insert into public.categories (company_id, name, kind, sort_order) values (pg_temp.id('co'), 'Example other', 'expense', 990);
 insert into jls (label, id) select 'cat_other', c.id from public.categories c
 where c.company_id = pg_temp.id('co') and c.name = 'Example other';
-insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, case when t.idempotency_key = 'jls:l_closed' then 'approved' else 'open' end::public.review_status, 'test'
+insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+select t.company_id, t.id, case when t.idempotency_key = 'jls:l_closed' then 'approved' else 'open' end::public.review_status,
+  'suggested', case when t.idempotency_key = 'jls:l_closed' then now() end
 from public.transactions t
 where t.idempotency_key like 'jls:%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
-update public.review_queue set status = 'approved'
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now())
 where transaction_id = pg_temp.id('l_closed');
 set constraints all immediate;
 
@@ -138,14 +139,14 @@ select throws_ok(
 reset role;
 
 -- l_cats was split by category (two parts) by the owner, then a re-sync reopened its review.
-update public.review_queue set status = 'approved' where transaction_id = pg_temp.id('l_cats');
+update public.review_queue set status = 'approved', resolved_at = coalesce(resolved_at, now()) where transaction_id = pg_temp.id('l_cats');
 select tests.authenticate_as('jls_owner');
 select public.save_line_split(pg_temp.id('l_cats'), jsonb_build_array(
   jsonb_build_object('category_id', pg_temp.id('cat_plain'), 'amount_minor', 40000),
   jsonb_build_object('category_id', pg_temp.id('cat_other'), 'amount_minor', 41946)
 ));
 reset role;
-update public.review_queue set status = 'open' where transaction_id = pg_temp.id('l_cats');
+update public.review_queue set status = 'open', resolved_at = null where transaction_id = pg_temp.id('l_cats');
 -- Not the owner's pick any more, so only the split itself can stop Jev.
 update public.transactions set user_assigned = false, category_assigned = false where id = pg_temp.id('l_cats');
 

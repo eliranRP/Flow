@@ -883,7 +883,7 @@ describe("review amounts keep their currency", () => {
           amount_net: 10000n,
           currency: "USD",
           direction: "income",
-          reason: "pending_income",
+          reason: "suggested",
           project_id: null,
           category_id: null,
           supplier_name: null,

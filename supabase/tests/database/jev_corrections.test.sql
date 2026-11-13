@@ -147,11 +147,12 @@ select 'cat_hidden', c.id from public.categories c
 where c.company_id = (select id from jc_ref where label = 'co') and c.name = 'מוסתרת';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'test'
+select t.company_id, t.id, 'open', 'suggested'
 from public.transactions t
 where t.idempotency_key like 'sumit:jc-%'
   and not exists (select 1 from public.review_queue q where q.transaction_id = t.id);
-update public.review_queue q set status = l.status::public.review_status
+update public.review_queue q set status = l.status::public.review_status,
+  resolved_at = case when l.status = 'open' then null else coalesce(q.resolved_at, now()) end
 from jc_lines l
 where q.transaction_id = (select id from jc_ref where label = l.label);
 

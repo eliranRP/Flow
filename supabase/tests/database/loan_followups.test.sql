@@ -48,7 +48,7 @@ from public.transactions t
 where t.idempotency_key like 'f114:%';
 
 update public.transactions set removed_at = now() where idempotency_key = 'f114:removed';
-update public.transactions set line_status = 'void' where idempotency_key = 'f114:void';
+update public.transactions set line_status = 'void', removed_at = now() where idempotency_key = 'f114:void';
 
 select is(
   (select count(*)::integer from private.loan_parts where loan_id = (select id from f114 where label = 'loan') and needs_review),

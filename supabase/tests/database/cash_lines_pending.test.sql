@@ -33,10 +33,10 @@ insert into clp2 (label, id) values
     pg_temp.id('reno_cat'), '2026-06-05', p_doc_kind => 'expense'));
 
 -- One open review and one approved review, written as postgres like the other fixtures.
-insert into public.review_queue (company_id, transaction_id, status)
+insert into public.review_queue (company_id, transaction_id, status, resolved_at)
 values
-  (pg_temp.id('co'), pg_temp.id('open'), 'open'),
-  (pg_temp.id('co'), pg_temp.id('done'), 'approved');
+  (pg_temp.id('co'), pg_temp.id('open'), 'open', null),
+  (pg_temp.id('co'), pg_temp.id('done'), 'approved', now());
 
 create or replace function pg_temp.row(p_page jsonb, p_description text)
 returns jsonb

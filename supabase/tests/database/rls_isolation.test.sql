@@ -80,7 +80,7 @@ from flow_a a
 join public.split_rules r on r.company_id = a.company_id;
 
 insert into public.review_queue (company_id, transaction_id, reason)
-select company_id, transaction_id, 'ניחוש' from flow_a;
+select company_id, transaction_id, 'suggested' from flow_a;
 
 insert into public.sumit_connections (
   company_id, sumit_company_id,
@@ -304,7 +304,7 @@ from public.companies c
 join public.transactions t on t.company_id = c.id and t.idempotency_key = 'beta-move'
 where c.name = 'בטא';
 insert into public.review_queue (company_id, reason)
-select id, 'תור של ב' from public.companies where name = 'בטא';
+select id, 'missing_category' from public.companies where name = 'בטא';
 
 -- sumit_connections has no insert grant for authenticated. A spare project
 -- on אלפא gives the composite foreign keys a real destination row.
@@ -420,7 +420,7 @@ select throws_ok(
   $$update public.review_queue
     set company_id = (select company_id from flow_a),
         transaction_id = null
-    where reason = 'תור של ב'$$,
+    where reason = 'missing_category'$$,
   '42501',
   NULL,
   'cannot move a review row into another company'

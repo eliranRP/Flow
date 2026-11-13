@@ -97,7 +97,9 @@ set local session_replication_role = origin;
 select is((select count(*)::int from private.push_new_due_users()), 0, 'removed lines and lines older than a day are not new');
 
 -- Switch off: not due.
-update public.transactions set created_at = pg_catalog.now(), removed_at = null;
+-- A void line stays removed (FLOW-1166: transactions_void_removed_chk).
+update public.transactions set created_at = pg_catalog.now(),
+  removed_at = case when line_status = 'void' then removed_at end;
 update public.notification_prefs set new_transaction = false where user_id = tests.get_supabase_uid('pw_owner');
 select is((select count(*)::int from private.push_new_due_users()), 0, 'a user with the switch off is not due');
 

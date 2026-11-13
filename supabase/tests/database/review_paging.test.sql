@@ -45,8 +45,9 @@ insert into rp (label, id) values
   ('done', tests.fixture_line(pg_temp.id('a'), 'rp:done', 11000, 'expense', pg_temp.id('px'), null, '2026-06-01')),
   ('b1', tests.fixture_line(pg_temp.id('b'), 'rp:b1', 12000, 'expense', pg_temp.id('pb'), null, '2026-06-01'));
 update public.transactions set removed_at = now() where id = pg_temp.id('gone');
-insert into public.review_queue (company_id, transaction_id, status, reason, created_at)
+insert into public.review_queue (company_id, transaction_id, status, resolved_at, reason, created_at)
 select t.company_id, t.id, case when t.id = pg_temp.id('done') then 'approved'::public.review_status else 'open' end,
+  case when t.id = pg_temp.id('done') then now() end,
   'missing_category',
   case t.idempotency_key
     when 'rp:l1' then '2026-06-10 10:00:00+00'::timestamptz

@@ -77,10 +77,10 @@ update public.projects set budget_agorot = 1000 where id = pg_temp.id('done');
 
 -- Review: the money out waits; the rehab line was approved by hand; last week's line still waits.
 delete from public.review_queue where company_id in (pg_temp.id('co'), pg_temp.id('other'));
-insert into public.review_queue (company_id, transaction_id, status) values
-  (pg_temp.id('co'), pg_temp.id('out_wk'), 'open'),
-  (pg_temp.id('co'), pg_temp.id('kept_wk'), 'approved'),
-  (pg_temp.id('co'), pg_temp.id('out_prev'), 'open');
+insert into public.review_queue (company_id, transaction_id, status, resolved_at) values
+  (pg_temp.id('co'), pg_temp.id('out_wk'), 'open', null),
+  (pg_temp.id('co'), pg_temp.id('kept_wk'), 'approved', now()),
+  (pg_temp.id('co'), pg_temp.id('out_prev'), 'open', null);
 
 create or replace function pg_temp.wk()
 returns jsonb
