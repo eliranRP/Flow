@@ -419,19 +419,27 @@ describe("Home's lines (FLOW-1189)", () => {
     expect(reads.map((read) => [read.p_side, read.p_limit, read.p_offset]).sort()).toEqual([["in", 20, 0], ["out", 20, 0]]);
   });
 
-  it("the more row opens the month's lines on the side with more: the rest is on that screen", async () => {
+  it("the current month has no more row: the band's money in / money out rows open its lines", async () => {
     readLines({ in: 3, out: 45 });
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
-    const more = await screen.findByRole("link", { name: "כל התנועות" });
-    expect(more).toHaveAttribute("href", `/cash/${current}/out/ILS`);
-    expect(screen.getByRole("link", { name: "כל הקבועים" })).toBeInTheDocument();
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    expect(screen.queryByRole("link", { name: "כל התנועות" })).not.toBeInTheDocument();
   });
 
-  it("a past month's more row names the month and opens its lines (FLOW-1056)", async () => {
-    readLines({ in: 45, out: 3 });
+  it("a past month with more than 20 lines a side ends with its lines row (FLOW-1056), and reads no further page", async () => {
+    readLines({ in: 21, out: 3 });
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: `/?month=${month(1)}` });
     const more = await screen.findByRole("link", { name: `כל התנועות ב${homeMonthLabel(month(1)).split(" ")[0] ?? ""}` });
-    expect(more).toHaveAttribute("href", `/cash/${month(1)}/in/ILS`);
+    expect(more).toHaveAttribute("href", `/cash/${month(1)}/out/ILS`);
+    expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2);
+  });
+
+  it("a past month with exactly 20 lines a side has no more row", async () => {
+    readLines({ in: 20, out: 20 });
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: `/?month=${month(1)}` });
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    await screen.findAllByText("Example Supplier");
+    expect(screen.queryByRole("link", { name: /^כל התנועות ב/ })).not.toBeInTheDocument();
   });
 });
 

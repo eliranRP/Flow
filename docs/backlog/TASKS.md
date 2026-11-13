@@ -745,7 +745,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1115"></a>[FLOW-1115](tasks/FLOW-1115.md) | A cold start on Home sends its figures' reads before the first render | SMALL CYCLE (perf) |
 | <a id="flow-1116"></a>[FLOW-1116](tasks/FLOW-1116.md) | Plan: Home's figure reads leave from the page itself, before the app's code arrives | PLAN FIRST (perf) |
 | <a id="flow-1171"></a>[FLOW-1171](tasks/FLOW-1171.md) | Perf queue: every screen in the sweep under 0.5 s | SMALL CYCLE (perf) |
-| <a id="flow-1189"></a>[FLOW-1189](tasks/FLOW-1189.md) | Perf: Home lists 20 lines a side, more on tap | SMALL UI (perf) |
+| <a id="flow-1189"></a>[FLOW-1189](tasks/FLOW-1189.md) | Perf: Home lists 20 lines a side, more on tap | SMALL (perf) |
 | <a id="flow-1190"></a>[FLOW-1190](tasks/FLOW-1190.md) | Plan: cache recurring_parties per company | PLAN FIRST (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
