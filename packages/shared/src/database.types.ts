@@ -1897,7 +1897,7 @@ isOneToOne: false
 "get_project":
 { Args: { "p_id": string }; Returns: Json
                            } |
-{ Args: { "p_basis": string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
+{ Args: { "p_basis": string,"p_from"?: string,"p_id": string,"p_lines"?: boolean,"p_to"?: string }; Returns: Json
                            },
 "get_project_group":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json

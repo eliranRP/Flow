@@ -54,6 +54,20 @@ describe("projectDetailSchema", () => {
     expect(parsed?.excluded_categories_by_currency?.[0]?.amount_minor).toBe(1000n);
   });
 
+  it("parses an answer with no lines (get_project p_lines false) and one saved with them (FLOW-1171)", () => {
+    const { transactions: _lines, ...withoutLines } = project;
+    const lean = projectDetailSchema.parse({ ...withoutLines, categories: [] });
+    expect(lean?.transactions).toBeUndefined();
+    expect(lean?.category_rollups).toBeUndefined();
+    expect(lean?.pending_agorot).toBeUndefined();
+    const saved = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      transactions: [{ id: "t", description: "מלט", doc_date: "2026-06-10", amount_net: -100, direction: "expense", category: null }],
+    });
+    expect(saved?.transactions).toHaveLength(1);
+  });
+
   it("parses the project's loans with a bigint balance, and a payload without them", () => {
     const parsed = projectDetailSchema.parse({
       ...project,
