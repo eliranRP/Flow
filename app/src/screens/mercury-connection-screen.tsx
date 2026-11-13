@@ -8,7 +8,8 @@ import { useDashboardQuery, useMercuryStatusQuery } from "../use-books";
 import { invokeEdge } from "../edge";
 import { rereadJevAfterSync } from "../jev-after-sync";
 import { LEDGER_KEYS } from "../ledger-keys";
-import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
+import { HELP_EMAIL } from "../config";
+import { hebrewMercuryError, MERCURY_STUCK, MERCURY_SUPPORT, mercuryRefreshDone } from "../mercury-copy";
 import { accountName, connectionName } from "../mercury-connections";
 import { MERCURY_NONE, mercuryProblem, type MercuryAccount, type MercuryConnection } from "../mercury-state";
 import { israelSyncPhrase } from "../sumit-copy";
@@ -197,7 +198,13 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   const viewerOnly = holdOwner;
   const keyOk = key.trim().length >= MIN_KEY;
   // FLOW-1162: a connection that hit the page cap says so from its first capped run; its refresh stays.
-  const pageCap = target != null && mercuryProblem(target) === "page_cap" ? hebrewMercuryError("sync_page_cap") : null;
+  // FLOW-1178: it has the warning marker and a link to the support address.
+  const pageCap = target != null && mercuryProblem(target) === "page_cap" ? (
+    <>
+      <span>{hebrewMercuryError("sync_page_cap")}</span>
+      <Button variant="link" href={`mailto:${HELP_EMAIL}`}>{MERCURY_SUPPORT}</Button>
+    </>
+  ) : null;
   const busyKey = connect.isPending || disconnect.connecting;
 
   /** A sample keeps a save in memory; live writes go to the server. */
@@ -300,7 +307,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
               icon={<BankIcon size={24} />}
               title={connectionName(connection)}
               ltrTitle
-              hint={mercuryProblem(connection) === "page_cap" ? hebrewMercuryError("sync_page_cap") : connectionSub(connection, now)}
+              hint={mercuryProblem(connection) === "page_cap" ? `${MERCURY_STUCK} · ${connectionSub(connection, now)}` : connectionSub(connection, now)}
               tone={mercuryProblem(connection) == null ? undefined : "warning"}
               chevron
             />
@@ -345,7 +352,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
 
   return (
     <ViewerScope>
-      <ConnectionPage title={TITLE} subtitle={SUBTITLE} backTo={backTo} problem={problem ?? pageCap ?? undefined}>
+      <ConnectionPage title={TITLE} subtitle={SUBTITLE} backTo={backTo} problem={problem ?? pageCap ?? undefined} problemTone={problem == null && pageCap != null ? "warning" : undefined}>
         <ViewerNote />
         {body}
       </ConnectionPage>
