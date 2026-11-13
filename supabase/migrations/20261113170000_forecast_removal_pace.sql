@@ -6,6 +6,7 @@
 --   still expected in the months after. A line added for its month only ('once') is deleted outright, as before.
 --   A row already out this month by a removal for this month only is taken out from it on when 'month' is asked
 --   (its undo puts the one-month removal back).
+-- - The four-argument private.pfe_remove is dropped: every caller passes the pace.
 -- - public.remove_project_forecast_row and public.mcp_remove_project_forecast_row take p_pace, default 'month', so
 --   callers that send none keep today's answer. private.pfe_mcp reads the remove's argument as the row key, or as
 --   {row_key, pace}.
@@ -72,15 +73,6 @@ $$;
 
 revoke all on function private.pfe_remove(uuid, uuid, text, text, text) from public, anon, authenticated;
 
--- The four-argument form stays for any caller written before this change: from this month on.
-create or replace function private.pfe_remove(p_company uuid, p_project uuid, p_month text, p_row_key text)
-returns jsonb
-language sql
-set search_path = ''
-as $$ select private.pfe_remove(p_company, p_project, p_month, p_row_key, 'month'); $$;
-
-revoke all on function private.pfe_remove(uuid, uuid, text, text) from public, anon, authenticated;
-
 drop function public.remove_project_forecast_row(uuid, text, text);
 
 create function public.remove_project_forecast_row(p_project_id uuid, p_month text, p_row_key text, p_pace text default 'month')
@@ -117,6 +109,9 @@ $mcp$;
 revoke all on function private.pfe_mcp(text, text, uuid, text, jsonb) from public, anon, authenticated;
 
 drop function public.mcp_remove_project_forecast_row(text, uuid, text, text);
+
+-- Every caller now passes the pace: the four-argument form goes.
+drop function private.pfe_remove(uuid, uuid, text, text);
 
 -- The idempotency hash keeps a plain row key for 'month', so a retry sent before this change still replays.
 create function public.mcp_remove_project_forecast_row(p_idempotency_key text, p_project_id uuid, p_month text, p_row_key text, p_pace text default 'month')
