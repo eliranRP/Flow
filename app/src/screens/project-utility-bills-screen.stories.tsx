@@ -80,6 +80,7 @@ export const ProjectUtilityBillsAllBack: Story = {
  */
 export const ProjectUtilityBillsLong: Story = {
   name: "ProjectUtilityBills, long content",
+  globals: { viewport: { value: "flow320", isRotated: false } },
   render: () => (
     <BillsStory
       bills={utilityTypesSample().map((bill) => ({

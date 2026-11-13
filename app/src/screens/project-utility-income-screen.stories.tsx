@@ -86,6 +86,7 @@ export const ProjectUtilityIncomeNoneWidest: Story = {
  */
 export const ProjectUtilityIncomeLong: Story = {
   name: "ProjectUtilityIncome, long content",
+  globals: { viewport: { value: "flow320", isRotated: false } },
   render: () => {
     const income = utilityIncomeSample();
     return (

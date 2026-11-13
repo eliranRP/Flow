@@ -97,6 +97,7 @@ export const UtilityRefundsEmpty: Story = {
  */
 export const UtilityRefundsLong: Story = {
   name: "UtilityRefunds, long content",
+  globals: { viewport: { value: "flow320", isRotated: false } },
   render: () => (
     <RefundsStory
       bills={utilityRefundsSample().map((bill) => ({
@@ -152,6 +153,7 @@ export const UtilityRefundsSheetContext: Story = {
  */
 export const UtilityRefundsSheetLong: Story = {
   name: "UtilityRefunds, bill sheet, long content",
+  globals: { viewport: { value: "flow320", isRotated: false } },
   render: () => (
     <RefundsStory
       bills={utilityTypesSample().map((bill) => ({
