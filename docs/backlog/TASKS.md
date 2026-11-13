@@ -784,6 +784,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1182"></a>[FLOW-1182](tasks/FLOW-1182.md) | Five-token sweep: review, transaction and search use their tokens (no visual change) | SMALL UI |
 | <a id="flow-1183"></a>[FLOW-1183](tasks/FLOW-1183.md) | Five-token foundation: two shadows, a label size, the 4-pt rule, the skill in the repo | SMALL UI |
 | <a id="flow-1184"></a>[FLOW-1184](tasks/FLOW-1184.md) | Five-token look, area 1: Home, lists, controls, fields, banners, tab bar, sheets and setup | SMALL UI |
+| <a id="flow-1186"></a>[FLOW-1186](tasks/FLOW-1186.md) | Five-token look: projects, loans, investment, forecast, profit and reports | SMALL UI |
 
 ## Data hygiene (public repo)
 
