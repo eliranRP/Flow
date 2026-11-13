@@ -39,7 +39,7 @@ function TypeSummary({ type }: { type: BillType }) {
  * FLOW-1159 (V3-J-B3-ByType, the List pattern): a property's bills by type, opened from the property page's חשבונות row and
  * from כל החשבונות on the refunds list; מי משלם at its end opens the payers page (FLOW-1169). Under the title, what the tenant owes ("השוכר חייב $X", or "הכול הוחזר");
  * then one head per type (the bill's category) with what is missing, and its bills newest activity first: the mark
- * (✓ refunded, a dashed ring while owed, a dot for ראיתי), "dd/mm/yy · supplier", its status line and its amount.
+ * (✓ refunded, a dashed ring while owed, a dot for ראיתי), the supplier, "dd/mm/yy · its status" and its amount.
  * A bill opens its drawer; a viewer's row opens its transaction. It replaces the by-month page (FLOW-1144).
  */
 export function ProjectUtilityBillsScreen() {
@@ -83,7 +83,7 @@ export function ProjectUtilityBillsScreen() {
       <header className="ui-urf-head">
         <BackButton fallback={back} text={backText} />
         <h1 className="t-title">חשבונות מול השוכר</h1>
-        <p className="ui-urf-sub t-meta">{name == null ? "לפי סוג חשבון" : `${name} · לפי סוג חשבון`}</p>
+        <p className="ui-urf-sub t-meta"><HintParts parts={name == null ? ["לפי סוג חשבון"] : [name, "לפי סוג חשבון"]} /></p>
         {phase.kind !== "ready" || bills.length === 0 ? null : owes.length === 0 ? (
           <p className="ui-urf-sub t-meta">הכול הוחזר</p>
         ) : (
@@ -121,9 +121,10 @@ export function ProjectUtilityBillsScreen() {
                     key={bill.bill_transaction_id}
                     variant="project"
                     layout="flat"
-                    title={`${refundDate(bill.doc_date)} · ${bill.supplier_name ?? "ספק"}`}
+                    // FLOW-1175: the supplier is the title (up to 2 lines); the date leads the status line.
+                    title={bill.supplier_name ?? "ספק"}
                     // A narrow line breaks only between whole parts, with no "·" at either end (FLOW-1153).
-                    hint={<HintParts text={billStatusLine(bill)} />}
+                    hint={<HintParts text={`${refundDate(bill.doc_date)} · ${billStatusLine(bill)}`} />}
                     wrapHint
                     wrapTitle
                     tone={isOpenBill(bill) ? "warning" : undefined}

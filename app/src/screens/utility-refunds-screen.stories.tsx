@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { PINE, storyUtilityClient, utilityRefundsSample, utilitySplitSample, utilityTypesSample } from "./utility-refunds-sample";
+import { expectNoOrphanDots } from "../ui/hint-parts.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { UtilityClientProvider, type UtilityBill } from "../utility-refunds";
@@ -90,7 +91,10 @@ export const UtilityRefundsEmpty: Story = {
   render: () => <RefundsStory bills={[]} />,
 };
 
-/** Long supplier and property names end in an ellipsis; the day and the gap wrap; the answers keep their row. */
+/**
+ * Long supplier and property names end in an ellipsis; the legs' and the rows' lines wrap between whole parts, with no
+ * "·" at either end of a line (FLOW-1173); the answers keep their row.
+ */
 export const UtilityRefundsLong: Story = {
   name: "UtilityRefunds, long content",
   render: () => (
@@ -103,6 +107,10 @@ export const UtilityRefundsLong: Story = {
       }))}
     />
   ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByRole("button", { name: "להשאיר" });
+    await expectNoOrphanDots(canvasElement.querySelector(".ui-urf-screen") as Element);
+  },
 };
 
 export const UtilityRefundsLoading: Story = {
@@ -134,7 +142,30 @@ export const UtilityRefundsSheetContext: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: /^City Light/ }));
     const dialog = await within(document.body).findByRole("dialog");
-    await expect(await within(dialog).findByRole("heading", { name: "כל חשבונות החשמל בנכס" })).toBeInTheDocument();
+    await expect(await within(dialog).findByRole("heading", { name: "חשמל בנכס" })).toBeInTheDocument();
+  },
+};
+
+/**
+ * FLOW-1173: long names in the drawer: its line and the income row's line break only between whole parts, and the
+ * history head names its category whole (a second line when it needs one).
+ */
+export const UtilityRefundsSheetLong: Story = {
+  name: "UtilityRefunds, bill sheet, long content",
+  render: () => (
+    <RefundsStory
+      bills={utilityTypesSample().map((bill) => ({
+        ...bill,
+        project_name: `${bill.project_name} הבניין הצפוני ליד הפארק`,
+        category_name: `${String(bill.category_name)} ושירותים משותפים לבניין`,
+      }))}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^City Light/ }));
+    const dialog = await within(document.body).findByRole("dialog");
+    await expect(await within(dialog).findByRole("heading", { name: "חשמל ושירותים משותפים לבניין בנכס" })).toBeInTheDocument();
+    await expectNoOrphanDots(dialog);
   },
 };
 

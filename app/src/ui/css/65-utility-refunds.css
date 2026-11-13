@@ -118,7 +118,8 @@
   white-space: nowrap;
 }
 
-/* The day and the gap wrap, as a hint does; they are never cut. */
+/* The line is HintParts (FLOW-1173): it wraps between whole parts, a part wider than the line at its own spaces;
+   it is never cut. */
 .ui-urf-leg-meta {
   overflow-wrap: anywhere;
 }
