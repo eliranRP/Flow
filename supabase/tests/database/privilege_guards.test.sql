@@ -49,7 +49,7 @@ insert into pg_allowed (sig) values
     ('clear_loan_split(uuid)'),
     ('collapse_split(uuid,uuid)'),
     ('company_forecast_edits_for(text)'),
-    ('company_next_month_inputs(date)'),
+    ('company_next_month_inputs(date,boolean)'),
     ('company_pnl_basis()'),
     ('count_transfer_matches()'),
     ('create_category(text,text,uuid)'),
