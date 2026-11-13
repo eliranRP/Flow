@@ -52,7 +52,7 @@ const headers = {
 if (accessToken) {
   const projects = await fetch(`${base}/rest/v1/projects?select=id&status=eq.active&order=id&limit=1`, { headers });
   const [first] = projects.ok ? ((await projects.json()) as { id: string }[]) : [];
-  if (first) reads.push({ screen: "Project page", rpc: "get_project", body: { p_id: first.id, p_basis: null } });
+  if (first) reads.push({ screen: "Project page", rpc: "get_project", body: { p_id: first.id, p_basis: null, p_lines: false } });
 }
 
 function percentile(sorted: number[], p: number): number {

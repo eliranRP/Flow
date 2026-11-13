@@ -197,6 +197,6 @@ describe("ProjectMonthProfitScreen", () => {
     expect(share.parentElement).toHaveTextContent("₪152");
     expect(screen.getByText("רווח אחרי הוצאות כלליות").parentElement).toHaveTextContent("₪3,644");
     const read = rpc.calls.find((call) => call.name === "get_project");
-    expect(read?.args).toMatchObject({ p_id: "p1", p_from: "2026-09-01", p_to: "2026-09-30" });
+    expect(read?.args).toMatchObject({ p_id: "p1", p_from: "2026-09-01", p_to: "2026-09-30", p_lines: false });
   });
 });

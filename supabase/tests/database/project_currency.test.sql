@@ -365,31 +365,31 @@ select is(
   'get_project stays security invoker'
 );
 select ok(
-  not has_function_privilege('anon', 'public.get_project(uuid, text, date, date)', 'execute'),
-  'anon cannot execute get_project(uuid, text, date, date)'
+  not has_function_privilege('anon', 'public.get_project(uuid, text, date, date, boolean)', 'execute'),
+  'anon cannot execute get_project(uuid, text, date, date, boolean)'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.get_project(uuid, text, date, date)', 'execute'),
-  'authenticated can execute get_project(uuid, text, date, date)'
+  has_function_privilege('authenticated', 'public.get_project(uuid, text, date, date, boolean)', 'execute'),
+  'authenticated can execute get_project(uuid, text, date, date, boolean)'
 );
 select ok(
-  not has_function_privilege('public', 'public.get_project(uuid, text, date, date)', 'execute'),
-  'public cannot execute get_project(uuid, text, date, date)'
+  not has_function_privilege('public', 'public.get_project(uuid, text, date, date, boolean)', 'execute'),
+  'public cannot execute get_project(uuid, text, date, date, boolean)'
 );
 select is(
-  (select prosecdef from pg_proc where oid = 'public.get_project(uuid, text, date, date)'::regprocedure),
+  (select prosecdef from pg_proc where oid = 'public.get_project(uuid, text, date, date, boolean)'::regprocedure),
   false,
-  'get_project(uuid, text, date, date) is security invoker'
+  'get_project(uuid, text, date, date, boolean) is security invoker'
 );
 select is(
-  (select jsonb_agg('search_path=""' = any(p.proconfig) order by p.pronargs) from pg_proc p where p.oid in ('public.get_project(uuid)'::regprocedure, 'public.get_project(uuid, text, date, date)'::regprocedure)),
+  (select jsonb_agg('search_path=""' = any(p.proconfig) order by p.pronargs) from pg_proc p where p.oid in ('public.get_project(uuid)'::regprocedure, 'public.get_project(uuid, text, date, date, boolean)'::regprocedure)),
   '[true, true]'::jsonb,
   'both get_project forms pin an empty search_path'
 );
 select is(
-  (select provolatile::text from pg_proc where oid = 'public.get_project(uuid, text, date, date)'::regprocedure),
+  (select provolatile::text from pg_proc where oid = 'public.get_project(uuid, text, date, date, boolean)'::regprocedure),
   's',
-  'get_project(uuid, text, date, date) is stable'
+  'get_project(uuid, text, date, date, boolean) is stable'
 );
 select ok(
   not has_function_privilege('anon', 'private.project_category_entries_by_currency(uuid)', 'execute'),

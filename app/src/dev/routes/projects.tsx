@@ -31,7 +31,7 @@ const e2eProject: typeof devProject = {
   pending_agorot: 40_000n,
   // The profit since the start (the board's second profit row).
   by_currency: (devProject.by_currency ?? []).map((row) => ({ ...row, profit_minor: -6_130_000n })),
-  transactions: devProject.transactions.map((line) => (line.id === "t1" ? { ...line, description: "מלט" } : line)),
+  transactions: (devProject.transactions ?? []).map((line) => (line.id === "t1" ? { ...line, description: "מלט" } : line)),
 };
 
 /** `?deletable=1`: a project with no activity and no investment card (the board's deletable frame), invented name. */
