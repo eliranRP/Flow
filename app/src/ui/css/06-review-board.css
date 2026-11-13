@@ -53,7 +53,7 @@
 
   .ui-review-queue .ui-review,
   .ui-review-queue .ui-review-ai {
-    gap: calc(var(--space-4) + var(--space-1) / 2);
+    gap: calc(var(--space-4) + var(--space-half));
   }
 
   .ui-review-queue .ui-review-doc {
@@ -61,7 +61,7 @@
   }
 
   .ui-review-queue .ui-review-source {
-    padding: calc(var(--space-1) * 0.75) calc(var(--space-2) + var(--space-1) / 2);
+    padding: calc(var(--space-1) * 0.75) calc(var(--space-2) + var(--space-half));
     border-radius: var(--radius-seg-btn);
     font-size: calc(var(--type-caption-size) - 1px);
     font-weight: var(--type-btn-2-weight);
@@ -83,7 +83,7 @@
     --review-tile-w: 60px;
     --review-tile-h: 76px;
     gap: calc(var(--space-1) + 1px);
-    padding: calc(var(--space-2) + var(--space-1) / 2) var(--space-2);
+    padding: calc(var(--space-2) + var(--space-half)) var(--space-2);
     border: 1px solid var(--color-tint-strong);
   }
 
@@ -116,9 +116,9 @@
   }
 
   .ui-review-queue .ui-review-field {
-    gap: calc(var(--space-2) + var(--space-1) / 2);
-    min-block-size: 64px;
-    padding: calc(var(--space-2) + var(--space-1) / 2) var(--space-inset-row);
+    gap: calc(var(--space-2) + var(--space-half));
+    min-block-size: var(--row-height);
+    padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row);
   }
 
   .ui-review-queue .ui-review-field-main {
@@ -144,7 +144,7 @@
 
   .ui-review-queue .ui-review-split-link {
     align-self: flex-start;
-    padding-inline: calc(var(--space-1) / 2);
+    padding-inline: var(--space-half);
   }
 
   .ui-review-queue .ui-review-split-link svg {
