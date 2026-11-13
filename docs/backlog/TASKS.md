@@ -782,6 +782,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1172"></a>[FLOW-1172](tasks/FLOW-1172.md) | Loans: move the app's direct table writes onto RPCs | SMALL CYCLE |
 | <a id="flow-1181"></a>[FLOW-1181](tasks/FLOW-1181.md) | Five-token sweep, MEDIUM refactor: controls, fields and base screens use their tokens (no visual change) | SMALL UI |
 | <a id="flow-1182"></a>[FLOW-1182](tasks/FLOW-1182.md) | Five-token sweep: review, transaction and search use their tokens (no visual change) | SMALL UI |
+| <a id="flow-1183"></a>[FLOW-1183](tasks/FLOW-1183.md) | Five-token foundation: two shadows, a label size, the 4-pt rule, the skill in the repo | SMALL UI |
 
 ## Data hygiene (public repo)
 
