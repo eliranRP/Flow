@@ -539,3 +539,22 @@ Deno.test("list_prepaid_schedules and get_prepaid_schedule read for any scope wi
     "refused",
   );
 });
+
+Deno.test("list and get give why an ended schedule ended, and the specs say so (FLOW-1166)", async () => {
+  const ended = { schedule_id: SCHEDULE, status: "ended", ended_on: "2026-12-01", end_mode: "keep", ended_by: "payment_removed" };
+  const { rpc } = rpcOf((name) => ({
+    status: 200,
+    json: name === "mcp_list_prepaid_schedules"
+      ? { ok: true, data: { books_closed_through: null, schedules: [ended] } }
+      : { ok: true, data: { ...ended, rows: [], refunds: [] } },
+  }));
+  const listed = await callTool("list_prepaid_schedules", { status: "ended" }, ["read"], rpc);
+  assertEquals(listed.structuredContent, { ok: true, data: { books_closed_through: null, schedules: [ended] } });
+  const got = await callTool("get_prepaid_schedule", { id: SCHEDULE }, ["read"], rpc);
+  assertEquals(got.structuredContent, { ok: true, data: { ...ended, rows: [], refunds: [] } });
+  const specs = new Map(toolsFor(["read", "write"]).map((tool) => [tool.name, tool.description]));
+  for (const word of ["ended_by", "person", "payment_removed"]) {
+    assertEquals(specs.get("list_prepaid_schedules")?.includes(word), true, word);
+  }
+  assertEquals(specs.get("end_prepaid_schedule")?.includes("ended_by person"), true);
+});

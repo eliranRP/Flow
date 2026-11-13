@@ -46,7 +46,7 @@ export function sampleMonthLines(month: string): ProjectCashMonthLines {
   };
 }
 
-type ProjectLine = NonNullable<ProjectDetail>["transactions"][number];
+type ProjectLine = NonNullable<NonNullable<ProjectDetail>["transactions"]>[number];
 
 /**
  * What a project line adds to its month head: a kept-out line adds nothing (0099), a split line adds

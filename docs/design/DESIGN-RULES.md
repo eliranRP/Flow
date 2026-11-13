@@ -133,7 +133,7 @@ Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. The
 |---|---|
 | Side margin | 20px (`--space-side`) |
 | Between sections | 16 to 24px (`--space-4` to `--space-6`) |
-| List row height | about 64px (`--row-height`); no dividers, no chevrons on flat lists. An inset list (rows in a card) keeps 14px inside and a `--color-line` hairline between rows (FLOW-363 2d) |
+| List row height | about 64px (`--row-height`); no dividers, no chevrons on flat lists. An inset list (rows in a card) keeps 16px inside and a `--color-line` hairline between rows (FLOW-363 2d) |
 | Avatar (initial circle) | 36px (`--avatar`) |
 | Card padding | 16px (`--space-card-inset`) |
 | Touch target | at least 44px |
@@ -142,7 +142,7 @@ Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. The
 | Status dot | 6px (`--dot`) |
 | Empty-state icon | 64px (`--empty-icon`) |
 
-Every spacing value (padding, margin, gap, a fixed gap's size) is on the 4-pt grid (4, 8, 12, 16, 20, 24, 32, 40) and comes from a space token (`--space-1` to `--space-10` and the named ones built on them), with no `calc()` arithmetic on spacing. The in-between 2, 6, 10, 14 and 18px steps are retired: a screen that has one snaps to the nearest grid step as it is next changed, and `--space-half`, `--space-inset-row` and the like go when nothing uses them (the owner, 2026-11-13, [0267](../decisions/0267-five-token-foundation.md); replaces the v3 boards' in-between spacing values of [0257](../decisions/0257-v3-boards-win.md)). A hairline, a border and a focus ring are strokes, not spacing. Guide §4.
+The rule for new and changed CSS: every spacing value (padding, margin, gap, a fixed gap's size) is on the 4-pt grid (4, 8, 12, 16, 20, 24, 32, 40) and comes from a space token (`--space-1` to `--space-10` and the named ones built on them), with no `calc()` arithmetic on spacing. The in-between 2, 6, 10, 14 and 18px steps are retired: existing CSS still has them (`--space-half`, `--space-inset-row`, `--status-gap`, `--pill-pad-inline`, `--field-btn-pad`, and `calc()` in about 60 files), and a line that has one snaps to the nearest grid step as its file is next changed (the area PRs of the five-token plan), and `--space-half`, `--space-inset-row` and the like go when nothing uses them (the owner, 2026-11-13, [0267](../decisions/0267-five-token-foundation.md); replaces the v3 boards' in-between spacing values of [0257](../decisions/0257-v3-boards-win.md)). A hairline, a border and a focus ring are strokes, not spacing. Guide §4.
 
 ### 2.5 Radii
 
@@ -166,7 +166,7 @@ Two shadows, and no others (the owner, 2026-11-13, [0267](../decisions/0267-five
 | `--shadow-sm` | Cards and surfaces. Subtle: `0 1px 3px` and `0 1px 2px` black at 8% and 4% in light, 50% and 35% in dark. |
 | `--shadow-lg` | Floating layers: toasts, the sync pill, menus, sheets, popovers. `0 8px 24px`; it is the old toast shadow. |
 
-`--shadow-pill` and `--shadow-toast` are aliases of `--shadow-lg`. The band has no shadow. The faint 1px shadow on the selected segment and on the switch knob stays as it is. A third level, a coloured glow or a heavier card shadow is not allowed. Cards take `--shadow-sm` screen area by screen area as each is next changed. Decision [0040](../decisions/0040-tailwind-v4.md) says shadows are mapped into `@theme` when they exist; map these two when the `@theme` mapping is next touched.
+`--shadow-pill` and `--shadow-toast` are aliases of `--shadow-lg`. The band has no shadow. A third level, a coloured glow or a heavier card shadow is not allowed. Cards take `--shadow-sm` screen area by screen area as each is next changed. Decision [0040](../decisions/0040-tailwind-v4.md) says shadows are mapped into `@theme` when they exist; map these two when the `@theme` mapping is next touched.
 
 ### 2.7 Motion
 
@@ -212,8 +212,8 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 |---|---|---|---|---|
 | 1 | **Button** (`button.tsx`): `primary` 52px pill, 17/500, accent fill; `secondary` 52px outline (1.5px `--color-tint-strong`), 16/500; `link` 44px text, 15/400, `--color-accent-text`, optional left-pointing chevron; `danger-link` in signal colour | DesignGuide (type table) | default, pressed, disabled, busy (spinner and the verb, same width, `aria-busy`; other actions on the screen disabled), focus | Press 120ms: opacity .72, scale .985 on primary and secondary |
 | 2 | **IconButton** (`icon-button.tsx`) | DesignGuide | default, pressed, disabled, on-band | Press 120ms, opacity only |
-| 3 | **ListRow** (`list-row.tsx`): `flat` (on the background, 20px sides, about 64px, 36px initial circle, name 17/400, line 15/400, amount at the end, no dividers) and `inset` (inside a Card, 14px padding, `--color-line` dividers). `control`: none, chevron (inset only), radio, check, switch, value | Lines, Recurring | default, pressed, selected, disabled (with a reason line), busy (spinner at the end), pending (soft text), skeleton (FLOW-371) | Press 120ms; leaving 220ms fade and collapse |
-| 4 | **Card** (`card.tsx`): radius 20 (`--radius-card`), 14 to 18px padding, `--color-surface`; `tone="tint"` for the problem box and דורש טיפול. A list stays flat; a card is for one focused item or a summary | Settings, Lines | default, pressed (when the whole card is a link), tint | Press 120ms |
+| 3 | **ListRow** (`list-row.tsx`): `flat` (on the background, 20px sides, about 64px, 36px initial circle, name 17/400, line 15/400, amount at the end, no dividers) and `inset` (inside a Card, 16px padding, `--color-line` dividers). `control`: none, chevron (inset only), radio, check, switch, value | Lines, Recurring | default, pressed, selected, disabled (with a reason line), busy (spinner at the end), pending (soft text), skeleton (FLOW-371) | Press 120ms; leaving 220ms fade and collapse |
+| 4 | **Card** (`card.tsx`): radius 20 (`--radius-card`), 16px padding (`--space-card-inset`), `--color-surface`; `tone="tint"` for the problem box and דורש טיפול. A list stays flat; a card is for one focused item or a summary | Settings, Lines | default, pressed (when the whole card is a link), tint | Press 120ms |
 | 5 | **Amount** (`amount.tsx`, from `big-number.tsx`): the role sets the size: band 52/500, detail 40/400, total 34/400, card 28/400, list 17/400 with cents at 11px, raised 5px | DesignGuide (type table) | expense (U+2212 on the start side), income (green with "+"), loss (signal colour), muted ($0) | None; figures never count up |
 | 6 | **Band** (`top-band.tsx`) and **ScreenHeader** (`screen-header.tsx`), sharing **CompactBar** (`compact-bar.tsx`, extends the [0156](../decisions/0156-labelled-back-and-compact-bar.md) bar) | States, Home | Band: current or past month (#7B3FE4 to #5A2DB0). Header: with Back, with actions, scrolled (compact bar with Back, "title · figure" and actions). The compact bar is 44px on a list page and 56px on a detail page. Back is labelled with the kicker when there is one (0156) | Band figures fade with scroll (60 to 220px, no timer). Compact bar slides in 240ms ease-enter, out 240ms ease-exit. Band colour 240ms |
 | 7 | ~~**OrganizeChips** (`organize-chips.tsx`)~~ removed by FLOW-368: its only user, the search row, now shows removable filter chips (`ui-search-active`) under the field | — | — | — |

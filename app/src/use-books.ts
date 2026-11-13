@@ -248,6 +248,8 @@ export function projectQueryOptions(preview: HomePreview, projectId: string, per
         p_id: projectId,
         // get_project's period overload needs p_basis present; null is the company's basis (0170).
         p_basis: COMPANY_BASIS as unknown as string,
+        // FLOW-1171: no screen reads the 40 newest lines, the roll-ups or the waiting sums (flow-mcp does).
+        p_lines: false,
         ...(range ?? {}),
       });
       if (error) throw error;

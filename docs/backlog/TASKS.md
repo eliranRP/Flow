@@ -779,10 +779,13 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1176"></a>[FLOW-1176](tasks/FLOW-1176.md) | A closed month's refusal stays long enough to read | SMALL UI |
 | <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | PLAN FIRST |
 | <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
+| <a id="flow-1172"></a>[FLOW-1172](tasks/FLOW-1172.md) | Loans: move the app's direct table writes onto RPCs | SMALL CYCLE |
 | <a id="flow-1181"></a>[FLOW-1181](tasks/FLOW-1181.md) | Five-token sweep, MEDIUM refactor: controls, fields and base screens use their tokens (no visual change) | SMALL UI |
 | <a id="flow-1182"></a>[FLOW-1182](tasks/FLOW-1182.md) | Five-token sweep: review, transaction and search use their tokens (no visual change) | SMALL UI |
 | <a id="flow-1183"></a>[FLOW-1183](tasks/FLOW-1183.md) | Five-token foundation: two shadows, a label size, the 4-pt rule, the skill in the repo | SMALL UI |
+| <a id="flow-1184"></a>[FLOW-1184](tasks/FLOW-1184.md) | Five-token look, area 1: Home, lists, controls, fields, banners, tab bar, sheets and setup | SMALL UI |
 | <a id="flow-1185"></a>[FLOW-1185](tasks/FLOW-1185.md) | Five-token look, review, transactions, search and journal: 4-pt spacing, card shadow, concentric corners, 12px label | SMALL UI |
+| <a id="flow-1186"></a>[FLOW-1186](tasks/FLOW-1186.md) | Five-token look: projects, loans, investment, forecast, profit and reports | SMALL UI |
 
 ## Data hygiene (public repo)
 
