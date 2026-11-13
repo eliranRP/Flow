@@ -51,12 +51,24 @@ describe("Home's Jev count and Review's list share one read", () => {
     expect(rpc.calls).toEqual([]);
   });
 
-  it("gives Review the same cached list", () => {
+  // A guard, not a change: Review's own read keeps answering from its key (it passes on main too).
+  it("Review's own query still reads the shared key", () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
     const list = [{}, {}];
     client.setQueryData(["jev-bookings", "off"], list);
     const { result } = renderHook(() => useJevBookingsQuery(), { wrapper: wrapperFor(client) });
     expect(result.current.data).toBe(list);
     expect(rpc.calls).toEqual([]);
+  });
+
+  it("hides Home's count when the list cannot be read, as Review's list fails on it", async () => {
+    // A row the app cannot read (no write id, kind or amount) fails the list's parse.
+    rpc.answer = [{}];
+    const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
+    const { result } = renderHook(() => useJevBookingCountQuery(), { wrapper: wrapperFor(client) });
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(result.current.data).toBeUndefined();
   });
 });
