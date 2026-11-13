@@ -52,6 +52,12 @@ const WeeklySummaryCardSlot = /* @__PURE__ */ lazy(() => import("./weekly-summar
 // FLOW-1056: Home on next month: its forecast's reads load in their own chunk too.
 const HomeFutureReads = /* @__PURE__ */ lazy(() => import("./home-future-month").then((m) => ({ default: m.HomeFutureReads })));
 
+/**
+ * FLOW-1189 (owner, 2026-11-13): Home lists 20 lines a side. The rest are on the month's lines screen: the band's
+ * money in / money out rows open it, and a past month's list ends with its row when a side has more.
+ */
+const HOME_LINES_PAGE = 20;
+
 /** Next month while its chunk and its reads are on their way. */
 const FUTURE_LOADING: HomeFuture = { phase: "loading", offline: false, onRetry: () => undefined, figures: null, groups: [] };
 
@@ -227,8 +233,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const schedule = useRecurringScheduleQuery(isCurrent && !previewing);
   // FLOW-1056 (owner): a past month shows its own lines the same way (no schedule: that is the current month's).
   const linesKey = isFuture ? currentKey : monthKey;
-  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint);
-  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint);
+  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
+  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
 
   function retry() {
     if (previewing) {
