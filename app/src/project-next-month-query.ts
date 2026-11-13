@@ -72,17 +72,12 @@ export async function readForecastLoans(projectId: string | null): Promise<Forec
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   await waitForAccessToken(supabase);
-  // The loans and their balances at once: no balance needs a loan's id to be asked for. The balances are the
-  // caller's visible ones (loan_balances is security invoker, so RLS scopes it as it scopes the loans), and each
-  // is joined below to the loan it belongs to.
   const query = supabase.from("loans").select(LOAN_DETAIL_COLUMNS);
-  const [loans, balances] = await Promise.all([
-    projectId == null ? query : query.eq("project_id", projectId),
-    supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts"),
-  ]);
-  if (loans.error) throw loans.error;
-  const rows = loans.data as unknown as LoanDetailDbRow[];
+  const { data, error } = await (projectId == null ? query : query.eq("project_id", projectId));
+  if (error) throw error;
+  const rows = data as unknown as LoanDetailDbRow[];
   if (rows.length === 0) return [];
+  const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts").in("loan_id", rows.map((row) => row.id));
   if (balances.error) throw balances.error;
   const byLoan = new Map(balances.data.map((row) => [row.loan_id, row]));
   return rows.map((row) => {
