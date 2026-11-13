@@ -230,11 +230,11 @@ select is(
   0, 'a disabled company gets no calls'
 );
 reset role;
-update public.company_integrations set enabled = true, mode = 'off'
-where company_id = (select id from jas_ref where label = 'company_b');
-select is(
-  public.jev_reserve_calls((select id from jas_ref where label = 'company_b'), gen_random_uuid(), 3),
-  0, 'mode off gets no calls'
+-- FLOW-1166 part 5: enabled with mode off is no longer stored (company_integrations_on_chk).
+select throws_ok(
+  $$update public.company_integrations set enabled = true, mode = 'off'
+    where company_id = (select id from jas_ref where label = 'company_b')$$,
+  '23514', null, 'enabled with mode off is refused'
 );
 
 -- Lease.
