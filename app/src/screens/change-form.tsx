@@ -11,6 +11,7 @@ import { screenPhase } from "../query-phase";
 import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
 import { reviewCacheUpdates, reviewListKey, useReviewDeepLink, useReviewQuery } from "../use-review";
 import { reviewFocusPath } from "../review-paths";
+import { reassignUndoFailure } from "../review-copy";
 import { assertNoError, useWrite } from "../use-write";
 import { approveFailure, approveShown } from "../approve-review";
 import { LEDGER_KEYS } from "../ledger-keys";
@@ -399,7 +400,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const undoShared = useWrite<{ id: string; back?: { projectId: string; categoryId: string } }>({
     scope,
     place: "top",
-    failure: "לא הצלחנו לבטל את השיוך.",
+    failure: reassignUndoFailure,
     success: "השיוך הקודם חזר",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
     onSuccess: (payload) => {
