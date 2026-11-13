@@ -400,9 +400,7 @@ async function monthsLoadingShimmer(canvasElement: HTMLElement) {
   });
   await expect(shimmer).toHaveAttribute("aria-hidden", "true");
   await expect(shimmer).toHaveClass("ui-skeleton-bar-band");
-  // FLOW-1180: the shimmer draws the band's 12% track, so its brightest moment is the loaded pill (the name keeps 4.5:1).
-  const track = getComputedStyle(canvasElement).getPropertyValue("--band-pill-track").trim();
-  await expect(getComputedStyle(shimmer).backgroundColor).toBe(track);
+  await expect(getComputedStyle(shimmer).backgroundColor).toBe(getComputedStyle(canvasElement).getPropertyValue("--band-pill-track").trim()); // FLOW-1180: the 12% track
   const pill = shimmer.parentElement?.getBoundingClientRect();
   await expect(shimmer.getBoundingClientRect().toJSON()).toEqual(pill?.toJSON());
   // Nothing moves when the shimmer goes: the page as it is once the months are in.
