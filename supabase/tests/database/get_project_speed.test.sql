@@ -1,4 +1,4 @@
--- FLOW-1171 (decision 0230): the project page read, faster, the same figures (20261113144924).
+-- FLOW-1171 (decision 0230): the project page read, faster, the same figures (20261113163849).
 -- (1) private.project_investment reads the owner's cash switch from the joined line instead of
 -- calling private.line_in_cash per row, and the direct branch reads only the project's lines: its
 -- rehab figures equal the previous query, kept below as pg_temp references, on a shared line, a
