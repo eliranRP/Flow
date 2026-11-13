@@ -3,6 +3,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { SAMPLE_EDIT_SELECTION, SAMPLE_NEW_ACCOUNT, SAMPLE_PICK, SAMPLE_SECOND, sampleConnection } from "../dev/mercury-sample";
+import { HELP_EMAIL } from "../config";
 import { MercuryConnectionRoute, type MercurySample } from "./mercury-connection-screen";
 
 /** FLOW-938: the Mercury page, its accounts step and several connections. Invented names, digits and balances. */
@@ -78,7 +79,7 @@ export const PageCap: Story = {
   render: () => page({ connections: [sampleConnection({ lastError: "sync_page_cap" })], lastSync: "לפני 5 דקות", imported: "1,284 תנועות" }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("link", { name: "פנייה לתמיכה" })).toHaveAttribute("href", "mailto:flowusappsupport@gmail.com");
+    await expect(canvas.getByRole("link", { name: "פנייה לתמיכה" })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
   },
 };
 

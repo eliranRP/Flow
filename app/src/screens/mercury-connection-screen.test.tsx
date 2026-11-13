@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { HELP_EMAIL } from "../config";
 import { israelSyncPhrase } from "../sumit-copy";
 import { ViewerPreview } from "../use-is-viewer";
 import { backend, invokeEdge, mercuryStatus, resetBackend, serve } from "./connection-page-test-backend";
@@ -131,7 +132,7 @@ describe("Mercury page: states (FLOW-918, FLOW-938)", () => {
     const box = (await screen.findByText("הרענון מ־Mercury נתקע. נסו שוב מאוחר יותר, ואם זה חוזר פנו לתמיכה.")).closest(".ui-connection-problem");
     expect(box).toHaveClass("ui-connection-problem-warning");
     expect(box).toHaveAttribute("role", "status");
-    expect(within(box as HTMLElement).getByRole("link", { name: "פנייה לתמיכה" })).toHaveAttribute("href", "mailto:flowusappsupport@gmail.com");
+    expect(within(box as HTMLElement).getByRole("link", { name: "פנייה לתמיכה" })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
     expect(screen.getByRole("button", { name: "רענון עכשיו" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חיבור מחדש" })).not.toBeInTheDocument();
   });
