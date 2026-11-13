@@ -115,8 +115,9 @@ select ok(not exists (select 1 from jsonb_array_elements(pg_temp.inputs()->'proj
   'no finished project and no overhead project among them');
 select is(
   (select x->'categories' from jsonb_array_elements(pg_temp.inputs()->'projects') x where (x->>'project_id')::uuid = pg_temp.id('house')),
-  public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories',
-  'a project''s months are the ones its own page reads');
+  (select jsonb_agg(jsonb_build_object('id', e->'id', 'name', e->'name', 'currency', e->'currency', 'months_minor', e->'months_minor') order by o)
+   from jsonb_array_elements(public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories') with ordinality t(e, o)),
+  'a project''s months are the ones its own page reads (FLOW-1171: id, name, currency and months_minor of them)');
 select is(
   (select x->'categories'->0->'months_minor' from jsonb_array_elements(pg_temp.inputs()->'projects') x where (x->>'project_id')::uuid = pg_temp.id('house')),
   '[0, 0, 0, 0, 12000, 15000]'::jsonb,
