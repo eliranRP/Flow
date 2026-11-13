@@ -38,14 +38,14 @@ export function jevBookingsKey(preview: string) {
   return ["jev-bookings", preview] as const;
 }
 
-/** Jev's bookings to review. A viewer reads them too. No read in preview or sample. */
-export function useJevBookingsQuery(enabled = true) {
-  const preview = useHomePreview();
-  return useQuery({
+/**
+ * The queue's read, shared by Review's list and Home's count (one key, one answer). Home's count passes its own
+ * retry: לאישור waits for the list before its first draw, so a failure there ends the wait at once.
+ */
+export function jevBookingsQueryOptions(preview: string, retry: false | number = false) {
+  return {
     queryKey: jevBookingsKey(preview),
-    enabled: enabled && preview === "off",
-    // לאישור waits for this read before its first draw, so a failure ends the wait at once.
-    retry: false,
+    retry,
     queryFn: async (): Promise<JevBooking[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -54,7 +54,13 @@ export function useJevBookingsQuery(enabled = true) {
       if (error) throw error;
       return parseJevBookings(data);
     },
-  });
+  };
+}
+
+/** Jev's bookings to review. A viewer reads them too. No read in preview or sample. */
+export function useJevBookingsQuery(enabled = true) {
+  const preview = useHomePreview();
+  return useQuery({ ...jevBookingsQueryOptions(preview), enabled: enabled && preview === "off" });
 }
 
 export const JEV_BOOKING_APPROVED = "הפקודה של Jev אושרה";
