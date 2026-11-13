@@ -473,7 +473,7 @@ Either way the server checks that the legs it derived equal the request, per acc
 
 ## Prepaid schedules and the books-closed date · FLOW-155, FLOW-156
 
-A payment made up front (a year of insurance) is spread over months. Rules for all eight tools:
+A payment made up front (a year of insurance) is spread over months. Rules for the eight prepaid and closed-date tools (`leave_held_change` has its own section below):
 
 - A posted month is a normal journal entry: a debit to the expense category on the project, a credit to the Prepaid expenses asset account (reference `prepaid:<schedule>:<seq>`). It moves no cash, so no cash view and no bank total changes. Planned months are not on the books and are in no report.
 - A daily job posts every planned month that is due; a re-run posts nothing. Create, refund, update and end also post what is already due at once, so a start month in the past backfills with the original dates.

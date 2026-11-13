@@ -290,7 +290,7 @@ export function reviewHeldView(row: ReviewHeldRow): ReviewHeldView {
   const sumit = provider === "sumit";
   const details: CopyPart[][] = [];
   if (held?.kind === "void" || held?.kind === "remove") {
-    details.push([sumit && held.kind === "remove" ? "המסמך נמחק ב־SUMIT." : "הבנק ביטל את השורה."]);
+    details.push([sumit ? "המסמך נמחק ב־SUMIT." : "הבנק ביטל את השורה."]);
   } else if (held?.kind === "update") {
     const currency = held.currency ?? row.currency ?? "ILS";
     const amount = held.amount_minor;

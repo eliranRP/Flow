@@ -84,6 +84,7 @@ describe("reviewHeldView (FLOW-1166)", () => {
     expect(details({ ...bankLine, held: { kind: "void", provider: "mercury" } })).toEqual(["הבנק ביטל את השורה."]);
     expect(details({ ...bankLine, held: { kind: "remove", provider: "mercury" } })).toEqual(["הבנק ביטל את השורה."]);
     expect(details({ ...sumitLine, held: { kind: "remove", provider: "sumit" } })).toEqual(["המסמך נמחק ב־SUMIT."]);
+    expect(details({ ...sumitLine, held: { kind: "void", provider: "sumit" } })).toEqual(["המסמך נמחק ב־SUMIT."]);
   });
 
   it("shows the reason and the hint with no details when held is missing or of an unknown kind", () => {
