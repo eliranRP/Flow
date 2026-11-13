@@ -121,7 +121,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     month,
     ytd: customRange(`${year}-01-01`, month.to ?? today),
     currency: companyCurrency,
-    categoriesOn: by !== "project",
+    // The year and since-the-start views ignore the order: only the month view draws the categories.
+    categoriesOn: period === "month" && by !== "project",
     overhead: monthByProject ? overhead : overhead ?? null,
   });
   const model: ProfitModel | null = sample ? buildProfitModel(sample, sample.overhead) : live.model;

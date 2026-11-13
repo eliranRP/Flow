@@ -305,7 +305,10 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
       queryFn: () => fetchAllLines(month, direction, "", currency, true),
     })),
   });
-  const failed = dashboard.isError || projectIncome.isError || projectExpense.isError || categoryIncome.isError || categoryExpense.isError;
+  // A category read that failed in another order stays in the cache with its error: only an order that reads
+  // the categories counts it.
+  const failed = dashboard.isError || projectIncome.isError || projectExpense.isError
+    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError));
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
   // A category read the order does not draw is not waited for (FLOW-1171).
   const categoriesReady = !categoriesOn || (categoryIncome.data !== undefined && categoryExpense.data !== undefined);

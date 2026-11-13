@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
@@ -144,13 +145,28 @@ describe("CompanyProfitScreen live, the category reads follow the order (FLOW-11
     expect(calls.keys.filter((key) => CATEGORY_KEYS.includes(key))).toEqual([]);
   });
 
-  it("switching to לפי קטגוריה reads both category breakdowns and draws its groups", async () => {
+  it("switching to לפי קטגוריה reads both category breakdowns and draws the page", async () => {
     answerBreakdowns();
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07" });
     await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
     expect(calls.keys.filter((key) => CATEGORY_KEYS.includes(key))).toEqual([]);
     fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
     await waitFor(() => { expect(CATEGORY_KEYS.every((key) => calls.keys.includes(key))).toBe(true); });
+    // The category order draws (this fixture's category groups are empty) once its reads are in, with no error.
+    await waitFor(() => { expect(document.querySelector(".ui-cp-figure")).not.toBeNull(); });
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
+  });
+
+  it("a category read that failed in the category order does not fail the default order later", async () => {
+    // Only the project breakdowns answer, so the category order's reads fail.
+    answerProjectBreakdowns();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const first = renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=category", client });
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    first.unmount();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07", client });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
   });
 });
 
