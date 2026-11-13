@@ -1962,6 +1962,9 @@ isOneToOne: false
 "jev_take_lease":
 { Args: { "p_holder": string,"p_seconds"?: number }; Returns: boolean
                            },
+"leave_held_change":
+{ Args: { "p_review_id": string }; Returns: undefined
+                           },
 "link_invoice_payment":
 { Args: { "p_invoice": string,"p_transaction": string }; Returns: Json
                            },
@@ -2173,6 +2176,9 @@ isOneToOne: false
                            },
 "mcp_journal_entry_history":
 { Args: { "p_journal_entry_id": string }; Returns: Json
+                           },
+"mcp_leave_held_change":
+{ Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_line_legs":
 { Args: { "p_transaction_id": string }; Returns: Json
@@ -2787,7 +2793,7 @@ isOneToOne: false
           }
           CompositeTypes: {
             "connector_upsert_result": {
-                        "inserted": number | null,"updated": number | null,"removed": number | null,"skipped": number | null
+                        "inserted": number | null,"updated": number | null,"removed": number | null,"skipped": number | null,"held": number | null
                       }
           }
         }
