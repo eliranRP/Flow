@@ -249,8 +249,11 @@ export type CompanyProfitRead = {
   ytd: PeriodChoice;
   /** The company currency, as the rest of the books show it. */
   currency: string;
-  /** Lines load only for the orders that list them (date, amount, category). */
-  linesOn: boolean;
+  /**
+   * The category breakdowns, and through them the counted lines, load only for the orders that list them (category,
+   * date, amount). The project order draws the summary and the project rows alone (FLOW-1171).
+   */
+  categoriesOn: boolean;
   /** The company's overhead project (useOverheadProject); undefined while it loads keeps the page loading. */
   overhead: OverheadProject | null | undefined;
 };
@@ -259,7 +262,7 @@ export type CompanyProfitRead = {
  * The page's reads, live. Preview mode reads nothing (the screen takes its sample). Query keys start
  * with "dashboard", "breakdown" or "breakdown-lines", so the basis sheet's write refreshes them.
  */
-export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, overhead }: CompanyProfitRead) {
+export function useCompanyProfitRead({ enabled, month, ytd, currency, categoriesOn, overhead }: CompanyProfitRead) {
   const preview = useHomePreview();
   const live = enabled && preview === "off";
   const monthRange = `${month.from ?? ""}..${month.to ?? ""}`;
@@ -277,8 +280,8 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
   });
   const projectIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "income"], enabled: live, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "project") });
   const projectExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "expense"], enabled: live, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "project") });
-  const categoryIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "income"], enabled: live, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "category") });
-  const categoryExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "expense"], enabled: live, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "category") });
+  const categoryIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "income"], enabled: live && categoriesOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "category") });
+  const categoryExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "expense"], enabled: live && categoriesOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "category") });
   const categoryGroups = [
     ...groupsIn(categoryIncome.data ?? null, currency).map((group) => ({ direction: "income" as const, group })),
     ...groupsIn(categoryExpense.data ?? null, currency).map((group) => ({ direction: "expense" as const, group })),
@@ -287,7 +290,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
   const lineQueries = useQueries({
     queries: categoryGroups.map(({ direction, group }) => ({
       queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, group.key, currency],
-      enabled: live && linesOn,
+      enabled: live && categoriesOn,
       queryFn: () => fetchAllLines(month, direction, group.key, currency),
     })),
   });
@@ -298,13 +301,18 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
   const keptOutQueries = useQueries({
     queries: keptOutDirections.map((direction) => ({
       queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, "kept-out", currency],
-      enabled: live && linesOn,
+      enabled: live && categoriesOn,
       queryFn: () => fetchAllLines(month, direction, "", currency, true),
     })),
   });
-  const failed = dashboard.isError || projectIncome.isError || projectExpense.isError || categoryIncome.isError || categoryExpense.isError;
+  // A category read that failed in another order stays in the cache with its error: only an order that reads
+  // the categories counts it.
+  const failed = dashboard.isError || projectIncome.isError || projectExpense.isError
+    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError));
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
-  const ready = dashboard.data != null && projectIncome.data !== undefined && projectExpense.data !== undefined && categoryIncome.data !== undefined && categoryExpense.data !== undefined;
+  // A category read the order does not draw is not waited for (FLOW-1171).
+  const categoriesReady = !categoriesOn || (categoryIncome.data !== undefined && categoryExpense.data !== undefined);
+  const ready = dashboard.data != null && projectIncome.data !== undefined && projectExpense.data !== undefined && categoriesReady;
   const inputs: ProfitInputs | null = ready
     ? {
         currency,
@@ -333,8 +341,11 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
       void ytdDashboard.refetch();
       void projectIncome.refetch();
       void projectExpense.refetch();
-      void categoryIncome.refetch();
-      void categoryExpense.refetch();
+      // refetch ignores `enabled`: a read the order does not draw stays unread.
+      if (categoriesOn) {
+        void categoryIncome.refetch();
+        void categoryExpense.refetch();
+      }
     },
   };
 }

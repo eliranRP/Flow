@@ -1,12 +1,14 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
 // The page's live path for a past month (owner 21/10): the reads answer from a mocked client. Invented data only.
-// `held` (FLOW-1080) holds get_dashboard's answer until the test lets it go.
-type Calls = { names: string[]; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null };
-const calls = vi.hoisted((): Calls => ({ names: [], answer: {}, company: { data: null, error: null }, held: null }));
+// `held` (FLOW-1080) holds get_dashboard's answer until the test lets it go. `keys` is each read's answer key, in the
+// order the reads went out (FLOW-1171: a get_breakdown reads as its grouping and direction).
+type Calls = { names: string[]; keys: string[]; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null };
+const calls = vi.hoisted((): Calls => ({ names: [], keys: [], answer: {}, company: { data: null, error: null }, held: null }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
@@ -14,6 +16,7 @@ vi.mock("../lib/supabase", () => ({
     rpc: (name: string, args?: Record<string, unknown>) => {
       calls.names.push(name);
       const key = name === "get_breakdown" ? `${name}:${String(args?.p_group_by)}:${String(args?.p_direction)}` : name;
+      calls.keys.push(key);
       const held = name === "get_dashboard" && calls.held != null ? calls.held : Promise.resolve();
       return held.then(() => (key in calls.answer ? { data: calls.answer[key], error: null } : { data: null, error: new Error(`unmocked ${key}`) }));
     },
@@ -50,6 +53,7 @@ const dashboard = {
 
 beforeEach(() => {
   calls.names.length = 0;
+  calls.keys.length = 0;
   calls.held = null;
   calls.answer = {
     mcp_company_loan_currency: "USD",
@@ -58,7 +62,10 @@ beforeEach(() => {
   calls.company = { data: { overhead_project_id: OVERHEAD, overhead: { id: OVERHEAD, name: "כללי" } }, error: null };
 });
 
-function answerBreakdowns() {
+const CATEGORY_KEYS = ["get_breakdown:category:expense", "get_breakdown:category:income"];
+
+/** July's project breakdowns only: the summary and the project rows draw from these alone (FLOW-1171). */
+function answerProjectBreakdowns() {
   // July: the overhead-role costs under `overhead`, the overhead project's own income under its id.
   calls.answer["get_breakdown:project:expense"] = breakdown("expense", [
     { key: "overhead", name: null, amount: 60000, count: 8 },
@@ -68,6 +75,10 @@ function answerBreakdowns() {
     { key: PROJECT, name: "בית הדקל", amount: 120000, count: 1 },
     { key: OVERHEAD, name: "כללי", amount: 30000, count: 6 },
   ]);
+}
+
+function answerBreakdowns() {
+  answerProjectBreakdowns();
   calls.answer["get_breakdown:category:expense"] = { ...breakdown("expense", []), group_by: "category" };
   calls.answer["get_breakdown:category:income"] = { ...breakdown("income", []), group_by: "category" };
 }
@@ -120,6 +131,42 @@ describe("CompanyProfitScreen live, a past month (owner 21/10)", () => {
       return found;
     });
     expect(named[0]?.querySelector("a")?.getAttribute("href")).toBe(`/projects/${OVERHEAD}/profit?from=profit`);
+  });
+});
+
+describe("CompanyProfitScreen live, the category reads follow the order (FLOW-1171)", () => {
+  it("the default order by project draws its figures and rows with no category breakdown read", async () => {
+    // Only the project breakdowns answer: a category read that went out would fail the page.
+    answerProjectBreakdowns();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07" });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    expect(document.querySelector(".ui-cp-figure")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
+    expect(calls.keys.filter((key) => CATEGORY_KEYS.includes(key))).toEqual([]);
+  });
+
+  it("switching to לפי קטגוריה reads both category breakdowns and draws the page", async () => {
+    answerBreakdowns();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07" });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    expect(calls.keys.filter((key) => CATEGORY_KEYS.includes(key))).toEqual([]);
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    await waitFor(() => { expect(CATEGORY_KEYS.every((key) => calls.keys.includes(key))).toBe(true); });
+    // The category order draws (this fixture's category groups are empty) once its reads are in, with no error.
+    await waitFor(() => { expect(document.querySelector(".ui-cp-figure")).not.toBeNull(); });
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
+  });
+
+  it("a category read that failed in the category order does not fail the default order later", async () => {
+    // Only the project breakdowns answer, so the category order's reads fail.
+    answerProjectBreakdowns();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const first = renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=category", client });
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    first.unmount();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07", client });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
   });
 });
 
