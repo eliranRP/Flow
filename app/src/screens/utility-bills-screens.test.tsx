@@ -66,34 +66,38 @@ describe("ProjectUtilityBillsScreen", () => {
     expect(screen.getByRole("heading", { level: 1 }).closest("header")?.textContent).toContain("הכול הוחזר");
   });
 
-  it("lists a type's bills newest activity first: the date and supplier, its status line, its amount", async () => {
+  it("lists a type's bills newest activity first: the supplier, the date leading its status line, its amount", async () => {
     renderBills();
     const rows = await screen.findAllByRole("button", { name: /City Light/ });
-    expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringContaining("04/11/26 · City Light"),
+    // FLOW-1175: the supplier is the title; the date leads the hint, a HintParts line.
+    expect(rows.map((row) => row.querySelector(".ui-row-title")?.textContent)).toEqual(["City Light", "City Light", "City Light"]);
+    expect(rows.map((row) => row.querySelector(".ui-row-hint")?.textContent)).toEqual([
+      "04/11/26 · עוד לא הוחזר · 5 ימים",
       // "Latest update first": September's bill came back on 07/10, after October's bill of the 06th.
-      expect.stringContaining("04/09/26 · City Light"),
-      expect.stringContaining("06/10/26 · City Light"),
+      "04/09/26 · הוחזר ב־07/10/26 · 33 ימים אחרי",
+      "06/10/26 · לא הוחזר · 34 ימים",
     ]);
-    expect(rows[0]?.textContent).toContain("עוד לא הוחזר · 5 ימים");
-    expect(rows[1]?.textContent).toContain("הוחזר ב־07/10/26 · 33 ימים אחרי");
-    expect(rows[2]?.textContent).toContain("לא הוחזר · 34 ימים");
+    expect(rows[0]?.querySelector(".ui-row-hint .ui-hint-wrap")).toBeTruthy();
     expect(rows[2]?.textContent).toContain("$188.90");
   });
 
   it("opens the bill's drawer: its status, the type's pattern and history, and the way into the income", async () => {
     renderBills();
-    fireEvent.click(await screen.findByRole("button", { name: /06\/10\/26 · City Light/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /City Light.*06\/10\/26/ }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("לא הוחזר · 34 ימים", { selector: "p" })).toBeTruthy();
+    expect(dialog.querySelector(".ui-urf-sheet-status")?.textContent).toBe("לא הוחזר · 34 ימים");
+    // FLOW-1173: the drawer's line is whole parts.
+    expect(dialog.querySelector(".ui-urf-sheet-line .ui-hint-wrap")?.textContent).toBe("חשמל · 06/10/26 · דירת הגפן 3");
     expect(await within(dialog).findByText("בדרך כלל חשמל מוחזר כ־33 ימים אחרי החשבון. החשבון הזה כבר מעבר לזה.")).toBeTruthy();
-    expect(within(dialog).getByRole("heading", { name: "כל חשבונות החשמל בנכס" })).toBeTruthy();
+    // FLOW-1173: the history head names its category whole, and counts the bills.
+    expect(within(dialog).getByRole("heading", { name: "חשמל בנכס" })).toBeTruthy();
+    expect(within(dialog).getByText("3 חשבונות")).toBeTruthy();
     const history = [...dialog.querySelectorAll(".ui-urf-hist")];
     expect(history.map((row) => row.querySelector("a")?.getAttribute("href"))).toEqual(["/transactions/t-power-11", "/transactions/t-power-09", "/transactions/t-power-10"]);
     expect(history.map((row) => row.getAttribute("data-current"))).toEqual([null, null, "true"]);
     const income = within(dialog).getByRole("link", { name: /מה נכנס סביב החשבון הזה/ });
     expect(income.getAttribute("href")).toBe(`/projects/${GEFEN}/utilities/bills/t-power-10/income`);
-    expect(income.textContent).toContain("תנועות נכנס של דירת הגפן 3 · חודשיים לפני ואחרי 06/10/26");
+    expect(income.querySelector(".ui-hint-wrap")?.textContent).toBe("תנועות נכנס של דירת הגפן 3 · חודשיים לפני ואחרי 06/10/26");
     // Its answers stay: ראיתי, החברה משלמת תמיד, the payment picker, the transaction.
     expect(within(dialog).getByRole("button", { name: "ראיתי, אין צורך בטיפול" })).toBeTruthy();
     expect(within(dialog).getByRole("button", { name: /^החברה משלמת תמיד/ })).toBeTruthy();
@@ -103,9 +107,9 @@ describe("ProjectUtilityBillsScreen", () => {
 
   it("gives a refunded bill no answers, only its context and its transaction", async () => {
     renderBills();
-    fireEvent.click(await screen.findByRole("button", { name: /04\/11\/26 · City Water/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /City Water.*04\/11\/26/ }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("הוחזר באותו חודש · 06/11/26", { selector: "p" })).toBeTruthy();
+    expect(dialog.querySelector(".ui-urf-sheet-status")?.textContent).toBe("הוחזר באותו חודש · 06/11/26");
     expect(within(dialog).queryByRole("button", { name: "ראיתי, אין צורך בטיפול" })).toBeNull();
     expect(within(dialog).queryByRole("button", { name: "הוחזר · בחירת התשלום" })).toBeNull();
     expect(within(dialog).getByRole("link", { name: "פתיחת התנועה" })).toBeTruthy();
@@ -114,7 +118,7 @@ describe("ProjectUtilityBillsScreen", () => {
   it("gives a viewer rows that open the transaction, and no drawer", async () => {
     db.hold = true;
     renderBills();
-    const row = await screen.findByRole("link", { name: /06\/10\/26 · City Light/ });
+    const row = await screen.findByRole("link", { name: /City Light.*06\/10\/26/ });
     expect(row.getAttribute("href")).toBe("/transactions/t-power-10");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -168,21 +172,25 @@ describe("ProjectUtilityIncomeScreen", () => {
   it("pins the checked bill, then the payments newest first with the bill's marker between", async () => {
     renderIncome();
     const bill = (await screen.findByRole("region", { name: "החשבון שבודקים" })).textContent;
-    expect(bill).toContain("City Light · חשמל · 06/10/26");
+    // FLOW-1174: the supplier is the title, "category · date" one HintParts line.
+    expect(screen.getByRole("region", { name: "החשבון שבודקים" }).querySelector(".ui-uri-bill-title")?.textContent).toBe("City Light");
+    expect(bill).toContain("חשמל · 06/10/26");
     expect(bill).toContain("לא הוחזר · 34 ימים");
     expect(bill).toContain("−$188.90");
     expect(screen.getByRole("heading", { level: 1 }).closest("header")?.textContent).toContain("דירת הגפן 3 · חשמל");
     const list = screen.getByRole("list", { name: "תשלומים מהשוכר" });
-    expect([...list.children].map((item) => item.textContent)).toEqual([
-      expect.stringContaining("Rent Pay · 06/11/26"),
-      expect.stringContaining("Rent Pay · 07/10/26"),
+    expect([...list.children].map((item) => item.querySelector(".ui-uri-title")?.textContent ?? item.textContent)).toEqual([
+      "Rent Pay",
+      "Rent Pay",
       "החשבון · 06/10/26",
-      expect.stringContaining("Rent Pay · 10/09/26"),
-      expect.stringContaining("Zelle · 12/08/26"),
+      "Rent Pay",
+      "Zelle",
     ]);
     const october = list.children[1];
-    expect(october?.textContent).toContain("חשמל $180.20 · החזיר את 04/09/26");
-    expect(october?.textContent).toContain("שכירות $1,750 · מים $122.80 · ביוב $68.40");
+    // FLOW-1174: one HintParts meta line (the date, the bill's type part, what it paid back), the other parts a second.
+    expect(october?.querySelector(".ui-uri-meta")?.textContent).toBe("07/10/26 · חשמל $180.20 · החזיר את 04/09/26");
+    expect(october?.querySelector(".ui-uri-others")?.textContent).toBe("שכירות $1,750 · מים $122.80 · ביוב $68.40");
+    expect(october?.querySelectorAll(".ui-hint-wrap")).toHaveLength(2);
     expect(october?.textContent).toContain("+$2,121.40");
     expect(october?.querySelector("a")?.getAttribute("href")).toBe("/transactions/pay-rent-10");
     // No part of November's payment is the bill's type: the line says so, in the signal colour.
@@ -204,10 +212,16 @@ describe("ProjectUtilityIncomeScreen", () => {
     expect(screen.getByRole("radio", { name: "3 חודשים" }).getAttribute("aria-checked")).toBe("true");
   });
 
-  it("says no payment came in, and still marks the bill's day", async () => {
+  it("says no payment came in, still marks the bill's day, and offers the next step", async () => {
     renderIncome(storyUtilityClient(utilityTypesSample(), undefined, { ...utilityIncomeSample(), lines: [] }));
     expect(await screen.findByText("לא נכנס תשלום מהשוכר בטווח הזה")).toBeTruthy();
     expect(screen.getByText("החשבון · 06/10/26")).toBeTruthy();
+    // FLOW-1174: a shorter window offers 3 months; at 3 months, the bill's transaction.
+    expect(screen.queryByRole("link", { name: "פתיחת החשבון" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "לטווח של 3 חודשים" }));
+    expect(screen.getByRole("radio", { name: "3 חודשים" }).getAttribute("aria-checked")).toBe("true");
+    expect((await screen.findByRole("link", { name: "פתיחת החשבון" })).getAttribute("href")).toBe("/transactions/t-power-10");
+    expect(screen.queryByRole("button", { name: "לטווח של 3 חודשים" })).toBeNull();
   });
 
   it("offers a retry when the read failed, and shows no bill while it is out", async () => {

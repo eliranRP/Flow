@@ -36,7 +36,8 @@ export function BillContext({ bill }: { bill: UtilityBill }) {
         <>
           <p className="ui-urf-pattern">{typePattern(query.data.bills, bill)}</p>
           <section className="ui-urf-sheet-group" aria-labelledby="urf-history">
-            <GroupHead id="urf-history" title={`כל חשבונות ה${category} בנכס`} summary="עדכון אחרון ראשון" />
+            {/* FLOW-1173: the head names its category whole (up to 2 lines) and counts the bills; newest first is the list's order. */}
+            <GroupHead id="urf-history" title={`${category} בנכס`} summary={history.length === 1 ? "חשבון אחד" : `${String(history.length)} חשבונות`} />
             <List>
               {history.map((item) => (
                 <div key={item.bill_transaction_id} className="ui-urf-hist" data-current={item.bill_transaction_id === bill.bill_transaction_id || undefined}>
@@ -64,7 +65,7 @@ export function BillContext({ bill }: { bill: UtilityBill }) {
           variant="item"
           layout="flat"
           title="מה נכנס סביב החשבון הזה"
-          hint={`תנועות נכנס של ${bill.project_name} · חודשיים לפני ואחרי ${refundDate(bill.doc_date)}`}
+          hint={<HintParts parts={[`תנועות נכנס של ${bill.project_name}`, `חודשיים לפני ואחרי ${refundDate(bill.doc_date)}`]} />}
           wrapHint
           href={`/projects/${bill.project_id}/utilities/bills/${bill.bill_transaction_id}/income${search}`}
           chevron

@@ -6,8 +6,10 @@ import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { BackButton } from "../ui/back";
 import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
+import { Button } from "../ui/button";
 import { CompactBar } from "../ui/compact-bar";
 import { GroupHead } from "../ui/group-head";
+import { HintParts } from "../ui/hint-parts";
 import { ChevronIcon } from "../ui/icons";
 import { useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -26,7 +28,10 @@ const WINDOWS: { value: Window; label: string; range: string }[] = [
   { value: "3", label: "3 חודשים", range: "3 חודשים" },
 ];
 
-/** The checked bill, pinned: a dashed signal border, its label, who and when, its status and its amount. */
+/**
+ * The checked bill, pinned: a dashed signal border, its label, the supplier, "category · date" (HintParts), its status
+ * and its amount (FLOW-1174: the row rule).
+ */
 function CheckedBill({ income }: { income: UtilityIncome }) {
   const bill = income.bill;
   const open = bill.state === "not_refunded" || bill.state === "waiting";
@@ -35,8 +40,11 @@ function CheckedBill({ income }: { income: UtilityIncome }) {
       <p className="ui-uri-bill-label t-caption">החשבון שבודקים</p>
       <div className="ui-uri-bill-main">
         <span className="ui-uri-bill-text">
-          <span className="ui-uri-bill-title">{[bill.supplier_name ?? "ספק", bill.category_name, refundDate(bill.doc_date)].filter(Boolean).join(" · ")}</span>
-          <span className="ui-uri-bill-status" data-open={open || undefined}>{incomeBillStatus(income)}</span>
+          <span className="ui-uri-bill-title">{bill.supplier_name ?? "ספק"}</span>
+          <span className="ui-uri-bill-meta">
+            <HintParts parts={[bill.category_name, refundDate(bill.doc_date)].filter((part): part is string => part != null)} />
+          </span>
+          <span className="ui-uri-bill-status" data-open={open || undefined}><HintParts text={incomeBillStatus(income)} /></span>
         </span>
         <bdi dir="ltr" className="ui-uri-bill-amount">{formatAmountText(bill.amount_minor, bill.currency, { detail: true, direction: "expense" })}</bdi>
       </div>
@@ -44,15 +52,28 @@ function CheckedBill({ income }: { income: UtilityIncome }) {
   );
 }
 
-/** A payment: its payer and date, the part that is the bill's type (what it refunded), its other parts, and its amount. */
+/**
+ * A payment (FLOW-1174: the row rule): the payer as the title, its amount, and one HintParts line: the date, the part
+ * that is the bill's type and the bills it paid back. Its other parts, when it has any, are a second line.
+ */
 function PaymentRow({ row, search }: { row: Extract<IncomeRow, { kind: "payment" }>; search: string }) {
+  const date = refundDate(row.date);
+  const label = [row.title, date, row.hit, row.refunded, ...row.others, row.amount, "פתיחת התנועה"].filter((part): part is string => part != null).join(" · ");
   return (
     <li className="ui-uri-item">
-      <Link className="ui-uri-link" to={`/transactions/${row.transactionId}${search}`} aria-label={`${row.title} · ${row.hit} · ${row.amount} · פתיחת התנועה`}>
+      <Link className="ui-uri-link" to={`/transactions/${row.transactionId}${search}`} aria-label={label}>
         <span className="ui-uri-text">
           <span className="ui-uri-title">{row.title}</span>
-          <span className="ui-uri-hit" data-missing={row.hitMissing || undefined}>{row.hit}</span>
-          {row.others == null ? null : <span className="ui-uri-others">{row.others}</span>}
+          <span className="ui-uri-meta">
+            <HintParts
+              parts={[
+                date,
+                <span key="hit" className="ui-uri-hit" data-missing={row.hitMissing || undefined}>{row.hit}</span>,
+                ...(row.refunded == null ? [] : [<span key="refunded" className="ui-uri-hit">{row.refunded}</span>]),
+              ]}
+            />
+          </span>
+          {row.others.length === 0 ? null : <span className="ui-uri-others"><HintParts parts={row.others} /></span>}
         </span>
         <bdi dir="ltr" className="ui-uri-amount">{row.amount}</bdi>
         <span className="ui-uri-chevron" aria-hidden="true"><ChevronIcon size={16} /></span>
@@ -89,7 +110,11 @@ export function ProjectUtilityIncomeScreen() {
       <header className="ui-urf-head">
         <BackButton fallback={back} text="חשבונות מול השוכר" />
         <h1 className="t-title">נכנס סביב החשבון</h1>
-        {income == null ? null : <p className="ui-urf-sub t-meta">{[income.bill.project_name, income.bill.category_name].filter(Boolean).join(" · ")}</p>}
+        {income == null ? null : (
+          <p className="ui-urf-sub t-meta">
+            <HintParts parts={[income.bill.project_name, income.bill.category_name].filter((part): part is string => part != null && part !== "")} />
+          </p>
+        )}
         <span ref={setTitleMark} className="ui-compact-mark" aria-hidden="true" />
       </header>
       {phase.kind === "loading" ? (
@@ -111,7 +136,17 @@ export function ProjectUtilityIncomeScreen() {
           />
           <section className="ui-month ui-urf-group" aria-labelledby="uri-head">
             <GroupHead id="uri-head" title="תשלומים מהשוכר" summary={`${range} לפני ואחרי`} />
-            {none ? <p className="ui-uri-none">לא נכנס תשלום מהשוכר בטווח הזה</p> : null}
+            {none ? (
+              // FLOW-1174: nothing came in is never a dead end: a wider window while one is left, else the bill itself.
+              <div className="ui-uri-none">
+                <p className="ui-uri-none-text">לא נכנס תשלום מהשוכר בטווח הזה</p>
+                {span === "3" ? (
+                  <Button variant="secondary" to={`/transactions/${income.bill.bill_transaction_id}${search}`}>פתיחת החשבון</Button>
+                ) : (
+                  <Button variant="secondary" onClick={() => { setSpan("3"); }}>לטווח של 3 חודשים</Button>
+                )}
+              </div>
+            ) : null}
             <ul className="ui-uri-list" aria-label="תשלומים מהשוכר">
               {rows.map((row) => row.kind === "bill" ? (
                 <li key={row.key} className="ui-uri-marker">

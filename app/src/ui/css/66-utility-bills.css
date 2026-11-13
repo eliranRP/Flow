@@ -54,6 +54,11 @@
   background: none;
 }
 
+/* FLOW-1173: the history head names its category whole: a long one takes a second line. */
+.ui-urf-sheet-group .ui-group-title {
+  -webkit-line-clamp: 2;
+}
+
 /* The open bill among its type's bills sits on the tint. */
 .ui-urf-hist[data-current] {
   border-radius: var(--radius-card-inner);
@@ -97,6 +102,7 @@
   line-height: var(--type-body-line);
 }
 
+.ui-uri-bill-meta,
 .ui-uri-bill-status {
   color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
@@ -153,27 +159,38 @@
   overflow-wrap: anywhere;
 }
 
+/* FLOW-1174, the row rule: the payer (up to 2 lines), then one HintParts line (the date, the bill's type part and
+   what it paid back), and the other parts as a second one. */
 .ui-uri-title {
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--color-text);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.ui-uri-hit {
-  color: var(--color-accent-text);
-  font-size: var(--type-caption-size);
-  font-weight: var(--type-btn-weight);
-  line-height: var(--type-caption-line);
-}
-
-.ui-uri-hit[data-missing] {
-  color: var(--color-signal);
-}
-
+.ui-uri-meta,
 .ui-uri-others {
   color: var(--color-text-secondary);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
+}
+
+/* The other parts take two lines at most: a part that does not fit drops whole (as a row's hint parts do, FLOW-168);
+   the row's name and its transaction page have them all. */
+.ui-uri-others > .ui-hint-wrap {
+  max-block-size: calc(var(--type-caption-line) * 2em);
+}
+
+.ui-uri-hit {
+  color: var(--color-accent-text);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-uri-hit[data-missing] {
+  color: var(--color-signal);
 }
 
 .ui-uri-amount {
@@ -212,9 +229,17 @@
   flex: none;
 }
 
+/* FLOW-1174: nothing came in: the line, then the next step (a wider window, or the bill). */
 .ui-uri-none {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
   padding-block: var(--space-3);
+}
+
+.ui-uri-none-text {
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);

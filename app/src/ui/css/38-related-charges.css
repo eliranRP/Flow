@@ -247,7 +247,7 @@
 /* The board's recurring row is two lines: the value is the title, the hint wraps under it, and the pace
    sits at the end of the row, centred, before the chevron. */
 .ui-recurring-card .ui-icon-row {
-  min-block-size: 64px;
+  min-block-size: var(--row-height);
 }
 
 /* The board's earlier-charge rows have no chevron: the row is the link, and its label names it. */
@@ -287,10 +287,10 @@
 }
 
 .ui-charges-sheet .ui-charges-badge {
-  padding: calc(var(--space-1) / 2) calc(var(--space-1) * 1.5);
+  padding: var(--space-half) calc(var(--space-1) * 1.5);
   border-radius: var(--radius-block);
   background: var(--color-tint);
-  font-size: calc(var(--type-caption-size) - 2px);
+  font-size: var(--type-cents-size);
   font-weight: var(--type-btn-weight);
 }
 
@@ -325,7 +325,7 @@
 }
 
 .ui-pace-sheet .ui-row-text {
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-half);
 }
 
 .ui-pace-sheet .ui-row-title {

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { usePreviewSearch } from "../preview";
 import { EMPTY_FILTERS, searchRowTitle, uniqueSearchRows, useSearchQuery, type SearchFilters } from "../search";
 import { Button } from "../ui/button";
+import { HintParts } from "../ui/hint-parts";
 import { israelToday } from "../ui/date-math";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
@@ -120,14 +121,19 @@ export function UtilityBillSheet({ bill, onOpenChange, onSeen, onCompany, onPick
     >
       {current == null ? null : picking ? (
         <>
-          <p className="t-caption t-muted">{`${name} · ${formatAmountText(current.amount_minor, current.currency, { detail: true })} · ${refundDate(current.doc_date)}`}</p>
+          {/* FLOW-1173: whole parts, the amount in its own direction; no "·" at either end of a line. */}
+          <p className="t-caption t-muted">
+            <HintParts parts={[name, <bdi key="amount" dir="ltr">{formatAmountText(current.amount_minor, current.currency, { detail: true })}</bdi>, refundDate(current.doc_date)]} />
+          </p>
           <PaymentChoices bill={current} onPick={(paymentId) => { onPicked(current, paymentId); }} />
           <Button variant="link" onClick={() => { setPicking(false); }}>חזרה</Button>
         </>
       ) : (
         <>
-          <p className="ui-urf-sheet-line">{[current.category_name, refundDate(current.doc_date), current.project_name].filter(Boolean).join(" · ")}</p>
-          <p className="ui-urf-sheet-status" data-open={isOpenBill(current) || undefined}>{billStatusLine(current)}</p>
+          <p className="ui-urf-sheet-line">
+            <HintParts parts={[current.category_name, refundDate(current.doc_date), current.project_name].filter((part): part is string => part != null && part !== "")} />
+          </p>
+          <p className="ui-urf-sheet-status" data-open={isOpenBill(current) || undefined}><HintParts text={billStatusLine(current)} /></p>
           {current.no_rent ? <span className="ui-urf-no-rent">חודש בלי שכירות בנכס</span> : null}
           <BillContext bill={current} />
           <div className="ui-urf-sheet-actions">

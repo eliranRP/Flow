@@ -193,7 +193,7 @@
   --size-seg-track: 48px; /* --size-seg plus the track's 4px padding on each side */
   --glyph-band-step: 22px;        /* the band's month-pill chevrons and the avatar's glyph (V3-Home, FLOW-1051) */
   --glyph-row-chevron: 18px;      /* an attention card's and the forecast card's chevron and X (V3-Home, FLOW-1051) */
-  --band-pill-track: rgba(255, 255, 255, 0.16); /* the band's month pill, both themes (V3-Home, FLOW-1051) */
+  --band-pill-track: rgba(255, 255, 255, 0.12); /* the band's month pill, both themes (V3-Home, FLOW-1051); 12% keeps its white name at 4.5:1 (FLOW-1180) */
   --band-progress-track: rgba(255, 255, 255, 0.2); /* the principal's progress on the band (V3-Loans, V3-Loan, FLOW-1055) */
   --band-card: rgba(255, 255, 255, 0.14); /* the next payment's card on a loan's band (V3-Loan, FLOW-1055) */
   --size-seg-period: 190px;      /* the loan page's period switch beside שולם (V3-Loan, FLOW-1055) */

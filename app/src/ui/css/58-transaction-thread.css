@@ -185,8 +185,8 @@
 
 .ui-thread-round {
   flex: none;
-  inline-size: 44px;
-  block-size: 44px;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
   display: grid;
   place-items: center;
   border: 0;
@@ -200,7 +200,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-block-size: 44px;
+  min-block-size: var(--touch-min);
   /* In line with the card and the "הבא בתור" peek: the page's side gutter. */
   margin: var(--space-2) var(--space-side) 0;
   padding-inline: var(--space-3);
