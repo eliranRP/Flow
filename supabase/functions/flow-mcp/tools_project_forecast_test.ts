@@ -75,6 +75,15 @@ Deno.test("remove, restore and reset forward to their functions; a read token ca
   assertEquals(calls.length, 4);
 });
 
+Deno.test("remove takes a pace, once or month, and refuses any other before a call (FLOW-1184)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_forecast" } } }));
+  const remove = (key: string, pace: string) => callTool("remove_project_forecast_row", { idempotency_key: key, project_id: PROJECT, month: "2026-11", row_key: "add:00000000-0000-4000-8000-0000000000e1", pace }, ["write"], rpc);
+  assertEquals((await remove("pf-p1", "once")).isError, false);
+  assertEquals((await remove("pf-p2", "month")).isError, false);
+  assertEquals((await remove("pf-p3", "year")).isError, true);
+  assertEquals(calls.map((call) => call.body.p_pace), ["once", "month"]);
+});
+
 Deno.test("the four writes take a month up to the forecast's last and refuse a later one before any call (FLOW-1066)", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_forecast" } } }));
   const last = forecastLastMonth(israelMonthKey());

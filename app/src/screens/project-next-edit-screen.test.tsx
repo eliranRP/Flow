@@ -34,6 +34,13 @@ function renderEdit(preset: Partial<ProjectNextEditSample> = {}, add = false, qu
   );
 }
 
+/** FLOW-1184: הסרה מהצפי asks for this month only or from it on. */
+async function removeFor(choice: RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
+  const sheet = await screen.findByRole("dialog", { name: "הסרה מהצפי" });
+  fireEvent.click(within(sheet).getByRole("radio", { name: choice }));
+}
+
 function amountField() {
   return screen.getByRole("textbox", { name: "סכום צפוי" });
 }
@@ -108,12 +115,12 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
     expect(screen.getByText("הקבוע עצמו לא משתנה. זה משנה רק את הצפי של הפרויקט.")).toBeTruthy();
   });
 
-  it("takes the row out of the forecast, with a toast", async () => {
+  it("takes the row out of the forecast from this month on, with a toast", async () => {
     rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "remove_project_forecast_row" ? { edit: {}, undo: UNDO } : null, error: null }));
     renderEdit({ rowKey: "avg:power" });
-    fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
+    await removeFor(/^מנובמבר והלאה/);
     await waitFor(() => {
-      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "avg:power" });
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "avg:power", p_pace: "month" });
     });
     expect(await screen.findByText("הוסר מהצפי מנובמבר והלאה: חשמל ומים")).toBeTruthy();
     // FLOW-969: the removal can be taken back, from under the header, and its ביטול sends the undo.
@@ -122,11 +129,21 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: UNDO }); });
   });
 
-  it("leaves for the forecast page at once, before the server answers (decision 0219)", () => {
+  it("takes the row out of this month only, and next month expects it (FLOW-1184)", async () => {
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "remove_project_forecast_row" ? { edit: {}, undo: UNDO } : null, error: null }));
+    renderEdit({ rowKey: "avg:power" });
+    await removeFor(/^רק בנובמבר/);
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "avg:power", p_pace: "once" });
+    });
+    expect(await screen.findByText("הוסר מהצפי של נובמבר: חשמל ומים")).toBeTruthy();
+  });
+
+  it("leaves for the forecast page at once, before the server answers (decision 0219)", async () => {
     rpc.mockImplementation(() => new Promise(() => undefined));
     renderEdit({ rowKey: "avg:power" });
-    fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
-    expect(screen.getByText("the forecast page")).toBeTruthy();
+    await removeFor(/^מנובמבר והלאה/);
+    expect(await screen.findByText("the forecast page")).toBeTruthy();
   });
 
   it("says so when the row is no longer in the forecast", () => {
@@ -215,9 +232,9 @@ describe("ProjectNextEditScreen, a new line", () => {
       { route: "/projects/juniper-ct/profit/next/edit/add:e-rent-2" },
     );
     expect(screen.getByText("נובמבר · הכנסה · הוספת · כל חודש")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
+    await removeFor(/^מנובמבר והלאה/);
     await waitFor(() => {
-      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "add:e-rent-2" });
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "add:e-rent-2", p_pace: "month" });
     });
   });
 

@@ -45,6 +45,22 @@ export function paceChoices(month: string): Array<{ value: ForecastPace; label: 
     : { value: pace, label: PACE_WORDS[pace], description: `הבא ב${paceNextMonth(pace, month) ?? ""}` });
 }
 
+/** FLOW-1184: a removal is out of its month only, or from it on (decision 0268). */
+export type RemovalPace = "once" | "month";
+
+/** The הסרה מהצפי sheet's two choices for a row in `month`. */
+export function removalChoices(month: string): Array<{ value: RemovalPace; label: string; description: string }> {
+  return [
+    { value: "once", label: `רק ב${monthWord(month)}`, description: `ב${monthWord(addMonths(month, 1))} הוא צפוי כרגיל` },
+    { value: "month", label: `מ${monthWord(month)} והלאה`, description: "לא יופיע בצפי של החודשים הבאים" },
+  ];
+}
+
+/** The removal's toast. */
+export function removedToast(pace: RemovalPace, month: string, name: string): string {
+  return pace === "once" ? `הוסר מהצפי של ${monthWord(month)}: ${name}` : `הוסר מהצפי מ${monthWord(month)} והלאה: ${name}`;
+}
+
 /** The repeat row's title and the line under it. */
 export function paceSummary(pace: ForecastPace, month: string, income: boolean): { title: string; sub: string } {
   if (pace === "once") return { title: "חד פעמי", sub: `רק בצפי של ${monthWord(month)}` };

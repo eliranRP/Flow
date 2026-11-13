@@ -73,6 +73,15 @@ export const ProjectNextPace: Story = {
   render: () => page({ categoryId: "pest", draft: "65", pace: "quarter", sheet: "pace" }, true),
 };
 
+/** FLOW-1184 (decision 0268): הסרה מהצפי asks for this month only or from it on. */
+export const ProjectNextRemove: Story = {
+  name: "Project, next month forecast, remove a row",
+  render: () => page({ rowKey: "avg:repairs", sheet: "remove" }),
+  play: async () => {
+    await waitFor(() => expect(document.querySelectorAll("[role='dialog'] [role='radio']")).toHaveLength(2));
+  },
+};
+
 /** FLOW-1063 (decision 0259): the category sheet offers the forecast's own categories too, "כבר בצפי · $4,150" on rent. */
 export const ProjectNextAddInForecast: Story = {
   name: "Project, next month forecast, category already in the forecast",
