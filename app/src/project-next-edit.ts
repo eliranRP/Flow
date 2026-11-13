@@ -45,7 +45,7 @@ export function paceChoices(month: string): Array<{ value: ForecastPace; label: 
     : { value: pace, label: PACE_WORDS[pace], description: `הבא ב${paceNextMonth(pace, month) ?? ""}` });
 }
 
-/** FLOW-1184: a removal is out of its month only, or from it on (decision 0268). */
+/** FLOW-1188: a removal is out of its month only, or from it on (decision 0268). */
 export type RemovalPace = "once" | "month";
 
 /** The הסרה מהצפי sheet's two choices for a row in `month`. */

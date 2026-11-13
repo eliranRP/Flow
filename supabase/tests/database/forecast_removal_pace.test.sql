@@ -1,4 +1,4 @@
--- FLOW-1184: a row taken out of a project's forecast for one month only, or from that month on. A line added on a
+-- FLOW-1188: a row taken out of a project's forecast for one month only, or from that month on. A line added on a
 -- pace and removed for its first month only is still expected in the months after; removed from it on, it goes.
 -- The MCP removal takes the same pace. Invented data only.
 

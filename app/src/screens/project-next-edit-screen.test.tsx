@@ -34,7 +34,7 @@ function renderEdit(preset: Partial<ProjectNextEditSample> = {}, add = false, qu
   );
 }
 
-/** FLOW-1184: הסרה מהצפי asks for this month only or from it on. */
+/** FLOW-1188: הסרה מהצפי asks for this month only or from it on. */
 async function removeFor(choice: RegExp) {
   fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
   const sheet = await screen.findByRole("dialog", { name: "הסרה מהצפי" });
@@ -129,7 +129,7 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: UNDO }); });
   });
 
-  it("takes the row out of this month only, and next month expects it (FLOW-1184)", async () => {
+  it("takes the row out of this month only, and next month expects it (FLOW-1188)", async () => {
     rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "remove_project_forecast_row" ? { edit: {}, undo: UNDO } : null, error: null }));
     renderEdit({ rowKey: "avg:power" });
     await removeFor(/^רק בנובמבר/);

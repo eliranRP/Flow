@@ -20,7 +20,7 @@ export type ForecastUndo = { drop: string[]; put: Json[] };
 
 type Write =
   | { fn: "set_project_forecast_edit"; edit: Record<string, unknown> }
-  /** FLOW-1184: a removal is out of its month only (once) or from it on (month, the default). */
+  /** FLOW-1188: a removal is out of its month only (once) or from it on (month, the default). */
   | { fn: "remove_project_forecast_row"; rowKey: string; pace?: RemovalPace }
   | { fn: "restore_project_forecast_row"; rowKey: string }
   | { fn: "reset_project_forecast" };

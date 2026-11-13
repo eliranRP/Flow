@@ -1,4 +1,4 @@
--- FLOW-1184 (owner, 2026-11-13: "I want to be able to remove from a specific month and not delete for all future
+-- FLOW-1188 (owner, 2026-11-13: "I want to be able to remove from a specific month and not delete for all future
 -- terms"). A row taken out of a project's forecast can be out of that month only, or from it on (decision 0268,
 -- amending 0239's "a removal is always from its month on").
 -- - private.pfe_remove takes p_pace: 'month' (from this month on, as before) or 'once' (this month only).

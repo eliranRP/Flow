@@ -525,7 +525,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     expect(row.getAttribute("href")).toMatch(/^\/recurring\//);
   });
 
-  // FLOW-1184 (owner, 2026-11-13): the line can leave the month's forecast here, for this month only or from it on.
+  // FLOW-1188 (owner, 2026-11-13): the line can leave the month's forecast here, for this month only or from it on.
   function monthlyLine(lineStart: string): ForecastSample {
     const sample = withAddedLine(lineStart);
     const items = sample.data.build.items.map((item) => (item.key === "added:e-1" ? { ...item, pace: "month" } : item));
@@ -533,7 +533,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     return { ...sample, data: { ...sample.data, build: { ...sample.data.build, items, income } } };
   }
 
-  it("removes a monthly line from this month only, and the page closes (FLOW-1184)", async () => {
+  it("removes a monthly line from this month only, and the page closes (FLOW-1188)", async () => {
     rpc.mockClear();
     renderForecast(monthlyLine("2026-09"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
     fireEvent.click(await screen.findByRole("button", { name: "הסרה מהצפי" }));
@@ -547,7 +547,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     expect(await screen.findByText("הוסר מהצפי של אוקטובר: הכנסות שכירות")).toBeInTheDocument();
   });
 
-  it("removes a monthly line from this month on (FLOW-1184)", async () => {
+  it("removes a monthly line from this month on (FLOW-1188)", async () => {
     rpc.mockClear();
     renderForecast(monthlyLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
     fireEvent.click(await screen.findByRole("button", { name: "הסרה מהצפי" }));
@@ -559,7 +559,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/forecast"); });
   });
 
-  it("removes a line for this month only at once, with no sheet (FLOW-1184)", async () => {
+  it("removes a line for this month only at once, with no sheet (FLOW-1188)", async () => {
     rpc.mockClear();
     renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
     fireEvent.click(await screen.findByRole("button", { name: "הסרה מהצפי" }));
@@ -569,7 +569,7 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     });
   });
 
-  it("has no removal on a recurring charge or an invoice: they leave the month by מתי צפוי (FLOW-1184)", async () => {
+  it("has no removal on a recurring charge or an invoice: they leave the month by מתי צפוי (FLOW-1188)", async () => {
     const sample = board();
     const charge = sample.data.build.items.find((item) => item.kind === "recurring");
     if (charge == null) throw new Error("no recurring item");

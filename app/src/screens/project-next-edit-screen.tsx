@@ -133,7 +133,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const categoryRef = useRef<HTMLButtonElement>(null);
   const paceRef = useRef<HTMLButtonElement>(null);
   const removeRef = useRef<HTMLButtonElement>(null);
-  // FLOW-1184: a removal picked in its sheet runs once the sheet's history entry is gone, so Back leaves the page.
+  // FLOW-1188: a removal picked in its sheet runs once the sheet's history entry is gone, so Back leaves the page.
   const [removing, setRemoving] = useState<RemovalPace | null>(null);
   const removeRun = useRef<(pace: RemovalPace) => void>(() => undefined);
   const removeLayer = liveSheetStack(useLocation().state).includes("pn-remove");
@@ -307,7 +307,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
               disabled={writes.pending}
               buttonRef={removeRef}
               onClick={() => {
-                // FLOW-1184: a line for this month only has no month after; any other row asks: this month, or from it on.
+                // FLOW-1188: a line for this month only has no month after; any other row asks: this month, or from it on.
                 if (row.kind === "added" && (row.pace == null || row.pace === "once")) remove("month");
                 else setSheet("remove");
               }}

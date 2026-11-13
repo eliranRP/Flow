@@ -1,7 +1,7 @@
 # A row leaves the forecast for one month, or from that month on
 
 **Date:** 2026-11-13
-**Status:** Accepted (owner, 2026-11-13, FLOW-1184: "When I added manually and then remove it, it keeps it in the stream. Also where I added one I can't remove it after that. Also I want to be able to remove from a specific month and not delete for all future terms.")
+**Status:** Accepted (owner, 2026-11-13, FLOW-1188: "When I added manually and then remove it, it keeps it in the stream. Also where I added one I can't remove it after that. Also I want to be able to remove from a specific month and not delete for all future terms.")
 **Amends:** [0239](0239-forecast-removal-sticks.md) (a removal was always from its month on), [0243](0243-forecast-line-pace.md) (the item page of an added line)
 
 ## Context

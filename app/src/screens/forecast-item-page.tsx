@@ -234,7 +234,7 @@ export function ForecastItemPage({
   }, [close]);
 
   /**
-   * FLOW-1184: an added line leaves the month's forecast here, for this month only or from it on (decision 0268), as
+   * FLOW-1188: an added line leaves the month's forecast here, for this month only or from it on (decision 0268), as
    * on the project's צפי page. Before, its only way out was the project's page, which opens next month.
    */
   const removable = item.kind === "added" && item.project_id != null;

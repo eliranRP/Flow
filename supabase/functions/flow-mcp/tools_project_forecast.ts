@@ -35,7 +35,7 @@ const setSchema = z.object({
   if (change && body.direction !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "direction goes with category_id" });
 });
 const rowSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: WRITE_MONTH, row_key: ROW_KEY }).strict();
-// FLOW-1184: a removal is out of that month only (once) or from it on (month, the default).
+// FLOW-1188: a removal is out of that month only (once) or from it on (month, the default).
 const removeSchema = rowSchema.extend({ pace: z.enum(["once", "month"]).optional() }).strict();
 const resetSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: WRITE_MONTH.optional() }).strict();
 
