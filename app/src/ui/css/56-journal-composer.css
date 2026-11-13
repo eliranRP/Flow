@@ -35,7 +35,7 @@
 .ui-jc-line {
   display: flex;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   padding-inline: var(--space-1);
 }
 
@@ -103,7 +103,7 @@
 .ui-jc-status {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-1) * 1.5);
+  gap: var(--space-2);
   margin: 0;
   padding-inline: var(--space-1);
   color: var(--color-signal-soft);
@@ -135,6 +135,8 @@
 .ui-jc-card {
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+
 }
 
 .ui-jc-label {
@@ -147,7 +149,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
 }
 
 .ui-jc-bank-icon {
@@ -160,7 +162,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -173,7 +175,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-half) var(--space-inset-row) var(--space-3);
+  padding: var(--space-1) var(--space-4) var(--space-3);
 }
 
 .ui-jc-leg-head {
@@ -203,12 +205,12 @@
 .ui-jc-pick {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-1) * 1.5);
+  gap: var(--space-2);
   min-inline-size: 0;
   block-size: var(--field-height);
   box-sizing: border-box;
   padding: 0 var(--space-3);
-  border: 1.5px solid var(--color-line);
+  border: var(--stroke-strong) solid var(--color-line);
   border-radius: var(--radius-input);
   background: var(--color-raised);
   color: var(--color-text);
@@ -237,7 +239,7 @@
 
 /* The amount field takes the tint-strong outline, with the side switch inside its end. */
 .ui-jc-amount .ui-money-field {
-  border: 1.5px solid var(--color-tint-strong);
+  border: var(--stroke-strong) solid var(--color-tint-strong);
   padding-inline-end: var(--space-1);
 }
 
@@ -250,8 +252,8 @@
   direction: rtl;
   display: flex;
   flex: none;
-  gap: var(--space-half);
-  padding: var(--space-half);
+  gap: var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-field-btn);
   background: var(--color-surface);
 }
@@ -259,9 +261,10 @@
 .ui-jc-side button {
   position: relative;
   min-block-size: calc(var(--touch-min) - var(--space-2));
-  padding: 0 calc(var(--space-2) + var(--space-half));
+  padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-seg-btn-small);
+  --radius-nested: calc(var(--radius-field-btn) - var(--space-1));
+  border-radius: var(--radius-nested);
   background: transparent;
   color: var(--color-text);
   font: inherit;
@@ -287,7 +290,7 @@
 
 .ui-jc-add {
   min-block-size: calc(var(--touch-min) + var(--space-2));
-  border: 1.5px dashed var(--color-track-strong);
+  border: var(--stroke-strong) dashed var(--color-track-strong);
   border-radius: var(--radius-card-tight);
   background: none;
   color: var(--color-accent-text);
@@ -328,7 +331,7 @@
 }
 
 .ui-jc-foot .ui-btn-primary {
-  block-size: 52px;
+  block-size: var(--control-height);
   border-radius: var(--radius-button);
 }
 
@@ -351,7 +354,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border: 0;
   border-radius: var(--radius-card-row);
   background: transparent;

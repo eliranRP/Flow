@@ -41,13 +41,15 @@
   gap: var(--space-1) var(--space-3);
   box-sizing: border-box;
   inline-size: 100%;
-  padding: var(--space-3) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid transparent;
   border-radius: var(--radius-card);
   background: var(--color-surface);
   color: inherit;
   font: inherit;
   text-align: start;
+  box-shadow: var(--shadow-sm);
+
 }
 
 .ui-lsplit-pick {
@@ -101,7 +103,7 @@
   align-items: center;
   gap: var(--space-1);
   min-block-size: calc(var(--space-6) + var(--space-1));
-  padding: 0 calc(var(--space-2) + var(--space-half));
+  padding: 0 var(--space-3);
   border-radius: var(--radius-chip);
   background: var(--color-tint-strong);
   color: var(--color-text);
@@ -140,12 +142,12 @@
 .ui-lsplit-check {
   display: flex;
   align-items: flex-start;
-  gap: calc(var(--space-1) * 1.5);
+  gap: var(--space-2);
 }
 
 .ui-lsplit-check > svg {
   flex: none;
-  margin-block-start: var(--space-half);
+  margin-block-start: var(--space-1);
 }
 
 .ui-lsplit-pickers {
@@ -220,10 +222,12 @@
 .ui-lsplit-rest {
   inline-size: 100%;
   margin: 0;
-  padding: var(--space-3) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
+
 }
 
 .ui-lsplit-rest-msg {
@@ -353,7 +357,7 @@
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   padding: var(--space-4);
 }
 
@@ -371,10 +375,12 @@
   gap: var(--space-2);
   box-sizing: border-box;
   inline-size: 100%;
-  padding: var(--space-3) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border: var(--stroke-strong) solid transparent;
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+
 }
 
 .ui-lsplit-board .ui-lsplit-part[data-invalid] {
@@ -514,10 +520,10 @@
 .ui-lsplit-board .ui-lsplit-field .ui-seg-input {
   inline-size: max-content;
   box-sizing: border-box;
-  block-size: var(--size-seg);
-  min-block-size: var(--size-seg);
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
   gap: 0;
-  padding: var(--space-half);
+  padding: var(--space-1);
   border: 0;
   border-radius: var(--radius-field-btn);
   background: var(--color-surface);
@@ -530,7 +536,8 @@
   block-size: 36px;
   min-block-size: 36px;
   padding: 0;
-  border-radius: var(--radius-field-btn);
+  --radius-nested: calc(var(--radius-field-btn) - var(--space-1));
+  border-radius: var(--radius-nested);
 }
 
 .ui-lsplit-board .ui-lsplit-note {
@@ -551,7 +558,7 @@
   gap: var(--space-2);
   box-sizing: border-box;
   inline-size: 100%;
-  min-block-size: 52px;
+  min-block-size: var(--control-height);
   padding: 0 var(--space-4);
   border: var(--stroke-strong) dashed var(--color-track-strong);
   border-radius: var(--radius-card-tight);
@@ -576,7 +583,7 @@
   box-sizing: border-box;
   inline-size: 100%;
   margin: 0;
-  padding: var(--space-3) var(--space-inset-row);
+  padding: var(--space-3) var(--space-4);
   border: 0;
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
@@ -584,6 +591,8 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
+
 }
 
 .ui-lsplit-rest[data-empty] {
@@ -594,7 +603,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-half);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -694,22 +703,22 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 }
 
 .ui-lsplit-board .ui-lsplit-footnote {
-  margin-block-start: calc(var(--space-2) + var(--space-half));
+  margin-block-start: var(--space-3);
   font-size: var(--type-caption-size);
   font-weight: var(--type-body-weight);
 }
 
 .ui-lsplit-board .ui-lsplit-rest {
-  padding-block: calc(var(--space-3) - var(--space-half));
+  padding-block: var(--space-3);
 }
 
 /* d4: the board's split header rhythm (header gaps 10, bar 6 above the status) and the part card gaps. */
 .ui-lsplit-board .ui-lsplit-top {
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
 }
 
 .ui-lsplit-board .ui-lsplit-line {
-  gap: var(--space-half);
+  gap: var(--space-1);
 }
 
 .ui-lsplit-board .ui-lsplit-meta,
@@ -732,5 +741,5 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 }
 
 .ui-lsplit-board .ui-lsplit-part {
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
 }
