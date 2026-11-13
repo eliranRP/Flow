@@ -118,7 +118,7 @@ These component colours are also in `implementation-tokens.css`:
 The other token groups are:
 
 - **Type:** `--type-<style>-size | -line | -weight` (see §5).
-- **Spacing:** `--space-1 … --space-10`, plus `--space-side` (24), `--space-card-inset` (16) and `--space-section` (36).
+- **Spacing:** `--space-1 … --space-12`, plus `--space-side` (24), `--space-card-inset` (16) and `--space-section` (36).
 - **Radius:** `--radius-chip | input | button | card | sheet | band | fab`.
 - **Layout and motion:** `--touch-min`, `--control-height`, `--tabbar-height`, `--safe-top`, `--safe-bottom`, `--motion-*`, `--ease-*` (§10).
 
