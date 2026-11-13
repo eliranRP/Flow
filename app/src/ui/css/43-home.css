@@ -61,7 +61,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-4) calc(var(--space-1) * 4.5);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-card);
   background: var(--color-tint);
   text-align: start;
@@ -89,7 +89,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   min-block-size: var(--month-cell-min);
   min-inline-size: 0;
   padding: var(--space-1);
@@ -153,7 +153,7 @@
 }
 
 .ui-band:has(.ui-band-body-empty) {
-  padding-bottom: calc(var(--space-1) * 4.5);
+  padding-bottom: var(--space-5);
 }
 
 /* FLOW-364 (board): the zero figure on the empty band is a dim lavender, not white. */
@@ -164,10 +164,10 @@
 /* FLOW-375 (board, StatesHomeEmpty): the zero figure sits on the band body's edge, not inside the hero's own gutter. */
 .ui-band-body-empty .ui-band-hero {
   padding-inline: 0;
-  padding-top: calc(var(--space-1) * 3.375);
+  padding-top: var(--space-3);
 }
 
-.ui-band-body-empty .ui-hero { gap: calc(var(--space-1) * 1.15); }
+.ui-band-body-empty .ui-hero { gap: var(--space-1); }
 .ui-band-body-empty .t-band { line-height: 1; }
 
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
@@ -193,10 +193,11 @@
   align-items: stretch;
   gap: var(--space-3);
   margin: var(--space-4) var(--space-side) 0;
-  padding: calc(var(--space-1) * 4.5) calc(var(--space-1) * 4.5) calc(var(--space-1) * 6.5);
+  padding: var(--space-5) var(--space-5) calc(var(--space-1) * 7);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   text-align: start;
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-home-empty-icon {
@@ -218,7 +219,7 @@
 }
 
 .ui-home-empty-body {
-  margin: calc(var(--space-1) * -0.875) 0 0;
+  margin: calc(var(--space-1) * -1) 0 0;
   font-size: var(--type-line2-size);
   line-height: calc(var(--space-1) * 5.75);
   color: var(--color-text-secondary);
@@ -228,7 +229,7 @@
 .ui-home-empty-what {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-1) * 0.75);
+  gap: var(--space-1);
   margin: var(--space-5) var(--space-side) 0;
 }
 
@@ -243,7 +244,7 @@
   display: flex;
   flex-direction: column;
   /* FLOW-364 (board): the two rows sit 12px closer than the 16px gap. */
-  gap: calc(var(--space-1) * 0.5);
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -271,7 +272,7 @@
 
 .ui-home-empty-card .ui-btn { margin-top: var(--space-1); }
 .ui-home-empty-link-row {
-  margin: calc(var(--space-1) * 2.5) 0 0;
+  margin: var(--space-3) 0 0;
   text-align: center;
 }
 
@@ -328,13 +329,14 @@
 .ui-home-act-failed {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-1) * 2.5);
+  gap: var(--space-3);
   min-block-size: var(--control-height);
   margin-block-end: var(--space-3);
   padding-inline: var(--space-4) var(--space-2);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-home-act-failed-mark {

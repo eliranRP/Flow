@@ -37,7 +37,7 @@
 }
 
 .ui-msr {
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
   padding-block: var(--space-4) var(--space-6);
 }
 
@@ -49,6 +49,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-msr-empty h2,
@@ -254,6 +255,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-msr-bars-plot {
@@ -346,6 +348,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-msr-facts dt {
@@ -407,6 +410,7 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-msr-left-out-title,
@@ -453,6 +457,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-msr-skel-bar {
@@ -510,6 +515,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-msr-skel-row {

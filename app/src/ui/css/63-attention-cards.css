@@ -77,6 +77,7 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card-tight);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 /* A card without an X (the review row) keeps its chevron 12px from the card's end. */
@@ -134,7 +135,7 @@
 
 .ui-attn-tag {
   flex: none;
-  padding: calc(var(--space-1) - 1px) calc(var(--space-2) + 1px);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent);
@@ -197,7 +198,7 @@
 .ui-attn-done-text {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   min-inline-size: 0;
   color: var(--color-text-secondary);
 }

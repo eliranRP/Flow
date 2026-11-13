@@ -21,7 +21,7 @@
 }
 
 .ui-cp-figure {
-  margin: calc(var(--space-1) * -0.5) 0 0;
+  margin: calc(var(--space-1) * -1) 0 0;
   padding-top: 0;
   line-height: var(--type-total-line);
   direction: ltr;
@@ -30,7 +30,7 @@
 
 /* FLOW-145: the period switch, 14px under the sub; the figure follows 8px under it. */
 .ui-cp-period {
-  margin-top: var(--space-inset-row);
+  margin-top: var(--space-4);
   /* FLOW-969: 44px segments (were 40px), as the loan page's switch (FLOW-962). */
   --size-seg: var(--touch-min);
   --size-seg-track: calc(var(--touch-min) + var(--space-2));
@@ -58,7 +58,7 @@
 
 /* Next month's card and chart sit 14px under the summary, before the chips. */
 .ui-cp-head .ui-fc-block {
-  margin-top: var(--space-inset-row);
+  margin-top: var(--space-4);
 }
 
 .ui-cp-chips > * {
@@ -91,7 +91,7 @@
   gap: var(--space-1);
   width: 100%;
   min-height: 0;
-  padding: calc(var(--space-1) * 2.75) 0;
+  padding: var(--space-3) 0;
   box-sizing: border-box;
   border: 0;
   background: none;
@@ -137,7 +137,7 @@
 
 /* Prefixed to beat the .t-muted line on the footer. */
 .ui-cp-screen .ui-cp-foot {
-  margin-top: calc(var(--space-1) * 4.25);
+  margin-top: var(--space-4);
   line-height: calc(var(--type-caption-size) * 17.25 / 13);
 }
 
@@ -162,7 +162,7 @@
 
 /* The category view (ProfitByCategory): the first group head sits 2px under the header's chips, not 12px. */
 .ui-cp-screen .ui-pcat-group:first-of-type {
-  margin-top: calc(var(--space-1) / 2 - var(--space-3));
+  margin-top: calc(var(--space-3) * -1);
 }
 
 /* FLOW-145: the year's forecast could not be read: one quiet line where the card would be. */

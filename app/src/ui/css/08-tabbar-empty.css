@@ -172,7 +172,7 @@
   /* The body scrolls, never the panel: clip stops a click's scroll-into-view or scroll anchoring
      from scrolling the panel mid tall-to-short change, which hid the header's padding. */
   overflow: clip;
-  padding: var(--sheet-pad-top) 0 calc(var(--sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-3) 0 calc(var(--sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
   outline: none;
@@ -181,7 +181,7 @@
 /* Opt-in panel classes: a sheet whose board block differs from the default (12 between blocks, 16 at the sides,
    24 below) sets one or more of these. Later rules win, so a choice sheet's 10 can be raised by its caller. */
 .ui-sheet-choice {
-  --sheet-gap-y: 10px;
+  --sheet-gap-y: 12px;
   --sheet-pad-bottom: 28px;
 }
 
@@ -190,7 +190,7 @@
 }
 
 .ui-sheet-g10 {
-  --sheet-gap-y: 10px;
+  --sheet-gap-y: 12px;
 }
 
 .ui-sheet-g12 {
@@ -198,7 +198,7 @@
 }
 
 .ui-sheet-g14 {
-  --sheet-gap-y: 14px;
+  --sheet-gap-y: 16px;
 }
 
 .ui-sheet-g16 {
@@ -295,7 +295,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2); /* the board's 2px: half the 4px step, no raw value */
+  gap: var(--space-1); /* the board's 2px: half the 4px step, no raw value */
   min-width: 0;
 }
 
@@ -400,7 +400,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-sync-pill {
   position: absolute;
-  top: calc(var(--space-4) - var(--space-half));
+  top: var(--space-4);
   inset-inline: 0;
   margin-inline: auto;
   inline-size: max-content;

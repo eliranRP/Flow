@@ -22,7 +22,7 @@
    16px between the figure, the paid line and the rows, and 22px of band under them. The board's lines are
    Rubik's own leading (normal): the label 20px, the paid line 17px, a row 24px. */
 .ui-loans-screen > .ui-band {
-  padding-bottom: calc(var(--space-5) + var(--space-half));
+  padding-bottom: var(--space-6);
 }
 
 .ui-loans-screen > .ui-band > .ui-band-row {
@@ -65,7 +65,7 @@
 .ui-loans-band-label {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
   color: var(--color-on-band-secondary);
   font-size: var(--type-btn-2-size);
   font-weight: var(--type-btn-2-weight);
@@ -77,7 +77,7 @@
 .ui-loans-band-paid {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-loans-band-paid .ui-parts-bar[data-track="true"] {
@@ -97,7 +97,7 @@
 .ui-loans-band-rows {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
 }
 
 /* FLOW-1076: as Home's band rows (.ui-band-rows): one size (btn 2), the label at the body's weight, the amount at btn 2's. */
@@ -161,7 +161,7 @@
 .ui-loans-row {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-3) + var(--space-1) / 2);
+  gap: var(--space-4);
   width: 100%;
   min-height: var(--row-height);
   padding: var(--space-2) 0;
@@ -177,7 +177,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -206,10 +206,10 @@
 }
 
 /* The empty Loans tab (States board, StatesLoansEmpty): the icon and copy sit lower, the primary action follows. */
-.ui-loans-screen .ui-empty-state { padding-top: calc(var(--space-1) * 14.4); }
-.ui-loans-screen .ui-empty-icon { margin-bottom: calc(var(--space-1) * 4.25); }
-.ui-loans-screen .ui-empty-line { margin-top: calc(var(--space-1) * 2.5); }
-.ui-loans-screen .ui-empty-action { margin-top: calc(var(--space-1) * 5.5); }
+.ui-loans-screen .ui-empty-state { padding-top: calc(var(--space-1) * 14); }
+.ui-loans-screen .ui-empty-icon { margin-bottom: var(--space-4); }
+.ui-loans-screen .ui-empty-line { margin-top: var(--space-3); }
+.ui-loans-screen .ui-empty-action { margin-top: var(--space-6); }
 
 /* FLOW-139d. The new-loan sheet (board LoanAdd) and the kind sheet (board LoanKind). Opt-in classes only:
    the shared sheet, field and radio rules stay as they are for every other sheet. The 10px pair gap and
@@ -230,18 +230,18 @@
 }
 
 .ui-loan-new .ui-sheet-body {
-  gap: var(--space-inset-row);
-  padding-block: var(--space-half) var(--space-4);
+  gap: var(--space-4);
+  padding-block: var(--space-1) var(--space-4);
 }
 
 /* FLOW-1055 (V3-NewLoan): no rule under the title; the kind's label (14, secondary) 22px under it, the segment
    and its one line 6px apart. */
 .ui-loan-new .ui-loan-kind-first {
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-loan-new .ui-loan-kind-first .ui-field {
-  gap: calc(var(--space-1) + var(--space-half));
+  gap: var(--space-2);
 }
 
 .ui-loan-new .ui-loan-kind-first .ui-field-label {
@@ -261,7 +261,7 @@
 }
 
 .ui-loan-form {
-  gap: var(--space-inset-row);
+  gap: var(--space-4);
 }
 
 .ui-loan-section-title {
@@ -283,7 +283,7 @@
   gap: var(--space-3);
   inline-size: 100%;
   min-block-size: calc(var(--touch-min) + var(--space-2));
-  padding: 0 var(--space-inset-row);
+  padding: 0 var(--space-4);
   border: 1.5px solid var(--color-line);
   border-radius: var(--radius-input);
   background: var(--color-raised);
@@ -339,8 +339,8 @@
   top: 50%;
   z-index: 2;
   display: flex;
-  gap: calc(var(--space-1) / 2);
-  padding: calc(var(--space-1) / 2);
+  gap: var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-seg-btn);
   background: var(--color-surface);
   translate: 0 -50%;
@@ -354,7 +354,7 @@
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-note);
+  border-radius: calc(var(--radius-seg-btn) - var(--space-1));
   background: transparent;
   color: var(--color-text);
   font: inherit;
@@ -403,7 +403,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-block-start: calc(var(--space-1) * 1.5);
+  margin-block-start: var(--space-2);
   padding: var(--space-card-inset);
   border-radius: var(--radius-card-tight);
   background: var(--color-tint);
@@ -491,7 +491,7 @@
 /* The new-loan sheet at the board's rhythm: the head 18px lower with nothing under its row, text at its natural
    line height (sections 18, field labels 15, hints 14, pick rows 15 over 20), the amount field 50 tall. */
 .ui-loan-new .ui-sheet-head {
-  margin-block-start: calc(var(--space-4) + var(--space-1) / 2);
+  margin-block-start: var(--space-5);
   padding-block-end: 0;
 }
 
@@ -507,7 +507,7 @@
 }
 
 .ui-loan-new .ui-field-hint {
-  font-size: calc(var(--type-caption-size) - 1px);
+  font-size: var(--type-label-size);
   line-height: calc(var(--type-title-line) - 0.05);
 }
 
@@ -534,7 +534,7 @@
 }
 
 .ui-loan-kind .ui-row-text {
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-1);
 }
 
 /* /loans/summary (the board's Loans · summary): the period switch, the debt card, the paid card, one row per open
@@ -555,7 +555,7 @@
 .ui-loans-row.ui-loans-sum-row {
   gap: var(--space-3);
   min-height: calc(var(--row-height) + var(--space-3));
-  padding: calc(var(--space-2) + var(--space-half)) 0;
+  padding: var(--space-3) 0;
 }
 
 .ui-loans-sum-row .ui-loans-text {
@@ -586,8 +586,8 @@
 .ui-loans-sum-closed {
   display: flex;
   flex-direction: column;
-  gap: var(--space-half);
-  margin-top: calc(var(--space-1) * 1.5);
+  gap: var(--space-1);
+  margin-top: var(--space-2);
   padding: var(--space-3) 0;
   border-top: var(--stroke-hairline) solid var(--color-line);
   color: var(--color-text-muted);
@@ -604,8 +604,8 @@
 /* FLOW-1055 (V3-LoansSummary): the paid card as the loan page's: 16px by 18px inside, the title (20, 500), the
    10px pill bar, then the 48px part rows 10px apart (the 10px dot, the part 17, the amount 17). */
 .ui-card.ui-loans-sum-paid {
-  gap: calc(var(--space-2) + var(--space-half));
-  padding: var(--space-4) calc(var(--space-4) + var(--space-half));
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
 }
 
 .ui-loans-sum-title {
@@ -617,7 +617,7 @@
 
 .ui-loans-sum-paid .ui-parts,
 .ui-loans-sum-paid .ui-parts-legend {
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
 }
 
 .ui-loans-sum-paid .ui-parts-bar[data-height="8"] {
@@ -625,7 +625,7 @@
 }
 
 .ui-loans-sum-paid .ui-parts-legend-item {
-  gap: calc(var(--space-2) + var(--space-half));
+  gap: var(--space-3);
   min-height: calc(var(--touch-min) + var(--space-1));
   color: var(--color-text);
   font-size: var(--type-body-size);
@@ -640,25 +640,25 @@
 /* The summary's band: the back row 52px under 6px of band, 14px between its blocks, 8px between the rows,
    22px of band under them (V3-LoansSummary). */
 .ui-loans-sum-page > .ui-band {
-  padding-bottom: calc(var(--space-5) + var(--space-half));
+  padding-bottom: var(--space-6);
 }
 
 .ui-loans-sum-page > .ui-band > .ui-band-row {
   min-block-size: calc(var(--touch-min) + var(--space-2) + var(--space-1) + var(--space-half));
-  padding-top: calc(var(--space-1) + var(--space-half));
+  padding-top: var(--space-2);
 }
 
 .ui-loans-sum-page > .ui-band > .ui-band-hero {
-  padding-top: calc(var(--space-3) + var(--space-half));
+  padding-top: var(--space-4);
 }
 
 .ui-loans-sum-page .ui-loans-band,
 .ui-loans-sum-page .ui-loans-band-figures {
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
 }
 
 .ui-loans-sum-page .ui-loans-band > .ui-compact-mark {
-  margin-block-start: calc((var(--space-3) + var(--space-half)) * -1);
+  margin-block-start: calc(var(--space-4) * -1);
 }
 
 .ui-loans-sum-page .ui-loans-band-rows {

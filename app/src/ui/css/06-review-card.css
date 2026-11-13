@@ -130,19 +130,19 @@
   }
 
   .ui-review-queue .ui-focus-title {
-    margin-top: calc(var(--space-1) * 1.5);
+    margin-top: var(--space-2);
   }
 
   .ui-review-queue .ui-review-counts {
-    margin-top: calc(var(--space-1) * 2.5);
+    margin-top: var(--space-3);
   }
 
   .ui-review-queue .ui-review-segments {
-    margin-top: calc(var(--space-1) * 1.5);
+    margin-top: var(--space-2);
   }
 
   .ui-review-queue .ui-review {
-    margin-top: calc(var(--space-3) - 1px);
+    margin-top: var(--space-3);
   }
 }
 
@@ -151,7 +151,7 @@
   container: review / inline-size;
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: var(--space-2) var(--space-side) 0;
@@ -210,7 +210,7 @@
 }
 
 .ui-review-doc {
-  gap: var(--review-gap);
+  gap: var(--space-4);
   align-items: flex-start;
 }
 
@@ -681,7 +681,7 @@
 /* The source pill at the top of the card's text column (חשבונית מצולמת, שורת בנק). */
 .ui-review-source {
   align-self: flex-start;
-  padding: calc(var(--space-1) / 2) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-chip);
   color: var(--color-text-secondary);

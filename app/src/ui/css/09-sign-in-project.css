@@ -200,11 +200,11 @@
 
 /* FLOW-375 (board, States homeLoading): Home's skeleton in the loaded Home's geometry. Bars sit at the
    inline start (right in Hebrew) as the board draws them; the rows stay at the loaded rows' heights. */
-.ui-skel-band-figs { gap: calc(var(--space-1) * 2.5); padding-inline: 0; }
+.ui-skel-band-figs { gap: var(--space-3); padding-inline: 0; }
 .ui-skel-band-label { inline-size: calc(var(--skel-sm) * 5 / 3); block-size: var(--space-3); }
 .ui-skel-band-hero { inline-size: calc(var(--skel-sm) * 5 / 2); block-size: calc(var(--skel-hero) - var(--space-3)); border-radius: var(--radius-input); }
 .ui-skel-band-caption { inline-size: var(--skel-md); block-size: var(--space-3); }
-.ui-skel-band-rows { display: flex; flex-direction: column; gap: calc(var(--space-1) * 2.5); padding-top: calc(var(--space-1) * 2.5); }
+.ui-skel-band-rows { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); }
 .ui-skel-band-row { display: flex; align-items: center; justify-content: space-between; }
 .ui-skel-band-row-a { inline-size: calc(var(--skel-sm) - var(--space-2)); block-size: var(--space-3); }
 .ui-skel-band-row-b { inline-size: var(--skel-pill); block-size: var(--space-3); }

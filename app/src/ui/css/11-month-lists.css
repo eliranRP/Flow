@@ -94,7 +94,7 @@
   align-items: baseline;
   justify-content: space-between;
   min-block-size: calc(var(--touch-min) + var(--space-1));
-  padding-block: calc(var(--space-3) + var(--space-half)) var(--space-2);
+  padding-block: var(--space-4) var(--space-2);
   border-block-end: 1px solid var(--color-line);
   transition: inset-block-start var(--motion-page) var(--ease-enter);
 }

@@ -118,7 +118,7 @@
 }
 
 .ui-btn-link {
-  gap: var(--space-half);
+  gap: var(--space-1);
   color: var(--color-accent-text);
 }
 
