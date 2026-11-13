@@ -126,8 +126,9 @@ describe("light values from the Design guide's Light theme table", () => {
   }
 
   it("keeps the shadow at rgba(40,20,90,.12) in light", () => {
-    expect(light.get("--shadow-pill")).toBe("0 6px 18px rgba(40, 20, 90, 0.12)");
-    expect(light.get("--shadow-toast")).toBe("0 8px 24px rgba(40, 20, 90, 0.12)");
+    expect(light.get("--shadow-lg")).toBe("0 8px 24px rgba(40, 20, 90, 0.12)");
+    expect(light.get("--shadow-pill")).toBe("var(--shadow-lg)");
+    expect(light.get("--shadow-toast")).toBe("var(--shadow-lg)");
   });
 
   it("keeps the band colour the same in both themes", () => {
@@ -177,10 +178,12 @@ describe("dark values are unchanged by FLOW-372", () => {
     expect(dark.get("--color-outline-secondary")).toBe("var(--color-tint-strong)");
   });
 
-  it("the pill shadow keeps its dark value, in both dark blocks", () => {
-    expect(darkMedia.get("--shadow-pill")).toBe("0 6px 18px rgba(0, 0, 0, 0.4)");
-    expect(dark.get("--shadow-pill")).toBe("0 6px 18px rgba(0, 0, 0, 0.4)");
-    expect(dark.get("--shadow-toast")).toBe("0 8px 24px rgba(0, 0, 0, 0.4)");
+  it("the floating-layer shadow keeps its dark value, in both dark blocks; pill and toast point at it", () => {
+    for (const map of [darkMedia, dark]) {
+      expect(map.get("--shadow-lg")).toBe("0 8px 24px rgba(0, 0, 0, 0.4)");
+      expect(map.get("--shadow-pill")).toBe("var(--shadow-lg)");
+      expect(map.get("--shadow-toast")).toBe("var(--shadow-lg)");
+    }
   });
 });
 
@@ -201,4 +204,31 @@ describe("the band's month pill (WCAG AA 4.5:1)", () => {
       expect(ratio, `the month's name is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
     });
   }
+});
+
+// FLOW-1183: the five-token design system's two shadows and its 12px label.
+describe("two shadows and a label size", () => {
+  const darkMedia = declarations(blockBody(tokensCss, ':root:not([data-theme="light"]) {'));
+
+  it("--shadow-sm is the subtle card shadow in light and the stronger one in both dark blocks", () => {
+    expect(light.get("--shadow-sm")).toBe("0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04)");
+    for (const map of [darkMedia, dark]) {
+      expect(map.get("--shadow-sm")).toBe("0 1px 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.35)");
+    }
+  });
+
+  it("--type-label-size is 12px", () => {
+    expect(light.get("--type-label-size")).toBe("12px");
+  });
+});
+
+// FLOW-1183 (plan T6): a user who forces dark with [data-theme] must get every token the
+// prefers-color-scheme dark block sets, or the forced mode silently falls back to the light value.
+describe("the two dark blocks set the same custom properties", () => {
+  const darkMedia = declarations(blockBody(tokensCss, ':root:not([data-theme="light"]) {'));
+
+  it("every custom property in the prefers-color-scheme dark block is in the forced-dark block", () => {
+    const missing = [...darkMedia.keys()].filter((name) => !dark.has(name));
+    expect(missing).toEqual([]);
+  });
 });

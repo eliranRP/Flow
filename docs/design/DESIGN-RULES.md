@@ -44,6 +44,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0043](../decisions/0043-assumed-vat-on-expenses.md) | An expense with no VAT split assumes 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt (`net = gross`). A subtle hint may appear on the detail screen. Home has no warning banner. |
 | [0120](../decisions/0120-income-green-type-scale.md) | Money in is `income` green with a `+` (0181 amends the no-plus rule of 0120), only on a figure with no minus and never on the band. Option C, full Mercury: page titles 34, section and month heads `heading` 20, row titles 17/400, list amounts `amount` 17/400, row secondary lines `meta` 15/400, project name on the band 32. No row hairlines anywhere; month groups 32px apart. Transaction rows show small raised cents, ".00" included; other lists and summaries stay whole. |
 | [0141](../decisions/0141-period-bar.md) | Home and the project band carry one period bar: five presets and a stepper with outward SVG chevrons; its label opens the period sheet. Replaces the period pill there (FLOW-411). |
+| [0267](../decisions/0267-five-token-foundation.md) | Two shadows only (`--shadow-sm` cards and surfaces, `--shadow-lg` floating layers), a 12px `--type-label-size`, every spacing value on the 4-pt grid via space tokens (the 2, 6, 10, 14, 18 steps are retired; amends 0257 for spacing), nested radius where a control sits in a tight padded track; the five-token skill is in the repo. |
 
 Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md) and [0065](../decisions/0065-review-round5.md) point 40: SUMIT is the source, and there is no Hapoalim import).
 
@@ -67,7 +68,7 @@ From the Design guide page of the [Design canvas](https://claude.ai/artifact/9gr
 
 - One accent, violet (`--color-accent`). Filled violet at most about twice per screen area.
 - The solid band is only the top of Home and the project header. [0023](../decisions/0023-violet-coloured-top-band.md)
-- No gradients (the loading shimmer is the one exception), no emoji, no heavy shadows.
+- No gradients (the loading shimmer is the one exception), no emoji, no heavy shadows (two soft shadows only, §2.6).
 
 ### 2.2 Colour tokens
 
@@ -122,6 +123,8 @@ Rubik 400, 500 and 600. Text is light: weight 400 is for text, 500 for body-size
 | caption | 13 / 400 | Caption |
 | cents | 11 / 400 | Cents on an amount, raised 5px |
 
+The 12px label is `--type-label-size` (with `-line` and `-weight`; `.t-label` is not added until a screen needs a class). The role scale stays; a new size is a new role, never a raw number (the owner, 2026-11-13).
+
 Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. There are no old names: the aliases are deleted and every screen uses the role names. `.t-muted` adds the muted text colour to any role (a note is `t-caption t-muted`). Numbers use `tabular-nums` and `lining-nums`. Input text is at least 16px so iOS does not zoom.
 
 ### 2.4 Spacing
@@ -129,17 +132,17 @@ Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. The
 | Rule | Value |
 |---|---|
 | Side margin | 20px (`--space-side`) |
-| Between sections | 14 to 24px (`--space-4` to `--space-6`) |
+| Between sections | 16 to 24px (`--space-4` to `--space-6`) |
 | List row height | about 64px (`--row-height`); no dividers, no chevrons on flat lists. An inset list (rows in a card) keeps 14px inside and a `--color-line` hairline between rows (FLOW-363 2d) |
 | Avatar (initial circle) | 36px (`--avatar`) |
-| Card padding | 14 to 18px |
+| Card padding | 16px (`--space-card-inset`) |
 | Touch target | at least 44px |
 | Primary button | 52px pill |
 | Bars | 6 to 8px (`--bar-thin` 6px, `--bar-job` 8px) |
 | Status dot | 6px (`--dot`) |
 | Empty-state icon | 64px (`--empty-icon`) |
 
-The 4-point scale (`--space-1` to `--space-10`) is still there for the values that are not listed. Guide §4.
+Every spacing value (padding, margin, gap, a fixed gap's size) is on the 4-pt grid (4, 8, 12, 16, 20, 24, 32, 40) and comes from a space token (`--space-1` to `--space-10` and the named ones built on them), with no `calc()` arithmetic on spacing. The in-between 2, 6, 10, 14 and 18px steps are retired: a screen that has one snaps to the nearest grid step as it is next changed, and `--space-half`, `--space-inset-row` and the like go when nothing uses them (the owner, 2026-11-13, [0267](../decisions/0267-five-token-foundation.md); replaces the v3 boards' in-between spacing values of [0257](../decisions/0257-v3-boards-win.md)). A hairline, a border and a focus ring are strokes, not spacing. Guide §4.
 
 ### 2.5 Radii
 
@@ -152,11 +155,18 @@ The 4-point scale (`--space-1` to `--space-10`) is still there for the values th
 | `--radius-sheet` | 24px | Sheet, top corners only |
 | `--radius-band` | 28px | Band, bottom corners only |
 
-Do not mix radii inside a component.
+Do not mix radii inside a component. Where a rounded control sits in a tight padded rounded track (a segmented control's pill in its track), the outer radius is the inner radius plus the padding, so the corners stay concentric (the owner, 2026-11-13). Cards keep `--radius-card`.
 
 ### 2.6 Shadows
 
-There is no shadow scale in the tokens. Do not add drop shadows. The only allowed shadows are a faint one on the switch knob and a faint 1px shadow on the selected segment. The band has no shadow. [design-system.md](../../design/system/design-system.md) principles, guide §1 P5 and §7.8–7.9. Decision [0040](../decisions/0040-tailwind-v4.md) says shadows are mapped into `@theme` when they exist. They do not exist as a scale, so do not invent `--shadow-*` utilities.
+Two shadows, and no others (the owner, 2026-11-13, [0267](../decisions/0267-five-token-foundation.md)):
+
+| Token | Use |
+|---|---|
+| `--shadow-sm` | Cards and surfaces. Subtle: `0 1px 3px` and `0 1px 2px` black at 8% and 4% in light, 50% and 35% in dark. |
+| `--shadow-lg` | Floating layers: toasts, the sync pill, menus, sheets, popovers. `0 8px 24px`; it is the old toast shadow. |
+
+`--shadow-pill` and `--shadow-toast` are aliases of `--shadow-lg`. The band has no shadow. The faint 1px shadow on the selected segment and on the switch knob stays as it is. A third level, a coloured glow or a heavier card shadow is not allowed. Cards take `--shadow-sm` screen area by screen area as each is next changed. Decision [0040](../decisions/0040-tailwind-v4.md) says shadows are mapped into `@theme` when they exist; map these two when the `@theme` mapping is next touched.
 
 ### 2.7 Motion
 
@@ -820,7 +830,7 @@ Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-t
 - Don't use a faint off-white tinted background. Styles A (`#F5F7F9`) and C (`#F3ECE1`) and the "faint off-white" alternative were rejected. The page is clean white, or a clear colour. [0023](../decisions/0023-violet-coloured-top-band.md), [design README](../module-1-project-pnl/design/README.md).
 - Don't use a stiff or thin face. IBM Plex was too stiff. Assistant and Varela Round were too thin. [0023](../decisions/0023-violet-coloured-top-band.md).
 - Don't revive styles A, B, or C, or the muted and other-bright palettes listed in 0023.
-- Don't use gradients, emoji, or heavy shadows. [design-system.md](../../design/system/design-system.md).
+- Don't use gradients or emoji, and don't add a shadow beyond `--shadow-sm` and `--shadow-lg` (§2.6). [design-system.md](../../design/system/design-system.md).
 - Don't colour a number red or green without ▼, ▲, or a minus sign.
 - Don't show more than about two filled-violet shapes in one view.
 - Don't build a desktop layout or an SMS sign-in. [0015](../decisions/0015-installable-mobile-web-app.md), [0033](../decisions/0033-google-sign-in.md).
