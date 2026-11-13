@@ -191,7 +191,7 @@ describe("the transaction page's picks (FLOW-1165)", () => {
     mountTxn();
     await pick(/חולון/, "וילה");
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
-    expect(await screen.findByText("השורה שונתה מאז, ולכן הביטול לא בוצע.")).toBeInTheDocument();
+    expect(await screen.findByText("השורה שונתה מאז. הביטול לא בוצע.")).toBeInTheDocument();
     expect(argsOf("undo_reassign")).toEqual([{ p_id: "undo-1" }]);
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });

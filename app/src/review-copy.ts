@@ -313,7 +313,7 @@ export function reviewHeldView(row: ReviewHeldRow): ReviewHeldView {
 /** The ביטול of a filing (undo_reassign) failed. */
 export const REASSIGN_UNDO_FAILED = "לא הצלחנו לבטל את השיוך.";
 /** FLOW-1166: undo_reassign refuses a late undo once the line changed since the filing; the later edit stays. */
-export const REASSIGN_UNDO_CHANGED = "השורה שונתה מאז, ולכן הביטול לא בוצע.";
+export const REASSIGN_UNDO_CHANGED = "השורה שונתה מאז. הביטול לא בוצע.";
 
 /** The filing's ביטול failed: a line changed since is final (no retry); anything else is the write's own failure. */
 export function reassignUndoFailure(error: Error): WriteFailure {
