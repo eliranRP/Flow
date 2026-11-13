@@ -1,20 +1,22 @@
 -- FLOW-1166 part 4 (20261113060409_review_row_undo_rules.sql; the owner's decisions of 2026-11-13).
 -- A. One open review row per line: the unique index refuses a second open row; the guarded inserts
 --    do nothing instead of raising; reopen_review (a skip, an approval) and undo_reassign keep the
---    newer open row as the card and leave the old one closed, and still reopen it when none is open;
---    an open split_mismatch row gives way as before.
+--    newer open row as the card (a skip stays; an undone approval or change goes, with an invoice's
+--    paired receipt put back, so a later sync queues the unfiled line again), and still reopen the
+--    old row when none is open; an open split_mismatch row gives way as before.
 -- B. skipped_by: resolve_review (person), transfer_mark_line (transfer), replace_sumit_connection
 --    (sumit_switch); null otherwise; transfer_restore_line reopens only a transfer's skip (or an
 --    unknown one), not a person's later skip.
 -- C. reassign_undo.written_line: undo_reassign refuses ('line changed since') once the line changed,
 --    and restores nothing; the immediate undo, a split line, a followed receipt and a sync's
---    unrelated update still undo; a sync's amount change and a person's edit do not; an undo row
+--    unrelated update still undo; a sync's amount change, a person's edit, a split by category or a
+--    loan payment's parts added since do not; an undo row
 --    from before keeps the old behaviour; flow-mcp gets the refusal word for word.
 -- Invented names and figures, @example.com only. Dates follow current_date.
 
 begin;
 
-select plan(58);
+select plan(70);
 
 do $users$
 begin
@@ -148,6 +150,33 @@ returns uuid language sql set search_path = '' as $$
   select (pg_temp.ask(format('select to_jsonb(public.reassign_transaction(%L, %L, %L))',
     (pg_temp.line(p_ext)).id, pg_temp.id(p_project), pg_temp.id(p_category))) #>> '{}')::uuid;
 $$;
+create or replace function pg_temp.file_line(p_line text, p_project text, p_category text)
+returns uuid language sql set search_path = '' as $$
+  select (pg_temp.ask(format('select to_jsonb(public.reassign_transaction(%L, %L, %L))',
+    pg_temp.id(p_line), pg_temp.id(p_project), pg_temp.id(p_category))) #>> '{}')::uuid;
+$$;
+-- A receipt as 'project:user_assigned:paired rows'.
+create or replace function pg_temp.receipt(p_line text)
+returns text language sql set search_path = '' as $$
+  select coalesce((select label from pg_temp.ru where id = t.project_id), '-') || ':' || t.user_assigned::text || ':'
+    || (select count(*) from public.review_queue q where q.transaction_id = t.id and q.paired_with is not null)::text
+  from public.transactions t where t.id = pg_temp.id(p_line);
+$$;
+-- An income invoice of ours with its paired receipt, as a SUMIT sync stores them.
+create or replace function pg_temp.invoice_pair(p_key text)
+returns void language plpgsql set search_path = '' as $$
+begin
+  insert into pg_temp.ru (label, id) values (p_key || '_inv', tests.fixture_line(pg_temp.id('co'), 'ru:' || p_key || '_inv', 5000,
+    'income', p_category => pg_temp.id('works'), p_doc_kind => 'invoice', p_source => 'sumit', p_pnl_role => null));
+  update public.transactions set external_id = 'ru-ext-' || p_key || '-inv', project_id = null, user_assigned = false,
+    category_assigned = false
+  where id = pg_temp.id(p_key || '_inv');
+  insert into pg_temp.ru (label, id) values (p_key || '_rec', tests.fixture_line(pg_temp.id('co'), 'ru:' || p_key || '_rec', 5000,
+    'income', p_doc_kind => 'receipt', p_source => 'sumit', p_pnl_role => null));
+  update public.transactions set external_id = 'ru-ext-' || p_key || '-rec', linked_external_id = 'ru-ext-' || p_key || '-inv',
+    user_assigned = false, category_assigned = false
+  where id = pg_temp.id(p_key || '_rec');
+end; $$;
 grant execute on all functions in schema pg_temp to authenticated, service_role;
 
 insert into ru (label, id) values ('co', tests.fixture_company('ru_owner', 'Example Review Rows Co'));
@@ -225,9 +254,9 @@ select is(pg_temp.try(format('select public.resolve_review(%L, %L, %L, %L)', pg_
 select is(pg_temp.row(pg_temp.id('r3')), 'approved:-', 'an approval has no skip kind');
 insert into ru (label, id) values ('r3b', pg_temp.newer('m-3'));
 select is(pg_temp.try(format('select public.reopen_review(%L)', pg_temp.id('r3'))), 'ok', 'reopening the approval succeeds');
-select is(pg_temp.filing('m-3') || ',' || pg_temp.row(pg_temp.id('r3')) || ',' || pg_temp.row(pg_temp.id('r3b')),
-  '-:-:overhead,approved:-,open:-',
-  'the line is as before the approval, the approval stays closed and the newer row is the card');
+select is(pg_temp.filing('m-3') || ',' || coalesce(pg_temp.row(pg_temp.id('r3')), 'gone') || ',' || pg_temp.row(pg_temp.id('r3b')),
+  '-:-:overhead,gone,open:-',
+  'the line is as before the approval, the undone approval''s row goes and the newer row is the card');
 select is(pg_temp.try(format('select public.resolve_review(%L, %L, %L, %L)', pg_temp.id('r4'), 'approved',
   pg_temp.id('house'), pg_temp.id('repairs'))), 'ok', 'the owner approves m-4');
 select is(pg_temp.try(format('select public.reopen_review(%L)', pg_temp.id('r4'))) || ':' || pg_temp.row(pg_temp.id('r4')),
@@ -238,9 +267,9 @@ insert into ru (label, id) values ('r5', pg_temp.open_row('m-5')), ('r6', pg_tem
 insert into ru (label, id) values ('u5', pg_temp.file('m-5', 'house', 'repairs'));
 insert into ru (label, id) values ('r5b', pg_temp.newer('m-5'));
 select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u5'))), 'ok', 'the undo of m-5''s filing succeeds');
-select is(pg_temp.filing('m-5') || ',' || pg_temp.row(pg_temp.id('r5')) || ',' || pg_temp.row(pg_temp.id('r5b')),
-  '-:-:overhead,changed:-,open:-',
-  'the line is as before, the changed row stays closed and the newer row is the card');
+select is(pg_temp.filing('m-5') || ',' || coalesce(pg_temp.row(pg_temp.id('r5')), 'gone') || ',' || pg_temp.row(pg_temp.id('r5b')),
+  '-:-:overhead,gone,open:-',
+  'the line is as before, the undone filing''s changed row goes and the newer row is the card');
 insert into ru (label, id) values ('u6', pg_temp.file('m-6', 'house', 'repairs'));
 select is(pg_temp.row(pg_temp.id('r6')), 'changed:-', 'a filing closes m-6''s row as changed');
 select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u6'))) || ':' || pg_temp.row(pg_temp.id('r6')),
@@ -368,6 +397,75 @@ select is((select t.project_id from public.transactions t where t.id = pg_temp.i
   'filing the invoice moves its receipt with it');
 select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u14'))) || ':'
   || pg_temp.filing('ru-ext-inv'), 'ok:-:works:-', 'the immediate undo of the invoice''s filing runs');
+
+-- A split by category made after the filing: the undo would leave its parts on an unfiled line.
+insert into ru (label, id) values ('sp', tests.fixture_line(pg_temp.id('co'), 'ru:sp', 1000, p_category => pg_temp.id('repairs')));
+insert into ru (label, id) values ('u15', pg_temp.file_line('sp', 'house', 'repairs'));
+select is(pg_temp.try(format('select public.save_line_split(%L, %L)', pg_temp.id('sp'), jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.id('repairs'), 'project_id', pg_temp.id('house'), 'amount_minor', 600),
+    jsonb_build_object('category_id', pg_temp.id('supplies'), 'project_id', pg_temp.id('barn'), 'amount_minor', 400)))),
+  'ok', 'the owner then splits the filed line by category');
+select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u15'))) || ':'
+  || (select count(*) from private.split_parts s where s.transaction_id = pg_temp.id('sp'))::text
+  || ':' || (select coalesce((select label from ru where id = t.project_id), '-') from public.transactions t where t.id = pg_temp.id('sp')),
+  'line changed since:2:house', 'a split made since refuses the undo, and the line keeps its filing and its parts');
+-- One whose parts were there before the filing leaves them as it found them: the undo runs at once.
+insert into ru (label, id) values ('sp2', tests.fixture_line(pg_temp.id('co'), 'ru:sp2', 1000, p_category => pg_temp.id('repairs')));
+select tests.line_split(pg_temp.id('sp2'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('repairs'), 'project_id', pg_temp.id('house'), 'amount_minor', 700, 'gross_up', false),
+  jsonb_build_object('category_id', pg_temp.id('supplies'), 'project_id', pg_temp.id('barn'), 'amount_minor', 300, 'gross_up', false)));
+insert into ru (label, id) values ('u16', pg_temp.file_line('sp2', 'barn', 'repairs'));
+select is(jsonb_array_length((select u.written_line->'split_parts' from public.reassign_undo u where u.id = pg_temp.id('u16'))), 2,
+  'the undo row keeps the parts the filing left');
+select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u16'))), 'ok',
+  'and the immediate undo of a split line''s filing runs');
+
+-- A loan payment's parts attached after the filing refuse the undo too.
+insert into ru (label, id) values ('ln', tests.fixture_line(pg_temp.id('co'), 'ru:ln', 1500, p_category => pg_temp.id('repairs')));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
+values (pg_temp.id('co'), 'Example loan', 120000, 60000, 360, pg_temp.day() - 60, 1500, 100, 'ILS');
+insert into ru (label, id) select 'loan', l.id from public.loans l where l.company_id = pg_temp.id('co');
+insert into ru (label, id) values ('u17', pg_temp.file_line('ln', 'house', 'repairs'));
+select tests.loan_split(pg_temp.id('ln'), pg_temp.id('loan'), (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.name = v.cat
+      and c.kind = 'expense'), 'needs_review', false) order by v.n)
+  from (values (1, 'principal', 900, 'תשלומי הלוואה'), (2, 'interest', 500, 'ריבית משכנתא'),
+    (3, 'escrow', 100, 'מסים וביטוח')) as v(n, part, amount, cat)));
+select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u17'))) || ':'
+  || (select count(*) from private.loan_parts s where s.transaction_id = pg_temp.id('ln'))::text,
+  'line changed since:3', 'loan parts attached since refuse the undo, and stay');
+
+-- The keep-the-newer-card path of a filed invoice: its paired receipt goes back with it.
+select pg_temp.invoice_pair('k1');
+insert into public.review_queue (company_id, transaction_id, status, reason)
+values (pg_temp.id('co'), pg_temp.id('k1_inv'), 'open', 'missing_category');
+insert into ru (label, id) values ('k1row', pg_temp.open_row('ru-ext-k1-inv'));
+select is(pg_temp.try(format('select public.resolve_review(%L, %L, %L, %L)', pg_temp.id('k1row'), 'changed',
+  pg_temp.id('barn'), pg_temp.id('works'))) || ',' || pg_temp.receipt('k1_rec'), 'ok,barn:true:1',
+  'filing the invoice from its card moves the receipt, with a paired row');
+insert into ru (label, id) values ('k1new', pg_temp.newer('ru-ext-k1-inv'));
+select is(pg_temp.try(format('select public.reopen_review(%L)', pg_temp.id('k1row'))) || ',' || pg_temp.filing('ru-ext-k1-inv')
+  || ',' || pg_temp.receipt('k1_rec'), 'ok,-:works:-,-:false:0',
+  'reopening it with a newer card open puts the receipt back too, as a reopen does');
+select is((select count(*)::integer from public.review_queue q where q.id = pg_temp.id('k1row')), 0,
+  'the undone filing''s row goes: it no longer says the line was filed');
+delete from public.review_queue where id = pg_temp.id('k1new');
+select pg_temp.queue();
+select is(pg_temp.open_count('ru-ext-k1-inv'), 1, 'with the newer card gone, the unfiled invoice is queued again');
+-- The same through undo_reassign.
+select pg_temp.invoice_pair('k2');
+insert into public.review_queue (company_id, transaction_id, status, reason)
+values (pg_temp.id('co'), pg_temp.id('k2_inv'), 'open', 'missing_category');
+insert into ru (label, id) values ('u18', pg_temp.file_line('k2_inv', 'barn', 'works'));
+select is(pg_temp.receipt('k2_rec'), 'barn:true:1', 'filing the invoice moves the receipt, with a paired row');
+insert into ru (label, id) values ('k2new', pg_temp.newer('ru-ext-k2-inv'));
+select is(pg_temp.try(format('select public.undo_reassign(%L)', pg_temp.id('u18'))) || ',' || pg_temp.filing('ru-ext-k2-inv')
+  || ',' || pg_temp.receipt('k2_rec'), 'ok,-:works:-,-:false:0',
+  'the undo with a newer card open puts the receipt back too');
+delete from public.review_queue where id = pg_temp.id('k2new');
+select pg_temp.queue();
+select is(pg_temp.open_count('ru-ext-k2-inv'), 1, 'and the unfiled invoice is queued again once the newer card is gone');
 
 -- flow-mcp: undo of a reassign gets the refusal word for word.
 insert into ru (label, id) values ('mcp', tests.fixture_line(pg_temp.id('co'), 'ru:mcp', 2000, p_category => pg_temp.id('repairs')));

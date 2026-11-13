@@ -6,8 +6,12 @@
 --    review_queue or sets status = 'open' was traced in the schema as it stands after part 3:
 --    - Reopen with no check for another open row (the two paths part 3 found): reopen_review (a skip
 --      and an approval or change alike) and undo_reassign (a 'changed' row). Both now reopen only when
---      no other row of the line is open; otherwise the undo still succeeds (the filing comes back), the
---      old row stays closed, and the newer row is the card shown. An open split_mismatch row gives way,
+--      no other row of the line is open; otherwise the undo still succeeds (the filing comes back) and
+--      the newer row is the card shown. A skip stays skipped. An approved or changed row whose filing
+--      came back is deleted (private.review_undone_row): kept, sync_review_queue's income insert would
+--      read it as settled and never queue the unfiled line again once the newer row went. An invoice's
+--      paired receipts go back first (private.unfollow_invoice_row), as review_receipt_pairing does
+--      when the row reopens instead. An open split_mismatch row gives way,
 --      as it did before: the trigger review_queue_line_split_review deleted it after such a reopen, and
 --      line_split_review_sync queues it again whenever the line has no other open row. That deletion
 --      now runs before the reopen (private.review_may_reopen), and the trigger's branch, which the
@@ -32,9 +36,10 @@
 --    Production has no line with two open rows (counted read-only on 2026-11-13):
 --      select transaction_id from public.review_queue where status = 'open' and transaction_id is not
 --      null group by 1 having count(*) > 1;
---    and the table has under 3,000 rows, so the index is built plainly: CREATE INDEX holds SHARE on
---    review_queue (reads go on, writes wait) for milliseconds, and DROP INDEX holds ACCESS EXCLUSIVE
---    as briefly; lock_timeout stops the file rather than queue behind a long sync.
+--    and the table has under 3,000 rows, so the index is built plainly. The file's ALTER TABLE ...
+--    ADD COLUMN (B) already takes ACCESS EXCLUSIVE on review_queue, and every lock is held to the
+--    commit, so reads and writes of review_queue wait for the rest of the file (milliseconds on a
+--    table this size); lock_timeout stops the file rather than queue behind a long sync.
 --
 -- B. skipped_by: what closed a skipped row. The writers that set status = 'skipped':
 --    - resolve_review with 'skipped': 'person' (the queue's דלג, by the owner or an editor, or the
@@ -53,7 +58,11 @@
 -- C. reassign_undo.written_line: the line as the filing left it, in exactly the columns undo_reassign
 --    restores: on transactions project_id, category_id, pnl_role, user_assigned, category_suggested,
 --    category_assigned; the line's allocations (project, share, amount); whether it has an overhead
---    row (private.reassign_line_state). A BEFORE INSERT trigger fills it: every writer of the table
+--    row; and the parts the undo would leave on the line, its split by category and a loan payment's
+--    parts (private.reassign_line_state), so a split saved or a loan payment attached since refuses
+--    the undo (undo_utility_refile already refuses a refile's undo on a split). No writer writes
+--    parts; a line's parts from before the filing are in the snapshot, so its undo runs at once.
+--    A BEFORE INSERT trigger fills it: every writer of the table
 --    (reassign_transaction, set_transaction_category, collapse_split, mcp_assign_expense_split) inserts
 --    the undo row after its last write to the line, and after the review row's close, whose triggers
 --    (follow_invoice on a paired receipt) have run by then; follow_invoice writes the receipts, never
@@ -68,7 +77,10 @@
 --    Callers: the app (undo_reassign), undo_reassign_recurring_charge, undo_utility_refile, and
 --    mcp_undo ('reassign' after its own check of private.mcp_writes, and a loan attach's project).
 --    mcp_undo gives the refusal word for word as a conflict; the loan attach's undo leaves the line's
---    project as it is (project_restored false), as it already does for a line changed since.
+--    project as it is (project_restored false), as it already does for a line changed since. The
+--    loan attach (mcp_attach_loan_payment) is the one filing that leaves parts it wrote itself: it
+--    writes them before reassign_transaction, so its undo now puts the filing back before it
+--    removes them (the reverse order).
 --
 -- D. reopen_invite: an invite whose expiry has passed is not put back to pending ('invite is not
 --    declined', the function's own refusal).
@@ -239,6 +251,36 @@ $$;
 
 revoke all on function private.review_may_reopen(uuid, uuid, uuid) from public, anon, authenticated;
 
+-- An approved or changed row p_row whose filing was just undone while a newer row of the line is
+-- open (so it does not reopen). It goes: kept, sync_review_queue would read it as settled and never
+-- queue the unfiled line again once the newer row went. An invoice's paired receipts go back first,
+-- as review_receipt_pairing does when such a row reopens. The caller holds the line's lock.
+create function private.review_undone_row(p_company uuid, p_txn uuid, p_row uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  invoice boolean;
+begin
+  select t.direction = 'income'::public.txn_direction and t.doc_kind = 'invoice'
+  into invoice
+  from public.transactions t
+  where t.id = p_txn and t.company_id = p_company;
+  if invoice then
+    perform private.unfollow_invoice_row(p_row);
+  end if;
+  delete from public.review_queue q
+  where q.id = p_row and q.company_id = p_company and q.status in ('approved', 'changed');
+  if invoice then
+    perform private.follow_invoice(p_txn);
+  end if;
+end;
+$$;
+
+revoke all on function private.review_undone_row(uuid, uuid, uuid) from public, anon, authenticated;
+
 -- The trigger's branch for a review that came back is now the helper above: with the index, a reopen
 -- beside an open split_mismatch row would fail before the trigger ran.
 select pg_temp.patch('private.review_queue_line_split_review()',
@@ -404,12 +446,14 @@ begin
   end if;
 
   -- FLOW-1166 part 4: the filing comes back either way; the row reopens only when no newer row of
-  -- the line is open, which then stays the card.
+  -- the line is open, which then stays the card, and the undone row goes.
   if private.review_may_reopen(cid, txn, p_id) then
     update public.review_queue
     set status = 'open',
         resolved_at = null
     where id = p_id and company_id = cid;
+  else
+    perform private.review_undone_row(cid, txn, p_id);
   end if;
 end;
 $function$;
@@ -494,7 +538,9 @@ create unique index review_queue_open_line_key on public.review_queue (transacti
 -- C. reassign_undo.written_line, and undo_reassign's check
 -- ---------------------------------------------------------------------------------------------
 
--- The line in the columns undo_reassign restores. Null for a line that is not the company's.
+-- The line in the columns undo_reassign restores, and the parts it would leave behind: the split by
+-- category (private.line_split_parts, the form undo_utility_refile compares) and a loan payment's
+-- parts, in a stable order. Null for a line that is not the company's.
 create function private.reassign_line_state(p_company uuid, p_txn uuid)
 returns jsonb
 language sql
@@ -517,7 +563,14 @@ as $$
     ), '[]'::jsonb),
     'overhead', exists (
       select 1 from public.overhead o where o.transaction_id = t.id and o.company_id = t.company_id
-    )
+    ),
+    'split_parts', private.line_split_parts(t.id),
+    'loan_parts', coalesce((
+      select jsonb_agg(jsonb_build_object('loan_id', s.loan_id, 'part', s.part, 'category_id', s.category_id,
+        'amount_minor', s.amount_minor) order by s.loan_id, s.part)
+      from private.loan_parts s
+      where s.transaction_id = t.id and s.company_id = t.company_id
+    ), '[]'::jsonb)
   )
   from public.transactions t
   where t.id = p_txn and t.company_id = p_company;
@@ -681,15 +734,19 @@ begin
     end if;
 
     -- FLOW-1166 part 4: the row reopens only when no newer row of the line is open, which then
-    -- stays the card; the filing comes back either way.
+    -- stays the card, and the undone row goes; the filing comes back either way.
     if exists (
       select 1 from public.review_queue q
       where q.id = review_id and q.company_id = cid and q.status = 'changed'
-    ) and private.review_may_reopen(cid, txn, review_id) then
-      update public.review_queue
-      set status = 'open',
-          resolved_at = null
-      where id = review_id and company_id = cid and status = 'changed';
+    ) then
+      if private.review_may_reopen(cid, txn, review_id) then
+        update public.review_queue
+        set status = 'open',
+            resolved_at = null
+        where id = review_id and company_id = cid and status = 'changed';
+      else
+        perform private.review_undone_row(cid, txn, review_id);
+      end if;
     end if;
   end if;
 
@@ -718,9 +775,18 @@ revoke all on function public.undo_reassign(uuid) from public, anon;
 grant execute on function public.undo_reassign(uuid) to authenticated, service_role;
 
 -- flow-mcp: the refusal word for word, as a conflict; a loan attach's undo leaves a changed line's
--- project as it is.
+-- project as it is. The attach wrote its parts before its filing, whose snapshot holds them, so its
+-- undo puts the filing back first and then removes the parts.
 select pg_temp.patch('public.mcp_undo(text,text,uuid)',
   array[
+    $a$        perform private.set_loan_parts(cid, p_id, rec.loan_id, null);
+        -- Give the line back$a$,
+    $a$        update private.mcp_writes
+        set undone_at = clock_timestamp()
+        where id = rec.id and user_id = auth.uid() and undone_at is null;
+        response := jsonb_build_object(
+          'ok', true,
+          'data', case when attach_reassign is not null$a$,
     $a$            perform public.undo_reassign(attach_reassign);
             restored := true;$a$,
     $a$      return private.mcp_error('unavailable', 'retry');
@@ -728,6 +794,15 @@ select pg_temp.patch('public.mcp_undo(text,text,uuid)',
       response := private.mcp_refused(sqlerrm);
   end;$a$],
   array[
+    $n$        -- Give the line back$n$,
+    $n$        -- FLOW-1166 part 4: the parts go after the filing's undo, whose snapshot holds them.
+        perform private.set_loan_parts(cid, p_id, rec.loan_id, null);
+        update private.mcp_writes
+        set undone_at = clock_timestamp()
+        where id = rec.id and user_id = auth.uid() and undone_at is null;
+        response := jsonb_build_object(
+          'ok', true,
+          'data', case when attach_reassign is not null$n$,
     $n$            -- FLOW-1166 part 4: undo_reassign also reads the line's flags and shares; a line
             -- changed there keeps its project too.
             begin
