@@ -738,6 +738,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1109"></a>[FLOW-1109](tasks/FLOW-1109.md) | Make room in Home's code so the bundle limits go back to 248 / 680 KB | SMALL CYCLE (perf) |
 | <a id="flow-1115"></a>[FLOW-1115](tasks/FLOW-1115.md) | A cold start on Home sends its figures' reads before the first render | SMALL CYCLE (perf) |
 | <a id="flow-1116"></a>[FLOW-1116](tasks/FLOW-1116.md) | Plan: Home's figure reads leave from the page itself, before the app's code arrives | PLAN FIRST (perf) |
+| <a id="flow-1171"></a>[FLOW-1171](tasks/FLOW-1171.md) | Perf queue: every screen in the sweep under 0.5 s | SMALL CYCLE (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
