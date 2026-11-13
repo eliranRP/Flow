@@ -231,4 +231,11 @@ describe("the two dark blocks set the same custom properties", () => {
     const missing = [...darkMedia.keys()].filter((name) => !dark.has(name));
     expect(missing).toEqual([]);
   });
+
+  it("every property the two dark blocks share has the same value in both", () => {
+    const differing = [...darkMedia.entries()]
+      .filter(([name, value]) => dark.has(name) && dark.get(name) !== value)
+      .map(([name]) => name);
+    expect(differing).toEqual([]);
+  });
 });
