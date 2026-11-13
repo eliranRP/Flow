@@ -69,7 +69,7 @@
 
 /* 2px over and under each field, so its border clears the dividers (design lead). */
 .ui-lsedit .ui-loan-parts-row {
-  padding-block: var(--space-half);
+  padding-block: var(--space-1);
 }
 
 .ui-lsedit .ui-loan-parts-total {

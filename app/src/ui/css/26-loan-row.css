@@ -71,7 +71,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: calc(var(--space-card-inset) + var(--space-1) / 2);
+  padding: var(--space-5);
   border-radius: var(--radius-card);
   font-weight: var(--type-body-weight);
 }
