@@ -6,6 +6,9 @@ export const MY_COMPANIES_KEY = "my-companies";
 /** One quiet line. Settings puts it under the header. Review puts it where the actions were. */
 export const VIEWER_NOTE = "צפייה בלבד · שינויים נעשים על ידי בעל העסק";
 
+/** FLOW-1176: the closed-books note is an instruction of about 20 words, so its toast stays 8s, not an info toast's 4s. */
+export const BOOKS_CLOSED_MS = 8000;
+
 /** FLOW-1166: the database refuses an edit to a line dated on or before the closed date. The date reads as the toasts show dates. */
 export function booksClosedNote(closedThrough: string): string {
   return `הספרים סגורים עד ${formatDisplay(closedThrough)}. כדי לשנות שורה מהתקופה הזו, הזיזו אחורה את תאריך הסגירה דרך עוזר ה־AI.`;
