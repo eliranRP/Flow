@@ -42,14 +42,20 @@ function body(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
-/** An element's computed background as 0–255 sRGB channels: rgb() or the color(srgb …) a color-mix() computes to. */
+/** An element's computed background as 0–255 sRGB channels: rgb() or the color(srgb …) a color-mix() computes to.
+ *  A transparent or partly transparent fill throws: it would otherwise read as black, and pass any contrast test. */
 function fill(el: Element | null): number[] {
   const value = el == null ? "" : getComputedStyle(el).backgroundColor;
-  const srgb = /^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/.exec(value);
-  if (srgb != null) return srgb.slice(1).map((c) => Number(c) * 255);
-  const rgb = /^rgba?\((\d+), (\d+), (\d+)/.exec(value);
-  if (rgb != null) return rgb.slice(1).map(Number);
+  const srgb = /^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?/.exec(value);
+  if (srgb != null) return opaque(value, srgb[4], srgb.slice(1, 4).map((c) => Number(c) * 255));
+  const rgb = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/.exec(value);
+  if (rgb != null) return opaque(value, rgb[4], rgb.slice(1, 4).map(Number));
   throw new Error(`no fill: ${value}`);
+}
+
+function opaque(value: string, alpha: string | undefined, channels: number[]): number[] {
+  if (alpha != null && Number(alpha) < 1) throw new Error(`not opaque: ${value}`);
+  return channels;
 }
 
 /** WCAG 2 contrast between two sRGB fills. */
@@ -97,6 +103,22 @@ export const Forecast: Story = {
     await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
     await expect(canvas.getByRole("list", { name: "עד אז" }).textContent).toContain("הריבית הצפויה היום, לא תחזית");
   },
+};
+
+/** FLOW-1179 at 320 and in dark: the same checks (the play is Forecast's), on the phone width and in the dark theme. */
+export const ForecastPhone320: Story = {
+  ...Forecast,
+  globals: { viewport: { value: "flow320", isRotated: false } },
+};
+
+export const ForecastDark393: Story = {
+  ...Forecast,
+  globals: { viewport: { value: "flow393", isRotated: false }, theme: "dark" },
+};
+
+export const ForecastDark320: Story = {
+  ...Forecast,
+  globals: { viewport: { value: "flow320", isRotated: false }, theme: "dark" },
 };
 
 export const FiveYears: Story = {
