@@ -179,6 +179,7 @@ describe("chargePickToast", () => {
 
   it("tells a conflict from another failure", () => {
     expect(chargeUndoFailure({ message: "conflict" })).toBe("תשלום השתנה מאז, אז הביטול לא בוצע.");
+    expect(chargeUndoFailure(new Error("line changed since"))).toBe("תשלום השתנה מאז, אז הביטול לא בוצע.");
     expect(chargeUndoFailure(new Error("network"))).toBe("לא הצלחנו לבטל.");
   });
 });

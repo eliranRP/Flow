@@ -10,6 +10,7 @@ import { groupUnassignedRows, kindLabel, rowKind, suggestedProject } from "../pr
 import { screenPhase } from "../query-phase";
 import { EMPTY_FILTERS, searchCountWords, searchRowTitle, uniqueSearchRows, useSearchQuery } from "../search";
 import { useHoldWrites } from "../use-is-viewer";
+import { reassignUndoFailure } from "../review-copy";
 import { assertNoError, useWrite } from "../use-write";
 import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -82,7 +83,7 @@ export function ProjectUnassignedScreen({ sample }: { sample?: UnassignedSample 
     });
   };
   const undoAssign = useWrite<Undo>({
-    failure: "לא הצלחנו לבטל את השיוך.",
+    failure: reassignUndoFailure,
     keys: ["search", "dashboard", "project", "projects-cash"],
     onSuccess: (payload) => { show(payload.line, true); },
     run: async (payload) => {

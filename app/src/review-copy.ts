@@ -1,5 +1,6 @@
 import { formatAmountText, type ReviewHeld } from "@flow/shared";
 import { formatDayMonth, formatDisplay, HEBREW_MONTHS } from "./ui/date-math";
+import type { WriteFailure } from "./use-write";
 
 /**
  * FLOW-327 / FLOW-701. The words on the review card for Jev's reason (decision 0134) and the
@@ -307,4 +308,15 @@ export function reviewHeldView(row: ReviewHeldRow): ReviewHeldView {
     if (row.line_status === "pending" && held.line_status === "posted") details.push(["השורה עברה לסופית."]);
   }
   return { reason: sumit ? REVIEW_HELD_REASON_SUMIT : REVIEW_HELD_REASON_BANK, details, hint: REVIEW_HELD_HINT };
+}
+
+/** The ביטול of a filing (undo_reassign) failed. */
+export const REASSIGN_UNDO_FAILED = "לא הצלחנו לבטל את השיוך.";
+/** FLOW-1166: undo_reassign refuses a late undo once the line changed since the filing; the later edit stays. */
+export const REASSIGN_UNDO_CHANGED = "השורה שונתה מאז. הביטול לא בוצע.";
+
+/** The filing's ביטול failed: a line changed since is final (no retry); anything else is the write's own failure. */
+export function reassignUndoFailure(error: Error): WriteFailure {
+  if (/line changed since/.test(error.message)) return { message: REASSIGN_UNDO_CHANGED, tone: "info", retry: false };
+  return REASSIGN_UNDO_FAILED;
 }

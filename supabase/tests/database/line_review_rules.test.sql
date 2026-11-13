@@ -376,11 +376,11 @@ select lives_ok(
     values (%L, %L, 'approved', null, now())$$, pg_temp.id('co'), (pg_temp.line('s-2')).id),
   'a settled row with no reason goes in (follow_invoice writes one)');
 select lives_ok(
-  format($$insert into public.review_queue (company_id, transaction_id, status, reason)
-    select %L, %L, 'open', r from unnest(array['missing_category', 'missing_project', 'suggested',
+  format($$insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+    select %L, %L, 'approved', r, now() from unnest(array['missing_category', 'missing_project', 'suggested',
       'unallocated_shared', 'split_mismatch', 'closed_month_change']) r$$,
     pg_temp.id('co'), (pg_temp.line('s-2')).id),
-  'each reason the code writes goes in');
+  'each reason the code writes goes in (closed rows: a line has one open row since part 4)');
 select is((select count(*)::integer from public.review_queue q where q.company_id = pg_temp.id('co')
   and q.reason is not null and q.reason not in ('missing_category', 'missing_project', 'suggested',
     'unallocated_shared', 'split_mismatch', 'closed_month_change')), 0,
