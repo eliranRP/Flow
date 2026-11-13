@@ -13,6 +13,7 @@
   background: var(--color-tint);
   color: inherit;
   text-decoration: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-banner .ui-row-text {
@@ -50,6 +51,7 @@
   list-style: none;
   border-radius: var(--radius-card);
   background: var(--color-tint);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-banner-row {
@@ -124,6 +126,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-tint);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-notice > div {
@@ -296,7 +299,7 @@
 .ui-row > .ui-btn-link {
   flex: none;
   max-width: none;
-  margin-block: calc(var(--space-half) * -1);
+  margin-block: calc(var(--space-1) * -1);
 }
 
 .ui-row > .ui-btn-link .ui-btn-label {
@@ -315,7 +318,7 @@
 }
 
 .ui-change-band {
-  padding: var(--pill-pad-block) var(--pill-pad-inline);
+  padding: var(--space-1) var(--space-3);
 }
 
 .ui-change-band.ui-delta-good {
@@ -334,7 +337,7 @@
 
 /* FLOW-364: the change as an amount on the band. A grey (helps) or red (hurts) figure on the band's pill. */
 .ui-change-amount {
-  padding: var(--pill-pad-block) var(--pill-pad-inline);
+  padding: var(--space-1) var(--space-3);
   background: var(--color-band-pill);
 }
 
@@ -368,7 +371,7 @@
   max-inline-size: 100%;
   min-inline-size: 0;
   min-block-size: var(--touch-min);
-  padding-block: var(--row-pad);
+  padding-block: var(--space-4);
   border: 0;
   border-bottom: 1px solid var(--color-line);
   background: transparent;
@@ -415,7 +418,7 @@
 .ui-choice-sheet .ui-radio-row {
   min-block-size: 56px;
   padding-block: var(--space-2);
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   border-radius: var(--radius-toast);
   gap: var(--space-3);
 }
@@ -431,7 +434,7 @@
 }
 
 .ui-choice-sheet .ui-row-text {
-  gap: var(--space-half);
+  gap: var(--space-1);
 }
 
 .ui-choice-sheet .ui-row-title {
@@ -459,7 +462,7 @@
    and the line said in place of the rows when there are none. */
 .ui-sheet-choice .ui-choice-action {
   min-block-size: var(--field-height);
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   font-size: var(--type-btn-size);
   line-height: var(--type-btn-line);
   font-weight: var(--type-btn-weight);
@@ -467,7 +470,7 @@
 
 .ui-sheet-choice .ui-choice-empty {
   margin: 0;
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line);
 }
