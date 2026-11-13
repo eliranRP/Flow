@@ -1,8 +1,8 @@
 import "../ui/lazy.css";
 import { type CategoryRow, formatAmountText } from "@flow/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { parseAmountMinor } from "../add-entry";
 import { projectRows } from "../by-currency";
 import { useCompanyCurrency } from "../company-currency";
@@ -23,6 +23,9 @@ import {
   paceChoices,
   paceSummary,
   PACE_WORDS,
+  removalChoices,
+  type RemovalPace,
+  removedToast,
   savedToast,
 } from "../project-next-edit";
 import { type ForecastPace, LOAN_SOURCE, type NextMonthRow } from "../project-next-month";
@@ -31,7 +34,7 @@ import { screenPhase } from "../query-phase";
 import { createCategoryNamed } from "../use-add-entry";
 import { useProjectQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
-import { useGoBack } from "../ui/back";
+import { liveSheetStack, useGoBack } from "../ui/back";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { formatDayMonth, israelToday } from "../ui/date-math";
@@ -53,7 +56,7 @@ export type ProjectNextEditSample = ProjectProfitSample & {
   draft?: string;
   pace?: ForecastPace;
   categoryId?: string;
-  sheet?: "category" | "pace";
+  sheet?: "category" | "pace" | "remove";
   query?: string;
 };
 
@@ -123,12 +126,22 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));
   const [pickedPace, setPace] = useState<ForecastPace | null>(sample?.pace ?? null);
   const [picked, setPicked] = useState<CategoryChoice | null>(null);
-  const [sheet, setSheet] = useState<"category" | "pace" | null>(sample?.sheet ?? null);
+  const [sheet, setSheet] = useState<"category" | "pace" | "remove" | null>(sample?.sheet ?? null);
   const [query, setQuery] = useState(sample?.query ?? "");
   const [missingAmount, setMissingAmount] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLButtonElement>(null);
   const paceRef = useRef<HTMLButtonElement>(null);
+  const removeRef = useRef<HTMLButtonElement>(null);
+  // FLOW-1188: a removal picked in its sheet runs once the sheet's history entry is gone, so Back leaves the page.
+  const [removing, setRemoving] = useState<RemovalPace | null>(null);
+  const removeRun = useRef<(pace: RemovalPace) => void>(() => undefined);
+  const removeLayer = liveSheetStack(useLocation().state).includes("pn-remove");
+  useEffect(() => {
+    if (removing == null || sheet === "remove" || removeLayer) return;
+    setRemoving(null);
+    removeRun.current(removing);
+  }, [removing, sheet, removeLayer]);
 
   const forecast = next.forecast;
   const categories = next.categories;
@@ -183,6 +196,14 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
       : row?.kind === "loan"
         ? "ההלוואה עצמה לא משתנה. השינוי שלך גובר על לוח ההלוואה בצפי."
         : "Flow ממשיך ללמוד מהתנועות. השינוי שלך גובר על הממוצע.";
+
+  function remove(pace: RemovalPace) {
+    if (row == null) return;
+    // Decision 0219: the row leaves at once; a failure puts it back on the list with the failure toast.
+    writes.mutate({ fn: "remove_project_forecast_row", rowKey: row.key, pace, message: removedToast(pace, month, row.name) });
+    goBack(backTo);
+  }
+  removeRun.current = remove;
 
   function save() {
     if (add && chosen == null) {
@@ -284,10 +305,11 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
             <Button
               variant="danger-link"
               disabled={writes.pending}
+              buttonRef={removeRef}
               onClick={() => {
-                // Decision 0219: the row leaves at once; a failure puts it back on the list with the failure toast.
-                writes.mutate({ fn: "remove_project_forecast_row", rowKey: row.key, message: `הוסר מהצפי מ${monthWord(month)} והלאה: ${row.name}` });
-                goBack(backTo);
+                // FLOW-1188: a line for this month only has no month after; any other row asks: this month, or from it on.
+                if (row.kind === "added" && (row.pace == null || row.pace === "once")) remove("month");
+                else setSheet("remove");
               }}
             >
               הסרה מהצפי
@@ -305,6 +327,21 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
         returnFocusRef={paceRef}
         panelClassName="ui-pace-sheet"
       />
+      {add || row == null ? null : (
+        <ChoiceSheet<RemovalPace, string>
+          copy={{ historyKey: "pn-remove", title: "הסרה מהצפי", subtitle: `${row.name} · בצפי של ${projectName}`, choices: removalChoices(month) }}
+          open={sheet === "remove"}
+          onOpenChange={(open) => { setSheet(open ? "remove" : null); }}
+          value=""
+          saving={null}
+          returnFocusRef={removeRef}
+          panelClassName="ui-pace-sheet"
+          onPick={(choice, close) => {
+            setRemoving(choice);
+            close();
+          }}
+        />
+      )}
       <ForecastCategorySheet
         open={sheet === "category"}
         onOpenChange={(open) => { setSheet(open ? "category" : null); }}

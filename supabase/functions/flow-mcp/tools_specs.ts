@@ -392,11 +392,12 @@ function writeTools() {
       amount_minor: { type: "integer", minimum: 0 },
       pace: { type: "string", enum: ["once", "month", "2months", "quarter", "year"] },
     }, true),
-    toolSpec("remove_project_forecast_row", "Take one row out of a project's forecast from one month on, until it is restored (הסרה מהצפי; owner or editor; decision 0239). project_id, month (YYYY-MM, this month or later) and row_key. A line added for that month (add:<id>) is deleted outright, on every month of its pace; one added for an earlier month is taken out from that month on. A row already out (removed for that month or an earlier one) stays out. Returns id, edit (null when a line was deleted) and undo_kind (project_forecast).", {
+    toolSpec("remove_project_forecast_row", "Take one row out of a project's forecast (הסרה מהצפי; owner or editor; decisions 0239, 0268). project_id, month (YYYY-MM, this month or later), row_key and pace: month (default) takes it out from that month on, until it is restored; once takes it out of that month only, and the months after still expect it. A line added for that month (add:<id>) is deleted outright when removed from it on, or when it was for that month only; removed once, a line on a pace stays for the months after. A row already out of the month stays out; one out of the month only and removed again from it on is out from it on. Returns id, edit (null when a line was deleted) and undo_kind (project_forecast).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
       month: { type: "string" },
       row_key: { type: "string" },
+      pace: { type: "string", enum: ["once", "month"] },
     }, true),
     toolSpec("restore_project_forecast_row", "Bring a removed row back into a project's forecast, from that month on (החזרה; owner or editor). project_id, month and row_key. Returns id, removed (how many removals went) and undo_kind (project_forecast).", {
       idempotency_key: { type: "string" },

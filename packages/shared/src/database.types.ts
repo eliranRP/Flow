@@ -2220,7 +2220,7 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_user_id": string }; Returns: Json
                            },
 "mcp_remove_project_forecast_row":
-{ Args: { "p_idempotency_key": string,"p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+{ Args: { "p_idempotency_key": string,"p_month": string,"p_pace"?: string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
 "mcp_remove_transaction_file":
 { Args: { "p_file_id": string,"p_idempotency_key": string }; Returns: Json
@@ -2528,7 +2528,7 @@ isOneToOne: false
 { Args: { "p_user_id": string }; Returns: Json
                            },
 "remove_project_forecast_row":
-{ Args: { "p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+{ Args: { "p_month": string,"p_pace"?: string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
 "remove_transaction_file":
 { Args: { "p_file_id": string }; Returns: string
