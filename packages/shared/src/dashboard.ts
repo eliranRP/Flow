@@ -446,7 +446,7 @@ export const projectDetailSchema = z
       expense_minor: agorotSchema,
       count: z.number().int().nonnegative(),
     })).optional(),
-    transactions: z.array(
+    transactions: z.array( // FLOW-1171: the app asks without them (p_lines false); a saved answer and flow-mcp's still carry them
       z.object({
         id: z.string(),
         description: z.string(),
@@ -462,7 +462,7 @@ export const projectDetailSchema = z
         /** A line split by category: this project's share, signed against the line's own kind (a reversal part counts minus, 0138). Null when the line has no split. */
         parts_minor: agorotOrNull.optional(),
       }),
-    ),
+    ).optional(),
     /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
     loans: z.array(z.object({
       id: z.string(),

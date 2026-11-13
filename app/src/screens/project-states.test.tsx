@@ -8,11 +8,12 @@ import { ProjectDetailScreen } from "./flow-screens";
 import { offlineSinceOf } from "./project-detail-screen";
 
 const rpc = vi.hoisted(() => ({
-  impl: (_name: string): Promise<{ data: unknown; error: { message: string } | null }> => Promise.resolve({ data: null, error: null }),
+  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string } | null }> => Promise.resolve({ data: null, error: null }),
+  calls: [] as { name: string; args: unknown }[],
 }));
 
 vi.mock("../lib/supabase", () => ({
-  getSupabase: () => ({ rpc: (name: string) => rpc.impl(name) }),
+  getSupabase: () => ({ rpc: (name: string, args?: unknown) => { rpc.calls.push({ name, args }); return rpc.impl(name, args); } }),
 }));
 
 const serverProject = {
@@ -59,6 +60,7 @@ function renderLive() {
 }
 
 afterEach(() => {
+  rpc.calls.length = 0;
   act(() => { onlineManager.setOnline(true); });
   rpc.impl = () => Promise.resolve({ data: null, error: null });
 });
@@ -91,5 +93,17 @@ describe("the project page's offline and failed states (FLOW-961)", () => {
     expect(await screen.findByRole("heading", { name: "וילה רעננה לא נטען" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
+  });
+});
+
+describe("the project page's read (FLOW-1171)", () => {
+  it("asks for the page without the lines and arrays no screen reads, and shows an answer without them", async () => {
+    // What the server sends for p_lines false: no transactions, roll-ups, excluded categories or waiting sums.
+    rpc.impl = (name) => Promise.resolve({ data: name === "get_project" ? { ...serverProject, transactions: undefined } : name === "project_cash_months" ? cashMonths : null, error: null });
+    renderLive();
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    const reads = rpc.calls.filter((call) => call.name === "get_project");
+    expect(reads.length).toBeGreaterThan(0);
+    for (const read of reads) expect(read.args).toMatchObject({ p_id: "a", p_lines: false });
   });
 });

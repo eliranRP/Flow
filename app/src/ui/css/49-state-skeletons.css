@@ -10,23 +10,23 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: calc(var(--space-3) + var(--space-half));
+  margin-top: var(--space-4);
 }
 
 .ui-skel-lines-chips {
   display: flex;
   gap: var(--space-2);
-  margin-top: calc(var(--space-4) + var(--space-half));
+  margin-top: var(--space-5);
 }
 
 .ui-skel-group {
   display: flex;
   flex-direction: column;
-  margin-top: calc(var(--space-5) + var(--space-half));
+  margin-top: var(--space-6);
 }
 
 .ui-skel-group + .ui-skel-group {
-  margin-top: calc(var(--space-4) + var(--space-half));
+  margin-top: var(--space-5);
 }
 
 .ui-skel-list-row {
@@ -57,9 +57,10 @@
   flex-direction: column;
   gap: var(--space-3);
   margin-top: var(--space-4);
-  padding: calc(var(--space-4) + var(--space-half));
+  padding: var(--space-5);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-skel-loans-card {
@@ -81,7 +82,7 @@
 }
 
 .ui-skel-profit-group {
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
 }
 
 .ui-skel-profit-row {
@@ -99,13 +100,13 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  margin-top: calc(var(--space-2) + var(--space-half));
+  margin-top: var(--space-3);
 }
 
 .ui-skel-detail-row {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-3) + var(--space-half));
+  gap: var(--space-4);
   block-size: calc(var(--space-8) + var(--space-6));
 }
 
@@ -113,7 +114,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-2) - var(--space-half) / 2);
+  gap: var(--space-2);
 }
 
 /* A loading page with no Back keeps the bar's height, so its title sits where the loaded one does (loansLoading). */
@@ -122,12 +123,12 @@
   block-size: var(--touch-min);
 }
 
-/* The loading frames draw the board's h1: 4px under the bar, then 2px before the subtitle, whose 18px line box
-   sits 2px higher than the app's 21px one. */
+/* The loading frames draw the board's h1: 4px under the bar, then the subtitle's 18px line box pulled up by 4px
+   against the app's 21px one. */
 .ui-state-header .t-title {
-  margin-block: var(--space-1) var(--space-half);
+  margin-block: var(--space-1);
 }
 
 .ui-state-header .t-line2 {
-  margin-block: calc(var(--space-half) * -1);
+  margin-block: calc(var(--space-1) * -1);
 }

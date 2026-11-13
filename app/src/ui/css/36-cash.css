@@ -36,7 +36,7 @@
 
 /* The figure (40) sits 6px under the month line (V3-Lines). */
 .ui-lines-head > .ui-breakdown-total {
-  margin-block-start: calc(var(--space-1) * 1.5);
+  margin-block-start: var(--space-2);
 }
 
 /* FLOW-965: the page's states: the review button and the offline line sit in the head. */
@@ -117,7 +117,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   /* board: 20px above the head, 6px under it. */
-  padding: var(--space-5) 0 var(--status-gap);
+  padding: var(--space-5) 0 var(--space-2);
   background: var(--color-bg);
 }
 
