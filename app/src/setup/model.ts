@@ -1,3 +1,4 @@
+import { defineMachine } from "@flow/shared";
 import type { SetupStore } from "./storage";
 import { emptySetupStore } from "./storage";
 
@@ -61,6 +62,66 @@ export function isSkipped(store: SetupStore, step: StepNumber): boolean {
 }
 
 /**
+ * The run, one table (decision 0266, FLOW-1161). Its state is read from the store's stamps
+ * (`runState`), and a patch's run stamp is a move: a move the state does not allow keeps the
+ * stored stamp (`withPatch`). `start` is step 1's company, `resume` the one automatic resume,
+ * `skipAll` the skip sheet, `finish` the done screen's Home.
+ */
+export const setupRun = defineMachine({
+  name: "setupRun",
+  initial: "fresh",
+  final: ["finished"],
+  states: {
+    fresh: { start: "started", skipAll: "skippedAll", finish: "finished" },
+    started: { resume: "resumed", skipAll: "skippedAll", finish: "finished" },
+    resumed: { skipAll: "skippedAll", finish: "finished" },
+    skippedAll: { finish: "finished" },
+    finished: {},
+  },
+});
+
+export type SetupRunState = keyof typeof setupRun.states;
+type SetupRunEvent = Parameters<typeof setupRun.next>[1];
+
+/** Each move's stamp, in the table's order. */
+const RUN_STAMPS = [
+  ["start", "run_started_at"],
+  ["resume", "run_resumed_at"],
+  ["skipAll", "skipped_all_at"],
+  ["finish", "finished_at"],
+] as const satisfies readonly (readonly [SetupRunEvent, keyof SetupStore])[];
+
+/** The furthest stamp the run carries. */
+export function runState(store: SetupStore): SetupRunState {
+  if (store.finished_at != null) return "finished";
+  if (store.skipped_all_at != null) return "skippedAll";
+  if (store.run_resumed_at != null) return "resumed";
+  return store.run_started_at != null ? "started" : "fresh";
+}
+
+/**
+ * One step, one table. `done` comes from the done rules (a stamp or a fact) and wins over a stored
+ * skip, so a step reads as one state only. A skip is written only from `open`; a done step whose
+ * fact goes away (a bank disconnected) is `lost`.
+ */
+export const setupStep = defineMachine({
+  name: "setupStep",
+  initial: "open",
+  states: {
+    open: { skip: "skipped", finish: "done" },
+    skipped: { finish: "done" },
+    done: { lost: "open" },
+  },
+});
+
+export type SetupStepState = keyof typeof setupStep.states;
+
+export function stepStatus(step: StepNumber, store: SetupStore, facts: SetupFacts): SetupStepState {
+  if (isDone(step, store, facts)) return "done";
+  return isSkipped(store, step) ? "skipped" : "open";
+}
+
+/**
  * The done rules (FLOW-514): 1 a company exists; 2 Mercury or SUMIT connected; 3 projects_at or a
  * project exists; 4 loans_at or a loan exists; 5 the Jev row is saved; 6 the sample is approved (or a
  * review is resolved); 7 installed, or the app runs standalone.
@@ -95,7 +156,7 @@ export function firstNotDone(store: SetupStore, facts: SetupFacts): StepNumber |
 
 /** The one automatic resume skips steps the user already skipped. */
 export function firstResumable(store: SetupStore, facts: SetupFacts): StepNumber | null {
-  return STEP_NUMBERS.find((step) => !isDone(step, store, facts) && !isSkipped(store, step)) ?? null;
+  return STEP_NUMBERS.find((step) => stepStatus(step, store, facts) === "open") ?? null;
 }
 
 export type EntryDecision =
@@ -119,15 +180,14 @@ export function decideEntry(store: SetupStore, facts: SetupFacts, sessionAlready
 
 /** A run that started and has not finished, skipped everything or resumed already: only it needs the step facts. */
 export function runMayResume(store: SetupStore, sessionAlreadyEntered: boolean): boolean {
-  if (store.flow_at == null || store.run_started_at == null) return false;
-  if (store.finished_at != null || store.skipped_all_at != null) return false;
-  return store.run_resumed_at == null && !sessionAlreadyEntered;
+  return store.flow_at != null && setupRun.can(runState(store), "resume") && !sessionAlreadyEntered;
 }
 
 /** The index (/setup) opens where the owner left off: the first step not done, skipped ones included. */
 export function indexTarget(store: SetupStore, facts: SetupFacts): string {
   if (facts.companyId == null) return "/setup/welcome";
-  if (store.finished_at != null || store.skipped_all_at != null) return "/";
+  const run = runState(store);
+  if (run === "finished" || run === "skippedAll") return "/";
   const step = firstNotDone(store, facts);
   return step == null ? "/setup/done" : stepPath(step);
 }
@@ -147,8 +207,9 @@ export function previousPath(step: StepNumber): string | null {
   return step === 1 ? null : stepPath((step - 1) as StepNumber);
 }
 
-export function skipPatch(store: SetupStore, step: StepNumber, at: string): SetupStore {
-  if (isSkipped(store, step)) return store;
+/** דילוג on a step: stamped only on an open step (a done or skipped one stays as it is). */
+export function skipPatch(store: SetupStore, facts: SetupFacts, step: StepNumber, at: string): SetupStore {
+  if (!setupStep.can(stepStatus(step, store, facts), "skip")) return store;
   return { ...store, skipped: { ...store.skipped, [skipKey(step)]: at } };
 }
 
@@ -157,35 +218,54 @@ export function skipPatch(store: SetupStore, step: StepNumber, at: string): Setu
  * run has started (the business is created as "העסק שלי" by the caller when there is none).
  */
 export function skipAllPatch(store: SetupStore, facts: SetupFacts, at: string): SetupStore {
+  if (!setupRun.can(runState(store), "skipAll")) return store;
   const skipped = { ...store.skipped };
   for (const step of STEP_NUMBERS) {
-    if (!isDone(step, store, facts)) skipped[skipKey(step)] = skipped[skipKey(step)] ?? at;
+    if (setupStep.can(stepStatus(step, store, facts), "skip")) skipped[skipKey(step)] = at;
   }
   return {
     ...store,
     run_started_at: store.run_started_at ?? at,
     flow_at: store.flow_at ?? at,
     skipped,
-    skipped_all_at: store.skipped_all_at ?? at,
+    skipped_all_at: at,
   };
 }
 
 /** Settings › הגדרה ראשונה: visible once a run started, until every step is done. */
 export function settingsEntryVisible(store: SetupStore, facts: SetupFacts): boolean {
   if (!facts.ready || store.run_started_at == null) return false;
-  if (store.finished_at != null) return false;
+  if (runState(store) === "finished") return false;
   return !allDone(store, facts);
 }
 
+/**
+ * The patch over the store. Its run stamps go through `setupRun` in order: a move the run's state
+ * refuses (a second start, a resume after skip all, a second finish) keeps the stored stamp.
+ */
 export function withPatch(store: SetupStore, patch: Partial<SetupStore> | null): SetupStore {
   if (!patch) return store;
-  return { ...emptySetupStore(), ...store, ...patch, skipped: patch.skipped ?? store.skipped };
+  const next = { ...emptySetupStore(), ...store, ...patch, skipped: patch.skipped ?? store.skipped };
+  let state = runState(store);
+  for (const [event, key] of RUN_STAMPS) {
+    if (patch[key] == null) continue;
+    if (setupRun.can(state, event)) {
+      state = setupRun.next(state, event);
+      continue;
+    }
+    next[key] = store[key];
+    if (event === "start") next.flow_at = store.flow_at;
+  }
+  return next;
 }
 
+/** Step 6's approve (the sample card): done, its skip gone. On a step already done it changes nothing. */
 export function approveSample(store: SetupStore, at: string): SetupStore {
+  const status: SetupStepState = store.sample_review_at != null ? "done" : isSkipped(store, 6) ? "skipped" : "open";
+  if (!setupStep.can(status, "finish")) return store;
   const skipped = { ...store.skipped };
   delete skipped["6"];
-  return { ...store, sample_review_at: store.sample_review_at ?? at, skipped };
+  return { ...store, sample_review_at: at, skipped };
 }
 
 /* -- Legacy: the completed toast stays gated off until #622 removes the Home slot. */

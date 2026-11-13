@@ -148,7 +148,7 @@ function StepBody({
     onBack: fresh ? () => { goBack("/"); } : back == null ? undefined : () => { void navigate(back); },
     onSkipStep: () => {
       const current = readSetupStore(userId, companyId);
-      writeSetupStore(userId, companyId, skipPatch(current, step, new Date().toISOString()));
+      writeSetupStore(userId, companyId, skipPatch(current, facts, step, new Date().toISOString()));
       void navigate(toStep);
     },
     onSkipAll: () => runSkipAll({ userId, facts, navigate, client, openNew }),

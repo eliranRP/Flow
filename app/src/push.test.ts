@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
+import { machineProblems } from "@flow/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // FLOW-516: this device's push state and every way a turn-on can stop, with the browser mocked.
@@ -13,7 +14,7 @@ vi.mock("./lib/supabase", () => ({
   }),
 }));
 
-const { errorDetail, forgetThisDevice, readDevicePush, subscribeThisDevice, useDevicePushQuery } = await import("./push");
+const { errorDetail, forgetThisDevice, readDevicePush, subscribeFlow, subscribeThisDevice, useDevicePushQuery } = await import("./push");
 const { pushOwner, notePushOwner } = await import("./push-owner");
 
 /** A 65-byte key of 4s, base64url, as the build carries it. */
@@ -233,9 +234,38 @@ describe("subscribeThisDevice", () => {
     expect(await subscribeThisDevice(FAST)).toEqual({ result: "save-failed", step: "save", detail: "Error: invalid endpoint" });
   });
 
-  it("always settles: an outer limit backs every step", async () => {
+  it("always settles: an outer limit backs every step, and names the step it stopped in", async () => {
     browser({ request: () => never() });
-    expect(await subscribeThisDevice({ ...FAST, permission: 10_000 }, 30)).toEqual({ result: "subscribe-timeout", step: "subscribe", detail: "no answer" });
+    expect(await subscribeThisDevice({ ...FAST, permission: 10_000 }, 30)).toEqual({ result: "permission-timeout", step: "permission", detail: "no answer" });
+    browser({ ready: never() });
+    expect(await subscribeThisDevice({ ...FAST, worker: 10_000 }, 30)).toEqual({ result: "worker-timeout", step: "worker", detail: "no answer" });
+    browser();
+    rpc.mockReturnValue(never());
+    expect(await subscribeThisDevice({ ...FAST, save: 10_000 }, 30)).toEqual({ result: "save-timeout", step: "save", detail: "no answer" });
+  });
+
+  it("goes on as not controlled when waiting for control throws, instead of calling it a worker timeout", async () => {
+    browser({ controller: null });
+    Object.assign(navigator.serviceWorker, { addEventListener: () => { throw new Error("no events"); } });
+    expect(await subscribeThisDevice(FAST)).toEqual({ result: "ok", step: "done" });
+    browser({ controller: null, subscribe: () => never() });
+    Object.assign(navigator.serviceWorker, { addEventListener: () => { throw new Error("no events"); } });
+    expect(await subscribeThisDevice(FAST)).toEqual({ result: "not-controlled", step: "subscribe" });
+  });
+});
+
+describe("subscribeFlow", () => {
+  it("is a sound table", () => {
+    expect(machineProblems(subscribeFlow)).toEqual([]);
+  });
+
+  it("ignores a step's answer out of order, and retries a refused subscribe once only", () => {
+    expect(subscribeFlow.next("permission", "made")).toBe("permission");
+    expect(subscribeFlow.next("worker", "saved")).toBe("worker");
+    expect(subscribeFlow.next("done", "granted")).toBe("done");
+    const retried = subscribeFlow.next(subscribeFlow.next("subscribe", "refused"), "dropped");
+    expect(retried).toBe("resubscribe");
+    expect(subscribeFlow.can(retried, "refused")).toBe(false);
   });
 });
 

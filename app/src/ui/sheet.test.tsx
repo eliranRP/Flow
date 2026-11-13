@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Sheet, SheetSurface } from "./sheet";
+import { machineProblems } from "@flow/shared";
+import { Sheet, SheetSurface, sheetClose } from "./sheet";
 import { expectRtl, expectTarget } from "./test-support";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { sheetStack, useSheetHistory } from "./back";
@@ -192,6 +193,71 @@ describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
     await waitFor(() => { expect(onCloseKind).toHaveBeenCalledWith(true); });
     expect(onCloseKind).toHaveBeenCalledTimes(1);
     await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+  });
+
+  // FLOW-1167: the close is one table (`sheetClose`).
+  it("has a sound close table that ignores a move out of order", () => {
+    expect(machineProblems(sheetClose)).toEqual([]);
+    expect(sheetClose.next("closed", "request")).toBe("closed");
+    expect(sheetClose.next("open", "allow")).toBe("open");
+    expect(sheetClose.next("deciding", "request")).toBe("deciding");
+    expect(sheetClose.next("closing", "request")).toBe("closing");
+  });
+
+  it("hears the next close after a parent ignored an accepted one, and sends one close for two taps in a tick", async () => {
+    const onOpenChange = vi.fn();
+    render(<Sheet open onOpenChange={onOpenChange} title="תקופה"><p>תוכן</p></Sheet>);
+    const close = screen.getByRole("button", { name: "סגירה" });
+    fireEvent.click(close);
+    fireEvent.click(close);
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    // The parent drew the sheet open again: the close gave up, so the next ✕ is heard.
+    fireEvent.click(close);
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops a decision that lands after the parent closed the sheet", async () => {
+    let decide: (verdict: undefined) => void = () => undefined;
+    const onOpenChange = vi.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} onOpenChange={onOpenChange} title="תקופה" onBeforeClose={() => new Promise<undefined>((resolve) => { decide = resolve; })}>
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    rerender(sheet(false));
+    await act(async () => { decide(undefined); await Promise.resolve(); });
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps a decision that never settles: later closes are not asked again until the parent closes or reopens the sheet", async () => {
+    const onBeforeClose = vi.fn(() => new Promise<undefined>(() => undefined));
+    const onOpenChange = vi.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} onOpenChange={onOpenChange} title="תקופה" onBeforeClose={onBeforeClose}>
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    expect(onBeforeClose).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
+    // The parent's own close always wins, and a reopened sheet asks afresh.
+    rerender(sheet(false));
+    rerender(sheet(true));
+    await waitFor(() => { expect(screen.getByRole("button", { name: "סגירה" })).toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    expect(onBeforeClose).toHaveBeenCalledTimes(2);
   });
 });
 

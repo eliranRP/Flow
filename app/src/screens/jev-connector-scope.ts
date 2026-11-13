@@ -30,8 +30,6 @@ export function jevConnectorStorageKey(scope: JevConnectorScope): string {
   return `${JEV_CONNECTOR_FLAG}:${scope.userId}:${scope.companyId}`;
 }
 
-let activeScope: JevConnectorScope | null = null;
-
 /** The old key is deleted once per launch, not on every read (FLOW-704). */
 let legacyKeyDropped = false;
 
@@ -40,22 +38,45 @@ let notedAuthUser: string | null | undefined;
 
 export type JevScopePhase = "off" | "pending" | "ready" | "miss";
 
-let scopePhase: JevScopePhase = "off";
-/** A miss reads the connector without the remembered flag. A later company row may still bind. */
-let followsLive = false;
+/**
+ * The lookup's phase and the scope it bound, as one value, so they cannot disagree (FLOW-1164):
+ * - `off`: nothing looked up and nothing bound (signed out, a user switch, or not started).
+ * - `pending`: a review lookup runs. The scope bound before it stays for writes until it finishes.
+ * - `ready`: a scope is bound, by a lookup or by a screen that knows the company.
+ * - `miss`: the lookup found no company. The card reads the connector live, without the
+ *   remembered flag. A company that binds later (a late row, or a screen) makes it `ready`.
+ */
+type JevScopeState =
+  | { phase: "off" }
+  | { phase: "pending"; scope: JevConnectorScope | null }
+  | { phase: "ready"; scope: JevConnectorScope }
+  | { phase: "miss" };
+
+let scopeState: JevScopeState = { phase: "off" };
 let scopeGeneration = 0;
 const scopeListeners = new Set<() => void>();
 
-function emitScope(): void {
+function setScope(next: JevScopeState): void {
+  scopeState = next;
   for (const listener of scopeListeners) listener();
 }
 
-export function jevScopePhase(): JevScopePhase {
-  return scopePhase;
+function scopeOf(state: JevScopeState): JevConnectorScope | null {
+  return state.phase === "pending" || state.phase === "ready" ? state.scope : null;
 }
 
+/** The scope belongs to the user auth last reported, or auth has not reported yet. */
+function noteMatches(scope: JevConnectorScope | null): scope is JevConnectorScope {
+  return scope != null && (notedAuthUser === undefined || notedAuthUser === scope.userId);
+}
+
+export function jevScopePhase(): JevScopePhase {
+  return scopeState.phase;
+}
+
+/** A miss reads the connector without the remembered flag. */
 export function jevScopeFollowsLive(): boolean {
-  return followsLive;
+  return scopeState.phase === "miss";
 }
 
 export function notedJevAuthUser(): string | null | undefined {
@@ -81,14 +102,10 @@ export type JevScopeLookup = {
 /** The card subscribes. The list does not wait on this. A ready scope survives a same-user refetch. */
 export function beginJevScopeLookup(): JevScopeLookup {
   scopeGeneration += 1;
-  const sameUser = activeScope != null && (notedAuthUser === undefined || notedAuthUser === activeScope.userId);
-  if (scopePhase === "ready" && sameUser) {
-    return { generation: scopeGeneration, userAtStart: notedAuthUser };
-  }
-  followsLive = false;
-  scopePhase = "pending";
-  emitScope();
-  return { generation: scopeGeneration, userAtStart: notedAuthUser };
+  const lookup = { generation: scopeGeneration, userAtStart: notedAuthUser };
+  if (scopeState.phase === "ready" && noteMatches(scopeState.scope)) return lookup;
+  setScope({ phase: "pending", scope: scopeOf(scopeState) });
+  return lookup;
 }
 
 /**
@@ -101,55 +118,51 @@ export function completeJevScopeLookup(lookup: JevScopeLookup, scope: JevConnect
   const signedOut = notedAuthUser === null;
   const otherUser = scope != null && typeof notedAuthUser === "string" && scope.userId !== notedAuthUser;
   if (signedOut || otherUser) {
-    activeScope = null;
-    followsLive = false;
-    scopePhase = "off";
-    emitScope();
+    setScope({ phase: "off" });
     return false;
   }
-  if (scope == null && scopePhase === "ready" && activeScope != null && (notedAuthUser === undefined || notedAuthUser === activeScope.userId)) {
+  if (scope != null) {
+    setScope({ phase: "ready", scope });
     return true;
   }
-  if (scope == null) {
-    if (followsLive && activeScope != null) return true;
-    activeScope = null;
-    followsLive = true;
-    scopePhase = "miss";
-    emitScope();
-    return true;
-  }
-  activeScope = scope;
-  if (!followsLive) scopePhase = "ready";
-  emitScope();
+  if (scopeState.phase === "ready" && noteMatches(scopeState.scope)) return true;
+  if (scopeState.phase !== "miss") setScope({ phase: "miss" });
   return true;
 }
 
 /** Sign-out and a user switch invalidate a lookup that is still in flight. */
 export function dropJevConnectorForAuthChange(): void {
-  activeScope = null;
-  followsLive = false;
   scopeGeneration += 1;
-  scopePhase = "off";
-  emitScope();
+  setScope({ phase: "off" });
 }
 
 /** Test isolation. A later finish from the previous case does not land. */
 export function resetJevScopeMemory(): void {
-  activeScope = null;
   notedAuthUser = undefined;
-  followsLive = false;
   scopeGeneration += 1;
-  scopePhase = "off";
   legacyKeyDropped = false;
-  emitScope();
+  setScope({ phase: "off" });
 }
 
+/**
+ * A screen that knows the company binds it: `ready`, from `off` or a miss. While a lookup runs
+ * the bind waits beside it, and the lookup's finish decides. Null unbinds. Settings binds while it
+ * draws, so only the move that changes what the card reads (leaving a miss) tells the listeners.
+ */
 export function bindJevConnectorScope(scope: JevConnectorScope | null): void {
-  activeScope = scope;
+  if (scopeState.phase === "pending") {
+    scopeState = { phase: "pending", scope };
+  } else if (scope == null) {
+    if (scopeState.phase === "ready") scopeState = { phase: "off" };
+  } else if (scopeState.phase === "miss") {
+    setScope({ phase: "ready", scope });
+  } else {
+    scopeState = { phase: "ready", scope };
+  }
 }
 
 export function boundJevConnectorScope(): JevConnectorScope | null {
-  return activeScope;
+  return scopeOf(scopeState);
 }
 
 /** The pre-scope device-wide key. It is deleted and never read as the flag. */
@@ -231,7 +244,7 @@ export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefi
   return undefined;
 }
 
-export function writeJevConnectorFlag(on: boolean, scope: JevConnectorScope | null = activeScope): void {
+export function writeJevConnectorFlag(on: boolean, scope: JevConnectorScope | null = boundJevConnectorScope()): void {
   if (scope == null || typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(jevConnectorStorageKey(scope), on ? "1" : "0");

@@ -1,6 +1,8 @@
+import { machineProblems } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import {
   allDone,
+  approveSample,
   decideEntry,
   doneCount,
   emptyFacts,
@@ -11,11 +13,15 @@ import {
   nextPath,
   parseStep,
   previousPath,
+  runState,
   SETUP_TOTAL,
+  setupRun,
+  setupStep,
   settingsEntryTarget,
   settingsEntryVisible,
   skipAllPatch,
   skipPatch,
+  stepStatus,
   stepsLeft,
   withPatch,
   type SetupFacts,
@@ -71,7 +77,7 @@ describe("setup step model (FLOW-514)", () => {
   });
 
   it("resumes at the first step that is neither done nor skipped", () => {
-    const skipped = skipPatch(emptySetupStore(), 2, at);
+    const skipped = skipPatch(emptySetupStore(), facts(), 2, at);
     expect(firstResumable(skipped, facts())).toBe(3);
     expect(firstNotDone(skipped, facts())).toBe(2);
   });
@@ -111,7 +117,7 @@ describe("setup step model (FLOW-514)", () => {
   });
 
   it("skip all skips every step not done, stamps the run, and keeps earlier skips", () => {
-    const earlier = skipPatch(emptySetupStore(), 3, "2026-10-01T00:00:00.000Z");
+    const earlier = skipPatch(emptySetupStore(), facts(), 3, "2026-10-01T00:00:00.000Z");
     const next = skipAllPatch(earlier, facts({ mercuryConnected: true }), at);
     expect(next.skipped["3"]).toBe("2026-10-01T00:00:00.000Z");
     expect(next.skipped["2"]).toBeUndefined();
@@ -145,8 +151,60 @@ describe("setup step model (FLOW-514)", () => {
   });
 
   it("withPatch keeps the stored skips unless the patch brings its own", () => {
-    const base = skipPatch(emptySetupStore(), 1, at);
+    const base = skipPatch(emptySetupStore(), facts({ companyId: null }), 1, at);
     expect(withPatch(base, { finished_at: at }).skipped["1"]).toBe(at);
     expect(withPatch(base, null)).toBe(base);
+  });
+});
+
+describe("the run and step tables (FLOW-1161)", () => {
+  const later = "2026-10-17T00:00:00.000Z";
+
+  it("are sound", () => {
+    expect(machineProblems(setupRun)).toEqual([]);
+    expect(machineProblems(setupStep)).toEqual([]);
+  });
+
+  it("reads the run's state from its stamps, the furthest one winning", () => {
+    expect(runState(emptySetupStore())).toBe("fresh");
+    expect(runState(started())).toBe("started");
+    expect(runState(started({ run_resumed_at: at }))).toBe("resumed");
+    expect(runState(started({ run_resumed_at: at, skipped_all_at: at }))).toBe("skippedAll");
+    expect(runState(started({ skipped_all_at: at, finished_at: at }))).toBe("finished");
+  });
+
+  it("reads a step as open, skipped or done, never both, and a done step takes no skip", () => {
+    const skipped = skipPatch(emptySetupStore(), facts(), 2, at);
+    expect(stepStatus(2, skipped, facts())).toBe("skipped");
+    expect(stepStatus(2, skipped, facts({ mercuryConnected: true }))).toBe("done");
+    expect(stepStatus(3, skipped, facts())).toBe("open");
+    const bank = facts({ mercuryConnected: true });
+    expect(skipPatch(emptySetupStore(), bank, 2, at)).toEqual(emptySetupStore());
+    expect(skipPatch(skipped, facts(), 2, later)).toBe(skipped);
+  });
+
+  it("changes nothing on a move out of order", () => {
+    // Skip all twice: the second keeps the first's stamps.
+    const once = skipAllPatch(started(), facts(), at);
+    expect(skipAllPatch(once, facts(), later)).toBe(once);
+    // Finish on a step already done.
+    const approved = approveSample(emptySetupStore(), at);
+    expect(approveSample(approved, later)).toBe(approved);
+    // A second start, a resume after skip all, a second finish: the stored stamps stay.
+    expect(withPatch(started(), { run_started_at: later, flow_at: later })).toEqual(started());
+    expect(withPatch(once, { run_resumed_at: later }).run_resumed_at).toBeNull();
+    const finished = withPatch(started(), { finished_at: at });
+    expect(withPatch(finished, { finished_at: later }).finished_at).toBe(at);
+    expect(withPatch(finished, { skipped_all_at: later }).skipped_all_at).toBeNull();
+    // Back past the first step: there is none.
+    expect(previousPath(1)).toBeNull();
+  });
+
+  it("still moves in order: start, resume, skip all, finish", () => {
+    const run = withPatch(emptySetupStore(), { run_started_at: at, flow_at: at });
+    expect(runState(run)).toBe("started");
+    expect(runState(withPatch(run, { run_resumed_at: at }))).toBe("resumed");
+    expect(runState(skipAllPatch(withPatch(run, { run_resumed_at: at }), facts(), at))).toBe("skippedAll");
+    expect(runState(withPatch(skipAllPatch(run, facts(), at), { finished_at: later }))).toBe("finished");
   });
 });

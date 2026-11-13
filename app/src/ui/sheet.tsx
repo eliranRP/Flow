@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { defineMachine } from "@flow/shared";
 import type { Drawer as VaulDrawer } from "vaul";
+import { useMachine } from "../use-machine";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { CloseIcon } from "./icons";
@@ -141,6 +143,30 @@ export function showRingUntilBlur(el: HTMLElement): void {
   el.addEventListener("blur", () => { el.removeAttribute("data-focus-ring"); }, { once: true });
 }
 
+/**
+ * A sheet's close, one table (decision 0266, FLOW-1167). A close runs `onBeforeClose`, then
+ * `onCloseKind`, then `onOpenChange(false)`, in that order.
+ * - `request` (✕, Escape, a scrim tap, `onRequestClose`): asks `onBeforeClose`. While a save is
+ *   in flight (`busy`) it waits instead (`queued`) and is asked once the save settles.
+ * - `allow` / `refuse`: the decision, or the parent's `onOpenChange` returning false.
+ * - `shown` / `hidden`: each draw says whether the parent has the sheet open. The parent's close
+ *   always wins. A close the parent accepted but did not act on gives up when the sheet is drawn
+ *   open again (`closing` → `open`), so the next close is heard; two taps in one tick send one.
+ * - A decision that never settles holds `deciding`: later requests are not asked again (a second
+ *   ask could save twice), until the parent closes the sheet or opens it afresh.
+ */
+export const sheetClose = defineMachine({
+  name: "sheetClose",
+  initial: "closed",
+  states: {
+    closed: { shown: "open" },
+    open: { request: "deciding", wait: "queued", hidden: "closed" },
+    queued: { wait: "queued", request: "deciding", hidden: "closed" },
+    deciding: { allow: "closing", refuse: "open", hidden: "closed" },
+    closing: { refuse: "open", shown: "open", hidden: "closed" },
+  },
+});
+
 export function Sheet({
   open: wanted,
   onOpenChange,
@@ -211,8 +237,7 @@ export function Sheet({
   const scrimRef = useRef<HTMLDivElement>(null);
   const localTitle = useRef<HTMLHeadingElement>(null);
   const titleRef = titleRefProp ?? localTitle;
-  const closing = useRef(false);
-  const deciding = useRef(false);
+  const close = useMachine(sheetClose, open ? "open" : "closed");
   /** A dismiss came in while a save was in flight; the sheet closes once it settles (0075). */
   const closeAfterBusy = useRef<{ byKey: boolean } | null>(null);
   const wasOpen = useRef(false);
@@ -258,9 +283,12 @@ export function Sheet({
     };
   }, [open]);
   const [depth, setDepth] = useState(0);
+  // Every draw tells the table whether the parent has the sheet open. A close the parent accepted
+  // but did not act on (it drew the sheet open again) gives up here, so the next close is heard.
   useEffect(() => {
-    if (open) closing.current = false;
-  }, [open]);
+    if (!open) close.send("hidden");
+    else if (close.send("shown")) keyClose.current = false;
+  });
   useLayoutEffect(() => {
     const panel = panelRef.current;
     if (panel) {
@@ -342,26 +370,31 @@ export function Sheet({
   async function requestClose(byKey = false) {
     if (busy) {
       // A repeat dismiss keeps the key flag: Escape anywhere in the wait means a key close.
-      closeAfterBusy.current = { byKey: byKey || closeAfterBusy.current?.byKey === true };
+      if (close.send("wait")) closeAfterBusy.current = { byKey: byKey || closeAfterBusy.current?.byKey === true };
       return;
     }
-    if (closing.current || deciding.current) return;
-    deciding.current = true;
+    if (!close.send("request")) return;
+    let verdict: undefined | boolean;
     try {
-      const verdict = await onBeforeClose?.();
-      if (verdict === false) return;
-      closing.current = true;
-      // Only a close that goes ahead decides the ring; a refused Escape must not mark a later ✕.
-      keyClose.current = byKey;
-      onCloseKind?.(byKey);
-      const accepted = (onOpenChange as (open: boolean) => boolean | undefined)(false);
-      // A refused close leaves the sheet open. The flags must not stick.
-      if (accepted === false) {
-        closing.current = false;
-        keyClose.current = false;
-      }
-    } finally {
-      deciding.current = false;
+      verdict = await onBeforeClose?.();
+    } catch (error) {
+      close.send("refuse");
+      throw error;
+    }
+    if (verdict === false) {
+      close.send("refuse");
+      return;
+    }
+    // The parent closed the sheet (or it closed and opened again) while this was decided: nothing to send.
+    if (!close.send("allow")) return;
+    // Only a close that goes ahead decides the ring; a refused Escape must not mark a later ✕.
+    keyClose.current = byKey;
+    onCloseKind?.(byKey);
+    const accepted = (onOpenChange as (open: boolean) => boolean | undefined)(false);
+    // A refused close leaves the sheet open. The flags must not stick.
+    if (accepted === false) {
+      close.send("refuse");
+      keyClose.current = false;
     }
   }
   const requestCloseRef = useRef(requestClose);

@@ -1,3 +1,4 @@
+import { defineMachine } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { getSupabase } from "./lib/supabase";
@@ -232,6 +233,59 @@ export function useDevicePushQuery(enabled: boolean) {
 /** The step a subscribe reached. Shown, with the reason and the browser's error name, when it fails. */
 export type SubscribeStep = "permission" | "worker" | "controller" | "lookup" | "unsubscribe" | "subscribe" | "save" | "done";
 
+/**
+ * The order a subscribe runs in, one table (decision 0266). A failure ends the run where it is, so
+ * the run's state is always the step that failed or timed out, the outer limit included.
+ * `refused` is the browser refusing because of an old subscription: drop it and subscribe once
+ * more (`resubscribe` has no `refused`, so there is no second retry).
+ */
+export const subscribeFlow = defineMachine({
+  name: "subscribeFlow",
+  initial: "permission",
+  final: ["done"],
+  states: {
+    permission: { granted: "worker" },
+    worker: { ready: "controller" },
+    controller: { checked: "lookup" },
+    lookup: { missing: "subscribe", found: "save" },
+    subscribe: { made: "save", refused: "unsubscribe" },
+    unsubscribe: { dropped: "resubscribe" },
+    resubscribe: { made: "save" },
+    save: { saved: "done" },
+    done: {},
+  },
+});
+
+type SubscribeState = keyof typeof subscribeFlow.states;
+type SubscribeEvent = Parameters<typeof subscribeFlow.next>[1];
+
+/** Per state: the step shown, and the reason for a call there that never answers or that throws. */
+const SUBSCRIBE_STATES: Record<SubscribeState, { step: SubscribeStep; timeout: SubscribeResult; threw: SubscribeResult }> = {
+  permission: { step: "permission", timeout: "permission-timeout", threw: "denied" },
+  worker: { step: "worker", timeout: "worker-timeout", threw: "worker-timeout" },
+  controller: { step: "controller", timeout: "worker-timeout", threw: "worker-timeout" },
+  lookup: { step: "lookup", timeout: "lookup-timeout", threw: "lookup-threw" },
+  subscribe: { step: "subscribe", timeout: "subscribe-timeout", threw: "subscribe-threw" },
+  unsubscribe: { step: "unsubscribe", timeout: "unsubscribe-timeout", threw: "unsubscribe-threw" },
+  resubscribe: { step: "subscribe", timeout: "subscribe-timeout", threw: "subscribe-threw" },
+  save: { step: "save", timeout: "save-timeout", threw: "save-failed" },
+  done: { step: "done", timeout: "save-timeout", threw: "save-failed" },
+};
+
+/** One run's place in `subscribeFlow`, read by the outer limit when a step never answers. */
+type SubscribeRun = { state: SubscribeState; isControlled: boolean };
+
+function move(run: SubscribeRun, event: SubscribeEvent): void {
+  run.state = subscribeFlow.next(run.state, event);
+}
+
+/** The outcome of a call that never answered, or threw, in the run's state. */
+function stoppedAt(run: SubscribeRun, how: "timeout" | "threw", detail?: string): SubscribeOutcome {
+  const row = SUBSCRIBE_STATES[run.state];
+  const result = row.step === "subscribe" && !run.isControlled ? "not-controlled" : row[how];
+  return detail === undefined ? { result, step: row.step } : { result, step: row.step, detail };
+}
+
 export type SubscribeResult =
   | "ok"
   | "unsupported"
@@ -269,7 +323,10 @@ function pause(ms: number): Promise<void> {
   return new Promise((resolve) => { setTimeout(resolve, ms); });
 }
 
-/** Waits briefly for the worker to control this page (a first open after an update is not yet). */
+/**
+ * Waits briefly for the worker to control this page (a first open after an update is not yet).
+ * A wait that throws reads as not controlled, the same as one that runs out.
+ */
 async function controlled(ms: number): Promise<boolean> {
   const container = navigator.serviceWorker;
   if (container.controller != null) return true;
@@ -280,6 +337,8 @@ async function controlled(ms: number): Promise<boolean> {
   });
   try {
     return (await within(change, ms)) === true;
+  } catch {
+    return false;
   } finally {
     if (listener) container.removeEventListener("controllerchange", listener);
   }
@@ -289,77 +348,76 @@ async function controlled(ms: number): Promise<boolean> {
  * Asks for permission and subscribes this device. Call it straight from a tap, with no await
  * before it: Safari and Chrome refuse a permission request that does not come from a user gesture.
  * Every step after the prompt has its own timeout and reason, and an outer limit backs them, so it
- * always settles and a busy control always clears (FLOW-516).
+ * always settles and a busy control always clears (FLOW-516). Whatever stops it, the outcome names
+ * the step the run was in (`subscribeFlow`).
  */
 export function subscribeThisDevice(timeouts: PushTimeouts = PUSH_TIMEOUTS, limitMs = 240_000): Promise<SubscribeOutcome> {
+  const run: SubscribeRun = { state: subscribeFlow.initial, isControlled: true };
   // subscribeSteps runs at once, in this same task: requestPermission is its first call.
-  const pending = subscribeSteps(timeouts).catch((error: unknown): SubscribeOutcome => ({ result: "subscribe-threw", step: "subscribe", detail: errorDetail(error) }));
-  return within(pending, limitMs).then((outcome) => outcome === TIMED_OUT
-    ? { result: "subscribe-timeout", step: "subscribe", detail: "no answer" }
-    : outcome);
+  const pending = subscribeSteps(timeouts, run).catch((error: unknown) => stoppedAt(run, "threw", errorDetail(error)));
+  return within(pending, limitMs).then((outcome) => outcome === TIMED_OUT ? stoppedAt(run, "timeout", "no answer") : outcome);
 }
 
-async function subscribeSteps(timeouts: PushTimeouts): Promise<SubscribeOutcome> {
+async function subscribeSteps(timeouts: PushTimeouts, run: SubscribeRun): Promise<SubscribeOutcome> {
   if (pushSupport() !== "ok") return { result: "unsupported", step: "permission" };
   let permission: NotificationPermission | typeof TIMED_OUT;
   try {
     // The request runs in this same task as the tap.
     permission = await within(Notification.requestPermission(), timeouts.permission);
   } catch (error) {
-    return { result: "denied", step: "permission", detail: errorDetail(error) };
+    return stoppedAt(run, "threw", errorDetail(error));
   }
-  if (permission === TIMED_OUT) return { result: "permission-timeout", step: "permission" };
+  if (permission === TIMED_OUT) return stoppedAt(run, "timeout");
   if (permission === "denied") return { result: "denied", step: "permission" };
   if (permission !== "granted") return { result: "dismissed", step: "permission" };
+  move(run, "granted");
 
-  let step: SubscribeStep = "worker";
-  let isControlled = true;
   try {
     const registration = await within(navigator.serviceWorker.ready, timeouts.worker);
-    if (registration === TIMED_OUT) return { result: "worker-timeout", step };
-    step = "controller";
-    isControlled = await controlled(timeouts.controller);
+    if (registration === TIMED_OUT) return stoppedAt(run, "timeout");
+    move(run, "ready");
+    run.isControlled = await controlled(timeouts.controller);
     const key = keyBytes(vapidKey());
+    move(run, "checked");
 
-    step = "lookup";
     let existing: PushSubscription | null | typeof TIMED_OUT;
     try {
       existing = await within(registration.pushManager.getSubscription(), timeouts.lookup);
     } catch (error) {
-      return { result: "lookup-threw", step, detail: errorDetail(error) };
+      return stoppedAt(run, "threw", errorDetail(error));
     }
-    if (existing === TIMED_OUT) return { result: "lookup-timeout", step };
+    if (existing === TIMED_OUT) return stoppedAt(run, "timeout");
 
     let subscription: PushSubscription | null = existing;
     // A subscription made with an older key can no longer be sent to. Subscribe fresh first; only
     // when the browser refuses because of the old one, drop it, pause and try once more.
     if (subscription != null && !sameKey(subscription.options.applicationServerKey, key)) subscription = null;
     if (subscription == null) {
+      move(run, "missing");
       const options = { userVisibleOnly: true, applicationServerKey: key };
-      step = "subscribe";
       let made: PushSubscription | typeof TIMED_OUT;
       try {
         made = await within(registration.pushManager.subscribe(options), timeouts.subscribe);
       } catch (error) {
         const name = (error as { name?: unknown } | null)?.name;
-        if (name !== "InvalidStateError" && name !== "AbortError") {
-          return { result: isControlled ? "subscribe-threw" : "not-controlled", step, detail: errorDetail(error) };
-        }
-        step = "unsubscribe";
+        if (name !== "InvalidStateError" && name !== "AbortError") return stoppedAt(run, "threw", errorDetail(error));
+        move(run, "refused");
         const old = existing ?? await within(registration.pushManager.getSubscription(), timeouts.lookup);
         if (old !== TIMED_OUT && old != null) {
           const dropped = await within(old.unsubscribe(), timeouts.unsubscribe);
-          if (dropped === TIMED_OUT) return { result: "unsubscribe-timeout", step, detail: errorDetail(error) };
+          if (dropped === TIMED_OUT) return stoppedAt(run, "timeout", errorDetail(error));
         }
         await pause(timeouts.retryPause);
-        step = "subscribe";
+        move(run, "dropped");
         made = await within(registration.pushManager.subscribe(options), timeouts.subscribe);
       }
-      if (made === TIMED_OUT) return { result: isControlled ? "subscribe-timeout" : "not-controlled", step };
+      if (made === TIMED_OUT) return stoppedAt(run, "timeout");
       subscription = made;
+      move(run, "made");
+    } else {
+      move(run, "found");
     }
 
-    step = "save";
     const json = subscription.toJSON();
     const p256dh = json.keys?.p256dh;
     const auth = json.keys?.auth;
@@ -371,20 +429,14 @@ async function subscribeSteps(timeouts: PushTimeouts): Promise<SubscribeOutcome>
         timeouts.save,
       );
     } catch (error) {
-      return { result: "save-failed", step, detail: errorDetail(error) };
+      return stoppedAt(run, "threw", errorDetail(error));
     }
-    if (saved === TIMED_OUT) return { result: "save-timeout", step };
+    if (saved === TIMED_OUT) return stoppedAt(run, "timeout");
+    move(run, "saved");
     void noteOwner();
     return { result: "ok", step: "done" };
   } catch (error) {
-    // The step a throw came from (TypeScript narrows `step` to its last plain assignment here).
-    const at = step as SubscribeStep;
-    const result: SubscribeResult = at === "subscribe" ? (isControlled ? "subscribe-threw" : "not-controlled")
-      : at === "unsubscribe" ? "unsubscribe-threw"
-        : at === "lookup" ? "lookup-threw"
-          : at === "save" ? "save-failed"
-            : "worker-timeout";
-    return { result, step: at, detail: errorDetail(error) };
+    return stoppedAt(run, "threw", errorDetail(error));
   }
 }
 

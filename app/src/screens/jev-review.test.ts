@@ -15,6 +15,7 @@ import {
   jevFilledOnCard,
   jevShown,
   jevConnectorStorageKey,
+  jevScopeFollowsLive,
   jevScopePhase,
   loadJevSuggestions,
   noteJevAuthUser,
@@ -337,6 +338,44 @@ describe("review scope finish guards", () => {
     expect(completeJevScopeLookup(lookup, scope)).toBe(false);
     expect(boundJevConnectorScope()).toBeNull();
     expect(jevScopePhase()).toBe("off");
+  });
+
+  // FLOW-1164: the phase and the bound scope are one state, so they cannot disagree.
+  it("never holds a scope while off: a bind is ready, and a drop or an unbind leaves nothing bound", () => {
+    expect(jevScopePhase()).toBe("off");
+    bindJevConnectorScope(scope);
+    expect(jevScopePhase()).toBe("ready");
+    expect(boundJevConnectorScope()).toEqual(scope);
+    bindJevConnectorScope(null);
+    expect([jevScopePhase(), boundJevConnectorScope()]).toEqual(["off", null]);
+    bindJevConnectorScope(scope);
+    resetJevScopeMemory();
+    expect([jevScopePhase(), boundJevConnectorScope()]).toEqual(["off", null]);
+  });
+
+  it("after a miss, a company that binds later is ready and no longer follows the live read", () => {
+    noteJevAuthUser(scope.userId);
+    const lookup = beginJevScopeLookup();
+    expect(completeJevScopeLookup(lookup, null)).toBe(true);
+    expect([jevScopePhase(), jevScopeFollowsLive(), boundJevConnectorScope()]).toEqual(["miss", true, null]);
+    // The company row arrives after the cap: the same lookup finishes again, with it.
+    expect(completeJevScopeLookup(lookup, scope)).toBe(true);
+    expect([jevScopePhase(), jevScopeFollowsLive(), boundJevConnectorScope()]).toEqual(["ready", false, scope]);
+    // A screen that knows the company binds it after a miss the same way.
+    resetJevScopeMemory();
+    noteJevAuthUser(scope.userId);
+    completeJevScopeLookup(beginJevScopeLookup(), null);
+    bindJevConnectorScope(scope);
+    expect([jevScopePhase(), jevScopeFollowsLive(), boundJevConnectorScope()]).toEqual(["ready", false, scope]);
+  });
+
+  it("keeps the lookup's place when a screen binds while it runs", () => {
+    noteJevAuthUser(scope.userId);
+    const lookup = beginJevScopeLookup();
+    bindJevConnectorScope(scope);
+    expect([jevScopePhase(), boundJevConnectorScope()]).toEqual(["pending", scope]);
+    expect(completeJevScopeLookup(lookup, scope)).toBe(true);
+    expect(jevScopePhase()).toBe("ready");
   });
 });
 
