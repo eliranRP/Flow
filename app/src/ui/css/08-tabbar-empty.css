@@ -295,7 +295,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2); /* the board's 2px: half the 4px step, no raw value */
+  gap: var(--space-half); /* the board's 2px: half the 4px step, no raw value */
   min-width: 0;
 }
 

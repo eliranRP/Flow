@@ -431,7 +431,7 @@
 }
 
 .ui-choice-sheet .ui-row-text {
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-half);
 }
 
 .ui-choice-sheet .ui-row-title {

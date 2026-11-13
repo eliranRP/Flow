@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { utilityRefundsRow } from "./attention-rows";
 import { refundWindowStart } from "./utility-refund-sheet";
 import { UtilityRefundsScreen } from "./utility-refunds-screen";
 import { GEFEN, PINE, utilityRefundsSample, utilitySplitSample } from "./utility-refunds-sample";
+import { FOLD_MS } from "../ui/fold";
 import { ToastProvider } from "../ui/toast";
 import { parseUtilityRefundCount } from "../utility-refund-count";
 import { fixCopy, paymentMeta, paymentsTaken, refundDate, refundGroups } from "../utility-refund-view";
@@ -140,7 +141,7 @@ describe("the cards", () => {
     // The rent with the bill is split; a payment the size of the bill moves whole.
     expect(gefen && fixCopy(gefen.cards[0] as never).label).toBe("פיצול והחזר לחשמל ומים");
     expect(pine && fixCopy(pine.cards[0] as never).label).toBe("העברה לחשמל ומים כהחזר");
-    expect(pine && paymentMeta(pine.cards[0] as never)).toBe("בלי פרויקט · הכנסה אחרת · 12/09/26 · 7 ימים אחרי");
+    expect(pine && paymentMeta(pine.cards[0] as never)).toEqual(["בלי פרויקט", "הכנסה אחרת", "12/09/26", "7 ימים אחרי"]);
   });
 
   it("shows the summary, the figure and both properties", async () => {
@@ -165,7 +166,7 @@ describe("the cards", () => {
     await screen.findByText("4 לא הוחזרו");
     fireEvent.click(screen.getByRole("button", { name: /^Gas Co/ }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("לא הוחזר · 81 ימים", { selector: "p" })).toBeTruthy();
+    expect(dialog.querySelector(".ui-urf-sheet-status")?.textContent).toBe("לא הוחזר · 81 ימים");
     expect((await within(dialog).findByRole("link", { name: /מה נכנס סביב החשבון הזה/ })).getAttribute("href")).toBe(`/projects/${GEFEN}/utilities/bills/b-gas-gefen/income`);
   });
 
@@ -210,7 +211,7 @@ describe("opening a transaction (FLOW-1142)", () => {
     expect(within(card).getAllByRole("link").map((leg) => leg.getAttribute("href"))).toEqual([
       "/transactions/b-water-gefen", "/transactions/b-gas-pair", "/transactions/pay-zelle-a",
     ]);
-    expect(within(card).getByText("גז · 14/09/26")).toBeTruthy();
+    expect(within(card).getByText(hintText("גז · 14/09/26"))).toBeTruthy();
   });
 
   it("the bill's sheet opens its transaction", async () => {
@@ -357,6 +358,14 @@ describe("the fold", () => {
   });
 
   it("keeps a row closed with ✓ in the list while it folds, then drops it", async () => {
+    // The fold's own timer is held, so a slow runner cannot end the fold before the write's toast shows.
+    const realTimeout = globalThis.setTimeout;
+    const folds: (() => void)[] = [];
+    vi.stubGlobal("setTimeout", ((run: () => void, ms?: number) => {
+      if (ms !== FOLD_MS) return realTimeout(run, ms);
+      folds.push(run);
+      return 0;
+    }));
     renderScreen();
     fireEvent.click(await screen.findByRole("button", { name: "ראיתי: Gas Co" }));
     expect(item("ראיתי: Gas Co")?.hasAttribute("data-leaving")).toBe(true);
@@ -364,6 +373,7 @@ describe("the fold", () => {
     expect(await screen.findByText("Gas Co · ראיתי")).toBeTruthy();
     // The write answered; the row is still folding.
     expect(screen.getByRole("button", { name: "ראיתי: Gas Co" })).toBeTruthy();
+    act(() => { for (const end of folds) end(); });
     await waitFor(() => { expect(screen.queryByRole("button", { name: "ראיתי: Gas Co" })).toBeNull(); });
   });
 
@@ -415,13 +425,13 @@ describe("the dates", () => {
   it("shows the bills', the payments' and the picker's dates as dd/mm/yy", async () => {
     renderScreen(`/utility-refunds?project=${GEFEN}`);
     expect(await screen.findByText(hintText("לא הוחזר · 67 ימים · 03/09/26"))).toBeTruthy();
-    expect(screen.getByText("חשמל ומים · 14/09/26")).toBeTruthy();
-    expect(screen.getByText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
+    expect(screen.getByText(hintText("חשמל ומים · 14/09/26"))).toBeTruthy();
+    expect(screen.getByText(hintText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי"))).toBeTruthy();
     const [row] = screen.getAllByRole("button", { name: /^Power Co/ });
     fireEvent.click(row as HTMLElement);
     fireEvent.click(await screen.findByRole("button", { name: "הוחזר · בחירת התשלום" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Power Co · $128.40 · 03/09/26")).toBeTruthy();
+    expect(within(dialog).getByText(hintText("Power Co · $128.40 · 03/09/26"))).toBeTruthy();
     expect(await within(dialog).findByText("שכירות · 01/10/26")).toBeTruthy();
   });
 });
@@ -439,14 +449,14 @@ describe("the payment's project and split", () => {
 
   it("names the payment's project on its line, and its leg's name says what the leg shows", async () => {
     renderScreen(`/utility-refunds?project=${GEFEN}`);
-    expect(await screen.findByText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי")).toBeTruthy();
+    expect(await screen.findByText(hintText("דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי"))).toBeTruthy();
     expect(screen.getByRole("link", { name: "Tenant A · דירת הגפן 3 · שכירות · 02/10/26 · 18 ימים אחרי · +$1,884.20 · פתיחת התנועה" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "City Water · חשמל ומים · 14/09/26 · −$84.20 · פתיחת התנועה" })).toBeTruthy();
   });
 
   it("keeps בלי פרויקט for a payment on no project", async () => {
     renderScreen(`/utility-refunds?project=${PINE}`);
-    expect(await screen.findByText("בלי פרויקט · הכנסה אחרת · 12/09/26 · 7 ימים אחרי")).toBeTruthy();
+    expect(await screen.findByText(hintText("בלי פרויקט · הכנסה אחרת · 12/09/26 · 7 ימים אחרי"))).toBeTruthy();
   });
 
   it("lists a split payment's parts under its leg, with the project only where it differs", async () => {

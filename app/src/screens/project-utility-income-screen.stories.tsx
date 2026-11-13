@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { expect, userEvent, within } from "storybook/test";
 import { ProjectUtilityIncomeScreen } from "./project-utility-income-screen";
 import { GEFEN, storyUtilityClient, useOfflineOnceRead, utilityIncomeSample, utilityTypesSample } from "./utility-refunds-sample";
+import { expectNoOrphanDots } from "../ui/hint-parts.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { UTILITY_INCOME_KEY, UtilityClientProvider, type UtilityIncome } from "../utility-refunds";
@@ -59,18 +60,33 @@ export const ProjectUtilityIncomeRefunded: Story = {
   },
 };
 
-/** No payment came in around the bill: the page says so, and the marker stays. */
+/** No payment came in around the bill: the page says so, the marker stays, and it offers 3 months (FLOW-1174). */
 export const ProjectUtilityIncomeNone: Story = {
   name: "ProjectUtilityIncome, no payments",
   render: () => <IncomeStory income={{ ...utilityIncomeSample(), lines: [] }} />,
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByText("לא נכנס תשלום מהשוכר בטווח הזה")).toBeInTheDocument();
+    await expect(within(canvasElement).getByRole("button", { name: "לטווח של 3 חודשים" })).toBeInTheDocument();
   },
 };
 
-/** Long names, many parts and large amounts: every line wraps and none is cut. */
+/** Nothing in 3 months either: the way on is the bill's transaction (FLOW-1174). */
+export const ProjectUtilityIncomeNoneWidest: Story = {
+  name: "ProjectUtilityIncome, no payments in 3 months",
+  render: () => <IncomeStory income={{ ...utilityIncomeSample(), lines: [] }} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "לטווח של 3 חודשים" }));
+    await expect(await within(canvasElement).findByRole("link", { name: "פתיחת החשבון" })).toHaveAttribute("href", "/transactions/t-power-10");
+  },
+};
+
+/**
+ * Long names, many parts and large amounts (FLOW-1174): each payment is its payer, its amount and one line, the other
+ * parts a second; every line breaks only between whole parts, with no "·" at either end.
+ */
 export const ProjectUtilityIncomeLong: Story = {
   name: "ProjectUtilityIncome, long content",
+  globals: { viewport: { value: "flow320", isRotated: false } },
   render: () => {
     const income = utilityIncomeSample();
     return (
@@ -87,6 +103,10 @@ export const ProjectUtilityIncomeLong: Story = {
         }}
       />
     );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("list", { name: "תשלומים מהשוכר" });
+    await expectNoOrphanDots(canvasElement.querySelector(".ui-urf-screen") as Element);
   },
 };
 

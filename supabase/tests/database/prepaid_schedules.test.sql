@@ -451,12 +451,13 @@ select is(pg_temp.mcp('b', format('select public.mcp_set_expense_category(%L, %L
 select is(pg_temp.pnl_all(), (select r::bigint from res where label = 'pnl_guard'), 'the P&L did not move');
 select is((select category_id from public.transactions where id = pg_temp.id('l_past')),
   (select prepaid_category_id from public.prepaid_schedules where id = pg_temp.id('s_past')), 'and the payment line kept its filing');
--- A bank sync (no user) may void the payment line; the schedule then posts nothing.
+-- A bank sync (no user) may void the payment line; the schedule then ends and posts nothing
+-- (FLOW-1166 part 5; prepaid_payment_removed.test.sql covers each way a line is removed).
 select pg_temp.no_user();
 update public.transactions set line_status = 'void', removed_at = now() where id = pg_temp.id('l_past');
 select is(private.prepaid_post_due(pg_temp.m1(3), pg_temp.id('s_past')), 0, 'a schedule whose payment line a sync voided posts nothing');
 update public.transactions set line_status = 'posted', removed_at = null where id = pg_temp.id('l_past');
-select is(private.prepaid_post_due(pg_temp.m1(1), pg_temp.id('s_past')), 1, 'and posts again once the line is back');
+select is(private.prepaid_post_due(pg_temp.m1(1), pg_temp.id('s_past')), 0, 'nor once the line is back: the void ended it');
 
 -- 7. Posting never moves cash: the cash views and the bank are the same before and after.
 insert into res values ('future', pg_temp.create_pp('pp-future', pg_temp.id('l_future'), pg_temp.id('insurance'), pg_temp.ym(1), 3));

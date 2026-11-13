@@ -12,15 +12,16 @@ import { billMeta, cardBillTitle, fixCopy, openMeta, paymentMeta, paymentParts, 
 
 /**
  * One leg of a card: a name and its line at the start, the amount at the end. FLOW-1142: the leg opens its
- * transaction's page, so the owner can check the bill or the payment before answering.
+ * transaction's page, so the owner can check the bill or the payment before answering. FLOW-1173: its line breaks
+ * only between whole parts, with no "·" at either end of a line.
  */
-function Leg({ title, meta, amount, to }: { title: string; meta: string; amount: string; to: string }) {
+function Leg({ title, meta, amount, to }: { title: string; meta: readonly string[]; amount: string; to: string }) {
   return (
     <li className="ui-urf-leg">
-      <Link className="ui-urf-leg-link" to={to} aria-label={`${title} · ${meta} · ${amount} · פתיחת התנועה`}>
+      <Link className="ui-urf-leg-link" to={to} aria-label={[title, ...meta, amount, "פתיחת התנועה"].join(" · ")}>
         <span className="ui-urf-leg-text">
           <span className="ui-urf-leg-title" data-clip-ok="">{title}</span>
-          <span className="ui-urf-leg-meta">{meta}</span>
+          <span className="ui-urf-leg-meta"><HintParts parts={meta} /></span>
         </span>
         <bdi dir="ltr" className="ui-urf-leg-amount" data-income={amount.startsWith("+") ? "true" : undefined}>{amount}</bdi>
         <span className="ui-urf-leg-chevron" aria-hidden="true"><ChevronIcon size={16} /></span>

@@ -25,7 +25,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: calc(var(--space-2) + var(--space-1) / 2);
+  gap: calc(var(--space-2) + var(--space-half));
   padding: var(--space-3) var(--space-4) var(--space-1);
 }
 
@@ -71,7 +71,7 @@
 .ui-onb-enter {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-3) + var(--space-1) / 2);
+  gap: calc(var(--space-3) + var(--space-half));
   animation: ui-onb-rise var(--motion-page) var(--ease-enter) both;
 }
 
@@ -96,7 +96,7 @@
 .ui-onb-copy {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) - var(--space-1) / 2);
+  gap: calc(var(--space-2) - var(--space-half));
 }
 
 .ui-onb-title {
@@ -119,7 +119,7 @@
   padding: var(--space-3) var(--space-side) calc(var(--space-6) + var(--space-1));
 }
 
-/* The welcome tile: 56px, 16px corners, a white 26/600 F, on the reading start edge. */
+/* The welcome tile: 56px, 16px corners, a white 28/600 F, on the reading start edge. */
 .ui-onb-logo {
   align-self: flex-start;
   inline-size: calc(var(--size-seg) + var(--space-4));
@@ -130,7 +130,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--space-6) + var(--space-1) / 2 + var(--space-1) / 2);
+  font-size: var(--type-card-size);
   font-weight: var(--type-title-weight);
   animation: ui-onb-pop var(--motion-page) var(--ease-enter) both;
 }
@@ -138,18 +138,18 @@
 .ui-onb-form {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-3) + var(--space-1) / 2);
+  gap: calc(var(--space-3) + var(--space-half));
 }
 
 .ui-onb-field {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-2) - var(--space-1) / 2);
+  gap: calc(var(--space-2) - var(--space-half));
 }
 
 /* Business step: the board's 48px field, 1.5px border, 6px label gap; 44px track with 2px padding. */
 .ui-onb-form .ui-field {
-  gap: calc(var(--space-2) - var(--space-1) / 2);
+  gap: calc(var(--space-2) - var(--space-half));
 }
 
 .ui-onb-form .ui-field-label {
@@ -164,8 +164,8 @@
 }
 
 .ui-onb-form .ui-seg {
-  gap: calc(var(--space-1) / 2);
-  padding: calc(var(--space-1) / 2);
+  gap: var(--space-half);
+  padding: var(--space-half);
   border-radius: var(--radius-input);
   background: var(--color-surface);
 }
@@ -347,7 +347,7 @@
 .ui-onb-conn-text {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-half);
   flex: 1 1 auto;
   min-width: 0;
   text-align: start;

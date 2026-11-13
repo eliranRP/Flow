@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { CompactBar } from "../ui/compact-bar";
 import { EmptyState } from "../ui/empty-state";
 import { GroupHead } from "../ui/group-head";
+import { HintParts } from "../ui/hint-parts";
 import { CheckIcon } from "../ui/icons";
 import { useScrolledPast } from "../ui/screen-header";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
@@ -84,7 +85,7 @@ export function UtilityRefundsScreen() {
                 <Amount agorot={total.minor} currency={total.currency} size="total" direction="expense" cents="always" />
               </p>
             ))}
-            <p className="ui-urf-sub t-caption">חשבונות שהחברה שילמה והשוכר עוד לא החזיר · נבדק 30 יום אחרי החיוב</p>
+            <p className="ui-urf-sub t-caption"><HintParts parts={["חשבונות שהחברה שילמה והשוכר עוד לא החזיר", "נבדק 30 יום אחרי החיוב"]} /></p>
           </>
         ) : null}
         <span ref={setTitleMark} className="ui-compact-mark" aria-hidden="true" />
