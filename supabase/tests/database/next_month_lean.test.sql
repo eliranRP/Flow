@@ -120,7 +120,9 @@ select ok(pg_temp.keys(pg_temp.lean(array['house'])->pg_temp.id('house')::text),
 select is(pg_temp.lean(array['other_house']), '{}'::jsonb, 'another company''s project reads nothing');
 
 select ok(
-  (select bool_and(pg_temp.keys(x->'categories')) and count(*) = 3 from jsonb_array_elements(pg_temp.inputs()->'projects') x),
+  -- A project with no lines has an empty list (yard), which has no fields to check.
+  (select bool_and(jsonb_array_length(x->'categories') = 0 or pg_temp.keys(x->'categories')) and count(*) = 3
+    from jsonb_array_elements(pg_temp.inputs()->'projects') x),
   'company_next_month_inputs gives every project''s categories as the four fields');
 select is(
   (select x->'categories' from jsonb_array_elements(pg_temp.inputs()->'projects') x where (x->>'project_id')::uuid = pg_temp.id('house')),
