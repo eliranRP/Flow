@@ -5,6 +5,7 @@ import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import { companyMonthInput, companyRestOfYear, restOfYearMonths, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
+import { expectedMonthsQueryOptions } from "./expected-months-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { shiftMonthKey } from "./period";
@@ -69,16 +70,8 @@ const NO_LOANS: readonly ForecastLoan[] = [];
 export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string, withRest = false) {
   const preview = useHomePreview();
   const live = enabled && sample == null && preview === "off";
-  const expected = useQuery({
-    queryKey: ["expected-months", preview, "company", 2],
-    enabled: live,
-    queryFn: async (): Promise<ExpectedMonths> => {
-      const supabase = await readyClient();
-      const { data, error } = await supabase.rpc("expected_months", { p_months: 2 });
-      if (error) throw error;
-      return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
-    },
-  });
+  // FLOW-1171: the same read as Home's forecast (expected-months-query), so one request serves both.
+  const expected = useQuery({ ...expectedMonthsQueryOptions(preview), enabled: live });
   const loans = useQuery({ queryKey: ["loans", "company-forecast", preview], enabled: live, queryFn: () => readForecastLoans(null) });
   // A later month is built from rest_edits; the slim answer (no rest_edits) holds next month's edits only.
   const full = withRest || (month != null && month !== nextMonthKey(today));
