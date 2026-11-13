@@ -16,7 +16,7 @@
 .ui-charge-back {
   display: flex;
   justify-content: flex-start;
-  margin-block-end: calc(var(--space-1) - var(--space-4));
+  margin-block-end: calc(var(--space-3) * -1);
 }
 
 /* The head: the status line (14/500, coloured by state), the name (24/600), the figure (40), the meta line. */
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-inline: calc(var(--space-1) * 1.5) var(--space-inset-row);
+  padding-inline: var(--space-2) var(--space-4);
   border-radius: var(--radius-toast);
   background: var(--color-tint);
 }
@@ -136,11 +136,11 @@
 /* board: 61px rows, 14px sides, a 22px icon, the 12px label and the 16px value 3px under it. */
 .ui-charge-card .ui-charge-row {
   min-block-size: 61px;
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
 }
 
 .ui-charge-card .ui-icon-row-text {
-  gap: calc(var(--space-1) * 0.75);
+  gap: var(--space-1);
 }
 
 .ui-charge-card .ui-icon-row-label {
@@ -179,7 +179,7 @@
   width: 100%;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-inset-row);
+  padding: var(--space-4);
   border: 0;
   background: transparent;
   color: var(--color-text);
@@ -198,7 +198,7 @@
   display: grid;
   flex: 1;
   min-inline-size: 0;
-  gap: calc(var(--space-1) * 0.75);
+  gap: var(--space-1);
   line-height: calc(var(--type-title-line) - 0.015);
 }
 
@@ -222,8 +222,8 @@
 /* The match box: a tint, 14px corners, the suggested party and the two answers. */
 .ui-recurring-match {
   display: grid;
-  gap: calc(var(--space-2) + var(--space-1) / 2);
-  padding: var(--space-inset-row);
+  gap: var(--space-3);
+  padding: var(--space-4);
   border-radius: var(--radius-toast);
   background: var(--color-tint);
 }
@@ -267,11 +267,11 @@
 
 /* FLOW-1079: "לא צפוי ב<month>" sits in the card as its other rows do: the same inset, so its icon lines up. */
 .ui-charge-skip .ui-row.ui-switch-row {
-  padding: var(--space-inset-row);
+  padding: var(--space-4);
 }
 
 /* FLOW-1087: a failed forecast read: the retry under the switch, at the row's inset. */
 .ui-charge-skip-retry {
   display: flex;
-  padding-inline: var(--space-inset-row);
+  padding-inline: var(--space-4);
 }

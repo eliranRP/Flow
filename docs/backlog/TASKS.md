@@ -786,6 +786,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1184"></a>[FLOW-1184](tasks/FLOW-1184.md) | Five-token look, area 1: Home, lists, controls, fields, banners, tab bar, sheets and setup | SMALL UI |
 | <a id="flow-1185"></a>[FLOW-1185](tasks/FLOW-1185.md) | Five-token look, review, transactions, search and journal: 4-pt spacing, card shadow, concentric corners, 12px label | SMALL UI |
 | <a id="flow-1186"></a>[FLOW-1186](tasks/FLOW-1186.md) | Five-token look: projects, loans, investment, forecast, profit and reports | SMALL UI |
+| <a id="flow-1187"></a>[FLOW-1187](tasks/FLOW-1187.md) | Five-token look, area 4: settings, team, invite, notifications, invoices, recurring, connections, add-entry, utility | SMALL UI |
 
 ## Data hygiene (public repo)
 
