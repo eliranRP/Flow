@@ -3,16 +3,18 @@ import { useEffect, useRef, useState } from "react";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCompanyCurrencyQuery } from "../company-currency";
+import { BOOKS_CLOSED_LABEL, useBooksClosedThrough } from "../books-closed";
 import { useDashboardQuery } from "../use-books";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
 import { useHoldOwnerSettings, useHoldWrites, useViewerNoteId, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { basisChoiceLabel, BASIS_TITLE, currencyChoiceLabel, type BasisChoice } from "../ui/company-choices";
 import { CalendarIcon } from "../ui/icons";
-import { CoinIcon, BuildingIcon, SplitIcon, TrashIcon } from "../ui/icons-later";
+import { CoinIcon, BuildingIcon, LockIcon, SplitIcon, TrashIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
+import { formatDisplay } from "../ui/date-math";
 import { Toggle } from "../ui/toggle";
 import { useTopToast } from "../ui/top-toast";
 import { useBlockedPreview } from "./screen-shared";
@@ -33,8 +35,9 @@ export const OVERHEAD_OFF = "הוצאות כלליות לא מתחלקות";
 const OVERHEAD_FAILED = "לא הצלחנו לשמור את התצוגה.";
 
 /**
- * `/settings/business` (FLOW-512): the business's name, currency and profit basis, then the
- * after-overhead switch. The owner changes them; anyone else reads the rows, with no chevron.
+ * `/settings/business` (FLOW-512): the business's name, currency and profit basis, the closed date when
+ * one is set (FLOW-1166: read-only for everyone; the assistant sets it), then the after-overhead switch.
+ * The owner changes the others; anyone else reads the rows, with no chevron.
  * Only the owner sees the danger zone, which deletes the company (decision 0194).
  */
 export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
@@ -50,6 +53,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const live = sample == null && preview === "off";
   const liveCompany = live && dashboard.data?.company_id != null;
   const currencyQuery = useCompanyCurrencyQuery(liveCompany);
+  const closedQuery = useBooksClosedThrough(dashboard.data?.company_id ?? null, liveCompany);
   const [renameOpen, setRenameOpen] = useState(false);
   // Browser Back closes the rename sheet and stays on this page.
   const setRenameSheet = useSheetHistory("business-rename", renameOpen, setRenameOpen);
@@ -108,6 +112,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const currencyHint = currencyChoiceLabel(companyCurrency);
   const companyBasis: BasisChoice = live ? (dashboard.data?.basis ?? "cash") : (sample?.basis ?? "cash");
   const basisHint = basisChoiceLabel(companyBasis);
+  const closedThrough = live ? (closedQuery.data ?? null) : (sample?.booksClosedThrough ?? null);
   const showSheets = !holdOwner && namedBusiness !== "";
   const overheadLocked = holdWrites || holdOwner;
 
@@ -186,6 +191,9 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
             buttonRef={basisRowRef}
             onClick={() => { setBasisOpen(true); }}
           />
+        )}
+        {closedThrough == null ? null : (
+          <ListRow variant="static" title={BOOKS_CLOSED_LABEL} value={formatDisplay(closedThrough)} icon={<LockIcon />} wrapTitle />
         )}
       </List>
       {showSheets && currencyReady ? (

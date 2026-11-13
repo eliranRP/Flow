@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { reviewHeldFields } from "./review-held.ts";
 
 const basisSchema = z.enum(["cash", "invoiced"]);
-
 /** JSON numbers and digit strings both become bigint agorot. Fractions are rejected. */
 const agorotInput = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
 
@@ -206,6 +206,7 @@ export const reviewRowSchema = z.object({
     .nullable()
     .optional()
     .catch(undefined),
+  ...reviewHeldFields,
 });
 
 /** A SUMIT row filed today with no open review item. Same filter as auto_approved_today. */

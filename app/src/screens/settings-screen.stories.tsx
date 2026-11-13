@@ -145,6 +145,20 @@ export const BusinessPage: Story = {
   ),
 };
 
+/** FLOW-1166: the closed date in one read-only row, under the profit basis (the assistant sets it). */
+export const BusinessBooksClosed: Story = {
+  name: "Business, books closed",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <BusinessScreen sample={{ ...renameBusiness, booksClosedThrough: "2026-03-31" }} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("31/03/2026")).toBeInTheDocument();
+  },
+};
+
 export const BusinessViewer: Story = {
   name: "Business, viewer",
   render: () => (

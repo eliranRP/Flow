@@ -25,7 +25,7 @@ import { CheckIcon } from "../ui/icons";
 import { changeSaveFailure } from "../ui/change-sheet";
 import { REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_KEEP } from "../ui/review-card";
 import { ActionBar, ActionBarRow } from "../ui/action-bar";
-import { reviewFlagView, reviewPaidView, reviewWhy } from "../review-copy";
+import { REVIEW_HELD, REVIEW_HELD_LEFT, reviewFlagView, reviewHeldView, reviewPaidView, reviewWhy } from "../review-copy";
 import { ScreenHeader } from "../ui/screen-header";
 import { cx } from "../ui/cx";
 import { useToast } from "../ui/toast";
@@ -34,6 +34,7 @@ import { useLineSplitQuery } from "./line-split";
 import { ReviewThreadEntry } from "./review-thread";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
 import { ProjectPickSheet } from "./review-pick-sheet";
+import { leaveHeldChange, ReviewHeldBar } from "./review-held";
 import { saveFlow } from "../save-flow";
 import { useMachine } from "../use-machine";
 import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, ReviewCardLoading, ReviewMoreFailed, reviewListPath, reviewSuggestion } from "./review-shared";
@@ -239,8 +240,9 @@ export function ReviewQueue({
       if (approving.current === target.id) approving.current = null;
     },
     run: async (target) => {
-      if (previewWrite) {
-        await previewWrite.run();
+      // FLOW-1166: a held change's אישור leaves the line as it is; nothing else on the card can be written.
+      if (previewWrite || target.reason === REVIEW_HELD) {
+        await (previewWrite ? previewWrite.run() : leaveHeldChange(target.id));
         markHandled(target.id);
         return;
       }
@@ -270,6 +272,12 @@ export function ReviewQueue({
       const id = target.id;
       // ביטול brings the undone card back to the front.
       const line = target.transaction_id;
+      // FLOW-1166: nothing to take back from the app (the line never changed); the assistant's undo can.
+      if (target.reason === REVIEW_HELD) {
+        previewWrite?.onDone(id);
+        toast.show({ message: REVIEW_HELD_LEFT, place: "top" });
+        return;
+      }
       if (previewWrite) {
         previewWrite.onDone(id);
         toast.show({
@@ -471,11 +479,12 @@ export function ReviewQueue({
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
   const splitCard = reviewIsSplit(view);
-  const needProject = view.reason !== "unallocated_shared" && !splitCard && view.project_id == null;
-  const needCategory = view.reason !== "unallocated_shared" && view.category_id == null;
+  const heldCard = card.reason === REVIEW_HELD;
+  const needProject = !heldCard && view.reason !== "unallocated_shared" && !splitCard && view.project_id == null;
+  const needCategory = !heldCard && view.reason !== "unallocated_shared" && view.category_id == null;
   const settled = !leaving && !jevLoading;
   const nextPick = settled ? (needProject ? "project" : needCategory ? "category" : null) : null;
-  const approvable = settled && nextPick == null && (view.reason === "unallocated_shared"
+  const approvable = settled && nextPick == null && (heldCard || view.reason === "unallocated_shared"
     || (splitCard ? view.category_id != null : view.project_id != null && view.category_id != null));
   // FLOW-365: אישור always reads אישור. FLOW-960: it is never a dead button; with a field missing a tap
   // opens that field's picker, and the line under the bar says so.
@@ -610,21 +619,22 @@ export function ReviewQueue({
           sourcePill={card.source === "mercury" ? "שורת בנק" : "חשבונית מצולמת"}
           photo={card.source === "photo"}
           sourceLine={`${invoiceDate(card.doc_date)} · ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
-          onSplit={holdWrites || leaving ? undefined : openSplit}
+          onSplit={holdWrites || leaving || heldCard ? undefined : openSplit}
           splitSummary={splitSummary}
           pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
           projectButtonRef={reviewLineFocus.project}
           categoryButtonRef={reviewLineFocus.category}
-          onProject={holdWrites ? undefined : openProject}
-          onCategory={holdWrites ? undefined : openCategory}
+          onProject={holdWrites || heldCard ? undefined : openProject}
+          onCategory={holdWrites || heldCard ? undefined : openCategory}
           meta={lineMeta.data}
           splitParts={mismatch ? splitParts : undefined}
           jevWhy={jevWhy}
           flag={flag}
           missingBoth={missingBoth}
           jevFilled={jevFilled}
+          held={heldCard ? reviewHeldView(card) : null}
         />
         <ReviewThreadEntry transactionId={card.transaction_id} holdWrites={holdWrites} approveDisabled={!settled} onApprove={runApprove} />
       </div>
@@ -661,7 +671,7 @@ export function ReviewQueue({
       ) : null}
       {holdWrites ? <ViewerNote className="t-caption t-muted ui-viewer-note" /> : (
       <ActionBar>
-        {mismatch ? (
+        {heldCard ? <ReviewHeldBar approveSlot={approveSlot} disabled={!settled} onApprove={runApprove} /> : mismatch ? (
           <>
             <Button
               full

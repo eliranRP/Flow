@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState, type CSSProperties, type Ref } from "react";
 import { formatAmountText } from "@flow/shared";
 import { lineSplitPartsLabel } from "../line-split-copy";
-import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewPaidView } from "../review-copy";
+import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewHeldView, type ReviewPaidView } from "../review-copy";
 import { methodLabel, methodSourceName, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
 import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon } from "./icons";
@@ -25,6 +25,8 @@ export const REVIEW_MISSING_ID = "review-missing";
 /** FLOW-702: the auto job wrote Jev's values on this line; ביטול takes the fill back (decision 0145). */
 export const JEV_FILLED = "מולא ע״י Jev";
 export const JEV_FILLED_UNDO = "ביטול";
+/** FLOW-1166: the held change's hint. The bar's אישור points at it. */
+export const REVIEW_HELD_HINT_ID = "review-held-hint";
 
 /** Draws copy parts, each number in its own bdi. */
 export function CopyLine({ parts }: { parts: readonly CopyPart[] }) {
@@ -121,6 +123,11 @@ type ReviewCardProps = {
    * (and the VAT line): "✓ שולם · קבלה dd/mm", or "שולם חלקית · קבלה dd/mm" with no ✓. `reviewPaidView`.
    */
   paid?: ReviewPaidView | null;
+  /**
+   * FLOW-1166: a sync's change held for this line in a closed period (`reviewHeldView`). The card says what
+   * waits and how to take it, in place of the project and category rows: nothing on it can be changed.
+   */
+  held?: ReviewHeldView | null;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -150,6 +157,7 @@ export function ReviewCard({
   jevFilled,
   still = false,
   paid,
+  held,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
   // FLOW-439: the card's nickname from the bank, or the account the money left from.
@@ -306,6 +314,7 @@ export function ReviewCard({
       {vatLine ? <p className="t-caption t-muted">{vatLine}</p> : null}
       {paid ? <ReviewPaidLine paid={paid} /> : null}
       {memo ? <ReviewMemo memo={memo} /> : null}
+      {held ? <ReviewHeldBlock held={held} /> : (
       <div className="ui-review-ai">
         {mismatch ? (
           <ListRow
@@ -377,9 +386,29 @@ export function ReviewCard({
           <p className="t-caption t-muted ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
         ) : null}
       </div>
+      )}
       {/* A spike pill is the whole warning: no row at the end repeats it (design lead, 2026-10-09). */}
       {flag && spike?.pill == null && (flag.tone === "loud" || flag.line.length > 0) ? <ReviewFlagBlock flag={flag} /> : null}
     </article>
+  );
+}
+
+/** FLOW-1166: what the held change is (the reason, then each detail that applies) and how to take it. */
+function ReviewHeldBlock({ held }: { held: ReviewHeldView }) {
+  return (
+    <div className="ui-review-ai">
+      <div className="ui-review-panel ui-review-held">
+        <p className="t-line2 ui-review-held-reason">{held.reason}</p>
+        {held.details.length > 0 ? (
+          <ul className="ui-review-held-details">
+            {held.details.map((parts, index) => (
+              <li className="t-caption" key={index}><CopyLine parts={parts} /></li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+      <p className="t-caption t-muted ui-review-held-hint" id={REVIEW_HELD_HINT_ID}>{held.hint}</p>
+    </div>
   );
 }
 
