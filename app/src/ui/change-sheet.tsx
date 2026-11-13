@@ -541,6 +541,8 @@ export function ChangeAssignment(props: Props) {
     forceDiscard.current = false;
     if (discard) propsRef.current.onDiscard?.();
     settled.current = true;
+    // The sheet hides before the route changes: the split link's leave must not land in between.
+    splitTicket.current += 1;
     discardPicker();
     return true;
   }
@@ -604,10 +606,7 @@ export function ChangeAssignment(props: Props) {
         return false;
       }
     }
-    await dropNew();
-    settled.current = true;
-    discardPicker();
-    return true;
+    return closeSheet(false);
   }
 
   if (props.leave) props.leave.current = allowClose;
