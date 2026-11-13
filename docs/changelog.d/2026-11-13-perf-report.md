@@ -1,0 +1,1 @@
+The 2026-11-13 daily perf report is in `docs/qa/perf/`. No fix shipped. Reads slowed from about 01:22 UTC, after the deploy of `22bc174`, while the database did not; cause not found. All JavaScript has 2.8 KB left under 740 KB.
