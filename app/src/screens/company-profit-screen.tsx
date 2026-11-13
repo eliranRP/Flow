@@ -139,7 +139,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // FLOW-1080 (as Home, FLOW-1019): the next-month reads start once the figures are drawn, so they do not share
   // the link with the figures' own reads; a return with the figures cached reads them at once.
   const afterPaint = useAfterFirstPaint(model != null);
-  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast && afterPaint, sample?.next);
+  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast && afterPaint, sample?.next, undefined, long);
   // Data already cached (from Home, or an earlier visit) shows at once; only a read not yet started waits.
   const nextWaiting = next.pending || (wantsForecast && !afterPaint && next.input == null);
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
