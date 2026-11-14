@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(116);
+select plan(121);
 
 do $users$
 begin
@@ -459,6 +459,49 @@ select is((public.get_property_returns(pg_temp.id('ed'), '2026-01-01', '2026-12-
   'proceeds 121 days before the first payment are outside its window: the loan counts');
 select is((public.get_property_returns(pg_temp.id('ee'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 0::bigint,
   'proceeds 120 days before the first payment are inside its window: the loan is out');
+
+-- FLOW-1197 (decision 0269): a hard-money loan funds the purchase at closing and pays its renovation
+-- draws into the bank. With no closing amount set, the price counts the principal less those draws:
+-- loan proceeds after its start, up to its payoff and before the first rent. A renovation refund, a
+-- deposit after the first rent and a draw after the payoff are not draws; a closing amount set wins.
+reset role;
+insert into public.accounts (company_id, name, type) values (pg_temp.id('co'), 'Example loan principal', 'liability');
+insert into prr (label, id) values
+  ('hml', tests.fixture_project(pg_temp.id('co'), 'Example renovation')),
+  ('draw_cat', tests.fixture_category(pg_temp.id('co'), 'Example draws', 'income', true)),
+  ('refund_cat', tests.fixture_category(pg_temp.id('co'), 'Example renovation refunds', 'income', true));
+update public.categories set ledger_account_id = (
+  select a.id from public.accounts a where a.company_id = pg_temp.id('co') and a.name = 'Example loan principal')
+where id = pg_temp.id('draw_cat');
+update public.categories set rehab = true, ledger_account_id = (
+  select a.id from public.accounts a where a.company_id = pg_temp.id('co') and a.name = 'Example loan principal')
+where id = pg_temp.id('refund_cat');
+insert into prr (label, id) values
+  ('hml-buy', tests.fixture_line(pg_temp.id('co'), 'prr:hml-buy', 3000000, p_project => pg_temp.id('hml'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-03-02')),
+  ('hml-d1', tests.fixture_line(pg_temp.id('co'), 'prr:hml-d1', 2000000, 'income', pg_temp.id('hml'), pg_temp.id('draw_cat'), '2026-04-01')),
+  ('hml-d2', tests.fixture_line(pg_temp.id('co'), 'prr:hml-d2', 1000000, 'income', pg_temp.id('hml'), pg_temp.id('draw_cat'), '2026-05-01')),
+  ('hml-ref', tests.fixture_line(pg_temp.id('co'), 'prr:hml-ref', 50000, 'income', pg_temp.id('hml'), pg_temp.id('refund_cat'), '2026-04-15')),
+  ('hml-rent', tests.fixture_line(pg_temp.id('co'), 'prr:hml-rent', 200000, 'income', pg_temp.id('hml'), pg_temp.id('rent'), '2026-07-01')),
+  ('hml-dep', tests.fixture_line(pg_temp.id('co'), 'prr:hml-dep', 300000, 'income', pg_temp.id('hml'), pg_temp.id('draw_cat'), '2026-07-05')),
+  ('hml-late', tests.fixture_line(pg_temp.id('co'), 'prr:hml-late', 400000, 'income', pg_temp.id('hml'), pg_temp.id('draw_cat'), '2026-10-01'));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id, status, closed_on)
+values (pg_temp.id('co'), 'Example hard-money loan', 20000000, 120000, 12, '2026-03-01', 200000, 0, 'ILS', pg_temp.id('hml'), 'paid_off', '2026-09-30');
+insert into prr (label, id) select 'hml_loan', l.id from public.loans l where l.name = 'Example hard-money loan';
+select tests.authenticate_as('prr_owner');
+create or replace function pg_temp.hml()
+returns jsonb
+language sql
+as $$ select public.get_property_returns(pg_temp.id('hml'), '2026-01-01', '2026-12-31'); $$;
+grant execute on function pg_temp.hml() to authenticated, service_role;
+select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 17000000::bigint,
+  'the loan counts its principal less the draws it paid into the bank before the first rent');
+select is((pg_temp.hml()->'inputs'->'taken_over_loans'->0->>'draws_minor')::bigint, 3000000::bigint,
+  'a renovation refund, a deposit after the first rent and money after the payoff are not draws');
+select is((pg_temp.hml()->'inputs'->>'purchase_minor')::bigint, 20000000::bigint,
+  'purchase = the cash at closing + what the loan paid at closing');
+select is((public.set_loan_closing_paid(pg_temp.id('hml_loan'), 18000000))->>'closing_paid_minor', '18000000',
+  'the owner sets the settlement statement''s amount');
+select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 18000000::bigint, 'and the amount set wins over the draws');
 
 select * from finish();
 rollback;
