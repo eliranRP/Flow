@@ -751,6 +751,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1171"></a>[FLOW-1171](tasks/FLOW-1171.md) | Perf queue: every screen in the sweep under 0.5 s | SMALL CYCLE (perf) |
 | <a id="flow-1189"></a>[FLOW-1189](tasks/FLOW-1189.md) | Perf: Home lists 20 lines a side, more on tap | SMALL (perf) |
 | <a id="flow-1190"></a>[FLOW-1190](tasks/FLOW-1190.md) | Plan: cache recurring_parties per company | PLAN FIRST (perf) |
+| <a id="flow-1192"></a>[FLOW-1192](tasks/FLOW-1192.md) | Perf: open review rows index back, and the recurring party test on its index | SMALL (perf) |
 | <a id="flow-1193"></a>[FLOW-1193](tasks/FLOW-1193.md) | Perf: drop read fields no one reads (get_project lean, projects_cash_month, expected_months) | SMALL (perf) |
 | <a id="flow-1194"></a>[FLOW-1194](tasks/FLOW-1194.md) | Perf: Company profit's "by category" order loads category lines on scroll; search finds every line | MEDIUM (perf) |
 | <a id="flow-1195"></a>[FLOW-1195](tasks/FLOW-1195.md) | Perf: Company profit's year view reads forecast skips once, not once per month | SMALL (perf) |
