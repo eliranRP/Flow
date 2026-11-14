@@ -154,7 +154,7 @@ function barClass(bar: ChartBar): string {
  * The chart: two bars a month on one scale (income in the accent, expenses in the dim purple-grey), oldest
  * on the right as time runs right to left. Next month is dashed and unfilled; a month in progress is solid
  * so far with a dashed cap for what is still expected. Either one's label is in the accent. A screen reader
- * hears `label` once; `link` sits under the legend.
+ * hears `label` once.
  */
 export function MonthChart({
   kind,
@@ -162,7 +162,6 @@ export function MonthChart({
   forecast,
   sub,
   label,
-  link,
   title,
   takeaway,
 }: {
@@ -173,7 +172,6 @@ export function MonthChart({
   forecast: ChartMonth | readonly ChartMonth[] | null;
   sub: string;
   label: string;
-  link?: { href: string; text: string };
   /** The title when the pairs are not months ("הכנסות והוצאות לפי שנה"); else the kind's. */
   title?: string;
   /** FLOW-961: a heading that says what the bars show; the kind's title and the sub then sit above it as one label. */
@@ -211,9 +209,6 @@ export function MonthChart({
         <span><span className="ui-fc-swatch ui-fc-bar-out" />{words.expenseShort}</span>
         {expected ? <span><span className="ui-fc-swatch ui-fc-swatch-ahead" />צפי</span> : null}
       </span>
-      {link == null ? null : (
-        <Link to={link.href} className="ui-fc-chart-link ui-hit m-press">{link.text}<ChevronIcon size={16} /></Link>
-      )}
     </section>
   );
 }

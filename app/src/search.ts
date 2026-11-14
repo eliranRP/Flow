@@ -7,6 +7,7 @@ import { useHomePreview } from "./preview";
 import { readyClient } from "./ready-client";
 import { HEBREW_MONTHS, israelToday, monthTitle } from "./ui/date-math";
 import type { MonthTotal } from "./ui/month-groups";
+import type { StatementDetail } from "./ui/statement";
 
 /**
  * The transaction search (FLOW-323, option A; FLOW-402 is the same screen with a project set).
@@ -400,4 +401,16 @@ export function searchTotalText(totals: readonly MonthTotal[]): string | null {
     if (total.currency === first.currency) minor += total.incomeMinor - total.expenseMinor;
   }
   return formatAmountText(minor, first.currency);
+}
+
+/**
+ * Line 2 of a result (FLOW-368 §2.1): the day and month, the project, the category, all muted on one
+ * line. A kept-out line adds "לא נספר ברווח" (decision 0141 log). "ממתין לאישור" is the line 3 note.
+ */
+export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "doc_date" | "project_name" | "category_name">): StatementDetail[] {
+  const details: StatementDetail[] = [{ text: `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}` }];
+  if (row.project_name) details.push({ text: row.project_name });
+  if (row.category_name) details.push({ text: row.category_name });
+  if (row.kept_out) details.push({ text: "לא נספר ברווח" });
+  return details;
 }

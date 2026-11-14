@@ -85,8 +85,6 @@ export type ProfitModel = {
   projects: ProfitProjectRow[];
   categories: ProfitCategoryRow[];
   lines: ProfitLine[];
-  /** Every counted line is loaded (the date and amount lists need all of them). */
-  linesComplete: boolean;
   /** FLOW-954: the kept-out categories and their lines, for the category view's לא נספר ברווח group. */
   keptOut: ProfitKeptOutRow[];
   keptOutLines: ProfitLine[];
@@ -100,7 +98,7 @@ function groupsIn(breakdown: Breakdown | null, currency: string) {
  * The page's figures from its inputs and the company's overhead project. Money is in the company currency; other
  * currencies do not count here.
  */
-export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject | null, linesComplete = true): ProfitModel {
+export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject | null): ProfitModel {
   const { currency } = inputs;
   const income = inputs.month.income;
   const expense = inputs.month.expense;
@@ -165,7 +163,6 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
     projects,
     categories,
     lines,
-    linesComplete,
     keptOut,
     keptOutLines,
   };
@@ -253,13 +250,26 @@ export type CompanyProfitRead = {
   projectsOn: boolean;
   /** The company's overhead project (useOverheadProject); undefined while it loads keeps the page loading. */
   overhead: OverheadProject | null | undefined;
+  /**
+   * FLOW-1194. The date and amount orders need every counted line, so each category is read. The category order reads
+   * none on entering: a category's lines are read once its id is in `lineIds`.
+   */
+  linesAll: boolean;
+  /** The lines reads asked for, by `linesIdOfRow`. */
+  lineIds: ReadonlySet<string>;
 };
+
+/**
+ * The id of the lines read a category view row needs: the row's own key (`in:` or `out:` and the category), or for a
+ * kept-out row (`kept:<direction>:<category>`) the direction's one kept-out read (`kept:<direction>`).
+ */
+export const linesIdOfRow = (rowKey: string) => (rowKey.startsWith("kept:") ? rowKey.slice(0, rowKey.indexOf(":", 5)) : rowKey);
 
 /**
  * The page's reads, live. Preview mode reads nothing (the screen takes its sample). Query keys start
  * with "dashboard", "breakdown" or "breakdown-lines", so the basis sheet's write refreshes them.
  */
-export function useCompanyProfitRead({ enabled, month, ytd, currency, categoriesOn, projectsOn, overhead }: CompanyProfitRead) {
+export function useCompanyProfitRead({ enabled, month, ytd, currency, categoriesOn, projectsOn, overhead, linesAll, lineIds }: CompanyProfitRead) {
   const preview = useHomePreview();
   const live = enabled && preview === "off";
   const monthRange = `${month.from ?? ""}..${month.to ?? ""}`;
@@ -283,23 +293,20 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     ...groupsIn(categoryIncome.data ?? null, currency).map((group) => ({ direction: "income" as const, group })),
     ...groupsIn(categoryExpense.data ?? null, currency).map((group) => ({ direction: "expense" as const, group })),
   ].filter((entry) => entry.group.key !== "");
-  // Each category group's lines load in parallel, every page of each.
-  const lineQueries = useQueries({
-    queries: categoryGroups.map(({ direction, group }) => ({
-      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, group.key, currency],
-      enabled: live && categoriesOn,
-      queryFn: () => fetchAllLines(month, direction, group.key, currency),
-    })),
-  });
-  const linesComplete = categoryGroups.length === 0 || lineQueries.every((query) => query.isSuccess);
-  // FLOW-954: every kept-out line of a direction in one read (p_excluded), when it has a kept-out category.
+  // FLOW-1194: a category's lines are read once, when the page asks for them (its row scrolled near, or a tap); the
+  // cache keeps them. The date and amount orders ask for every category, with the larger page. FLOW-954: every
+  // kept-out line of a direction is one read (p_excluded), when it has a kept-out category.
   const keptOutDirections = (["income", "expense"] as const).filter((direction) =>
     ((direction === "income" ? categoryIncome.data : categoryExpense.data)?.excluded_groups ?? []).some((group) => group.currency === currency));
-  const keptOutQueries = useQueries({
-    queries: keptOutDirections.map((direction) => ({
-      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, "kept-out", currency],
-      enabled: live && categoriesOn,
-      queryFn: () => fetchAllLines(month, direction, "", currency, true),
+  const lineReads = [
+    ...categoryGroups.map(({ direction, group }) => ({ id: `${direction === "income" ? "in" : "out"}:${group.key}`, direction, key: group.key, name: group.name ?? "", keptOut: false })),
+    ...keptOutDirections.map((direction) => ({ id: `kept:${direction}`, direction, key: "", name: "", keptOut: true })),
+  ];
+  const lineQueries = useQueries({
+    queries: lineReads.map((read) => ({
+      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, read.direction, read.keptOut ? "kept-out" : read.key, currency],
+      enabled: live && categoriesOn && ((linesAll && !read.keptOut) || lineIds.has(read.id)),
+      queryFn: () => fetchAllLines(month, read.direction, read.key, currency, read.keptOut),
     })),
   });
   // A read that failed in another view or order stays in the cache with its error: only a view that reads it
@@ -318,21 +325,23 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
         ytdProfit: ytdTotals == null ? null : ytdTotals.income - ytdTotals.expense,
         projects: { income: projectIncome.data ?? null, expense: projectExpense.data ?? null },
         categories: { income: categoryIncome.data ?? null, expense: categoryExpense.data ?? null },
-        lines: categoryGroups.flatMap(({ direction, group }, index) => {
-          const result = lineQueries[index]?.data;
-          return result == null ? [] : [{ direction, categoryKey: group.key, categoryName: group.name ?? "", rows: result }];
-        }).concat(keptOutDirections.flatMap((direction, index) => {
-          const result = keptOutQueries[index]?.data;
-          return result == null ? [] : [{ direction, categoryKey: "", categoryName: "", rows: result, keptOut: true }];
-        })),
+        lines: lineReads.flatMap((read, index) => {
+          const rows = lineQueries[index]?.data;
+          return rows == null ? [] : [{ direction: read.direction, categoryKey: read.key, categoryName: read.name, rows, keptOut: read.keptOut }];
+        }),
       }
     : null;
   return {
     failed,
+    /** FLOW-1194: an asked-for category's lines are not in yet. */
+    linesLoading: (rowKey: string) => {
+      const id = linesIdOfRow(rowKey);
+      return lineIds.has(id) && lineQueries[lineReads.findIndex((read) => read.id === id)]?.isPending === true;
+    },
     /** FLOW-969: when the month's figures were read, for the offline line (0 before any read). */
     readAt: dashboard.dataUpdatedAt,
     loading: !failed && (inputs == null || overhead === undefined),
-    model: inputs == null || overhead === undefined ? null : buildProfitModel(inputs, overhead, linesComplete),
+    model: inputs == null || overhead === undefined ? null : buildProfitModel(inputs, overhead),
     refetch: () => {
       // refetch ignores `enabled`: a read the view or order does not draw stays unread.
       if (!projectsOn) return;

@@ -224,16 +224,6 @@
 .ui-skel-attention .ui-skel-line-b { inline-size: var(--skel-sm); }
 .ui-skel-list .ui-skel-line-a { inline-size: calc(var(--skel-sm) * 9 / 5); }
 .ui-skel-list .ui-skel-line-b { inline-size: calc(var(--skel-sm) * 7 / 6); }
-.ui-row-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.ui-row-action {
-  padding-bottom: var(--space-2);
-}
-
 .ui-row-meta {
   flex: none;
   color: var(--color-text-muted);

@@ -9,23 +9,17 @@ import { Card } from "./card";
  */
 export function PromptCard({
   question,
-  yesLabel = "כן",
-  noLabel = "לא עכשיו",
   busy = false,
   note,
-  noteDismissLabel = "הבנתי",
   dismissRef,
   onYes,
   onNo,
   onNoteDismiss,
 }: {
   question: string;
-  yesLabel?: string;
-  noLabel?: string;
   busy?: boolean;
   /** May hold a link (the iPhone note links "למסך הבית" to the install steps). */
   note?: ReactNode;
-  noteDismissLabel?: string;
   /** The note's dismiss button: the caller moves focus here when the note replaces כן. */
   dismissRef?: Ref<HTMLButtonElement>;
   onYes: () => void;
@@ -41,13 +35,13 @@ export function PromptCard({
         <>
           <p className="ui-prompt-note t-caption t-muted" id={noteId} dir="rtl">{note}</p>
           <div className="ui-prompt-actions">
-            <Button variant="link" buttonRef={dismissRef} aria-describedby={noteId} onClick={onNoteDismiss ?? onNo}>{noteDismissLabel}</Button>
+            <Button variant="link" buttonRef={dismissRef} aria-describedby={noteId} onClick={onNoteDismiss ?? onNo}>הבנתי</Button>
           </div>
         </>
       ) : (
         <div className="ui-prompt-actions">
-          <Button variant="secondary" busy={busy} onClick={() => { if (!busy) onYes(); }}>{yesLabel}</Button>
-          <Button variant="link" disabled={busy} onClick={onNo}>{noLabel}</Button>
+          <Button variant="secondary" busy={busy} onClick={() => { if (!busy) onYes(); }}>כן</Button>
+          <Button variant="link" disabled={busy} onClick={onNo}>לא עכשיו</Button>
         </div>
       )}
     </Card>

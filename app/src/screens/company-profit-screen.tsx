@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
-import { formatAmountText } from "@flow/shared";
-import { useRef, useState, type ReactNode } from "react";
+import { formatAmountText, type SearchRow } from "@flow/shared";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { lineDayTitle, lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
@@ -21,7 +21,10 @@ import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
-import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
+import { buildProfitModel, linesIdOfRow, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
+import { EMPTY_FILTERS, SEARCH_DEBOUNCE_MS, searchRowDetails, searchRowTitle, uniqueSearchRows, useDebounced, useSearchQuery } from "../search";
+import { SearchField } from "../ui/search-field";
+import { Button } from "../ui/button";
 import { byDateThenSize, bySizeOnly, companyCategoryGroups, companyKeptOutCategories, companySummaryRows } from "../company-profit-rows";
 import { useAfterFirstPaint } from "../after-paint";
 import { useCompanyNextMonth, useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
@@ -96,6 +99,13 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const location = useLocation();
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
+  // FLOW-1194: the category lines the page asked for (a row scrolled near, or tapped), each read once.
+  const [wanted, setWanted] = useState<ReadonlySet<string>>(() => new Set());
+  const want = useCallback((rowKey: string) => {
+    const id = linesIdOfRow(rowKey);
+    setWanted((current) => (current.has(id) ? current : new Set(current).add(id)));
+  }, []);
+  const [typed, setTyped] = useState("");
   const companyCurrency = useCompanyCurrency();
   const online = useOnline();
   const by = orderOf(params.get("by"));
@@ -126,7 +136,14 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     // FLOW-1191: the year and since-the-start views read the years' months only.
     projectsOn: period === "month",
     overhead: monthByProject ? overhead : overhead ?? null,
+    // The date and amount lists need every line, in one paged read; the category order reads a category when it is near.
+    linesAll: by === "date" || by === "amount",
+    lineIds: wanted,
   });
+  // FLOW-1194: the search asks the server (search_transactions) for the month's lines, so a line in a category that
+  // has not loaded is found too.
+  const settled = useDebounced(typed, SEARCH_DEBOUNCE_MS).trim();
+  const found = useSearchQuery({ ...EMPTY_FILTERS, q: settled, period: month }, sample == null && period === "month" && settled !== "");
   const model: ProfitModel | null = sample ? buildProfitModel(sample, sample.overhead) : live.model;
   const onCurrent = monthKey === currentKey;
   const long = period !== "month";
@@ -346,6 +363,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         keptOut={companyKeptOutCategories(model)}
         currency={currency}
         initialOpen={firstOpen}
+        onWant={sample == null ? want : undefined}
+        linesLoading={sample == null ? live.linesLoading : undefined}
         renderLine={(line) => lineRow(line, `${dayMonth(line.date)} · ${line.project ?? "בלי פרויקט"}`)}
       />
     );
@@ -377,6 +396,36 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       </>
     );
   }
+  // FLOW-1194: a typed word swaps the list for the lines the server found in this month, whatever the order.
+  const hits = uniqueSearchRows(found.data?.pages ?? []);
+  const searching = settled !== "";
+  // The rows are the search screen's own (statement rows), so a found line reads as it does there.
+  const foundRow = (row: SearchRow) => (
+    <ListRow
+      key={row.id}
+      variant="statement"
+      title={searchRowTitle(row)}
+      fallback="invoice"
+      details={searchRowDetails(row)}
+      setAside={row.kept_out}
+      agorot={row.amount_net}
+      currency={row.currency}
+      sign={row.direction === "income" ? "in" : "out"}
+      href={`/transactions/${row.id}${search}`}
+    />
+  );
+  const searchBox = (
+    <div className="ui-cp-search ui-rep-search">
+      <SearchField label="חיפוש בתנועות" value={typed} onChange={setTyped} placeholder="ספק, תיאור או סכום" busy={searching && found.isFetching} />
+      <p className="t-caption t-muted" role="status">{searching && found.data != null && hits.length === 0 ? "אין תנועות" : ""}</p>
+    </div>
+  );
+  const foundBody = (
+    <>
+      <List layout="flat" className="ui-cp-list">{hits.map(foundRow)}</List>
+      {found.hasNextPage ? <Button variant="link" busy={found.isFetchingNextPage} onClick={() => { void found.fetchNextPage(); }}>עוד תנועות</Button> : null}
+    </>
+  );
   return (
     <div className="ui-cp-screen">
       <ScreenHeader
@@ -389,7 +438,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         panel={chips}
         below={<div className="ui-cp-head">{periodSwitch}{figure}{offlineLine}{summary}{nextBlock}{chips}</div>}
       />
-      {body}
+      {searchBox}
+      {searching ? foundBody : body}
       {basisFooter}
     </div>
   );

@@ -26,7 +26,6 @@ export function NextMonthBlock({
   kind,
   cardHref,
   categories,
-  chartLink,
   today,
   takeaway = false,
 }: {
@@ -44,7 +43,6 @@ export function NextMonthBlock({
   cardHref: string;
   /** The company's categories, to name recurring rent in the income caption. */
   categories: readonly RentCategory[];
-  chartLink?: { href: string; text: string };
   /** yyyy-mm-dd, the forecast's today: the month's name carries a year only when it is not today's. */
   today: string;
   /** FLOW-961: the project page titles its chart with the month's takeaway; FLOW-969: the profit page with the months'. */
@@ -76,7 +74,6 @@ export function NextMonthBlock({
           forecast={ahead}
           sub={chartSub(history, ahead != null)}
           label={chartLabel(history, ahead, currency, kind)}
-          link={chartLink}
           takeaway={!takeaway ? null : kind === "profit" ? profitTakeaway(history.months, "month", current ?? undefined) : cashTakeaway(history, currency)}
         />
       )}

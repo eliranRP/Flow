@@ -160,7 +160,6 @@ export function Sheet({
   onRequestClose,
   returnFocusRef,
   onCloseKind,
-  closeOnBackdrop = true,
   busy = false,
   closeButton = true,
   aside,
@@ -194,8 +193,6 @@ export function Sheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** Called just before an accepted close: true when Escape closed it. RouteSheet returns focus itself. */
   onCloseKind?: (byKey: boolean) => void;
-  /** A backdrop tap closes the sheet. Step 2 of the one-time code turns this off. */
-  closeOnBackdrop?: boolean;
   /** A save is in flight: the sheet stays open and closes once it settles. */
   busy?: boolean;
   /** Off where the sheet has its own way out (the setup skip sheet draws none). */
@@ -401,7 +398,7 @@ export function Sheet({
   return (
     <Drawer.Root
       open={open}
-      dismissible={closeOnBackdrop && !busy}
+      dismissible={!busy}
       modal={modal}
       // FLOW-1024: Vaul lifts the sheet by the keyboard's height but ignores iOS panning the page
       // to the field, so the sheet rose twice, off the top. The CSS lifts it by --kb instead.
@@ -440,11 +437,10 @@ export function Sheet({
               void requestClose();
               return;
             }
-            if (!closeOnBackdrop) event.preventDefault();
           }}
           onInteractOutside={(event) => {
             keepOpenForToast(event);
-            if (busy || !closeOnBackdrop) event.preventDefault();
+            if (busy) event.preventDefault();
           }}
           onFocusOutside={(event) => {
             keepOpenForToast(event);
@@ -459,12 +455,6 @@ export function Sheet({
             if (onEscape) {
               event.preventDefault();
               onEscape();
-              return;
-            }
-            // Vaul drops every close, including Escape, when dismissible is off.
-            if (!closeOnBackdrop) {
-              event.preventDefault();
-              void requestClose(true);
               return;
             }
             // Vaul closes through onOpenChange(false) in this same task.

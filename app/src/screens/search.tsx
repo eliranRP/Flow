@@ -15,6 +15,7 @@ import {
   readSearchFilters,
   searchCountWords,
   searchRowAmount,
+  searchRowDetails,
   searchRowTotals,
   searchMonthTitle,
   searchMonthTotals,
@@ -40,7 +41,6 @@ import { usePreviewRetry } from "../ui/screen-state";
 import { wantsSearchFocus } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
 import { TabBar } from "../ui/tab-bar";
-import type { StatementDetail } from "../ui/statement";
 import { SearchFilterSheet, activeFilterCount, type SearchSheetProject } from "./search-filter-sheet";
 import { SearchEmptyState, SearchReportShortcuts, SearchingRows } from "./search-parts";
 import { SearchStart, type QuickCheck } from "./search-start";
@@ -486,16 +486,4 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
       />
     </div>
   );
-}
-
-/**
- * Line 2 of a result (FLOW-368 §2.1): the day and month, the project, the category, all muted on one
- * line. A kept-out line adds "לא נספר ברווח" (decision 0141 log). "ממתין לאישור" is the line 3 note.
- */
-export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "doc_date" | "project_name" | "category_name">): StatementDetail[] {
-  const details: StatementDetail[] = [{ text: `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}` }];
-  if (row.project_name) details.push({ text: row.project_name });
-  if (row.category_name) details.push({ text: row.category_name });
-  if (row.kept_out) details.push({ text: "לא נספר ברווח" });
-  return details;
 }

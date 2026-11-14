@@ -13,11 +13,6 @@
   color: var(--color-text-muted);
 }
 
-.ui-grip {
-  flex: none;
-  color: var(--color-text-muted);
-}
-
 .ui-switch-row {
   position: relative;
   display: flex;
