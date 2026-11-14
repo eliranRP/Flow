@@ -92,7 +92,6 @@ describe("ProjectDetailScreen currency", () => {
       income_agorot: 100_000n,
       direct_agorot: 20_000n,
       profit_agorot: 80_000n,
-      profit_after_overhead_agorot: -10_000n,
       by_currency: [
         { currency: "USD", income_minor: 400_000n, direct_minor: 125_000n, shared_minor: 0n, profit_minor: 275_000n },
       ],

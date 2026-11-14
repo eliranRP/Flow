@@ -31,7 +31,6 @@ function row(over: Partial<ProjectCashRow> & { id: string; name: string }): Proj
     budget_minor: null,
     spent_minor: 0,
     cash: [],
-    profit_month_minor: 0,
     profit_all_minor: 0,
     first_month: "2026-09-01",
     pending_count: 0,

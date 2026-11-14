@@ -927,30 +927,23 @@ AS $function$
   );
 $function$;
 
--- projects_cash_month before: per project, the base-currency row of company_pnl's month and
--- all-time projects, and its first month from its own pnl_lines read. Everything else in the
--- payload is as it was.
+-- projects_cash_month before: per project, the base-currency row of company_pnl's all-time
+-- projects, and its first month from its own pnl_lines read. Everything else in the payload is as it
+-- was (FLOW-1193 dropped profit_month_minor, which came from the month's company_pnl).
 create function pg_temp.ref_cash_month(p_new jsonb, p_cid uuid)
 returns jsonb
 language sql
 as $$
   with k as (
-    select (p_new->>'month')::date as month_start, c.cash_basis as basis, c.base_currency as base
+    select c.cash_basis as basis, c.base_currency as base
     from public.companies c
     where c.id = p_cid
   ),
   pnl as (
     select
-      pg_temp.ref_company_pnl(p_cid, k.month_start, (k.month_start + interval '1 month' - interval '1 day')::date, k.basis) as month_pnl,
       pg_temp.ref_company_pnl(p_cid, null, null, k.basis) as all_pnl,
       k.base
     from k
-  ),
-  month_rows as (
-    select (x->>'id')::uuid as id, bc->>'currency' as currency, (bc->>'profit_minor')::bigint as profit_minor
-    from pnl
-    cross join lateral jsonb_array_elements(coalesce(pnl.month_pnl->'projects', '[]'::jsonb)) x
-    cross join lateral jsonb_array_elements(coalesce(x->'by_currency', '[]'::jsonb)) bc
   ),
   all_rows as (
     select
@@ -965,7 +958,6 @@ as $$
   select jsonb_set(p_new, '{projects}', coalesce((
     select jsonb_agg(p.r || jsonb_build_object(
       'spent_minor', coalesce((select r.spent_minor from all_rows r where r.id = (p.r->>'id')::uuid and r.currency = (select base from pnl)), 0),
-      'profit_month_minor', coalesce((select r.profit_minor from month_rows r where r.id = (p.r->>'id')::uuid and r.currency = (select base from pnl)), 0),
       'profit_all_minor', coalesce((select r.profit_minor from all_rows r where r.id = (p.r->>'id')::uuid and r.currency = (select base from pnl)), 0),
       'first_month', (
         select to_char(date_trunc('month', min(l.doc_date)), 'YYYY-MM-DD')
@@ -1096,7 +1088,7 @@ begin
   return next is((select val from got where label = 'cash_month' || p_suffix), (
     select jsonb_agg(pg_temp.ref_cash_month(x, co) order by n)
     from jsonb_array_elements((select val from got where label = 'cash_month' || p_suffix)) with ordinality e(x, n)
-  ), 'projects_cash_month: spent, month and all-time profit and first month as two company_pnl calls gave them' || p_note);
+  ), 'projects_cash_month: spent, all-time profit and first month as company_pnl gave them' || p_note);
   return next is((select val from got where label = 'project' || p_suffix), (
     select jsonb_agg(jsonb_build_array(
       pg_temp.ref_project(x->0, co, p.id, b.b, null, null),

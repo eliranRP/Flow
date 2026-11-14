@@ -43,7 +43,6 @@ const projectRowSchema = z.object({
   /** A short project code (P-12), once the server sends one. */
   code: z.string().nullable().optional(),
   budget_agorot: agorotOrNull.nullish(),
-  sumit_budget_section_id: z.number().nullable().optional(),
   income_agorot: agorotSchema,
   direct_agorot: agorotSchema,
   shared_agorot: agorotSchema,
@@ -360,7 +359,6 @@ export const projectDetailSchema = z
     /** FLOW-504 (0147). The overhead share in `base_currency`. Older payloads omit both. */
     overhead_share_minor: agorotOrNull.optional(),
     base_currency: z.string().regex(/^[A-Z]{3}$/).optional().catch(undefined),
-    profit_after_overhead_agorot: agorotSchema.optional(),
     overhead_weighted: z.boolean().optional(),
     by_currency: z.array(projectByCurrencyRowSchema).optional(),
     categories_by_currency: z
@@ -370,7 +368,6 @@ export const projectDetailSchema = z
           id: z.string().nullable(),
           name: z.string().nullable(),
           amount_minor: agorotSchema,
-          has_shared_share: z.boolean().optional(),
           parent_id: z.string().nullable().optional(),
         }),
       )
@@ -382,7 +379,6 @@ export const projectDetailSchema = z
           id: z.string().nullable(),
           name: z.string().nullable(),
           amount_minor: agorotSchema,
-          has_shared_share: z.boolean().optional(),
           parent_id: z.string().nullable().optional(),
         }),
       )
@@ -392,8 +388,6 @@ export const projectDetailSchema = z
         id: z.string().nullable(),
         name: z.string().nullable(),
         amount_agorot: agorotSchema,
-        /** True when this line includes this project's share of a shared cost. */
-        has_shared_share: z.boolean().optional(),
         /** FLOW-406: the category's parent; omitted on older payloads. */
         parent_id: z.string().nullable().optional(),
       }),

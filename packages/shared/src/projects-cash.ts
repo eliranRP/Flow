@@ -25,7 +25,6 @@ const projectRowSchema = z.object({
   budget_minor: z.number().int().nullable(),
   spent_minor: z.number().int(),
   cash: z.array(cashRowSchema),
-  profit_month_minor: z.number().int(),
   profit_all_minor: z.number().int(),
   first_month: monthSchema.nullable(),
   pending_count: z.number().int(),

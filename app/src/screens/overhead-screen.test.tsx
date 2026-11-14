@@ -30,7 +30,6 @@ const serverProject = {
   profit_agorot: 10_000_000,
   overhead_share_agorot: 4_000_000,
   overhead_weighted: true,
-  profit_after_overhead_agorot: 6_000_000,
   categories: [],
   transactions: [],
 };
@@ -98,7 +97,6 @@ describe("project overhead hero", () => {
     after_overhead: true,
     overhead_share_agorot: 4_000_000n,
     overhead_weighted: true,
-    profit_after_overhead_agorot: 6_000_000n,
     categories: [],
     transactions: [],
   };

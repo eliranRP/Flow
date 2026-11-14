@@ -177,7 +177,7 @@ const expectedPartySchema = z.object({
     .optional(),
 });
 
-/** `expected_months(months, project_id)`: this month (still to come) and the next ones. */
+/** `expected_months(months, project_id)`: this month (still to come) and the next ones; today and recurring[] only with months 0. */
 export const expectedMonthsSchema = z.object({
   today: daySchema,
   project_id: z.string().nullable().optional(),
@@ -189,7 +189,8 @@ export const expectedMonthsSchema = z.object({
         by_currency: z.array(expectedCurrencySchema).nullable().transform((rows) => rows ?? []),
       }),
     )
-    .nullable()
+    // FLOW-1193: p_months 0 answers without months[].
+    .nullish()
     .transform((rows) => rows ?? []),
   recurring: z.array(expectedPartySchema).nullable().transform((rows) => rows ?? []),
 });

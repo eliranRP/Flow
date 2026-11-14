@@ -46,15 +46,15 @@ export const editSchema = z.object({
   matched_transaction_id: z.string().nullable().optional(),
 });
 
-/** expected_months for one project: this month and the next (decision 0185: a charge's project is its own). */
+/** expected_months for one project, its charges only (FLOW-1193: no months[]; decision 0185: a charge's project is its own). */
 function useProjectExpectedQuery(projectId: string) {
   const preview = useHomePreview();
   return useQuery({
-    queryKey: ["expected-months", preview, "project", projectId, 2],
+    queryKey: ["expected-months", preview, "project", projectId, 0],
     enabled: preview === "off" && projectId !== "",
     queryFn: async (): Promise<ExpectedMonths> => {
       const supabase = await readyClient();
-      const { data, error } = await supabase.rpc("expected_months", { p_months: 2, p_project_id: projectId });
+      const { data, error } = await supabase.rpc("expected_months", { p_months: 0, p_project_id: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
     },
