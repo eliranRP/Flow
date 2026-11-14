@@ -111,6 +111,8 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: /^@supabase\/realtime-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
         { find: /^@supabase\/storage-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
+        // auth-js's passkey (WebAuthn) factor code, which GoTrueClient imports and Flow never calls.
+        { find: /^\.\/lib\/webauthn$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
         // Decision 0192: zod without its new Function probe, which the CSP (no 'unsafe-eval') reports.
         { find: /^zod$/, replacement: path.resolve(__dirname, "src/lib/zod-jitless.ts") },
       ],
