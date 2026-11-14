@@ -105,8 +105,12 @@ export function StepBusiness({
   onBack,
   onSkipAll,
 }: StepProps & { companyId: string | null; initial: BusinessInitial | null }) {
-  const [currency, setCurrency] = useState<"USD" | "ILS">(initial?.currency ?? "USD");
-  const [basis, setBasis] = useState<"paid" | "invoice">(initial?.basis ?? "paid");
+  // What the person picked here, if anything. Until they pick, the step shows what the company has,
+  // also when that arrives after the first draw, and an existing company's setting is not written.
+  const [pickedCurrency, setCurrency] = useState<"USD" | "ILS" | null>(null);
+  const [pickedBasis, setBasis] = useState<"paid" | "invoice" | null>(null);
+  const currency = pickedCurrency ?? initial?.currency ?? "USD";
+  const basis = pickedBasis ?? initial?.basis ?? "paid";
   // FLOW-1170: a basis the closed books refuse says so in place of SAVE_ERROR, and goes back.
   const [closedNote, setClosedNote] = useState<string | null>(null);
   const flow = useMachine(saveFlow);
@@ -165,10 +169,10 @@ export function StepBusiness({
     if (initial == null || name.trim() !== initial.name) {
       assertNoError(await supabase.rpc("rename_company", { p_company_id: companyId, p_name: name.trim() }));
     }
-    if (initial == null || currency !== initial.currency) {
+    if (pickedCurrency != null && currency !== initial?.currency) {
       assertNoError(await supabase.rpc("set_company_currency", { p_currency: currency }));
     }
-    if (initial == null || basis !== initial.basis) {
+    if (pickedBasis != null && basis !== initial?.basis) {
       assertNoError(await supabase.rpc("set_cash_basis", { p_basis: basis }));
     }
     await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
@@ -206,7 +210,7 @@ export function StepBusiness({
       .catch((error: unknown) => {
         const note = error instanceof Error ? booksClosedMessage(error) : null;
         setClosedNote(note);
-        if (note != null && initial != null) setBasis(initial.basis);
+        if (note != null) setBasis(null);
         flow.send("fail");
       });
   }

@@ -167,6 +167,23 @@ describe("setup step 1 · a company whose books are closed (FLOW-1170)", () => {
   });
 });
 
+describe("setup step 1 · an existing company whose settings arrive late", () => {
+  it("writes neither the basis nor the currency the person did not pick, and shows the company's own once they arrive", async () => {
+    const calls = mockRpc(() => ok);
+    const props = { onDone, onStamp: () => undefined, onSkipStep: () => undefined, onSkipAll: () => undefined };
+    const view = renderWithProviders(<StepBusiness companyId="company-1" initial={null} {...props} />, { route: "/setup/1" });
+    view.rerender(
+      <StepBusiness companyId="company-1" initial={{ name: "עסק לדוגמה", currency: "ILS", basis: "invoice" }} {...props} />,
+    );
+    expect(screen.getByRole("radio", { name: "תאריך חשבונית" })).toBeChecked();
+    fireEvent.change(screen.getByRole("textbox", { name: "שם העסק" }), { target: { value: "עסק לדוגמה" } });
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
+    expect(count(calls, "set_cash_basis")).toBe(0);
+    expect(count(calls, "set_company_currency")).toBe(0);
+  });
+});
+
 describe("setup step 1 · the other controls while it saves", () => {
   it("disables דילוג על הכל while create_company runs, so skip-all cannot create a second company", async () => {
     vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
