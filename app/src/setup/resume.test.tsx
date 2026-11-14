@@ -98,7 +98,6 @@ const supabase = {
       const slow = {
         select: () => slow,
         eq: () => slow,
-        upsert: () => Promise.resolve({ data: null, error: null }),
         maybeSingle: () => new Promise((resolve) => setTimeout(() => { resolve({ data: row, error: null }); }, 150)),
       };
       return slow;
