@@ -5,6 +5,11 @@ name: storybook preview
 # The Cloudflare secrets live on the `storybook-preview` environment, never on `production` (which
 # stays restricted to main). Without them the build and the key checks still run, and the deploy
 # is skipped with a note. Runbook: docs/runbooks/ci-cd.md, "Storybook preview".
+# FLOW-853: the pull request's code, its dependencies and its scripts run only in `build`, which holds no
+# secret and uploads the static build. `deploy` reads the Cloudflare token and runs code from the base
+# commit only: it installs the base lockfile, checks the downloaded build again, deploys and comments.
+# Neither job uses the pnpm cache, so no store the pull request wrote reaches `deploy`. The workflow file
+# itself still comes from the pull request; decision 0079 accepts that for people who can push a branch.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -23,18 +28,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
+  build:
     # A fork's pull request gets no secrets and must not run with a write token. A draft gets its preview
     # when it is marked ready for review (FLOW-837): pushes to a draft do not build one.
     if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: storybook-preview
     permissions:
       contents: read
-      pull-requests: write
     env:
-      PR_NUMBER: ${{ github.event.pull_request.number }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
     steps:
@@ -49,14 +51,64 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build-storybook
+      - name: List the changed files
+        run: git diff --name-only "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/changed.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: storybook-static
+          path: app/storybook-static
+          retention-days: 3
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: changed-files
+          path: ${{ runner.temp }}/changed.txt
+          retention-days: 3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: storybook-preview
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      # The base commit is on main already: its lockfile, wrangler and scripts are reviewed code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: storybook-static
+          path: preview/storybook-static
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: changed-files
+          path: preview
 
       - name: Check the build carries sample data only
         run: |
-          node scripts/storybook-preview-keys.mjs app/storybook-static
-          node scripts/check-jev-bundle.mjs app/storybook-static
+          set -euo pipefail
+          # A link, or a Pages Worker or routes file, would let the build act on the host, not only serve.
+          if [ -n "$(find preview -type l | sed -n 1p)" ]; then echo "::error::the build holds a link"; exit 1; fi
+          for f in _worker.js _routes.json; do
+            if [ -e "preview/storybook-static/$f" ]; then echo "::error::the build holds $f"; exit 1; fi
+          done
+          node scripts/storybook-preview-keys.mjs preview/storybook-static
+          node scripts/check-jev-bundle.mjs preview/storybook-static
 
       - name: Deploy to Cloudflare Pages
         id: deploy
@@ -75,7 +127,7 @@ jobs:
             pnpm exec wrangler pages project create flow-storybook --production-branch=main
           fi
           out="$(mktemp "$RUNNER_TEMP/wrangler.XXXXXX")"
-          pnpm exec wrangler pages deploy app/storybook-static \
+          pnpm exec wrangler pages deploy preview/storybook-static \
             --project-name=flow-storybook \
             --branch="pr-$PR_NUMBER" \
             --commit-hash="$HEAD_SHA" \
@@ -96,8 +148,7 @@ jobs:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
         run: |
           set -euo pipefail
-          git diff --name-only "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/changed.txt"
-          node scripts/storybook-preview-comment.mjs app/storybook-static/index.json "$RUNNER_TEMP/changed.txt" "$PREVIEW_URL" "$HEAD_SHA" > "$RUNNER_TEMP/comment.md"
+          node scripts/storybook-preview-comment.mjs preview/storybook-static/index.json preview/changed.txt "$PREVIEW_URL" "$HEAD_SHA" > "$RUNNER_TEMP/comment.md"
           id="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
             --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- flow-storybook-preview -->"))) | .id' | sed -n 1p)"
           if [ -n "$id" ]; then
