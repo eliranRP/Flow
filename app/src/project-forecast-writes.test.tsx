@@ -94,7 +94,7 @@ describe("useProjectForecastWrites (decision 0219)", () => {
     const reads = { forecast: 0, expected: 0 };
     function Reads() {
       useQuery({ queryKey: ["month-forecast", "off", "2026-11"], queryFn: () => { reads.forecast += 1; return Promise.resolve({}); } });
-      useQuery({ queryKey: ["expected-months", "off", "project", "juniper-ct", 2], queryFn: () => { reads.expected += 1; return Promise.resolve({}); } });
+      useQuery({ queryKey: ["expected-months", "off", "project", "juniper-ct", 0], queryFn: () => { reads.expected += 1; return Promise.resolve({}); } });
       return null;
     }
     renderWithProviders(<><Probe /><Reads /></>, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });

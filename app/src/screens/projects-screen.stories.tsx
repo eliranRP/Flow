@@ -20,7 +20,6 @@ function cashRow(input: { id: string; name: string; net?: number; type?: string 
     budget_minor: input.budget ?? null,
     spent_minor: input.spent ?? 0,
     cash: net === 0 ? [] : [{ currency: "ILS", in_minor: Math.max(net, 0), out_minor: Math.max(-net, 0), net_minor: net }],
-    profit_month_minor: net,
     profit_all_minor: input.profitAll ?? net,
     first_month: input.fresh ? null : "2026-08-01",
     pending_count: 0,
