@@ -182,6 +182,12 @@ $a$, '');
 $a$, '');
   def := pg_temp.swap(def, $a$        'profit_month_minor', r.profit_month_minor,
 $a$, '');
+  def := pg_temp.swap(def, $a$  -- The project totals below count as company_pnl(cid, month, basis) and
+  -- company_pnl(cid, all time, basis) count their projects' by_currency, and company_pnl reads$a$,
+    $b$  -- The project totals below count as company_pnl(cid, all time, basis) counts its projects'
+  -- by_currency, and company_pnl reads$b$);
+  def := pg_temp.swap(def, $a$  -- Per project and currency, company_pnl's income_net, direct_net and shared_net for the month
+  -- and for all time.$a$, $b$  -- Per project and currency, company_pnl's income_net, direct_net and shared_net for all time.$b$);
   execute def;
 end
 $cash$;
