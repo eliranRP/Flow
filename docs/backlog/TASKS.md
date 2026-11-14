@@ -749,6 +749,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1171"></a>[FLOW-1171](tasks/FLOW-1171.md) | Perf queue: every screen in the sweep under 0.5 s | SMALL CYCLE (perf) |
 | <a id="flow-1189"></a>[FLOW-1189](tasks/FLOW-1189.md) | Perf: Home lists 20 lines a side, more on tap | SMALL (perf) |
 | <a id="flow-1190"></a>[FLOW-1190](tasks/FLOW-1190.md) | Plan: cache recurring_parties per company | PLAN FIRST (perf) |
+| <a id="flow-1193"></a>[FLOW-1193](tasks/FLOW-1193.md) | Perf: drop read fields no one reads (get_project lean, projects_cash_month, expected_months) | SMALL (perf) |
+| <a id="flow-1194"></a>[FLOW-1194](tasks/FLOW-1194.md) | Perf: Company profit's "by category" order loads a category's lines when it opens | OWNER DECISION (perf) |
+| <a id="flow-1195"></a>[FLOW-1195](tasks/FLOW-1195.md) | Perf: Company profit's year view reads forecast skips once, not once per month | SMALL (perf) |
+| <a id="flow-1196"></a>[FLOW-1196](tasks/FLOW-1196.md) | Perf: duplicated fields in reads that flow-mcp names | MEDIUM (perf, MCP contract) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
