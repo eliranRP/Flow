@@ -4,12 +4,11 @@
   the editor saves deletes nothing, so red and the bin stay for real deletes. The card clips both.
   The vertical scroll and pinch-zoom stay with the browser.
 
-  FLOW-363 (3c): the under layer is the tint with accent text in both modes. With `reveal`, the
-  row rests open over its action, `--swipe-action` wide, and slides back on a close.
+  FLOW-363 (3c): the under layer is the tint with accent text in both modes.
 */
 .ui-swipe-row {
   position: relative;
-  /* The width a revealed row opens over its action (swipe-row.tsx OPEN_PX). */
+  /* The width the keyboard action opens over (.ui-swipe-row-key). */
   --swipe-action: 120px;
 }
 
@@ -37,26 +36,9 @@
 }
 
 .ui-swipe-row[data-drag] .ui-swipe-row-under,
-.ui-swipe-row[data-open] .ui-swipe-row-under,
 .ui-swipe-row[data-peek] .ui-swipe-row-under {
   visibility: visible;
   transition: none;
-}
-
-/* The revealed action takes the whole reveal, so its name wraps in two balanced lines. */
-.ui-swipe-row-action {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-end: 0;
-  inline-size: var(--swipe-action);
-  padding-inline: var(--space-2);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: center;
-  text-wrap: balance;
-  cursor: pointer;
 }
 
 .ui-swipe-row-body {
@@ -67,14 +49,6 @@
 
 .ui-swipe-row[data-drag]:not([data-leaving]) .ui-swipe-row-body {
   transition: none;
-}
-
-.ui-swipe-row[data-open] .ui-swipe-row-body:dir(rtl) {
-  transform: translateX(var(--swipe-action));
-}
-
-.ui-swipe-row[data-open] .ui-swipe-row-body:dir(ltr) {
-  transform: translateX(calc(-1 * var(--swipe-action)));
 }
 
 /* FLOW-1086: the swipe's action for a keyboard and a screen reader. Hidden from sight at rest; with keyboard focus

@@ -1,6 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Amount } from "../ui/amount";
+import { FailureLine } from "../ui/empty-state";
 import { List } from "../ui/list-row";
 import { LineRowSkeleton } from "../ui/screen-skeletons";
 
@@ -98,7 +99,7 @@ function CategoryBox({ className, rowKey, onWant, children }: { className: strin
  * group with its total, a row per category with its share, count (and projects when above one), total and a
  * bar. A row opens in place to its lines, drawn by the caller; one category is open at a time.
  */
-export function ProfitCategories<L>({ groups, keptOut = [], currency, renderLine, initialOpen = null, onWant, linesLoading }: {
+export function ProfitCategories<L>({ groups, keptOut = [], currency, renderLine, initialOpen = null, onWant, linesState, onRetry }: {
   groups: readonly ProfitCategoryGroup<L>[];
   /** FLOW-954 (board LedgerBreakdownKeptOut): the kept-out categories, a group of their own after the counted ones. */
   keptOut?: readonly KeptOutCategory<L>[];
@@ -110,15 +111,21 @@ export function ProfitCategories<L>({ groups, keptOut = [], currency, renderLine
    * that category's lines (a repeat is its to ignore). Without it the lines come with the rows.
    */
   onWant?: (key: string) => void;
-  /** True while an open row's lines are being read: a skeleton row stands in for them. */
-  linesLoading?: (key: string) => boolean;
+  /** An open row's lines while they are not in: "loading" draws a skeleton row, "failed" a line with a retry (`onRetry`). */
+  linesState?: (key: string) => "loading" | "failed" | null;
+  onRetry?: (key: string) => void;
 }) {
   const [openKey, setOpenKey] = useState<string | null>(initialOpen);
   const toggle = (key: string, shown: boolean) => {
     if (!shown) onWant?.(key);
     setOpenKey(shown ? null : key);
   };
-  const linesOf = (key: string, lines: readonly L[]) => (linesLoading?.(key) === true ? <LineRowSkeleton /> : <List layout="flat">{lines.map(renderLine)}</List>);
+  const linesOf = (key: string, lines: readonly L[]) => {
+    const state = linesState?.(key);
+    if (state === "loading") return <LineRowSkeleton />;
+    if (state === "failed") return <FailureLine offline={false} message="לא הצלחנו לטעון את התנועות." onRetry={() => { onRetry?.(key); }} />;
+    return <List layout="flat">{lines.map(renderLine)}</List>;
+  };
   const keptOutGroup = keptOut.length === 0 ? null : (
     <section className="ui-lines-group ui-pcat-group" aria-label="לא נספר ברווח">
       <div className="ui-lines-group-head">

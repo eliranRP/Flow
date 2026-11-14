@@ -42,7 +42,8 @@ import { wantsSearchFocus } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
 import { TabBar } from "../ui/tab-bar";
 import { SearchFilterSheet, activeFilterCount, type SearchSheetProject } from "./search-filter-sheet";
-import { SearchEmptyState, SearchReportShortcuts, SearchingRows } from "./search-parts";
+import { SearchEmptyState } from "../ui/empty-state";
+import { SearchReportShortcuts, SearchingRows } from "./search-parts";
 import { SearchStart, type QuickCheck } from "./search-start";
 import { readRecentSearches, rememberRecentSearch } from "./search-recent";
 

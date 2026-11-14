@@ -87,7 +87,7 @@ function scrolledDown(node: Element): boolean {
 export function pullBlocked(target: EventTarget | null): boolean {
   if (document.querySelector('[role="dialog"], [role="alertdialog"]') != null) return true;
   if (!(target instanceof Element)) return false;
-  if (target.closest('input, textarea, select, [contenteditable="true"], .ui-swipe-row[data-open], .ui-swipe-row [data-drag], .ui-toast') != null) return true;
+  if (target.closest('input, textarea, select, [contenteditable="true"], .ui-swipe-row [data-drag], .ui-toast') != null) return true;
   for (let node: Element | null = target; node != null && node !== document.body; node = node.parentElement) {
     if (scrolledDown(node)) return true;
   }

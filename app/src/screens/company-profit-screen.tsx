@@ -24,6 +24,7 @@ import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, linesIdOfRow, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
 import { EMPTY_FILTERS, SEARCH_DEBOUNCE_MS, searchRowDetails, searchRowTitle, uniqueSearchRows, useDebounced, useSearchQuery } from "../search";
 import { SearchField } from "../ui/search-field";
+import { SearchEmptyState } from "../ui/empty-state";
 import { Button } from "../ui/button";
 import { byDateThenSize, bySizeOnly, companyCategoryGroups, companyKeptOutCategories, companySummaryRows } from "../company-profit-rows";
 import { useAfterFirstPaint } from "../after-paint";
@@ -364,7 +365,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         currency={currency}
         initialOpen={firstOpen}
         onWant={sample == null ? want : undefined}
-        linesLoading={sample == null ? live.linesLoading : undefined}
+        linesState={sample == null ? live.linesState : undefined}
+        onRetry={sample == null ? live.retryLines : undefined}
         renderLine={(line) => lineRow(line, `${dayMonth(line.date)} · ${line.project ?? "בלי פרויקט"}`)}
       />
     );
@@ -398,7 +400,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   }
   // FLOW-1194: a typed word swaps the list for the lines the server found in this month, whatever the order.
   const hits = uniqueSearchRows(found.data?.pages ?? []);
-  const searching = settled !== "";
+  const searching = period === "month" && settled !== "";
   // The rows are the search screen's own (statement rows), so a found line reads as it does there.
   const foundRow = (row: SearchRow) => (
     <ListRow
@@ -417,11 +419,11 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const searchBox = (
     <div className="ui-cp-search ui-rep-search">
       <SearchField label="חיפוש בתנועות" value={typed} onChange={setTyped} placeholder="ספק, תיאור או סכום" busy={searching && found.isFetching} />
-      <p className="t-caption t-muted" role="status">{searching && found.data != null && hits.length === 0 ? "אין תנועות" : ""}</p>
     </div>
   );
   const foundBody = (
     <>
+      {found.data != null && hits.length === 0 ? <SearchEmptyState text={settled} withChips={false} onClear={() => { setTyped(""); }} /> : null}
       <List layout="flat" className="ui-cp-list">{hits.map(foundRow)}</List>
       {found.hasNextPage ? <Button variant="link" busy={found.isFetchingNextPage} onClick={() => { void found.fetchNextPage(); }}>עוד תנועות</Button> : null}
     </>
@@ -438,7 +440,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         panel={chips}
         below={<div className="ui-cp-head">{periodSwitch}{figure}{offlineLine}{summary}{nextBlock}{chips}</div>}
       />
-      {searchBox}
+      {period === "month" ? searchBox : null}
       {searching ? foundBody : body}
       {basisFooter}
     </div>

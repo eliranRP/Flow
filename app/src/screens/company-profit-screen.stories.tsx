@@ -341,7 +341,7 @@ export const SearchNoMatch: Story = {
   name: "Search, no match",
   render: () => <SearchRoute word="אאא" rows={[]} />,
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText("אין תנועות")).toBeInTheDocument();
+    await expect(await within(canvasElement).findByText("לא מצאנו ״אאא״")).toBeInTheDocument();
   },
 };
 
@@ -360,7 +360,7 @@ export const ByCategoryLoading: Story = {
           currency="USD"
           initialOpen="out:c1"
           renderLine={() => null}
-          linesLoading={(key) => key === "out:c1"}
+          linesState={(key) => (key === "out:c1" ? "loading" : null)}
         />
       </div>
     </StoryRoute>

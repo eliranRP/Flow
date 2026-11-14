@@ -333,11 +333,12 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     : null;
   return {
     failed,
-    /** FLOW-1194: an asked-for category's lines are not in yet. */
-    linesLoading: (rowKey: string) => {
-      const id = linesIdOfRow(rowKey);
-      return lineIds.has(id) && lineQueries[lineReads.findIndex((read) => read.id === id)]?.isPending === true;
+    /** FLOW-1194: where an asked-for category's lines stand while they are not in: loading, or failed (retryLines reads again). */
+    linesState: (rowKey: string): "loading" | "failed" | null => {
+      const query = lineQueries[lineReads.findIndex((read) => read.id === linesIdOfRow(rowKey))];
+      return query?.isError === true ? "failed" : query?.isPending === true && lineIds.has(linesIdOfRow(rowKey)) ? "loading" : null;
     },
+    retryLines: (rowKey: string) => { void lineQueries[lineReads.findIndex((read) => read.id === linesIdOfRow(rowKey))]?.refetch(); },
     /** FLOW-969: when the month's figures were read, for the offline line (0 before any read). */
     readAt: dashboard.dataUpdatedAt,
     loading: !failed && (inputs == null || overhead === undefined),
