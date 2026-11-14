@@ -48,6 +48,8 @@ as $$
     );
 $$;
 revoke all on function private.refinance_transactions(uuid, uuid, text) from public, anon, authenticated, service_role;
+-- The callers (get_property_returns, get_property_return_lines) run as the caller, like private.property_lines.
+grant execute on function private.refinance_transactions(uuid, uuid, text) to authenticated, service_role;
 comment on function private.refinance_transactions(uuid, uuid, text) is
   'FLOW-1200: the transactions of a property that hold a refinance''s loan proceeds (decision 0270).';
 
