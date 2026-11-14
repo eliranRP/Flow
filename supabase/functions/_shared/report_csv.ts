@@ -24,9 +24,13 @@ export function decimal(minor: bigint): string {
   return `${negative ? "-" : ""}${String(whole)}.${cents}`;
 }
 
-/** One CSV cell: quoted when it holds a comma, a quote or a line break; a leading = + - @ is defused. */
+/**
+ * One CSV cell: quoted when it holds a comma, a quote or a line break. A leading = + - @ (or a tab or a
+ * carriage return) is defused, also behind leading spaces: a spreadsheet skips them and still reads a formula.
+ */
 export function cell(value: string): string {
-  const safe = /^[=+\-@\t\r]/.test(value) && !/^-?\d+(\.\d+)?$/.test(value) ? `'${value}` : value;
+  const risky = /^[\t\r]/.test(value) || /^\s*[=+\-@]/.test(value);
+  const safe = risky && !/^-?\d+(\.\d+)?$/.test(value) ? `'${value}` : value;
   return /[",\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 

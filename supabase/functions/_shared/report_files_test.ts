@@ -44,6 +44,14 @@ Deno.test("a CSV cell is quoted when it has to be, and a formula is defused", ()
   assertEquals(cell("-120.00"), "-120.00");
 });
 
+Deno.test("a formula behind leading spaces is defused too, since a spreadsheet skips them", () => {
+  assertEquals(cell(" =HYPERLINK(1)"), "' =HYPERLINK(1)");
+  assertEquals(cell("\u00a0=1+1"), "'\u00a0=1+1");
+  assertEquals(cell("  @SUM(1)"), "'  @SUM(1)");
+  assertEquals(cell("\u3000+1"), "'\u3000+1");
+  assertEquals(cell(" Cedar"), " Cedar");
+});
+
 Deno.test("the file's name says the report, its dates and its projects", () => {
   assertEquals(reportFileName(SAMPLE_FILE, "pdf"), "דוחות_2026-01-01_2026-10-31_כל-הפרויקטים.pdf");
   assertEquals(reportFileName({ ...SAMPLE_FILE, parts: [{ kind: "balance", sheet: SAMPLE_BALANCE }] }, "csv"), "מאזן_2026-10-31_כל-הפרויקטים.csv");
