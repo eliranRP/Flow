@@ -46,4 +46,14 @@ describe("supabase-unused (FLOW-804)", () => {
     expect(() => new unused.RealtimeClient().channel("any")).toThrow(/vite\.config\.ts/);
     expect(() => new unused.StorageClient().from("any")).toThrow(/vite\.config\.ts/);
   });
+
+  it("exports every WebAuthn name GoTrueClient imports from ./lib/webauthn", () => {
+    // auth-js is supabase-js's dependency, so it resolves from supabase-js's own entry.
+    const authEntry = createRequire(entry).resolve("@supabase/auth-js");
+    const gotrue = readFileSync(path.join(path.dirname(authEntry), "..", "module", "GoTrueClient.js"), "utf8");
+    const names = (/import \{([^}]*)\} from '\.\/lib\/webauthn'/.exec(gotrue)?.[1] ?? "").split(",").map((name) => name.trim()).filter(Boolean);
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) expect(unused, name).toHaveProperty(name);
+    expect(() => unused.createCredential()).toThrow(/vite\.config\.ts/);
+  });
 });
