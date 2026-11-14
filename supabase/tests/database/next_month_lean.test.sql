@@ -137,7 +137,7 @@ select ok(
 select ok(not (pg_temp.inputs(false) ? 'rest_edits'), 'p_rest false leaves rest_edits out');
 select ok(pg_temp.inputs() ? 'rest_edits' and pg_temp.inputs(true) ? 'rest_edits', 'by default, and with p_rest true, rest_edits is there');
 select is(pg_temp.inputs(false)->'edits', pg_temp.inputs()->'edits', 'next month''s edits are the same either way');
-select is(pg_temp.inputs(false), pg_temp.inputs() - 'rest_edits', 'without rest_edits it is the full answer, field for field');
+select is(pg_temp.inputs(false), pg_temp.inputs() - 'rest_edits' - 'skips', 'without rest_edits and skips (FLOW-1195) it is the full answer, field for field');
 select is((select array_agg(x->>'row_key' order by x->>'row_key') from jsonb_array_elements(pg_temp.inputs()->'rest_edits') x),
   array['avg:x', 'avg:y'], 'and rest_edits holds the October and December edits');
 

@@ -100,7 +100,6 @@ export function demoDashboard(from: string | null, to: string | null, basis: Bas
       status: finished ? ("finished" as const) : ("active" as const),
       state_label: project?.state ?? null,
       budget_agorot: null,
-      sumit_budget_section_id: project?.budget_section_id ?? null,
       income_agorot: num(inv),
       direct_agorot: num(dir),
       shared_agorot: num(alloc),

@@ -24,20 +24,12 @@ const project = {
 };
 
 describe("projectDetailSchema", () => {
-  it("keeps has_shared_share when a line includes a share", () => {
-    const parsed = projectDetailSchema.parse({
-      ...project,
-      categories: [{ id: "c", name: "מלט", amount_agorot: 100, has_shared_share: true }],
-    });
-    expect(parsed?.categories[0]?.has_shared_share).toBe(true);
-  });
-
-  it("parses a category line from before the flag existed", () => {
+  it("parses a category line with only its amount: the lean answer leaves out has_shared_share (FLOW-1193)", () => {
     const parsed = projectDetailSchema.parse({
       ...project,
       categories: [{ id: "c", name: "מלט", amount_agorot: 100 }],
     });
-    expect(parsed?.categories[0]?.has_shared_share).toBeUndefined();
+    expect(parsed?.categories[0]).toEqual({ id: "c", name: "מלט", amount_agorot: 100n });
   });
 
   it("parses excluded_categories_by_currency when present", () => {

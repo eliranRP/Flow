@@ -77,7 +77,7 @@ const projectsMonth = {
   basis: "paid",
   projects: [{
     id: "p1", name: "בית לדוגמה", type: null, status: "active", is_overhead: false, group_id: null, created_at: `${earlier}-01T00:00:00Z`,
-    finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_month_minor: 0, profit_all_minor: 0, first_month: null,
+    finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_all_minor: 0, first_month: null,
     pending_count: 0, deletable: false,
   }],
   unassigned: { count: 0, cash: [] },

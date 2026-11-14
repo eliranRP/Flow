@@ -3,13 +3,13 @@
 -- calling private.line_in_cash per row, and the direct branch reads only the project's lines: its
 -- rehab figures equal the previous query, kept below as pg_temp references, on a shared line, a
 -- split line, a category and a line not in cash, a switch on and off, a guessed category and a loan
--- part. (2) get_project(..., p_lines false), what the app asks, leaves out the lines and the
--- arrays it never reads and gives every other key the same value. (3) The default answer, which
+-- part. (2) get_project(..., p_lines false), what the app asks, leaves out the lines, the
+-- arrays and (FLOW-1193) the fields it never reads, and gives every other key the same value. (3) The default answer, which
 -- flow-mcp gets, keeps every key. Invented data only. Amounts are agorot.
 
 begin;
 
-select plan(29);
+select plan(31);
 
 do $users$
 begin
@@ -207,9 +207,22 @@ returns text[]
 language sql
 as $$
   select array['transactions', 'category_rollups', 'category_rollups_by_currency', 'excluded_categories_by_currency',
-    'excluded_category_rollups_by_currency', 'pending_agorot', 'pending_other_currencies'];
+    'excluded_category_rollups_by_currency', 'pending_agorot', 'pending_other_currencies',
+    -- FLOW-1193: and what no app code reads.
+    'excluded_income_by_currency', 'other_currencies', 'profit_after_overhead_agorot', 'sumit_budget_section_id'];
 $$;
 grant execute on function pg_temp.unused() to authenticated, service_role;
+
+-- The full answer as the lean one gives it: less those keys, and no has_shared_share on a category row (FLOW-1193).
+create or replace function pg_temp.lean_of(p_full jsonb)
+returns jsonb
+language sql
+as $$
+  select (p_full - pg_temp.unused()) || jsonb_build_object(
+    'categories', coalesce((select jsonb_agg(c - 'has_shared_share' order by o) from jsonb_array_elements(p_full->'categories') with ordinality t(c, o)), '[]'::jsonb),
+    'categories_by_currency', coalesce((select jsonb_agg(c - 'has_shared_share' order by o) from jsonb_array_elements(p_full->'categories_by_currency') with ordinality t(c, o)), '[]'::jsonb));
+$$;
+grant execute on function pg_temp.lean_of(jsonb) to authenticated, service_role;
 
 select tests.authenticate_as('gps_owner');
 
@@ -260,17 +273,23 @@ select is(
 -- (2) get_project with p_lines false.
 select ok(not (pg_temp.gp('house', 'cash', false) ?| pg_temp.unused()),
   'p_lines false: no lines, no roll-ups, no excluded categories, no pending sums');
-select ok(pg_temp.gp('house', 'cash', false) ?& array['pending_count', 'categories', 'categories_by_currency', 'investment', 'loans', 'by_currency', 'excluded_income_by_currency', 'other_currencies'],
+select ok(pg_temp.gp('house', 'cash', false) ?& array['pending_count', 'categories', 'categories_by_currency', 'investment', 'loans', 'by_currency'],
   'p_lines false: every key the app reads is there');
-select is(pg_temp.gp('house', 'cash', false), pg_temp.gp('house', 'cash', true) - pg_temp.unused(),
+select ok(not (pg_temp.gp('house', 'cash', false) ?| array['excluded_income_by_currency', 'other_currencies', 'profit_after_overhead_agorot', 'sumit_budget_section_id'])
+    and not exists (select 1 from jsonb_array_elements(pg_temp.gp('house', 'cash', false)->'categories' || (pg_temp.gp('house', 'cash', false)->'categories_by_currency')) c where c ? 'has_shared_share'),
+  'p_lines false: no kept-out income, no other-currency totals, no profit after overhead, no budget section, and no has_shared_share (FLOW-1193)');
+select ok(pg_temp.gp('house', 'cash', true) ?& array['excluded_income_by_currency', 'other_currencies', 'profit_after_overhead_agorot', 'sumit_budget_section_id']
+    and exists (select 1 from jsonb_array_elements(pg_temp.gp('house', 'cash', true)->'categories_by_currency') c where (c->>'has_shared_share')::boolean),
+  'with the lines (flow-mcp''s answer) every one of them is there, has_shared_share true on the house''s shared cost');
+select is(pg_temp.gp('house', 'cash', false), pg_temp.lean_of(pg_temp.gp('house', 'cash', true)),
   'p_lines false equals the full answer less those keys (house, cash)');
-select is(pg_temp.gp('house', 'invoiced', false), pg_temp.gp('house', 'invoiced', true) - pg_temp.unused(),
+select is(pg_temp.gp('house', 'invoiced', false), pg_temp.lean_of(pg_temp.gp('house', 'invoiced', true)),
   'house, invoiced');
-select is(pg_temp.gp('barn', 'cash', false), pg_temp.gp('barn', 'cash', true) - pg_temp.unused(),
+select is(pg_temp.gp('barn', 'cash', false), pg_temp.lean_of(pg_temp.gp('barn', 'cash', true)),
   'barn, cash (a shared share, a split part, a cost in dollars)');
-select is(pg_temp.gp('house', 'cash', false, '2026-06-01', '2026-06-30'), pg_temp.gp('house', 'cash', true, '2026-06-01', '2026-06-30') - pg_temp.unused(),
+select is(pg_temp.gp('house', 'cash', false, '2026-06-01', '2026-06-30'), pg_temp.lean_of(pg_temp.gp('house', 'cash', true, '2026-06-01', '2026-06-30')),
   'a period');
-select is(pg_temp.gp('shed', 'cash', false), pg_temp.gp('shed', 'cash', true) - pg_temp.unused(), 'a project with no lines');
+select is(pg_temp.gp('shed', 'cash', false), pg_temp.lean_of(pg_temp.gp('shed', 'cash', true)), 'a project with no lines');
 select ok(octet_length(pg_temp.gp('house', 'cash', false)::text) < octet_length(pg_temp.gp('house', 'cash', true)::text),
   'and the answer is smaller');
 select is(pg_temp.gp('house', 'cash', false)->'investment', pg_temp.inv('house'), 'the investment block is the same function''s');

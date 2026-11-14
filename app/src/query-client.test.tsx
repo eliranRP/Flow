@@ -21,7 +21,6 @@ const row = (id: string, name: string) => ({
   budget_minor: null,
   spent_minor: 0,
   cash: [{ currency: "ILS", in_minor: 100_000, out_minor: 40_000, net_minor: 60_000 }],
-  profit_month_minor: 60_000,
   profit_all_minor: 60_000,
   first_month: "2026-01-01",
   pending_count: 0,

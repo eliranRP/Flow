@@ -15,7 +15,7 @@ function Probe() {
   const set = useSetForecastItem("2026-11");
   const reset = useResetForecastMonth("2026-11");
   useQuery({ queryKey: ["month-forecast", "off", "2026-11"], queryFn: () => { reads.forecast += 1; return Promise.resolve({}); } });
-  useQuery({ queryKey: ["expected-months", "off", "company", 1], queryFn: () => { reads.expected += 1; return Promise.resolve({}); } });
+  useQuery({ queryKey: ["expected-months", "off", "company", 0], queryFn: () => { reads.expected += 1; return Promise.resolve({}); } });
   return (
     <>
       <button type="button" onClick={() => { set.mutate({ key: "party:expense:power:USD", patch: { moved_out: true }, undo: false, prior: null }); }}>set</button>

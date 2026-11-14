@@ -208,14 +208,15 @@ describe("CompanyProfitScreen live, the next-month read's size (FLOW-1171)", () 
     expect(calls.args.forecast_overrides_for).toEqual([{ p_month: "2026-11" }]);
   });
 
-  it("the year view asks for every later month's edits and reads each month left in the year", async () => {
+  it("the year view asks for every later month's edits and skips in one read, and sends no overrides read (FLOW-1195)", async () => {
     answerBreakdowns();
     answerProfitMonths();
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year" });
     await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
-    await waitFor(() => { expect(calls.args.forecast_overrides_for?.length).toBe(2); });
+    await waitFor(() => { expect(calls.names).toContain("get_profit_months"); });
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
     expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: true }]);
-    expect((calls.args.forecast_overrides_for as Array<{ p_month: string }>).map((arg) => arg.p_month).sort()).toEqual(["2026-11", "2026-12"]);
+    expect(calls.names).not.toContain("forecast_overrides_for");
   });
 });
 
