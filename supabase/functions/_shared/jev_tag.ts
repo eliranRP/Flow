@@ -5,6 +5,7 @@
 // A database lease lets one run at a time, and each company's calls are reserved
 // from its daily cap in SQL before Jev is called (decision 0124).
 
+import { defineMachine } from "../../../packages/shared/src/machine.ts";
 import { JEV_MODEL, JEV_TIMEOUT_MS, JevError, callJev, type FetchLike, type JevResult, type JevTimer } from "./jev.ts";
 import { readJevApiKey } from "./jev_key.ts";
 import { planLoanFill } from "./jev_tag_loan.ts";
@@ -21,6 +22,7 @@ import {
   JEV_TAG_DEFAULT_LIMIT,
   JEV_TAG_INTERVAL_MS,
   JEV_TAG_LEASE_SECONDS,
+  JEV_REFUSALS_PER_COMPANY,
   JEV_TAG_OUTAGE_STOP,
   JEV_TAG_RESERVE_MS,
   lineCategories,
@@ -140,14 +142,42 @@ export async function tagWork(
   const now = options.now ?? Date.now;
   const budgetMs = options.budgetMs ?? JEV_TAG_BUDGET_MS;
   const reserveMs = options.reserveMs ?? JEV_TAG_RESERVE_MS;
-  const started = now();
+  const started = options.startedAt ?? now();
   let stop = false;
   let outage = 0;
-  const markFailed = async (expense: TagExpense) => {
+  const markFailed = async (expense: TagExpense, refused = false) => {
     try {
-      await store.markFailed?.(expense.companyId, expense.id, JEV_MODEL);
+      await store.markFailed?.(expense.companyId, expense.id, JEV_MODEL, refused);
     } catch {
       // The line is sent again on the next run, within the daily cap.
+    }
+  };
+  // FLOW-1168, FLOW-1174: a line Jev refused as invalid is marked refused (not sent again until the
+  // line, or the company's projects or categories, change) only when Jev answered another line of
+  // the same company in this run, which shows that company's request shape and the key are sound;
+  // and at most JEV_REFUSALS_PER_COMPANY a run. Else it is a failure that can pass, as before. A
+  // refusal is marked as soon as its company has an answer; one that comes before the first answer
+  // waits for it, or for the company's end (a failure that can pass).
+  let answered = false;
+  let refusals = 0;
+  const waiting: TagExpense[] = [];
+  const settle = async (expense: TagExpense) => {
+    const refused = refusals < JEV_REFUSALS_PER_COMPANY;
+    if (refused) refusals += 1;
+    await markFailed(expense, refused);
+  };
+  const settleWaiting = async () => {
+    for (const expense of waiting.splice(0)) {
+      if (answered) await settle(expense);
+      else await markFailed(expense);
+    }
+  };
+  const leaseHeld = async () => {
+    if (!options.renew) return true;
+    try {
+      return await options.renew();
+    } catch {
+      return false;
     }
   };
   for (const company of work) {
@@ -167,6 +197,8 @@ export async function tagWork(
       ? options.usage.get(company.companyId) ?? emptyUsage()
       : emptyUsage();
     options.usage?.set(company.companyId, usage);
+    answered = false;
+    refusals = 0;
     for (const expense of company.expenses) {
       if (outage >= JEV_TAG_OUTAGE_STOP) {
         report.skipped += 1;
@@ -188,6 +220,13 @@ export async function tagWork(
         report.skipped += 1;
         continue;
       }
+      // FLOW-1168: no call without the lease: another run may hold it now.
+      if (!(await leaseHeld())) {
+        report.skipped += 1;
+        report.budget_skipped += 1;
+        stop = true;
+        continue;
+      }
       let result: JevResult;
       usage.calls += 1;
       try {
@@ -197,16 +236,23 @@ export async function tagWork(
         });
       } catch (error) {
         if (error instanceof JevError && (error.code === "unauthorized" || error.code === "missing_key")) {
+          await settleWaiting();
           logTagRun(report, options.log);
           throw new TagStop(error.code);
         }
         report.failed += 1;
         usage.failed += 1;
         outage = error instanceof JevError && TRANSPORT_CODES.has(error.code) ? outage + 1 : 0;
-        await markFailed(expense);
+        if (!(error instanceof JevError && error.code === "invalid_request")) await markFailed(expense);
+        else if (answered) await settle(expense);
+        else waiting.push(expense);
         continue;
       }
       outage = 0;
+      if (!answered) {
+        answered = true;
+        await settleWaiting();
+      }
       if (result.usage) {
         report.input_tokens += result.usage.input_tokens;
         report.output_tokens += result.usage.output_tokens;
@@ -283,6 +329,7 @@ export async function tagWork(
         await markFailed(expense);
       }
     }
+    await settleWaiting();
   }
   logTagRun(report, options.log);
   return report;
@@ -333,6 +380,28 @@ export function allowTagRun(
 }
 
 const tagRateState: TagRateState = { lastAt: -1 };
+
+/**
+ * One run of the job (decision 0266). The 60-second rate gate is read once the lease is held and
+ * spent only on the move into `tagging`: a run answered busy, or one that found nothing to tag,
+ * leaves it for the next run (FLOW-1168).
+ */
+export const jevRun = defineMachine({
+  name: "jevRun",
+  initial: "leasing",
+  final: ["busy", "limited", "idle", "finished", "failed"],
+  states: {
+    leasing: { taken: "leased", refused: "busy", failed: "failed" },
+    leased: { open: "listing", gated: "limited", failed: "failed" },
+    listing: { work: "tagging", empty: "idle", failed: "failed" },
+    tagging: { done: "finished", failed: "failed" },
+    busy: {},
+    limited: {},
+    idle: {},
+    finished: {},
+    failed: {},
+  },
+});
 
 export type JevTagDeps = {
   fetch: FetchLike;
@@ -439,18 +508,23 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
   const call = deps.call ?? tagJevCall(deps.fetch);
   const jobs = createTagJobStore(deps.fetch, supabaseUrl, serviceKey);
   const runId = (deps.runId ?? (() => crypto.randomUUID()))();
+  const clock = deps.now ?? Date.now;
+  let run = jevRun.initial;
   try {
-    if (!(await jobs.takeLease(runId, JEV_TAG_LEASE_SECONDS))) {
-      return json({ error: "busy" }, 409);
-    }
+    run = jevRun.next(run, (await jobs.takeLease(runId, JEV_TAG_LEASE_SECONDS)) ? "taken" : "refused");
   } catch {
-    return json({ error: "tag_failed" }, 500);
+    run = jevRun.next(run, "failed");
   }
+  if (run === "busy") return json({ error: "busy" }, 409);
+  if (run !== "leased") return json({ error: "tag_failed" }, 500);
+  const leasedAt = clock();
   const usage = new Map<string, CompanyUsage>();
   const reserved: string[] = [];
   try {
-    // Spent only once the lease is held: a run answered busy must not block the next one.
-    const gate = allowTagRun(deps.rateState ?? tagRateState, deps.now ? deps.now() : Date.now(), deps.intervalMs);
+    // Read once the lease is held; spent only when the run starts tagging (jevRun).
+    const rate = deps.rateState ?? tagRateState;
+    const gate = allowTagRun({ ...rate }, leasedAt, deps.intervalMs);
+    run = jevRun.next(run, gate.ok ? "open" : "gated");
     if (!gate.ok) {
       const response = json({ error: "rate_limited", retry_after_seconds: gate.retryAfterSeconds }, 429);
       response.headers.set("retry-after", String(gate.retryAfterSeconds));
@@ -460,19 +534,24 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
     const listed = await store.listWork(requested.limit, requested.companyId);
     const capped = await applyDailyCap(listed, jobs, runId, reserved);
     const pending = capped.work.reduce((sum, company) => sum + company.expenses.length, 0);
-    if (pending === 0) {
+    run = jevRun.next(run, pending === 0 ? "empty" : "work");
+    if (run === "idle") {
       const report = emptyReport(listed.length);
       report.skipped = capped.capSkipped;
       report.cap_skipped = capped.capSkipped;
       logTagRun(report, deps.log);
       return json({ ok: true, ...report });
     }
+    rate.lastAt = leasedAt;
     const apiKey = await readKey({ fetch: deps.fetch, supabaseUrl, serviceKey });
     const report = await tagWork(capped.work, store, call, apiKey, {
       now: deps.now,
       log: deps.log,
       usage,
+      startedAt: leasedAt,
+      renew: () => jobs.takeLease(runId, JEV_TAG_LEASE_SECONDS),
     });
+    run = jevRun.next(run, "done");
     report.companies = listed.length;
     report.skipped += capped.capSkipped;
     report.cap_skipped = capped.capSkipped;

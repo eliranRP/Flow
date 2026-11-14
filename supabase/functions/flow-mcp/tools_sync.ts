@@ -1,6 +1,7 @@
 // MCP tools: sync_bank starts a bank sync job and get_sync_status reads it. Decision 0102.
 // Split out of tools.ts (FLOW-807).
 
+import { defineMachine } from "../../../packages/shared/src/machine.ts";
 import { MERCURY_SYNC_FUNCTION } from "../_shared/connectors/mercury/capabilities.ts";
 import {
   envelopeOf,
@@ -32,29 +33,74 @@ function syncResultOf(payload: Record<string, unknown>): Record<string, unknown>
   return { added, duplicates, removed, newest_date: newest ?? null };
 }
 
-type SyncOutcome = { ok: true; data: Record<string, unknown> } | { ok: false; error: { code: string; message: string } };
+/**
+ * What the job stores. `complete` sits beside `data` (false: the pull stopped at its page cap and the
+ * next sync brings the rest); a failure asked to retry says why in `reason` (FLOW-1168).
+ */
+type SyncOutcome =
+  | { ok: true; data: Record<string, unknown>; complete?: boolean }
+  | { ok: false; error: { code: string; message: string; reason?: "busy" | "rate_limited"; retry_at?: string } };
 
 function syncFailure(code: string, message: string): SyncOutcome {
   return { ok: false, error: { code, message } };
 }
 
+/** Asked to retry, and why: busy (the bank sync ran a moment ago or is running) or rate_limited. */
+function syncRetry(reason: "busy" | "rate_limited", retryAt?: unknown): SyncOutcome {
+  const at = typeof retryAt === "string" && !Number.isNaN(Date.parse(retryAt)) ? { retry_at: retryAt } : {};
+  return { ok: false, error: { code: "unavailable", message: "retry", reason, ...at } };
+}
+
 async function pullBank(invoke: ToolInvoke): Promise<SyncOutcome> {
   const pulled = await invoke(MERCURY_SYNC_FUNCTION, { force: true });
-  if (pulled.status === 429) return syncFailure("unavailable", "retry");
-  if (pulled.status === 401) return syncFailure("unavailable", "unavailable");
   const payload = pulled.json != null && typeof pulled.json === "object" && !Array.isArray(pulled.json)
     ? pulled.json as Record<string, unknown>
     : null;
+  if (pulled.status === 429) return syncRetry("rate_limited", payload?.retry_at);
+  if (pulled.status === 401) return syncFailure("unavailable", "unavailable");
   if (payload?.error === "Mercury is not connected") return syncFailure("not_found", "bank is not connected");
   if (payload?.error === "auth") return syncFailure("refused", "bank key was rejected; reconnect in Settings");
   if (pulled.status === 200 && payload != null) {
-    if (payload.skipped === true) return syncFailure("unavailable", "retry");
+    if (payload.skipped === true) return syncRetry("busy");
     if (payload.ok === true) {
       const data = syncResultOf(payload);
-      if (data != null) return { ok: true, data };
+      if (data != null) return typeof payload.complete === "boolean" ? { ok: true, data, complete: payload.complete } : { ok: true, data };
     }
   }
   return syncFailure("refused", "The bank sync failed.");
+}
+
+/**
+ * FLOW-1168: a job's end. The finish is the only write that ends it; one that is not stored (an
+ * HTTP error, a throw, a refusal) is tried once more. `not_found` means the job is no longer this
+ * run's to end (it ended, or it is past its 5 minutes and reads as failed with reason unknown).
+ * A finish lost twice leaves the job running until those 5 minutes, then failed, reason unknown.
+ */
+export const syncJob = defineMachine({
+  name: "syncJob",
+  initial: "pulling",
+  final: ["stored", "ended", "lost"],
+  states: {
+    pulling: { pulled: "finishing" },
+    finishing: { stored: "stored", gone: "ended", refused: "retrying" },
+    retrying: { stored: "stored", gone: "ended", refused: "lost" },
+    stored: {},
+    ended: {},
+    lost: {},
+  },
+});
+
+async function finishOnce(jobId: string, rpc: ToolRpc, outcome: SyncOutcome): Promise<"stored" | "gone" | "refused"> {
+  try {
+    const finished = await rpc("mcp_sync_bank_finish", { p_job_id: jobId, p_response: outcome });
+    if (finished.status >= 400) return "refused";
+    const answer = envelopeOf(finished.json);
+    if (!answer.isError) return "stored";
+    const code = (answer.structuredContent as { error: { code: string } }).error.code;
+    return code === "not_found" ? "gone" : "refused";
+  } catch {
+    return "refused";
+  }
 }
 
 /** Runs the pull and records the outcome on the job. Never throws. */
@@ -65,17 +111,11 @@ async function runSyncJob(jobId: string, rpc: ToolRpc, invoke?: ToolInvoke): Pro
   } catch {
     outcome = syncFailure("refused", "The bank sync failed.");
   }
-  try {
-    const finished = await rpc("mcp_sync_bank_finish", { p_job_id: jobId, p_response: outcome });
-    if (finished.status >= 400 || envelopeOf(finished.json).isError) logFinishLost(finished.status);
-  } catch {
-    logFinishLost(null);
+  let state = syncJob.next(syncJob.initial, "pulled");
+  while (state === "finishing" || state === "retrying") {
+    state = syncJob.next(state, await finishOnce(jobId, rpc, outcome));
   }
-}
-
-/** The job stays running and get_sync_status reports it as retry after the stale window. Logs only the status. */
-function logFinishLost(status: number | null): void {
-  console.error(`sync_bank finish not stored status=${status ?? "error"}`);
+  if (state === "lost") console.error("sync_bank finish not stored twice; the job reads as failed (unknown) after 5 minutes");
 }
 
 export async function syncStatus(jobId: string, rpc: ToolRpc): Promise<ToolResult> {

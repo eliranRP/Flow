@@ -14,8 +14,21 @@ export const JEV_TAG_RESERVE_MS = 20_000;
 export const JEV_TAG_INTERVAL_MS = 60_000;
 /** This many provider failures in a row end the run, so an outage marks few lines. */
 export const JEV_TAG_OUTAGE_STOP = 3;
+/**
+ * FLOW-1174: at most this many lines of one company are marked refused in one run. Past it the
+ * rest are failures that can pass (6 hours, then a day), so a cause that is the company's, not
+ * the line's, cannot park a whole backlog for 30 days.
+ */
+export const JEV_REFUSALS_PER_COMPANY = 3;
 export const TRANSPORT_CODES = new Set(["rate_limited", "overloaded", "timeout", "unavailable"]);
-/** The run lease outlives the 150 second Edge limit, so a killed run frees it on its own. */
+/**
+ * The run lease outlives the 150 second Edge limit, so a killed run frees it on its own. FLOW-1168:
+ * the run renews it for this long before each Jev call, and its 120 second budget counts from when
+ * it took the lease. A call starts only with 20 seconds of budget left and lasts at most 2 tries of
+ * 8 seconds and one backoff of at most 8 (24 seconds), so each call and its writes end well inside
+ * the 180 seconds its renewal bought. A run killed mid-call frees the lease 180 seconds after its
+ * last renewal.
+ */
 export const JEV_TAG_LEASE_SECONDS = 180;
 const CHOICE_CAP = 255;
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -189,8 +202,11 @@ export type TagStore = {
   /** False when SQL wrote no split: the line closed, was set, split, flagged, or the checks refused it. */
   prefillLoan(write: LoanPrefillWrite): Promise<boolean>;
   deleteSuggestion(transactionId: string, modelVersion: string): Promise<void>;
-  /** A line Jev failed on. The job does not send it again until its retry time. */
-  markFailed(companyId: string, transactionId: string, modelVersion: string): Promise<void>;
+  /**
+   * A line Jev failed on. The job does not send it again until its retry time. `refused`: Jev
+   * refused the request as invalid, so it waits until the line changes (FLOW-1168).
+   */
+  markFailed(companyId: string, transactionId: string, modelVersion: string, refused?: boolean): Promise<void>;
 };
 
 export type TagJobStore = {
@@ -217,6 +233,10 @@ export type TagReport = {
 
 export type TagRunOptions = {
   now?: () => number;
+  /** When the run took its lease: the budget counts from here, not from after the listing. */
+  startedAt?: number;
+  /** Renews the run's lease before each Jev call; false (or a throw) ends the run (FLOW-1168). */
+  renew?: () => Promise<boolean>;
   budgetMs?: number;
   reserveMs?: number;
   log?: (line: string) => void;

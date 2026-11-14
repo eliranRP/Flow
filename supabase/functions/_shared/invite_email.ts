@@ -4,8 +4,33 @@
 // Before sending it claims the send with claim_invite_email (decision 0195): at most 3 emails per
 // pending, unexpired invite, so a caller cannot mail one address without bound. Nothing here changes
 // the books. A failed send leaves the invite waiting in the invitee's inbox.
+// FLOW-1168: a send Resend refused sent nothing, so its claim is given back (release_invite_email,
+// with the service key). FLOW-1174: only a 4xx other than 408, 409 and 429 is a refusal (resendRefused).
+// A 5xx, a gateway timeout, a timeout or a lost connection may come after Resend took the mail, so it
+// keeps its claim: an invite never gets more than 3 real emails. An invite gives back at most 3
+// claims (company_invites.email_releases), so Resend hears at most 6 tries for it.
 
+import { defineMachine } from "../../../packages/shared/src/machine.ts";
 import { empty, json } from "./http.ts";
+import { serviceRoleKey } from "./jev_tag.ts";
+
+/**
+ * One call's send. `answered` is Resend's refusal: nothing went out. `failed` is an error answer
+ * after which the mail may have gone out, or one that asks to try later; `lost` is no answer.
+ */
+export const inviteSend = defineMachine({
+  name: "inviteSend",
+  initial: "lookup",
+  final: ["refused", "sent", "released", "spent"],
+  states: {
+    lookup: { claimed: "claimed", refused: "refused" },
+    claimed: { sent: "sent", answered: "released", failed: "spent", lost: "spent" },
+    refused: {},
+    sent: {},
+    released: {},
+    spent: {},
+  },
+});
 
 export interface InviteEmailDeps {
   fetch: typeof fetch;
@@ -17,6 +42,14 @@ export interface InviteMail {
   role: "editor" | "viewer";
   inviter: string;
   company: string;
+}
+
+/**
+ * FLOW-1174: Resend refused the request, so nothing went out: a 4xx, but not 408 (timed out), 409
+ * (an idempotent request in flight or reused) or 429 (rate or quota limit: try later, never loop).
+ */
+export function resendRefused(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 409 && status !== 429;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -99,12 +132,19 @@ export async function loadInviteMail(deps: InviteEmailDeps, req: Request, invite
   };
 }
 
-/** Claims one send of the invite: "ok", "limit" past 3 emails of this invite, or "gone". */
-export async function claimInviteEmail(deps: InviteEmailDeps, req: Request, inviteId: string): Promise<"ok" | "limit" | "gone"> {
+/**
+ * Claims one send of the invite: its number (1 to 3; null when the answer does not say), "limit"
+ * past 3 emails of this invite, or "gone".
+ */
+export async function claimInviteEmail(
+  deps: InviteEmailDeps,
+  req: Request,
+  inviteId: string,
+): Promise<{ send: number | null } | "limit" | "gone"> {
   const response = await callerFetch(deps, req, "claim_invite_email", { p_invite_id: inviteId });
   if (response.ok) {
-    await response.body?.cancel();
-    return "ok";
+    const sends = record(await response.json().catch(() => null))?.email_sends;
+    return { send: typeof sends === "number" && Number.isInteger(sends) && sends >= 1 && sends <= 3 ? sends : null };
   }
   const error = record(await response.json().catch(() => null));
   if (error?.message === "invite_email_limit") return "limit";
@@ -129,15 +169,19 @@ export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Pr
     return json({ error: "lookup_failed" }, 502);
   }
   if (!mail) return json({ error: "not_found" }, 404);
+  let send: number | null;
   try {
     const claim = await claimInviteEmail(deps, req, inviteId);
     if (claim === "limit") return json({ error: "email_limit" }, 429);
     if (claim === "gone") return json({ error: "not_found" }, 404);
+    send = claim.send;
   } catch {
     return json({ error: "lookup_failed" }, 502);
   }
+  let step = inviteSend.next(inviteSend.initial, "claimed");
   const appUrl = deps.env("APP_URL").trim() || DEFAULT_APP_URL;
   const { html, text } = inviteBody(mail, appUrl);
+  let status: number | null = null;
   try {
     const response = await deps.fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -155,13 +199,33 @@ export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Pr
       }),
       signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
     });
-    if (!response.ok) {
-      await response.body?.cancel();
-      return json({ error: "send_failed", status: response.status }, 502);
-    }
     await response.body?.cancel();
+    status = response.status;
+    step = inviteSend.next(step, response.ok ? "sent" : resendRefused(response.status) ? "answered" : "failed");
   } catch {
-    return json({ error: "send_failed" }, 502);
+    step = inviteSend.next(step, "lost");
   }
-  return json({ sent: true });
+  if (step === "sent") return json({ sent: true });
+  if (step === "released") await releaseClaim(deps, inviteId, send);
+  return json(status === null ? { error: "send_failed" } : { error: "send_failed", status }, 502);
+}
+
+/**
+ * Gives back the claim of a send Resend refused. Never throws: without the service key, before the
+ * migration, past the invite's 3 releases, or when it fails, the claim stays spent, as before.
+ */
+async function releaseClaim(deps: InviteEmailDeps, inviteId: string, send: number | null): Promise<void> {
+  const key = serviceRoleKey(deps.env);
+  if (send === null || key.trim() === "") return;
+  try {
+    const response = await deps.fetch(`${deps.env("SUPABASE_URL").replace(/\/+$/, "")}/rest/v1/rpc/release_invite_email`, {
+      method: "POST",
+      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ p_invite_id: inviteId, p_send: send }),
+    });
+    await response.body?.cancel();
+    if (!response.ok) console.error(`invite-email release status=${String(response.status)}`);
+  } catch {
+    console.error("invite-email release error");
+  }
 }

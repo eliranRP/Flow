@@ -136,7 +136,8 @@ Deno.test("a failed send logs the host, the status and a short answer, never the
   console.warn = (line: string) => { lines.push(line); };
   try {
     const answer: typeof fetch = () => Promise.resolve(new Response('{"reason":"BadJwtToken"}', { status: 403 }));
-    assertEquals(await sendPush(answer, { endpoint: OWN, ...device }, {}, keys, NOW), "failed");
+    // FLOW-1168: a 403 is this device refusing it, not a try that can pass later.
+    assertEquals(await sendPush(answer, { endpoint: OWN, ...device }, {}, keys, NOW), "refused");
   } finally {
     console.warn = warn;
   }
