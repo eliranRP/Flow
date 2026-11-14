@@ -151,7 +151,7 @@ function CashLinesBody({
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
   const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
   const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
-  const allLoaded = sample != null || !hasNextPage;
+  const allLoaded = sample != null || (!hasNextPage && !lines.isPlaceholderData);
   const requested = linesOrder(locationParams.get("order"));
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);

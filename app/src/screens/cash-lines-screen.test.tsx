@@ -218,6 +218,26 @@ describe("Cash lines", () => {
     expect(screen.queryByText("בנק לדוגמה")).toBeNull();
   });
 
+  it("FLOW-1191: Home's cached page counts as complete only once the 200-line read answers", async () => {
+    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return new Promise((resolve) => { answer = resolve; });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Home's page says it has no more, but it is a placeholder: the count waits for the real read.
+    client.setQueryData(["breakdown-lines", "cash", "off", earlier, "out", "ILS", null, 20], { pages: [{ rows: [{ ...lines.rows[0], amount_minor: 120_000n }], has_more: false }], pageParams: [0] });
+    renderWithProviders(
+      <Routes><Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} /></Routes>,
+      { route: `/cash/${earlier}/out/ILS`, client },
+    );
+    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
+    expect(screen.queryByText(/תנועה אחת/)).toBeNull();
+    answer({ data: { rows: [lines.rows[0]], has_more: false }, error: null });
+    expect(await screen.findByText(/תנועה אחת/)).toBeInTheDocument();
+  });
+
   it("flips the side in place and keeps the order chip", async () => {
     wrap(`/cash/${earlier}/out/ILS?order=amount`);
     await screen.findByText("בנק לדוגמה");
