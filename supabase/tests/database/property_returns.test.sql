@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(124);
+select plan(127);
 
 do $users$
 begin
@@ -524,6 +524,44 @@ select tests.authenticate_as('prr_owner');
 select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 20000000::bigint,
   'a payoff of the principal and the draws: the draws were lent on top, the whole principal counts');
 select is((pg_temp.hml()->'inputs'->'taken_over_loans'->0->>'draws_minor')::bigint, 0::bigint, 'and no draws are taken off');
+
+-- FLOW-1200 (decision 0270): a refinance closing's costs other than interest (rental-year taxes here)
+-- are the rental's, not the deal's holding; the old loan's payoff interest at the same closing stays.
+reset role;
+insert into prr (label, id) values
+  ('rf', tests.fixture_project(pg_temp.id('co'), 'Example refinance')),
+  ('rf_tax', tests.fixture_category(pg_temp.id('co'), 'Example refinance taxes', 'expense'));
+update public.categories set rehab = false where id = pg_temp.id('rf_tax');
+insert into prr (label, id)
+select 'rf_int', coalesce(
+  (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'interest'),
+  tests.fixture_category(pg_temp.id('co'), 'Example refinance interest', 'expense'));
+update public.categories set loan_part = 'interest', rehab = false where id = pg_temp.id('rf_int') and loan_part is null;
+insert into prr (label, id)
+select 'rf_fee', coalesce(
+  (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'fees'),
+  tests.fixture_category(pg_temp.id('co'), 'Example refinance loan fees', 'expense', true));
+update public.categories set loan_part = 'fees' where id = pg_temp.id('rf_fee') and loan_part is null;
+insert into prr (label, id) values
+  ('rf-buy', tests.fixture_line(pg_temp.id('co'), 'prr:rf-buy', 3000000, p_project => pg_temp.id('rf'), p_category => pg_temp.id('purchase'), p_doc_date => '2026-01-05')),
+  ('rf-tax1', tests.fixture_line(pg_temp.id('co'), 'prr:rf-tax1', 10000, p_project => pg_temp.id('rf'), p_category => pg_temp.id('rf_tax'), p_doc_date => '2026-03-01')),
+  ('rf-close', tests.fixture_line(pg_temp.id('co'), 'prr:rf-close', 19910000, 'income', pg_temp.id('rf'), pg_temp.id('proceeds'), '2026-06-10')),
+  ('rf-rent', tests.fixture_line(pg_temp.id('co'), 'prr:rf-rent', 200000, 'income', pg_temp.id('rf'), pg_temp.id('rent'), '2026-08-01'));
+-- The closing's costs run against the deposit, so they are gross-up parts, as the app saves them.
+select tests.line_split(pg_temp.id('rf-close'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('proceeds'), 'project_id', pg_temp.id('rf'), 'amount_minor', 20000000, 'gross_up', false),
+  jsonb_build_object('category_id', pg_temp.id('rf_tax'), 'project_id', pg_temp.id('rf'), 'amount_minor', 50000, 'gross_up', true),
+  jsonb_build_object('category_id', pg_temp.id('rf_int'), 'project_id', pg_temp.id('rf'), 'amount_minor', 30000, 'gross_up', true),
+  jsonb_build_object('category_id', pg_temp.id('rf_fee'), 'project_id', pg_temp.id('rf'), 'amount_minor', 10000, 'gross_up', true)));
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values (pg_temp.id('co'), 'Example refinance loan', 20000000, 70000, 360, '2026-07-01', 130000, 0, 'ILS', pg_temp.id('rf'));
+select tests.authenticate_as('prr_owner');
+select is((public.get_property_returns(pg_temp.id('rf'), '2026-01-01', '2026-12-31')->'deal'->>'holding_minor')::bigint, -40000::bigint,
+  'the refinance closing''s taxes and new-loan fees are the rental''s; taxes before it and the payoff interest at it stay holding');
+select is((public.get_property_return_lines(pg_temp.id('rf'), 'deal_holding')->>'total_minor')::bigint, -40000::bigint,
+  'the deal_holding lines add up to the same holding');
+select is((public.get_property_returns(pg_temp.id('rf'), '2026-01-01', '2026-12-31')->'equity'->>'money_in_minor')::bigint, -16900000::bigint,
+  'the money in still counts every line of the refinance');
 
 select * from finish();
 rollback;

@@ -514,6 +514,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
 | <a id="flow-1068"></a>[FLOW-1068](tasks/FLOW-1068.md) | Investment page: ROI, the flip's net profit, and new deal metrics | PLAN FIRST (approved) |
 | <a id="flow-1199"></a>[FLOW-1199](tasks/FLOW-1199.md) | Bug: a hard-money loan's renovation draws count twice in a renovation's purchase price | BUG |
+| <a id="flow-1200"></a>[FLOW-1200](tasks/FLOW-1200.md) | A refinance closing's taxes, insurance and escrow count as the renovation's holding | BUG |
 | <a id="flow-1198"></a>[FLOW-1198](tasks/FLOW-1198.md) | The loan page's סכום ששולם בסגירה row reads "כל ההלוואה" though the price counts the principal less the draws | SMALL UI |
 | <a id="flow-1069"></a>[FLOW-1069](tasks/FLOW-1069.md) | Investment page: IRR since purchase | SMALL CYCLE |
 | <a id="flow-1070"></a>[FLOW-1070](tasks/FLOW-1070.md) | ROI review follow-ups (#1012 review) | BACKLOG NIT |
