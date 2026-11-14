@@ -8,6 +8,10 @@
 --    doc_date) where removed_at is null. The case test stays as an extra filter. The function is re-created from its
 --    body in 20261113141912, with that one predicate added; signature, security definer, search_path, stable, grants
 --    and revokes are unchanged (create or replace keeps the grants; the revoke is restated).
+--    The answers are unchanged while no line carries both a supplier and a customer: for an income charge, such a line
+--    used to count as an earlier line of its customer and no longer does. No constraint forbids such a line; production
+--    had none on 2026-11-14 (0 of 2,828 lines, a read-only count). Exact equality would need an OR branch and a second
+--    index, out of scope here.
 
 begin;
 

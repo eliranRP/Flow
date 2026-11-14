@@ -1,5 +1,6 @@
 -- FLOW-1192. (a) review_queue_open_idx is back: a partial index on (company_id) where status = 'open', the one
--- migration 20261113060409 dropped. (b) private.recurring_match_suggestions answers the same rows after its "first seen
+-- migration 20261113060409 dropped. (b) private.recurring_match_suggestions answers the same rows (for lines with one
+-- party; a line with both a supplier and a customer is not in the fixture, see the migration) after its "first seen
 -- lately" anti-join tests coalesce(supplier_id, customer_id) (the expression transactions_party_date_idx is on), and keeps
 -- the same grants, volatility and security. The oracle is the function's body before FLOW-1192 (migration
 -- 20261113141912), kept as a pg_temp function, as recurring_setwise does. Invented data only.
