@@ -1,5 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { SearchRow } from "@flow/shared";
 import { expect, waitFor, within } from "storybook/test";
+import { monthPeriod } from "../period";
+import { EMPTY_FILTERS, searchArgs } from "../search";
+import { ProfitCategories, profitCategoryGroups } from "./profit-categories";
 import { COMPANY_PROFIT_PAST_SAMPLE, COMPANY_PROFIT_SAMPLE } from "../dev/company-profit-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -264,5 +270,102 @@ export const CompanyProfitFailed: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1194: one found line, as the server would send it. */
+function foundRow(id: string, supplier: string, amount: bigint, extra: Partial<SearchRow> = {}): SearchRow {
+  return {
+    id, description: supplier, doc_date: "2026-10-04", doc_kind: null, amount_net: amount, direction: "expense", currency: "USD",
+    project_id: null, category_id: null, project_name: "בית הדקל", category_name: "חומרי בניין", supplier_name: supplier, customer_name: null,
+    waiting_review: false, kept_out: false, split_parts: 0, loan_matched: false, ...extra,
+  };
+}
+
+/**
+ * The page with the search cache filled for one typed word: the field asks the server in the app, and a story never
+ * reads it, so the answer is put where the read keeps it.
+ */
+function SearchRoute({ word, rows }: { word: string; rows: SearchRow[] }) {
+  const [client] = useState(() => {
+    const next = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    next.setQueryData(["company-currency", "off"], "USD");
+    const filters = { ...EMPTY_FILTERS, q: word, period: monthPeriod("2026-10") };
+    const page = { total: rows.length, expenses: rows, months: null, next: null };
+    next.setQueryData(["search", "off", searchArgs(filters, 0)], { pages: [page], pageParams: [{ text: 0, amount: null }] });
+    return next;
+  });
+  // The word is typed on mount, so a shot taken without the play function shows the found lines too.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      const field = document.querySelector<HTMLInputElement>("input[type=search]");
+      if (field == null) return;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, word);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    }, 0);
+    return () => { window.clearTimeout(id); };
+  }, [word]);
+  // A 900ms animation keeps story-shots waiting (it shoots after finite animations end) until the 300ms debounce has run.
+  return (
+    <StoryRoute entry="/profit?by=category" tabs>
+      <ExampleBar />
+      <style>{"@keyframes story-settle { to { opacity: 1; } }"}</style>
+      <QueryClientProvider client={client}>
+        <div style={{ animation: "story-settle 900ms linear" }}>
+          <CompanyProfitScreen sample={COMPANY_PROFIT_SAMPLE} />
+        </div>
+      </QueryClientProvider>
+    </StoryRoute>
+  );
+}
+
+/** FLOW-1194: a word typed in the month view: the server's lines in the search screen's rows, a kept-out one named. */
+export const Search: Story = {
+  name: "Search, lines found",
+  render: () => (
+    <SearchRoute word="ברזל" rows={[
+      foundRow("t1", "ברזל ופלדה בע״מ", -1_845_000n),
+      foundRow("t2", "מחסן ברזל", -92_550n, { doc_date: "2026-10-02", category_name: null, project_name: null }),
+      foundRow("t3", "החזר ברזל", 31_000n, { direction: "income", doc_date: "2026-10-01", category_name: "קבלת הלוואה", kept_out: true }),
+    ]} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("ברזל ופלדה בע״מ")).toBeInTheDocument();
+    await expect(canvas.getByText("לא נספר ברווח")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1194: a word that matches nothing says so, never an empty gap. */
+export const SearchNoMatch: Story = {
+  name: "Search, no match",
+  render: () => <SearchRoute word="אאא" rows={[]} />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("אין תנועות")).toBeInTheDocument();
+  },
+};
+
+/** FLOW-1194: a category tapped before its row scrolled in: one skeleton row while its lines are read. */
+export const ByCategoryLoading: Story = {
+  name: "By category, lines loading",
+  render: () => (
+    <StoryRoute entry="/profit?by=category" tabs>
+      <ExampleBar />
+      <div className="ui-cp-screen">
+        <ProfitCategories
+          groups={profitCategoryGroups([], [
+            { key: "c1", name: "חומרי בניין", total: 1_250_000n, count: 12, projects: 3, lines: [] },
+            { key: "c2", name: "ביטוח", total: 480_000n, count: 4, projects: 1, lines: [] },
+          ])}
+          currency="USD"
+          initialOpen="out:c1"
+          renderLine={() => null}
+          linesLoading={(key) => key === "out:c1"}
+        />
+      </div>
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(async () => { await expect(within(canvasElement).getAllByRole("status").some((node) => node.textContent === "טוען…")).toBe(true); });
   },
 };
