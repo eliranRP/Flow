@@ -533,7 +533,10 @@ insert into prr (label, id) values
   ('rf_tax', tests.fixture_category(pg_temp.id('co'), 'Example refinance taxes', 'expense'));
 update public.categories set rehab = false where id = pg_temp.id('rf_tax');
 insert into prr (label, id)
-select 'rf_int', c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'interest';
+select 'rf_int', coalesce(
+  (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'interest'),
+  tests.fixture_category(pg_temp.id('co'), 'Example refinance interest', 'expense'));
+update public.categories set loan_part = 'interest', rehab = false where id = pg_temp.id('rf_int') and loan_part is null;
 insert into prr (label, id)
 select 'rf_fee', coalesce(
   (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'fees'),
