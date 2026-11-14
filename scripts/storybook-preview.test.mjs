@@ -121,7 +121,9 @@ test("the preview builds the pull request without secrets and deploys it with co
   assert.match(deploy, /\n {4}needs: build\n/);
   assert.match(deploy, /\n {4}environment: storybook-preview\n/);
   assert.match(deploy, /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}\n/);
-  assert.equal(deploy.includes("head.sha }}\n          fetch-depth"), false);
+  assert.equal(/cache:/.test(workflow), false, "no pnpm cache: a store the pull request wrote must not reach deploy");
+  assert.match(deploy, /find preview -type l/);
+  assert.match(deploy, /for f in _worker\.js _routes\.json; do/);
   assert.equal(/ref: \$\{\{ github\.event\.pull_request\.head\.sha/.test(deploy), false);
   assert.equal(deploy.includes("pnpm build-storybook"), false);
   assert.match(deploy, /uses: actions\/download-artifact@/);

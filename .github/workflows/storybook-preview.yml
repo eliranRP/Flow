@@ -8,6 +8,8 @@ name: storybook preview
 # FLOW-853: the pull request's code, its dependencies and its scripts run only in `build`, which holds no
 # secret and uploads the static build. `deploy` reads the Cloudflare token and runs code from the base
 # commit only: it installs the base lockfile, checks the downloaded build again, deploys and comments.
+# Neither job uses the pnpm cache, so no store the pull request wrote reaches `deploy`. The workflow file
+# itself still comes from the pull request; decision 0079 accepts that for people who can push a branch.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -49,7 +51,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build-storybook
       - name: List the changed files
@@ -88,7 +89,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -101,6 +101,12 @@ jobs:
 
       - name: Check the build carries sample data only
         run: |
+          set -euo pipefail
+          # A link, or a Pages Worker or routes file, would let the build act on the host, not only serve.
+          if [ -n "$(find preview -type l | sed -n 1p)" ]; then echo "::error::the build holds a link"; exit 1; fi
+          for f in _worker.js _routes.json; do
+            if [ -e "preview/storybook-static/$f" ]; then echo "::error::the build holds $f"; exit 1; fi
+          done
           node scripts/storybook-preview-keys.mjs preview/storybook-static
           node scripts/check-jev-bundle.mjs preview/storybook-static
 
