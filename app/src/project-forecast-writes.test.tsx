@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useQuery } from "@tanstack/react-query";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -88,5 +88,19 @@ describe("useProjectForecastWrites (decision 0219)", () => {
     fireEvent.click(screen.getByRole("button", { name: "undo pace" }));
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: { drop: ["e-9"], put: [] } }); });
     expect(rpc.mock.calls.filter(([name]) => name === "undo_project_forecast")).toHaveLength(1);
+  });
+
+  it("a forecast edit refetches the forecast on screen, not expected_months, which reads no edits (FLOW-1191)", async () => {
+    const reads = { forecast: 0, expected: 0 };
+    function Reads() {
+      useQuery({ queryKey: ["month-forecast", "off", "2026-11"], queryFn: () => { reads.forecast += 1; return Promise.resolve({}); } });
+      useQuery({ queryKey: ["expected-months", "off", "project", "juniper-ct", 2], queryFn: () => { reads.expected += 1; return Promise.resolve({}); } });
+      return null;
+    }
+    renderWithProviders(<><Probe /><Reads /></>, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
+    await waitFor(() => { expect(reads).toEqual({ forecast: 1, expected: 1 }); });
+    fireEvent.click(screen.getByRole("button", { name: "reset" }));
+    await waitFor(() => { expect(reads.forecast).toBe(2); });
+    expect(reads.expected).toBe(1);
   });
 });

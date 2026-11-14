@@ -1,5 +1,5 @@
 import type { CategoryRow, ExpectedMonths, ProfitMonths } from "@flow/shared";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
@@ -13,7 +13,8 @@ import { useHomePreview } from "./preview";
 import type { ForecastLoan } from "./project-next-loans";
 import { nextMonthKey } from "./project-next-month";
 import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-next-month-query";
-import { overridesQuery, skippedKeys, useForecastOverrides } from "./forecast-skip";
+import { overridesQuery } from "./forecast-overrides-query";
+import { skippedKeys, useForecastOverrides } from "./forecast-skip";
 import { useCategoriesQuery } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -75,9 +76,16 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const loans = useQuery({ queryKey: ["loans", "company-forecast", preview], enabled: live, queryFn: () => readForecastLoans(null) });
   // A later month is built from rest_edits; the slim answer (no rest_edits) holds next month's edits only.
   const full = withRest || (month != null && month !== nextMonthKey(today));
+  const client = useQueryClient();
+  const keyOf = (withAll: boolean) => [FORECAST_EDITS_KEY, preview, "company", today, withAll] as const;
+  // FLOW-1191: the full answer (p_rest) holds everything the slim one does, plus rest_edits. With the full one cached
+  // for the same day, the slim read starts from it, as fresh as it is: no request while it is fresh.
+  const seed = full ? undefined : client.getQueryState<CompanyNextMonthInputs>(keyOf(true));
   const inputs = useQuery({
-    queryKey: [FORECAST_EDITS_KEY, preview, "company", today, full],
+    queryKey: keyOf(full),
     enabled: live,
+    initialData: seed?.data,
+    initialDataUpdatedAt: seed?.dataUpdatedAt,
     queryFn: async (): Promise<CompanyNextMonthInputs> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("company_next_month_inputs", { p_today: today, p_rest: full });

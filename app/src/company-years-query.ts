@@ -48,6 +48,9 @@ export function useCompanyYears(today: string, enabled: boolean, sample?: Compan
   });
   return {
     months: sample?.months ?? read.data?.months ?? null,
+    /** The books' basis and when the read came in: the year views take both from here (FLOW-1191). */
+    basis: read.data?.basis ?? null,
+    readAt: read.dataUpdatedAt,
     failed: live && read.isError,
     refetch: () => { void read.refetch(); },
   };

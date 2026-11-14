@@ -254,6 +254,11 @@ export type CompanyProfitRead = {
    * date, amount). The project order draws the summary and the project rows alone (FLOW-1171).
    */
   categoriesOn: boolean;
+  /**
+   * The month's figures and its project breakdowns load only in the month view (FLOW-1191). The year and since-the-start
+   * views draw from the years' read (get_profit_months), which also holds the basis, and read none of these.
+   */
+  projectsOn: boolean;
   /** The company's overhead project (useOverheadProject); undefined while it loads keeps the page loading. */
   overhead: OverheadProject | null | undefined;
 };
@@ -262,24 +267,24 @@ export type CompanyProfitRead = {
  * The page's reads, live. Preview mode reads nothing (the screen takes its sample). Query keys start
  * with "dashboard", "breakdown" or "breakdown-lines", so the basis sheet's write refreshes them.
  */
-export function useCompanyProfitRead({ enabled, month, ytd, currency, categoriesOn, overhead }: CompanyProfitRead) {
+export function useCompanyProfitRead({ enabled, month, ytd, currency, categoriesOn, projectsOn, overhead }: CompanyProfitRead) {
   const preview = useHomePreview();
   const live = enabled && preview === "off";
   const monthRange = `${month.from ?? ""}..${month.to ?? ""}`;
   const dashboard = useQuery({
     queryKey: ["dashboard", "company-profit", preview, monthRange],
-    enabled: live,
+    enabled: live && projectsOn,
     placeholderData: keepPreviousData,
     queryFn: () => fetchDashboard(month),
   });
   const ytdDashboard = useQuery({
     queryKey: ["dashboard", "company-profit-ytd", preview, ytd.from ?? "", ytd.to ?? ""],
-    enabled: live,
+    enabled: live && projectsOn,
     placeholderData: keepPreviousData,
     queryFn: () => fetchDashboard(ytd),
   });
-  const projectIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "income"], enabled: live, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "project") });
-  const projectExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "expense"], enabled: live, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "project") });
+  const projectIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "income"], enabled: live && projectsOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "project") });
+  const projectExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "expense"], enabled: live && projectsOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "project") });
   const categoryIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "income"], enabled: live && categoriesOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "category") });
   const categoryExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "expense"], enabled: live && categoriesOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "category") });
   const categoryGroups = [
@@ -305,14 +310,14 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
       queryFn: () => fetchAllLines(month, direction, "", currency, true),
     })),
   });
-  // A category read that failed in another order stays in the cache with its error: only an order that reads
-  // the categories counts it.
-  const failed = dashboard.isError || projectIncome.isError || projectExpense.isError
-    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError));
+  // A read that failed in another view or order stays in the cache with its error: only a view that reads it
+  // counts it.
+  const failed = projectsOn && (dashboard.isError || projectIncome.isError || projectExpense.isError
+    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError)));
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
   // A category read the order does not draw is not waited for (FLOW-1171).
   const categoriesReady = !categoriesOn || (categoryIncome.data !== undefined && categoryExpense.data !== undefined);
-  const ready = dashboard.data != null && projectIncome.data !== undefined && projectExpense.data !== undefined && categoriesReady;
+  const ready = projectsOn && dashboard.data != null && projectIncome.data !== undefined && projectExpense.data !== undefined && categoriesReady;
   const inputs: ProfitInputs | null = ready
     ? {
         currency,
@@ -337,11 +342,12 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     loading: !failed && (inputs == null || overhead === undefined),
     model: inputs == null || overhead === undefined ? null : buildProfitModel(inputs, overhead, linesComplete),
     refetch: () => {
+      // refetch ignores `enabled`: a read the view or order does not draw stays unread.
+      if (!projectsOn) return;
       void dashboard.refetch();
       void ytdDashboard.refetch();
       void projectIncome.refetch();
       void projectExpense.refetch();
-      // refetch ignores `enabled`: a read the order does not draw stays unread.
       if (categoriesOn) {
         void categoryIncome.refetch();
         void categoryExpense.refetch();
