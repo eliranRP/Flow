@@ -49,6 +49,7 @@
   border-radius: var(--radius-card-tight);
   background: var(--color-raised);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-review-split-head,

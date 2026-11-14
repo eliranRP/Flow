@@ -65,6 +65,15 @@ beforeEach(() => {
   calls.company = { data: { overhead_project_id: OVERHEAD, overhead: { id: OVERHEAD, name: "כללי" } }, error: null };
 });
 
+/** get_profit_months since the start: the year views draw from it, and take the basis from it (FLOW-1191). */
+function answerProfitMonths() {
+  const row = { currency: "USD", income_minor: 150000, expense_minor: 120000, profit_minor: 30000 };
+  calls.answer.get_profit_months = {
+    basis: "cash", from: "2006-10-01", to: "2026-10-20", by_currency: [row],
+    months: [{ month: "2026-10", from: "2026-10-01", to: "2026-10-20", open: true, by_currency: [row] }],
+  };
+}
+
 const CATEGORY_KEYS = ["get_breakdown:category:expense", "get_breakdown:category:income"];
 
 /** July's project breakdowns only: the summary and the project rows draw from these alone (FLOW-1171). */
@@ -201,10 +210,36 @@ describe("CompanyProfitScreen live, the next-month read's size (FLOW-1171)", () 
 
   it("the year view asks for every later month's edits and reads each month left in the year", async () => {
     answerBreakdowns();
+    answerProfitMonths();
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year" });
     await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
     await waitFor(() => { expect(calls.args.forecast_overrides_for?.length).toBe(2); });
     expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: true }]);
     expect((calls.args.forecast_overrides_for as Array<{ p_month: string }>).map((arg) => arg.p_month).sort()).toEqual(["2026-11", "2026-12"]);
+  });
+});
+
+describe("CompanyProfitScreen live, the year and since-the-start views (FLOW-1191)", () => {
+  it.each(["year", "all"])("the %s view reads the years' months only: no month figures, no project breakdowns, and still draws with the basis", async (period) => {
+    answerBreakdowns();
+    answerProfitMonths();
+    renderWithProviders(<CompanyProfitScreen />, { route: `/profit?period=${period}` });
+    expect(await screen.findByText(/נספר לפי/)).toBeInTheDocument();
+    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
+    expect(calls.names).toContain("get_profit_months");
+    expect(calls.names).not.toContain("get_dashboard");
+    expect(calls.names).not.toContain("get_breakdown");
+  });
+
+  it("a month read that failed in the month view does not fail the year view later", async () => {
+    // get_dashboard answers; the project breakdowns do not, so the month view fails.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const first = renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07", client });
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    first.unmount();
+    answerProfitMonths();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year", client });
+    expect(await screen.findByText(/נספר לפי/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
   });
 });

@@ -97,12 +97,6 @@ vi.mock("../lib/supabase", () => ({
       if (table === "loans") {
         return {
           select: () => ({ eq: () => held(() => ({ data: db.loans, error: null })) }),
-          update: (values: unknown) => ({
-            eq: (_column: string, id: unknown) => {
-              db.loanUpdates.push({ values, id });
-              return Promise.resolve({ data: null, error: null });
-            },
-          }),
         };
       }
       if (table === "categories") {
@@ -123,6 +117,11 @@ vi.mock("../lib/supabase", () => ({
       if (name === "save_loan_split") {
         const finish = () => ({ data: null, error: db.saveError });
         return db.saveHold ? db.saveHold.then(finish) : Promise.resolve(finish());
+      }
+      if (name === "update_loan") {
+        const { p_loan_id: id, p_patch: values } = args as { p_loan_id: unknown; p_patch: unknown };
+        db.loanUpdates.push({ values, id });
+        return Promise.resolve({ data: id, error: null });
       }
       if (name === "mcp_loan_payments") {
         const loanId = (args as { p_loan_id: string }).p_loan_id;

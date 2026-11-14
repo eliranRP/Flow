@@ -145,12 +145,13 @@ function CashLinesBody({
   // FLOW-366: every page loads up front; the totals and the groups need all of them.
   // A page that failed stops the loop here: a failed fetch leaves hasNextPage set, so it would retry forever.
   useEffect(() => {
-    if (sample == null && hasNextPage && !isFetchingNextPage && !lines.isError) void fetchNextPage();
-  }, [sample, hasNextPage, isFetchingNextPage, lines.isError, fetchNextPage]);
+    // FLOW-1191: the cached 20-line page shown while the first read runs is not a page to continue from.
+    if (sample == null && hasNextPage && !isFetchingNextPage && !lines.isError && !lines.isPlaceholderData) void fetchNextPage();
+  }, [sample, hasNextPage, isFetchingNextPage, lines.isError, lines.isPlaceholderData, fetchNextPage]);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
   const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
   const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
-  const allLoaded = sample != null || !hasNextPage;
+  const allLoaded = sample != null || (!hasNextPage && !lines.isPlaceholderData);
   const requested = linesOrder(locationParams.get("order"));
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);

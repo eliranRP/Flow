@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(39);
+select plan(40);
 
 do $users$
 begin
@@ -424,19 +424,25 @@ select is(
   'the older reversal line has no project again'
 );
 
--- 9. A viewer of the company cannot change its loan through the table.
+-- 9. A viewer of the company cannot change its loan, through the table or update_loan.
 select tests.authenticate_as('lf_viewer');
 select is(
   (select count(*)::int from public.loans where id = (select id from lf where label = 'loan_demo')),
   1,
   'positive control: the viewer reads its company''s loan'
 );
-select lives_ok(
+select throws_ok(
   format(
     $$update public.loans set name = 'Example Viewer Rename', project_id = null where id = %L$$,
     (select id from lf where label = 'loan_demo')
   ),
-  'a viewer''s update of its own company''s loan runs and matches no row'
+  '42501', null,
+  'a viewer''s direct update of its own company''s loan is refused at the grant'
+);
+select throws_ok(
+  format($$select public.update_loan(%L, '{"project_id": null}'::jsonb)$$, (select id from lf where label = 'loan_demo')),
+  '42501', 'forbidden',
+  'and so is its update_loan'
 );
 select tests.clear_authentication();
 reset role;
@@ -451,13 +457,12 @@ select is(
   1,
   'positive control: the owner reads the loan'
 );
-update public.loans set name = 'Example Demo Mortgage 2'
-where id = (select id from lf where label = 'loan_demo');
+select public.update_loan((select id from lf where label = 'loan_demo'), '{"escrow_minor": 100}'::jsonb);
 select tests.clear_authentication();
 reset role;
 select is(
-  (select name from public.loans where id = (select id from lf where label = 'loan_demo')),
-  'Example Demo Mortgage 2',
+  (select escrow_minor from public.loans where id = (select id from lf where label = 'loan_demo')),
+  100::bigint,
   'positive control: the owner''s update is stored'
 );
 

@@ -1,10 +1,9 @@
 import type { ForecastBuild, ForecastItem } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { monthEndDay } from "../forecast-month";
-import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview } from "../preview";
-import { waitForAccessToken } from "../wait-for-session";
+import { readyClient } from "../ready-client";
 import { itemLate } from "./forecast-parts";
 
 /**
@@ -80,9 +79,7 @@ export function useForecastSoFarQuery(month: string, base: string, active = true
     queryKey: ["month-forecast", "so-far", preview, month, base],
     enabled: active && preview === "off",
     queryFn: async (): Promise<ForecastSoFar> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const range = { p_from: `${month}-01`, p_to: monthEndDay(month), p_group_by: "category", p_basis: "cash" };
       const [income, expense] = await Promise.all([
         supabase.rpc("get_breakdown", { ...range, p_direction: "income" }),

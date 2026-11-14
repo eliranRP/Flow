@@ -2,6 +2,7 @@ import type { Json } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { getSupabase } from "./lib/supabase";
+import type { RemovalPace } from "./project-next-edit";
 import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
 import { assertNoError, useWrite } from "./use-write";
@@ -19,7 +20,9 @@ export type ForecastUndo = { drop: string[]; put: Json[] };
 
 type Write =
   | { fn: "set_project_forecast_edit"; edit: Record<string, unknown> }
-  | { fn: "remove_project_forecast_row" | "restore_project_forecast_row"; rowKey: string }
+  /** FLOW-1188: a removal is out of its month only (once) or from it on (month, the default). */
+  | { fn: "remove_project_forecast_row"; rowKey: string; pace?: RemovalPace }
+  | { fn: "restore_project_forecast_row"; rowKey: string }
   | { fn: "reset_project_forecast" };
 
 type Call = Write & (
@@ -35,9 +38,9 @@ function undoOf(data: unknown): ForecastUndo | null {
   return { drop: undo.drop.filter((id): id is string => typeof id === "string"), put: undo.put as Json[] };
 }
 
-/** The edit a removal will write, drawn at once (decision 0219: the row leaves at once, ביטול 5s); from its month on (0239). */
-function removalEdit(rowKey: string, month: string): ProjectForecastEdit {
-  return { id: `optimistic-remove:${rowKey}`, kind: "remove", row_key: rowKey, category_id: null, direction: null, amount_minor: null, pace: "month", start_month: month };
+/** The edit a removal will write, drawn at once (decision 0219: the row leaves at once, ביטול 5s); its month only, or from it on (0268). */
+function removalEdit(rowKey: string, month: string, pace: RemovalPace): ProjectForecastEdit {
+  return { id: `optimistic-remove:${rowKey}`, kind: "remove", row_key: rowKey, category_id: null, direction: null, amount_minor: null, pace, start_month: month };
 }
 
 export function useProjectForecastWrites(projectId: string, month: string) {
@@ -55,7 +58,7 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       assertNoError(await supabase.rpc("undo_project_forecast", { p_project_id: projectId, p_undo: body }));
     },
     // FLOW-1005: the month-end forecast counts the edits too.
-    keys: [FORECAST_EDITS_KEY, "month-forecast", "expected-months"],
+    keys: [FORECAST_EDITS_KEY, "month-forecast"],
     failure: "לא הצלחנו לבטל את השינוי בצפי",
   });
   const write = useWrite<Call>({
@@ -71,19 +74,19 @@ export function useProjectForecastWrites(projectId: string, month: string) {
         : call.fn === "reset_project_forecast"
           ? await supabase.rpc("reset_project_forecast", { p_project_id: projectId, p_month: month })
           : call.fn === "remove_project_forecast_row"
-            ? await supabase.rpc("remove_project_forecast_row", { p_project_id: projectId, p_month: month, p_row_key: call.rowKey })
+            ? await supabase.rpc("remove_project_forecast_row", { p_project_id: projectId, p_month: month, p_row_key: call.rowKey, p_pace: call.pace ?? "month" })
             : await supabase.rpc("restore_project_forecast_row", { p_project_id: projectId, p_month: month, p_row_key: call.rowKey });
       assertNoError(result);
       lastUndo.current = undoOf(result.data);
     },
     // FLOW-1005: the month-end forecast counts the edits too.
-    keys: [FORECAST_EDITS_KEY, "month-forecast", "expected-months"],
+    keys: [FORECAST_EDITS_KEY, "month-forecast"],
     // A removal leaves the list at once; a failure puts the row back (useWrite's rollback) and says so.
     optimistic: (call) => {
       if (call.fn !== "remove_project_forecast_row") return [];
       return client.getQueriesData<ProjectForecastEdit[]>({ queryKey: [FORECAST_EDITS_KEY] })
         .filter(([key]) => key[2] === projectId && key[3] === month)
-        .map(([key]) => ({ key, update: (old: unknown) => [...((old as ProjectForecastEdit[] | undefined) ?? []), removalEdit(call.rowKey, month)] }));
+        .map(([key]) => ({ key, update: (old: unknown) => [...((old as ProjectForecastEdit[] | undefined) ?? []), removalEdit(call.rowKey, month, call.pace ?? "month")] }));
     },
     failure: "לא הצלחנו לעדכן את הצפי",
     onSuccess: (call) => {

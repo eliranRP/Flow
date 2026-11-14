@@ -6,7 +6,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
 import { cashLinesPath, cashMonthKey, cashRows, shownCashRows } from "../cash";
-import { useCashLinesQuery, useCashMonthData, useCashMonthsQuery, useCashYearsQuery } from "../use-cash";
+import { HOME_LINES_PAGE, useCashLinesQuery, useCashMonthData, useCashMonthsQuery, useCashYearsQuery } from "../use-cash";
 import { useCashToDayQuery } from "../use-cash-to-day";
 import { Amount } from "../ui/amount";
 import { useSheetHistory } from "../ui/back";
@@ -227,8 +227,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const schedule = useRecurringScheduleQuery(isCurrent && !previewing);
   // FLOW-1056 (owner): a past month shows its own lines the same way (no schedule: that is the current month's).
   const linesKey = isFuture ? currentKey : monthKey;
-  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint);
-  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint);
+  const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
+  const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
 
   function retry() {
     if (previewing) {

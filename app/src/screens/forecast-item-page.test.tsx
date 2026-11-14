@@ -525,6 +525,59 @@ describe("ForecastItemPage, כל כמה זמן (FLOW-1010)", () => {
     expect(row.getAttribute("href")).toMatch(/^\/recurring\//);
   });
 
+  // FLOW-1188 (owner, 2026-11-13): the line can leave the month's forecast here, for this month only or from it on.
+  function monthlyLine(lineStart: string): ForecastSample {
+    const sample = withAddedLine(lineStart);
+    const items = sample.data.build.items.map((item) => (item.key === "added:e-1" ? { ...item, pace: "month" } : item));
+    const income = sample.data.build.income.map((item) => (item.key === "added:e-1" ? { ...item, pace: "month" } : item));
+    return { ...sample, data: { ...sample.data, build: { ...sample.data.build, items, income } } };
+  }
+
+  it("removes a monthly line from this month only, and the page closes (FLOW-1188)", async () => {
+    rpc.mockClear();
+    renderForecast(monthlyLine("2026-09"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    fireEvent.click(await screen.findByRole("button", { name: "הסרה מהצפי" }));
+    const sheet = await screen.findByRole("dialog", { name: "הסרה מהצפי" });
+    expect(within(sheet).getByText("בנובמבר הוא צפוי כרגיל")).toBeInTheDocument();
+    fireEvent.click(within(sheet).getByRole("radio", { name: /^רק באוקטובר/ }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "p-green", p_month: "2026-10", p_row_key: "add:e-1", p_pace: "once" });
+    });
+    await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/forecast"); });
+    expect(await screen.findByText("הוסר מהצפי של אוקטובר: הכנסות שכירות")).toBeInTheDocument();
+  });
+
+  it("removes a monthly line from this month on (FLOW-1188)", async () => {
+    rpc.mockClear();
+    renderForecast(monthlyLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    fireEvent.click(await screen.findByRole("button", { name: "הסרה מהצפי" }));
+    const sheet = await screen.findByRole("dialog", { name: "הסרה מהצפי" });
+    fireEvent.click(within(sheet).getByRole("radio", { name: /^מאוקטובר והלאה/ }));
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "p-green", p_month: "2026-10", p_row_key: "add:e-1", p_pace: "month" });
+    });
+    await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/forecast"); });
+  });
+
+  it("removes a line for this month only at once, with no sheet (FLOW-1188)", async () => {
+    rpc.mockClear();
+    renderForecast(withAddedLine("2026-10"), `/forecast/item/${encodeURIComponent("added:e-1")}`);
+    fireEvent.click(await screen.findByRole("button", { name: "הסרה מהצפי" }));
+    expect(screen.queryByRole("dialog", { name: "הסרה מהצפי" })).toBeNull();
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "p-green", p_month: "2026-10", p_row_key: "add:e-1", p_pace: "month" });
+    });
+  });
+
+  it("has no removal on a recurring charge or an invoice: they leave the month by מתי צפוי (FLOW-1188)", async () => {
+    const sample = board();
+    const charge = sample.data.build.items.find((item) => item.kind === "recurring");
+    if (charge == null) throw new Error("no recurring item");
+    renderForecast(sample, `/forecast/item/${encodeURIComponent(charge.key)}`);
+    await screen.findByRole("button", { name: /^מתי צפוי/ });
+    expect(screen.queryByRole("button", { name: "הסרה מהצפי" })).toBeNull();
+  });
+
   it("has no pace row on an invoice", async () => {
     const sample = board();
     const invoice = sample.data.build.items.find((item) => item.kind === "invoice");

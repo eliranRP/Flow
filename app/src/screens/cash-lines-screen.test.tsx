@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -192,6 +193,49 @@ describe("Cash lines", () => {
     expect(rpc.calls.filter((c) => c.name === "cash_month_lines").map((c) => (c.args as { p_offset: number }).p_offset)).toEqual([0, 200]);
     expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_limit: 200 });
     expect(screen.queryByRole("button", { name: "עוד תנועות" })).toBeNull();
+  });
+
+  it("FLOW-1191: opened from Home, paints Home's cached first 20 lines at once, before the 200-line read answers", async () => {
+    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return new Promise((resolve) => { answer = resolve; });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Home's key: the same month, side and currency, with the page size 20 at its end.
+    client.setQueryData(["breakdown-lines", "cash", "off", earlier, "out", "ILS", null, 20], { pages: [{ rows: [{ ...lines.rows[0], amount_minor: 120_000n }], has_more: true }], pageParams: [0] });
+    renderWithProviders(
+      <Routes><Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} /></Routes>,
+      { route: `/cash/${earlier}/out/ILS`, client },
+    );
+    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
+    // The 200 read is the only request; the placeholder page is not continued from.
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(1); });
+    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_limit: 200, p_offset: 0 });
+    answer({ data: { rows: [{ ...lines.rows[0], supplier_name: "ספק מלא" }], has_more: false }, error: null });
+    expect(await screen.findByText("ספק מלא")).toBeInTheDocument();
+    expect(screen.queryByText("בנק לדוגמה")).toBeNull();
+  });
+
+  it("FLOW-1191: Home's cached page counts as complete only once the 200-line read answers", async () => {
+    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
+      if (name === "cash_month_lines") return new Promise((resolve) => { answer = resolve; });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Home's page says it has no more, but it is a placeholder: the count waits for the real read.
+    client.setQueryData(["breakdown-lines", "cash", "off", earlier, "out", "ILS", null, 20], { pages: [{ rows: [{ ...lines.rows[0], amount_minor: 120_000n }], has_more: false }], pageParams: [0] });
+    renderWithProviders(
+      <Routes><Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} /></Routes>,
+      { route: `/cash/${earlier}/out/ILS`, client },
+    );
+    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
+    expect(screen.queryByText(/תנועה אחת/)).toBeNull();
+    answer({ data: { rows: [lines.rows[0]], has_more: false }, error: null });
+    expect(await screen.findByText(/תנועה אחת/)).toBeInTheDocument();
   });
 
   it("flips the side in place and keeps the order chip", async () => {

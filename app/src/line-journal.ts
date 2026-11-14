@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { SYSTEM_NAMES } from "./system-accounts";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-954 (decision 0208). One line's journal entry ("פקודת יומן"), from `get_line_journal`: its
@@ -99,9 +98,7 @@ export function useLineJournalQuery(transactionId: string, enabled = true) {
     enabled: enabled && preview === "off" && transactionId !== "",
     retry: 1,
     queryFn: async (): Promise<LineJournal | null> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("get_line_journal", { p_transaction_id: transactionId });
       if (error) throw error;
       return parseLineJournal(data);

@@ -96,14 +96,13 @@ select is(
   'other bad terms keep the general refusal'
 );
 
--- The app writes loans directly. The same rule holds there.
--- discard plans: the trigger's plan cached under the definer above would hide a missing grant.
-discard plans;
+-- The app writes loans through create_loan (FLOW-854). The same rule holds there.
 select tests.authenticate_as('f111_owner');
 select throws_ok(
   $$
-    insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
-    values ((select id from f111 where label = 'company'), 'Example Low', 12000000, 60000, 360, '2026-01-01', 50000, 0, 'USD')
+    select public.create_loan((select id from f111 where label = 'company'), jsonb_build_object(
+      'name', 'Example Low', 'principal_minor', 12000000, 'annual_rate_ppm', 60000, 'term_months', 360,
+      'start_date', '2026-01-01', 'payment_minor', 50000, 'escrow_minor', 0, 'currency', 'USD'))
   $$,
   '23514',
   'loan_payment_below_interest',
@@ -111,8 +110,9 @@ select throws_ok(
 );
 select lives_ok(
   $$
-    insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
-    values ((select id from f111 where label = 'company'), 'Example Interest Only', 12000000, 60000, 360, '2026-01-01', 60000, 0, 'USD')
+    select public.create_loan((select id from f111 where label = 'company'), jsonb_build_object(
+      'name', 'Example Interest Only', 'principal_minor', 12000000, 'annual_rate_ppm', 60000, 'term_months', 360,
+      'start_date', '2026-01-01', 'payment_minor', 60000, 'escrow_minor', 0, 'currency', 'USD'))
   $$,
   'an interest-only payment saves'
 );

@@ -337,6 +337,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1078"></a>[FLOW-1078](tasks/FLOW-1078.md) | Back from the background, the tab bar sits mid-screen on iOS | BUG |
 | <a id="flow-1079"></a>[FLOW-1079](tasks/FLOW-1079.md) | Take a recurring charge out of this month's forecast | SMALL CYCLE |
 | <a id="flow-1081"></a>[FLOW-1081](tasks/FLOW-1081.md) | Take a charge out of a month on the project page, תזרים צפוי and the other forecast lists | SMALL CYCLE |
+| <a id="flow-1188"></a>[FLOW-1188](tasks/FLOW-1188.md) | A line added to the forecast can be removed from the month's צפי, for that month only or from it on | BUG |
 | <a id="flow-1096"></a>[FLOW-1096](tasks/FLOW-1096.md) | A month taken out of the forecast: the year view, one key per charge, and an instant put-back | SMALL CYCLE |
 | <a id="flow-1099"></a>[FLOW-1099](tasks/FLOW-1099.md) | A figure's lines draw no focus ring when its calculation row moves the focus to them | SMALL CYCLE |
 | <a id="flow-1084"></a>[FLOW-1084](tasks/FLOW-1084.md) | Home, past month: the "חזרה ל<חודש>" pill is 36px and wraps at 320 | SMALL UI |
@@ -709,6 +710,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-848"></a>[FLOW-848](tasks/FLOW-848.md) | The offline shell keeps only HTML pages | SMALL CYCLE (infra) |
 | <a id="flow-849"></a>[FLOW-849](tasks/FLOW-849.md) | Red-team research step and new hunt patterns | SMALL CYCLE (docs) |
 | <a id="flow-850"></a>[FLOW-850](tasks/FLOW-850.md) | The support address is flowusappsupport@gmail.com | SMALL CYCLE |
+| <a id="flow-851"></a>[FLOW-851](tasks/FLOW-851.md) | The CSV report keeps every formula as text | SMALL CYCLE (infra) |
+| <a id="flow-852"></a>[FLOW-852](tasks/FLOW-852.md) | Jev never files a line in a closed month | SMALL CYCLE (infra) |
+| <a id="flow-854"></a>[FLOW-854](tasks/FLOW-854.md) | Clients write loans, loan_rates, project_groups and setup_states only through functions | SMALL CYCLE (infra) |
+| <a id="flow-853"></a>[FLOW-853](tasks/FLOW-853.md) | The Storybook preview deploys with code from main only | SMALL CYCLE (infra) |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
@@ -745,6 +750,14 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1115"></a>[FLOW-1115](tasks/FLOW-1115.md) | A cold start on Home sends its figures' reads before the first render | SMALL CYCLE (perf) |
 | <a id="flow-1116"></a>[FLOW-1116](tasks/FLOW-1116.md) | Plan: Home's figure reads leave from the page itself, before the app's code arrives | PLAN FIRST (perf) |
 | <a id="flow-1171"></a>[FLOW-1171](tasks/FLOW-1171.md) | Perf queue: every screen in the sweep under 0.5 s | SMALL CYCLE (perf) |
+| <a id="flow-1189"></a>[FLOW-1189](tasks/FLOW-1189.md) | Perf: Home lists 20 lines a side, more on tap | SMALL (perf) |
+| <a id="flow-1190"></a>[FLOW-1190](tasks/FLOW-1190.md) | Plan: cache recurring_parties per company | PLAN FIRST (perf) |
+| <a id="flow-1191"></a>[FLOW-1191](tasks/FLOW-1191.md) | Perf: five reads the app made twice, or made for nothing | SMALL (perf) |
+| <a id="flow-1192"></a>[FLOW-1192](tasks/FLOW-1192.md) | Perf: open review rows index back, and the recurring party test on its index | SMALL (perf) |
+| <a id="flow-1193"></a>[FLOW-1193](tasks/FLOW-1193.md) | Perf: drop read fields no one reads (get_project lean, projects_cash_month, expected_months) | SMALL (perf) |
+| <a id="flow-1194"></a>[FLOW-1194](tasks/FLOW-1194.md) | Perf: Company profit's "by category" order loads category lines on scroll; search finds every line | MEDIUM (perf) |
+| <a id="flow-1195"></a>[FLOW-1195](tasks/FLOW-1195.md) | Perf: Company profit's year view reads forecast skips once, not once per month | SMALL (perf) |
+| <a id="flow-1196"></a>[FLOW-1196](tasks/FLOW-1196.md) | Perf: duplicated fields in reads that flow-mcp names | MEDIUM (perf, MCP contract) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
@@ -784,7 +797,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1182"></a>[FLOW-1182](tasks/FLOW-1182.md) | Five-token sweep: review, transaction and search use their tokens (no visual change) | SMALL UI |
 | <a id="flow-1183"></a>[FLOW-1183](tasks/FLOW-1183.md) | Five-token foundation: two shadows, a label size, the 4-pt rule, the skill in the repo | SMALL UI |
 | <a id="flow-1184"></a>[FLOW-1184](tasks/FLOW-1184.md) | Five-token look, area 1: Home, lists, controls, fields, banners, tab bar, sheets and setup | SMALL UI |
+| <a id="flow-1185"></a>[FLOW-1185](tasks/FLOW-1185.md) | Five-token look, review, transactions, search and journal: 4-pt spacing, card shadow, concentric corners, 12px label | SMALL UI |
 | <a id="flow-1186"></a>[FLOW-1186](tasks/FLOW-1186.md) | Five-token look: projects, loans, investment, forecast, profit and reports | SMALL UI |
+| <a id="flow-1187"></a>[FLOW-1187](tasks/FLOW-1187.md) | Five-token look, area 4: settings, team, invite, notifications, invoices, recurring, connections, add-entry, utility | SMALL UI |
 
 ## Data hygiene (public repo)
 

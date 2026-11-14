@@ -1,11 +1,10 @@
 import type { CashLinesPage, CashMonths, CashYears } from "@flow/shared";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { CASH_MONTHS, cashMonthKey, type CashListSide } from "./cash";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { israelToday } from "./ui/date-math";
 import { useHomePreview, type HomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-413. The cash reads (decision 0168). Their keys start with "dashboard" and
@@ -24,9 +23,7 @@ export function cashMonthsQueryOptions(preview: HomePreview, months: number) {
   return {
     queryKey: ["dashboard", "cash-months", preview, months],
     queryFn: async (): Promise<CashMonths> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_months", { p_months: months });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -39,9 +36,7 @@ export function cashYearsQueryOptions(preview: HomePreview) {
   return {
     queryKey: ["dashboard", "cash-years", preview],
     queryFn: async (): Promise<CashYears> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_years", {});
       if (error) throw error;
       return (await loadReadSchemas()).cashYearsSchema.parse(data);
@@ -59,9 +54,7 @@ export function cashYearMonthsQueryOptions(preview: HomePreview, year: number) {
   return {
     queryKey: ["dashboard", "cash-year-months", preview, year],
     queryFn: async (): Promise<CashMonths> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_year_months", { p_year: year });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -89,26 +82,38 @@ export function useCashMonthData(monthKey: string, active = true) {
 
 /** The server's cap per call (FLOW-366: the lines page loads every page). */
 const CASH_LINES_PAGE = 200;
+/** FLOW-1189: the lines per call on Home's two lists. */
+export const HOME_LINES_PAGE = 20;
+
+function cashLinesKey(preview: HomePreview, month: string, side: CashListSide, currency: string, projectId: string | null, pageSize: number) {
+  return ["breakdown-lines", "cash", preview, month, side, currency, projectId, pageSize] as const;
+}
 
 /**
  * One month's נכנס, יצא or לא נספר ברווח lines in one currency, newest first. FLOW-1111: with a project, that
- * project's lines (project_cash_month_lines, the same rows; a shared line at the project's share).
+ * project's lines (project_cash_month_lines, the same rows; a shared line at the project's share). `pageSize` is the
+ * lines per call (FLOW-1189: Home reads 20 a side; the month's lines screen keeps the server's cap of 200).
  */
-export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true, projectId: string | null = null) {
+export function useCashLinesQuery(month: string, side: CashListSide, currency: string, active = true, projectId: string | null = null, pageSize = CASH_LINES_PAGE) {
   const preview = useHomePreview();
+  const client = useQueryClient();
   return useInfiniteQuery({
-    queryKey: ["breakdown-lines", "cash", preview, month, side, currency, projectId],
+    queryKey: cashLinesKey(preview, month, side, currency, projectId, pageSize),
     enabled: active && preview === "off",
+    // FLOW-1191: the 200-line read (own key, own pages) paints Home's cached first 20 at once while it runs. It is
+    // placeholder data: isPlaceholderData is set, hasNextPage follows the 20-line page's has_more, and no request is added.
+    placeholderData: pageSize === CASH_LINES_PAGE ? (): InfiniteData<CashLinesPage, number> | undefined => {
+      const first = client.getQueryData<InfiniteData<CashLinesPage, number>>(cashLinesKey(preview, month, side, currency, projectId, HOME_LINES_PAGE))?.pages[0];
+      return first ? { pages: [first], pageParams: [0] } : undefined;
+    } : undefined,
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<CashLinesPage> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const range = {
         p_month: `${month}-01`,
         p_side: side === "kept" ? "not_in_profit" : side,
         p_currency: currency,
-        p_limit: CASH_LINES_PAGE,
+        p_limit: pageSize,
         p_offset: pageParam,
       };
       const { data, error } = projectId == null
@@ -117,7 +122,7 @@ export function useCashLinesQuery(month: string, side: CashListSide, currency: s
       if (error) throw error;
       return (await loadReadSchemas()).cashLinesSchema.parse(data);
     },
-    getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * CASH_LINES_PAGE : undefined),
+    getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * pageSize : undefined),
   });
 }
 

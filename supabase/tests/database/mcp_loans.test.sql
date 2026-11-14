@@ -140,7 +140,10 @@ select is(
   'true'::jsonb,
   'second update succeeds'
 );
+-- A change outside the tool (as postgres: clients write loans only through functions).
+reset role;
 update public.loans set name = 'Manual Edit' where id = (select id from mcp5 where label = 'loan_a');
+select pg_temp.as_mcp('write');
 select is(
   public.mcp_undo('undo-up-2', 'loan_update', (select id from mcp5 where label = 'loan_a'))->'error'->>'code',
   'conflict',
@@ -348,7 +351,10 @@ select is(
   'conflict',
   'update key reuse with another patch is conflict'
 );
+-- A change outside the tool (as postgres: clients write loans only through functions).
+reset role;
 update public.loans set annual_rate_ppm = 1 where id = (select id from mcp5 where label = 'loan_b');
+select pg_temp.as_mcp('write');
 select is(
   public.mcp_undo('undo-b-up', 'loan_update', (select id from mcp5 where label = 'loan_b'))->'error'->>'code',
   'conflict',
@@ -359,7 +365,10 @@ select is(
   5000,
   'conflicting undo writes nothing'
 );
+-- A change outside the tool (as postgres: clients write loans only through functions).
+reset role;
 update public.loans set annual_rate_ppm = 0 where id = (select id from mcp5 where label = 'loan_b');
+select pg_temp.as_mcp('write');
 select is(
   public.mcp_undo('undo-b-up-2', 'loan_update', (select id from mcp5 where label = 'loan_b'))->'data'->>'kind',
   'loan_update',

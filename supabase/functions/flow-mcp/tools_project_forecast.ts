@@ -35,6 +35,8 @@ const setSchema = z.object({
   if (change && body.direction !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "direction goes with category_id" });
 });
 const rowSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: WRITE_MONTH, row_key: ROW_KEY }).strict();
+// FLOW-1188: a removal is out of that month only (once) or from it on (month, the default).
+const removeSchema = rowSchema.extend({ pace: z.enum(["once", "month"]).optional() }).strict();
 const resetSchema = z.object({ idempotency_key: IDEMPOTENCY_KEY, project_id: PROJECT, month: WRITE_MONTH.optional() }).strict();
 
 /** The tools' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
@@ -42,7 +44,7 @@ export const PROJECT_FORECAST_ALLOWED: Record<string, Set<string>> = {
   get_project_forecast_edits: new Set(["project_id", "month"]),
   get_company_next_month_inputs: new Set(["today"]),
   set_project_forecast_edit: new Set(["idempotency_key", "project_id", "month", "row_key", "category_id", "direction", "amount_minor", "pace"]),
-  remove_project_forecast_row: new Set(["idempotency_key", "project_id", "month", "row_key"]),
+  remove_project_forecast_row: new Set(["idempotency_key", "project_id", "month", "row_key", "pace"]),
   restore_project_forecast_row: new Set(["idempotency_key", "project_id", "month", "row_key"]),
   reset_project_forecast: new Set(["idempotency_key", "project_id", "month"]),
 };
@@ -89,10 +91,16 @@ export async function projectForecastWrite(
     if (!parsed.success) return fail("validation", "validation");
     rpcName = "mcp_reset_project_forecast";
     body = { p_idempotency_key: parsed.data.idempotency_key, p_project_id: parsed.data.project_id, p_month: parsed.data.month ?? null };
+  } else if (name === "remove_project_forecast_row") {
+    const parsed = removeSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_remove_project_forecast_row";
+    body = { p_idempotency_key: parsed.data.idempotency_key, p_project_id: parsed.data.project_id, p_month: parsed.data.month, p_row_key: parsed.data.row_key };
+    if (parsed.data.pace !== undefined) body.p_pace = parsed.data.pace;
   } else {
     const parsed = rowSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
-    rpcName = name === "remove_project_forecast_row" ? "mcp_remove_project_forecast_row" : "mcp_restore_project_forecast_row";
+    rpcName = "mcp_restore_project_forecast_row";
     body = { p_idempotency_key: parsed.data.idempotency_key, p_project_id: parsed.data.project_id, p_month: parsed.data.month, p_row_key: parsed.data.row_key };
   }
   const result = await rpc(rpcName, body);

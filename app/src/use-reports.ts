@@ -1,23 +1,15 @@
 import type { ProfitMonths } from "@flow/shared";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import type { BalanceSheet, Statement } from "./reports";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-161, FLOW-1045: the reports' reads. Query keys start with "dashboard" so the basis sheet's write (and
  * every write that refreshes the P&L) refreshes the statement too, "profit-months" for the months (the same
  * key as the company's other month reads) and "balance-sheet" for the balance sheet.
  */
-
-async function readyClient() {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
-  return supabase;
-}
 
 /** A period's dates; null ends mean every date. */
 export type Range = { from: string | null; to: string | null };

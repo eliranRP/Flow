@@ -1792,6 +1792,9 @@ isOneToOne: false
 "create_company":
 { Args: { "p_name": string,"p_vat_registered": boolean }; Returns: string
                            },
+"create_loan":
+{ Args: { "p_company_id": string,"p_loan": Json }; Returns: string
+                           },
 "create_manual_entry":
 { Args: { "p_category_id"?: string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id"?: string,"p_vat_exempt"?: boolean }; Returns: string
                            },
@@ -1809,6 +1812,9 @@ isOneToOne: false
                            },
 "delete_loan":
 { Args: { "p_loan_id": string }; Returns: Json
+                           },
+"delete_loan_rate":
+{ Args: { "p_loan_rate_id": string }; Returns: string
                            },
 "delete_project":
 { Args: { "p_id": string }; Returns: Json
@@ -2220,7 +2226,7 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_user_id": string }; Returns: Json
                            },
 "mcp_remove_project_forecast_row":
-{ Args: { "p_idempotency_key": string,"p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+{ Args: { "p_idempotency_key": string,"p_month": string,"p_pace"?: string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
 "mcp_remove_transaction_file":
 { Args: { "p_file_id": string,"p_idempotency_key": string }; Returns: Json
@@ -2528,7 +2534,7 @@ isOneToOne: false
 { Args: { "p_user_id": string }; Returns: Json
                            },
 "remove_project_forecast_row":
-{ Args: { "p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+{ Args: { "p_month": string,"p_pace"?: string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
 "remove_transaction_file":
 { Args: { "p_file_id": string }; Returns: string
@@ -2593,8 +2599,14 @@ isOneToOne: false
 "save_line_split":
 { Args: { "p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
+"save_loan_rate":
+{ Args: { "p_annual_rate_ppm": number,"p_effective_date": string,"p_loan_id": string,"p_loan_rate_id"?: string }; Returns: string
+                           },
 "save_loan_split":
 { Args: { "p_loan_id": string,"p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
+                           },
+"save_setup_state":
+{ Args: { "p_company_id": string,"p_state": Json }; Returns: undefined
                            },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
@@ -2766,6 +2778,9 @@ isOneToOne: false
                            },
 "unpaid_overview":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"update_loan":
+{ Args: { "p_loan_id": string,"p_patch": Json }; Returns: string
                            },
 "upsert_connector_lines":
 { Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]

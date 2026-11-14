@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 // Its own module: only the company profit page's chunk reads it, never Home's first load.
 
@@ -48,9 +47,7 @@ export function useOverheadProject(enabled: boolean): OverheadRead {
     queryKey: ["company-overhead", preview],
     enabled: live,
     queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.from("companies").select(OVERHEAD_SELECT).maybeSingle();
       if (error) throw error;
       return overheadFromRow(data);

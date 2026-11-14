@@ -1,8 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
-import { waitForAccessToken } from "../wait-for-session";
+import { readyClient } from "../ready-client";
 
 /* ------------------------------------------------------------------------------------------------
  * FLOW-451 (decision 0244): a property's returns, read by get_property_returns for the last 12
@@ -523,9 +522,7 @@ export function usePropertyReturnsQuery(projectId: string, enabled = true) {
     enabled: enabled && preview === "off" && projectId !== "",
     staleTime: 10_000,
     queryFn: async (): Promise<PropertyReturns> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("get_property_returns", { p_project_id: projectId });
       if (error) throw error;
       return toPropertyReturns(data);
@@ -546,9 +543,7 @@ export function usePropertyReturnLinesQuery(projectId: string, line: ReturnLine,
     enabled: enabled && preview === "off" && projectId !== "",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<ReturnLinesPage> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("get_property_return_lines", {
         p_project_id: projectId,
         p_line: line,

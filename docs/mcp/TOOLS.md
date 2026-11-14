@@ -855,7 +855,7 @@ Changes a row of a project's next-month forecast, or adds a line ([0186](../deci
 
 ### remove_project_forecast_row
 
-`idempotency_key`, `project_id`, `month`, `row_key`. Takes one row out of the project's forecast from that month on, until it is restored (הסרה מהצפי; owner or editor; [0239](../decisions/0239-forecast-removal-sticks.md)). A line added for that month (`add:<id>`) is deleted outright, on every month of its pace; one added for an earlier month is taken out from that month on. A row already out (removed for that month or an earlier one) stays out. Returns `id`, `edit` (`null` when a line was deleted) and `undo_kind` (`project_forecast`).
+`idempotency_key`, `project_id`, `month`, `row_key`, optional `pace`. Takes one row out of the project's forecast (הסרה מהצפי; owner or editor; [0239](../decisions/0239-forecast-removal-sticks.md), [0268](../decisions/0268-forecast-removal-one-month.md)). `pace` `month` (default) takes it out from that month on, until it is restored; `once` takes it out of that month only, and the months after still expect it. A line added for that month (`add:<id>`) is deleted outright when it goes from that month on, or when it was for that month only; removed `once`, a line on a pace stays for the months after. One added for an earlier month is taken out of that month, or from it on. A row already out of the month stays out; one out of that month only and removed again with `month` is out from that month on. Returns `id`, `edit` (`null` when a line was deleted) and `undo_kind` (`project_forecast`).
 
 ### restore_project_forecast_row
 

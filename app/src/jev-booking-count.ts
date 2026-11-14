@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-955 (owner, 2026-10-22). How many of Jev's bookings wait in לאישור, for Home's count. The same read
@@ -15,9 +14,7 @@ export function useJevBookingCountQuery(enabled = true) {
     enabled: enabled && preview === "off",
     retry: 1,
     queryFn: async (): Promise<number> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("list_jev_bookings");
       if (error) throw error;
       return Array.isArray(data) ? data.length : 0;

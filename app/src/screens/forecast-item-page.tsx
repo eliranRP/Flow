@@ -11,7 +11,7 @@ import { FocusTitle } from "../ui/focus-title";
 import { IconRow } from "../ui/icon-row";
 import { CalendarIcon, DocumentIcon, ProjectsIcon, RepeatIcon } from "../ui/icons";
 import { PencilIcon, TagIcon } from "../ui/icons-later";
-import { PACE_WORDS, paceChoices } from "../project-next-edit";
+import { PACE_WORDS, paceChoices, removalChoices, type RemovalPace, removedToast } from "../project-next-edit";
 import type { ForecastPace } from "../project-next-month";
 import { useProjectForecastWrites } from "../project-forecast-writes";
 import { List } from "../ui/list-row";
@@ -21,6 +21,13 @@ import { ADDED_LINE, dayMonth, FORECAST_TITLE, itemLate, itemWhat } from "./fore
 import { monthName } from "./home-parts";
 
 const WHEN_LAYER = "forecast-when";
+const REMOVE_LAYER = "forecast-remove";
+/** The page's sheets whose history entry a close waits for. */
+const LAYERS = [WHEN_LAYER, REMOVE_LAYER];
+
+function inLayer(stack: readonly string[]): boolean {
+  return stack.some((key) => LAYERS.includes(key));
+}
 
 function paceWord(pace: string | null): string {
   return pace != null && pace in PACE_WORDS ? PACE_WORDS[pace as ForecastPace] : "";
@@ -172,7 +179,9 @@ export function ForecastItemPage({
   const [when, setWhen] = useState<ForecastWhen>(startWhen(item, today));
   const [whenOpen, setWhenOpen] = useState(openWhen);
   const [pace, setPace] = useState(item.pace);
+  const [removeOpen, setRemoveOpen] = useState(false);
   const whenRow = useRef<HTMLButtonElement>(null);
+  const removeButton = useRef<HTMLButtonElement>(null);
   const whenOpenRef = useRef(whenOpen);
   whenOpenRef.current = whenOpen;
   const onCloseRef = useRef(onClose);
@@ -181,12 +190,12 @@ export function ForecastItemPage({
   const locationState: unknown = location.state;
   // The When sheet's history entry is popped after the sheet closes. A close (a save, Escape) in that gap
   // waits for the pop: Back now would take the sheet's entry, and the pop after it would reopen the page.
-  const sheetEntry = whenOpen || liveSheetStack(locationState).includes(WHEN_LAYER);
+  const sheetEntry = whenOpen || removeOpen || inLayer(liveSheetStack(locationState));
   const sheetEntryRef = useRef(sheetEntry);
   sheetEntryRef.current = sheetEntry;
   const closeWaiting = useRef(false);
   const close = useRef(() => {
-    if (sheetEntryRef.current || liveSheetStack(window.history.state).includes(WHEN_LAYER)) {
+    if (sheetEntryRef.current || inLayer(liveSheetStack(window.history.state))) {
       closeWaiting.current = true;
       return;
     }
@@ -213,14 +222,26 @@ export function ForecastItemPage({
   const kindText = item.kind === "added" ? ADDED_LINE : item.kind !== "invoice" ? "קבוע" : income ? "חשבונית פתוחה" : "חשבון ספק פתוח";
 
   // Escape closes the When sheet first (the sheet's own), then the page.
+  const removeOpenRef = useRef(removeOpen);
+  removeOpenRef.current = removeOpen;
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key !== "Escape" || event.defaultPrevented || whenOpenRef.current) return;
+      if (event.key !== "Escape" || event.defaultPrevented || whenOpenRef.current || removeOpenRef.current) return;
       close();
     }
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("keydown", onKey); };
   }, [close]);
+
+  /**
+   * FLOW-1188: an added line leaves the month's forecast here, for this month only or from it on (decision 0268), as
+   * on the project's צפי page. Before, its only way out was the project's page, which opens next month.
+   */
+  const removable = item.kind === "added" && item.project_id != null;
+  function remove(removal: RemovalPace) {
+    paceWrites.mutate({ fn: "remove_project_forecast_row", rowKey: `add:${item.key.replace(/^added:/, "")}`, pace: removal, message: removedToast(removal, month, item.name) });
+    close();
+  }
 
   function save() {
     let paceUndo: (() => void) | null = null;
@@ -297,6 +318,35 @@ export function ForecastItemPage({
           : item.kind !== "invoice" ? `משנה רק את הצפי של ${monthLabel}. החיוב הקבוע לא משתנה.` : "משנה רק את הצפי. החשבונית עצמה לא משתנה."}
       </p>
       <Button variant="primary" full onClick={save}>שמירת השינוי בצפי</Button>
+      {removable ? (
+        <Button
+          variant="danger-link"
+          buttonRef={removeButton}
+          disabled={paceWrites.pending}
+          onClick={() => {
+            // A line for this month only has no month after it.
+            if (item.pace == null || item.pace === "once") remove("month");
+            else setRemoveOpen(true);
+          }}
+        >
+          הסרה מהצפי
+        </Button>
+      ) : null}
+      {removable ? (
+        <ChoiceSheet<RemovalPace, string>
+          copy={{ historyKey: REMOVE_LAYER, title: "הסרה מהצפי", subtitle: `${item.name} · ${ADDED_LINE}`, choices: removalChoices(month) }}
+          open={removeOpen}
+          onOpenChange={setRemoveOpen}
+          value=""
+          saving={null}
+          returnFocusRef={removeButton}
+          panelClassName="ui-pace-sheet"
+          onPick={(choice, closeSheet) => {
+            closeSheet();
+            remove(choice);
+          }}
+        />
+      ) : null}
       <ChoiceSheet
         copy={whenSheetCopy(item, today, monthEndChoice)}
         open={whenOpen}

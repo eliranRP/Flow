@@ -121,9 +121,8 @@ select tests.authenticate_as('ldo_owner');
 -- The order starts by name.
 select is(pg_temp.names(), 'A mortgage,B mortgage,C mortgage', 'loans list by name before any order is saved');
 
--- The delete policy is gone: a direct delete removes nothing.
-delete from public.loans where id = pg_temp.id('c');
-select ok(exists (select 1 from public.loans where id = pg_temp.id('c')), 'a direct delete removes nothing');
+-- The app deletes through delete_loan: a direct delete is refused at the grant (FLOW-854).
+select throws_ok(format('delete from public.loans where id = %L', pg_temp.id('c')), '42501', null, 'a direct delete is refused');
 
 -- The app: delete_loan.
 insert into ldo_out (label, body)

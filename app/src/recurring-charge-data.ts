@@ -1,11 +1,10 @@
 import type { MissingBill, PaymentRecurring, PartyCharges, RecurringChange } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMissingBillsQuery, useRecurringChangesQuery, usePaymentRecurringQuery } from "./forecast";
-import { getSupabase } from "./lib/supabase";
 import { usePartyChargesQuery } from "./party-charges";
 import { useHomePreview } from "./preview";
 import { type ScheduleRow, useRecurringScheduleQuery } from "./recurring-schedule";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-447c: the charge page's reads. The party's schedule row, its newest line (the line the page
@@ -23,9 +22,7 @@ export function usePartyLineQuery(direction: "income" | "expense", partyId: stri
     queryKey: ["party-line", preview, direction, partyId, currency, projectId],
     enabled: active && preview === "off" && currency !== "",
     queryFn: async (): Promise<string | null> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("recurring_party_line", {
         p_direction: direction,
         p_party_id: partyId,
