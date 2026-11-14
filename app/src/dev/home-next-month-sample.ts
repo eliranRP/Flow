@@ -57,7 +57,6 @@ function project(id: string, name: string, type: string, dollars: number, overhe
     budget_minor: null,
     spent_minor: 0,
     cash: [{ currency: "USD", in_minor: Math.max(net, 0), out_minor: Math.max(-net, 0), net_minor: net }],
-    profit_month_minor: net,
     profit_all_minor: net,
     first_month: "2026-05-01",
     pending_count: 0,

@@ -108,7 +108,6 @@ function projectsCashMonth() {
         budget_minor: null,
         spent_minor: out,
         cash: [{ currency: "ILS", in_minor: income, out_minor: out, net_minor: net }],
-        profit_month_minor: net,
         profit_all_minor: Number(project.profit_agorot),
         first_month: null,
         pending_count: 0,

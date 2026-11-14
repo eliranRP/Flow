@@ -39,6 +39,11 @@ export type CompanyNextMonthInputs = {
    * the read leaves it out (p_rest false) for next month's own card, which builds from `edits`.
    */
   rest_edits?: RestOfYearEdit[];
+  /**
+   * FLOW-1195: with `rest_edits`, the forecast items taken out of each month (moved_out), next month to the horizon,
+   * by yyyy-mm; a month with none has no key. The same keys forecast_overrides_for gives for the month.
+   */
+  skips?: Record<string, string[]>;
 };
 
 /** A rest-of-year edit: `matches` is its matched bank line by month (yyyy-mm), for an added line. */

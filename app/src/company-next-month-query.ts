@@ -1,5 +1,5 @@
 import type { CategoryRow, ExpectedMonths, ProfitMonths } from "@flow/shared";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
@@ -12,7 +12,6 @@ import { useHomePreview } from "./preview";
 import type { ForecastLoan } from "./project-next-loans";
 import { nextMonthKey } from "./project-next-month";
 import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-next-month-query";
-import { overridesQuery } from "./forecast-overrides-query";
 import { skippedKeys, useForecastOverrides } from "./forecast-skip";
 import { useCategoriesQuery } from "./use-books";
 import { readyClient } from "./ready-client";
@@ -47,6 +46,8 @@ const inputsSchema = z.object({
   general: z.array(monthsRowSchema),
   edits: z.array(editSchema.extend({ project_id: z.string() })),
   rest_edits: z.array(editSchema.omit({ matched_transaction_id: true }).extend({ project_id: z.string(), matches: z.record(z.string(), z.string()).optional() })).optional(),
+  /** FLOW-1195: with rest_edits, the keys taken out of each month (next month to the horizon); a month with none has no key. */
+  skips: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 const NO_LOANS: readonly ForecastLoan[] = [];
@@ -89,17 +90,20 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const overrides = useForecastOverrides(month ?? "", live && month != null);
   const skipList = overrides.data;
   // FLOW-1096: without a month (the profit page), next month and each month left in the year count what was taken
-  // out of them, from the same reads; until those are in, every charge.
-  const yearMonths = useMemo(() => [...new Set([nextMonthKey(today), ...(full ? restOfYearMonths(today) : [])])], [today, full]);
-  const skipsByMonth = useSkipsByMonth(yearMonths, live && month == null);
-  const skips = useMemo(
-    () => (month == null ? skipsByMonth?.[nextMonthKey(today)] : skipList == null ? undefined : [...skippedKeys(skipList)]),
-    [month, skipsByMonth, today, skipList],
-  );
+  // out of them; until those are in, every charge. FLOW-1195: the full answer carries every month's skips (`skips`),
+  // so the year and since-start views read none apart. Next month's own card reads next month's overrides, as a
+  // month does.
+  const nextOverrides = useForecastOverrides(nextMonthKey(today), live && month == null && !full);
+  const inputData = sample?.inputs ?? inputs.data;
+  const skipsByMonth = useMemo(() => (full ? yearSkips(inputData, today) : undefined), [full, inputData, today]);
+  const skips = useMemo(() => {
+    if (month != null) return skipList == null ? undefined : [...skippedKeys(skipList)];
+    if (full) return skipsByMonth?.[nextMonthKey(today)];
+    return nextOverrides.data == null ? undefined : [...skippedKeys(nextOverrides.data)];
+  }, [month, full, skipList, skipsByMonth, nextOverrides.data, today]);
   const recurring = sample?.recurring ?? expected.data?.recurring;
   const loanList = sample?.loans ?? loans.data ?? (sample == null ? undefined : NO_LOANS);
   const categoryList = sample?.categories ?? categories.data;
-  const inputData = sample?.inputs ?? inputs.data;
   // FLOW-1002: what the forecast is built from, so the overhead project's page can build the general costs alone.
   // FLOW-1066: built for `month` (a month of the forecast; next month by default), its own edits in place of next month's.
   const forMonth = month ?? nextMonthKey(today);
@@ -158,20 +162,11 @@ export function useCompanyProfitMonths(today: string, enabled: boolean, sample?:
 }
 
 /**
- * FLOW-1096: the keys taken out of each of `months` (the year view's months left), by month: the same reads as
- * useForecastOverrides, so a skip on any page refreshes them. Undefined until every month is read.
+ * FLOW-1096, FLOW-1195: the keys taken out of next month and each month left in the year, by month, from the full answer's
+ * `skips`. Undefined until the answer is in (or when it carries none, a sample's): every charge counts then.
  */
-function useSkipsByMonth(months: readonly string[], enabled: boolean): Record<string, string[]> | undefined {
-  const preview = useHomePreview();
-  const results = useQueries({ queries: months.map((month) => overridesQuery(month, preview, enabled)) });
-  // One string for what was read, so the answer keeps its identity while nothing changed.
-  const read = results.every((result) => result.data != null)
-    ? results.map((result) => [...skippedKeys(result.data)].sort().join(",")).join("|")
-    : null;
-  const at = months.join("|");
-  return useMemo(() => {
-    if (read == null) return undefined;
-    const lists = read.split("|");
-    return Object.fromEntries(at.split("|").map((month, index) => [month, (lists[index] ?? "").split(",").filter((key) => key !== "")]));
-  }, [read, at]);
+function yearSkips(inputs: CompanyNextMonthInputs | undefined, today: string): Record<string, string[]> | undefined {
+  const skips = inputs?.skips;
+  if (skips == null) return undefined;
+  return Object.fromEntries([nextMonthKey(today), ...restOfYearMonths(today)].map((month) => [month, skips[month] ?? []]));
 }
