@@ -11,8 +11,10 @@ A renovation's net profit (0261) counts the holding costs paid before the first 
 ## Decision
 
 - **A refinance transaction** holds a property's loan proceeds of 80% or more of a loan that starts more than 75 days after the purchase closing (so not the purchase loan, 0246). The proceeds are dated after that closing, from 120 days before the loan's start to 30 days after it (`private.refinance_transactions`).
-- **In it, only interest and loan fees stay holding.** These are the old loan's payoff interest and exit fees. Every other holding line leaves `deal.holding_minor`, and leaves the `deal_holding` lines that add up to it: property taxes, insurance and escrow reserves. Following the book (Ch 45), these belong to the rental: its operating expenses, and escrow is a reserve rather than a cost.
-- **The new loan's own costs** (points, underwriting, lender title, appraisal, prepaid interest) are filed by the owner in a financing category. They then reduce the refinance's net proceeds, as Ch 47 has it: loan proceeds = new loan − closing costs.
+- **In it, only interest stays holding.** The old loan's payoff interest and finance charges (exit fee, payoff fees) are filed as interest. Every other holding line leaves `deal.holding_minor`, and leaves the `deal_holding` lines that add up to it:
+  - The new loan's closing costs: points, underwriting, lender title, and its prepaid interest, filed as loan fees. Ch 47: loan proceeds = new loan − closing costs.
+  - Property taxes and insurance for the rental year, which are the rental's operating expenses (Ch 45).
+  - The new loan's escrow reserves, a reserve rather than a cost.
 - **Costs paid between a refinance and the first rent** in their own transactions stay holding: utilities and interest while the property is vacant.
 - **The money in is unchanged.** It counts every line.
 
@@ -21,3 +23,4 @@ A renovation's net profit (0261) counts the holding costs paid before the first 
 - A rental's net profit no longer carries its first year's taxes, insurance and escrow.
 - A refinance whose proceeds reach the bank netted below 80% of the loan is not detected. Its costs are then already inside the net proceeds.
 - Property taxes paid at the refinance move whole, even when part of the period they cover was during the renovation.
+- A new-loan cost paid before the closing in its own transaction (an appraisal) stays holding.

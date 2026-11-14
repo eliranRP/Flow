@@ -525,8 +525,8 @@ select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 20000000::bigi
   'a payoff of the principal and the draws: the draws were lent on top, the whole principal counts');
 select is((pg_temp.hml()->'inputs'->'taken_over_loans'->0->>'draws_minor')::bigint, 0::bigint, 'and no draws are taken off');
 
--- FLOW-1200 (decision 0270): a refinance closing's rental-year taxes, insurance and escrow are the
--- rental's, not the deal's holding; the old loan's payoff interest at the same closing stays holding.
+-- FLOW-1200 (decision 0270): a refinance closing's costs other than interest (rental-year taxes here)
+-- are the rental's, not the deal's holding; the old loan's payoff interest at the same closing stays.
 reset role;
 insert into prr (label, id) values
   ('rf', tests.fixture_project(pg_temp.id('co'), 'Example refinance')),

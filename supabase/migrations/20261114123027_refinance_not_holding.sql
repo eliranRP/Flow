@@ -1,16 +1,15 @@
 -- FLOW-1200 (decision 0270): a refinance closing's rental costs are not the deal's holding.
 --
 -- Real Estate by the Numbers, Ch 47 (BRRRR) and Ch 45 (the rental statement): what a refinance
--- closing pays to set up the rental (property taxes and insurance for the rental year, the new
--- loan's escrow reserves) belongs to the rental, not to the renovation's holding costs. The old
--- loan's payoff interest and fees, paid at the same closing, stay holding. The new loan's own
--- costs are filed by the owner in a financing category, so they already reduce the refinance's
--- net proceeds (Ch 47: loan proceeds = new loan − closing costs).
+-- closing pays to set up the rental belongs to the rental, not to the renovation's holding costs:
+-- the new loan's costs (Ch 47: loan proceeds = new loan − closing costs), property taxes and
+-- insurance for the rental year, and the new loan's escrow reserves. The old loan's payoff
+-- interest and finance charges, filed as interest, stay holding.
 --
 -- A refinance transaction is one that holds a property's loan proceeds of 80% or more of a loan
 -- that starts more than 75 days after the purchase closing (so not the purchase loan, decision
 -- 0246), dated after that closing and from 120 days before the loan's start to 30 days after it.
--- In it, every holding line other than interest and loan fees leaves deal.holding_minor, and
+-- In it, every holding line other than interest leaves deal.holding_minor, and
 -- get_property_return_lines' deal_holding line, which add up to it.
 
 begin;
@@ -64,10 +63,10 @@ begin
   end if;
   def := replace(def, a_hold, $n$  where a.currency = cur and a.line = 'holding' and not a.in_rehab
     and coalesce(c.loan_part::text, a.part, '') <> 'principal'
-    -- FLOW-1200 (decision 0270): a refinance closing's taxes, insurance and escrow are the rental's.
+    -- FLOW-1200 (decision 0270): a refinance closing's costs, other than interest, are the rental's.
     and not (
       a.transaction_id in (select private.refinance_transactions(cid, p_project_id, cur))
-      and coalesce(c.loan_part::text, a.part, '') not in ('interest', 'fees')
+      and coalesce(c.loan_part::text, a.part, '') <> 'interest'
     );$n$);
   execute def;
 end
@@ -85,10 +84,10 @@ begin
   end if;
   def := replace(def, a_line, $n$        when 'deal_holding' then x.line = 'holding' and not x.in_rehab
           and coalesce(lc.loan_part::text, x.part, '') <> 'principal'
-          -- FLOW-1200 (decision 0270): a refinance closing's taxes, insurance and escrow are the rental's.
+          -- FLOW-1200 (decision 0270): a refinance closing's costs, other than interest, are the rental's.
           and not (
             x.transaction_id in (select private.refinance_transactions(cid, p_project_id, cur))
-            and coalesce(lc.loan_part::text, x.part, '') not in ('interest', 'fees')
+            and coalesce(lc.loan_part::text, x.part, '') <> 'interest'
           )$n$);
   execute def;
 end
