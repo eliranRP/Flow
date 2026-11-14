@@ -50,6 +50,7 @@ Deno.test("a formula behind leading spaces is defused too, since a spreadsheet s
   assertEquals(cell("  @SUM(1)"), "'  @SUM(1)");
   assertEquals(cell("\u3000+1"), "'\u3000+1");
   assertEquals(cell(" Cedar"), " Cedar");
+  assertEquals(cell("\tx"), "'\tx");
 });
 
 Deno.test("the file's name says the report, its dates and its projects", () => {
