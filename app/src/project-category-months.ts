@@ -1,9 +1,8 @@
 import { projectCategoryMonthsSchema, type ProjectCategoryMonthRow, type ProjectCategoryMonths } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import type { PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-401 (decision 0149, owner's v5 "clean"): in the month view a small up mark sits on a category
@@ -26,9 +25,7 @@ export function useProjectCategoryMonthsQuery(projectId: string, period: PeriodC
     queryKey: ["project", "category-months", preview, projectId, day],
     enabled: preview === "off" && projectId !== "" && day != null,
     queryFn: async (): Promise<ProjectCategoryMonths | null> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("project_category_months", { p_project_id: projectId, p_today: day ?? undefined });
       if (error) throw error;
       return data == null ? null : projectCategoryMonthsSchema.parse(data);

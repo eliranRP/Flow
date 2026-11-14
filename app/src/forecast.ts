@@ -1,9 +1,8 @@
 import { formatAmountText, type MissingBill, type PaymentRecurring, type RecurringChange } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * Jev missing bills and expected months (FLOW-403, plan option A, decision 0131). Every figure
@@ -74,9 +73,7 @@ export function useMissingBillsQuery(active = true) {
     queryKey: ["missing-bills", preview],
     enabled: active && preview === "off",
     queryFn: async (): Promise<MissingBill[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("missing_bills", {});
       if (error) throw error;
       return (await loadReadSchemas()).missingBillsSchema.parse(data);
@@ -91,9 +88,7 @@ export function useRecurringChangesQuery(active = true) {
     queryKey: ["recurring-changes", preview],
     enabled: active && preview === "off",
     queryFn: async (): Promise<RecurringChange[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("recurring_changes", {});
       if (error) throw error;
       return (await loadReadSchemas()).recurringChangesSchema.parse(data);
@@ -112,9 +107,7 @@ export function useProjectRecurringChangesQuery(projectId: string, active = true
     queryKey: ["recurring-changes", preview, "project", projectId],
     enabled: active && preview === "off" && projectId !== "",
     queryFn: async (): Promise<RecurringChange[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("project_recurring_changes", { p_project: projectId });
       if (error) throw error;
       // Null: the project is not this company's.
@@ -130,9 +123,7 @@ export function usePaymentRecurringQuery(transactionId: string, active = true) {
     queryKey: ["payment-recurring", preview, transactionId],
     enabled: active && preview === "off" && transactionId !== "",
     queryFn: async (): Promise<PaymentRecurring> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("payment_recurring", { p_id: transactionId });
       if (error) throw error;
       return (await loadReadSchemas()).paymentRecurringSchema.parse(data);

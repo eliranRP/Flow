@@ -123,6 +123,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     currency: companyCurrency,
     // The year and since-the-start views ignore the order: only the month view draws the categories.
     categoriesOn: period === "month" && by !== "project",
+    // FLOW-1191: the year and since-the-start views read the years' months only.
+    projectsOn: period === "month",
     overhead: monthByProject ? overhead : overhead ?? null,
   });
   const model: ProfitModel | null = sample ? buildProfitModel(sample, sample.overhead) : live.model;
@@ -139,19 +141,21 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const wantsForecast = period === "month" ? onCurrent : period === "all" || forecastYear === currentYear;
   // FLOW-1080 (as Home, FLOW-1019): the next-month reads start once the figures are drawn, so they do not share
   // the link with the figures' own reads; a return with the figures cached reads them at once.
-  const afterPaint = useAfterFirstPaint(model != null);
+  const afterPaint = useAfterFirstPaint(long ? yearsData != null : model != null);
   const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast && afterPaint, sample?.next, undefined, long);
   // Data already cached (from Home, or an earlier visit) shows at once; only a read not yet started waits.
   const nextWaiting = next.pending || (wantsForecast && !afterPaint && next.input == null);
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   const yearProjects = useCompanyYearProjects(viewYear, today, yearByProject, sample?.years);
   const failed = live.failed || (monthByProject && overheadRead.failed) || (long && years.failed);
-  const waiting = model == null;
+  // The year views draw from the years' read, with the figures' skeleton inside them (below).
+  const waiting = !long && model == null;
+  const basis = model?.basis ?? years.basis;
   const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed ? { kind: "error", offline: !online } : waiting ? { kind: "loading" } : { kind: "ready" };
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
   const back = homeMonthPath(monthKey, search, currentKey);
-  if (phase.kind !== "ready" || model == null) {
+  if (phase.kind !== "ready") {
     // The board's loading frame names the month in the title: the stacked header's own bar, Back labelled בית.
     const loadingTitle = period === "month" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח";
     return (
@@ -169,9 +173,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       />
     );
   }
-  const currency = model.currency;
+  const currency = model?.currency ?? companyCurrency;
   // FLOW-969: offline, the page keeps its last read and says which moment it is from.
-  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (live.readAt || null) : null;
+  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? ((long ? years.readAt : live.readAt) || null) : null;
   const offlineLine = offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />;
   const sheetOpen = sheetState ?? sample?.sheetOpen === true;
   /** Sets (or, with null, drops) query parameters in place: the page keeps its choices in the URL. */
@@ -227,16 +231,16 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     projectHref: (projectId) => projectProfitPath(projectId, search),
   });
   const chips = <OrderChips className="ui-cp-chips" label="סידור" value={by} options={ORDERS} onChange={setBy} />;
-  const basisFooter = (
+  const basisFooter = basis == null ? null : (
     <>
       <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ופיקדון מסים וביטוח. הם נשארים בספר ובתזרים, לא ברווח.</p>
       <button type="button" ref={basisRef} className="ui-cp-basis" onClick={() => { setSheetOpen(true); }}>
-        נספר לפי {basisChoiceLabel(model.basis)} · <span className="ui-cp-change">שינוי</span>
+        נספר לפי {basisChoiceLabel(basis)} · <span className="ui-cp-change">שינוי</span>
       </button>
       <CompanyBasisSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        basis={model.basis}
+        basis={basis}
         blocked={() => blocked(sample != null ? "empty" : undefined)}
         returnFocusRef={basisRef}
         copy={BASIS_PROFIT_COPY}
@@ -270,6 +274,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       </div>
     );
   }
+  // The year views returned above.
+  if (model == null) return null;
   const profit = model.profit;
   const subtitle = `${monthName} ${year} · ${onCurrent ? "עד היום" : "חודש סגור"}`;
   const figure = (

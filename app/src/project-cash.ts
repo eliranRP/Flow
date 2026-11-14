@@ -1,7 +1,6 @@
 import type { CashCurrencyRow, CashLine, CashMonths, ProjectsCashMonth } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cashLinesPath, cashSummaryRows } from "./cash";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { CHART_MONTHS } from "./month-figures";
 import { monthPeriod } from "./period";
@@ -9,7 +8,7 @@ import { useHomePreview } from "./preview";
 import { israelToday } from "./ui/date-math";
 import { withPeriodSearch } from "./project-period";
 import type { CashRow } from "./ui/cash-rows";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-419 (owner's option A "Like Home", decision 0176). A project opens on its cash: this
@@ -89,9 +88,7 @@ export function projectCashMonthsOptions(preview: string, projectId: string) {
   return {
     queryKey: ["dashboard", "project-cash-months", preview, projectId, PROJECT_CASH_MONTHS] as const,
     queryFn: async (): Promise<CashMonths> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("project_cash_months", { p_project: projectId, p_months: PROJECT_CASH_MONTHS });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -119,9 +116,7 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
     queryKey: ["breakdown-lines", "project-cash-month", preview, projectId, month, currency],
     enabled: active && preview === "off" && projectId !== "" && currency !== "",
     queryFn: async (): Promise<ProjectCashMonthLines> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const schemas = await loadReadSchemas();
       const read = async (side: "in_profit" | "not_in_profit") => {
         const { data, error } = await supabase.rpc("project_cash_month_lines", {
@@ -161,9 +156,7 @@ export function useProjectsCashMonth(month?: string, projectId?: string, active 
       return list?.isInvalidated === true ? 0 : list?.dataUpdatedAt;
     },
     queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("projects_cash_month", {
         p_month: month == null ? undefined : `${month}-01`,
         p_today: israelToday(),

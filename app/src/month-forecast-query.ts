@@ -2,11 +2,11 @@ import type { ForecastBuild, ForecastOverrideRow } from "@flow/shared";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { readStoredCurrency } from "./company-currency";
 import { expectedMonthsQueryOptions } from "./expected-months-query";
-import { getSupabase } from "./lib/supabase";
+import { overridesQuery } from "./forecast-overrides-query";
 import { useHomePreview } from "./preview";
 import { QUERY_STALE_MS } from "./query-client";
+import { readyClient } from "./ready-client";
 import { unpaidQueryOptions } from "./use-books";
-import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * FLOW-141: the month-end forecast's data. Four reads (expected months, open invoices, the month's overrides and,
@@ -31,24 +31,21 @@ export function useMonthForecastQuery(month: string, active = true) {
     queryKey: ["month-forecast", preview, month],
     enabled: active && preview === "off",
     queryFn: async ({ client }: { client: QueryClient }): Promise<MonthForecast> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const [expected, rows, overrides, edits, base] = await Promise.all([
+      const supabase = await readyClient();
+      const [expected, rows, current, edits, base] = await Promise.all([
         // The company's expected months, shared with the profit page's next month (FLOW-1171): one request.
         client.query({ ...expectedMonthsQueryOptions(preview), staleTime: QUERY_STALE_MS }),
         // Home's own read when it is fresh or under way, so list_unpaid goes out once.
         client.query({ ...unpaidQueryOptions(preview), staleTime: QUERY_STALE_MS }),
-        supabase.rpc("forecast_overrides_for", { p_month: month }),
+        // The month's overrides, shared with the project page and the recurring screen (FLOW-1191): one request.
+        client.query({ ...overridesQuery(month, preview, true), staleTime: QUERY_STALE_MS }),
         supabase.rpc("company_forecast_edits_for", { p_month: month }),
         // A failed read fails the forecast: counting a dollar company in shekels would show nothing due.
         readStoredCurrency(),
       ]);
-      if (overrides.error) throw overrides.error;
       if (edits.error) throw edits.error;
       const { buildMonthForecast, parseMonthEdits } = await import("./month-forecast-build");
       const projectEdits = parseMonthEdits(edits.data);
-      const current = (overrides.data ?? []) as ForecastOverrideRow[];
       return {
         month,
         base,

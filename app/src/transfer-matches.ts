@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { z } from "zod";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import type { RpcClient } from "./recurring-actions";
 import type { transferMatchesSchema } from "./transfer-match-schema";
 import { assertNoError } from "./use-write";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-941 (decision 0205): a transfer between two Mercury connections Flow suggests. Mercury may name a
@@ -25,9 +24,7 @@ export function useTransferMatchesQuery(active = true) {
     queryKey: [TRANSFER_MATCHES_KEY, preview],
     enabled: active && preview === "off",
     queryFn: async (): Promise<TransferMatch[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("list_transfer_matches", {});
       if (error) throw error;
       return (await loadReadSchemas()).transferMatchesSchema.parse(data);

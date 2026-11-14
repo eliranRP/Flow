@@ -1,11 +1,10 @@
 import { formatAmountText, type SearchPage, type SearchRow } from "@flow/shared";
 import { keepPreviousData, useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { allTime, periodFromSearch, periodSearch, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 import { HEBREW_MONTHS, israelToday, monthTitle } from "./ui/date-math";
 import type { MonthTotal } from "./ui/month-groups";
 
@@ -253,9 +252,7 @@ export function useSearchQuery(filters: SearchFilters, active = true) {
     placeholderData: keepPreviousData,
     initialPageParam: initialSearchCursor(filters),
     queryFn: async ({ pageParam }): Promise<SearchReadPage> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const schema = (await loadReadSchemas()).searchPageSchema;
       const read = async (args: ReturnType<typeof searchArgs>) => {
         const { data, error } = await supabase.rpc("search_transactions", args);

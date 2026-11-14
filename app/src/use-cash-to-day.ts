@@ -1,9 +1,8 @@
 import type { CashToDay } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview, type HomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-364. One month's נכנס and יצא up to a day of it (cash_month_to_day, decision 0168's cash
@@ -14,9 +13,7 @@ export function cashToDayQueryOptions(preview: HomePreview, monthKey: string, da
   return {
     queryKey: ["dashboard", "cash-to-day", preview, monthKey, day],
     queryFn: async (): Promise<CashToDay> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_month_to_day", { p_month: `${monthKey}-01`, p_day: day });
       if (error) throw error;
       return (await loadReadSchemas()).cashToDaySchema.parse(data);
