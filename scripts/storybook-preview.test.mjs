@@ -89,13 +89,44 @@ test("the preview workflow skips forks, keeps off production, and pins actions l
   assert.match(workflow, /persist-credentials: false\n/);
   assert.match(workflow, /\npermissions:\n {2}contents: read\n/);
   // The key checks run before anything is published.
-  const build = workflow.indexOf("node scripts/storybook-preview-keys.mjs app/storybook-static");
+  const build = workflow.indexOf("node scripts/storybook-preview-keys.mjs preview/storybook-static");
   assert.ok(build > 0 && build < workflow.indexOf("wrangler pages deploy"));
-  assert.ok(workflow.indexOf("node scripts/check-jev-bundle.mjs app/storybook-static") < workflow.indexOf("wrangler pages deploy"));
+  assert.ok(workflow.indexOf("node scripts/check-jev-bundle.mjs preview/storybook-static") < workflow.indexOf("wrangler pages deploy"));
   assert.match(workflow, /--project-name=flow-storybook \\\n/);
   assert.equal(workflow.includes("--project-name=flow-app"), false);
   const pins = new Set(ci.split("\n").filter((line) => /^\s*(?:-\s*)?uses:/.test(line)).map((line) => line.trim().replace(/^- /, "")));
   for (const line of workflow.split("\n").filter((l) => /^\s*(?:-\s*)?uses:/.test(l))) {
     assert.ok(pins.has(line.trim().replace(/^- /, "")), `pinned as in ci.yml: ${line.trim()}`);
   }
+});
+
+// FLOW-853: the pull request's code (its dependencies and its scripts included) builds in a job that holds
+// no secret; only the deploy job reads the Cloudflare token, and it runs code from the base commit alone.
+function previewJob(name) {
+  const start = workflow.indexOf(`\n  ${name}:\n`);
+  assert.ok(start > 0, `job ${name}`);
+  const rest = workflow.slice(start + 1);
+  const next = rest.slice(1).search(/\n {2}[a-z][\w-]*:\n/);
+  return next < 0 ? rest : rest.slice(0, next + 1);
+}
+
+test("the preview builds the pull request without secrets and deploys it with code from the base", () => {
+  const build = previewJob("build");
+  const deploy = previewJob("deploy");
+  assert.equal(build.includes("secrets."), false);
+  assert.equal(build.includes("environment:"), false);
+  assert.match(build, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}\n/);
+  assert.match(build, /run: pnpm build-storybook\n/);
+  assert.match(build, /uses: actions\/upload-artifact@/);
+  assert.match(deploy, /\n {4}needs: build\n/);
+  assert.match(deploy, /\n {4}environment: storybook-preview\n/);
+  assert.match(deploy, /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}\n/);
+  assert.equal(/cache:/.test(workflow), false, "no pnpm cache: a store the pull request wrote must not reach deploy");
+  assert.match(deploy, /find preview -type l/);
+  assert.match(deploy, /for f in _worker\.js _routes\.json; do/);
+  assert.equal(/ref: \$\{\{ github\.event\.pull_request\.head\.sha/.test(deploy), false);
+  assert.equal(deploy.includes("pnpm build-storybook"), false);
+  assert.match(deploy, /uses: actions\/download-artifact@/);
+  assert.ok(deploy.includes("secrets.CLOUDFLARE_API_TOKEN"));
+  assert.equal(workflow.split("secrets.CLOUDFLARE_API_TOKEN").length, 2, "the token is read in one place");
 });

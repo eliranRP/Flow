@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(71);
+select plan(73);
 
 do $users$
 begin
@@ -406,6 +406,26 @@ end
 $jev_left$;
 select isnt((select coalesce(r->>'skipped', '-') from res where label = 'jev_left'), 'closed',
   'Jev may file a line whose held change the owner left');
+-- FLOW-852: Jev never files a line that is in a closed period, even with an open review row on it
+-- (a person can reopen a skipped row after the close).
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select pg_temp.id('co'), (pg_temp.line('m-new')).id, 'open', 'suggested'
+where not exists (select 1 from public.review_queue q
+  where q.transaction_id = (pg_temp.line('m-new')).id and q.status = 'open');
+insert into ch (label, id) values ('new_cat_before', (pg_temp.line('m-new')).category_id);
+do $jev_closed$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  insert into pg_temp.res values ('jev_closed', public.jev_prefill(pg_temp.id('co'), (pg_temp.line('m-new')).id, null,
+    pg_temp.id('supplies'), 'example-model', 0.9));
+end
+$jev_closed$;
+select is((select r->>'skipped' from res where label = 'jev_closed'), 'closed_month',
+  'Jev skips a line in the closed period');
+select ok((pg_temp.line('m-new')).category_id is not distinct from pg_temp.id('new_cat_before'),
+  'and the line keeps its category');
 
 -- A line that is itself open but has a held change (the bank moved it into the closed month): a
 -- person's filing of it goes through, and the held change still waits in the queue.
