@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { BOOKS_CLOSED_MS, booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
+import { BOOKS_CLOSED_MS, booksClosedNote, booksClosedSettingNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { ToastProvider } from "./ui/toast";
 import { changeSaveFailure } from "./ui/change-sheet";
-import { booksClosedThrough, useWrite } from "./use-write";
+import { booksClosedMessage, booksClosedThrough, useWrite } from "./use-write";
 
 vi.mock("./use-books", () => ({
   useInvalidateBooks: () => () => Promise.resolve(),
@@ -78,7 +78,33 @@ describe("booksClosedThrough", () => {
   });
 });
 
+describe("booksClosedMessage (FLOW-1170)", () => {
+  it("words a setting's refusal as a setting, and still reads its date", () => {
+    const setting = new Error("the books are closed through 2026-10-31: this setting changes them");
+    expect(booksClosedThrough(setting)).toBe("2026-10-31");
+    expect(booksClosedMessage(setting)).toBe(booksClosedSettingNote("2026-10-31"));
+    expect(booksClosedMessage(new Error("ERROR: the books are closed through 2026-10-31: this setting changes them (SQLSTATE P0001)")))
+      .toBe(booksClosedSettingNote("2026-10-31"));
+  });
+
+  it("keeps a line's refusal worded as a line, and null for any other error", () => {
+    expect(booksClosedMessage(new Error("the books are closed through 2026-10-31"))).toBe(booksClosedNote("2026-10-31"));
+    expect(booksClosedMessage(new Error("this setting changes them"))).toBeNull();
+    expect(booksClosedMessage(new Error("no company"))).toBeNull();
+  });
+});
+
 describe("useWrite", () => {
+  it("says a setting's refusal in the setting's words, with no retry (FLOW-1170)", async () => {
+    renderSave(() => Promise.reject(new Error("the books are closed through 2026-10-31: this setting changes them")), "לא נשמר.");
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText(booksClosedSettingNote("2026-10-31"))).toBeInTheDocument();
+    expect(screen.queryByText(booksClosedNote("2026-10-31"))).not.toBeInTheDocument();
+    expect(screen.queryByText("לא נשמר.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: booksClosedSettingNote("2026-10-31"), durationMs: BOOKS_CLOSED_MS }));
+  });
+
   it("says the books are closed through the date, with no retry, and still runs onError", async () => {
     const onError = vi.fn();
     renderSave(() => Promise.reject(new Error("the books are closed through 2026-10-31")), "לא הצלחנו למחוק.", undefined, onError);

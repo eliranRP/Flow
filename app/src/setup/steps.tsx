@@ -21,7 +21,7 @@ import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { saveFlow } from "../save-flow";
 import { useMachine } from "../use-machine";
-import { assertNoError } from "../use-write";
+import { assertNoError, booksClosedMessage } from "../use-write";
 import { pushSupport, subscribeThisDevice, useRecordPushAnswer, type SubscribeOutcome } from "../push";
 import { subscribeDiagnostic, subscribeFailure } from "../screens/push-copy";
 import { type ConnectKind, openConnection } from "./connect-entry";
@@ -107,6 +107,8 @@ export function StepBusiness({
 }: StepProps & { companyId: string | null; initial: BusinessInitial | null }) {
   const [currency, setCurrency] = useState<"USD" | "ILS">(initial?.currency ?? "USD");
   const [basis, setBasis] = useState<"paid" | "invoice">(initial?.basis ?? "paid");
+  // FLOW-1170: a basis the closed books refuse says so in place of SAVE_ERROR, and goes back.
+  const [closedNote, setClosedNote] = useState<string | null>(null);
   const flow = useMachine(saveFlow);
   const saving = flow.state === "saving";
   const failed = flow.state === "failed";
@@ -201,7 +203,12 @@ export function StepBusiness({
         onDone();
         flow.send("done");
       })
-      .catch(() => { flow.send("fail"); });
+      .catch((error: unknown) => {
+        const note = error instanceof Error ? booksClosedMessage(error) : null;
+        setClosedNote(note);
+        if (note != null && initial != null) setBasis(initial.basis);
+        flow.send("fail");
+      });
   }
 
   return (
@@ -237,7 +244,7 @@ export function StepBusiness({
           />
           <p className="ui-onb-note t-caption t-muted">{BASIS_NOTE[basis]}</p>
         </div>
-        {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+        {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{closedNote ?? SAVE_ERROR}</p> : null}
       </form>
     </OnboardingFrame>
   );

@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { booksClosedSettingNote } from "../company-role-cache";
 import * as supabaseModule from "../lib/supabase";
 import { renderWithProviders } from "../test-render";
 import { SAVE_ERROR } from "./copy";
@@ -145,6 +146,24 @@ describe("setup step 1 · a setting refused after create_company", () => {
     expectRunStarted("company-1");
     expect(count(calls, "create_company")).toBe(1);
     expect(count(calls, "apply_starter_categories")).toBe(2);
+  });
+});
+
+describe("setup step 1 · a company whose books are closed (FLOW-1170)", () => {
+  it("says the closed books refuse the basis, puts the basis back, and the next tap saves without it", async () => {
+    const calls = mockRpc((name) => (name === "set_cash_basis"
+      ? { data: null, error: { message: "the books are closed through 2026-05-31: this setting changes them" } }
+      : ok));
+    const button = show("company-1");
+    fireEvent.click(screen.getByRole("radio", { name: "תאריך חשבונית" }));
+    fireEvent.click(button);
+    expect(await screen.findByText(booksClosedSettingNote("2026-05-31"))).toBeInTheDocument();
+    expect(screen.queryByText(SAVE_ERROR)).toBeNull();
+    expect(screen.getByRole("radio", { name: "תאריך תשלום" })).toBeChecked();
+    expect(onDone).not.toHaveBeenCalled();
+    fireEvent.click(button);
+    await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
+    expect(count(calls, "set_cash_basis")).toBe(1);
   });
 });
 

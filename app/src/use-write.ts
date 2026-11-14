@@ -1,6 +1,6 @@
 import { type MutationOptions, type QueryKey, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { BOOKS_CLOSED_MS, booksClosedNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
+import { BOOKS_CLOSED_MS, booksClosedNote, booksClosedSettingNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
@@ -38,6 +38,16 @@ export function isReadOnlyRefusal(error: Error): boolean {
 export function booksClosedThrough(error: Error): string | null {
   const match = /the books are closed through (\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))(?!\d)/.exec(error.message);
   return match?.[1] ?? null;
+}
+
+/**
+ * The closed-books sentence for a refusal, or null for any other error. A setting that would move a
+ * closed figure (FLOW-1170) is refused with the line's words and `: this setting changes them`.
+ */
+export function booksClosedMessage(error: Error): string | null {
+  const closedThrough = booksClosedThrough(error);
+  if (closedThrough == null) return null;
+  return error.message.includes(`${closedThrough}: this setting changes them`) ? booksClosedSettingNote(closedThrough) : booksClosedNote(closedThrough);
 }
 
 /** Any refusal of this user's role. The screen's own copy still words a "forbidden". */
@@ -140,10 +150,10 @@ export function useWrite<T = void>(options: {
         toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", message: VIEWER_NOTE });
         return;
       }
-      const closedThrough = booksClosedThrough(failure);
-      if (closedThrough != null) {
+      const closedNote = booksClosedMessage(failure);
+      if (closedNote != null) {
         // The lock gives the same answer for every write, so the write's own copy and retry do not apply.
-        toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", durationMs: BOOKS_CLOSED_MS, message: booksClosedNote(closedThrough) });
+        toast.show({ ...(options.place ? { place: options.place } : {}), tone: "info", durationMs: BOOKS_CLOSED_MS, message: closedNote });
         return;
       }
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
