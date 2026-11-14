@@ -242,7 +242,7 @@ select throws_ok(
 
 -- 16-17. The app's own writes follow the rule: a loan row, and a corrected part.
 select throws_ok(
-  $$ update public.loans set principal_category_id = pg_temp.id('cat_in2') where id = pg_temp.id('loan') $$,
+  $$ select public.update_loan(pg_temp.id('loan'), jsonb_build_object('principal_category_id', pg_temp.id('cat_in2'))) $$,
   '23514',
   'loan_category_not_allowed',
   'the app cannot name a P&L category for principal'
@@ -396,15 +396,13 @@ reset role;
 -- 30. The app's own insert of a loan follows the rule.
 select tests.authenticate_as('f106d_owner');
 select throws_ok(
-  $$ insert into public.loans (
-       company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor,
-       escrow_minor, currency, principal_category_id
-     )
-     values (pg_temp.id('company'), 'Example App Loan', 1000000, 60000, 120, '2026-01-01', 20000, 0, 'USD',
-       pg_temp.id('cat_in2')) $$,
-  '23514',
-  'loan_category_not_allowed',
-  'the app cannot add a loan with a P&L category for principal'
+  $$ select public.create_loan(pg_temp.id('company'), jsonb_build_object(
+       'name', 'Example App Loan', 'principal_minor', 1000000, 'annual_rate_ppm', 60000, 'term_months', 120,
+       'start_date', '2026-01-01', 'payment_minor', 20000, 'escrow_minor', 0, 'currency', 'USD',
+       'principal_category_id', pg_temp.id('cat_in2'))) $$,
+  '22023',
+  'validation',
+  'the app cannot add a loan with a part category: create_loan takes the form''s fields only (FLOW-854)'
 );
 reset role;
 

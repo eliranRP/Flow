@@ -426,7 +426,7 @@ select lives_ok(
   'and counted again'
 );
 select throws_ok(
-  $$ update public.loans set fees_category_id = pg_temp.id('income_cat') where id = pg_temp.id('loan') $$,
+  $$ select public.update_loan(pg_temp.id('loan'), jsonb_build_object('fees_category_id', pg_temp.id('income_cat'))) $$,
   '23514',
   'loan_category_not_allowed',
   'the app cannot name an income category for fees'

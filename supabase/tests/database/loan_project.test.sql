@@ -373,12 +373,13 @@ select is(
   0,
   'the viewer wrote no loan'
 );
-select lives_ok(
+select throws_ok(
   format(
     $$update public.loans set project_id = %L where id = %L$$,
     (select id from lp where label = 'p1'), (select id from lp where label = 'lb')
   ),
-  'a viewer''s direct update runs and matches no row'
+  '42501', null,
+  'a viewer''s direct update is refused at the grant'
 );
 
 -- The FK: no cross-company project, even around the RPC.
