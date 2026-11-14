@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { booksClosedSettingNote } from "../company-role-cache";
 import * as supabaseModule from "../lib/supabase";
 import { sheetStack } from "../ui/back";
 import type { BasisChoice } from "../ui/company-choices";
@@ -93,6 +94,19 @@ describe("CompanyBasisSheet (FLOW-103)", () => {
     await screen.findByText(BASIS_REFUSED);
     expect(screen.queryByRole("button", { name: "ניסיון חוזר", hidden: true })).not.toBeInTheDocument();
     expect(screen.getByText("open")).toBeInTheDocument();
+  });
+
+  it("says the closed books refuse the switch, with no retry, and keeps the basis it had (FLOW-1170)", async () => {
+    const calls = mockRpc(() => ({ error: { message: "the books are closed through 2026-05-31: this setting changes them" } }));
+    renderSheet();
+    fireEvent.click(invoice());
+    await screen.findByText(booksClosedSettingNote("2026-05-31"));
+    expect(calls).toEqual([{ name: "set_cash_basis", args: { p_basis: "invoice" } }]);
+    expect(screen.queryByText(BASIS_FAILED)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר", hidden: true })).not.toBeInTheDocument();
+    expect(screen.getByText("open")).toBeInTheDocument();
+    await waitFor(() => { expect(payment()).toBeChecked(); });
+    expect(invoice()).not.toBeChecked();
   });
 
   it("offers a retry for a dropped connection", async () => {
