@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject, type SubmitEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { REVERSAL_HEADING, REVERSAL_HINT } from "../reversal";
 import { Button } from "./button";
@@ -193,8 +193,9 @@ export function ChangeAssignment(props: Props) {
   const sheetOpen = props.host === "overlay" ? props.open : true;
   // FLOW-325 §10: the split link's leave runs after the approve settles. A close, Back or a view
   // change meanwhile voids it, so a dismissed sheet never pulls the person into the editor.
+  // A layout effect: its cleanup runs in the commit that changes the view, not a moment after it.
   const splitTicket = useRef(0);
-  useEffect(() => () => {
+  useLayoutEffect(() => () => {
     splitTicket.current += 1;
   }, [view, sheetOpen]);
   // A view change ends the picker's unsaved check: reopening shows the saved value. Reset during
