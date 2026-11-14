@@ -480,10 +480,13 @@ test("the homepage and /settings retry like build.txt, list reads wait for the s
   assert.match(homeLoop, /sleep "\$pause"/);
   assert.equal(homeLoop.includes("/settings"), false);
 
+  // FLOW-1191: the reads take their client from readyClient(), which waits for the session's token first.
+  const ready = readFileSync(new URL("../app/src/ready-client.ts", import.meta.url), "utf8");
+  assert.match(ready, /if \(!supabase\) throw new Error\("supabase"\);\n\s+await waitForAccessToken\(supabase\);\n\s+return supabase;/);
   const books = readFileSync(new URL("../app/src/use-books.ts", import.meta.url), "utf8");
-  const waits = books.split("await waitForAccessToken(supabase);").length - 1;
+  const waits = books.split("const supabase = await readyClient();").length - 1;
   const rpcs = books.split(".rpc(").length - 1;
-  const guardedFrom = (books.match(/await waitForAccessToken\(supabase\);\s+const \{ data, error \} = await supabase\s+\.from\(/g) ?? []).length;
+  const guardedFrom = (books.match(/const supabase = await readyClient\(\);\s+const \{ data, error \} = await supabase\s+\.from\(/g) ?? []).length;
   assert.equal(waits, rpcs + guardedFrom);
   assert.ok(waits >= 10);
   // FLOW-984: the review queue's read lives in use-review.ts; it waits for the token, then reads page by page.
