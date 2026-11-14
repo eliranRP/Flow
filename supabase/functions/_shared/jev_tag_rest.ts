@@ -478,6 +478,16 @@ export function createTagStore(
           const name = asString(row.name);
           return id && name ? [{ id, name, loanPart: asString(row.loan_part) }] : [];
         });
+        // FLOW-1174: a line refused before the company's projects or categories changed is listed
+        // again. Before the migration the function does not exist: list as before.
+        try {
+          await rest(fetch, `${base}/rest/v1/rpc/jev_refusals_reset`, serviceKey, {
+            method: "POST",
+            body: { p_company: company.companyId },
+          });
+        } catch {
+          // A refusal that is not cleared waits its 30 days, as before.
+        }
         const transactions = rows(await get(transactionsPath(company.companyId, quota, new Date(now()).toISOString())));
         const loaded = transactions.flatMap((row) => expenseFromRow(row, company.companyId));
         const expenses = capNewest(loaded, quota);

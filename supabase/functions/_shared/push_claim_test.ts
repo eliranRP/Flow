@@ -30,7 +30,13 @@ async function keys() {
  * One push-send call. `rows` are what the claim (or the test targets) returns; `status` is each
  * endpoint's push service answer; `claim` is claim_push_test's answer for a test call.
  */
-async function run(body: string, rows: Record<string, unknown>[], status: Record<string, number>, claim?: unknown) {
+async function run(
+  body: string,
+  rows: Record<string, unknown>[],
+  status: Record<string, number>,
+  claim?: unknown,
+  releaseAnswer: Response = new Response("1"),
+) {
   const { vapid, device } = await keys();
   const rpcs: { name: string; body: unknown }[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
@@ -42,14 +48,17 @@ async function run(body: string, rows: Record<string, unknown>[], status: Record
       if (name === "push_claim_targets" || name === "push_test_targets") {
         return Response.json(rows.map((row) => ({ ...row, ...device })));
       }
-      return new Response(name === "push_release_claims" ? "1" : null, { status: name === "push_release_claims" ? 200 : 204 });
+      return name === "push_release_claims" ? releaseAnswer : new Response(null, { status: 204 });
     }
     return new Response(null, { status: status[request.url] ?? 201 });
   };
   const warn = console.warn;
   const info = console.info;
+  const error = console.error;
+  const logs: string[] = [];
   console.warn = () => {};
-  console.info = () => {};
+  console.info = (line: string) => logs.push(line);
+  console.error = (line: string) => logs.push(line);
   try {
     const response = await handlePushSend(
       new Request("https://example.supabase.co/functions/v1/push-send", {
@@ -71,10 +80,11 @@ async function run(body: string, rows: Record<string, unknown>[], status: Record
         } as Record<string, string>)[name] ?? "",
       },
     );
-    return { status: response.status, json: await response.json(), rpcs };
+    return { status: response.status, json: await response.json(), rpcs, logs };
   } finally {
     console.warn = warn;
     console.info = info;
+    console.error = error;
   }
 }
 
@@ -152,7 +162,45 @@ Deno.test("a test push no device took gives its claim back", async () => {
   assertEquals(sent.json, { devices: 1, sent: 1, gone: 0, failed: 0 });
   assertEquals(names(sent.rpcs), ["claim_push_test", "push_test_targets"]);
 
+  // No device at all: nothing was posted, so the claim is given back.
+  const noDevice = await run('{"kind":"test"}', [], {}, { user_id: U1, devices: 0, claim: 41 });
+  assertEquals(noDevice.json, { devices: 0, sent: 0, gone: 0, failed: 0 });
+  assertEquals(noDevice.rpcs.at(-1), { name: "release_push_test", body: { p_user: U1, p_claim: 41 } });
+
   // Before the migration the claim has no id: nothing to give back.
   const old = await run('{"kind":"test"}', [], {}, { user_id: U1, devices: 1 });
   assertEquals(names(old.rpcs), ["claim_push_test", "push_test_targets"]);
+});
+
+// FLOW-1174: a test claim is given back under the same rule as a new-lines one, so the 5 an hour
+// still bound the posts: devices that all refused it or are gone keep the claim.
+Deno.test("a test push every device refused, or that found only gone devices, keeps its claim", async () => {
+  const claim = { user_id: U1, devices: 2, claim: 41 };
+  const refused = await run('{"kind":"test"}', [{ user_id: U1, endpoint: FCM }, { user_id: U1, endpoint: APPLE }], {
+    [FCM]: 403,
+    [APPLE]: 400,
+  }, claim);
+  assertEquals(refused.json, { devices: 2, sent: 0, gone: 0, failed: 2 });
+  assertEquals(names(refused.rpcs), ["claim_push_test", "push_test_targets"]);
+
+  const gone = await run('{"kind":"test"}', [{ user_id: U1, endpoint: FCM }], { [FCM]: 410 }, claim);
+  assertEquals(names(gone.rpcs), ["claim_push_test", "push_test_targets", "note_push_results"]);
+
+  // One refused, one that can pass: given back, as a new-lines claim would be.
+  const mixed = await run('{"kind":"test"}', [{ user_id: U1, endpoint: FCM }, { user_id: U1, endpoint: APPLE }], {
+    [FCM]: 403,
+    [APPLE]: 503,
+  }, claim);
+  assertEquals(mixed.rpcs.at(-1), { name: "release_push_test", body: { p_user: U1, p_claim: 41 } });
+});
+
+Deno.test("the log says how many claims were given back, not how many were asked", async () => {
+  const two = [
+    { user_id: U1, endpoint: FCM, fresh: 2, waiting: 0, claim: CLAIM },
+    { user_id: U2, endpoint: APPLE, fresh: 1, waiting: 0, claim: CLAIM },
+  ];
+  const fewer = await run('{"kind":"new"}', two, { [FCM]: 503, [APPLE]: 503 }, undefined, new Response("1"));
+  assertEquals(fewer.logs.filter((line) => line.includes("released")), ["push-send new released=1 asked=2"]);
+  const failing = await run('{"kind":"new"}', two, { [FCM]: 503, [APPLE]: 503 }, undefined, new Response(null, { status: 500 }));
+  assertEquals(failing.logs.filter((line) => line.includes("released")), ["push-send new released=0 asked=2"]);
 });

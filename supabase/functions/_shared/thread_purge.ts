@@ -9,7 +9,7 @@ import { defineMachine } from "../../../packages/shared/src/machine.ts";
 
 export type PurgeClient = {
   rpc(name: "thread_files_to_purge", args: { p_limit: number }): PromiseLike<{ data: unknown; error: unknown }>;
-  rpc(name: "thread_files_purge_skip", args: { p_names: string[] }): PromiseLike<{ data: unknown; error: unknown }>;
+  rpc(name: "thread_files_purge_skip", args: { p_names: string[]; p_for_good: boolean }): PromiseLike<{ data: unknown; error: unknown }>;
   storage: {
     from(bucket: string): { remove(paths: string[]): PromiseLike<{ data: unknown; error: unknown }> };
   };
@@ -29,18 +29,20 @@ const BAD_PART = /(^|\/)\.{0,2}(\/|$)/;
 const isThreadPath = (name: string) => THREAD_PATH.test(name) && !BAD_PART.test(name) && !name.includes("\\");
 
 /**
- * FLOW-1168: one listed name. It is removed, or skipped: it fails the path rule, or Storage kept it.
- * A skipped name is recorded (thread_files_purge_skip) and left off the list for a day, so the list
- * moves past it rather than returning it first every hour.
+ * FLOW-1168: one listed name. It is removed, or not: it fails the path rule (skipped: it can never
+ * pass), or Storage kept it (held: Storage does not say why, and the reason may pass). Either is
+ * recorded (thread_files_purge_skip) and left off the list, so the list moves past it rather than
+ * returning it first every hour: a skipped name for a day, a held one for an hour (FLOW-1174).
  */
 export const purgeName = defineMachine({
   name: "purgeName",
   initial: "listed",
-  final: ["removed", "skipped"],
+  final: ["removed", "skipped", "held"],
   states: {
-    listed: { removed: "removed", refused: "skipped", kept: "skipped" },
+    listed: { removed: "removed", refused: "skipped", kept: "held" },
     removed: {},
     skipped: {},
+    held: {},
   },
 });
 
@@ -71,14 +73,17 @@ export async function purgeThreadFiles(admin: PurgeClient, bucket: string): Prom
       removed += done.length;
       for (const name of names) move(name, "kept");
     }
-    const skip = listed.filter((name) => state.get(name) === "skipped");
-    if (skip.length > 0) {
-      // Before the skip list exists (mercury-sync is deployed before the migration), stop as before:
-      // the next hour lists the same names first.
-      const noted = await admin.rpc("thread_files_purge_skip", { p_names: skip });
-      if (noted.error) break;
-      skipped += skip.length;
+    // Before the skip list exists (mercury-sync is deployed before the migration), stop as before:
+    // the next hour lists the same names first.
+    let noted = true;
+    for (const [end, forGood] of [["skipped", true], ["held", false]] as const) {
+      const names = listed.filter((name) => state.get(name) === end);
+      if (names.length === 0 || !noted) continue;
+      const answer = await admin.rpc("thread_files_purge_skip", { p_names: names, p_for_good: forGood });
+      noted = !answer.error;
+      if (noted) skipped += names.length;
     }
+    if (!noted) break;
     if (listed.length < PURGE_BATCH) break;
   }
   return { removed, skipped };

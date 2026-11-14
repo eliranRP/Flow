@@ -1,9 +1,10 @@
-// FLOW-1168: a line Jev refused as invalid stops spending a call; the run's lease covers its calls;
+// FLOW-1168, FLOW-1174: a line Jev refused as invalid stops spending a call; the run's lease covers its calls;
 // a run that finds nothing to tag leaves the rate gate for the next one.
 import { assertEquals } from "jsr:@std/assert@1";
 import { machineProblems } from "../../../packages/shared/src/machine.ts";
 import { JEV_MODEL, JevError } from "./jev.ts";
 import { createTagStore, handleJevTag, jevRun, JEV_TAG_BUDGET_MS, tagWork } from "./jev_tag.ts";
+import { JEV_REFUSALS_PER_COMPANY } from "./jev_tag_plan.ts";
 import { answers, categories, company, COMPANY, expense, EXPENSE, memoryStore, projects, tagEnv, txnRow } from "./jev_tag_test_support.ts";
 
 const SECOND = "77777777-7777-4777-8777-777777777777";
@@ -58,6 +59,75 @@ Deno.test("a run stopped by a rejected key still marks the refused lines, as fai
     return Promise.reject(new JevError(n === 1 ? "invalid_request" : "unauthorized"));
   }, "jev-test-key", quiet).catch(() => {});
   assertEquals(marks, [[EXPENSE, false]]);
+});
+
+// FLOW-1174: an answer shows the request's shape is sound only for its own company: another
+// company's request is built from its own projects and categories.
+const B_CO = "99999999-9999-4999-8999-999999999999";
+const B1 = "aaaaaaaa-0000-4000-8000-0000000000b1";
+const B2 = "aaaaaaaa-0000-4000-8000-0000000000b2";
+const refuse = () => Promise.reject(new JevError("invalid_request", 422));
+const lineB = (id: string) => expense({ id, companyId: B_CO, description: "b" });
+
+Deno.test("an answer for one company never makes another company's refusals final", async () => {
+  for (const order of ["answered first", "refused first"] as const) {
+    const { store, marks } = marking();
+    const a = company({ mode: "shadow", expenses: [expense()] });
+    const b = company({ companyId: B_CO, mode: "shadow", expenses: [lineB(B1), lineB(B2)] });
+    await tagWork(order === "answered first" ? [a, b] : [b, a], store, (_key, request) =>
+      (request.state as Record<string, unknown>).description === "b" ? refuse() : ok(), "jev-test-key", quiet);
+    assertEquals(marks, [[B1, false], [B2, false]], order);
+  }
+});
+
+Deno.test("one run marks at most a few refusals per company; the rest are failures that can pass", async () => {
+  const { store, marks } = marking();
+  const ids = Array.from({ length: JEV_REFUSALS_PER_COMPANY + 2 }, (_, n) => `aaaaaaaa-0000-4000-8000-00000000000${n}`);
+  let n = 0;
+  await tagWork([company({ mode: "shadow", expenses: [expense(), ...ids.map((id) => expense({ id }))] })], store, () => {
+    n += 1;
+    return n === 1 ? ok() : refuse();
+  }, "jev-test-key", quiet);
+  assertEquals(JEV_REFUSALS_PER_COMPANY, 3);
+  assertEquals(marks, ids.map((id, index) => [id, index < JEV_REFUSALS_PER_COMPANY]));
+});
+
+Deno.test("a refusal is marked when it is decided, so a run killed later does not lose it", async () => {
+  const { store, marks } = marking();
+  const seen: string[] = [];
+  let n = 0;
+  const FOURTH = "aaaaaaaa-0000-4000-8000-0000000000f4";
+  const lines = [expense(), expense({ id: SECOND }), expense({ id: THIRD }), expense({ id: FOURTH })];
+  await tagWork([company({ mode: "shadow", expenses: lines })], store, () => {
+    n += 1;
+    seen.push(JSON.stringify(marks));
+    // The first line is refused before any answer: settled when the second line's answer comes.
+    // The third is refused after it: marked at once, before the fourth call.
+    return n === 1 || n === 3 ? refuse() : ok();
+  }, "jev-test-key", quiet);
+  assertEquals(seen, ["[]", "[]", `[["${EXPENSE}",true]]`, `[["${EXPENSE}",true],["${THIRD}",true]]`]);
+  assertEquals(marks, [[EXPENSE, true], [THIRD, true]]);
+});
+
+Deno.test("the store clears stale refusals before it lists a company's lines, and lists anyway before the migration", async () => {
+  const urls: string[] = [];
+  const fetch = (input: RequestInfo | URL) => {
+    const url = String(input);
+    urls.push(url.split("?")[0]);
+    if (url.includes("/rpc/jev_refusals_reset")) return Promise.resolve(Response.json({ code: "PGRST202" }, { status: 404 }));
+    if (url.includes("/rpc/jev_projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
+    return Promise.resolve(Response.json([]));
+  };
+  const work = await createTagStore(fetch, "https://example.supabase.co", "service-test").listWork(10);
+  assertEquals(work.map((row) => row.expenses.length), [1]);
+  const reset = urls.indexOf("https://example.supabase.co/rest/v1/rpc/jev_refusals_reset");
+  const listed = urls.indexOf("https://example.supabase.co/rest/v1/transactions");
+  assertEquals([reset >= 0, reset < listed], [true, true]);
 });
 
 Deno.test("the store marks a refusal, and falls back to the old call before the migration", async () => {

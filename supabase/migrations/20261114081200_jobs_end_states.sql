@@ -6,8 +6,9 @@
 -- A. Jev tagging: a failure the provider says can never pass for this input stops spending a call.
 --    jev_line_failures.refused_at: set when Jev answered invalid_request (HTTP 400 or 422, or the
 --    request the edge function built failed its own check before it was sent), and only when the
---    same run got an answer for another line (jev_tag.ts decides; a rate limit, an overload, a
---    timeout, a 5xx, a missing or rejected key is never a refusal). A refused line waits 30 days
+--    same run got an answer for another line of the same company, at most 3 lines of a company a
+--    run (jev_tag.ts decides; a rate limit, an overload, a timeout, a 5xx, a missing or rejected key
+--    is never a refusal). A refused line waits 30 days
 --    (jev_line_failures_refused_chk ties retry_after to refused_at), so every reader that already
 --    skips a failure until retry_after (the run's work list in jev_tag_rest.ts, private.jev_has_work)
 --    skips it with no change. What brings it back sooner:
@@ -17,27 +18,39 @@
 --      transactions_jev_refusal_reset);
 --    - a new model version: the row's key is (transaction_id, model_version), so a new pin has none;
 --    - a later suggestion: jev_finish_usage deletes the failure rows of lines that have one (part 5);
---    - the 30 days pass (a safety net for the inputs that are not the line's own: the company's
---      projects and categories, the supplier's history).
+--    - FLOW-1174: the company's projects or categories change: the refusal stores
+--      private.jev_inputs_key (refused_inputs); jev_has_work and get_jev_status ignore a refusal whose
+--      key is no longer the company's, and the run deletes it (jev_refusals_reset) before it lists
+--      the company's lines. No trigger on categories or projects;
+--    - the 30 days pass (a safety net for the inputs that are neither the line's nor the company's:
+--      the supplier's history, the flags, the forecast line).
 --    Writers of jev_line_failures, all traced: jev_mark_failed (this file adds p_refused, default
 --    false, so the old three-argument call is the same call), jev_finish_usage (deletes), the
---    trigger (deletes refused rows only), the line's delete (cascade), delete_company (cascade).
+--    trigger and jev_refusals_reset (delete refused rows only), the line's delete (cascade),
+--    delete_company (cascade).
 --    get_jev_status (mcp_jev_status) adds lines_not_retried: open lines without a suggestion whose
 --    failure is a refusal; they stay counted in lines_without_suggestion.
 -- B. Push: a new-lines or weekly claim can be given back. push_claim_targets returns each row's
 --    claim ({mark, prev} for new, {day, prev} for weekly); push_release_claims puts the mark back
 --    when no device of the user accepted the push and at least one failed for a reason that can pass
 --    (push_send.ts decides). It moves a mark back only from the value that claim set, so a later
---    claim is never undone. A released weekly summary is tried again by the hourly gate until 11:59
---    on the same Sunday (notification_prefs.weekly_released_on, notification_prefs_weekly_released_chk).
---    claim_push_test returns its claim's id; release_push_test gives a test claim back when no
---    device accepted the test push.
--- C. Invite email: release_invite_email gives back the claim of a send Resend answered with an error
---    (nothing was sent). A send that timed out keeps its claim (it may have been sent), so an invite
---    never gets more than 3 real emails. company_invites_emailed_chk ties emailed_at to email_sends.
--- D. Thread purge: a listed name that the purge cannot remove (it fails the path rule in
---    thread_purge.ts, or Storage keeps it) is recorded by thread_files_purge_skip and left off the
---    list for a day, so the job moves past it instead of stopping on it every hour. The path rule
+--    claim is never undone. A push service that took a send but whose answer was lost counts as
+--    failed, so the push can go out again (the device's tag replaces it): FLOW-1174 bounds that. A
+--    new-lines mark is moved back to the same value at most twice (notification_prefs.new_releases,
+--    notification_prefs_new_releases_chk), so the same lines go out at most three times; a released
+--    weekly summary is tried again by the hourly gate until 11:59 on the same Sunday
+--    (notification_prefs.weekly_released_on, notification_prefs_weekly_released_chk), at most four
+--    sends. claim_push_test returns its claim's id; release_push_test gives a test claim back under
+--    the same rule (or when the user has no device: nothing was posted).
+-- C. Invite email: release_invite_email gives back the claim of a send Resend refused (a 4xx but 408,
+--    409 and 429: nothing was sent). A 5xx or a timeout keeps its claim (it may have been sent), so
+--    an invite never gets more than 3 real emails. company_invites_emailed_chk ties emailed_at to
+--    email_sends. FLOW-1174: at most 3 claims of an invite are given back (email_releases,
+--    company_invites_email_releases_chk), so Resend hears at most 6 tries for it.
+-- D. Thread purge: a listed name that the purge cannot remove is recorded by thread_files_purge_skip
+--    and left off the list, so the job moves past it instead of stopping on it every hour: a day when
+--    it fails the path rule in thread_purge.ts, an hour when Storage kept it (FLOW-1174: Storage does
+--    not say why, and the reason may pass). The path rule
 --    and every other condition of the list stay; the skip only ever takes a name off the list.
 -- E. sync_bank: mcp_sync_bank_finish stores a pull that did not read everything (its page cap, or one
 --    of several connections failed: mcp_sync_jobs.complete false, set only on
@@ -81,13 +94,49 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 
 alter table public.jev_line_failures add column refused_at timestamptz;
+alter table public.jev_line_failures add column refused_inputs text;
 alter table public.jev_line_failures
   add constraint jev_line_failures_refused_chk
-  check (refused_at is null or retry_after = refused_at + interval '30 days');
+  check (
+    (refused_at is null and refused_inputs is null)
+    or (refused_at is not null and refused_inputs is not null and retry_after = refused_at + interval '30 days')
+  );
 comment on column public.jev_line_failures.refused_at is
   'FLOW-1168: Jev refused this line''s request as invalid (it can never pass as it is); not sent again '
-  'for 30 days unless the line changes (transactions_jev_refusal_reset) or the model version does. Null: '
-  'a failure that can pass, retried at retry_after.';
+  'for 30 days unless the line changes (transactions_jev_refusal_reset), its company''s projects or '
+  'categories change (refused_inputs) or the model version does. Null: a failure that can pass, retried '
+  'at retry_after.';
+comment on column public.jev_line_failures.refused_inputs is
+  'FLOW-1174: private.jev_inputs_key of the company when the line was refused. A refusal whose key is no '
+  'longer the company''s holds nothing: jev_has_work and get_jev_status ignore it, jev_refusals_reset deletes it.';
+
+-- FLOW-1174: what a Jev request takes from the company rather than the line: its projects (as
+-- jev_projects gives them) and its categories. A refusal is kept only while this is unchanged.
+create function private.jev_inputs_key(p_company uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select md5(jsonb_build_array(
+    (select coalesce(jsonb_agg(jsonb_build_array(
+        p.id, p.name, p.status, p.id is not distinct from co.overhead_project_id,
+        case when p.status = 'finished' then (
+          select max(t.doc_date) from public.transactions t
+          where t.company_id = p_company and t.project_id = p.id and t.removed_at is null
+        ) end
+      ) order by p.id), '[]'::jsonb)
+     from public.projects p
+     join public.companies co on co.id = p.company_id
+     where p.company_id = p_company),
+    (select coalesce(jsonb_agg(jsonb_build_array(c.id, c.name, c.kind, c.hidden, c.loan_part) order by c.id), '[]'::jsonb)
+     from public.categories c
+     where c.company_id = p_company)
+  )::text);
+$$;
+
+revoke all on function private.jev_inputs_key(uuid) from public, anon, authenticated;
 
 drop function public.jev_mark_failed(uuid, uuid, text);
 
@@ -107,15 +156,17 @@ begin
   if coalesce(auth.role(), '') is distinct from 'service_role' then
     raise exception 'forbidden' using errcode = '42501';
   end if;
-  insert into public.jev_line_failures (company_id, transaction_id, model_version, attempts, retry_after, refused_at)
+  insert into public.jev_line_failures (company_id, transaction_id, model_version, attempts, retry_after, refused_at, refused_inputs)
   select t.company_id, t.id, p_model, 1,
     now() + case when coalesce(p_refused, false) then interval '30 days' else interval '6 hours' end,
-    case when coalesce(p_refused, false) then now() end
+    case when coalesce(p_refused, false) then now() end,
+    case when coalesce(p_refused, false) then private.jev_inputs_key(t.company_id) end
   from public.transactions t
   where t.company_id = p_company and t.id = p_transaction
   on conflict (transaction_id, model_version) do update
     set attempts = public.jev_line_failures.attempts + 1,
-        refused_at = case when coalesce(p_refused, false) then now() end,
+        refused_at = excluded.refused_at,
+        refused_inputs = excluded.refused_inputs,
         retry_after = now() + case
           when coalesce(p_refused, false) then interval '30 days'
           when public.jev_line_failures.attempts + 1 >= 3 then interval '24 hours'
@@ -130,7 +181,46 @@ grant execute on function public.jev_mark_failed(uuid, uuid, text, boolean) to s
 
 comment on function public.jev_mark_failed(uuid, uuid, text, boolean) is
   'Decision 0124, FLOW-1168: records a line Jev failed on. p_refused: Jev refused the request as invalid; '
-  'the line waits 30 days or until it changes.';
+  'the line waits 30 days or until it, or its company''s projects or categories, change.';
+
+-- FLOW-1174: the run calls this for each company before it lists the company's lines, so a line
+-- refused before a project or category changed is sent again. Returns how many were cleared.
+create function public.jev_refusals_reset(p_company uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_key text;
+  cleared integer;
+begin
+  if coalesce(auth.role(), '') is distinct from 'service_role' then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  current_key := private.jev_inputs_key(p_company);
+  delete from public.jev_line_failures f
+  where f.company_id = p_company
+    and f.refused_at is not null
+    and f.refused_inputs is distinct from current_key;
+  get diagnostics cleared = row_count;
+  return cleared;
+end;
+$$;
+
+revoke all on function public.jev_refusals_reset(uuid) from public, anon, authenticated;
+grant execute on function public.jev_refusals_reset(uuid) to service_role;
+
+comment on function public.jev_refusals_reset(uuid) is
+  'FLOW-1174: deletes the company''s Jev refusals made before its projects or categories changed. jev-tag only.';
+
+-- The cron's gate reads a stale refusal as work, so a fixed category is tried without waiting for a new line.
+select pg_temp.patch('private.jev_has_work()',
+  array[$a$          and f.retry_after > now()$a$],
+  array[$n$          and f.retry_after > now()
+          -- FLOW-1174: a refusal made before the company's projects or categories changed holds nothing.
+          and (f.refused_at is null or f.refused_inputs = private.jev_inputs_key(f.company_id))$n$]);
+revoke all on function private.jev_has_work() from public, anon, authenticated;
 
 -- A line whose request changes is asked again: its refusal no longer says anything about it.
 create function private.jev_refusal_reset()
@@ -193,9 +283,10 @@ select pg_temp.patch('public.mcp_jev_status()',
             and f.model_version = 'jev-1.13.0'
             and f.refused_at is not null
             and f.retry_after > now()
+            and f.refused_inputs = private.jev_inputs_key(cid)
         )
     )$n$]);
-revoke all on function public.mcp_jev_status() from public, anon, authenticated;
+revoke all on function public.mcp_jev_status() from public, anon;
 grant execute on function public.mcp_jev_status() to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------------------------
@@ -210,14 +301,26 @@ comment on column public.notification_prefs.weekly_released_on is
   'FLOW-1168: the Israel date a סיכום שבועי claim was given back because no device took it; the hourly '
   'gate tries again until 11:59 that Sunday. Cleared by the next weekly claim.';
 
+-- FLOW-1174: a send whose answer was lost may have reached the device, so a new-lines claim is given
+-- back at most twice from the same mark: the same lines go out at most three times.
+alter table public.notification_prefs
+  add column new_released_mark timestamptz,
+  add column new_releases smallint not null default 0;
+alter table public.notification_prefs
+  add constraint notification_prefs_new_releases_chk check (new_releases between 0 and 2);
+comment on column public.notification_prefs.new_releases is
+  'FLOW-1174: how many new-lines claims were given back to new_released_mark (the mark they moved from); '
+  'at most 2, then the claim is kept. A release to another mark starts again at 1.';
+
 -- The return type gains `claim`, so the function is made again with its grants.
 drop function public.push_claim_targets(text);
 
 -- The send function claims a kind's targets in one call: the claim moves the user's mark (new)
--- or stamps today (weekly) before the push goes out, so two runs never send the same lines.
--- Each row carries its claim; push_release_claims gives it back when no device took the push.
--- created_at is when the inserting transaction began, so a line from a sync that commits after a
--- later-started sync was claimed is not pushed. It is missed, never sent twice; accepted.
+-- or stamps today (weekly) before the push goes out, so two runs in flight never send the same
+-- lines. Each row carries its claim; push_release_claims gives it back when no device took the
+-- push. created_at is when the inserting transaction began, so a line from a sync that commits
+-- after a later-started sync was claimed is not pushed: it is missed rather than pushed late;
+-- accepted.
 -- The weekly claim does not check the day: the cron's gate does (only a cron or service caller
 -- reaches it).
 create function public.push_claim_targets(p_kind text)
@@ -302,7 +405,8 @@ grant execute on function public.push_claim_targets(text) to service_role;
 
 -- Gives claims back: p_claims is [{user_id, claim}] as push_claim_targets returned them. A mark
 -- moves back only from the value that claim set, and only to an earlier one, so a claim made since
--- is never undone. Returns how many users were given back.
+-- is never undone. A new-lines mark moves back to the same value at most twice (FLOW-1174); a weekly
+-- claim is bounded by its gate (until 11:59). Returns how many users were given back.
 create function public.push_release_claims(p_kind text, p_claims jsonb)
 returns integer
 language plpgsql
@@ -338,13 +442,21 @@ begin
   ), back as (
     update public.notification_prefs p
     set new_line_mark = case when p_kind = 'new' then g.prev_mark else p.new_line_mark end,
+        new_releases = case
+          when p_kind <> 'new' then p.new_releases
+          when p.new_released_mark is not distinct from g.prev_mark then p.new_releases + 1
+          else 1
+        end,
+        new_released_mark = case when p_kind = 'new' then g.prev_mark else p.new_released_mark end,
         weekly_sent_on = case when p_kind = 'weekly' then g.prev_day else p.weekly_sent_on end,
         weekly_released_on = case when p_kind = 'weekly' then g.day else p.weekly_released_on end
     from given g
     where p.user_id = g.user_id
       and (
         (p_kind = 'new' and g.mark is not null and p.new_line_mark = g.mark
-          and (g.prev_mark is null or g.prev_mark < g.mark))
+          and (g.prev_mark is null or g.prev_mark < g.mark)
+          -- FLOW-1174: twice from the same mark at most, then the claim is kept.
+          and (p.new_released_mark is distinct from g.prev_mark or p.new_releases < 2))
         or (p_kind = 'weekly' and g.day is not null and p.weekly_sent_on = g.day
           and (g.prev_day is null or g.prev_day < g.day))
       )
@@ -395,7 +507,7 @@ begin$n$,
   return jsonb_build_object('user_id', uid, 'devices', least(devices, 10), 'claim', claimed);$n$
   ]);
 revoke all on function public.claim_push_test() from public, anon, authenticated;
-grant execute on function public.claim_push_test() to authenticated, service_role;
+grant execute on function public.claim_push_test() to authenticated;
 
 create function public.release_push_test(p_user uuid, p_claim bigint)
 returns boolean
@@ -424,9 +536,18 @@ comment on function public.release_push_test(uuid, bigint) is
 
 alter table public.company_invites
   add constraint company_invites_emailed_chk check ((email_sends = 0) = (emailed_at is null));
+-- FLOW-1174: claims given back, at most 3, so Resend hears at most 6 tries per invite (3 kept sends
+-- and 3 refused ones), however often a client asks.
+alter table public.company_invites
+  add column email_releases smallint not null default 0;
+alter table public.company_invites
+  add constraint company_invites_email_releases_chk check (email_releases between 0 and 3);
+comment on column public.company_invites.email_releases is
+  'FLOW-1174: email claims given back because Resend refused the send (release_invite_email); at most 3.';
 
 -- p_send is the claim's number (claim_invite_email's email_sends). Only the latest claim is given
--- back, so two sends in flight cannot both lower the count past what was claimed.
+-- back, so two sends in flight cannot both lower the count past what was claimed; and at most 3
+-- claims of an invite are ever given back (FLOW-1174).
 create function public.release_invite_email(p_invite_id uuid, p_send integer)
 returns boolean
 language plpgsql
@@ -439,10 +560,12 @@ begin
   end if;
   update public.company_invites i
   set email_sends = i.email_sends - 1,
-      emailed_at = case when i.email_sends = 1 then null else i.emailed_at end
+      emailed_at = case when i.email_sends = 1 then null else i.emailed_at end,
+      email_releases = i.email_releases + 1
   where i.id = p_invite_id
     and p_send between 1 and 3
-    and i.email_sends = p_send;
+    and i.email_sends = p_send
+    and i.email_releases < 3;
   return found;
 end;
 $$;
@@ -459,16 +582,21 @@ comment on function public.release_invite_email(uuid, integer) is
 
 create table private.thread_purge_skips (
   name text primary key,
-  skipped_at timestamptz not null default now()
+  skipped_at timestamptz not null default now(),
+  -- FLOW-1174: a name that fails the path rule waits a day; one Storage kept (it may pass) an hour.
+  retry_at timestamptz not null,
+  constraint thread_purge_skips_wait_chk
+    check (retry_at in (skipped_at + interval '1 hour', skipped_at + interval '1 day'))
 );
 alter table private.thread_purge_skips enable row level security;
 revoke all on private.thread_purge_skips from public, anon, authenticated;
 
 comment on table private.thread_purge_skips is
-  'FLOW-1168: transaction-files names the purge listed and could not remove; left off the list for a day. '
-  'Written by thread_files_purge_skip, which drops rows older than a day.';
+  'FLOW-1168: transaction-files names the purge listed and could not remove; left off the list until '
+  'retry_at (a day for a name that fails the path rule, an hour for one Storage kept). Written by '
+  'thread_files_purge_skip, which drops rows past their retry_at.';
 
-create function public.thread_files_purge_skip(p_names jsonb)
+create function public.thread_files_purge_skip(p_names jsonb, p_for_good boolean default true)
 returns integer
 language plpgsql
 security definer
@@ -483,32 +611,34 @@ begin
   if p_names is null or jsonb_typeof(p_names) <> 'array' or jsonb_array_length(p_names) > 1000 then
     raise exception 'validation' using errcode = '22023';
   end if;
-  delete from private.thread_purge_skips s where s.skipped_at < now() - interval '1 day';
-  insert into private.thread_purge_skips (name)
-  select distinct e #>> '{}'
+  delete from private.thread_purge_skips s where s.retry_at <= now();
+  insert into private.thread_purge_skips (name, skipped_at, retry_at)
+  select distinct e #>> '{}', now(),
+    now() + case when coalesce(p_for_good, true) then interval '1 day' else interval '1 hour' end
   from jsonb_array_elements(p_names) e
   where jsonb_typeof(e) = 'string'
-  on conflict (name) do update set skipped_at = now();
+  on conflict (name) do update set skipped_at = excluded.skipped_at, retry_at = excluded.retry_at;
   get diagnostics kept = row_count;
   return kept;
 end;
 $$;
 
-revoke all on function public.thread_files_purge_skip(jsonb) from public, anon, authenticated;
-grant execute on function public.thread_files_purge_skip(jsonb) to service_role;
+revoke all on function public.thread_files_purge_skip(jsonb, boolean) from public, anon, authenticated;
+grant execute on function public.thread_files_purge_skip(jsonb, boolean) to service_role;
 
-comment on function public.thread_files_purge_skip(jsonb) is
-  'FLOW-1168: names the purge could not remove; thread_files_to_purge leaves them out for a day. mercury-sync only.';
+comment on function public.thread_files_purge_skip(jsonb, boolean) is
+  'FLOW-1168: names the purge could not remove; thread_files_to_purge leaves them out for a day (p_for_good: '
+  'they fail the path rule), or an hour (Storage kept them, FLOW-1174). mercury-sync only.';
 
 select pg_temp.patch('public.thread_files_to_purge(integer)',
   array[$a$      and not exists (select 1 from public.transaction_files f where f.storage_path = o.name)$a$],
   array[$n$      and not exists (select 1 from public.transaction_files f where f.storage_path = o.name)
-      -- FLOW-1168: a name the purge could not remove waits a day, so the list moves past it. An
-      -- object uploaded again under that name since is listed.
+      -- FLOW-1168: a name the purge could not remove waits (a day, or an hour when Storage kept it),
+      -- so the list moves past it. An object uploaded again under that name since is listed.
       and not exists (
         select 1 from private.thread_purge_skips s
         where s.name = o.name
-          and s.skipped_at > now() - interval '1 day'
+          and s.retry_at > now()
           and s.skipped_at >= o.created_at
       )$n$]);
 revoke all on function public.thread_files_to_purge(integer) from public, anon, authenticated;

@@ -22,6 +22,7 @@ import {
   JEV_TAG_DEFAULT_LIMIT,
   JEV_TAG_INTERVAL_MS,
   JEV_TAG_LEASE_SECONDS,
+  JEV_REFUSALS_PER_COMPANY,
   JEV_TAG_OUTAGE_STOP,
   JEV_TAG_RESERVE_MS,
   lineCategories,
@@ -151,13 +152,25 @@ export async function tagWork(
       // The line is sent again on the next run, within the daily cap.
     }
   };
-  // FLOW-1168: lines Jev refused as invalid. Marked at the end of the run: as refused (not sent
-  // again until the line changes) only when Jev answered another line in this run, which shows the
-  // request's shape and the key are sound; else as a failure that can pass, as before.
-  const refusedLines: TagExpense[] = [];
+  // FLOW-1168, FLOW-1174: a line Jev refused as invalid is marked refused (not sent again until the
+  // line, or the company's projects or categories, change) only when Jev answered another line of
+  // the same company in this run, which shows that company's request shape and the key are sound;
+  // and at most JEV_REFUSALS_PER_COMPANY a run. Else it is a failure that can pass, as before. A
+  // refusal is marked as soon as its company has an answer; one that comes before the first answer
+  // waits for it, or for the company's end (a failure that can pass).
   let answered = false;
-  const markRefused = async () => {
-    for (const expense of refusedLines.splice(0)) await markFailed(expense, answered);
+  let refusals = 0;
+  const waiting: TagExpense[] = [];
+  const settle = async (expense: TagExpense) => {
+    const refused = refusals < JEV_REFUSALS_PER_COMPANY;
+    if (refused) refusals += 1;
+    await markFailed(expense, refused);
+  };
+  const settleWaiting = async () => {
+    for (const expense of waiting.splice(0)) {
+      if (answered) await settle(expense);
+      else await markFailed(expense);
+    }
   };
   const leaseHeld = async () => {
     if (!options.renew) return true;
@@ -184,6 +197,8 @@ export async function tagWork(
       ? options.usage.get(company.companyId) ?? emptyUsage()
       : emptyUsage();
     options.usage?.set(company.companyId, usage);
+    answered = false;
+    refusals = 0;
     for (const expense of company.expenses) {
       if (outage >= JEV_TAG_OUTAGE_STOP) {
         report.skipped += 1;
@@ -221,19 +236,23 @@ export async function tagWork(
         });
       } catch (error) {
         if (error instanceof JevError && (error.code === "unauthorized" || error.code === "missing_key")) {
-          await markRefused();
+          await settleWaiting();
           logTagRun(report, options.log);
           throw new TagStop(error.code);
         }
         report.failed += 1;
         usage.failed += 1;
         outage = error instanceof JevError && TRANSPORT_CODES.has(error.code) ? outage + 1 : 0;
-        if (error instanceof JevError && error.code === "invalid_request") refusedLines.push(expense);
-        else await markFailed(expense);
+        if (!(error instanceof JevError && error.code === "invalid_request")) await markFailed(expense);
+        else if (answered) await settle(expense);
+        else waiting.push(expense);
         continue;
       }
       outage = 0;
-      answered = true;
+      if (!answered) {
+        answered = true;
+        await settleWaiting();
+      }
       if (result.usage) {
         report.input_tokens += result.usage.input_tokens;
         report.output_tokens += result.usage.output_tokens;
@@ -310,8 +329,8 @@ export async function tagWork(
         await markFailed(expense);
       }
     }
+    await settleWaiting();
   }
-  await markRefused();
   logTagRun(report, options.log);
   return report;
 }

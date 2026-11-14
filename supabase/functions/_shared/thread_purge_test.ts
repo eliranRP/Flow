@@ -15,13 +15,13 @@ function client(
   fail: { list?: boolean; remove?: boolean; keep?: number; skip?: "missing" } = {},
 ) {
   const removed: Array<{ bucket: string; paths: string[] }> = [];
-  const skips: string[][] = [];
+  const skips: [string[], boolean][] = [];
   let calls = 0;
   const admin = {
-    rpc: (name: string, args: { p_limit?: number; p_names?: string[] }) => {
+    rpc: (name: string, args: { p_limit?: number; p_names?: string[]; p_for_good?: boolean }) => {
       if (name === "thread_files_purge_skip") {
         if (fail.skip === "missing") return Promise.resolve({ data: null, error: { code: "PGRST202" } });
-        skips.push(args.p_names ?? []);
+        skips.push([args.p_names ?? [], args.p_for_good === true]);
         return Promise.resolve({ data: args.p_names?.length ?? 0, error: null });
       }
       calls += 1;
@@ -68,7 +68,8 @@ Deno.test("removes any thread file name, never another kind of path, and skips t
   const c = client([[...ok, ...bad]]);
   assertEquals(await purgeThreadFiles(c.admin, "transaction-files"), { removed: ok.length, skipped: bad.length });
   assertEquals(c.removed, [{ bucket: "transaction-files", paths: ok }]);
-  assertEquals(c.skips, [bad]);
+  // A name that fails the path rule can never pass: it waits a day.
+  assertEquals(c.skips, [[bad, true]]);
   assertEquals(c.calls(), 1);
 });
 
@@ -85,8 +86,15 @@ Deno.test("what Storage kept is skipped, and the run goes on", async () => {
   const full = Array.from({ length: PURGE_BATCH }, (_, i) => `${A}/${L}/${String(i)}.jpg`);
   const c = client([[...full], [`${A}/${L}/last.jpg`]], { keep: 2 });
   assertEquals(await purgeThreadFiles(c.admin, "transaction-files"), { removed: PURGE_BATCH - 2, skipped: 3 });
-  assertEquals(c.skips, [full.slice(0, 2), [`${A}/${L}/last.jpg`]]);
+  // Storage does not say why it kept a name, and the reason may pass: it waits an hour (FLOW-1174).
+  assertEquals(c.skips, [[full.slice(0, 2), false], [[`${A}/${L}/last.jpg`], false]]);
   assertEquals(c.calls(), 2);
+});
+
+Deno.test("a batch with both kinds records each with its own wait", async () => {
+  const c = client([["avatars/me.png", `${A}/${L}/a.jpg`, `${A}/${L}/b.jpg`]], { keep: 1 });
+  assertEquals(await purgeThreadFiles(c.admin, "transaction-files"), { removed: 1, skipped: 2 });
+  assertEquals(c.skips, [[["avatars/me.png"], true], [[`${A}/${L}/a.jpg`], false]]);
 });
 
 Deno.test("before the skip list exists, a run stops where it did", async () => {
@@ -114,4 +122,5 @@ Deno.test("purgeName: a late answer does not move a name that already ended", ()
   assertEquals(purgeName.next("skipped", "removed"), "skipped");
   assertEquals(purgeName.next("removed", "kept"), "removed");
   assertEquals(purgeName.next(purgeName.next("listed", "removed"), "kept"), "removed");
+  assertEquals(purgeName.next("held", "refused"), "held");
 });

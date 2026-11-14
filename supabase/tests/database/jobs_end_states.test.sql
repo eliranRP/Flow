@@ -1,12 +1,12 @@
 -- FLOW-1168 (decision 0266): the server jobs' end states. A Jev line refused as invalid waits until
--- it changes; a new-lines, weekly or test push claim and an invite email claim can be given back
--- when nothing was sent; a name the thread purge cannot remove leaves its list for a day; a
+-- it or its company's projects and categories change; a new-lines, weekly or test push claim and an
+-- invite email claim can be given back, a bounded number of times, when nothing was sent; a name the thread purge cannot remove leaves its list for a day; a
 -- sync_bank job stores an incomplete pull and why a pull did not run, and its own token finishes it
 -- after a revoke. Invented names and @example.com emails only.
 
 begin;
 
-select plan(56);
+select plan(84);
 
 do $users$
 begin
@@ -130,6 +130,55 @@ select is(
   'a later failure that can pass clears the refusal'
 );
 
+-- FLOW-1174: a refusal holds only while the company's projects and categories are as the refused
+-- request had them: a change there can be what made Jev refuse it.
+delete from public.company_integrations where provider = 'jev';
+insert into public.company_integrations (company_id, provider, enabled, mode, threshold)
+values (pg_temp.id('co'), 'jev', true, 'shadow', 0.9);
+insert into je (label, id) values ('cat', tests.fixture_category(pg_temp.id('co'), 'Example Repairs'));
+select pg_temp.as_service();
+select public.jev_mark_failed(pg_temp.id('co'), pg_temp.id('line'), 'jev-1.13.0', true);
+select public.jev_mark_failed(pg_temp.id('co'), pg_temp.id('line2'), 'jev-1.13.0', true);
+select pg_temp.as_postgres();
+select is(
+  (select count(*)::int from public.jev_line_failures
+   where company_id = pg_temp.id('co') and refused_inputs = private.jev_inputs_key(pg_temp.id('co'))),
+  2,
+  'a refusal records the projects and categories its request was built from'
+);
+select throws_ok(
+  $$update public.jev_line_failures set refused_inputs = null where transaction_id = pg_temp.id('line')$$,
+  '23514', null,
+  'a refusal always names its inputs (jev_line_failures_refused_chk)'
+);
+select ok(not private.jev_has_work(), 'both open lines refused: no work');
+update public.categories set sort_order = sort_order + 100 where id = pg_temp.id('cat');
+select ok(not private.jev_has_work(), 'a category write the request does not read keeps the refusals');
+update public.categories set name = 'Example Repairs and Upkeep' where id = pg_temp.id('cat');
+select ok(private.jev_has_work(), 'a renamed category makes the refused lines work again');
+select tests.authenticate_as('je_owner');
+select is((public.mcp_jev_status()->>'lines_not_retried')::int, 0, 'get_jev_status no longer counts them as not retried');
+reset role;
+select pg_temp.as_service();
+select is(public.jev_refusals_reset(pg_temp.id('co')), 2, 'the run clears the refusals the change made stale');
+select is(public.jev_refusals_reset(pg_temp.id('co')), 0, 'and only those');
+select public.jev_mark_failed(pg_temp.id('co'), pg_temp.id('line'), 'jev-1.13.0', true);
+select pg_temp.as_postgres();
+select is(
+  (select refused_inputs = private.jev_inputs_key(pg_temp.id('co')) from public.jev_line_failures where transaction_id = pg_temp.id('line')),
+  true,
+  'a line refused again records the new inputs'
+);
+select pg_temp.as_service();
+select is(public.jev_refusals_reset(pg_temp.id('co')), 0, 'a refusal under the current inputs stays');
+select pg_temp.as_postgres();
+select tests.fixture_project(pg_temp.id('co'), 'Example Street 9');
+select is(
+  (select refused_inputs = private.jev_inputs_key(pg_temp.id('co')) from public.jev_line_failures where transaction_id = pg_temp.id('line')),
+  false,
+  'a new project makes it stale too'
+);
+
 -- ---------------------------------------------------------------------------------------------
 -- B. Push claims
 -- ---------------------------------------------------------------------------------------------
@@ -194,6 +243,43 @@ select is(
     'claim', jsonb_build_object('mark', (select claim->'mark' from claimed), 'prev', now())))),
   0,
   'a release never moves the mark forward'
+);
+-- FLOW-1174: a send whose answer was lost may have reached the device, so the same lines are given
+-- back at most twice: they go out at most three times, and the device's tag replaces the copy.
+select is(
+  public.push_release_claims('new', (select jsonb_agg(jsonb_build_object('user_id', user_id, 'claim', claim)) from claimed)),
+  1,
+  'the same lines are given back a second time'
+);
+truncate claimed;
+insert into claimed select * from public.push_claim_targets('new');
+select is(
+  public.push_release_claims('new', (select jsonb_agg(jsonb_build_object('user_id', user_id, 'claim', claim)) from claimed)),
+  0,
+  'never a third time: the claim is kept'
+);
+select pg_temp.as_postgres();
+select is(
+  (select (new_line_mark = (select (claim->>'mark')::timestamptz from claimed), new_releases)::text
+   from public.notification_prefs where user_id = tests.get_supabase_uid('je_owner')),
+  '(t,2)',
+  'the mark stays where the kept claim set it'
+);
+select throws_ok(
+  $$update public.notification_prefs set new_releases = 3 where user_id = tests.get_supabase_uid('je_owner')$$,
+  '23514', null,
+  'at most two releases per mark (notification_prefs_new_releases_chk)'
+);
+-- Lines claimed from another mark get their own two.
+update public.notification_prefs set new_line_mark = now() - interval '30 minutes'
+where user_id = tests.get_supabase_uid('je_owner');
+select pg_temp.as_service();
+truncate claimed;
+insert into claimed select * from public.push_claim_targets('new');
+select is(
+  public.push_release_claims('new', (select jsonb_agg(jsonb_build_object('user_id', user_id, 'claim', claim)) from claimed)),
+  1,
+  'a claim from a new mark can be given back again'
 );
 select throws_ok($$select public.push_release_claims('evening', '[]')$$, '22023', null, 'only new and weekly claims are given back');
 
@@ -287,6 +373,29 @@ select is(
 );
 select throws_ok($$select public.claim_invite_email(pg_temp.id('invite'))$$, '23514', 'invite_email_limit',
   'and never a fourth');
+-- FLOW-1174: an invite gives back at most 3 claims, so Resend hears at most 6 tries for it (3 sends
+-- and 3 refused), however often an owner's client asks.
+select pg_temp.as_service();
+select is(public.release_invite_email(pg_temp.id('invite'), 3), true, 'a second refused send is given back');
+select tests.authenticate_as('je_owner');
+select is((public.claim_invite_email(pg_temp.id('invite'))->>'email_sends')::int, 3, 'and claimed again');
+select pg_temp.as_service();
+select is(public.release_invite_email(pg_temp.id('invite'), 3), true, 'a third refused send is given back');
+select tests.authenticate_as('je_owner');
+select is((public.claim_invite_email(pg_temp.id('invite'))->>'email_sends')::int, 3, 'and claimed again');
+select pg_temp.as_service();
+select is(public.release_invite_email(pg_temp.id('invite'), 3), false, 'never a fourth release');
+select pg_temp.as_postgres();
+select is(
+  (select (email_sends, email_releases)::text from public.company_invites where id = pg_temp.id('invite')),
+  '(3,3)',
+  'three sends kept, three given back'
+);
+select throws_ok(
+  $$update public.company_invites set email_releases = 4 where id = pg_temp.id('invite')$$,
+  '23514', null,
+  'at most three releases (company_invites_email_releases_chk)'
+);
 select pg_temp.as_postgres();
 select throws_ok(
   $$update public.company_invites set emailed_at = null where id = pg_temp.id('invite')$$,
@@ -315,7 +424,7 @@ select is(public.thread_files_purge_skip(jsonb_build_array(pg_temp.path('stuck.j
 select is(public.thread_files_to_purge(1), jsonb_build_array(pg_temp.path('next.jpg')),
   'so the list moves past it');
 select pg_temp.as_postgres();
-update private.thread_purge_skips set skipped_at = now() - interval '25 hours';
+update private.thread_purge_skips set skipped_at = skipped_at - interval '25 hours', retry_at = retry_at - interval '25 hours';
 select pg_temp.as_service();
 select is(public.thread_files_to_purge(1), jsonb_build_array(pg_temp.path('stuck.jpg')),
   'a day later it is listed again');
@@ -325,9 +434,29 @@ update storage.objects set created_at = now() + interval '1 second' where name =
 select pg_temp.as_service();
 select is(public.thread_files_to_purge(10), jsonb_build_array(pg_temp.path('next.jpg'), pg_temp.path('stuck.jpg')),
   'an object uploaded again since its skip is listed again');
+-- FLOW-1174: a name Storage kept (the reason is not said, it may pass) waits an hour, not a day.
+select is(public.thread_files_purge_skip(jsonb_build_array(pg_temp.path('next.jpg')), false), 1,
+  'the purge records a name Storage kept');
+select is(public.thread_files_to_purge(10), jsonb_build_array(pg_temp.path('stuck.jpg')), 'so the list moves past it');
+select pg_temp.as_postgres();
+select is(
+  (select retry_at - skipped_at from private.thread_purge_skips where name = pg_temp.path('next.jpg')),
+  interval '1 hour',
+  'for an hour'
+);
+select throws_ok(
+  $$update private.thread_purge_skips set retry_at = skipped_at + interval '2 days'$$,
+  '23514', null,
+  'a skip waits an hour or a day (thread_purge_skips_wait_chk)'
+);
+update private.thread_purge_skips set skipped_at = skipped_at - interval '61 minutes', retry_at = retry_at - interval '61 minutes'
+where name = pg_temp.path('next.jpg');
+select pg_temp.as_service();
+select is(public.thread_files_to_purge(10), jsonb_build_array(pg_temp.path('next.jpg'), pg_temp.path('stuck.jpg')),
+  'an hour later it is listed again');
 select pg_temp.as_postgres();
 select ok(
-  not has_function_privilege('authenticated', 'public.thread_files_purge_skip(jsonb)', 'execute'),
+  not has_function_privilege('authenticated', 'public.thread_files_purge_skip(jsonb, boolean)', 'execute'),
   'no client records a purge skip'
 );
 

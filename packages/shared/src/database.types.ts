@@ -176,13 +176,13 @@ isOneToOne: false
                   ]
                 },"company_invites": {
                   Row: {
-                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"email_sends": number,"emailed_at": string | null,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
+                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"email_releases": number,"email_sends": number,"emailed_at": string | null,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
+                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"email_releases"?: number,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
+                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"email_releases"?: number,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
                   }
                   Relationships: [
                     {
@@ -446,13 +446,13 @@ isOneToOne: false
                   ]
                 },"jev_line_failures": {
                   Row: {
-                    "attempts": number,"company_id": string,"model_version": string,"refused_at": string | null,"retry_after": string,"transaction_id": string,"updated_at": string
+                    "attempts": number,"company_id": string,"model_version": string,"refused_at": string | null,"refused_inputs": string | null,"retry_after": string,"transaction_id": string,"updated_at": string
                   }
                   Insert: {
-                    "attempts"?: number,"company_id": string,"model_version": string,"refused_at"?: string | null,"retry_after": string,"transaction_id": string,"updated_at"?: string
+                    "attempts"?: number,"company_id": string,"model_version": string,"refused_at"?: string | null,"refused_inputs"?: string | null,"retry_after": string,"transaction_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"refused_at"?: string | null,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
+                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"refused_at"?: string | null,"refused_inputs"?: string | null,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -818,13 +818,13 @@ isOneToOne: true
                   ]
                 },"notification_prefs": {
                   Row: {
-                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_released_on": string | null,"weekly_sent_on": string | null,"weekly_summary": boolean
+                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_released_mark": string | null,"new_releases": number,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_released_on": string | null,"weekly_sent_on": string | null,"weekly_summary": boolean
                   }
                   Insert: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_released_mark"?: string | null,"new_releases"?: number,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Update: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_released_mark"?: string | null,"new_releases"?: number,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Relationships: [
                     
@@ -1953,6 +1953,9 @@ isOneToOne: false
 "jev_projects":
 { Args: { "p_company": string }; Returns: Json
                            },
+"jev_refusals_reset":
+{ Args: { "p_company": string }; Returns: number
+                           },
 "jev_release_lease":
 { Args: { "p_holder": string }; Returns: undefined
                            },
@@ -2747,7 +2750,7 @@ isOneToOne: false
 { Args: { "p_company_id": string }; Returns: number
                            },
 "thread_files_purge_skip":
-{ Args: { "p_names": Json }; Returns: number
+{ Args: { "p_for_good"?: boolean,"p_names": Json }; Returns: number
                            },
 "thread_files_to_purge":
 { Args: { "p_limit": number }; Returns: Json

@@ -235,14 +235,16 @@ export async function claimTestPush(
 }
 
 /**
- * FLOW-1168: gives claims back. Never throws: a claim that is not given back stays spent, as before
- * (and before the migration, when the functions do not exist yet).
+ * FLOW-1168: gives claims back, and answers what the database said (null when the call failed).
+ * Never throws: a claim that is not given back stays spent, as before (and before the migration,
+ * when the functions do not exist yet).
  */
-async function giveBack(deps: PushSendDeps, url: string, key: string, name: string, args: unknown, label: string): Promise<void> {
+async function giveBack(deps: PushSendDeps, url: string, key: string, name: string, args: unknown, label: string): Promise<unknown> {
   try {
-    await rpc(deps, url, key, name, args);
+    return await rpc(deps, url, key, name, args);
   } catch (error) {
     console.error(`push-send ${label} release error=${error instanceof Error ? error.message : "unknown"}`);
+    return null;
   }
 }
 
@@ -275,22 +277,31 @@ async function handleTestPush(req: Request, deps: PushSendDeps, serviceKey: stri
     const claim = await claimTestPush(deps, supabaseUrl, anonKey, `Bearer ${bearer}`);
     if (claim === "unauthorized") return json({ error: "unauthorized" }, 401);
     if (claim === "limit") return json({ error: "push_test_limit" }, 429);
-    if (claim.devices === 0) return json({ devices: 0, sent: 0, gone: 0, failed: 0 });
+    // FLOW-1168, FLOW-1174: a test push that posted nothing (no device), or that no device took
+    // while one failed in a way a retry can pass, does not spend one of the five an hour. Devices
+    // that all refused it or are gone keep the claim, so the five still bound the posts.
+    const claims = new PushClaims([claim.userId]);
+    let posted = false;
     let targets: (PushTarget & { user_id: string })[] = [];
     let report: PushReport = { users: 0, sent: 0, gone: 0, failed: 0 };
     let gone: string[] = [];
     try {
-      targets = parseTestTargets(await rpc(deps, supabaseUrl, serviceKey, "push_test_targets", { p_user: claim.userId }), claim.userId);
-      ({ report, gone } = await remindEvening(
-        targets,
-        (target) => sendPush(deps.fetch, target, testMessage(), vapid, now(), 10 * 60),
-      ));
+      if (claim.devices > 0) {
+        targets = parseTestTargets(await rpc(deps, supabaseUrl, serviceKey, "push_test_targets", { p_user: claim.userId }), claim.userId);
+        posted = targets.length > 0;
+        ({ report, gone } = await remindEvening(
+          targets,
+          (target) => sendPush(deps.fetch, target, testMessage(), vapid, now(), 10 * 60),
+          { claims },
+        ));
+      }
     } finally {
-      // FLOW-1168: a test push no device took does not spend one of the five an hour.
-      if (report.sent === 0 && claim.claim !== null) {
+      const giveItBack = posted ? claims.end().released.includes(claim.userId) : report.sent === 0;
+      if (giveItBack && claim.claim !== null) {
         await giveBack(deps, supabaseUrl, serviceKey, "release_push_test", { p_user: claim.userId, p_claim: claim.claim }, "test");
       }
     }
+    if (claim.devices === 0) return json({ devices: 0, sent: 0, gone: 0, failed: 0 });
     if (gone.length > 0) await rpc(deps, supabaseUrl, serviceKey, "note_push_results", { p_reminded: [], p_gone: gone });
     console.info(`push-send test devices=${String(targets.length)} sent=${String(report.sent)} gone=${String(report.gone)} failed=${String(report.failed)}`);
     return json({ devices: targets.length, sent: report.sent, gone: report.gone, failed: report.failed });
@@ -328,8 +339,9 @@ export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<
         (target) => sendPush(deps.fetch, target, eveningMessage(target.waiting), vapid, now()),
       );
     } else {
-      // The claim moves each user's mark first, so two runs never send the same lines. A claim no
-      // device took, with a try that can pass later, is given back for the next run (push_claim.ts).
+      // The claim moves each user's mark first, so two runs in flight never send the same lines. A
+      // claim no device took, with a try that can pass later, is given back for the next run, a
+      // bounded number of times (push_claim.ts).
       const targets = parseCountTargets(await rpc(deps, supabaseUrl, serviceKey, "push_claim_targets", { p_kind: kind }));
       const weekStart = lastWeekStart(now());
       const message = (target: CountTarget) =>
@@ -346,8 +358,11 @@ export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<
         return claim ? [{ user_id: user, claim }] : [];
       });
       if (back.length > 0) {
-        await giveBack(deps, supabaseUrl, serviceKey, "push_release_claims", { p_kind: kind, p_claims: back }, kind);
-        console.info(`push-send ${kind} released=${String(back.length)}`);
+        // What the database gave back: fewer than asked when a claim was made since, or a new-lines
+        // claim was already given back twice from its mark (FLOW-1174); none when the call failed.
+        const answer = await giveBack(deps, supabaseUrl, serviceKey, "push_release_claims", { p_kind: kind, p_claims: back }, kind);
+        const released = typeof answer === "number" && Number.isInteger(answer) && answer >= 0 ? answer : 0;
+        console.info(`push-send ${kind} released=${String(released)} asked=${String(back.length)}`);
       }
     }
     const { report, reminded, gone } = result;

@@ -4,22 +4,27 @@
 // Before sending it claims the send with claim_invite_email (decision 0195): at most 3 emails per
 // pending, unexpired invite, so a caller cannot mail one address without bound. Nothing here changes
 // the books. A failed send leaves the invite waiting in the invitee's inbox.
-// FLOW-1168: a send Resend answered with an error sent nothing, so its claim is given back
-// (release_invite_email, with the service key). A send that timed out or lost its connection may
-// have gone out, so it keeps its claim: an invite never gets more than 3 real emails.
+// FLOW-1168: a send Resend refused sent nothing, so its claim is given back (release_invite_email,
+// with the service key). FLOW-1174: only a 4xx other than 408, 409 and 429 is a refusal (resendRefused).
+// A 5xx, a gateway timeout, a timeout or a lost connection may come after Resend took the mail, so it
+// keeps its claim: an invite never gets more than 3 real emails. An invite gives back at most 3
+// claims (company_invites.email_releases), so Resend hears at most 6 tries for it.
 
 import { defineMachine } from "../../../packages/shared/src/machine.ts";
 import { empty, json } from "./http.ts";
 import { serviceRoleKey } from "./jev_tag.ts";
 
-/** One call's send. `answered` is Resend's error answer: nothing went out. */
+/**
+ * One call's send. `answered` is Resend's refusal: nothing went out. `failed` is an error answer
+ * after which the mail may have gone out, or one that asks to try later; `lost` is no answer.
+ */
 export const inviteSend = defineMachine({
   name: "inviteSend",
   initial: "lookup",
   final: ["refused", "sent", "released", "spent"],
   states: {
     lookup: { claimed: "claimed", refused: "refused" },
-    claimed: { sent: "sent", answered: "released", lost: "spent" },
+    claimed: { sent: "sent", answered: "released", failed: "spent", lost: "spent" },
     refused: {},
     sent: {},
     released: {},
@@ -37,6 +42,14 @@ export interface InviteMail {
   role: "editor" | "viewer";
   inviter: string;
   company: string;
+}
+
+/**
+ * FLOW-1174: Resend refused the request, so nothing went out: a 4xx, but not 408 (timed out), 409
+ * (an idempotent request in flight or reused) or 429 (rate or quota limit: try later, never loop).
+ */
+export function resendRefused(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 409 && status !== 429;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -188,7 +201,7 @@ export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Pr
     });
     await response.body?.cancel();
     status = response.status;
-    step = inviteSend.next(step, response.ok ? "sent" : "answered");
+    step = inviteSend.next(step, response.ok ? "sent" : resendRefused(response.status) ? "answered" : "failed");
   } catch {
     step = inviteSend.next(step, "lost");
   }
@@ -199,7 +212,7 @@ export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Pr
 
 /**
  * Gives back the claim of a send Resend refused. Never throws: without the service key, before the
- * migration, or when it fails, the claim stays spent, as before.
+ * migration, past the invite's 3 releases, or when it fails, the claim stays spent, as before.
  */
 async function releaseClaim(deps: InviteEmailDeps, inviteId: string, send: number | null): Promise<void> {
   const key = serviceRoleKey(deps.env);

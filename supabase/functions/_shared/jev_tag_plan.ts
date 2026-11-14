@@ -14,6 +14,12 @@ export const JEV_TAG_RESERVE_MS = 20_000;
 export const JEV_TAG_INTERVAL_MS = 60_000;
 /** This many provider failures in a row end the run, so an outage marks few lines. */
 export const JEV_TAG_OUTAGE_STOP = 3;
+/**
+ * FLOW-1174: at most this many lines of one company are marked refused in one run. Past it the
+ * rest are failures that can pass (6 hours, then a day), so a cause that is the company's, not
+ * the line's, cannot park a whole backlog for 30 days.
+ */
+export const JEV_REFUSALS_PER_COMPANY = 3;
 export const TRANSPORT_CODES = new Set(["rate_limited", "overloaded", "timeout", "unavailable"]);
 /**
  * The run lease outlives the 150 second Edge limit, so a killed run frees it on its own. FLOW-1168:

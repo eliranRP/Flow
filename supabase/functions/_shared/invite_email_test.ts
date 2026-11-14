@@ -1,5 +1,5 @@
 import { machineProblems } from "../../../packages/shared/src/machine.ts";
-import { handleInviteEmail, inviteBody, inviteSend, inviteSubject } from "./invite_email.ts";
+import { handleInviteEmail, inviteBody, inviteSend, inviteSubject, resendRefused } from "./invite_email.ts";
 
 function assertEquals(actual: unknown, expected: unknown): void {
   const a = JSON.stringify(actual);
@@ -145,9 +145,29 @@ Deno.test("a sent email keeps its claim, and a claim with no number is never giv
   const sent = releaseRun(200);
   assertEquals((await sent.run()).status, 200);
   assertEquals(released(sent.calls).length, 0);
-  const old = releaseRun(500, { id: INVITE });
+  const old = releaseRun(422, { id: INVITE });
   assertEquals((await old.run()).status, 502);
   assertEquals(released(old.calls).length, 0);
+});
+
+// FLOW-1174: only an answer that says nothing went out gives the claim back. A 5xx or a gateway
+// timeout may come after Resend took the mail; 408, 409 and 429 say "try later", and releasing on
+// them would let a client loop on Resend's rate limit.
+Deno.test("only a 4xx that says nothing went out gives the claim back", async () => {
+  for (const status of [400, 401, 403, 404, 422]) {
+    const { calls, run } = releaseRun(status);
+    assertEquals([status, (await run()).status, released(calls).length], [status, 502, 1]);
+  }
+  for (const status of [408, 409, 429, 500, 502, 503, 504]) {
+    const { calls, run } = releaseRun(status);
+    const res = await run();
+    assertEquals([status, res.status, await res.json(), released(calls).length], [status, 502, { error: "send_failed", status }, 0]);
+  }
+});
+
+Deno.test("resendRefused: the statuses that certainly sent nothing", () => {
+  assertEquals([400, 403, 422, 451].map(resendRefused), [true, true, true, true]);
+  assertEquals([200, 202, 408, 409, 429, 500, 504, 302].map(resendRefused), [false, false, false, false, false, false, false, false]);
 });
 
 Deno.test("inviteSend: every state is reached and ends", () => {
@@ -157,5 +177,6 @@ Deno.test("inviteSend: every state is reached and ends", () => {
 Deno.test("inviteSend: a send's answer before its claim, or after it ended, changes nothing", () => {
   assertEquals(inviteSend.next("lookup", "answered"), "lookup");
   assertEquals(inviteSend.next(inviteSend.next("claimed", "lost"), "answered"), "spent");
+  assertEquals(inviteSend.next("claimed", "failed"), "spent");
   assertEquals(inviteSend.next("refused", "claimed"), "refused");
 });

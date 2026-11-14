@@ -1,13 +1,18 @@
 // FLOW-1168: a push claim that can be given back. push_claim_targets moves a user's new-lines mark
 // (or stamps the weekly day) before the push goes out, and claim_push_test spends one of the five
 // test pushes an hour. A claim no device took is given back, so the next run sends it:
-// - new and weekly: given back when no device of the user accepted the push and at least one try
-//   failed in a way a later try can pass (a timeout, a network error, 408, 429, 5xx, or the run's
-//   time ran out before it was tried). A user one device accepted it from keeps the claim, so a
-//   push is never sent twice to a user who got it; a user whose every device refused it or is gone
-//   keeps it too, so nothing retries without end. A run killed before it gives claims back leaves
-//   them spent (at most once, as before).
-// - test: given back whenever no device accepted the test push.
+// - new, weekly and test: given back when no device of the user accepted the push and at least one
+//   try failed in a way a later try can pass (a timeout, a network error, 408, 429, 5xx, or the
+//   run's time ran out before it was tried). A user one device confirmed it from keeps the claim,
+//   so a push is not sent again once a device confirmed it; a user whose every device refused it or
+//   is gone keeps it too, so nothing retries without end. A run killed before it gives claims back
+//   leaves them spent.
+// - A send the push service took but whose answer was lost (a timeout) counts as failed, so the
+//   push can go out again; the device replaces it, by its tag, rather than showing two. FLOW-1174
+//   bounds that: a new-lines claim is given back at most twice from the same mark (the same lines
+//   go out at most 3 times, push_release_claims), a weekly one until 11:59 that Sunday (at most 4),
+//   a test one at most 5 an hour.
+// - test: also given back when the user has no device (nothing was posted).
 
 import { defineMachine } from "../../../packages/shared/src/machine.ts";
 import type { PushOutcome } from "./webpush.ts";
