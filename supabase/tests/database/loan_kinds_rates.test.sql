@@ -334,13 +334,12 @@ update public.loan_rates set annual_rate_ppm = 120000 where id = pg_temp.id('rat
 select is(pg_temp.undo('f106k-r1-undo2', 'loan_rate', pg_temp.id('rate'))->>'ok', 'true', 'undo of the add removes the row');
 select is((select count(*)::int from public.loan_rates where loan_id = pg_temp.id('io')), 0, 'no rate row is left');
 
--- loan_rates has RLS like loans: another company sees nothing and cannot write.
+-- loan_rates has RLS like loans: another company sees nothing, and save_loan_rate refuses its write.
 select pg_temp.set_rate('f106k-r4', 'io', '2026-09-01', 70000);
 select tests.authenticate_as('f106k_other');
 select is((select count(*)::int from public.loan_rates), 0, 'another user sees no rate rows');
 select throws_ok(
-  format($$insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm) values (%L, %L, '2026-10-01', 1)$$,
-    pg_temp.id('company'), pg_temp.id('io')),
+  format($$select public.save_loan_rate(%L, '2026-10-01', 1)$$, pg_temp.id('io')),
   '42501', null, 'and cannot add one to the owner''s loan'
 );
 reset role;

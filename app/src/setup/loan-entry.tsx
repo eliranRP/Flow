@@ -13,7 +13,7 @@ export function openNewLoan(open: () => void): void {
   open();
 }
 
-/** The stand-in sheet: today's LoanSetupForm, saved as a loans row for this company. */
+/** The stand-in sheet: today's LoanSetupForm, saved as a loan of this company (create_loan). */
 export function NewLoanSheet({
   open,
   onOpenChange,
@@ -45,7 +45,7 @@ export function NewLoanSheet({
             try {
               const supabase = getSupabase();
               if (!supabase) throw new Error("supabase");
-              const { error } = await supabase.from("loans").insert({ ...row, company_id: companyId }).select("id").single();
+              const { error } = await supabase.rpc("create_loan", { p_company_id: companyId, p_loan: row });
               if (error) throw new Error(error.message);
               onSaved();
             } catch {

@@ -8,9 +8,6 @@ import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "
 import { LoanSetupForm } from "./loan-setup";
 
 const db = vi.hoisted(() => ({
-  inserts: [] as Array<Record<string, unknown>>,
-  insertError: null as { message: string; code?: string } | null,
-  hold: null as Promise<void> | null,
   baseCurrency: null as string | null,
   currencyError: null as { message: string } | null,
   currencyHold: null as Promise<void> | null,
@@ -19,10 +16,6 @@ const db = vi.hoisted(() => ({
   balanceError: null as { message: string } | null,
   loans: [] as Array<{ id: string; name: string; currency: string; project_id: string | null }>,
   projects: [] as Array<{ id: string; name: string }>,
-  updates: [] as Array<{ row: Record<string, unknown>; id: string }>,
-  updateRows: 1,
-  updateError: null as { message: string; code?: string } | null,
-  updateHold: null as Promise<void> | null,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -39,32 +32,9 @@ vi.mock("../lib/supabase", () => ({
       from: (table: string) => {
         if (table === "loans") {
           return {
-            insert: (row: Record<string, unknown>) => ({
-              select: () => ({
-                single: () => {
-                  db.inserts.push(row);
-                  const finish = () => ({ data: db.insertError ? null : { id: `new-${String(db.inserts.length)}` }, error: db.insertError });
-                  if (db.hold) return db.hold.then(() => finish());
-                  return Promise.resolve(finish());
-                },
-              }),
-            }),
             select: () => ({
               eq: () => ({
                 order: () => Promise.resolve({ data: db.loans.map((loan) => ({ kind: "amortizing", status: "open", closed_on: null, ...loan })), error: null }),
-              }),
-            }),
-            update: (row: Record<string, unknown>) => ({
-              eq: (_column: string, id: string) => ({
-                select: () => {
-                  db.updates.push({ row, id });
-                  const finish = () => ({
-                    data: db.updateError ? null : Array.from({ length: db.updateRows }, () => ({ id })),
-                    error: db.updateError,
-                  });
-                  if (db.updateHold) return db.updateHold.then(() => finish());
-                  return Promise.resolve(finish());
-                },
               }),
             }),
           };
@@ -102,9 +72,6 @@ const mortgage = {
 };
 
 beforeEach(() => {
-  db.inserts = [];
-  db.insertError = null;
-  db.hold = null;
   db.baseCurrency = "ILS";
   db.currencyError = null;
   db.currencyHold = null;
@@ -113,10 +80,6 @@ beforeEach(() => {
   db.balanceError = null;
   db.loans = [];
   db.projects = [];
-  db.updates = [];
-  db.updateRows = 1;
-  db.updateError = null;
-  db.updateHold = null;
 });
 
 function renderForm(ui: ReactNode) {

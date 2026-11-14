@@ -5,7 +5,7 @@ import { emptySetupStore, loadSetupStore, readSetupStore, writeSetupStore } from
 const server = vi.hoisted(() => ({
   row: null as { state: unknown } | null,
   error: null as { message: string } | null,
-  upserts: [] as { row: Record<string, unknown>; options: unknown }[],
+  saves: [] as { p_company_id: unknown; p_state: unknown }[],
   reads: 0,
 }));
 
@@ -25,13 +25,12 @@ vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     from: (table: string) => {
       if (table !== "setup_states") throw new Error(`unexpected table ${table}`);
-      return {
-        ...readChain(),
-        upsert: (row: Record<string, unknown>, options: unknown) => {
-          server.upserts.push({ row, options });
-          return Promise.resolve({ data: null, error: null });
-        },
-      };
+      return readChain();
+    },
+    rpc: (name: string, args: { p_company_id: unknown; p_state: unknown }) => {
+      if (name !== "save_setup_state") throw new Error(`unexpected rpc ${name}`);
+      server.saves.push(args);
+      return Promise.resolve({ data: null, error: null });
     },
   }),
 }));
@@ -46,7 +45,7 @@ describe("setup flags on the server", () => {
     resetSetupServerForTests();
     server.row = null;
     server.error = null;
-    server.upserts = [];
+    server.saves = [];
     server.reads = 0;
   });
 
@@ -54,16 +53,15 @@ describe("setup flags on the server", () => {
     server.row = { state: skippedTwo };
     await loadSetupStore(user, company);
     expect(readSetupStore(user, company)).toEqual(skippedTwo);
-    expect(server.upserts).toHaveLength(0);
+    expect(server.saves).toHaveLength(0);
   });
 
   it("uploads flags this phone kept before the server had a row", async () => {
     localStorage.setItem(`flow.setup.${user}.${company}`, JSON.stringify(skippedTwo));
     await loadSetupStore(user, company);
     await setupUploadsSettled();
-    expect(server.upserts).toHaveLength(1);
-    expect(server.upserts[0]?.row).toEqual({ user_id: user, company_id: company, state: skippedTwo });
-    expect(server.upserts[0]?.options).toEqual({ onConflict: "user_id,company_id" });
+    expect(server.saves).toHaveLength(1);
+    expect(server.saves[0]).toEqual({ p_company_id: company, p_state: skippedTwo });
   });
 
   it("keeps a write made before the load settled over an older server copy", async () => {
@@ -72,7 +70,7 @@ describe("setup flags on the server", () => {
     await loadSetupStore(user, company);
     await setupUploadsSettled();
     expect(readSetupStore(user, company)).toEqual(skippedTwo);
-    expect(server.upserts.at(-1)?.row).toMatchObject({ state: skippedTwo });
+    expect(server.saves.at(-1)).toMatchObject({ p_state: skippedTwo });
   });
 
   it("keeps the local copy when the read fails, and reads once per page load", async () => {
@@ -82,7 +80,7 @@ describe("setup flags on the server", () => {
     await loadSetupStore(user, company);
     expect(readSetupStore(user, company)).toEqual(skippedTwo);
     expect(server.reads).toBe(1);
-    expect(server.upserts).toHaveLength(0);
+    expect(server.saves).toHaveLength(0);
   });
 
   it("after a failed read, a later write stays local and does not replace the row", async () => {
@@ -90,22 +88,22 @@ describe("setup flags on the server", () => {
     await loadSetupStore(user, company);
     writeSetupStore(user, company, { ...emptySetupStore(), run_started_at: "2026-10-09T02:00:00.000Z" });
     await setupUploadsSettled();
-    expect(server.upserts).toHaveLength(0);
+    expect(server.saves).toHaveLength(0);
   });
 
   it("a new device with no row and no local flags uploads nothing", async () => {
     await loadSetupStore(user, company);
     expect(server.reads).toBe(1);
-    expect(server.upserts).toHaveLength(0);
+    expect(server.saves).toHaveLength(0);
   });
 
   it("uploads every write once a company exists, and none before", async () => {
     writeSetupStore(user, null, skippedTwo);
     await setupUploadsSettled();
-    expect(server.upserts).toHaveLength(0);
+    expect(server.saves).toHaveLength(0);
     writeSetupStore(user, company, skippedTwo);
     await setupUploadsSettled();
-    expect(server.upserts).toHaveLength(1);
+    expect(server.saves).toHaveLength(1);
   });
 
   it("a write on a page that never read the row merges into it instead of wiping it", async () => {
@@ -114,7 +112,7 @@ describe("setup flags on the server", () => {
     writeSetupStore(user, company, { ...emptySetupStore(), sample_review_at: "2026-10-09T04:00:00.000Z" });
     await setupUploadsSettled();
     const merged = { ...skippedTwo, card_dismissed_at: "2026-10-09T03:00:00.000Z", sample_review_at: "2026-10-09T04:00:00.000Z" };
-    expect(server.upserts.map((u) => u.row.state)).toEqual([merged]);
+    expect(server.saves.map((u) => u.p_state)).toEqual([merged]);
     expect(readSetupStore(user, company)).toEqual(merged);
   });
 
@@ -123,7 +121,7 @@ describe("setup flags on the server", () => {
     writeSetupStore(user, company, { ...skippedTwo, confirmed_lists_at: "2026-10-09T05:00:00.000Z" });
     writeSetupStore(user, company, { ...readSetupStore(user, company), installed_at: "2026-10-09T05:01:00.000Z" });
     await setupUploadsSettled();
-    expect(server.upserts.at(-1)?.row.state).toMatchObject({
+    expect(server.saves.at(-1)?.p_state).toMatchObject({
       confirmed_lists_at: "2026-10-09T05:00:00.000Z",
       installed_at: "2026-10-09T05:01:00.000Z",
       skipped: { "2": "2026-10-09T00:01:00.000Z" },

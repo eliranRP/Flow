@@ -294,7 +294,7 @@ select is(
 -- 26. The table refuses a closed loan without a date, whoever writes it.
 select tests.authenticate_as('f106_owner');
 select throws_ok(
-  $$ update public.loans set closed_on = null where id = (select id from pg_temp.f106 where label = 'loan') $$,
+  $$ select public.update_loan((select id from pg_temp.f106 where label = 'loan'), '{"closed_on": null}'::jsonb) $$,
   '23514',
   null,
   'a closed loan must have closed_on'
