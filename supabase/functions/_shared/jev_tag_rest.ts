@@ -573,11 +573,17 @@ export function createTagStore(
       );
     },
 
-    async markFailed(companyId: string, transactionId: string, modelVersion: string): Promise<void> {
-      await rest(fetch, `${base}/rest/v1/rpc/jev_mark_failed`, serviceKey, {
-        method: "POST",
-        body: { p_company: companyId, p_transaction: transactionId, p_model: modelVersion },
-      });
+    async markFailed(companyId: string, transactionId: string, modelVersion: string, refused = false): Promise<void> {
+      const body = { p_company: companyId, p_transaction: transactionId, p_model: modelVersion };
+      if (refused) {
+        try {
+          await rest(fetch, `${base}/rest/v1/rpc/jev_mark_failed`, serviceKey, { method: "POST", body: { ...body, p_refused: true } });
+          return;
+        } catch {
+          // Before the FLOW-1168 migration the function takes three arguments: mark a failure that can pass.
+        }
+      }
+      await rest(fetch, `${base}/rest/v1/rpc/jev_mark_failed`, serviceKey, { method: "POST", body });
     },
   };
 }

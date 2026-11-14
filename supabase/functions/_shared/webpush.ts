@@ -17,7 +17,13 @@ export interface PushTarget {
   auth: string;
 }
 
-export type PushOutcome = "sent" | "gone" | "failed";
+/**
+ * gone: the push service said the subscription is gone (404 or 410), so it is deleted. failed: this
+ * try did not reach the device, and a later one can (a timeout, a network error, 408, 429, 5xx).
+ * refused: this device can never take it as stored (an endpoint that is not a push service's, keys
+ * that cannot seal a message, any other 4xx); the subscription stays (FLOW-1168).
+ */
+export type PushOutcome = "sent" | "gone" | "failed" | "refused";
 
 /** The push services browsers use. The send function posts only to these hosts. */
 export const PUSH_ENDPOINT = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)\/[^\s]+$/;
@@ -139,7 +145,7 @@ export function failureLine(endpoint: string, status: number | string, body = ""
   return `push failed host=${host} status=${String(status)}${short === "" ? "" : ` body=${short}`}`;
 }
 
-/** Posts one notification. 404 and 410 mean the browser dropped the subscription. */
+/** Posts one notification. Only 404 and 410 mean the browser dropped the subscription. */
 export async function sendPush(
   fetchImpl: typeof fetch,
   target: PushTarget,
@@ -149,14 +155,15 @@ export async function sendPush(
   ttlSeconds = 4 * 60 * 60,
   timeoutMs = 10_000,
 ): Promise<PushOutcome> {
-  if (!PUSH_ENDPOINT.test(target.endpoint) || target.endpoint.length > 2048) return "gone";
+  // Not a push service's endpoint: never posted to, and not deleted as gone (FLOW-1168).
+  if (!PUSH_ENDPOINT.test(target.endpoint) || target.endpoint.length > 2048) return "refused";
   let body: Bytes;
   let authorization: string;
   try {
     body = await encryptPush(encoder.encode(JSON.stringify(payload)), target);
     authorization = await vapidAuthorization(target.endpoint, keys, now);
   } catch {
-    return "failed";
+    return "refused";
   }
   let response: Response;
   try {
@@ -187,5 +194,6 @@ export async function sendPush(
   }
   const answer = await response.text().catch(() => "");
   console.warn(failureLine(target.endpoint, response.status, answer));
-  return "failed";
+  const later = response.status === 408 || response.status === 429 || response.status >= 500;
+  return later ? "failed" : "refused";
 }

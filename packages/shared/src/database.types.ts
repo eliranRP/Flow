@@ -446,13 +446,13 @@ isOneToOne: false
                   ]
                 },"jev_line_failures": {
                   Row: {
-                    "attempts": number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at": string
+                    "attempts": number,"company_id": string,"model_version": string,"refused_at": string | null,"retry_after": string,"transaction_id": string,"updated_at": string
                   }
                   Insert: {
-                    "attempts"?: number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at"?: string
+                    "attempts"?: number,"company_id": string,"model_version": string,"refused_at"?: string | null,"retry_after": string,"transaction_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
+                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"refused_at"?: string | null,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -818,13 +818,13 @@ isOneToOne: true
                   ]
                 },"notification_prefs": {
                   Row: {
-                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_sent_on": string | null,"weekly_summary": boolean
+                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_released_on": string | null,"weekly_sent_on": string | null,"weekly_summary": boolean
                   }
                   Insert: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Update: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Relationships: [
                     
@@ -1942,7 +1942,7 @@ isOneToOne: false
 { Args: { "p_company": string }; Returns: Json
                            },
 "jev_mark_failed":
-{ Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
+{ Args: { "p_company": string,"p_model": string,"p_refused"?: boolean,"p_transaction": string }; Returns: undefined
                            },
 "jev_prefill":
 { Args: { "p_category"?: string,"p_company": string,"p_confidence"?: number,"p_model"?: string,"p_project"?: string,"p_transaction": string }; Returns: Json
@@ -2473,13 +2473,16 @@ isOneToOne: false
                            },
 "push_claim_targets":
 { Args: { "p_kind": string }; Returns: {
-              "auth": string,"endpoint": string,"fresh": number,"p256dh": string,"user_id": string,"waiting": number
+              "auth": string,"claim": Json,"endpoint": string,"fresh": number,"p256dh": string,"user_id": string,"waiting": number
             }[]
                            },
 "push_evening_targets":
 { Args: Record<PropertyKey, never>; Returns: {
               "auth": string,"endpoint": string,"p256dh": string,"user_id": string,"waiting": number
             }[]
+                           },
+"push_release_claims":
+{ Args: { "p_claims": Json,"p_kind": string }; Returns: number
                            },
 "push_subscribe":
 { Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent"?: string }; Returns: undefined
@@ -2526,6 +2529,12 @@ isOneToOne: false
                            },
 "refresh_treasury_yields":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"release_invite_email":
+{ Args: { "p_invite_id": string,"p_send": number }; Returns: boolean
+                           },
+"release_push_test":
+{ Args: { "p_claim": number,"p_user": string }; Returns: boolean
                            },
 "remember_line_category":
 { Args: { "p_category_id": string,"p_id": string }; Returns: Json
@@ -2736,6 +2745,9 @@ isOneToOne: false
                            },
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
+                           },
+"thread_files_purge_skip":
+{ Args: { "p_names": Json }; Returns: number
                            },
 "thread_files_to_purge":
 { Args: { "p_limit": number }; Returns: Json

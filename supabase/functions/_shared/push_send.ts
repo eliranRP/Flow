@@ -10,6 +10,7 @@
 import { empty, json } from "./http.ts";
 import { serviceRoleKey, tagCallerKind } from "./jev_tag.ts";
 import { sendPush, type PushOutcome, type PushTarget, type VapidKeys } from "./webpush.ts";
+import { PushClaims } from "./push_claim.ts";
 
 export interface PushSendDeps {
   fetch: typeof fetch;
@@ -27,6 +28,8 @@ export interface CountTarget extends PushTarget {
   user_id: string;
   fresh: number;
   waiting: number;
+  /** The claim push_release_claims gives back (FLOW-1168); missing before that migration. */
+  claim?: Record<string, unknown>;
 }
 
 export type PushKind = "evening" | "new" | "weekly" | "test";
@@ -116,6 +119,9 @@ function parseCountTargets(data: unknown): CountTarget[] {
       typeof item.p256dh !== "string" || typeof item.auth !== "string" ||
       !count(item.fresh) || !count(item.waiting) || item.fresh + item.waiting === 0
     ) return [];
+    const claim = item.claim && typeof item.claim === "object" && !Array.isArray(item.claim)
+      ? item.claim as Record<string, unknown>
+      : undefined;
     return [{
       user_id: item.user_id,
       endpoint: item.endpoint,
@@ -123,6 +129,7 @@ function parseCountTargets(data: unknown): CountTarget[] {
       auth: item.auth,
       fresh: item.fresh,
       waiting: item.waiting,
+      ...(claim ? { claim } : {}),
     }];
   });
 }
@@ -152,11 +159,12 @@ export const PUSH_BUDGET_MS = 90_000;
 /**
  * Sends to every device of each due user; a user counts as reminded when one device took it.
  * A send not started before the budget runs out is left for the next day, and counted as failed.
+ * A device that refused it counts as failed too. `claims` hears every outcome (FLOW-1168).
  */
 export async function remindEvening<T extends PushTarget & { user_id: string }>(
   targets: readonly T[],
   send: (target: T) => Promise<PushOutcome>,
-  options: { now?: () => number; budgetMs?: number; concurrency?: number } = {},
+  options: { now?: () => number; budgetMs?: number; concurrency?: number; claims?: PushClaims } = {},
 ): Promise<{ report: PushReport; reminded: string[]; gone: string[] }> {
   const now = options.now ?? Date.now;
   const deadline = now() + (options.budgetMs ?? PUSH_BUDGET_MS);
@@ -170,7 +178,8 @@ export async function remindEvening<T extends PushTarget & { user_id: string }>(
       next += 1;
       if (!target) continue;
       const outcome = now() < deadline ? await send(target) : "failed";
-      report[outcome] += 1;
+      report[outcome === "refused" ? "failed" : outcome] += 1;
+      options.claims?.note(target.user_id, outcome);
       if (outcome === "sent") reminded.add(target.user_id);
       if (outcome === "gone") gone.push(target.endpoint);
     }
@@ -200,7 +209,7 @@ export async function claimTestPush(
   url: string,
   anonKey: string,
   authorization: string,
-): Promise<{ userId: string; devices: number } | "unauthorized" | "limit"> {
+): Promise<{ userId: string; devices: number; claim: number | null } | "unauthorized" | "limit"> {
   const response = await deps.fetch(`${url.replace(/\/+$/, "")}/rest/v1/rpc/claim_push_test`, {
     method: "POST",
     headers: { apikey: anonKey, authorization, "content-type": "application/json" },
@@ -220,7 +229,21 @@ export async function claimTestPush(
   if (typeof userId !== "string" || typeof devices !== "number" || !Number.isInteger(devices) || devices < 0) {
     throw new Error("push_rpc_claim_push_test_shape");
   }
-  return { userId, devices };
+  // The claim's row (FLOW-1168), to give it back; missing before that migration.
+  const claim = typeof body?.claim === "number" && Number.isSafeInteger(body.claim) ? body.claim : null;
+  return { userId, devices, claim };
+}
+
+/**
+ * FLOW-1168: gives claims back. Never throws: a claim that is not given back stays spent, as before
+ * (and before the migration, when the functions do not exist yet).
+ */
+async function giveBack(deps: PushSendDeps, url: string, key: string, name: string, args: unknown, label: string): Promise<void> {
+  try {
+    await rpc(deps, url, key, name, args);
+  } catch (error) {
+    console.error(`push-send ${label} release error=${error instanceof Error ? error.message : "unknown"}`);
+  }
 }
 
 function parseTestTargets(data: unknown, userId: string): (PushTarget & { user_id: string })[] {
@@ -253,11 +276,21 @@ async function handleTestPush(req: Request, deps: PushSendDeps, serviceKey: stri
     if (claim === "unauthorized") return json({ error: "unauthorized" }, 401);
     if (claim === "limit") return json({ error: "push_test_limit" }, 429);
     if (claim.devices === 0) return json({ devices: 0, sent: 0, gone: 0, failed: 0 });
-    const targets = parseTestTargets(await rpc(deps, supabaseUrl, serviceKey, "push_test_targets", { p_user: claim.userId }), claim.userId);
-    const { report, gone } = await remindEvening(
-      targets,
-      (target) => sendPush(deps.fetch, target, testMessage(), vapid, now(), 10 * 60),
-    );
+    let targets: (PushTarget & { user_id: string })[] = [];
+    let report: PushReport = { users: 0, sent: 0, gone: 0, failed: 0 };
+    let gone: string[] = [];
+    try {
+      targets = parseTestTargets(await rpc(deps, supabaseUrl, serviceKey, "push_test_targets", { p_user: claim.userId }), claim.userId);
+      ({ report, gone } = await remindEvening(
+        targets,
+        (target) => sendPush(deps.fetch, target, testMessage(), vapid, now(), 10 * 60),
+      ));
+    } finally {
+      // FLOW-1168: a test push no device took does not spend one of the five an hour.
+      if (report.sent === 0 && claim.claim !== null) {
+        await giveBack(deps, supabaseUrl, serviceKey, "release_push_test", { p_user: claim.userId, p_claim: claim.claim }, "test");
+      }
+    }
     if (gone.length > 0) await rpc(deps, supabaseUrl, serviceKey, "note_push_results", { p_reminded: [], p_gone: gone });
     console.info(`push-send test devices=${String(targets.length)} sent=${String(report.sent)} gone=${String(report.gone)} failed=${String(report.failed)}`);
     return json({ devices: targets.length, sent: report.sent, gone: report.gone, failed: report.failed });
@@ -295,16 +328,27 @@ export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<
         (target) => sendPush(deps.fetch, target, eveningMessage(target.waiting), vapid, now()),
       );
     } else {
-      // The claim moves each user's mark first, so a failed push is not sent again.
+      // The claim moves each user's mark first, so two runs never send the same lines. A claim no
+      // device took, with a try that can pass later, is given back for the next run (push_claim.ts).
       const targets = parseCountTargets(await rpc(deps, supabaseUrl, serviceKey, "push_claim_targets", { p_kind: kind }));
       const weekStart = lastWeekStart(now());
       const message = (target: CountTarget) =>
         kind === "new" ? newLinesMessage(target.fresh, target.waiting) : weeklyMessage(target.fresh, target.waiting, weekStart);
+      const claims = new PushClaims(targets.map((target) => target.user_id));
       result = await remindEvening(
         targets,
         (target) => sendPush(deps.fetch, target, message(target), vapid, now()),
+        { claims },
       );
       result.reminded = [];
+      const back = claims.end().released.flatMap((user) => {
+        const claim = targets.find((target) => target.user_id === user)?.claim;
+        return claim ? [{ user_id: user, claim }] : [];
+      });
+      if (back.length > 0) {
+        await giveBack(deps, supabaseUrl, serviceKey, "push_release_claims", { p_kind: kind, p_claims: back }, kind);
+        console.info(`push-send ${kind} released=${String(back.length)}`);
+      }
     }
     const { report, reminded, gone } = result;
     if (reminded.length > 0 || gone.length > 0) {
