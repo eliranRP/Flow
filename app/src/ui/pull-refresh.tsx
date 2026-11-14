@@ -12,7 +12,7 @@ import "./css/62-pull-refresh.css";
  * the period, card and edge swipes do:
  * - touch only, one finger, in the installed app (a browser tab keeps its own pull to refresh);
  * - the page is at scroll top 0, and the touch starts outside the edge zones (the edge-back swipe),
- *   a sheet or dialog, a field, a revealed swiped row, and any inner list scrolled down from its top;
+ *   a sheet or dialog, a field, and any inner list scrolled down from its top;
  * - nothing is decided until the finger moved DECIDE_PX; a sideways move goes to the swipes, an
  *   upward one to the page scroll;
  * - the screen comes down with the finger on a rubber band (`pullTravel`: 1:1 at first, then with
@@ -87,7 +87,7 @@ function scrolledDown(node: Element): boolean {
 export function pullBlocked(target: EventTarget | null): boolean {
   if (document.querySelector('[role="dialog"], [role="alertdialog"]') != null) return true;
   if (!(target instanceof Element)) return false;
-  if (target.closest('input, textarea, select, [contenteditable="true"], .ui-swipe-row[data-open], .ui-swipe-row [data-drag], .ui-toast') != null) return true;
+  if (target.closest('input, textarea, select, [contenteditable="true"], .ui-swipe-row [data-drag], .ui-toast') != null) return true;
   for (let node: Element | null = target; node != null && node !== document.body; node = node.parentElement) {
     if (scrolledDown(node)) return true;
   }

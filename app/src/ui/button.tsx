@@ -15,8 +15,6 @@ type Common = {
   full?: boolean;
   quiet?: boolean;
   icon?: ReactNode;
-  /** Sits at the inline end, after the label. */
-  iconEnd?: ReactNode;
   /** A left-pointing chevron after the label (it points left in RTL too). */
   chevron?: boolean;
   /** A 16px chevron after the label that turns when `expanded` (a link that opens a list in place). */
@@ -99,7 +97,6 @@ export function Button(props: ButtonProps) {
       >
         {props.children}
       </span>
-      {props.iconEnd}
       {props.chevron ? <ChevronIcon size={16} /> : null}
       {props.expanded === undefined ? null : (
         <span className="ui-chevron-turn" data-open={props.expanded ? "true" : "false"}>
@@ -149,7 +146,7 @@ export function Button(props: ButtonProps) {
       </a>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, chevron: _chevron, expanded, controls, to: _to, href: _href, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, chevron: _chevron, expanded, controls, to: _to, href: _href, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
   return (
     <button
       ref={buttonRef}
