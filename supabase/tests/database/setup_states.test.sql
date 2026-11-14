@@ -1,9 +1,10 @@
 -- FLOW-506: the first-run setup flags live in setup_states, one row per owner and company.
--- Only the owner reads and writes their own row. Invented names, @example.com only.
+-- Only the owner reads their own row, and writes it through save_setup_state (FLOW-854).
+-- Invented names, @example.com only.
 
 begin;
 
-select plan(12);
+select plan(13);
 
 do $users$
 begin
@@ -23,63 +24,69 @@ select tests.get_supabase_uid('f506_viewer'), id from f506 where label = 'compan
 
 select tests.authenticate_as('f506_owner');
 select lives_ok(
-  $$insert into public.setup_states (user_id, company_id, state)
-    select auth.uid(), id, '{"skipped": {"2": "2026-10-09T00:00:00.000Z"}}'::jsonb from f506 where label = 'company'$$,
+  $$select public.save_setup_state((select id from f506 where label = 'company'),
+    '{"skipped": {"2": "2026-10-09T00:00:00.000Z"}}'::jsonb)$$,
   'the owner saves their setup flags'
 );
 select lives_ok(
-  $$insert into public.setup_states (user_id, company_id, state)
-    select auth.uid(), id, '{"card_dismissed_at": "2026-10-09T01:00:00.000Z"}'::jsonb from f506 where label = 'company'
-    on conflict (user_id, company_id) do update set state = excluded.state, updated_at = now()$$,
-  'the owner replaces them with an upsert'
+  $$select public.save_setup_state((select id from f506 where label = 'company'),
+    '{"card_dismissed_at": "2026-10-09T01:00:00.000Z"}'::jsonb)$$,
+  'the owner replaces them'
 );
 select is(
   (select state->>'card_dismissed_at' from public.setup_states),
   '2026-10-09T01:00:00.000Z',
   'the owner reads back their own row'
 );
+reset role;
 update public.setup_states set updated_at = '2000-01-01T00:00:00Z';
+select tests.authenticate_as('f506_owner');
+select public.save_setup_state((select id from f506 where label = 'company'),
+  '{"card_dismissed_at": "2026-10-09T01:00:00.000Z"}'::jsonb);
 select is(
   (select updated_at from public.setup_states),
   pg_catalog.now(),
-  'the server stamps updated_at, whatever the client sends'
+  'the server stamps updated_at on every save'
 );
 select throws_ok(
-  $$insert into public.setup_states (user_id, company_id, state)
-    select auth.uid(), id, '[]'::jsonb from f506 where label = 'company'
-    on conflict (user_id, company_id) do update set state = excluded.state$$,
+  $$select public.save_setup_state((select id from f506 where label = 'company'), '[]'::jsonb)$$,
   '23514',
   null,
   'the state must be an object'
 );
 select throws_ok(
-  $$insert into public.setup_states (user_id, company_id) select auth.uid(), id from f506 where label = 'other'$$,
+  $$select public.save_setup_state((select id from f506 where label = 'other'), '{}'::jsonb)$$,
   '42501',
-  null,
+  'forbidden',
   'the owner cannot write a row for another company'
 );
 select throws_ok(
   $$update public.setup_states set company_id = (select id from f506 where label = 'other')$$,
   '42501',
   null,
-  'the owner cannot move their row to another company'
+  'the owner cannot update the row directly'
 );
 reset role;
 
 select tests.authenticate_as('f506_other');
 select is((select count(*) from public.setup_states)::integer, 0, 'another owner reads no row of this company');
-update public.setup_states set state = '{}'::jsonb;
+select throws_ok(
+  $$update public.setup_states set state = '{}'::jsonb$$,
+  '42501',
+  null,
+  'another owner cannot update a row directly'
+);
 reset role;
 select is(
   (select state->>'card_dismissed_at' from public.setup_states),
   '2026-10-09T01:00:00.000Z',
-  'another owner''s update touches no row'
+  'the row is unchanged'
 );
 select tests.authenticate_as('f506_other');
 select throws_ok(
-  $$insert into public.setup_states (user_id, company_id) select auth.uid(), id from f506 where label = 'company'$$,
+  $$select public.save_setup_state((select id from f506 where label = 'company'), '{}'::jsonb)$$,
   '42501',
-  null,
+  'forbidden',
   'another owner cannot write into this company'
 );
 reset role;
@@ -87,9 +94,9 @@ reset role;
 select tests.authenticate_as('f506_viewer');
 select is((select count(*) from public.setup_states)::integer, 0, 'a viewer reads no setup row');
 select throws_ok(
-  $$insert into public.setup_states (user_id, company_id) select auth.uid(), id from f506 where label = 'company'$$,
+  $$select public.save_setup_state((select id from f506 where label = 'company'), '{}'::jsonb)$$,
   '42501',
-  null,
+  'forbidden',
   'a viewer cannot save setup flags'
 );
 reset role;

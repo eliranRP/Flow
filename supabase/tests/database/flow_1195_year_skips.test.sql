@@ -1,4 +1,4 @@
--- FLOW-1195 (20261114081743): company_next_month_inputs with p_rest (the year and since-start views) carries the
+-- FLOW-1195 (20261114090214): company_next_month_inputs with p_rest (the year and since-start views) carries the
 -- forecast items taken out of each month, so the app reads them once with the answer, not
 -- forecast_overrides_for once per month left.
 -- - skips is an object by month (next month to the forecast's last, 12 months), each the moved_out item keys in

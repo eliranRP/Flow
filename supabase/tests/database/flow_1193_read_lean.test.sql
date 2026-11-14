@@ -1,4 +1,4 @@
--- FLOW-1193 (20261114081743): fields no app code reads are left out.
+-- FLOW-1193 (20261114090214): fields no app code reads are left out.
 -- - projects_cash_month: projects[] has no profit_month_minor, and every figure the app reads is as it was (the
 --   month's cash, the all-time profit and spend).
 -- - expected_months: p_months 0 answers without months[]: the same today, project_id and recurring[] the full

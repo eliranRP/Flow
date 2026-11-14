@@ -1,4 +1,5 @@
 import "../ui/lazy.css";
+import { useLayoutEffect } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
@@ -54,9 +55,13 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
-  if (signedInUserId && signedInCompanyId) {
-    bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
-  }
+  const jevScope = signedInUserId && signedInCompanyId ? { userId: signedInUserId, companyId: signedInCompanyId } : null;
+  // After commit, not while drawing: a bind that leaves a miss tells the review card (FLOW-1164).
+  // Every commit, as the card's own bind. The Jev card reads the scope in this same first draw, so
+  // it is handed `jevScope` directly rather than through the store.
+  useLayoutEffect(() => {
+    if (signedInUserId && signedInCompanyId) bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
+  });
   const liveCompany = sample == null && preview === "off" && signedInCompanyId != null;
   const assistant = useAssistantStatusQuery(liveCompany);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
@@ -157,6 +162,7 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
           <ConnectionHead>עזרים</ConnectionHead>
           <JevSettings
             noCompany={noCompany}
+            scope={jevScope}
             blocked={blocked}
             readOnly={holdWrites}
             sample={

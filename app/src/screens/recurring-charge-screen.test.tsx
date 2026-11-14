@@ -265,6 +265,122 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
   });
 });
 
+describe("the charge page: one alert write at a time, and answers the read takes over (FLOW-1164)", () => {
+  const page = () => (
+    <Routes>
+      <Route path="/recurring/:direction/:partyId" element={<RecurringChargeScreen now={NOW} />} />
+    </Routes>
+  );
+  const never = () => new Promise<{ error: null }>(() => undefined);
+  const writes = (name: string) => calls().filter(([called]) => called === name);
+  const withoutPower = RECURRING_MISSING_FIXTURE.map((bill) => (bill.party_id === "power" ? { ...bill, suggestion: null } : bill));
+
+  it("sends nothing else while an ignore or an answer is on the wire", () => {
+    state.client = { rpc: vi.fn(never) };
+    renderPage("/recurring/expense/water");
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    fireEvent.click(screen.getByRole("button", { name: "החזרה" }));
+    expect(calls().map(([name]) => name)).toEqual(["dismiss_recurring_alert"]);
+
+    state.data = ready(RECURRING_CHARGES_FIXTURE_POWER);
+    state.client = { rpc: vi.fn(never) };
+    renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "כן, זה הוא" }));
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    expect(calls().map(([name]) => name)).toEqual(["answer_recurring_match"]);
+  });
+
+  it("drops an ignore's local answer once the read has it, so a later alert shows", async () => {
+    const view = renderPage("/recurring/expense/water");
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    expect(await screen.findByText("התעלמת מההתראה")).toBeTruthy();
+    state.data = ready({ ...RECURRING_CHARGES_FIXTURE_WATER, changes: [] });
+    view.rerender(page());
+    expect(screen.getByRole("button", { name: "החזרה" })).toBeTruthy();
+    // The server raises the change again: the page shows it, not the old ignore.
+    state.data = ready(RECURRING_CHARGES_FIXTURE_WATER);
+    view.rerender(page());
+    expect(document.querySelector(".ui-charge-banner")).toBeTruthy();
+    expect(writes("dismiss_recurring_alert")).toHaveLength(1);
+  });
+
+  it("drops a match answer once the read has it, and keeps the not-this-one hint", async () => {
+    state.data = ready(RECURRING_CHARGES_FIXTURE_POWER);
+    const view = renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "לא" }));
+    expect(await screen.findByText("לא נציע שוב")).toBeTruthy();
+    state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, bills: withoutPower });
+    view.rerender(page());
+    expect(within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByText("אמרת שהשורה שהצענו היא לא זה.")).toBeTruthy();
+    // A new suggestion from the server is offered, not hidden by the old answer.
+    state.data = ready(RECURRING_CHARGES_FIXTURE_POWER);
+    view.rerender(page());
+    expect(screen.getByRole("button", { name: "כן, זה הוא" })).toBeTruthy();
+  });
+
+  it("disables the alert's answers while one is on the wire, and they work once it settles", async () => {
+    let settle: (value: { error: null }) => void = () => undefined;
+    state.data = ready(RECURRING_CHARGES_FIXTURE_POWER);
+    state.client = { rpc: vi.fn((name: string) => (name === "answer_recurring_match" ? new Promise<{ error: null }>((resolve) => { settle = resolve; }) : Promise.resolve({ error: null }))) };
+    renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "לא" }));
+    // The ask box shows at once; its answers wait for the match answer instead of dropping a tap.
+    const still = within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByRole("button", { name: "כן, עדיין קבוע" });
+    expect(still).toBeDisabled();
+    expect(within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByRole("button", { name: "הסתיים" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "התעלמות" })).toBeDisabled();
+    await act(async () => { settle({ error: null }); await Promise.resolve(); });
+    await waitFor(() => { expect(still).toBeEnabled(); });
+    fireEvent.click(still);
+    await waitFor(() => { expect(writes("dismiss_recurring_alert")).toHaveLength(1); });
+  });
+
+  it("disables the ignored line while its ignore is on the wire, and the match box while a restore is", async () => {
+    state.data = ready(RECURRING_CHARGES_FIXTURE_POWER);
+    state.client = { rpc: vi.fn(never) };
+    const first = renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    expect(screen.getByRole("button", { name: "החזרה" })).toBeDisabled();
+    first.unmount();
+    state.client = { rpc: vi.fn(() => Promise.resolve({ error: null })) };
+    renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    expect(await screen.findByText("התעלמת מההתראה")).toBeTruthy();
+    vi.mocked(state.client.rpc).mockImplementation(never);
+    fireEvent.click(screen.getByRole("button", { name: "החזרה" }));
+    const match = screen.getByRole("region", { name: "אולי הגיע בשם אחר?" });
+    for (const button of within(match).getAllByRole("button")) expect(button).toBeDisabled();
+  });
+
+  it("runs a toast's ביטול tapped during another alert write once, when that write settles", async () => {
+    let settle: (value: { error: null }) => void = () => undefined;
+    state.data = ready(RECURRING_CHARGES_FIXTURE_POWER);
+    renderPage("/recurring/expense/power");
+    fireEvent.click(screen.getByRole("button", { name: "כן, זה הוא" }));
+    expect(await screen.findByText("סומן כאותו ספק")).toBeTruthy();
+    vi.mocked(state.client.rpc).mockImplementation((name: string) => (name === "dismiss_recurring_alert" ? new Promise<{ error: null }>((resolve) => { settle = resolve; }) : Promise.resolve({ error: null })));
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    act(() => { fireEvent.click(screen.getByRole("button", { name: "ביטול" })); });
+    const undone = () => calls().filter(([name, args]) => name === "answer_recurring_match" && args.p_same === null);
+    expect(undone()).toHaveLength(0);
+    await act(async () => { settle({ error: null }); await Promise.resolve(); });
+    await waitFor(() => { expect(undone()).toHaveLength(1); });
+    await act(async () => { await Promise.resolve(); });
+    expect(undone()).toHaveLength(1);
+  });
+
+  it("puts the row back and says so when a write fails", async () => {
+    state.client = { rpc: vi.fn(() => Promise.resolve({ error: { message: "boom" } })) as unknown as typeof state.client.rpc };
+    renderPage("/recurring/expense/water");
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    expect(await screen.findByText("לא הצלחנו לעדכן את השורה.")).toBeTruthy();
+    expect(document.querySelector(".ui-charge-banner")).toBeTruthy();
+    // The guard is free again: the next tap is sent.
+    fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
+    await waitFor(() => { expect(writes("dismiss_recurring_alert")).toHaveLength(2); });
+  });
+});
+
 describe("the charge page: the states", () => {
   it("a party with no recurring row is the not-found view", () => {
     state.data = { status: "missing" };

@@ -81,10 +81,11 @@ select is((select pg_get_triggerdef(t.oid) like '%BEFORE INSERT OR UPDATE OF sta
   from pg_trigger t where t.tgrelid = 'public.loans'::regclass and t.tgname = 'loans_close_check'), true,
   'loans_close_check fires on an insert as on a close');
 select tests.authenticate_as('lr_owner');
-select lives_ok(format($$insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, start_date,
-    escrow_minor, currency, term_months, payment_minor) values (%L, 'Example form loan', 15400000, 60000, '2025-03-01', 0,
-    'ILS', 360, 135000)$$, pg_temp.id('co')),
+select lives_ok(format($$select public.create_loan(%L, '{"name": "Example form loan", "principal_minor": 15400000,
+    "annual_rate_ppm": 60000, "start_date": "2025-03-01", "escrow_minor": 0, "currency": "ILS", "term_months": 360,
+    "payment_minor": 135000}'::jsonb)$$, pg_temp.id('co')),
   'the app''s new-loan form inserts an open loan');
+reset role;
 select lives_ok(format($$insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, start_date,
     escrow_minor, currency, term_months, payment_minor, status, closed_on) values (%L, 'Example closed loan', 1000000, 50000,
     '2024-01-01', 0, 'ILS', 12, 90000, 'paid_off', '2025-01-01')$$, pg_temp.id('co')),

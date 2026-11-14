@@ -266,7 +266,7 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
 
   it("opens the rate sheet from a rate change row, and the ריבית row for a new rate", async () => {
     const store = sampleLoanStore();
-    await store.saveRate({ id: "loan-bridge", companyId: "company-sample" }, { effectiveDate: "2026-09-01", annualRatePpm: 112_500 });
+    await store.saveRate({ id: "loan-bridge" }, { effectiveDate: "2026-09-01", annualRatePpm: 112_500 });
     renderLoan(store, "loan-bridge", undefined, "");
     expect(screen.getByRole("heading", { name: "שינויי ריבית" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^מ־01\/09\/2026/ }));

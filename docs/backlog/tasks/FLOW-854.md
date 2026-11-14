@@ -1,0 +1,12 @@
+<a id="flow-854"></a>
+# FLOW-854 · Clients write loans, loan_rates, project_groups and setup_states only through functions
+- **Type:** SMALL CYCLE (infra) · **Status:** in-progress · **Source:** [FLOW-1172](FLOW-1172.md) (FLOW-1166 part 5: the app's direct loan writes), widened to `loan_rates`, `project_groups` and `setup_states` so no client table write is left on them; the owner's go, 2026-11-14.
+- **Files:** `supabase/migrations/20261114080134_client_writes_through_functions.sql`, `supabase/tests/database/client_writes_through_functions.test.sql` and the pgTAP files that wrote these tables as a client, `supabase/tests/database/privilege_guards.test.sql`, `packages/shared/src/database.types.ts`, `app/src/screens/loans-host.tsx`, `app/src/setup/loan-entry.tsx`, `app/src/screens/loan-detail-store.ts`, `app/src/screens/loan-match-api.tsx`, `app/src/setup/server-store.ts`, their tests, `docs/qa/CONTROLS.md`, `docs/tech/state-machines.md`, `docs/decisions/0163-setup-state-on-the-server.md`, a changelog fragment.
+
+- [x] `create_loan` (the two new-loan forms), `update_loan` (the loan page's patch and its undo, the loan match's fees category), `save_loan_rate` and `delete_loan_rate` (the rate sheet), `save_setup_state` (the setup flags): security definers with an empty `search_path` that write for the caller's company (owner or editor) and refuse a viewer and another company's row (42501 `forbidden`). The tables' checks and triggers run inside them, so the refusals and messages stay the same.
+- [x] `update_loan` takes only the columns the loan page patches; `create_loan` only the form's fields.
+- [x] `authenticated` keeps SELECT and loses INSERT, UPDATE and DELETE on the four tables; their write policies are dropped. `project_groups` and the `loans` delete already went through functions (`upsert_project_group`, `set_project_group`, `delete_loan`).
+- [x] The app calls the functions; flow-mcp already wrote these tables only through its own definers.
+- [x] This also covers [FLOW-1172](FLOW-1172.md) (the app's direct loan writes).
+
+**Acceptance:** no `.from(...)` insert, update, upsert or delete on these tables is left in `app/src` or `supabase/functions`; `has_table_privilege('authenticated', ...)` is false for insert and update on all four; each function writes for an owner or editor and refuses a viewer and another company's row (pgTAP); the privilege allowlist and the cross-company sweep stay green.

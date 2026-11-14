@@ -298,7 +298,13 @@ insert into pg_allowed (sig) values
     ('mcp_remove_transaction_note(text,uuid)'),
     ('remove_transaction_file(uuid)'),
     ('remove_transaction_note(uuid)'),
-    ('transaction_thread_counts(uuid[])');
+    ('transaction_thread_counts(uuid[])'),
+    -- FLOW-854: the app writes loans, loan_rates and setup_states through these.
+    ('create_loan(uuid,jsonb)'),
+    ('delete_loan_rate(uuid)'),
+    ('save_loan_rate(uuid,date,integer,uuid)'),
+    ('save_setup_state(uuid,jsonb)'),
+    ('update_loan(uuid,jsonb)');
 
 create temp view pg_client_definers as
 select p.oid::regprocedure::text as sig

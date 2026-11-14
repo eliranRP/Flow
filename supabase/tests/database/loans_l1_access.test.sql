@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(32);
+select plan(34);
 
 do $users$
 begin
@@ -103,7 +103,12 @@ select throws_ok(
   'a viewer cannot insert a loan'
 );
 
-update public.loans set name = 'נגנב' where name = 'משכנתא לדוגמה';
+select throws_ok(
+  $$update public.loans set name = 'נגנב' where name = 'משכנתא לדוגמה'$$,
+  '42501',
+  null,
+  'a viewer''s direct update is refused at the grant'
+);
 
 select is(
   (select name from public.loans),
@@ -111,7 +116,12 @@ select is(
   'a viewer cannot update a loan'
 );
 
-delete from public.loans;
+select throws_ok(
+  $$delete from public.loans$$,
+  '42501',
+  null,
+  'a viewer''s direct delete is refused at the grant'
+);
 
 select is(
   (select count(*)::int from public.loans),
@@ -249,11 +259,9 @@ select lives_ok(
 set constraints all deferred;
 
 select lives_ok(
-  $$insert into public.loans (
-      company_id, name, principal_minor, annual_rate_ppm, term_months,
-      start_date, payment_minor, escrow_minor, currency
-    )
-    select private.current_company_id(), 'משכנתא שנייה', 50000, 0, 12, '2026-04-01', 4000, 0, 'ILS'$$,
+  $$select public.create_loan(private.current_company_id(), jsonb_build_object(
+      'name', 'משכנתא שנייה', 'principal_minor', 50000, 'annual_rate_ppm', 0, 'term_months', 12,
+      'start_date', '2026-04-01', 'payment_minor', 4000, 'escrow_minor', 0, 'currency', 'ILS'))$$,
   'the owner can add a loan'
 );
 

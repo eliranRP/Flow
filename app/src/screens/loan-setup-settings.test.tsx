@@ -29,17 +29,19 @@ const db = vi.hoisted(() => ({
   noBalanceRow: [] as string[],
   loans: [] as Array<{ id: string; name: string; currency: string; project_id: string | null; principal_minor?: number }>,
   projects: [] as Array<{ id: string; name: string }>,
-  updates: [] as Array<{ row: Record<string, unknown>; id: string }>,
-  updateRows: 1,
-  updateError: null as { message: string; code?: string } | null,
-  updateHold: null as Promise<void> | null,
 }));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => {
     if (db.offline) return null;
     return {
-      rpc: (name: string) => {
+      rpc: (name: string, args?: { p_company_id?: string; p_loan?: Record<string, unknown> }) => {
+        if (name === "create_loan") {
+          db.inserts.push({ company_id: args?.p_company_id, ...args?.p_loan });
+          const finish = () => ({ data: db.insertError ? null : `new-${String(db.inserts.length)}`, error: db.insertError });
+          if (db.hold) return db.hold.then(() => finish());
+          return Promise.resolve(finish());
+        }
         if (name !== "mcp_company_loan_currency") throw new Error(name);
         db.selects += 1;
         const finish = () => ({ data: db.currencyError ? null : db.baseCurrency, error: db.currencyError });
@@ -49,32 +51,9 @@ vi.mock("../lib/supabase", () => ({
       from: (table: string) => {
         if (table === "loans") {
           return {
-            insert: (row: Record<string, unknown>) => ({
-              select: () => ({
-                single: () => {
-                  db.inserts.push(row);
-                  const finish = () => ({ data: db.insertError ? null : { id: `new-${String(db.inserts.length)}` }, error: db.insertError });
-                  if (db.hold) return db.hold.then(() => finish());
-                  return Promise.resolve(finish());
-                },
-              }),
-            }),
             select: () => ({
               eq: () => ({
                 order: () => Promise.resolve({ data: db.loans.map((loan) => ({ kind: "amortizing", status: "open", closed_on: null, principal_minor: 0, escrow_minor: 0, payment_minor: null, annual_rate_ppm: null, term_months: null, start_date: null, ...loan })), error: null }),
-              }),
-            }),
-            update: (row: Record<string, unknown>) => ({
-              eq: (_column: string, id: string) => ({
-                select: () => {
-                  db.updates.push({ row, id });
-                  const finish = () => ({
-                    data: db.updateError ? null : Array.from({ length: db.updateRows }, () => ({ id })),
-                    error: db.updateError,
-                  });
-                  if (db.updateHold) return db.updateHold.then(() => finish());
-                  return Promise.resolve(finish());
-                },
               }),
             }),
           };
@@ -118,10 +97,6 @@ beforeEach(() => {
   db.balanceError = null;
   db.loans = [];
   db.projects = [];
-  db.updates = [];
-  db.updateRows = 1;
-  db.updateError = null;
-  db.updateHold = null;
 });
 
 function sectionTree(client: QueryClient, ui: ReactNode) {

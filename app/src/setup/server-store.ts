@@ -94,11 +94,9 @@ async function send(userId: string, companyId: string, local: LocalSetupCopy): P
   await settle(userId, companyId, local);
   if (failed.has(serverKey(userId, companyId))) return;
   const supabase = getSupabase();
-  if (!supabase || typeof supabase.from !== "function") return;
-  const table = supabase.from("setup_states");
-  if (typeof table.upsert !== "function") return;
-  // updated_at is stamped by the server.
-  await table.upsert({ user_id: userId, company_id: companyId, state: local.read() }, { onConflict: "user_id,company_id" });
+  if (!supabase || typeof supabase.rpc !== "function") return;
+  // The caller's own row for the company (FLOW-854); updated_at is stamped by the server.
+  await supabase.rpc("save_setup_state", { p_company_id: companyId, p_state: local.read() });
 }
 
 /** Queues an upload of the local copy. Fire and forget: a refused or failed write keeps the local copy. */
