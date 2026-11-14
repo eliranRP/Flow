@@ -1,11 +1,10 @@
 import type { CashLinesPage, CashMonths, CashYears } from "@flow/shared";
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { CASH_MONTHS, cashMonthKey, type CashListSide } from "./cash";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { israelToday } from "./ui/date-math";
 import { useHomePreview, type HomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-413. The cash reads (decision 0168). Their keys start with "dashboard" and
@@ -24,9 +23,7 @@ export function cashMonthsQueryOptions(preview: HomePreview, months: number) {
   return {
     queryKey: ["dashboard", "cash-months", preview, months],
     queryFn: async (): Promise<CashMonths> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_months", { p_months: months });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -39,9 +36,7 @@ export function cashYearsQueryOptions(preview: HomePreview) {
   return {
     queryKey: ["dashboard", "cash-years", preview],
     queryFn: async (): Promise<CashYears> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_years", {});
       if (error) throw error;
       return (await loadReadSchemas()).cashYearsSchema.parse(data);
@@ -59,9 +54,7 @@ export function cashYearMonthsQueryOptions(preview: HomePreview, year: number) {
   return {
     queryKey: ["dashboard", "cash-year-months", preview, year],
     queryFn: async (): Promise<CashMonths> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("cash_year_months", { p_year: year });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -115,9 +108,7 @@ export function useCashLinesQuery(month: string, side: CashListSide, currency: s
     } : undefined,
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<CashLinesPage> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const range = {
         p_month: `${month}-01`,
         p_side: side === "kept" ? "not_in_profit" : side,

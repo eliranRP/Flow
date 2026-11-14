@@ -4,11 +4,10 @@ type LinesRows = NonNullable<BreakdownLinesPage>["rows"];
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { projectGroupRow } from "./breakdown-project-group";
 import type { OverheadProject } from "./overhead-project";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-140c1. The company profit page reads its figures from the reads the books already have: the
@@ -196,13 +195,6 @@ type Range = { p_from?: string; p_to?: string };
 
 function rangeArgs(period: PeriodChoice): Range {
   return period.from && period.to ? { p_from: period.from, p_to: period.to } : {};
-}
-
-async function readyClient() {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
-  return supabase;
 }
 
 async function fetchDashboard(period: PeriodChoice): Promise<Dashboard> {

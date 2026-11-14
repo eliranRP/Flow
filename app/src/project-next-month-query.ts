@@ -5,7 +5,6 @@ import type { CategoryRow, ExpectedMonths, ProjectCategoryMonths } from "@flow/s
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { monthPeriod } from "./period";
 import { useHomePreview } from "./preview";
@@ -15,7 +14,7 @@ import { applyForecastEdits, nextMonthForecast, nextMonthKey, type NextMonthFore
 import { LOAN_DETAIL_COLUMNS, type LoanDetailDbRow, readLoanRow } from "./screens/loan-detail-data";
 import { israelToday } from "./ui/date-math";
 import { useCategoriesQuery } from "./use-books";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * What a story, a test or the dev fixture hands the screens instead of the reads: the two forecast reads,
@@ -54,9 +53,7 @@ function useProjectExpectedQuery(projectId: string) {
     queryKey: ["expected-months", preview, "project", projectId, 2],
     enabled: preview === "off" && projectId !== "",
     queryFn: async (): Promise<ExpectedMonths> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("expected_months", { p_months: 2, p_project_id: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
@@ -69,9 +66,7 @@ function useProjectExpectedQuery(projectId: string) {
  * its row with the rates, and its balance in the books (the payments left start from it, FLOW-427).
  */
 export async function readForecastLoans(projectId: string | null): Promise<ForecastLoan[]> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
+  const supabase = await readyClient();
   const query = supabase.from("loans").select(LOAN_DETAIL_COLUMNS);
   const { data, error } = await (projectId == null ? query : query.eq("project_id", projectId));
   if (error) throw error;
@@ -103,9 +98,7 @@ function useForecastEditsQuery(projectId: string, month: string) {
     queryKey: [FORECAST_EDITS_KEY, preview, projectId, month],
     enabled: preview === "off" && projectId !== "",
     queryFn: async (): Promise<ProjectForecastEdit[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("project_forecast_edits_for", { p_project_id: projectId, p_month: month });
       if (error) throw error;
       return editSchema.array().parse(data ?? []);

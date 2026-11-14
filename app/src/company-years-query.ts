@@ -2,11 +2,10 @@ import type { Breakdown, ProfitMonth, ProfitMonths } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { yearsRange } from "./company-years";
 import type { ProjectStatus } from "./company-year-rows";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import { useDashboardQuery } from "./use-books";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * The company profit page's year and since-the-start reads (decision 0200): one get_profit_months read of every
@@ -23,13 +22,6 @@ export type CompanyYearsSample = {
   projects: Record<string, { income: Breakdown; expense: Breakdown }>;
   statuses: ProjectStatus[];
 };
-
-async function readyClient() {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
-  return supabase;
-}
 
 /** The company's months since the start, to today. */
 export function useCompanyYears(today: string, enabled: boolean, sample?: CompanyYearsSample) {

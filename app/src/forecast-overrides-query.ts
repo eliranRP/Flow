@@ -1,6 +1,5 @@
 import type { ForecastOverrideRow } from "@flow/shared";
-import { getSupabase } from "./lib/supabase";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * A month's overrides (forecast_overrides_for). Under "month-forecast", so the skip's write refreshes it. The month
@@ -12,9 +11,7 @@ export function overridesQuery(month: string, preview: string, enabled: boolean)
     queryKey: ["month-forecast", preview, "overrides", month],
     enabled: enabled && preview === "off",
     queryFn: async (): Promise<ForecastOverrideRow[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("forecast_overrides_for", { p_month: month });
       if (error) throw error;
       return (data ?? []) as ForecastOverrideRow[];

@@ -6,7 +6,6 @@ import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMo
 import { companyMonthInput, companyRestOfYear, restOfYearMonths, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
 import { expectedMonthsQueryOptions } from "./expected-months-query";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { shiftMonthKey } from "./period";
 import { useHomePreview } from "./preview";
@@ -16,7 +15,7 @@ import { editSchema, FORECAST_EDITS_KEY, readForecastLoans } from "./project-nex
 import { overridesQuery } from "./forecast-overrides-query";
 import { skippedKeys, useForecastOverrides } from "./forecast-skip";
 import { useCategoriesQuery } from "./use-books";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * The company profit page's next month and chart (canvas note spec-fcwide, item 2): four reads for the whole
@@ -50,13 +49,6 @@ const inputsSchema = z.object({
   rest_edits: z.array(editSchema.omit({ matched_transaction_id: true }).extend({ project_id: z.string(), matches: z.record(z.string(), z.string()).optional() })).optional(),
 });
 
-async function readyClient() {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
-  return supabase;
-}
-
 const NO_LOANS: readonly ForecastLoan[] = [];
 
 /**
@@ -77,12 +69,11 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   // A later month is built from rest_edits; the slim answer (no rest_edits) holds next month's edits only.
   const full = withRest || (month != null && month !== nextMonthKey(today));
   const client = useQueryClient();
-  const keyOf = (withAll: boolean) => [FORECAST_EDITS_KEY, preview, "company", today, withAll] as const;
   // FLOW-1191: the full answer (p_rest) holds everything the slim one does, plus rest_edits. With the full one cached
   // for the same day, the slim read starts from it, as fresh as it is: no request while it is fresh.
-  const seed = full ? undefined : client.getQueryState<CompanyNextMonthInputs>(keyOf(true));
+  const seed = full ? undefined : client.getQueryState<CompanyNextMonthInputs>([FORECAST_EDITS_KEY, preview, "company", today, true]);
   const inputs = useQuery({
-    queryKey: keyOf(full),
+    queryKey: [FORECAST_EDITS_KEY, preview, "company", today, full],
     enabled: live,
     initialData: seed?.data,
     initialDataUpdatedAt: seed?.dataUpdatedAt,

@@ -3,11 +3,10 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { readStoredCurrency } from "./company-currency";
 import { expectedMonthsQueryOptions } from "./expected-months-query";
 import { overridesQuery } from "./forecast-overrides-query";
-import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { QUERY_STALE_MS } from "./query-client";
+import { readyClient } from "./ready-client";
 import { unpaidQueryOptions } from "./use-books";
-import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * FLOW-141: the month-end forecast's data. Four reads (expected months, open invoices, the month's overrides and,
@@ -32,9 +31,7 @@ export function useMonthForecastQuery(month: string, active = true) {
     queryKey: ["month-forecast", preview, month],
     enabled: active && preview === "off",
     queryFn: async ({ client }: { client: QueryClient }): Promise<MonthForecast> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const [expected, rows, current, edits, base] = await Promise.all([
         // The company's expected months, shared with the profit page's next month (FLOW-1171): one request.
         client.query({ ...expectedMonthsQueryOptions(preview), staleTime: QUERY_STALE_MS }),

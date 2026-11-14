@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /** Home's row: the bills not refunded, a count and a sum per currency (FLOW-1143: Flow suggests nothing). */
 export type UtilityRefundCount = {
@@ -41,9 +40,7 @@ export function useUtilityRefundCountQuery() {
     queryKey: ["utility-refund-count", preview],
     enabled: preview === "off",
     queryFn: async (): Promise<UtilityRefundCount> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("count_utility_refunds", {});
       if (error) throw error;
       return parseUtilityRefundCount(data);
