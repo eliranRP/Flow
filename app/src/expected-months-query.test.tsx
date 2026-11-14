@@ -56,6 +56,6 @@ describe("expected_months is read once for Home's forecast and the company card 
     await new Promise((resolve) => { setTimeout(resolve, 20); });
     const expected = rpc.calls.filter((call) => call.name === "expected_months");
     expect(expected).toHaveLength(1);
-    expect(expected[0]?.args).toEqual({ p_months: 1 });
+    expect(expected[0]?.args).toEqual({ p_months: 0 });
   });
 });

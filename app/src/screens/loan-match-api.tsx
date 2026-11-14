@@ -153,7 +153,7 @@ export const liveLoanMatchApi: LoanMatchApi = {
   setFeesCategory: async (loanId, categoryId) => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
-    assertNoError(await supabase.from("loans").update({ fees_category_id: categoryId }).eq("id", loanId));
+    assertNoError(await supabase.rpc("update_loan", { p_loan_id: loanId, p_patch: { fees_category_id: categoryId } }));
   },
 };
 

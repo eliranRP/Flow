@@ -176,13 +176,13 @@ isOneToOne: false
                   ]
                 },"company_invites": {
                   Row: {
-                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"email_sends": number,"emailed_at": string | null,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
+                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"email_releases": number,"email_sends": number,"emailed_at": string | null,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
+                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"email_releases"?: number,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
+                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"email_releases"?: number,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
                   }
                   Relationships: [
                     {
@@ -446,13 +446,13 @@ isOneToOne: false
                   ]
                 },"jev_line_failures": {
                   Row: {
-                    "attempts": number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at": string
+                    "attempts": number,"company_id": string,"model_version": string,"refused_at": string | null,"refused_inputs": string | null,"retry_after": string,"transaction_id": string,"updated_at": string
                   }
                   Insert: {
-                    "attempts"?: number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at"?: string
+                    "attempts"?: number,"company_id": string,"model_version": string,"refused_at"?: string | null,"refused_inputs"?: string | null,"retry_after": string,"transaction_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
+                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"refused_at"?: string | null,"refused_inputs"?: string | null,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -818,13 +818,13 @@ isOneToOne: true
                   ]
                 },"notification_prefs": {
                   Row: {
-                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_sent_on": string | null,"weekly_summary": boolean
+                    "evening_reminder": boolean,"evening_sent_on": string | null,"new_line_mark": string | null,"new_released_mark": string | null,"new_releases": number,"new_transaction": boolean,"prompt_answered_at": string | null,"updated_at": string,"user_id": string,"weekly_released_on": string | null,"weekly_sent_on": string | null,"weekly_summary": boolean
                   }
                   Insert: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_released_mark"?: string | null,"new_releases"?: number,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id": string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Update: {
-                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
+                    "evening_reminder"?: boolean,"evening_sent_on"?: string | null,"new_line_mark"?: string | null,"new_released_mark"?: string | null,"new_releases"?: number,"new_transaction"?: boolean,"prompt_answered_at"?: string | null,"updated_at"?: string,"user_id"?: string,"weekly_released_on"?: string | null,"weekly_sent_on"?: string | null,"weekly_summary"?: boolean
                   }
                   Relationships: [
                     
@@ -1792,6 +1792,9 @@ isOneToOne: false
 "create_company":
 { Args: { "p_name": string,"p_vat_registered": boolean }; Returns: string
                            },
+"create_loan":
+{ Args: { "p_company_id": string,"p_loan": Json }; Returns: string
+                           },
 "create_manual_entry":
 { Args: { "p_category_id"?: string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id"?: string,"p_vat_exempt"?: boolean }; Returns: string
                            },
@@ -1809,6 +1812,9 @@ isOneToOne: false
                            },
 "delete_loan":
 { Args: { "p_loan_id": string }; Returns: Json
+                           },
+"delete_loan_rate":
+{ Args: { "p_loan_rate_id": string }; Returns: string
                            },
 "delete_project":
 { Args: { "p_id": string }; Returns: Json
@@ -1936,7 +1942,7 @@ isOneToOne: false
 { Args: { "p_company": string }; Returns: Json
                            },
 "jev_mark_failed":
-{ Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
+{ Args: { "p_company": string,"p_model": string,"p_refused"?: boolean,"p_transaction": string }; Returns: undefined
                            },
 "jev_prefill":
 { Args: { "p_category"?: string,"p_company": string,"p_confidence"?: number,"p_model"?: string,"p_project"?: string,"p_transaction": string }; Returns: Json
@@ -1946,6 +1952,9 @@ isOneToOne: false
                            },
 "jev_projects":
 { Args: { "p_company": string }; Returns: Json
+                           },
+"jev_refusals_reset":
+{ Args: { "p_company": string }; Returns: number
                            },
 "jev_release_lease":
 { Args: { "p_holder": string }; Returns: undefined
@@ -2467,13 +2476,16 @@ isOneToOne: false
                            },
 "push_claim_targets":
 { Args: { "p_kind": string }; Returns: {
-              "auth": string,"endpoint": string,"fresh": number,"p256dh": string,"user_id": string,"waiting": number
+              "auth": string,"claim": Json,"endpoint": string,"fresh": number,"p256dh": string,"user_id": string,"waiting": number
             }[]
                            },
 "push_evening_targets":
 { Args: Record<PropertyKey, never>; Returns: {
               "auth": string,"endpoint": string,"p256dh": string,"user_id": string,"waiting": number
             }[]
+                           },
+"push_release_claims":
+{ Args: { "p_claims": Json,"p_kind": string }; Returns: number
                            },
 "push_subscribe":
 { Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent"?: string }; Returns: undefined
@@ -2520,6 +2532,12 @@ isOneToOne: false
                            },
 "refresh_treasury_yields":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"release_invite_email":
+{ Args: { "p_invite_id": string,"p_send": number }; Returns: boolean
+                           },
+"release_push_test":
+{ Args: { "p_claim": number,"p_user": string }; Returns: boolean
                            },
 "remember_line_category":
 { Args: { "p_category_id": string,"p_id": string }; Returns: Json
@@ -2593,8 +2611,14 @@ isOneToOne: false
 "save_line_split":
 { Args: { "p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
+"save_loan_rate":
+{ Args: { "p_annual_rate_ppm": number,"p_effective_date": string,"p_loan_id": string,"p_loan_rate_id"?: string }; Returns: string
+                           },
 "save_loan_split":
 { Args: { "p_loan_id": string,"p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
+                           },
+"save_setup_state":
+{ Args: { "p_company_id": string,"p_state": Json }; Returns: undefined
                            },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
@@ -2725,6 +2749,9 @@ isOneToOne: false
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
                            },
+"thread_files_purge_skip":
+{ Args: { "p_for_good"?: boolean,"p_names": Json }; Returns: number
+                           },
 "thread_files_to_purge":
 { Args: { "p_limit": number }; Returns: Json
                            },
@@ -2766,6 +2793,9 @@ isOneToOne: false
                            },
 "unpaid_overview":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"update_loan":
+{ Args: { "p_loan_id": string,"p_patch": Json }; Returns: string
                            },
 "upsert_connector_lines":
 { Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]

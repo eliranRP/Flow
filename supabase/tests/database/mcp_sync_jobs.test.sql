@@ -290,13 +290,13 @@ select is(
   'another company''s user cannot read the job'
 );
 
--- A running job past the stale window reads as failed with retry.
+-- A running job past the stale window reads as failed with retry; FLOW-1168: its reason is unknown.
 reset role;
 update private.mcp_sync_jobs set started_at = now() - interval '10 minutes' where id = pg_temp.job('j7');
 select pg_temp.as_mcp('write');
 select is(
   public.mcp_sync_status(pg_temp.job('j7'))->'data'->'error',
-  '{"code": "unavailable", "message": "retry"}'::jsonb,
+  '{"code": "unavailable", "message": "retry", "reason": "unknown"}'::jsonb,
   'a stale running job reads as retry'
 );
 select is(

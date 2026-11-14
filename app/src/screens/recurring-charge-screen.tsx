@@ -23,6 +23,8 @@ import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } fro
 import { RecurringAskBox, RecurringMatchBox } from "../ui/recurring-match-box";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
+import { saveFlow } from "../save-flow";
+import { useMachine } from "../use-machine";
 import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { ChargeSkipMonth } from "./recurring-skip-month";
@@ -177,9 +179,24 @@ function ChargeBody({
   const currency = row.currency;
   const thisMonth = today.slice(0, 7);
   // Local answers: an ignore, a match answer and a pace change show at once; a failure takes them back.
+  // An ignore and a match answer hold only until the read has them (FLOW-1164), so a later change on
+  // the server is not hidden; each is kept with the alert it answered.
   const [head, setHead] = useState<HTMLElement | null>(null);
-  const [ignoredLocal, setIgnoredLocal] = useState<boolean | null>(null);
-  const [matchLocal, setMatchLocal] = useState<"same" | "never" | null>(null);
+  const [ignoredLocal, setIgnoredLocal] = useState<{ key: string; ignored: boolean } | null>(null);
+  const [matchLocal, setMatchLocal] = useState<{ key: string; answer: "same" | "never" } | null>(null);
+  // "Not this one" picks the ask's hint after the read has dropped the suggestion too.
+  const [saidNever, setSaidNever] = useState<string | null>(null);
+  // The alert's writes (ignore, restore, the match answer): one at a time. While one runs the alert's
+  // controls are disabled; a toast's ביטול, which cannot be, waits and runs once when it settles.
+  const alertWrite = useMachine(saveFlow);
+  const alertBusy = alertWrite.state === "saving";
+  const afterAlertWrite = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (alertBusy) return;
+    const next = afterAlertWrite.current;
+    afterAlertWrite.current = null;
+    next?.();
+  }, [alertBusy]);
   const [paceLocal, setPaceLocal] = useState<{ recurring: boolean; pace: RecurringPace } | null>(null);
   const [paceOpen, setPaceOpen] = useState(openSheet === "pace");
   const [allOpen, setAllOpen] = useState(openSheet === "all");
@@ -200,11 +217,22 @@ function ChargeBody({
   const status = statusOf(row, arrivedOn, today);
   const amount = amountOf(row);
   const alert = chargeAlert(row, data.bills, data.changes, lineId, data.split);
-  const ignored = alert != null && (ignoredLocal ?? !alert.active);
-  const suggestion = alert?.kind === "missing" && !ignored ? alert.suggestion : null;
-  const showMatch = suggestion != null && matchLocal == null && !holdWrites;
+  const alertKey = alert?.key ?? "";
+  const ignoredHere = ignoredLocal?.key === alertKey ? ignoredLocal.ignored : null;
+  const matchHere = matchLocal?.key === alertKey ? matchLocal.answer : null;
+  const ignored = alert != null && (ignoredHere ?? !alert.active);
+  const readSuggestion = alert?.kind === "missing" ? alert.suggestion ?? null : null;
+  const suggestion = ignored ? null : readSuggestion;
+  const showMatch = suggestion != null && matchHere == null && !holdWrites;
   // A late bill with no match to offer (or one the owner said is not it) asks whether it still recurs.
-  const showAsk = alert?.kind === "missing" && !ignored && alert.key != null && !showMatch && !holdWrites && (suggestion == null || matchLocal === "never");
+  const showAsk = alert?.kind === "missing" && !ignored && alert.key != null && !showMatch && !holdWrites && (suggestion == null || matchHere === "never");
+  // Once no write runs, a local answer the read now has (or that answered another alert) goes.
+  const ignoreRead = !alertBusy && ignoredLocal != null && (ignoredLocal.key !== alertKey || alert == null || ignoredLocal.ignored === !alert.active);
+  const matchRead = !alertBusy && matchLocal != null && (matchLocal.key !== alertKey || readSuggestion == null);
+  useEffect(() => {
+    if (ignoreRead) setIgnoredLocal(null);
+    if (matchRead) setMatchLocal(null);
+  }, [ignoreRead, matchRead]);
   const isRecurring = paceLocal?.recurring ?? true;
   const pace: RecurringPace = paceLocal?.pace ?? row.pace;
   const overridden = recurring?.override != null;
@@ -218,44 +246,63 @@ function ChargeBody({
     for (const key of RECURRING_KEYS) void client.invalidateQueries({ queryKey: [key] });
   };
 
+  /** A failed alert write: the row goes back, the guard is free, and the page's usual line says so. */
+  function failed() {
+    alertWrite.send("stop");
+    toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
+  }
+
   async function ignore(message = "התעלמת מההתראה") {
-    if (alert?.key == null) return;
+    if (alert?.key == null || !alertWrite.send("start")) return;
     const { key, kind } = alert;
-    setIgnoredLocal(true);
+    setIgnoredLocal({ key, ignored: true });
     try {
       if (live) await dismissRecurringAlert(liveRpcClient(), key, kind);
     } catch {
       setIgnoredLocal(null);
-      toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
+      failed();
       return;
     }
+    alertWrite.send("done");
     if (live) refresh();
     toast.show(topToast({ message, action: "ביטול", onAction: () => void restore(key, kind) }));
   }
 
   async function restore(key: string, kind: AlertKind) {
-    setIgnoredLocal(false);
+    if (!alertWrite.send("start")) {
+      afterAlertWrite.current = () => void restore(key, kind);
+      return;
+    }
+    setIgnoredLocal({ key, ignored: false });
     try {
       if (live) await restoreRecurringAlert(liveRpcClient(), key, kind);
     } catch {
-      setIgnoredLocal(true);
-      toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
+      setIgnoredLocal({ key, ignored: true });
+      failed();
       return;
     }
+    alertWrite.send("done");
     if (live) refresh();
     toast.show(topToast({ message: "ההתראה חזרה" }));
   }
 
   async function answer(same: boolean | null) {
     if (suggestion == null) return;
-    setMatchLocal(same === true ? "same" : same === false ? "never" : null);
+    if (!alertWrite.send("start")) {
+      afterAlertWrite.current = () => void answer(same);
+      return;
+    }
+    setMatchLocal(same === null ? null : { key: alertKey, answer: same ? "same" : "never" });
+    setSaidNever(same === false ? alertKey : null);
     try {
       if (live) await answerRecurringMatch(liveRpcClient(), { direction: row.direction, partyId: row.party_id, matchPartyId: suggestion.party_id, same });
     } catch {
       setMatchLocal(null);
-      toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
+      setSaidNever(null);
+      failed();
       return;
     }
+    alertWrite.send("done");
     if (live) refresh();
     if (same === null) return;
     const message = same ? (income ? "סומן כאותו לקוח" : "סומן כאותו ספק") : "לא נציע שוב";
@@ -321,15 +368,16 @@ function ChargeBody({
         />
         {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         {alert != null && alertText != null && !ignored ? (
-          <ChargeBanner text={alertText} onIgnore={() => void ignore()} disabled={alert.key == null} />
+          <ChargeBanner text={alertText} onIgnore={() => void ignore()} disabled={alert.key == null || alertBusy} />
         ) : null}
         {alert != null && ignored && alertText != null ? (
-          <ChargeIgnored text={alertText} onRestore={() => void restore(alert.key ?? "", alert.kind)} disabled={alert.key == null} />
+          <ChargeIgnored text={alertText} onRestore={() => void restore(alert.key ?? "", alert.kind)} disabled={alert.key == null || alertBusy} />
         ) : null}
         {showAsk ? (
           <RecurringAskBox
             text={askText(row, today)}
-            hint={matchLocal === "never" ? "אמרת שהשורה שהצענו היא לא זה." : "הגיע בשם אחר? אפשר לשייך אותו מדף השורה."}
+            hint={saidNever === alertKey ? "אמרת שהשורה שהצענו היא לא זה." : "הגיע בשם אחר? אפשר לשייך אותו מדף השורה."}
+            disabled={alertBusy}
             onStill={() => void ignore("נמשיך לצפות לו")}
             onEnded={() => {
               if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
@@ -344,6 +392,7 @@ function ChargeBody({
             date={dayMonth(suggestion.doc_date)}
             onYes={() => void answer(true)}
             onNo={() => void answer(false)}
+            disabled={alertBusy}
             {...(alert?.key == null ? {} : { onIgnore: () => void ignore() })}
           />
         ) : null}

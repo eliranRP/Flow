@@ -103,14 +103,14 @@ select ok(
   and not has_function_privilege('authenticated', 'public.jev_reserve_calls(uuid, uuid, integer)', 'execute')
   and not has_function_privilege('anon', 'public.jev_reserve_calls(uuid, uuid, integer)', 'execute')
   and not has_function_privilege('authenticated', 'public.jev_finish_usage(uuid, uuid, integer, bigint, bigint, integer, integer)', 'execute')
-  and not has_function_privilege('authenticated', 'public.jev_mark_failed(uuid, uuid, text)', 'execute'),
+  and not has_function_privilege('authenticated', 'public.jev_mark_failed(uuid, uuid, text, boolean)', 'execute'),
   'members and anon cannot run the job functions'
 );
 select ok(
   has_function_privilege('service_role', 'public.jev_take_lease(uuid, integer)', 'execute')
   and has_function_privilege('service_role', 'public.jev_reserve_calls(uuid, uuid, integer)', 'execute')
   and has_function_privilege('service_role', 'public.jev_finish_usage(uuid, uuid, integer, bigint, bigint, integer, integer)', 'execute')
-  and has_function_privilege('service_role', 'public.jev_mark_failed(uuid, uuid, text)', 'execute'),
+  and has_function_privilege('service_role', 'public.jev_mark_failed(uuid, uuid, text, boolean)', 'execute'),
   'the service role runs the job functions'
 );
 select ok(

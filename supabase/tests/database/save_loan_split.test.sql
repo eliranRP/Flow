@@ -241,21 +241,19 @@ select throws_ok(
 -- 5. Rates start on or after the loan.
 select tests.authenticate_as('sls_owner');
 select throws_ok(
-  format($$insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm) values (%L, %L, '2025-12-31', 50000)$$,
-    pg_temp.id('company'), pg_temp.id('amort')),
+  format($$select public.save_loan_rate(%L, '2025-12-31', 50000)$$, pg_temp.id('amort')),
   '23514', 'rate before the loan start', 'a rate row before the loan start is refused');
 select lives_ok(
-  format($$insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm) values (%L, %L, '2026-06-01', 50000)$$,
-    pg_temp.id('company'), pg_temp.id('amort')),
+  format($$select public.save_loan_rate(%L, '2026-06-01', 50000)$$, pg_temp.id('amort')),
   'a rate row after the start is stored');
+reset role;
+-- The loan's start: the table's trigger, whoever writes it (the app does not move it).
 select throws_ok(
   format($$update public.loans set start_date = '2026-07-01' where id = %L$$, pg_temp.id('amort')),
   '23514', 'rate before the loan start', 'moving the start after a rate row is refused');
-reset role;
 select is(
   pg_temp.mcp_update('sls-upd-1', 'amort', '{"start_date": "2026-07-01"}'::jsonb)->'error'->>'message',
   'rate before the loan start', 'MCP names the refusal');
-select tests.authenticate_as('sls_owner');
 select lives_ok(
   format($$update public.loans set start_date = '2026-05-01' where id = %L$$, pg_temp.id('amort')),
   'moving the start up to the rate row is allowed');

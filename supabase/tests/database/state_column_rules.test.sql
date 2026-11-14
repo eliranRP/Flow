@@ -119,14 +119,14 @@ insert into sr (label, id) values
 
 select tests.authenticate_as('sr_owner');
 select throws_ok(
-  format('update public.loans set refinanced_into_id = %L where id = %L', pg_temp.id('b'), pg_temp.id('a')),
+  format('select public.update_loan(%L, jsonb_build_object(''refinanced_into_id'', %L))', pg_temp.id('a'), pg_temp.id('b')),
   '23514', 'new row for relation "loans" violates check constraint "loans_refinance_chk"',
   'the app cannot link an open loan'
 );
 -- The close sheet's write: status, date and link in one update.
 select lives_ok(
-  format($$update public.loans set status = 'closed', closed_on = '2026-06-30', refinanced_into_id = %L where id = %L$$,
-    pg_temp.id('b'), pg_temp.id('a')),
+  format($$select public.update_loan(%L, jsonb_build_object('status', 'closed', 'closed_on', '2026-06-30', 'refinanced_into_id', %L))$$,
+    pg_temp.id('a'), pg_temp.id('b')),
   'the app closes a loan with its link in one write'
 );
 reset role;
@@ -135,13 +135,13 @@ select is(pg_temp.loan('a'), 'closed:2026-06-30:b', 'which stores the closed loa
 -- loans_refinance_pair: b may not name a back, from the app or set_loan_refinance.
 select tests.authenticate_as('sr_owner');
 select throws_ok(
-  format($$update public.loans set status = 'closed', closed_on = '2026-06-30', refinanced_into_id = %L where id = %L$$,
-    pg_temp.id('a'), pg_temp.id('b')),
+  format($$select public.update_loan(%L, jsonb_build_object('status', 'closed', 'closed_on', '2026-06-30', 'refinanced_into_id', %L))$$,
+    pg_temp.id('b'), pg_temp.id('a')),
   '23514', 'loan_refinance_pair', 'two loans never name each other'
 );
 -- The reopen's write: open, no date, no link in one update.
 select lives_ok(
-  format($$update public.loans set status = 'open', closed_on = null, refinanced_into_id = null where id = %L$$, pg_temp.id('a')),
+  format($$select public.update_loan(%L, '{"status": "open", "closed_on": null, "refinanced_into_id": null}'::jsonb)$$, pg_temp.id('a')),
   'the app reopens a loan and clears its link in one write'
 );
 reset role;

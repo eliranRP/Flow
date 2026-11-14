@@ -133,7 +133,8 @@ Deno.test("sendPush posts an encrypted body and reads the push service's answer"
   assertEquals(await sendPush(thrown, target, {}, keys, NOW), "failed");
 });
 
-Deno.test("sendPush never posts to a host that is not a push service", async () => {
+// FLOW-1168: such an endpoint is refused, not deleted as gone: only the push service says gone.
+Deno.test("sendPush never posts to a host that is not a push service, and does not call it gone", async () => {
   const keys = await vapidKeys();
   const receiver = await browser();
   let calls = 0;
@@ -147,7 +148,7 @@ Deno.test("sendPush never posts to a host that is not a push service", async () 
     "https://fcm.googleapis.com.example.com/x",
     "https://169.254.169.254/latest",
   ]) {
-    assertEquals(await sendPush(count, { endpoint, p256dh: receiver.p256dh, auth: receiver.authText }, {}, keys, NOW), "gone");
+    assertEquals(await sendPush(count, { endpoint, p256dh: receiver.p256dh, auth: receiver.authText }, {}, keys, NOW), "refused");
   }
   assertEquals(calls, 0);
 });

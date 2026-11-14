@@ -466,6 +466,26 @@ describe("ChangeAssignment split by categories link (FLOW-325 §10)", () => {
     expect(await screen.findByRole("heading", { name: "עורך" })).toBeInTheDocument();
   });
 
+  it("drops a leave that lands in the same tick the picker goes away", async () => {
+    // A leave that arrives right after the commit that removes the picker, before React's passive
+    // effects run, must already be void: the observer below calls it at exactly that moment.
+    let leave: ((to: string) => void) | null = null;
+    render(<SplitHarness onSplitCategory={(next) => { leave = next; }} />);
+    fireEvent.click(await screen.findByRole("button", { name: "פיצול לפי קטגוריות" }));
+    let left = false;
+    const seen = new MutationObserver(() => {
+      if (left || screen.queryByRole("heading", { name: "בחירת פרויקט" }) != null) return;
+      left = true;
+      leave?.("/transactions/t1/split-category");
+    });
+    seen.observe(document.body, { childList: true, subtree: true });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(left).toBe(true); });
+    seen.disconnect();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("heading", { name: "עורך" })).not.toBeInTheDocument();
+  });
+
   it("drops the leave when the sheet closes before the approve settles", async () => {
     let leave: ((to: string) => void) | null = null;
     render(<SplitHarness onSplitCategory={(next) => { leave = next; }} />);

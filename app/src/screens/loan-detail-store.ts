@@ -25,10 +25,10 @@ function nextOf(loan: Parameters<typeof nextPaymentOf>[0]): Pick<LoanListRow, "n
 }
 
 /**
- * FLOW-106 B / FLOW-110: where the loan page reads and writes. Live reads go through react-query
- * and write with RLS (loans, loan_rates) or the owner RPCs (delete_loan, restore_loan). Stories,
- * the dev fixture and tests use `memoryLoanStore`, with the same write shape, so every sheet and
- * undo runs with no network.
+ * FLOW-106 B / FLOW-110: where the loan page reads and writes. Live reads go through react-query;
+ * writes go through RPCs (update_loan, save_loan_rate, delete_loan_rate, delete_loan, restore_loan;
+ * FLOW-854). Stories, the dev fixture and tests use `memoryLoanStore`, with the same write shape, so
+ * every sheet and undo runs with no network.
  */
 
 export type LoanBundle = {
@@ -63,7 +63,7 @@ export type LoanRateWrite = { id?: string; effectiveDate: string; annualRatePpm:
 export type LoanWrites = {
   update: (loanId: string, patch: LoanPatch) => Promise<void>;
   /** Adds a rate row, or changes one by id. Returns the row's id. */
-  saveRate: (loan: Pick<LoanDetail, "id" | "companyId">, rate: LoanRateWrite) => Promise<string>;
+  saveRate: (loan: Pick<LoanDetail, "id">, rate: LoanRateWrite) => Promise<string>;
   deleteRate: (rateId: string) => Promise<void>;
   /** delete_loan: the loan, its rates and its split parts. Returns how many payments count whole again. */
   deleteLoan: (loanId: string) => Promise<{ payments: number }>;
@@ -142,48 +142,38 @@ function refused(): Error {
   return Object.assign(new Error("forbidden"), { code: "42501" });
 }
 
-/** The live writes. RLS filters a refused row without an error, so no row back is a refusal. */
+/**
+ * The live writes. Each RPC refuses another company's row, or a viewer, with 42501 "forbidden";
+ * a missing id back is read the same way.
+ */
 export const liveLoanWrites: LoanWrites = {
   update: async (loanId, patch) => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
-    const result = await supabase.from("loans").update(patchColumns(patch)).eq("id", loanId).select("id");
+    const result = await supabase.rpc("update_loan", { p_loan_id: loanId, p_patch: patchColumns(patch) });
     assertNoError(result);
-    if ((result.data ?? []).length === 0) throw refused();
+    if (typeof result.data !== "string") throw refused();
   },
   saveRate: async (loan, rate) => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
-    if (rate.id != null) {
-      const result = await supabase
-        .from("loan_rates")
-        .update({ effective_date: rate.effectiveDate, annual_rate_ppm: rate.annualRatePpm })
-        .eq("id", rate.id)
-        .select("id");
-      assertNoError(result);
-      const id = result.data?.[0]?.id;
-      if (typeof id !== "string") throw refused();
-      return id;
-    }
-    // One row per day (unique loan_id, effective_date): a second rate on the same day replaces it.
-    const result = await supabase
-      .from("loan_rates")
-      .upsert(
-        { company_id: loan.companyId, loan_id: loan.id, effective_date: rate.effectiveDate, annual_rate_ppm: rate.annualRatePpm },
-        { onConflict: "loan_id,effective_date" },
-      )
-      .select("id");
+    // With an id it changes that row; without, one row per day: a second rate on the same day replaces it.
+    const result = await supabase.rpc("save_loan_rate", {
+      p_loan_id: loan.id,
+      p_effective_date: rate.effectiveDate,
+      p_annual_rate_ppm: rate.annualRatePpm,
+      ...(rate.id != null ? { p_loan_rate_id: rate.id } : {}),
+    });
     assertNoError(result);
-    const id = result.data?.[0]?.id;
-    if (typeof id !== "string") throw refused();
-    return id;
+    if (typeof result.data !== "string") throw refused();
+    return result.data;
   },
   deleteRate: async (rateId) => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
-    const result = await supabase.from("loan_rates").delete().eq("id", rateId).select("id");
+    const result = await supabase.rpc("delete_loan_rate", { p_loan_rate_id: rateId });
     assertNoError(result);
-    if ((result.data ?? []).length === 0) throw refused();
+    if (typeof result.data !== "string") throw refused();
   },
   deleteLoan: async (loanId) => {
     const supabase = getSupabase();

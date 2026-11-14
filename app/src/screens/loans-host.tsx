@@ -190,9 +190,9 @@ export function LoansHost({
       const supabase = getSupabase();
       if (!supabase || companyId == null) throw new Error("supabase");
       savedId.current = null;
-      const inserted = await supabase.from("loans").insert({ ...row, company_id: companyId }).select("id").single();
+      const inserted = await supabase.rpc("create_loan", { p_company_id: companyId, p_loan: row });
       assertNoError(inserted);
-      savedId.current = typeof inserted.data?.id === "string" ? inserted.data.id : null;
+      savedId.current = typeof inserted.data === "string" ? inserted.data : null;
     },
   });
 

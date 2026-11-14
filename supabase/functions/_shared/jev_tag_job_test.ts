@@ -454,7 +454,8 @@ Deno.test("the run sends only the calls the cap granted, logs usage, and frees t
     p_tagged: 1,
     p_failed: 0,
   }]);
-  assertEquals(log.rpc, ["jev_take_lease", "jev_line_flags", "jev_forecast_lines", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
+  // FLOW-1168: the lease is renewed right before the one call.
+  assertEquals(log.rpc, ["jev_take_lease", "jev_refusals_reset", "jev_line_flags", "jev_forecast_lines", "jev_reserve_calls", "jev_take_lease", "jev_finish_usage", "jev_release_lease"]);
 });
 
 Deno.test("a spent cap does not read the key or call Jev", async () => {
@@ -466,7 +467,7 @@ Deno.test("a spent cap does not read the key or call Jev", async () => {
   assertEquals(log.jev, 0);
   assertEquals(log.key, 0);
   assertEquals((finished as { p_calls: number }[]).map((row) => row.p_calls), [0]);
-  assertEquals(log.rpc, ["jev_take_lease", "jev_line_flags", "jev_forecast_lines", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
+  assertEquals(log.rpc, ["jev_take_lease", "jev_refusals_reset", "jev_line_flags", "jev_forecast_lines", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
 });
 
 Deno.test("a stopped run still records the call it made and frees the lease", async () => {

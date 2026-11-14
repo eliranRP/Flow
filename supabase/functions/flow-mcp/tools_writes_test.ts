@@ -852,9 +852,10 @@ Deno.test("sync_bank begin errors are returned at once", async () => {
 });
 
 Deno.test("sync_bank records each pull failure on the job", async () => {
-  const cases: { pull: { status: number; json: unknown } | Error | null; error: { code: string; message: string } }[] = [
-    { pull: { status: 200, json: { ok: true, lines: 0, skipped: true } }, error: { code: "unavailable", message: "retry" } },
-    { pull: { status: 429, json: { error: "rate_limited" } }, error: { code: "unavailable", message: "retry" } },
+  const cases: { pull: { status: number; json: unknown } | Error | null; error: { code: string; message: string; reason?: string } }[] = [
+    // FLOW-1168: a skipped pull and a rate limit say which they are.
+    { pull: { status: 200, json: { ok: true, lines: 0, skipped: true } }, error: { code: "unavailable", message: "retry", reason: "busy" } },
+    { pull: { status: 429, json: { error: "rate_limited" } }, error: { code: "unavailable", message: "retry", reason: "rate_limited" } },
     { pull: { status: 500, json: { error: "Mercury is not connected" } }, error: { code: "not_found", message: "bank is not connected" } },
     {
       pull: { status: 500, json: { error: "auth" } },
