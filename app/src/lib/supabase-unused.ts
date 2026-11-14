@@ -5,6 +5,11 @@
  * vite.config points `@supabase/realtime-js` and `@supabase/storage-js` here. Using either one throws, so a feature
  * that needs them fails loudly and drops the alias. supabase-unused.test.ts checks this file
  * covers every call supabase-js makes on them.
+ *
+ * The same goes for auth-js's WebAuthn (passkey) multi-factor code, about 8 KB minified that
+ * GoTrueClient always imports: Flow signs in with Google and magic links and never enrols a
+ * factor. vite.config points auth-js's `./lib/webauthn` here; the names below are the ones
+ * GoTrueClient imports, and using one throws.
  */
 
 function unused(part: string): Error {
@@ -36,3 +41,30 @@ export class StorageClient {
 }
 
 export class StorageApiError extends Error {}
+
+export class WebAuthnApi {
+  /** GoTrueClient builds one for `mfa.webauthn`; it has no methods here. */
+  readonly client: unknown;
+  constructor(client?: unknown) {
+    this.client = client;
+  }
+}
+
+export const webAuthnAbortService = {
+  createNewAbortSignal(): never {
+    throw unused("WebAuthn");
+  },
+};
+
+export function browserSupportsWebAuthn(): boolean {
+  return false;
+}
+
+export function createCredential(..._args: unknown[]): never {
+  throw unused("WebAuthn");
+}
+export const getCredential = createCredential;
+export const deserializeCredentialCreationOptions = createCredential;
+export const deserializeCredentialRequestOptions = createCredential;
+export const serializeCredentialCreationResponse = createCredential;
+export const serializeCredentialRequestResponse = createCredential;
