@@ -2,9 +2,8 @@ import type { ForecastOverrideRow } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { priorPatch, useSetForecastItem } from "./forecast-month";
-import { getSupabase } from "./lib/supabase";
+import { overridesQuery } from "./forecast-overrides-query";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
 import type { ScheduleRow } from "./recurring-schedule";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
@@ -43,21 +42,6 @@ export function skippedKeys(overrides: readonly ForecastOverrideRow[]): Set<stri
 export function useForecastOverrides(month: string, enabled: boolean) {
   const preview = useHomePreview();
   return useQuery(overridesQuery(month, preview, enabled));
-}
-
-export function overridesQuery(month: string, preview: string, enabled: boolean) {
-  return {
-    queryKey: ["month-forecast", preview, "overrides", month],
-    enabled: enabled && preview === "off",
-    queryFn: async (): Promise<ForecastOverrideRow[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("forecast_overrides_for", { p_month: month });
-      if (error) throw error;
-      return (data ?? []) as ForecastOverrideRow[];
-    },
-  };
 }
 
 const PEEK_SEEN_KEY = "flow.skip-swipe-peek-seen";

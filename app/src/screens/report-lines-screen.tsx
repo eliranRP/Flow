@@ -3,7 +3,6 @@ import type { BreakdownLinesPage } from "@flow/shared";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { lineInitials } from "../cash-lines-groups";
-import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { categoryName, dateRangeText, projectKeyName } from "../reports";
@@ -18,7 +17,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { SearchField } from "../ui/search-field";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
-import { waitForAccessToken } from "../wait-for-session";
+import { readyClient } from "../ready-client";
 import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { SearchSnippet, searchText, searchWords } from "./report-lines-snippet";
 import { ReportRow, ReportSection, ReportSummary, type Collapse } from "./reports-parts";
@@ -51,9 +50,7 @@ export function reportLinesArgs(params: URLSearchParams) {
 }
 
 async function fetchPage(args: ReturnType<typeof reportLinesArgs>, currency: string, offset: number): Promise<LinesPage> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
+  const supabase = await readyClient();
   const { data, error } = await supabase.rpc("get_breakdown_lines", {
     ...(args.from != null && args.to != null ? { p_from: args.from, p_to: args.to } : {}),
     p_direction: args.side,

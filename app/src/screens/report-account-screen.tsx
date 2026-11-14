@@ -3,7 +3,6 @@ import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { lineInitials } from "../cash-lines-groups";
-import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import type { AccountLines } from "../report-schemas";
@@ -21,7 +20,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { SegmentedControl } from "../ui/segmented-control";
 import { DelayedSkeleton } from "../ui/skeleton";
-import { waitForAccessToken } from "../wait-for-session";
+import { readyClient } from "../ready-client";
 import { linesByMonth } from "./report-lines-screen";
 import { ReportRow, ReportSection, ReportSummary } from "./reports-parts";
 
@@ -50,9 +49,7 @@ function accountArgs(params: URLSearchParams, today: string) {
 }
 
 async function fetchPage(args: ReturnType<typeof accountArgs>, offset: number): Promise<AccountLines | null> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  await waitForAccessToken(supabase);
+  const supabase = await readyClient();
   const { data, error } = await supabase.rpc("get_account_lines", {
     p_account_id: args.accountId,
     p_as_of: args.asOf,

@@ -1,11 +1,10 @@
 import { formatAmountText, type PartyCharges } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { absAgorot } from "./agorot";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import { HEBREW_MONTHS } from "./ui/date-math";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-431 (the owner's layout A, 2026-10-10 16:07Z): the transaction screen's "חיובים קודמים"
@@ -88,9 +87,7 @@ export function usePartyChargesQuery(transactionId: string, active = true) {
     queryKey: ["party-charges", preview, transactionId],
     enabled: active && preview === "off" && transactionId !== "",
     queryFn: async (): Promise<PartyCharges> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("party_charges", { p_id: transactionId });
       if (error) throw error;
       return (await loadReadSchemas()).partyChargesSchema.parse(data);

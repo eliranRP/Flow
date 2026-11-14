@@ -1,8 +1,7 @@
 import type { MissingBill, RecurringPace } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import type { RecurringLine } from "./recurring-layout";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /** One row of `recurring_schedule` (FLOW-447): a recurring party with its state this month. */
 export type ScheduleRow = {
@@ -132,9 +131,7 @@ export function useRecurringScheduleQuery(enabled = true) {
     queryKey: ["recurring-schedule"],
     enabled,
     queryFn: async (): Promise<ScheduleRow[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("recurring_schedule", {});
       if (error) throw error;
       if (!Array.isArray(data)) throw new Error("recurring_schedule");

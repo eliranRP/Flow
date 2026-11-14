@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-941 (decision 0205): how many transfers between two Mercury connections Flow suggests, for
@@ -14,9 +13,7 @@ export function useTransferMatchCountQuery() {
     queryKey: ["transfer-match-count", preview],
     enabled: preview === "off",
     queryFn: async (): Promise<number> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("count_transfer_matches", {});
       if (error) throw error;
       if (typeof data !== "number" || !Number.isInteger(data) || data < 0) throw new Error("count_transfer_matches");

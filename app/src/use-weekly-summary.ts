@@ -1,8 +1,7 @@
 import type { WeeklySummary } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
-import { waitForAccessToken } from "./wait-for-session";
+import { readyClient } from "./ready-client";
 
 /**
  * FLOW-517: one week for the weekly summary sheet (`weekly_summary`). The key starts with
@@ -13,9 +12,7 @@ export function useWeeklySummaryQuery(weekStart: string | null) {
     queryKey: ["dashboard", "weekly-summary", weekStart],
     enabled: weekStart != null,
     queryFn: async (): Promise<WeeklySummary> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
+      const supabase = await readyClient();
       const { data, error } = await supabase.rpc("weekly_summary", { p_week_start: weekStart ?? "" });
       if (error) throw error;
       return (await loadReadSchemas()).weeklySummarySchema.parse(data);
