@@ -12,7 +12,7 @@ import "./css/62-pull-refresh.css";
  * the period, card and edge swipes do:
  * - touch only, one finger, in the installed app (a browser tab keeps its own pull to refresh);
  * - the page is at scroll top 0, and the touch starts outside the edge zones (the edge-back swipe),
- *   a sheet or dialog, a field, a revealed swiped row, and any inner list scrolled down from its top;
+ *   a sheet or dialog, a field, and any inner list scrolled down from its top;
  * - nothing is decided until the finger moved DECIDE_PX; a sideways move goes to the swipes, an
  *   upward one to the page scroll;
  * - the screen comes down with the finger on a rubber band (`pullTravel`: 1:1 at first, then with

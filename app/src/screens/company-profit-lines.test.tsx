@@ -188,6 +188,8 @@ describe("CompanyProfitScreen, more on lines and search (FLOW-1194)", () => {
     await enterCategories();
     fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש בתנועות" }), { target: { value: "אאא" } });
     expect(await screen.findByText("לא מצאנו ״אאא״")).toBeInTheDocument();
+    // A screen reader hears the empty result: it sits in a live region.
+    expect(screen.getByText("לא מצאנו ״אאא״").closest("[role=status]")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "ניקוי החיפוש" }));
     expect(await screen.findByText("שכר")).toBeInTheDocument();
   });
