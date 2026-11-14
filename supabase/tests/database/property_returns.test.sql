@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(123);
+select plan(124);
 
 do $users$
 begin
@@ -506,9 +506,18 @@ select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 18000000::bigi
 -- draws, so the draws were not inside the principal and are not taken off.
 select public.set_loan_closing_paid(pg_temp.id('hml_loan'), null);
 reset role;
+-- Another loan's proceeds (80% or more of it, near its start) are not this loan's draws.
+insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
+values (pg_temp.id('co'), 'Example second loan', 10000000, 80000, 360, '2026-06-01', 80000, 0, 'ILS', pg_temp.id('hml'));
 insert into prr (label, id) values
-  ('principal_cat', tests.fixture_category(pg_temp.id('co'), 'Example loan payoff', 'expense', true));
-update public.categories set loan_part = 'principal' where id = pg_temp.id('principal_cat');
+  ('hml-second', tests.fixture_line(pg_temp.id('co'), 'prr:hml-second', 8000000, 'income', pg_temp.id('hml'), pg_temp.id('draw_cat'), '2026-06-02'));
+select tests.authenticate_as('prr_owner');
+select is((pg_temp.hml()->'inputs'->'taken_over_loans'->0->>'draws_minor')::bigint, 3000000::bigint,
+  'another loan''s proceeds are not this loan''s draws');
+reset role;
+-- The company's principal category (one per loan part).
+insert into prr (label, id)
+select 'principal_cat', c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = 'principal';
 insert into prr (label, id) values
   ('hml-payoff', tests.fixture_line(pg_temp.id('co'), 'prr:hml-payoff', 23000000, p_project => pg_temp.id('hml'), p_category => pg_temp.id('principal_cat'), p_doc_date => '2026-09-30'));
 select tests.authenticate_as('prr_owner');

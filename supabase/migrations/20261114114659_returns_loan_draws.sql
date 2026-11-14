@@ -65,13 +65,15 @@ begin
             and f.amount_minor >= o.principal_minor * 0.8
         )
     ) dg
-    -- Draws lent on top of the principal show as principal paid back above it: not taken off.
+    -- Draws lent on top of the principal show as principal paid back above it: not taken off. Loan
+    -- payments carry no link to their loan, so this reads the property's principal paid back up to
+    -- 30 days after the payoff (today + 30 while the loan is open).
     cross join lateral (
       select coalesce(-sum(f.amount_minor), 0)::bigint as repaid_minor
       from private.property_lines(cid, p_project_id, lo.start_date + 1,
         coalesce(lo.closed_on, (now() at time zone 'Asia/Jerusalem')::date) + 30) f
       left join public.categories pc on pc.id = f.category_id and pc.company_id = cid
-      where f.currency = cur and coalesce(f.part, pc.loan_part::text) = 'principal'
+      where f.currency = cur and f.amount_minor < 0 and coalesce(f.part, pc.loan_part::text) = 'principal'
     ) rp
     cross join lateral (
       select dg.gross_minor - least(dg.gross_minor, greatest(rp.repaid_minor - lo.principal_minor, 0)) as draws_minor

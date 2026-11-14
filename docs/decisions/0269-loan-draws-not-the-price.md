@@ -21,4 +21,5 @@
 ## Consequences
 
 - A hard-money loan whose draws are in the bank and inside its principal no longer counts them in the price; a loan whose draws were lent on top and whose payoff is in the books keeps its whole principal; entering the settlement statement's amount is needed only when the bank does not show the draws, or to be exact.
-- A deposit or other liability money that arrives during the renovation, before the first rent, would read as a draw, and draws lent on top of a loan not yet paid off (or whose payoff is not in the books) are taken off until the payoff shows. The settlement statement's amount, set on the loan, overrides both, and is the reliable source.
+- A deposit or other liability money that arrives during the renovation, before the first rent, would read as a draw, and draws lent on top of a loan not yet paid off (or whose payoff is not in the books) are taken off until the payoff shows. Loan payments carry no link to their loan, so another loan's principal paid back in that window would read as this loan's. The settlement statement's amount (its Loan Amount less its Lender Hold Back), set on the loan, overrides all of these, and is the reliable source.
+- The loan page still reads "כל ההלוואה · <principal>" for a loan with no amount set; it should show what the price counts (follow-up FLOW-1198).
