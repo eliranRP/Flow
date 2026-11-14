@@ -37,7 +37,7 @@ describe("reviewHeldView (FLOW-1166)", () => {
   it("names the bank or SUMIT in the reason, by the held change's provider, and always gives the hint", () => {
     const bank = reviewHeldView({ ...bankLine, held: { kind: "void", provider: "mercury" } });
     expect(bank.reason).toBe("שינוי מהבנק ממתין: התקופה סגורה בספרים.");
-    expect(bank.hint).toBe("כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו.");
+    expect(bank.hint).toBe("כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו. אישור משאיר את השורה כמו שהיא.");
     expect(reviewHeldView({ ...sumitLine, held: { kind: "remove", provider: "sumit" } }).reason)
       .toBe("שינוי מ־SUMIT ממתין: התקופה סגורה בספרים.");
     // The provider of the change wins over the line's source.

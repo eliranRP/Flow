@@ -3,14 +3,6 @@
   polish. Loaded after the other area files, so a rule here overrides the block it names.
 */
 
-/*
-  FLOW-335: a ListRow's action under the row sits on the start side, under the name (Unpaid's mark).
-  Only ListRow's own stack: any other .ui-row-stack (a list that builds its own) keeps its layout.
-*/
-.ui-row-stack-action {
-  align-items: flex-start;
-}
-
 /* FLOW-335: the preview tag sits --space-3 up, clear of the 28px corner curve; the band grows by as much. Overrides .ui-preview-banner in 07-band-home.css. */
 .ui-preview-banner {
   inset-block-end: var(--space-3);

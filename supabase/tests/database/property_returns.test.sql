@@ -460,7 +460,7 @@ select is((public.get_property_returns(pg_temp.id('ed'), '2026-01-01', '2026-12-
 select is((public.get_property_returns(pg_temp.id('ee'), '2026-01-01', '2026-12-31')->'inputs'->>'taken_over_minor')::bigint, 0::bigint,
   'proceeds 120 days before the first payment are inside its window: the loan is out');
 
--- FLOW-1197 (decision 0269): a hard-money loan funds the purchase at closing and pays its renovation
+-- FLOW-1199 (decision 0269): a hard-money loan funds the purchase at closing and pays its renovation
 -- draws into the bank. With no closing amount set, the price counts the principal less those draws:
 -- loan proceeds after its start, up to its payoff and before the first rent. A renovation refund, a
 -- deposit after the first rent and a draw after the payoff are not draws; a closing amount set wins.

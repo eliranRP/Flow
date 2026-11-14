@@ -1,4 +1,4 @@
--- FLOW-1197 (decision 0269, amends 0250): a loan paid out at closing, with no amount from the
+-- FLOW-1199 (decision 0269, amends 0250): a loan paid out at closing, with no amount from the
 -- settlement statement (loans.closing_paid_minor null), adds its principal less the draws it paid
 -- into the bank to the purchase price, not the whole principal.
 --
@@ -48,7 +48,7 @@ begin
         'draws_minor', dr.draws_minor,
         'counted_minor', least(coalesce(lo.closing_paid_minor, greatest(lo.principal_minor - dr.draws_minor, 0)), lo.principal_minor))$n$);
   def := replace(def, a_from, $n$    from public.loans lo
-    -- FLOW-1197 (decision 0269): the draws the loan paid into the bank after closing are not the price.
+    -- FLOW-1199 (decision 0269): the draws the loan paid into the bank after closing are not the price.
     cross join lateral (
       select coalesce(sum(f.amount_minor), 0)::bigint as gross_minor
       from private.property_lines(cid, p_project_id, lo.start_date + 1,

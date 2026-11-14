@@ -30,11 +30,6 @@ type DateSheetProps = {
   reason?: ReactNode;
   /** The button's word. Default בחירה; a loan's close date says החלה. */
   applyLabel?: string;
-  /**
-   * A sheet that saves keeps itself open: `onApply` returns false (or a promise of false) when
-   * the save was refused, and `error` says why under the date. Default: close on apply.
-   */
-  onApplyResult?: (iso: string) => boolean | Promise<boolean>;
   /** The save is running: the button spins and the days stay still. */
   busy?: boolean;
   /** A refusal for the picked day, shown under it in the error colour. */
@@ -55,7 +50,6 @@ export function DateSheet({
   max = null,
   reason,
   applyLabel = "בחירה",
-  onApplyResult,
   busy = false,
   error = null,
 }: DateSheetProps) {
@@ -117,13 +111,8 @@ export function DateSheet({
     setCursor(monthOf(iso));
   }
 
-  async function apply() {
+  function apply() {
     if (busy || outside(pending)) return;
-    if (onApplyResult) {
-      const closed = await onApplyResult(pending);
-      if (closed) setOpen(false);
-      return;
-    }
     onApply(pending);
     setOpen(false);
   }
@@ -140,7 +129,7 @@ export function DateSheet({
           busy={busy}
           aria-describedby={error ? errorId : undefined}
           onClick={() => {
-            void apply();
+            apply();
           }}
         >
           {applyLabel}

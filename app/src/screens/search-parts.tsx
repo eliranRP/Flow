@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import type { ReportShortcut } from "../search-reports";
-import { Button } from "../ui/button";
 import { BackIcon, DocumentIcon } from "../ui/icons";
 
 /**
@@ -23,36 +22,6 @@ export function SearchingRows({ allTime }: { allTime: boolean }) {
             <span className="ui-skeleton-bar ui-search-skel-end" aria-hidden="true" />
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * A search with no lines (FLOW-368 §2.6, FLOW-1049 V3-Search): the name searched, one muted line, and never a
- * dead end: with chips a link drops them; always the filters and a clear (back to the start's checks).
- */
-export function SearchEmptyState({ text, withChips, onClearChips, onFilters, onClear }: {
-  text: string;
-  withChips: boolean;
-  onClearChips: () => void;
-  /** Opens the filter sheet. */
-  onFilters: () => void;
-  /** Clears the text and the filters: the start, with שווה לבדוק and the recent searches. */
-  onClear: () => void;
-}) {
-  return (
-    <div className="ui-search-empty">
-      <h2 className="ui-search-empty-title">{text !== "" ? `לא מצאנו ״${text}״` : "אין תנועות שמתאימות לסינון"}</h2>
-      <p className="ui-search-empty-body">
-        {withChips
-          ? "החיפוש הוא לפי ספק, לקוח, פרויקט, קטגוריה או סכום, בתוך הסינון שבחרתם."
-          : "נסו שם אחר, פרויקט או סכום."}
-      </p>
-      <div className="ui-search-empty-actions">
-        {withChips ? <Button variant="link" onClick={onClearChips}>חיפוש בלי הסינון</Button> : null}
-        <Button variant="secondary" onClick={onFilters}>סינון</Button>
-        <Button variant="link" onClick={onClear}>ניקוי החיפוש</Button>
       </div>
     </div>
   );

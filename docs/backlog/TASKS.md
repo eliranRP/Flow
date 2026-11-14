@@ -513,7 +513,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
 | <a id="flow-1068"></a>[FLOW-1068](tasks/FLOW-1068.md) | Investment page: ROI, the flip's net profit, and new deal metrics | PLAN FIRST (approved) |
-| <a id="flow-1197"></a>[FLOW-1197](tasks/FLOW-1197.md) | Bug: a hard-money loan's renovation draws count twice in a renovation's purchase price | BUG |
+| <a id="flow-1199"></a>[FLOW-1199](tasks/FLOW-1199.md) | Bug: a hard-money loan's renovation draws count twice in a renovation's purchase price | BUG |
 | <a id="flow-1198"></a>[FLOW-1198](tasks/FLOW-1198.md) | The loan page's סכום ששולם בסגירה row reads "כל ההלוואה" though the price counts the principal less the draws | SMALL UI |
 | <a id="flow-1069"></a>[FLOW-1069](tasks/FLOW-1069.md) | Investment page: IRR since purchase | SMALL CYCLE |
 | <a id="flow-1070"></a>[FLOW-1070](tasks/FLOW-1070.md) | ROI review follow-ups (#1012 review) | BACKLOG NIT |
@@ -792,7 +792,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
 | <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
 | <a id="flow-1176"></a>[FLOW-1176](tasks/FLOW-1176.md) | A closed month's refusal stays long enough to read | SMALL UI |
-| <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | PLAN FIRST |
+| <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | SMALL UI |
+| <a id="flow-1197"></a>[FLOW-1197](tasks/FLOW-1197.md) | A held change set aside with אישור stays set aside when the period reopens | SMALL CYCLE |
 | <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
 | <a id="flow-1172"></a>[FLOW-1172](tasks/FLOW-1172.md) | Loans: move the app's direct table writes onto RPCs | SMALL CYCLE |
 | <a id="flow-1181"></a>[FLOW-1181](tasks/FLOW-1181.md) | Five-token sweep, MEDIUM refactor: controls, fields and base screens use their tokens (no visual change) | SMALL UI |

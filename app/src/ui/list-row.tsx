@@ -6,7 +6,7 @@ import { cx } from "./cx";
 import { HintText } from "./hint-cut";
 import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
-import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
+import { BankIcon, ChevronIcon, DocumentIcon } from "./icons";
 import { Skeleton } from "./skeleton";
 import { JevTag, SuggestTag } from "./suggest-tag";
 
@@ -40,13 +40,10 @@ type Common = {
   external?: boolean;
   state?: unknown;
   action?: ReactNode;
-  /** The action sits under the row, on the start side under the name (FLOW-335). */
-  actionBelow?: boolean;
   icon?: ReactNode;
   chevron?: boolean;
   /** FLOW-408: a row with no chevron keeps its space, so its amount lines up with linked rows above and below. */
   chevronSpace?: boolean;
-  grip?: boolean;
   /** Hidden categories use a muted name. */
   muted?: boolean;
   meta?: ReactNode;
@@ -117,8 +114,6 @@ export type ListRowProps =
     currency?: string;
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
-    /** Green money in without the plus (the open-invoices list). */
-    amountSignless?: boolean;
     /** A plus before a positive amount, in the row's own colour (a project's month profit). */
     amountPlus?: boolean;
     /** The Projects list's amount (board): signed, green when money in, muted at zero, cents drawn small and raised. */
@@ -341,11 +336,6 @@ export function ListRow(props: ListRowProps) {
   );
   const body = (
     <>
-      {props.grip ? (
-        <span className="ui-grip" aria-hidden="true">
-          <GripIcon />
-        </span>
-      ) : null}
       <CopyMain className="ui-row-main">
         {initialsLead ?? (icon ? <span className="ui-row-icon">{icon}</span> : null)}
         <CopyText className="ui-row-text">
@@ -385,7 +375,7 @@ export function ListRow(props: ListRowProps) {
       ) : props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.value != null ? <span className="ui-row-value">{props.value}</span> : null}
       {props.meta ? <span className="ui-row-meta t-caption t-muted">{props.meta}</span> : null}
-      {props.actionBelow ? null : props.action}
+      {props.action}
       {showChevron ? (
         <span className="ui-row-chevron" aria-hidden="true">
           <ChevronIcon />
@@ -507,7 +497,7 @@ export function ListRow(props: ListRowProps) {
       {body}
     </div>
   );
-  return withAction(props, row);
+  return row;
 }
 
 const NEW_TAB = "(נפתח בלשונית חדשה)";
@@ -565,16 +555,6 @@ function titleText(props: Common): ReactNode {
   const shown = props.ltrTitle ? <bdi dir="ltr">{props.title}</bdi> : props.title;
   // A snippet is hidden from screen readers; the whole text follows the title (see the body).
   return props.titleFull == null ? shown : <span aria-hidden="true">{shown}</span>;
-}
-
-function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {
-  if (!props.actionBelow || props.action == null) return row;
-  return (
-    <div className="ui-row-stack ui-row-stack-action">
-      {row}
-      <div className="ui-row-action">{props.action}</div>
-    </div>
-  );
 }
 
 function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost" | "moved-in"; inWord?: string; wholeCents?: boolean }) {
@@ -713,9 +693,8 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
       currency={props.currency}
       size="list"
       loss={props.loss === true}
-      direction={props.amountSignless === true ? undefined : props.amountDirection ?? (props.amountPlus === true && props.agorot > 0n ? "income" : undefined)}
+      direction={props.amountDirection ?? (props.amountPlus === true && props.agorot > 0n ? "income" : undefined)}
       income={props.amountDirection === "income"}
-      signless={props.amountSignless === true}
     />
   );
 }

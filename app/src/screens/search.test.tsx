@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTxnList } from "../txn-nav";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
 import { BooksProvider } from "../use-books";
-import { resetSearchMemory, SearchScreen, searchRowDetails } from "./search";
+import { searchRowDetails } from "../search";
+import { resetSearchMemory, SearchScreen } from "./search";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: Record<string, unknown> }>,

@@ -177,3 +177,13 @@
   color: var(--color-accent-text);
   font-weight: var(--type-btn-weight);
 }
+
+/* FLOW-1194: the month view's search field, in the list's gutter; its status line is the report search's (.ui-rep-search). */
+.ui-cp-search {
+  margin-inline: var(--space-side);
+}
+
+/* The search box sits between the chips and the first group: no pull-up under it. */
+.ui-cp-screen .ui-cp-search + .ui-pcat-group {
+  margin-top: 0;
+}

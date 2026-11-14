@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type AnimationEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useRef, type AnimationEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
 import { blocksEdgeBack } from "./edge-back";
 import { inEdgeZone, lockAxis, reducedMotion, swipeStep } from "./period-swipe";
 
@@ -15,9 +15,6 @@ import { inEdgeZone, lockAxis, reducedMotion, swipeStep } from "./period-swipe";
  * - with reduced motion the row stays put and is removed on release;
  * - while the page is pinch-zoomed the row does not swipe.
  *
- * FLOW-363 (3c): with `reveal`, a move toward the start past 30px opens the row over an action
- * (`--swipe-action` wide). A move back, or a tap on the row, closes it; a tap on the action runs it.
- *
  * FLOW-1086: a row with no ✕ of its own passes `keyName`: a button after the row, hidden until it has keyboard focus,
  * then shown over the slid-open row like the revealed action. A screen reader finds it by that name.
  */
@@ -29,9 +26,6 @@ const CLICK_AFTER_DRAG_MS = 400;
 
 /** How far the row gives toward the end side: a quarter of the move, at most 32px. */
 const END_GIVE_PX = 32;
-
-/** The move, in px, that opens or closes a revealed row. Matches --swipe-action (app.css). */
-const OPEN_PX = 120;
 
 /** The row leaves after its slide, or on this fallback when animationend does not come. */
 const LEAVE_MS = 240;
@@ -54,19 +48,11 @@ export function swipeRemoves(dx: number, elapsedMs: number, width: number, isRtl
 /** FLOW-913: how far the one-time peek slides the row toward the start side. */
 const PEEK_PX = 72;
 
-export type SwipeRowReveal = {
-  /** The action's name, read aloud and shown on it, e.g. "התעלמות מההתראה". */
-  label: string;
-  onAct: () => void;
-};
-
 export function SwipeRow({
   onRemove,
   disabled = false,
   label = "הסרה",
   peek = false,
-  reveal,
-  defaultOpen = false,
   keyName,
   children,
 }: {
@@ -77,10 +63,6 @@ export function SwipeRow({
   peek?: boolean;
   /** While the editor is busy or locked, the row stays put. */
   disabled?: boolean;
-  /** FLOW-363 (3c): the row opens over an action instead of removing itself. */
-  reveal?: SwipeRowReveal;
-  /** FLOW-447b: a revealed row that opens over its action on mount (the dev route's swiped row). */
-  defaultOpen?: boolean;
   /**
    * FLOW-1086: the swipe's action as a button for a keyboard and a screen reader, named this (it starts with
    * `label`, e.g. "לא החודש: חשמל"). Only for a row that has no ✕ of its own.
@@ -95,8 +77,6 @@ export function SwipeRow({
   // click right after the drag is dropped, so a later keyboard or mouse press always goes through.
   const dragEnd = useRef<number | null>(null);
   const leaving = useRef<number | null>(null);
-  const [open, setOpen] = useState(() => reveal != null && defaultOpen);
-  const openRef = useRef(open);
   // The removal lands a moment after the release; a save that started meanwhile keeps the part.
   const off = useRef(disabled);
   off.current = disabled;
@@ -104,15 +84,6 @@ export function SwipeRow({
   useEffect(() => () => {
     if (leaving.current != null) window.clearTimeout(leaving.current);
   }, []);
-
-  // A row whose action went away rests closed, and stays closed if the action comes back.
-  const revealed = reveal != null;
-  useEffect(() => {
-    if (!revealed && openRef.current) {
-      openRef.current = false;
-      setOpen(false);
-    }
-  }, [revealed]);
 
   useEffect(() => {
     const box = frame.current;
@@ -138,16 +109,6 @@ export function SwipeRow({
     }
     box.setAttribute("data-drag", "");
     node.style.transform = `translateX(${String(Math.round(shift))}px)`;
-  }
-
-  /** Where a revealed row rests, in px along the screen (right in RTL). */
-  function openShift(): number {
-    return rtl() ? OPEN_PX : -OPEN_PX;
-  }
-
-  function setOpenState(next: boolean) {
-    openRef.current = next;
-    setOpen(next);
   }
 
   function finishLeave() {
@@ -192,11 +153,9 @@ export function SwipeRow({
     }
     if (axis == null) return;
     if (reducedMotion()) return;
-    // A revealed row starts from where it rests.
-    const raw = (reveal != null && openRef.current ? openShift() : 0) + dx;
     // Toward the end side there is nothing to reveal: the row only gives a little.
-    const give = Math.min(Math.abs(raw) / 4, END_GIVE_PX);
-    place(towardStart(raw, rtl()) > 0 ? raw : raw < 0 ? -give : give);
+    const give = Math.min(Math.abs(dx) / 4, END_GIVE_PX);
+    place(towardStart(dx, rtl()) > 0 ? dx : dx < 0 ? -give : give);
   }
 
   function onTouchEnd(event: TouchEvent<HTMLDivElement>) {
@@ -210,13 +169,6 @@ export function SwipeRow({
     const touch = event.changedTouches[0];
     const width = frame.current?.getBoundingClientRect().width ?? 0;
     const dx = touch ? touch.clientX - start.x : 0;
-    if (reveal != null) {
-      const move = towardStart(dx, rtl());
-      place(null);
-      if (!openRef.current && move > OPEN_PX / 4) setOpenState(true);
-      else if (openRef.current && move < -OPEN_PX / 4) setOpenState(false);
-      return;
-    }
     if (!swipeRemoves(dx, event.timeStamp - start.at, width, rtl())) {
       place(null);
       return;
@@ -242,13 +194,6 @@ export function SwipeRow({
       event.stopPropagation();
       return;
     }
-    // A tap on the row, or on what it holds, closes a revealed row and does nothing else.
-    const target = event.target;
-    if (reveal != null && openRef.current && target instanceof Element && !target.closest(".ui-swipe-row-action")) {
-      event.preventDefault();
-      event.stopPropagation();
-      setOpenState(false);
-    }
   }
 
   return (
@@ -256,7 +201,6 @@ export function SwipeRow({
       ref={frame}
       className="ui-swipe-row"
       data-on={disabled ? undefined : ""}
-      data-open={open ? "" : undefined}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -269,33 +213,14 @@ export function SwipeRow({
         if (event.target === event.currentTarget && event.animationName === "m-row-leave") finishLeave();
       }}
     >
-      {reveal != null ? (
-        <div className="ui-swipe-row-under">
-          <button
-            type="button"
-            className="ui-swipe-row-action"
-            aria-label={reveal.label}
-            tabIndex={open ? 0 : -1}
-            onClick={() => {
-              // While the editor is busy or locked the row's action waits, as its swipe does.
-              if (off.current) return;
-              setOpenState(false);
-              reveal.onAct();
-            }}
-          >
-            {reveal.label}
-          </button>
-        </div>
-      ) : (
-        /* Under the row, shown only while it moves; the row's ✕ is the named control. */
-        <div className="ui-swipe-row-under" aria-hidden="true">
-          <span>{label}</span>
-        </div>
-      )}
+      {/* Under the row, shown only while it moves; the row's ✕ is the named control. */}
+      <div className="ui-swipe-row-under" aria-hidden="true">
+        <span>{label}</span>
+      </div>
       <div ref={row} className="ui-swipe-row-body">
         {children}
       </div>
-      {reveal == null && keyName != null ? (
+      {keyName != null ? (
         <button
           type="button"
           className="ui-swipe-row-key"
