@@ -712,6 +712,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-850"></a>[FLOW-850](tasks/FLOW-850.md) | The support address is flowusappsupport@gmail.com | SMALL CYCLE |
 | <a id="flow-851"></a>[FLOW-851](tasks/FLOW-851.md) | The CSV report keeps every formula as text | SMALL CYCLE (infra) |
 | <a id="flow-852"></a>[FLOW-852](tasks/FLOW-852.md) | Jev never files a line in a closed month | SMALL CYCLE (infra) |
+| <a id="flow-853"></a>[FLOW-853](tasks/FLOW-853.md) | The Storybook preview deploys with code from main only | SMALL CYCLE (infra) |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
