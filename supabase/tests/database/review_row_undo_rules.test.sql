@@ -201,7 +201,9 @@ select is(
    where i.indexrelid = 'public.review_queue_open_line_key'::regclass),
   'true:CREATE UNIQUE INDEX review_queue_open_line_key ON public.review_queue USING btree (transaction_id) WHERE (status = ''open''::review_status)',
   'the open rows are unique per line');
-select is(to_regclass('public.review_queue_open_idx'), null, 'and the old open-row index is gone, not kept beside it');
+select is(pg_get_indexdef('public.review_queue_open_idx'::regclass),
+  'CREATE INDEX review_queue_open_idx ON public.review_queue USING btree (company_id) WHERE (status = ''open''::review_status)',
+  'the open-row index is back beside the unique line key, partial on open rows (FLOW-1192)');
 
 select is((select count(*)::integer from public.review_queue q where q.company_id = pg_temp.id('co') and q.status = 'open'), 12,
   'the sync queues each new line with one open row');
