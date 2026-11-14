@@ -47,12 +47,13 @@ with made as (
 )
 insert into cw (label, id)
 select case when m.company_id = pg_temp.id('co') then 'loan' else 'other_loan' end, m.id from made m;
-insert into cw (label, id)
-select 'other_rate', r.id from (
+with r as (
   insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm)
   values (pg_temp.id('other_co'), pg_temp.id('other_loan'), '2026-03-01', 55000)
   returning id
-) r;
+)
+insert into cw (label, id)
+select 'other_rate', r.id from r;
 
 -- 1-4. The grants: SELECT stays, no direct write is left.
 select ok(
