@@ -194,6 +194,15 @@ describe("CompanyProfitScreen, more on lines and search (FLOW-1194)", () => {
     expect(await screen.findByText("שכר")).toBeInTheDocument();
   });
 
+  it("the search's live region is on the page while the search is still loading", async () => {
+    calls.search = new Promise(() => undefined);
+    await enterCategories();
+    fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש בתנועות" }), { target: { value: "אאא" } });
+    await waitFor(() => { expect(calls.rpc.some((call) => call.name === "search_transactions")).toBe(true); });
+    expect(document.querySelector(".ui-cp-found-status[role=status]")).not.toBeNull();
+    expect(screen.queryByText("לא מצאנו ״אאא״")).toBeNull();
+  });
+
   it("the search is for the month view: the year view has no field and keeps its own list", async () => {
     await enterCategories();
     fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש בתנועות" }), { target: { value: "מצאנו" } });

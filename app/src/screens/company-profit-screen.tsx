@@ -423,7 +423,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   );
   const foundBody = (
     <>
-      {found.data != null && hits.length === 0 ? <div role="status"><SearchEmptyState text={settled} withChips={false} onClear={() => { setTyped(""); }} /></div> : null}
+      {/* The live region is on the page before the answer, so a screen reader announces the empty result. */}
+      <div role="status" className="ui-cp-found-status">{found.data != null && hits.length === 0 ? <SearchEmptyState text={settled} withChips={false} onClear={() => { setTyped(""); }} /> : null}</div>
       <List layout="flat" className="ui-cp-list">{hits.map(foundRow)}</List>
       {found.hasNextPage ? <Button variant="link" busy={found.isFetchingNextPage} onClick={() => { void found.fetchNextPage(); }}>עוד תנועות</Button> : null}
     </>
