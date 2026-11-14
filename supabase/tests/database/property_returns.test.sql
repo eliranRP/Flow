@@ -547,11 +547,12 @@ insert into prr (label, id) values
   ('rf-tax1', tests.fixture_line(pg_temp.id('co'), 'prr:rf-tax1', 10000, p_project => pg_temp.id('rf'), p_category => pg_temp.id('rf_tax'), p_doc_date => '2026-03-01')),
   ('rf-close', tests.fixture_line(pg_temp.id('co'), 'prr:rf-close', 19910000, 'income', pg_temp.id('rf'), pg_temp.id('proceeds'), '2026-06-10')),
   ('rf-rent', tests.fixture_line(pg_temp.id('co'), 'prr:rf-rent', 200000, 'income', pg_temp.id('rf'), pg_temp.id('rent'), '2026-08-01'));
+-- The closing's costs run against the deposit, so they are gross-up parts, as the app saves them.
 select tests.line_split(pg_temp.id('rf-close'), jsonb_build_array(
   jsonb_build_object('category_id', pg_temp.id('proceeds'), 'project_id', pg_temp.id('rf'), 'amount_minor', 20000000, 'gross_up', false),
-  jsonb_build_object('category_id', pg_temp.id('rf_tax'), 'project_id', pg_temp.id('rf'), 'amount_minor', 50000, 'gross_up', false),
-  jsonb_build_object('category_id', pg_temp.id('rf_int'), 'project_id', pg_temp.id('rf'), 'amount_minor', 30000, 'gross_up', false),
-  jsonb_build_object('category_id', pg_temp.id('rf_fee'), 'project_id', pg_temp.id('rf'), 'amount_minor', 10000, 'gross_up', false)));
+  jsonb_build_object('category_id', pg_temp.id('rf_tax'), 'project_id', pg_temp.id('rf'), 'amount_minor', 50000, 'gross_up', true),
+  jsonb_build_object('category_id', pg_temp.id('rf_int'), 'project_id', pg_temp.id('rf'), 'amount_minor', 30000, 'gross_up', true),
+  jsonb_build_object('category_id', pg_temp.id('rf_fee'), 'project_id', pg_temp.id('rf'), 'amount_minor', 10000, 'gross_up', true)));
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
 values (pg_temp.id('co'), 'Example refinance loan', 20000000, 70000, 360, '2026-07-01', 130000, 0, 'ILS', pg_temp.id('rf'));
 select tests.authenticate_as('prr_owner');
