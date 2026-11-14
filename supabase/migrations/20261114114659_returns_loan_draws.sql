@@ -11,7 +11,11 @@
 -- liability account and is not a renovation refund, and not another loan's proceeds (80% or more of
 -- that loan, from 120 days before its start to 30 days after, as 0246 tells proceeds). The amount
 -- counted is the principal less the draws, at least zero. A closing amount the owner sets still wins.
--- taken_over_loans gains draws_minor.
+--
+-- Some lenders hold the draws back inside the principal (interest on the whole loan from day one);
+-- others lend them on top of it (the balance grows with each draw). When the loan's principal paid
+-- back, from its start to 30 days after its payoff, is above its principal, the excess is draws lent
+-- on top: those draws are not taken off. taken_over_loans gains draws_minor, the draws taken off.
 
 begin;
 
@@ -46,7 +50,7 @@ begin
   def := replace(def, a_from, $n$    from public.loans lo
     -- FLOW-1197 (decision 0269): the draws the loan paid into the bank after closing are not the price.
     cross join lateral (
-      select coalesce(sum(f.amount_minor), 0)::bigint as draws_minor
+      select coalesce(sum(f.amount_minor), 0)::bigint as gross_minor
       from private.property_lines(cid, p_project_id, lo.start_date + 1,
         coalesce(lo.closed_on, (now() at time zone 'Asia/Jerusalem')::date)) f
       join public.categories fc on fc.id = f.category_id and fc.company_id = cid
@@ -60,6 +64,17 @@ begin
             and f.line_date between o.start_date - 120 and o.start_date + 30
             and f.amount_minor >= o.principal_minor * 0.8
         )
+    ) dg
+    -- Draws lent on top of the principal show as principal paid back above it: not taken off.
+    cross join lateral (
+      select coalesce(-sum(f.amount_minor), 0)::bigint as repaid_minor
+      from private.property_lines(cid, p_project_id, lo.start_date + 1,
+        coalesce(lo.closed_on, (now() at time zone 'Asia/Jerusalem')::date) + 30) f
+      left join public.categories pc on pc.id = f.category_id and pc.company_id = cid
+      where f.currency = cur and coalesce(f.part, pc.loan_part::text) = 'principal'
+    ) rp
+    cross join lateral (
+      select dg.gross_minor - least(dg.gross_minor, greatest(rp.repaid_minor - lo.principal_minor, 0)) as draws_minor
     ) dr
     where lo.company_id = cid and lo.project_id = p_project_id and lo.currency = cur
       and lo.start_date between closing - 30 and closing + 75$n$);

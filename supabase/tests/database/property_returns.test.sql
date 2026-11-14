@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(121);
+select plan(123);
 
 do $users$
 begin
@@ -502,6 +502,19 @@ select is((pg_temp.hml()->'inputs'->>'purchase_minor')::bigint, 20000000::bigint
 select is((public.set_loan_closing_paid(pg_temp.id('hml_loan'), 18000000))->>'closing_paid_minor', '18000000',
   'the owner sets the settlement statement''s amount');
 select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 18000000::bigint, 'and the amount set wins over the draws');
+-- A lender who lends the draws on top of the principal: the payoff repays the principal and the
+-- draws, so the draws were not inside the principal and are not taken off.
+select public.set_loan_closing_paid(pg_temp.id('hml_loan'), null);
+reset role;
+insert into prr (label, id) values
+  ('principal_cat', tests.fixture_category(pg_temp.id('co'), 'Example loan payoff', 'expense', true));
+update public.categories set loan_part = 'principal' where id = pg_temp.id('principal_cat');
+insert into prr (label, id) values
+  ('hml-payoff', tests.fixture_line(pg_temp.id('co'), 'prr:hml-payoff', 23000000, p_project => pg_temp.id('hml'), p_category => pg_temp.id('principal_cat'), p_doc_date => '2026-09-30'));
+select tests.authenticate_as('prr_owner');
+select is((pg_temp.hml()->'inputs'->>'taken_over_minor')::bigint, 20000000::bigint,
+  'a payoff of the principal and the draws: the draws were lent on top, the whole principal counts');
+select is((pg_temp.hml()->'inputs'->'taken_over_loans'->0->>'draws_minor')::bigint, 0::bigint, 'and no draws are taken off');
 
 select * from finish();
 rollback;

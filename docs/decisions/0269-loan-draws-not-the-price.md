@@ -15,9 +15,10 @@
   - is dated after the loan's start, up to its payoff (`closed_on`, or today while it is open), and before the first rent;
   - is in a category that posts to a liability account and is not a renovation category (a store refund is not a draw);
   - is not another loan's proceeds (80% or more of that loan, from 120 days before its start to 30 days after it, the 0246 test).
-- `taken_over_loans` gains `draws_minor`; `counted_minor` is what the price counts.
+- Some lenders hold the draws back inside the principal (interest on the whole loan from day one); others lend them on top of it (the balance grows with each draw). When the principal paid back on the property, from the loan's start to 30 days after its payoff, is above the loan's principal, the excess is draws lent on top, and those draws are not taken off.
+- `taken_over_loans` gains `draws_minor`, the draws taken off; `counted_minor` is what the price counts.
 
 ## Consequences
 
-- A hard-money loan whose draws are in the bank no longer counts them in the price; entering the settlement statement's amount is needed only when the bank does not show the draws, or to be exact.
-- A deposit or other liability money that arrives during the renovation, before the first rent, would read as a draw. The settlement statement's amount, set on the loan, overrides it.
+- A hard-money loan whose draws are in the bank and inside its principal no longer counts them in the price; a loan whose draws were lent on top and whose payoff is in the books keeps its whole principal; entering the settlement statement's amount is needed only when the bank does not show the draws, or to be exact.
+- A deposit or other liability money that arrives during the renovation, before the first rent, would read as a draw, and draws lent on top of a loan not yet paid off (or whose payoff is not in the books) are taken off until the payoff shows. The settlement statement's amount, set on the loan, overrides both, and is the reliable source.
