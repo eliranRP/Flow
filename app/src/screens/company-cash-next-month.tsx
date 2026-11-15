@@ -36,9 +36,9 @@ export type CompanyCashNextMonth = {
 /** A fixture: the forecast's reads and the cash months, as they would come back (Home on a month to come). */
 export type HomeNextMonthSample = { next: CompanyNextMonthSample; cash: NonNullable<CashMonths> };
 
-/** FLOW-1066: `month` is a month of the forecast (next month by default). */
-export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string): CompanyCashNextMonth {
-  const next = useCompanyNextMonth(currency, today, enabled, sample, month);
+/** FLOW-1066: `month` is a month of the forecast (next month by default). FLOW-1202: `withOverrides` reads the month's override rows, for a page that can skip its rows. */
+export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string, withOverrides = false): CompanyCashNextMonth {
+  const next = useCompanyNextMonth(currency, today, enabled, sample, month, false, withOverrides);
   const forecast = useMemo(() => (next.forecast == null ? null : companyCashForecast(next.forecast)), [next.forecast]);
   return { forecast, loading: next.pending, failed: next.failed, paused: next.paused, refetch: next.refetch, categories: next.categories, profitMinor: next.forecast?.netMinor ?? null, overrides: next.overrides, input: next.input };
 }

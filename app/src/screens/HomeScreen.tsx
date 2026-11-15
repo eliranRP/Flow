@@ -371,7 +371,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const recent = cash.data;
   return withWeekly(
     <Suspense fallback={home(FUTURE_LOADING)}>
-      <HomeFutureReads today={today} month={monthKey} currency={base} cash={recent} search={search}>
+      <HomeFutureReads today={today} month={monthKey} currency={base} cash={recent} search={search} canSkip={!previewing && !holdForecast}>
         {home}
       </HomeFutureReads>
     </Suspense>,

@@ -6,8 +6,10 @@ import { QUERY_STALE_MS } from "./query-client";
 import { renderWithProviders } from "./test-render";
 
 // FLOW-1195: the year view (withRest) takes every month's skips from company_next_month_inputs' `skips`, so it sends
-// no forecast_overrides_for at all, in January (eleven months left) as in November. Next month's own card still
-// reads next month's overrides, one read. Invented answers only; "today" is 2026-01-15, so next month is February.
+// no forecast_overrides_for at all, in January (eleven months left) as in November. FLOW-1202: so do next month's own
+// card (the slim answer carries next month's skips) and a later month's page (skips[month]); only a page that can skip
+// a row reads the month's override rows, for the skip's undo. Invented answers only; "today" is 2026-01-15, so next
+// month is February.
 const rpc = vi.hoisted((): { calls: Array<{ name: string; args: unknown }>; answers: Record<string, unknown> } => ({
   calls: [],
   answers: {},
@@ -55,6 +57,11 @@ function Next() {
   return null;
 }
 
+function Month({ month, withOverrides = false }: { month: string; withOverrides?: boolean }) {
+  seen = useCompanyNextMonth("ILS", today, true, undefined, month, false, withOverrides);
+  return null;
+}
+
 function calls(name: string) {
   return rpc.calls.filter((call) => call.name === name);
 }
@@ -88,14 +95,52 @@ describe("the year view reads the skips once, with the answer (FLOW-1195)", () =
     expect(seen?.input?.skips).toEqual([]);
   });
 
-  it("next month's own card reads next month's overrides once and sends no skips with its answer", async () => {
-    rpc.answers.company_next_month_inputs = inputs;
+  it("next month's own card sends no forecast_overrides_for and counts the skip from its first answer (FLOW-1202)", async () => {
+    rpc.answers.company_next_month_inputs = { ...inputs, skips: { "2026-02": [POWER] } };
     renderWithProviders(<Next />, { route: "/", client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
     await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
-    expect(calls("forecast_overrides_for")).toHaveLength(1);
-    expect(calls("forecast_overrides_for")[0]?.args).toEqual({ p_month: "2026-02" });
-    expect(calls("company_next_month_inputs")[0]?.args).toEqual({ p_today: today, p_rest: false });
-    expect(seen?.input?.skips).toEqual([POWER]);
+    // The first figure it draws is the final one: it never counted the charge before the skips arrived.
     expect(seen?.forecast?.expenseMinor).toBe(0n);
+    expect(seen?.input?.skips).toEqual([POWER]);
+    expect(calls("forecast_overrides_for")).toHaveLength(0);
+    expect(calls("company_next_month_inputs")).toHaveLength(1);
+    expect(calls("company_next_month_inputs")[0]?.args).toEqual({ p_today: today, p_rest: false });
+  });
+
+  it("next month's card with no skip in its answer counts the charge", async () => {
+    rpc.answers.company_next_month_inputs = { ...inputs, skips: {} };
+    renderWithProviders(<Next />, { route: "/", client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
+    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
+    expect(seen?.forecast?.expenseMinor).toBe(18_600n);
+    expect(calls("forecast_overrides_for")).toHaveLength(0);
+  });
+
+  it("a later month's page sends no forecast_overrides_for and counts skips[month]", async () => {
+    rpc.answers.company_next_month_inputs = { ...inputs, rest_edits: [], skips: { "2026-03": [POWER] } };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithProviders(<Month month="2026-03" />, { route: "/", client });
+    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
+    expect(seen?.forecast?.month).toBe("2026-03");
+    expect(seen?.forecast?.expenseMinor).toBe(0n);
+    expect(calls("forecast_overrides_for")).toHaveLength(0);
+    expect(calls("company_next_month_inputs")[0]?.args).toEqual({ p_today: today, p_rest: true });
+  });
+
+  it("a later month's page that can skip a row reads that month's override rows for the undo, and still counts from skips", async () => {
+    rpc.answers.company_next_month_inputs = { ...inputs, rest_edits: [], skips: { "2026-03": [POWER] } };
+    renderWithProviders(<Month month="2026-03" withOverrides />, { route: "/", client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
+    await waitFor(() => { expect(seen?.overrides).not.toBeNull(); });
+    expect(calls("forecast_overrides_for").map((call) => call.args)).toEqual([{ p_month: "2026-03" }]);
+    expect(seen?.forecast?.expenseMinor).toBe(0n);
+  });
+
+  it("the slim read seeded from a cached full answer uses its skips, with no request", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
+    client.setQueryData(["project-forecast-edits", "off", "company", today, true], { ...inputs, rest_edits: [], skips: { "2026-02": [POWER], "2026-03": [] } });
+    renderWithProviders(<Next />, { route: "/", client });
+    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
+    expect(seen?.forecast?.expenseMinor).toBe(0n);
+    expect(calls("company_next_month_inputs")).toHaveLength(0);
+    expect(calls("forecast_overrides_for")).toHaveLength(0);
   });
 });

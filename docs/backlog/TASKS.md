@@ -761,6 +761,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1194"></a>[FLOW-1194](tasks/FLOW-1194.md) | Perf: Company profit's "by category" order loads category lines on scroll; search finds every line | MEDIUM (perf) |
 | <a id="flow-1195"></a>[FLOW-1195](tasks/FLOW-1195.md) | Perf: Company profit's year view reads forecast skips once, not once per month | SMALL (perf) |
 | <a id="flow-1196"></a>[FLOW-1196](tasks/FLOW-1196.md) | Perf: duplicated fields in reads that flow-mcp names | MEDIUM (perf, MCP contract) |
+| <a id="flow-1202"></a>[FLOW-1202](tasks/FLOW-1202.md) | Perf: the forecast skips come in the inputs read, everywhere | SMALL (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
