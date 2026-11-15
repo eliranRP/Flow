@@ -492,6 +492,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1208"></a>[FLOW-1208](tasks/FLOW-1208.md) | Project profit: לפי חודש puts the months under a sticky head per year | SMALL UI |
 | <a id="flow-1082"></a>[FLOW-1082](tasks/FLOW-1082.md) | Reports: a row's second line is cut at 320, hiding expenses or the loan amount | SMALL UI |
 | <a id="flow-1083"></a>[FLOW-1083](tasks/FLOW-1083.md) | Reports: a small non-zero row shows "0% מהקבוצה" | SMALL UI |
 | <a id="flow-1098"></a>[FLOW-1098](tasks/FLOW-1098.md) | Report rows: a 9-digit full figure at 360–380, and two small cleanups | SMALL UI |
