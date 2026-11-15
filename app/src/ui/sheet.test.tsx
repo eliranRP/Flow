@@ -241,12 +241,13 @@ describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
     const onBeforeClose = vi.fn(() => undefined);
     const onCloseKind = vi.fn();
     const onOpenChange = vi.fn();
+    const late: (() => void)[] = [];
     function Late() {
       const [open, setOpen] = useState(true);
       return (
         <Sheet
           open={open}
-          onOpenChange={(next) => { onOpenChange(next); window.setTimeout(() => { setOpen(next); }, 30); }}
+          onOpenChange={(next) => { onOpenChange(next); late.push(() => { setOpen(next); }); }}
           onBeforeClose={onBeforeClose}
           onCloseKind={onCloseKind}
           title="תקופה"
@@ -260,6 +261,9 @@ describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
     await tick();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    // The parent closes only now, after every tap: no real timer decides the order.
+    act(() => { for (const close of late) close(); });
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "תקופה" })).toBeNull(); });
     expect(onBeforeClose).toHaveBeenCalledTimes(1);
     expect(onCloseKind).toHaveBeenCalledTimes(1);
