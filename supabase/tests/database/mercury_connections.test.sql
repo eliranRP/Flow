@@ -236,7 +236,7 @@ select ok(
   has_function_privilege('authenticated', 'public.set_mercury_accounts(smallint,text[],text)', 'execute')
     and not has_function_privilege('anon', 'public.set_mercury_accounts(smallint,text[],text)', 'execute')
     and not has_function_privilege('authenticated', 'public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text,smallint)', 'execute')
-    and not has_function_privilege('authenticated', 'public.replace_connector_connection(uuid,public.connector_provider,text,text,text,text,text,text,boolean,jsonb,smallint)', 'execute'),
+    and not has_function_privilege('authenticated', 'public.replace_connector_connection(uuid,public.connector_provider,text,text,text,text,text,text,boolean,jsonb,smallint,boolean,jsonb)', 'execute'),
   'the owner''s RPC is callable by the app; the sync ones stay with the service role');
 
 select * from finish();

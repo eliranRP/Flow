@@ -415,23 +415,22 @@ Each is `security definer`, `search_path = ''`, and checks `auth.role()` against
 
 | Function | Returns | Grant |
 | --- | --- | --- |
-| `public.replace_connector_connection(p_company uuid, p_provider public.connector_provider, p_key_ciphertext text, p_key_nonce text, p_dek_ciphertext text, p_dek_nonce text, p_kek_version text, p_envelope_version text, p_validated boolean, p_settings jsonb)` | `void` | `service_role` |
+| `public.replace_connector_connection(p_company uuid, p_provider public.connector_provider, p_key_ciphertext text, p_key_nonce text, p_dek_ciphertext text, p_dek_nonce text, p_kek_version text, p_envelope_version text, p_validated boolean, p_settings jsonb, p_slot smallint default null, p_reset boolean default false, p_kept jsonb default null)` | `void` | `service_role` |
 | `public.disconnect_connector(p_provider public.connector_provider)` | `void` | `authenticated`, `service_role` |
 | `public.request_connector_refresh(p_provider public.connector_provider)` | `timestamptz` | `service_role` (no client calls it, [0193](../decisions/0193-client-privileges.md)) |
 | `public.set_import_from(p_provider public.connector_provider, p_from date)` | `void` | `authenticated`, `service_role` |
-| `public.note_connector_rejection(p_company uuid, p_provider public.connector_provider, p_code text)` | `jsonb` | `service_role` |
 | `public.claim_connector_refreshes(p_limit integer)` | `table (id bigint, company_id uuid, provider public.connector_provider)` | `service_role` |
 | `public.claim_connector_refreshes(p_limit integer, p_provider public.connector_provider)` | the same table, only that provider | `service_role` |
 
-`replace_connector_connection` requires `p_validated` true. Until L2a, `p_envelope_version` is `'2'` or `'3'`. `p_settings` for SUMIT is `{ "sumit_company_id": <bigint> }`. A different SUMIT company id keeps today's retirement behaviour, scoped to `provider = 'sumit'`.
+`replace_connector_connection` requires `p_validated` true. Until L2a, `p_envelope_version` is `'2'` or `'3'`. `p_settings` for SUMIT is `{ "sumit_company_id": <bigint> }`. A different SUMIT company id keeps today's retirement behaviour, scoped to `provider = 'sumit'`. `p_reset` (Mercury; FLOW-1163) clears `sync_cursor` and, unless `p_kept` is given, the owner's account choice, in the same statement that stores the key, so a failed store leaves the old connection whole. `p_kept` is `{ sync_account_ids, skip_account_ids, account_from }`, the choices a new key of the same organisation keeps; `accounts_chosen_at` stays then. `mercury-connect` falls back to clearing first, then storing, while the database has no `p_reset` (CI deploys the functions first).
 
 `request_connector_refresh` is the owner button. If `last_sync_at` is within 60 seconds, it inserts nothing and returns that timestamp. Otherwise it inserts one open row with `forced` true. The partial unique index `connector_refresh_open_uidx` makes a second open row a no-op. The unforced floor stays 6 hours and is enforced by the drain, not by this RPC.
 
 `set_import_from` accepts null (מההתחלה) or a date that is not after today in Asia/Jerusalem. A later date is allowed. It does not delete rows. See removal.
 
-`note_connector_rejection` accepts `auth` and `rejected` only. `auth` clears `next_attempt_at`. `rejected` increments `reject_attempts` with the existing backoff of 5 minutes, 15 minutes, 1 hour, 6 hours, and 24 hours. The stored `last_error` is `auth` or `rejected`, never `sumit_auth`.
+`note_connector_rejection` was dropped (FLOW-1163): nothing called it. `note_connector_failure` takes `auth` and `rejected` and sets no retry time for either; the escalating backoff (5 minutes up to 24 hours by `reject_attempts`) went with the dropped function, which was never called. The stored `last_error` is `auth` or `rejected`, never `sumit_auth`. An `auth` stop clears only on a reconnect: `stamp_connector_sync`, `note_connector_failure`, and for SUMIT `stamp_sumit_sync`, `note_sync_failure` and `note_sumit_rejection` keep it.
 
-`claim_connector_refreshes` is one statement. It sets `claimed_at` and `sync_claimed_at` on the rows it returns, `for update skip locked`, skipping `next_attempt_at` in the future, `last_error = 'auth'`, and a `sync_claimed_at` younger than 15 minutes. `sumit-sync` keeps its current claim update against the compatibility view until L2a calls this function. Both paths claim by `claimed_at is null`, so a row is claimed once.
+`claim_connector_refreshes` is one statement. It sets `claimed_at` and `sync_claimed_at` on the rows it returns, `for update skip locked`, skipping `next_attempt_at` in the future, `last_error = 'auth'`, and a `sync_claimed_at` younger than the claim window (`private.sync_claim_window()`, 10 minutes; `connector_connection_status`, `sumit_status()` and `private.mcp_bank_connection_json` read the same function). `sumit-sync` keeps its current claim update against the compatibility view until L2a calls this function. Both paths claim by `claimed_at is null`, so a row is claimed once.
 
 Also service role only, same revoke and `auth.role()` check:
 

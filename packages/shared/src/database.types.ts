@@ -2426,9 +2426,6 @@ isOneToOne: false
 "note_connector_failure":
 { Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: string
                            },
-"note_connector_rejection":
-{ Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Json
-                           },
 "note_push_results":
 { Args: { "p_gone": (string)[],"p_reminded": (string)[] }; Returns: undefined
                            },
@@ -2570,7 +2567,7 @@ isOneToOne: false
 { Args: { "p_loan_ids": (string)[] }; Returns: Json
                            },
 "replace_connector_connection":
-{ Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_settings": Json,"p_slot"?: number,"p_validated": boolean }; Returns: undefined
+{ Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_kept"?: Json,"p_key_ciphertext": string,"p_key_nonce": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_reset"?: boolean,"p_settings": Json,"p_slot"?: number,"p_validated": boolean }; Returns: undefined
                            },
 "replace_sumit_connection":
 { Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number,"p_validated": boolean }; Returns: undefined

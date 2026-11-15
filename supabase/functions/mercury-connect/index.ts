@@ -2,7 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import { MERCURY_KEK_REF } from "../_shared/connectors/mercury/capabilities.ts";
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
-import { isLegacyRow, legacyPatch, rpcWithSlot } from "../_shared/connectors/mercury/legacy.ts";
+import { isLegacyRow, legacyPatch } from "../_shared/connectors/mercury/legacy.ts";
+import { type KeyReset, replaceKey } from "../_shared/connectors/mercury/replace_key.ts";
 import { chooseSlot, keptChoices, readConnectionScope, storedLabels } from "../_shared/connectors/mercury/scope.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
@@ -88,24 +89,30 @@ Deno.serve(async (req) => {
     const forSlot = <Q extends { eq(column: string, value: unknown): Q }>(query: Q): Q =>
       legacy ? query : query.eq("slot", slot);
 
+    // A token for other accounts must not resume the old accounts' cursor. Of the owner's choices the
+    // accounts it still lists stay (keptChoices); with none of them, the accounts are chosen again. The
+    // reset and the new key are one database call (FLOW-1163), so a failure keeps the old connection
+    // whole; replaceKey falls back to clearing first while the database has no reset yet.
+    let reset: KeyReset | null = null;
     if (choice.kind === "replace" && choice.accountsChanged) {
-      // A token for other accounts must not resume the old accounts' cursor. Of the owner's choices
-      // the accounts it still lists stay (keptChoices); with none of them, the accounts are chosen
-      // again. Cleared before the new key is stored, so no sync can pair it with the old cursor.
       const kept = target ? keptChoices(target, accountIds) : null;
-      const patch = choice.reset || kept == null
+      reset = { kept };
+    }
+    const clearOld = () => {
+      const kept = reset?.kept ?? null;
+      const patch = kept == null
         ? { sync_cursor: null, accounts_chosen_at: null, sync_account_ids: null, skip_account_ids: [], account_from: {} }
         : { sync_cursor: null, ...kept };
-      const cleared = await forSlot(
+      return forSlot(
         admin.from("connector_connections").update(legacyPatch(patch, legacy)).eq("company_id", companyId).eq("provider", "mercury"),
       );
-      if (cleared.error) return json({ error: "could not store the connection" }, 500);
-    }
+    };
 
     const kekVersion = Deno.env.get("MERCURY_KEK_VERSION") || "1";
     const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, companyId, "3", "mercury");
-    const replaced = await rpcWithSlot(
+    const replaced = await replaceKey(
       (args) => admin.rpc("replace_connector_connection", args),
+      clearOld,
       {
         p_company: companyId,
         p_provider: "mercury",
@@ -121,6 +128,7 @@ Deno.serve(async (req) => {
       slot,
       // No row yet: the schema is not known, so a missing p_slot means the old one.
       rows.length === 0 ? null : legacy,
+      reset,
     );
     legacy = replaced.legacy;
     if (replaced.result.error) return json({ error: "could not store the connection" }, 500);
