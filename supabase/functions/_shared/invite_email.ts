@@ -32,6 +32,16 @@ export const inviteSend = defineMachine({
   },
 });
 
+/**
+ * The Resend idempotency key of one send. Resend answers a repeat of a key within 24 hours without
+ * sending again, so each claim (its number, email_sends) gets its own key and "send again" really
+ * sends; a retry of the same claim reuses it. A claim with no number gets a fresh key. The key holds
+ * no address.
+ */
+export function inviteIdempotencyKey(inviteId: string, send: number | null): string {
+  return `invite-${inviteId}-${send ?? crypto.randomUUID()}`;
+}
+
 export interface InviteEmailDeps {
   fetch: typeof fetch;
   env: (name: string) => string;
@@ -188,7 +198,7 @@ export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Pr
       headers: {
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
-        "idempotency-key": `invite-${inviteId}`,
+        "idempotency-key": inviteIdempotencyKey(inviteId, send),
       },
       body: JSON.stringify({
         from: deps.env("INVITE_EMAIL_FROM").trim() || DEFAULT_FROM,
