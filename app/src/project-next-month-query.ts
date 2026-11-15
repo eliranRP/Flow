@@ -30,7 +30,7 @@ export type NextMonthSample = {
   categories?: CategoryRow[];
 };
 
-/** The query key the edits read sits under; every forecast write refreshes it. */
+/** The query key the edits read (and the company inputs) sit under. The project edit writes refresh it (project-forecast-writes.ts); the month forecast's skip writes drop the company inputs no screen holds (forecast-month.ts). */
 export const FORECAST_EDITS_KEY = "project-forecast-edits";
 
 export const editSchema = z.object({
