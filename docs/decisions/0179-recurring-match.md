@@ -24,6 +24,6 @@ A recurring supplier's bill sometimes comes in under a different name (a longer 
 - Nothing changes until someone answers; a "no" stops the pair's suggestion for the whole company.
 - The suggested supplier stays its own supplier everywhere else (search, review, reports).
 
-## Notes
+## Update 2026-11-15 (FLOW-1206)
 
 - **2026-11-15 (FLOW-1206).** By the owner's decision, a line that carries both a supplier and a customer counts as an earlier line of its charge's party (the customer, for an income), in the "first seen lately" test. FLOW-1192 had stopped counting it; FLOW-1206 restored this.

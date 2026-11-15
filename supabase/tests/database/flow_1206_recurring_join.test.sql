@@ -476,10 +476,9 @@ grant execute on function pg_temp.mcp_jev_status_before() to authenticated, serv
 insert into fj (label, id) values
   ('c', tests.fixture_company('fj_c', 'Example Jev Works C'));
 insert into fj (label, id) values
-  ('c1', tests.fixture_line(pg_temp.fid('c'), 'fj:c1', 3300, p_source => 'sumit', p_doc_date => '2026-11-04')),
-  ('c2', tests.fixture_line(pg_temp.fid('c'), 'fj:c2', 3400, p_source => 'sumit', p_doc_date => '2026-11-05'));
+  ('c1', tests.fixture_line(pg_temp.fid('c'), 'fj:c1', 3300, p_source => 'sumit', p_doc_date => '2026-11-04'));
 insert into public.review_queue (company_id, transaction_id, status)
-select t.company_id, t.id, 'open' from public.transactions t where t.id in (pg_temp.fid('c1'), pg_temp.fid('c2'));
+select t.company_id, t.id, 'open' from public.transactions t where t.id = pg_temp.fid('c1');
 insert into public.company_integrations (company_id, provider, enabled, mode)
 values (pg_temp.fid('c'), 'jev', true, 'auto');
 
@@ -508,6 +507,11 @@ select is(public.mcp_jev_status(), pg_temp.mcp_jev_status_before(),
 select is((public.mcp_jev_status()->>'lines_not_retried')::int, 1,
   'company B: its refused line is counted as not retried');
 reset role;
+
+insert into fj (label, id) values
+  ('c2', tests.fixture_line(pg_temp.fid('c'), 'fj:c2', 3400, p_source => 'sumit', p_doc_date => '2026-11-05'));
+insert into public.review_queue (company_id, transaction_id, status)
+select t.company_id, t.id, 'open' from public.transactions t where t.id = pg_temp.fid('c2');
 
 -- The true case: company C has a refused line (c1) and another open line that is not refused (c2), so there is work.
 select is(private.jev_has_work(), pg_temp.jev_has_work_before(),
