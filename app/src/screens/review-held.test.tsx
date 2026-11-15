@@ -80,7 +80,7 @@ describe("the closed_month_change card (FLOW-1166)", () => {
     expect(screen.getByText("שינוי מהבנק ממתין: התקופה סגורה בספרים.")).toBeInTheDocument();
     expect(screen.getByText("$1,350.50")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: "אישור" });
-    expect(approve).toHaveAccessibleDescription("כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו.");
+    expect(approve).toHaveAccessibleDescription("כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו. אישור משאיר את השורה כמו שהיא.");
     expect(screen.queryByRole("link", { name: "שינוי" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "דלג" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^פרויקט:/ })).not.toBeInTheDocument();
@@ -133,7 +133,7 @@ describe("the closed_month_change card (FLOW-1166)", () => {
   it("shows the reason and the hint, with no detail line, when held is missing", () => {
     renderWithProviders(<ReviewQueue rows={[{ ...held, held: undefined }]} search="" />, { route: "/review" });
     expect(screen.getByText("שינוי מהבנק ממתין: התקופה סגורה בספרים.")).toBeInTheDocument();
-    expect(screen.getByText("כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו.")).toBeInTheDocument();
+    expect(screen.getByText("כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו. אישור משאיר את השורה כמו שהיא.")).toBeInTheDocument();
     expect(document.querySelector(".ui-review-held-details")).toBeNull();
   });
 });

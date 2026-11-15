@@ -150,7 +150,8 @@ const expectedPartySchema = z.object({
   currency: currencySchema,
   typical_amount_minor: agorotSchema,
   typical_day: z.number().int(),
-  months_seen: z.number().int().nonnegative(),
+  /** FLOW-1205: only in an answer with months (flow-mcp's); the app asks with none and reads no count. */
+  months_seen: z.number().int().nonnegative().optional(),
   seen_this_month: z.boolean(),
   project_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),

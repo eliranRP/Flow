@@ -43,12 +43,12 @@ export const Rental: Story = {
   },
 };
 
-/** A flip on the project page, in cash words: no income ($0 in grey), the purchase month sets the scale, the profit link under the chart. */
+/** A flip on the project page, in cash words: no income ($0 in grey), the purchase month sets the scale. */
 export const Flip: Story = {
   render: () => (
     <>
       <ForecastCard title="נובמבר" kind="cash" currency="USD" incomeMinor={0n} expenseMinor={1_200_000n} incomeNote="אין הכנסה צפויה" expenseNote="מול $38,120 בספטמבר" href="/projects/p/profit/next" />
-      <MonthChart kind="cash" history={FLIP} forecast={FLIP_NEXT} sub="מתחילת הפרויקט וצפי" label="נכנס ויצא לפי חודש, מתחילת הפרויקט, וצפי נובמבר: נכנס $0, יצא $12,000" link={{ href: "/projects/p/profit", text: "רווח לפי חודש" }} />
+      <MonthChart kind="cash" history={FLIP} forecast={FLIP_NEXT} sub="מתחילת הפרויקט וצפי" label="נכנס ויצא לפי חודש, מתחילת הפרויקט, וצפי נובמבר: נכנס $0, יצא $12,000" />
     </>
   ),
   play: async ({ canvasElement }) => {

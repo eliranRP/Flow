@@ -46,7 +46,7 @@ const inputsSchema = z.object({
   general: z.array(monthsRowSchema),
   edits: z.array(editSchema.extend({ project_id: z.string() })),
   rest_edits: z.array(editSchema.omit({ matched_transaction_id: true }).extend({ project_id: z.string(), matches: z.record(z.string(), z.string()).optional() })).optional(),
-  /** FLOW-1195: with rest_edits, the keys taken out of each month (next month to the horizon); a month with none has no key. */
+  /** FLOW-1195, FLOW-1202: the keys taken out of each month: next month only in the slim answer, next month to the horizon with rest_edits; a month with none has no key. */
   skips: z.record(z.string(), z.array(z.string())).optional(),
 });
 
@@ -58,10 +58,13 @@ const NO_LOANS: readonly ForecastLoan[] = [];
  * December). Null until the reads are in; `enabled` false reads nothing. FLOW-1066: with `month` (a month of the
  * forecast, inForecastHorizon), `forecast` and `input` are that month's, from the same reads.
  * FLOW-1171: `withRest` (the year and since-start views) also reads every later month's edits and builds `rest`;
- * a month after next month needs them too. Next month's own card reads without them, under its own cache key,
- * and skips only next month's overrides.
+ * a month after next month needs them too. Next month's own card reads without them, under its own cache key.
+ * FLOW-1202: every month's skips come with the answer (`skips`: next month's in the slim one), so no
+ * forecast_overrides_for is sent to count them. `withOverrides` (a month's page that can skip a row) also reads
+ * that month's override rows: a skip's undo puts back the row as it was (its amount and day), which the keys alone
+ * do not hold.
  */
-export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string, withRest = false) {
+export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string, withRest = false, withOverrides = false) {
   const preview = useHomePreview();
   const live = enabled && sample == null && preview === "off";
   // FLOW-1171: the same read as Home's forecast (expected-months-query), so one request serves both.
@@ -70,8 +73,9 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   // A later month is built from rest_edits; the slim answer (no rest_edits) holds next month's edits only.
   const full = withRest || (month != null && month !== nextMonthKey(today));
   const client = useQueryClient();
-  // FLOW-1191: the full answer (p_rest) holds everything the slim one does, plus rest_edits. With the full one cached
-  // for the same day, the slim read starts from it, as fresh as it is: no request while it is fresh.
+  // FLOW-1191: the full answer (p_rest) holds everything the slim one does, plus rest_edits (and, FLOW-1202, its
+  // skips cover next month too). With the full one cached for the same day, the slim read starts from it, as fresh
+  // as it is: no request while it is fresh.
   const seed = full ? undefined : client.getQueryState<CompanyNextMonthInputs>([FORECAST_EDITS_KEY, preview, "company", today, true]);
   const inputs = useQuery({
     queryKey: [FORECAST_EDITS_KEY, preview, "company", today, full],
@@ -86,21 +90,20 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
     },
   });
   const categories = useCategoriesQuery(live);
-  // FLOW-1079: a month of the forecast counts what was taken out of it for that month only.
-  const overrides = useForecastOverrides(month ?? "", live && month != null);
+  // FLOW-1079: a month of the forecast counts what was taken out of it for that month only. FLOW-1096, FLOW-1195,
+  // FLOW-1202: from the answer's `skips`, which has next month (the slim answer) or every month to the horizon (the
+  // full one): the card's count is right from the first answer, and no forecast_overrides_for goes out for it.
+  // The override rows are read only where a row can be skipped and put back (`withOverrides`).
+  const overrides = useForecastOverrides(month ?? "", live && month != null && withOverrides);
   const skipList = overrides.data;
-  // FLOW-1096: without a month (the profit page), next month and each month left in the year count what was taken
-  // out of them; until those are in, every charge. FLOW-1195: the full answer carries every month's skips (`skips`),
-  // so the year and since-start views read none apart. Next month's own card reads next month's overrides, as a
-  // month does.
-  const nextOverrides = useForecastOverrides(nextMonthKey(today), live && month == null && !full);
   const inputData = sample?.inputs ?? inputs.data;
   const skipsByMonth = useMemo(() => (full ? yearSkips(inputData, today) : undefined), [full, inputData, today]);
+  const answeredSkips = inputData?.skips;
   const skips = useMemo(() => {
-    if (month != null) return skipList == null ? undefined : [...skippedKeys(skipList)];
-    if (full) return skipsByMonth?.[nextMonthKey(today)];
-    return nextOverrides.data == null ? undefined : [...skippedKeys(nextOverrides.data)];
-  }, [month, full, skipList, skipsByMonth, nextOverrides.data, today]);
+    const forMonth = month ?? nextMonthKey(today);
+    if (answeredSkips != null) return answeredSkips[forMonth] ?? [];
+    return skipList == null ? undefined : [...skippedKeys(skipList)];
+  }, [month, today, answeredSkips, skipList]);
   const recurring = sample?.recurring ?? expected.data?.recurring;
   const loanList = sample?.loans ?? loans.data ?? (sample == null ? undefined : NO_LOANS);
   const categoryList = sample?.categories ?? categories.data;
@@ -121,7 +124,7 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
       : null),
     [full, recurring, loanList, categoryList, inputData, currency, today, skipsByMonth],
   );
-  const reads = month == null || sample != null ? [expected, loans, inputs, categories] : [expected, loans, inputs, categories, overrides];
+  const reads = month == null || sample != null || !withOverrides ? [expected, loans, inputs, categories] : [expected, loans, inputs, categories, overrides];
   return {
     forecast,
     input,

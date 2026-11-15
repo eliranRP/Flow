@@ -66,6 +66,32 @@ describe("ProjectProfitScreen", () => {
     expect(titles.findIndex((text) => text.includes("אוקטובר"))).toBeLessThan(titles.findIndex((text) => text.includes("ספטמבר")));
   });
 
+  it("one year: no year heads, and the month names carry no year", () => {
+    renderScreen({ project: { ...base, overhead_weighted: false, overhead_share_minor: null }, months });
+    expect(screen.queryByRole("heading", { name: "2026" })).toBeNull();
+    expect(screen.getByText("ספטמבר")).toBeTruthy();
+  });
+
+  it("months from two years sit under a head per year, newest first, with the year's count and profit", () => {
+    const twoYears: NonNullable<ProfitMonths> = {
+      ...months,
+      months: [
+        ...months.months,
+        { month: "2025-12", from: "2025-12-01", to: "2025-12-31", open: false, by_currency: [{ currency: "USD", income_minor: 0n, expense_minor: 300_000n, profit_minor: -300_000n }] },
+      ],
+    };
+    renderScreen({ project: { ...base, overhead_weighted: false, overhead_share_minor: null }, months: twoYears });
+    const head2026 = screen.getByRole("heading", { name: "2026" });
+    const head2025 = screen.getByRole("heading", { name: "2025" });
+    expect(head2026.compareDocumentPosition(head2025) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(head2026.parentElement?.textContent).toContain("2 · +$2,000");
+    expect(head2025.parentElement?.textContent).toContain("1 · −$3,000");
+    // The head names the year, so December's row is "דצמבר", not "דצמבר 2025".
+    expect(screen.getByText("דצמבר")).toBeTruthy();
+    expect(screen.queryByText("דצמבר 2025")).toBeNull();
+    expect(screen.getByRole("region", { name: "2025" }).textContent).toContain("דצמבר");
+  });
+
   it("the preview's month rows add up to the project's profit since the start", () => {
     const rows = JUNIPER_PROFIT.months.months.flatMap((month) => month.by_currency);
     const income = rows.reduce((sum, row) => sum + row.income_minor, 0n);

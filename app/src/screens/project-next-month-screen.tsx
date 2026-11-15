@@ -93,10 +93,10 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const today = sample?.next.today ?? israelToday();
   const forMonth = useForecastMonth(today);
   const monthSearch = forecastMonthSearch(search, forMonth, today);
-  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth);
-  const currency = next.currency;
   const holdRole = useHoldWrites();
   const hold = sample == null && holdRole;
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth, !hold);
+  const currency = next.currency;
   const writes = useProjectForecastWrites(projectId, next.month);
   // FLOW-1081: a recurring row swipes out of this month only (the month forecast's item), as on Home.
   const skipName = monthWord(next.month);

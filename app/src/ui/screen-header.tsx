@@ -6,8 +6,6 @@ import { slashBreaks } from "./slash-breaks";
 
 type HeaderChrome = {
   subtitle?: string;
-  /** FLOW-366: drawn between the back row and the title (the board puts the side switch there). */
-  aboveTitle?: ReactNode;
   backTo?: string;
   action?: ReactNode;
   kicker?: string;
@@ -61,7 +59,6 @@ function subtitleClass(extra: string | undefined, stacked: boolean): string {
 export function ScreenHeader(props: ScreenHeaderProps) {
   const {
     subtitle,
-    aboveTitle,
     backTo,
     action,
     kicker,
@@ -102,7 +99,6 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         {trailing ?? action}
       </div>
       {stacked ? kickerLine : null}
-      {stacked ? aboveTitle : null}
       {stacked && title != null ? (
         titleAside != null ? (
           <div className="ui-page-title-line">

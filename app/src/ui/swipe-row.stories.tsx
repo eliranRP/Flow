@@ -69,25 +69,6 @@ export const Dragging: Story = {
     await expect(getComputedStyle(mark as HTMLElement).visibility).toBe("visible");
   },
 };
-/** Open: the row rests over its action, which names the change: "התעלמות מההתראה". */
-export const Revealed: Story = {
-  render: () => (
-    <div className="ui-lsplit-body">
-      <SwipeRow onRemove={() => undefined} reveal={{ label: "התעלמות מההתראה", onAct: () => undefined }}>
-        <div className="ui-lsplit-part">
-          <span className="ui-lsplit-name">ביטוח רכב</span>
-        </div>
-      </SwipeRow>
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const frame = canvasElement.querySelector<HTMLElement>(".ui-swipe-row");
-    if (!frame) throw new Error("no swipe row");
-    frame.setAttribute("data-open", "");
-    await expect(within(canvasElement).getByRole("button", { name: "התעלמות מההתראה" })).toBeVisible();
-  },
-};
-
 /**
  * FLOW-1086: a row with no ✕ of its own (Home's נותר לשלם) carries its swipe as a button. Hidden at rest; with
  * keyboard focus the row slides open over it, and Enter runs it.

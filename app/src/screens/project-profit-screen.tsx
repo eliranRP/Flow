@@ -65,10 +65,33 @@ function monthWord(key: string): string {
   return HEBREW_MONTHS[Number(key.slice(5, 7)) - 1] ?? key;
 }
 
-/** A month's name; a month in another year than the newest one adds its year. */
-function monthName(key: string, newestYear: string): string {
-  const year = key.slice(0, 4);
-  return year === newestYear ? monthWord(key) : `${monthWord(key)} ${year}`;
+/** A month's figures in the row's currency; zeros when it has none in it. */
+function monthFigures(month: ProfitMonth, currency: string) {
+  return month.by_currency.find((figure) => figure.currency === currency)
+    ?? { currency, income_minor: 0n, expense_minor: 0n, profit_minor: 0n };
+}
+
+/** A calendar year of the month rows, newest first as the rows come, with its profit in the row's currency. */
+type MonthYear = { year: string; months: ProfitMonth[]; profit: bigint };
+
+function monthYears(rows: readonly ProfitMonth[], currency: string): MonthYear[] {
+  const years: MonthYear[] = [];
+  for (const month of rows) {
+    const year = month.month.slice(0, 4);
+    let group = years.at(-1);
+    if (group?.year !== year) {
+      group = { year, months: [], profit: 0n };
+      years.push(group);
+    }
+    group.months.push(month);
+    group.profit += monthFigures(month, currency).profit_minor;
+  }
+  return years;
+}
+
+/** A head's "count · profit" line: the profit signed, a gain with + in the income colour. */
+function profitSummary(count: number, profit: bigint, currency: string) {
+  return <><bdi dir="ltr">{String(count)}</bdi> · <bdi dir="ltr">{formatAmountText(profit, currency, { plus: profit > 0n, direction: profit > 0n ? "income" : undefined })}</bdi></>;
 }
 
 function countWord(count: number): string {
@@ -135,7 +158,8 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   const cardLoading = live && nextMonth.pending && !nextMonth.paused && !nextMonth.failed;
   const profit = row?.profit_minor ?? 0n;
   const after = share == null ? null : profit - share;
-  const newestYear = rows[0]?.month.slice(0, 4) ?? "";
+  // Months from more than one year sit under a sticky head per year, as the loan's payments do (FLOW-1046).
+  const years = monthYears(rows, currency);
   const oldest = rows[rows.length - 1]?.month;
   const fromProfit = new URLSearchParams(location.search).get("from") === "profit";
   // FLOW-969: offline, the page keeps its last read and says which moment it is from.
@@ -210,7 +234,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   });
   const categories = categoryTotals(project, currency);
   const expenses = row == null ? 0n : projectExpenseMinor(row);
-  const since = oldest == null ? "כל התקופה" : `מאז ${monthName(oldest, "")} · ${countWord(rows.length)}`;
+  const since = oldest == null ? "כל התקופה" : `מאז ${monthWord(oldest)} ${oldest.slice(0, 4)} · ${countWord(rows.length)}`;
   const control = (onBand: boolean) => (
     <SegmentedControl label="פירוק" showLabel={false} tone={onBand ? "band" : "page"} value={by} options={ORDERS} onChange={setBy} />
   );
@@ -307,50 +331,64 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
           </section>
         </>
       ) : (
-        <section className="ui-month" aria-labelledby="pp-months">
-          <GroupHead id="pp-months" title="לפי חודש" summary={<><bdi dir="ltr">{String(rows.length)}</bdi> · <bdi dir="ltr">{formatAmountText(profit, currency, { plus: profit > 0n, direction: profit > 0n ? "income" : undefined })}</bdi></>} />
-          <div className="ui-pp-next">
-            <NextMonthBlock
-              forecast={nextMonth.forecast}
-              // The card waits for the months too, so its expense caption never shows the count first.
-              loading={cardLoading || monthsLoading}
-              current={monthsLoading || monthsFailed || !sameCurrency ? null : shiftMonthKey(nextMonth.month, -1)}
-              figures={profitMonthFigures(rows, currency)}
-              firstMonth={oldest ?? null}
-              currency={nextMonth.currency}
-              kind="profit"
-              takeaway
-              cardHref={`/projects/${id}/profit/next${search}`}
-              categories={nextMonth.categories}
-              today={nextMonth.today}
-            />
-          </div>
-          {monthsFailed ? (
-            <FailureLine offline={!navigator.onLine} onRetry={() => { void months.refetch(); }} />
-          ) : monthsLoading ? (
-            <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
-          ) : (
-            <List className="ui-pp-months">
-              {rows.map((month) => (
-                <MonthLine
-                  key={month.month}
-                  month={month}
-                  title={monthName(month.month, newestYear)}
-                  currency={currency}
-                  href={`/projects/${id}/profit/${month.month}${withPeriodSearch(search, monthPeriod(month.month))}`}
-                />
-              ))}
-            </List>
-          )}
-        </section>
+        <>
+          <section className="ui-month" aria-labelledby="pp-months">
+            <GroupHead id="pp-months" title="לפי חודש" summary={profitSummary(rows.length, profit, currency)} />
+            <div className="ui-pp-next">
+              <NextMonthBlock
+                forecast={nextMonth.forecast}
+                // The card waits for the months too, so its expense caption never shows the count first.
+                loading={cardLoading || monthsLoading}
+                current={monthsLoading || monthsFailed || !sameCurrency ? null : shiftMonthKey(nextMonth.month, -1)}
+                figures={profitMonthFigures(rows, currency)}
+                firstMonth={oldest ?? null}
+                currency={nextMonth.currency}
+                kind="profit"
+                takeaway
+                cardHref={`/projects/${id}/profit/next${search}`}
+                categories={nextMonth.categories}
+                today={nextMonth.today}
+              />
+            </div>
+            {monthsFailed ? (
+              <FailureLine offline={!navigator.onLine} onRetry={() => { void months.refetch(); }} />
+            ) : monthsLoading ? (
+              <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
+            ) : years.length > 1 ? null : (
+              <MonthLines months={rows} id={id} currency={currency} search={search} />
+            )}
+          </section>
+          {monthsFailed || monthsLoading || years.length < 2 ? null : years.map((year) => (
+            <section key={year.year} className="ui-month" aria-labelledby={`pp-year-${year.year}`}>
+              <GroupHead id={`pp-year-${year.year}`} title={year.year} summary={profitSummary(year.months.length, year.profit, currency)} />
+              <MonthLines months={year.months} id={id} currency={currency} search={search} />
+            </section>
+          ))}
+        </>
       )}
     </div>
   );
 }
 
+/** A run of month rows, each named by its month alone: the head above names the year. */
+function MonthLines({ months, id, currency, search }: { months: readonly ProfitMonth[]; id: string; currency: string; search: string }) {
+  return (
+    <List className="ui-pp-months">
+      {months.map((month) => (
+        <MonthLine
+          key={month.month}
+          month={month}
+          title={monthWord(month.month)}
+          currency={currency}
+          href={`/projects/${id}/profit/${month.month}${withPeriodSearch(search, monthPeriod(month.month))}`}
+        />
+      ))}
+    </List>
+  );
+}
+
 function MonthLine({ month, title, currency, href }: { month: ProfitMonth; title: string; currency: string; href: string }) {
-  const figures = month.by_currency.find((figure) => figure.currency === currency)
-    ?? { currency, income_minor: 0n, expense_minor: 0n, profit_minor: 0n };
+  const figures = monthFigures(month, currency);
   const expense = figures.expense_minor < 0n ? -figures.expense_minor : figures.expense_minor;
   const loss = figures.profit_minor < 0n;
   return (

@@ -260,7 +260,7 @@ export function reviewPaidView(
 export const REVIEW_HELD = "closed_month_change";
 export const REVIEW_HELD_REASON_BANK = "שינוי מהבנק ממתין: התקופה סגורה בספרים.";
 export const REVIEW_HELD_REASON_SUMIT = "שינוי מ־SUMIT ממתין: התקופה סגורה בספרים.";
-export const REVIEW_HELD_HINT = "כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו.";
+export const REVIEW_HELD_HINT = "כדי לקבל את השינוי, הזיזו אחורה את תאריך הסגירה. הרענון הבא יכניס אותו. אישור משאיר את השורה כמו שהיא.";
 /** The toast after אישור leaves the line as it is (leave_held_change). */
 export const REVIEW_HELD_LEFT = "השורה נשארת כמו שהיא.";
 

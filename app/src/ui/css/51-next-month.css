@@ -61,8 +61,7 @@
   color: var(--color-accent-text);
 }
 
-.ui-fc-link,
-.ui-fc-chart-link {
+.ui-fc-link {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -308,15 +307,6 @@
 
 .ui-fc-swatch-ahead {
   border: var(--stroke-strong) dashed var(--color-accent);
-}
-
-/* "רווח לפי חודש ›": the board's 36px line, with a 44px hit area. */
-.ui-fc-chart-link {
-  align-self: flex-start;
-  min-block-size: var(--touch-min);
-  margin-block: calc((var(--space-8) + var(--space-1) - var(--touch-min)) / 2);
-  font-size: var(--type-line2-size);
-  text-decoration: none;
 }
 
 /* A year's twelve months (FLOW-145): the columns close up to 4px. */

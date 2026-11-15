@@ -9,7 +9,7 @@
 
 begin;
 
-select plan(31);
+select plan(33);
 
 do $users$
 begin
@@ -209,16 +209,21 @@ as $$
   select array['transactions', 'category_rollups', 'category_rollups_by_currency', 'excluded_categories_by_currency',
     'excluded_category_rollups_by_currency', 'pending_agorot', 'pending_other_currencies',
     -- FLOW-1193: and what no app code reads.
-    'excluded_income_by_currency', 'other_currencies', 'profit_after_overhead_agorot', 'sumit_budget_section_id'];
+    'excluded_income_by_currency', 'other_currencies', 'profit_after_overhead_agorot', 'sumit_budget_section_id',
+    -- FLOW-1205: the period echo (flow-mcp's, with lines).
+    'from', 'to'];
 $$;
 grant execute on function pg_temp.unused() to authenticated, service_role;
 
--- The full answer as the lean one gives it: less those keys, and no has_shared_share on a category row (FLOW-1193).
+-- The full answer as the lean one gives it: less those keys, no has_shared_share on a category row (FLOW-1193), and no
+-- hidden on each investment.rehab_by_category row (FLOW-1205).
 create or replace function pg_temp.lean_of(p_full jsonb)
 returns jsonb
 language sql
 as $$
   select (p_full - pg_temp.unused()) || jsonb_build_object(
+    'investment', jsonb_set(p_full->'investment', '{rehab_by_category}',
+      coalesce((select jsonb_agg(r - 'hidden' order by o) from jsonb_array_elements(p_full->'investment'->'rehab_by_category') with ordinality t(r, o)), '[]'::jsonb)),
     'categories', coalesce((select jsonb_agg(c - 'has_shared_share' order by o) from jsonb_array_elements(p_full->'categories') with ordinality t(c, o)), '[]'::jsonb),
     'categories_by_currency', coalesce((select jsonb_agg(c - 'has_shared_share' order by o) from jsonb_array_elements(p_full->'categories_by_currency') with ordinality t(c, o)), '[]'::jsonb));
 $$;
@@ -292,7 +297,18 @@ select is(pg_temp.gp('house', 'cash', false, '2026-06-01', '2026-06-30'), pg_tem
 select is(pg_temp.gp('shed', 'cash', false), pg_temp.lean_of(pg_temp.gp('shed', 'cash', true)), 'a project with no lines');
 select ok(octet_length(pg_temp.gp('house', 'cash', false)::text) < octet_length(pg_temp.gp('house', 'cash', true)::text),
   'and the answer is smaller');
-select is(pg_temp.gp('house', 'cash', false)->'investment', pg_temp.inv('house'), 'the investment block is the same function''s');
+select is(pg_temp.gp('house', 'cash', false)->'investment', pg_temp.lean_of(pg_temp.gp('house', 'cash', true))->'investment',
+  'the investment block is the same function''s, less hidden on the rehab rows (FLOW-1205)');
+select is(pg_temp.gp('house', 'cash', true)->'investment', pg_temp.inv('house'),
+  'with the lines it is the same function''s whole, the rehab rows'' hidden flags too');
+select ok(jsonb_array_length(pg_temp.gp('house', 'cash', true)->'investment'->'rehab_by_category') = 4
+    and jsonb_array_length(pg_temp.gp('house', 'cash', false)->'investment'->'rehab_by_category') = 4
+    and not exists (select 1 from jsonb_array_elements(pg_temp.gp('house', 'cash', false)->'investment'->'rehab_by_category') r where r ? 'hidden')
+    and not (pg_temp.gp('house', 'cash', false) ?| array['from', 'to'])
+    and pg_temp.gp('house', 'cash', true, '2026-06-01', '2026-06-30') @> '{"from": "2026-06-01", "to": "2026-06-30"}'
+    and pg_temp.gp('house', 'cash', true) @> '{"from": null, "to": null}'
+    and (pg_temp.gp('house', 'cash', true)->'investment'->'rehab_by_category'->0) ? 'hidden',
+  'FLOW-1205: hidden on the four rehab rows, and from and to, are in the lines form only (the lean one keeps the rows), from and to as the period or null');
 
 -- (3) The default answer.
 select is(

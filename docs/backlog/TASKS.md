@@ -492,6 +492,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-1208"></a>[FLOW-1208](tasks/FLOW-1208.md) | Project profit: לפי חודש puts the months under a sticky head per year | SMALL UI |
 | <a id="flow-1082"></a>[FLOW-1082](tasks/FLOW-1082.md) | Reports: a row's second line is cut at 320, hiding expenses or the loan amount | SMALL UI |
 | <a id="flow-1083"></a>[FLOW-1083](tasks/FLOW-1083.md) | Reports: a small non-zero row shows "0% מהקבוצה" | SMALL UI |
 | <a id="flow-1098"></a>[FLOW-1098](tasks/FLOW-1098.md) | Report rows: a 9-digit full figure at 360–380, and two small cleanups | SMALL UI |
@@ -513,6 +514,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1045"></a>[FLOW-1045](tasks/FLOW-1045.md) | Reports v3: the hub, profit and loss by category, project and month with a drill-down, the balance sheet by project | UI (design approved) |
 | <a id="flow-1047"></a>[FLOW-1047](tasks/FLOW-1047.md) | Investor pages v3: the investment page by kind and the calculation pages | UI (design approved) |
 | <a id="flow-1068"></a>[FLOW-1068](tasks/FLOW-1068.md) | Investment page: ROI, the flip's net profit, and new deal metrics | PLAN FIRST (approved) |
+| <a id="flow-1199"></a>[FLOW-1199](tasks/FLOW-1199.md) | Bug: a hard-money loan's renovation draws count twice in a renovation's purchase price | BUG |
+| <a id="flow-1200"></a>[FLOW-1200](tasks/FLOW-1200.md) | A refinance closing's taxes, insurance and escrow count as the renovation's holding | BUG |
+| <a id="flow-1198"></a>[FLOW-1198](tasks/FLOW-1198.md) | The loan page's סכום ששולם בסגירה row reads "כל ההלוואה" though the price counts the principal less the draws | SMALL UI |
 | <a id="flow-1069"></a>[FLOW-1069](tasks/FLOW-1069.md) | Investment page: IRR since purchase | SMALL CYCLE |
 | <a id="flow-1070"></a>[FLOW-1070](tasks/FLOW-1070.md) | ROI review follow-ups (#1012 review) | BACKLOG NIT |
 | <a id="flow-1071"></a>[FLOW-1071](tasks/FLOW-1071.md) | Investment metrics: a renovation keeps the four metrics, every part drills down, Back keeps the tab | SMALL UI (owner's ask) |
@@ -758,6 +762,13 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1194"></a>[FLOW-1194](tasks/FLOW-1194.md) | Perf: Company profit's "by category" order loads category lines on scroll; search finds every line | MEDIUM (perf) |
 | <a id="flow-1195"></a>[FLOW-1195](tasks/FLOW-1195.md) | Perf: Company profit's year view reads forecast skips once, not once per month | SMALL (perf) |
 | <a id="flow-1196"></a>[FLOW-1196](tasks/FLOW-1196.md) | Perf: duplicated fields in reads that flow-mcp names | MEDIUM (perf, MCP contract) |
+| <a id="flow-1201"></a>[FLOW-1201](tasks/FLOW-1201.md) | Perf: a forecast write refetches what it does not change; a typed amount's third read | SMALL (perf) |
+| <a id="flow-1202"></a>[FLOW-1202](tasks/FLOW-1202.md) | Perf: the forecast skips come in the inputs read, everywhere | SMALL (perf) |
+| <a id="flow-1203"></a>[FLOW-1203](tasks/FLOW-1203.md) | Perf: `get_property_returns` reads the property's lines once | MEDIUM (perf) |
+| <a id="flow-1204"></a>[FLOW-1204](tasks/FLOW-1204.md) | Perf: the projects list stops computing each project's menu counts | SMALL (perf) |
+| <a id="flow-1205"></a>[FLOW-1205](tasks/FLOW-1205.md) | Perf: drop more read fields no one reads (rehab hidden flag, expected_months lean, projects_cash_month, get_project lean) | SMALL (perf) |
+| <a id="flow-1206"></a>[FLOW-1206](tasks/FLOW-1206.md) | Perf: the recurring suggestions' look-alike join uses the party index; jev's inputs key once | SMALL (perf) |
+| <a id="flow-1207"></a>[FLOW-1207](tasks/FLOW-1207.md) | Perf: Company profit's date and amount orders read every line in one call | MEDIUM (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
@@ -790,7 +801,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-943"></a>[FLOW-943](tasks/FLOW-943.md) | The main screens' server reads take less time, with the same answers | BUG |
 | <a id="flow-1166"></a>[FLOW-1166](tasks/FLOW-1166.md) | Database lifecycles: tie the columns of a state together, and close the direct writes around them | SMALL CYCLE |
 | <a id="flow-1176"></a>[FLOW-1176](tasks/FLOW-1176.md) | A closed month's refusal stays long enough to read | SMALL UI |
-| <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | PLAN FIRST |
+| <a id="flow-1177"></a>[FLOW-1177](tasks/FLOW-1177.md) | The held change's card says what אישור does | SMALL UI |
+| <a id="flow-1197"></a>[FLOW-1197](tasks/FLOW-1197.md) | A held change set aside with אישור stays set aside when the period reopens | SMALL CYCLE |
 | <a id="flow-1170"></a>[FLOW-1170](tasks/FLOW-1170.md) | Settings that move a closed month's figures are not locked | PLAN FIRST |
 | <a id="flow-1172"></a>[FLOW-1172](tasks/FLOW-1172.md) | Loans: move the app's direct table writes onto RPCs | SMALL CYCLE |
 | <a id="flow-1181"></a>[FLOW-1181](tasks/FLOW-1181.md) | Five-token sweep, MEDIUM refactor: controls, fields and base screens use their tokens (no visual change) | SMALL UI |

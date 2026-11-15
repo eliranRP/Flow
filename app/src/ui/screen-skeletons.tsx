@@ -232,6 +232,16 @@ export function ProfitRowsSkeleton() {
   );
 }
 
+/** FLOW-1194: the place of a category's lines while they are read after a tap: one row, drawn at once (the tap asked for it). */
+export function LineRowSkeleton() {
+  return (
+    <div aria-busy="true">
+      <Loading />
+      <ListRowSkeleton first="34%" second="62%" avatar={false} />
+    </div>
+  );
+}
+
 /** The dashed next-month card's place while its forecast loads: the card's own box (.ui-fc-card), its title and two columns. */
 export function NextMonthCardSkeleton() {
   return (

@@ -24,7 +24,7 @@ Deno.test("every tool name in a workflow step is a real tool", () => {
   for (const workflow of WORKFLOWS) {
     for (const step of workflow.steps) {
       for (const name of step.match(/[a-z]+(?:_[a-z]+)+/g) ?? []) {
-        if (name === "undo_kind" || name === "idempotency_key" || name === "batch_key") continue;
+        if (name === "undo_kind" || name === "held_change_left" || name === "idempotency_key" || name === "batch_key") continue;
         assert(present(name), `${name} in ${workflow.id} is not a tool`);
       }
     }

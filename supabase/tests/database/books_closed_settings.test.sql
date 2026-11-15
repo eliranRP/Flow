@@ -1,5 +1,5 @@
 -- FLOW-1170: a setting that would move a figure in a closed period is refused when a person changes
--- it (20261114094800_books_closed_settings.sql): the cash basis, a category's P&L flag, cash flag and
+-- it (20261115173100_books_closed_settings.sql): the cash basis, a category's P&L flag, cash flag and
 -- account, and the overhead project. Per setting: allowed with no closed date; allowed when no line it
 -- reaches is closed; refused with the exact message when one is; a change to the same value allowed;
 -- the undo refused; the service role allowed; the editor and the viewer as before; company A's date

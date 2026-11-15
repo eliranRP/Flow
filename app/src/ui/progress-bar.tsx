@@ -26,8 +26,6 @@ type JobBarProps = {
   count: string;
   steps: JobStep[];
   onLeave: () => void;
-  /** The leave button's label. The job goes on in the background. */
-  leaveLabel?: string;
 };
 
 /** FLOW-514: the setup's seven segments. Done is accent, the current step band, the rest line. */
@@ -61,7 +59,7 @@ function StepsBar({ count, current, label }: StepsBarProps) {
   );
 }
 
-function JobBar({ value, max, label, count, steps, onLeave, leaveLabel = "המשך לבית בינתיים" }: JobBarProps) {
+function JobBar({ value, max, label, count, steps, onLeave }: JobBarProps) {
   const safeMax = max <= 0 ? 1 : max;
   const ratio = Math.min(1, Math.max(0, value / safeMax));
   return (
@@ -92,7 +90,7 @@ function JobBar({ value, max, label, count, steps, onLeave, leaveLabel = "המש
         ))}
       </ol>
       <Button variant="secondary" onClick={onLeave}>
-        {leaveLabel}
+        המשך לבית בינתיים
       </Button>
     </div>
   );

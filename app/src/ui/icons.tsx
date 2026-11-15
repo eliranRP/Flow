@@ -221,19 +221,6 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
-export function GripIcon(props: IconProps) {
-  return (
-    <svg width={props.size ?? 20} height={props.size ?? 20} viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="9" cy="7" r="1.3" fill="currentColor" />
-      <circle cx="15" cy="7" r="1.3" fill="currentColor" />
-      <circle cx="9" cy="12" r="1.3" fill="currentColor" />
-      <circle cx="15" cy="12" r="1.3" fill="currentColor" />
-      <circle cx="9" cy="17" r="1.3" fill="currentColor" />
-      <circle cx="15" cy="17" r="1.3" fill="currentColor" />
-    </svg>
-  );
-}
-
 export function MoreIcon(props: IconProps) {
   return (
     <svg width={props.size ?? 24} height={props.size ?? 24} viewBox="0 0 24 24" aria-hidden="true">

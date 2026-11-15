@@ -335,7 +335,7 @@ const projectInvestmentSchema = z.object({
   value_date: z.string().nullable(),
   rehab_minor: agorotSchema,
   rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: agorotSchema })).catch([]),
-  /** FLOW-460: rehab_minor by category, largest first, from the same lines (0247); a null id is no category. */
+  /** FLOW-460: rehab_minor by category, largest first, from the same lines (0247); a null id is no category. FLOW-1205: only in an answer with lines (`p_lines` true): the returns screen asks for it, the lean read has none. */
   rehab_by_category: z.array(z.object({ category_id: z.string().nullable(), name: z.string().nullable(), amount_minor: agorotSchema })).catch([]).optional(),
   loan_balance_minor: agorotSchema,
   loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: agorotSchema })).catch([]),
@@ -678,6 +678,8 @@ export const breakdownLinesSchema = z
         gross_up: z.boolean().optional().catch(undefined),
         /** FLOW-954: the row's category, so a kept-out line sits under its own group. Older payloads omit it. */
         category_id: z.string().nullable().optional().catch(undefined),
+        /** FLOW-1207: with no group key, the group the row belongs to (the key a keyed read would be asked with). Else omitted. */
+        group_key: z.string().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

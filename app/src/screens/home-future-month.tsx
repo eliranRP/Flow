@@ -135,16 +135,18 @@ export function homeFutureView({ forecast, profitMinor, categories, projects, ca
 }
 
 /** The reads for a month to come on Home (`month`, FLOW-1066: any month of the forecast); `children` draws Home with them. */
-export function HomeFutureReads({ today, month, currency, cash, search, children }: {
+export function HomeFutureReads({ today, month, currency, cash, search, canSkip, children }: {
   today: string;
   /** yyyy-mm, a month of the forecast. */
   month: string;
   currency: string;
   cash: NonNullable<CashMonths> | null;
   search: string;
+  /** The month's rows can be skipped (not a viewer, not a preview): its override rows are read for the skip's undo. */
+  canSkip: boolean;
   children: (future: HomeFuture) => ReactNode;
 }) {
-  const next = useCompanyCashNextMonth(currency, today, true, undefined, month);
+  const next = useCompanyCashNextMonth(currency, today, true, undefined, month, canSkip);
   // The Projects tab's rows, for the groups' names and order; a failed read leaves the names as פרויקט.
   const list = useProjectsCashMonth();
   const projects = list.data?.projects;

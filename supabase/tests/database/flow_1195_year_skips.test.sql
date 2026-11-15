@@ -5,7 +5,8 @@
 --   item_key order; a month with none has no key. For every month it equals what forecast_overrides_for(month)
 --   gives for its moved_out rows, in its order.
 -- - An item changed only (an amount or a day), this month's rows, rows past the horizon and another company's
---   are not in it. Without p_rest the answer has neither rest_edits nor skips, and is the full one less both.
+--   are not in it. Without p_rest the answer has no rest_edits, and its skips (FLOW-1202) are next month's only
+--   (flow_1202_slim_skips.test.sql).
 -- "Today" is 2026-11-06, so the forecast runs from December 2026 to November 2027. Invented data only.
 
 begin;
@@ -75,8 +76,8 @@ select ok(public.forecast_overrides_for('2027-12') <> '[]'::jsonb and public.for
   'though forecast_overrides_for still reads both (the pages of those months)');
 select is(pg_temp.inputs(true), public.company_next_month_inputs('2026-11-06'), 'p_rest true is the default answer');
 
-select ok(not (pg_temp.inputs(false) ?| array['rest_edits', 'skips']), 'p_rest false leaves out rest_edits and skips');
-select is(pg_temp.inputs(false), pg_temp.inputs() - 'rest_edits' - 'skips', 'and is the full answer less those two, field for field');
+select ok(not (pg_temp.inputs(false) ? 'rest_edits'), 'p_rest false leaves out rest_edits');
+select is(pg_temp.inputs(false) - 'skips', pg_temp.inputs() - 'rest_edits' - 'skips', 'and is the full answer less rest_edits, field for field but the skips (FLOW-1202)');
 
 select tests.authenticate_as('ys_other');
 select is(pg_temp.inputs()->'skips', '{"2026-12": ["party:expense:other:ILS"]}'::jsonb, 'another company reads only its own skips');

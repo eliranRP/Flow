@@ -1,5 +1,5 @@
 // Flow MCP tools tests: FLOW-1170, a setting that would move a figure in a closed period. The database
-// refuses it (20261114094800_books_closed_settings.sql) and the tool passes the refusal through as it
+// refuses it (20261115173100_books_closed_settings.sql) and the tool passes the refusal through as it
 // came; each tool's description says so and names the way back. Invented ids only.
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { callTool, toolsFor } from "./tools.ts";

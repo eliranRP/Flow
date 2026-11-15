@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTxnList } from "../txn-nav";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
 import { BooksProvider } from "../use-books";
-import { resetSearchMemory, SearchScreen, searchRowDetails } from "./search";
+import { searchRowDetails } from "../search";
+import { resetSearchMemory, SearchScreen } from "./search";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: Record<string, unknown> }>,
@@ -229,6 +230,14 @@ describe("Search screen (FLOW-323)", () => {
     const args = searchCalls().map((call) => call.args);
     expect(args).toContainEqual(expect.objectContaining({ p_amount_min: 894000, p_amount_max: 894099 }));
     expect(args).toContainEqual(expect.objectContaining({ p_query: "8940" }));
+  });
+
+  it("a typed amount reads three times on the search screen: the overlap read corrects its total and months", async () => {
+    page = { total: 1, expenses: [line("amt")] };
+    wrap("/search?q=8940");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
+    expect(searchCalls()).toHaveLength(3);
+    expect(searchCalls().map((call) => call.args)).toContainEqual(expect.objectContaining({ p_query: "8940", p_limit: 1, p_amount_min: 894000 }));
   });
 
   it("does not say nothing matched for text the server has not answered yet", async () => {

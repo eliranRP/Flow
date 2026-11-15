@@ -94,7 +94,7 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   // FLOW-1066: any month of the forecast (?month=), next month by default.
   const month = useForecastMonth(today);
   const monthSearch = forecastMonthSearch(search, month, today);
-  const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample, month);
+  const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample, month, !hold);
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   // FLOW-1081: a recurring row swipes out of this month only and back, as on Home; what was taken out is listed last.
   const monthLabel = monthWord(month);
