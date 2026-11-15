@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useMachine } from "../use-machine";
 import { HintParts } from "./hint-parts";
 import { InfoIcon } from "./icons";
+import { toastLife, toastTimer, useQuietMachine } from "./toast-life";
 import { clearToastPad, OK_MS, pinSheetScroll, placeToast, sheetContentKey, sheetSurface, shiftPad, SWIPE_PX, toastAnchor, type ToastInput, toastMs } from "./toast-layout";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
@@ -40,20 +42,18 @@ export function useToast(): ToastContextValue {
 /** One toast above the floor (decision 0182). A new show replaces it. The host does not catch taps. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);
-  const [phase, setPhase] = useState<"off" | "measure" | "pad" | "fade" | "in" | "out">("off");
+  const { state: phase, send: sendLife } = useMachine(toastLife);
+  const sendTimer = useQuietMachine(toastTimer);
   const host = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
   const outTimer = useRef<number | null>(null);
   const remaining = useRef(OK_MS);
   const started = useRef(0);
-  const acting = useRef(false);
   const toastRef = useRef<ToastItem | null>(null);
   toastRef.current = toast;
   /** The shown toast's onClose, until it leaves; cleared when its action runs instead. */
   const closing = useRef<{ id: number; run: () => void } | null>(null);
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
 
   const clearTimer = () => {
     if (timer.current != null) window.clearTimeout(timer.current);
@@ -76,35 +76,34 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const clearToast = useCallback(() => {
     outTimer.current = null;
     setToast(null);
-    setPhase("off");
-  }, []);
+    sendLife("cleared");
+  }, [sendLife]);
 
   /** The one way out: a timer, a tap, a swipe or an action. Phase "out" plays the sink, then the toast clears. A zero token clears at once. */
-  const leave = useCallback(() => {
-    if (phaseRef.current === "out") return;
+  const exit = useCallback(() => {
     const close = closing.current;
     if (close != null && close.id === toastRef.current?.id) {
       closing.current = null;
       close.run();
     }
+    sendTimer("stop");
     if (timer.current != null) window.clearTimeout(timer.current);
     timer.current = null;
     clearOutTimer();
-    if (toastRef.current == null) {
-      clearToast();
-      return;
-    }
-    phaseRef.current = "out";
-    setPhase("out");
     const ms = cssMs("--motion-toast-out");
     if (ms <= 0) {
       clearToast();
       return;
     }
     outTimer.current = window.setTimeout(clearToast, ms);
-  }, [clearToast]);
+  }, [clearToast, sendTimer]);
 
-  const arm = useCallback((ms: number) => {
+  const leave = useCallback(() => {
+    if (sendLife("leave")) exit();
+  }, [exit, sendLife]);
+
+  /** Starts the timer for `ms`; a toast that stays until it is acted on has none. */
+  const schedule = useCallback((ms: number) => {
     clearTimer();
     started.current = Date.now();
     remaining.current = ms;
@@ -115,21 +114,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, ms);
   }, [leave]);
 
+  const arm = useCallback((ms: number) => {
+    sendTimer("arm");
+    schedule(ms);
+  }, [schedule, sendTimer]);
+
   /** A toast that is already on screen is placed in this frame. A new one waits until the sheet shape stops changing, so it is never shown at a position it will leave. */
   const revealNow = useRef(false);
 
   const show = useCallback(
     (input: ToastInput) => {
-      acting.current = false;
       seq.current += 1;
+      sendTimer("stop");
       clearTimer();
       clearOutTimer();
       const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "top";
       const next = confirmation ? { ...input, place: "page" as const } : input;
       remaining.current = toastMs(next);
-      const current = phaseRef.current;
-      revealNow.current = current === "pad" || current === "fade" || current === "in";
-      if (!revealNow.current) setPhase("measure");
+      revealNow.current = sendLife("replace");
+      if (!revealNow.current) sendLife("show");
       if (host.current) {
         if (next.place === "page" || next.place === "top") host.current.dataset.place = next.place;
         else delete host.current.dataset.place;
@@ -142,53 +145,52 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       setToast({ ...next, id });
       return id;
     },
-    [],
+    [sendLife, sendTimer],
   );
 
   const dismiss = useCallback((id?: number) => {
     if (id != null && toastRef.current?.id !== id) return;
-    acting.current = false;
     leave();
   }, [leave]);
 
   const dismissPersist = useCallback(() => {
     if (toastRef.current?.persist !== true) return;
-    acting.current = false;
     leave();
   }, [leave]);
 
   function runAction() {
-    if (!toast?.onAction || acting.current) return;
-    acting.current = true;
-    const action = toast.onAction;
+    const action = toast?.onAction;
+    if (!action || !sendLife("act")) return;
     closing.current = null;
-    leave();
+    exit();
     action();
   }
 
   function pause() {
-    if (timer.current == null) return;
+    if (!sendTimer("pause")) return;
     remaining.current = Math.max(0, remaining.current - (Date.now() - started.current));
     clearTimer();
   }
 
   function resume() {
-    if (!toast) return;
-    arm(remaining.current);
+    if (!sendTimer("resume")) return;
+    schedule(remaining.current);
   }
 
   const visible = phase === "fade" || phase === "in";
   const padToken = useRef(0);
   useEffect(() => {
     if (!toast || !visible) {
+      sendTimer("stop");
       clearTimer();
       return;
     }
     arm(remaining.current);
     return () => {
+      sendTimer("stop");
       clearTimer();
     };
-  }, [toast, visible, arm]);
+  }, [toast, visible, arm, sendTimer]);
 
   useLayoutEffect(() => {
     const node = host.current;
@@ -316,7 +318,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(fallback);
       removeEnd?.();
       removeEnd = null;
-      setPhase("in");
+      sendLife("shown");
       release();
     }
 
@@ -327,7 +329,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(fallback);
       removeEnd?.();
       removeEnd = null;
-      setPhase("fade");
+      sendLife("fade");
       release();
       if (reduce) {
         showNow(gen);
@@ -382,7 +384,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const target = surface ? Number.parseFloat(surface.dataset.toastPad ?? "") || 0 : 0;
       if (!reduce && surface != null && Math.abs(target - before) > 1) {
         waiting = true;
-        setPhase("pad");
+        sendLife("pad");
         const onEnd = (event: Event) => {
           if (gen !== generation || !waiting) return;
           if (!(event instanceof TransitionEvent) || event.propertyName !== "padding-top") return;
@@ -464,7 +466,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const surface = sheet instanceof Element ? sheetSurface(sheet) : null;
       if (surface) surface.style.transition = "";
     };
-  }, [toast]);
+  }, [toast, sendLife]);
 
   return (
     <ToastContext.Provider value={{ show, dismiss, dismissPersist }}>
