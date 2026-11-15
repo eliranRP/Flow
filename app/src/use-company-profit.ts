@@ -323,7 +323,9 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     ...categoryGroups.map(({ direction, group }) => ({ id: `${direction === "income" ? "in" : "out"}:${group.key}`, direction, key: group.key, name: group.name ?? "", keptOut: false })),
     ...keptOutDirections.map((direction) => ({ id: `kept:${direction}`, direction, key: "", name: "", keptOut: true })),
   ];
-  const lineKey = (direction: BreakdownDirection, key: string) => ["breakdown-lines", "company-profit", preview, monthRange, direction, key, currency];
+  function lineKey(direction: BreakdownDirection, key: string) {
+    return ["breakdown-lines", "company-profit", preview, monthRange, direction, key, currency];
+  }
   const lineQueries = useQueries({
     queries: lineReads.map((read) => ({
       queryKey: lineKey(read.direction, read.keptOut ? "kept-out" : read.key),
