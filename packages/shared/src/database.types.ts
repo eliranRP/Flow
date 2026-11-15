@@ -2811,6 +2811,9 @@ isOneToOne: false
 "upsert_sumit_documents":
 { Args: { "p_company": string,"p_docs": Json }; Returns: number
                            },
+"upsert_sumit_window":
+{ Args: { "p_company": string,"p_complete": boolean,"p_docs": Json,"p_pull": Json }; Returns: number
+                           },
 "weekly_summary":
 { Args: { "p_week_start": string }; Returns: Json
                            }
