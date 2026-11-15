@@ -2,7 +2,9 @@
 // not change a line dated on or before set_books_closed_through's date: the change is held, and list_review
 // shows the line with reason closed_month_change and `held`. One write, leave_held_change, through
 // mcp_leave_held_change with the idempotency key, the write rate limit and undo (kind held_change_left, id:
-// the line). The other way to settle it is to move the closed date back: the next sync then applies a held change (not one left).
+// the line). The other way to settle it is to move the closed date back: the next sync then applies the
+// held change. A change already left is not applied then (undo the leave first), and the same change sent
+// again stays left; a different change from the provider is applied as usual.
 import { z } from "zod";
 import { envelopeOf, fail, type ToolResult, type ToolRpc, UUID, WRITE_REFUSED } from "./tools_args.ts";
 

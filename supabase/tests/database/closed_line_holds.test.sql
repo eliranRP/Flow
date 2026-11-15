@@ -12,7 +12,7 @@
 
 begin;
 
-select plan(81);
+select plan(89);
 
 do $users$
 begin
@@ -458,6 +458,19 @@ insert into res values ('keep_leave', pg_temp.ask(format('select public.mcp_leav
   'ch-leave-keep', (pg_temp.line('m-keep')).id)));
 select is((pg_temp.hold('m-keep')).state, 'left', 'the owner leaves it through the assistant');
 
+-- A bank void and a SUMIT removal the owner leaves (the app's אישור): used after the period reopens.
+insert into res values ('lv_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-lv', 5990, pg_temp.shut()))));
+insert into res values ('lv_void', pg_temp.run('mercury', '[]'::jsonb, '["m-lv"]'::jsonb));
+select is((pg_temp.hold('m-lv')).kind || ':' || (pg_temp.hold('m-lv')).state, 'void:held', 'a bank void of a closed line is held');
+select is(pg_temp.try(format('select public.leave_held_change(%L)', pg_temp.review_of('m-lv'))), 'ok', 'the owner leaves the void');
+insert into res values ('lr_new', pg_temp.run('sumit', jsonb_build_array(
+  pg_temp.sl('s-2', 7100, pg_temp.shut(), 'Example Oak house'), pg_temp.sl('s-3', 7200, pg_temp.open()),
+  pg_temp.sl('s-lr', 7400, pg_temp.shut())), '[]'::jsonb, true));
+insert into res values ('lr_gone', pg_temp.run('sumit', jsonb_build_array(
+  pg_temp.sl('s-2', 7100, pg_temp.shut(), 'Example Oak house'), pg_temp.sl('s-3', 7200, pg_temp.open())), '[]'::jsonb, true));
+select is((pg_temp.hold('s-lr')).kind || ':' || (pg_temp.hold('s-lr')).state, 'remove:held', 'a SUMIT removal of a closed line is held');
+select is(pg_temp.try(format('select public.leave_held_change(%L)', pg_temp.review_of('s-lr'))), 'ok', 'the owner leaves the removal');
+
 -- The hold's state and left_at go together (decision 0266).
 select throws_ok(format($$update private.closed_line_holds set state = 'left' where transaction_id = %L$$,
   (pg_temp.line('m-0')).id), '23514', null, 'a left hold with no left_at is refused');
@@ -501,10 +514,22 @@ select is((pg_temp.line('m-pend')).line_status::text || ':' || (pg_temp.line('m-
 select is((select array_agg(t.external_id || '=' || h.state order by t.external_id)
   from private.closed_line_holds h join public.transactions t on t.id = h.transaction_id
   where h.company_id = pg_temp.id('co') and h.provider = 'mercury'),
-  array['m-keep=left', 'm-left=left'],
+  array['m-keep=left', 'm-left=left', 'm-lv=left'],
   'the only bank holds that remain are the left ones: they stay left, not applied and not deleted');
 select is((pg_temp.line('m-into')).doc_date, pg_temp.shut(), 'the reopened change (held again) is applied');
 select is((pg_temp.line('m-keep')).amount_original, 5900::bigint, 'a left change is not applied when the period reopens');
+-- The same left change sent again as it is stays set aside; a different one applies and supersedes the hold.
+insert into res values ('resend_left', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-keep', 5950, pg_temp.shut()))));
+select is((pg_temp.line('m-keep')).amount_original::text || ':' || (pg_temp.hold('m-keep')).state, '5900:left',
+  'a left change the provider sends again as it is is not written, its hold still left');
+insert into res values ('new_left', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-left', 6350, pg_temp.shut()))));
+select is((pg_temp.line('m-left')).amount_original::text || ':' || (select count(*) from private.closed_line_holds h
+  where h.transaction_id = (pg_temp.line('m-left')).id), '6350:0',
+  'a different change from the provider is applied once the period is open, and the left hold is dropped');
+-- A void the provider reports again is not applied while its hold is left.
+insert into res values ('void_again', pg_temp.run('mercury', '[]'::jsonb, '["m-lv"]'::jsonb));
+select is((pg_temp.line('m-lv')).line_status::text || ':' || (pg_temp.hold('m-lv')).state, 'posted:left',
+  'a left void is not applied when the provider reports it again, its hold still left');
 select is((select count(*)::integer from public.review_queue q where q.company_id = pg_temp.id('co') and q.status = 'open'
   and q.reason = 'closed_month_change' and q.transaction_id in (select id from public.transactions where source = 'mercury')),
   0, 'and their review rows are closed in the same run');
@@ -525,6 +550,8 @@ insert into res values ('replay_sumit', pg_temp.run('sumit', jsonb_build_array(
 select ok((pg_temp.line('s-1')).removed_at is not null and (pg_temp.hold('s-1')).transaction_id is null
   and pg_temp.open_rows('s-1') = '{}', 'the held SUMIT removal is applied, its hold and row gone');
 select is((select (r->>'removed')::integer from res where label = 'replay_sumit'), 1, 'and counted as removed');
+select is(((pg_temp.line('s-lr')).removed_at is null)::text || ':' || (pg_temp.hold('s-lr')).state, 'true:left',
+  'a left SUMIT removal is not applied by the sweep, its hold still left');
 
 -- ---------------------------------------------------------------------------------------------
 -- A removed line's held change is not shown and is not applied: removed here directly, then by a
