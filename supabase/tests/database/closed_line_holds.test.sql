@@ -12,7 +12,7 @@
 
 begin;
 
-select plan(89);
+select plan(90);
 
 do $users$
 begin
@@ -522,6 +522,12 @@ select is((pg_temp.line('m-keep')).amount_original, 5900::bigint, 'a left change
 insert into res values ('resend_left', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-keep', 5950, pg_temp.shut()))));
 select is((pg_temp.line('m-keep')).amount_original::text || ':' || (pg_temp.hold('m-keep')).state, '5900:left',
   'a left change the provider sends again as it is is not written, its hold still left');
+-- Recognised by the hold's fingerprint, not the whole line: a re-send that differs only in a key the
+-- fingerprint ignores (the description) is the same change.
+insert into res values ('resend_left_desc', pg_temp.run('mercury', jsonb_build_array(
+  pg_temp.ml('m-keep', 5950, pg_temp.shut()) || '{"description": "Renamed by the bank"}'::jsonb)));
+select is((pg_temp.line('m-keep')).amount_original::text || ':' || (pg_temp.hold('m-keep')).state, '5900:left',
+  'a re-send that differs only in the description is still the same left change');
 insert into res values ('new_left', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-left', 6350, pg_temp.shut()))));
 select is((pg_temp.line('m-left')).amount_original::text || ':' || (select count(*) from private.closed_line_holds h
   where h.transaction_id = (pg_temp.line('m-left')).id), '6350:0',

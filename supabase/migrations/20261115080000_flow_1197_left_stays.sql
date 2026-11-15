@@ -10,10 +10,13 @@
 -- 1. the `applied` CTE that applies held voids and removals: `and h.state = 'held'`;
 -- 2. the replay loop's union that feeds held updates through the line loop: `and h.state = 'held'`;
 -- 3. the normal update path ("Written as the provider sends it"), which writes the line and deletes the
---    line's hold whatever its state: a fetched line equal to the stored `line` of a left update hold is
---    skipped (not written), and the hold stays left. SUMIT sends every document every run, so without this
---    a left change would come back on the next run once the period is open. A fetched line that differs
---    is a new change: written, and the left hold deleted;
+--    line's hold whatever its state: a fetched line with the same fingerprint as a left update hold (the
+--    expression the hold insert uses, so a re-send differing only in keys it ignores, such as the
+--    description, is the same change) is skipped (not written), and the hold stays left. SUMIT sends every document every run, so without this
+--    a left change would come back on the next run once the period is open. A fetched line with another
+--    fingerprint is a new change: written, and the left hold deleted;
+--    (A left void or remove hold needs no fingerprint: it is md5('void') or md5('remove') for any report, so
+--    kind and state say it is the same change.)
 -- 4. the `voided` CTE (a bank void of an open line) and 5. the `swept` CTE (the SUMIT sweep of an open
 --    line): a line whose hold is a left void (4) or a left remove (5) is not voided or removed, and the
 --    hold stays left. Their `dropped` CTEs still delete the hold of any line they do change.
@@ -76,16 +79,28 @@ $n$);
         and h.state = 'held' -- FLOW-1197: a left hold is not applied
 $n$);
   def := pg_temp.swap(def, a_declare, $n$  replayed_ext text[] := array[]::text[];
-  held_left jsonb;
+  held_fp text;
 begin
 $n$);
   def := pg_temp.swap(def, a_keep, $n$      -- FLOW-1197: the change the owner left, sent again as it is, is not written; its hold stays left.
       if holds_exist and not is_replay then
-        select h.line into held_left from private.closed_line_holds h
+        select h.fingerprint into held_fp from private.closed_line_holds h
         where h.transaction_id = existing_id and h.state = 'left' and h.kind = 'update';
-        if held_left is not null and held_left = line then
-          seen_ids := array_append(seen_ids, ext);
-          continue;
+        if held_fp is not null then
+          -- The same fingerprint the hold insert computes (the facts a change is made of, as this line
+          -- would lay them over the stored row; keys such as the description are not part of it).
+          select * into cur_row from public.transactions t where t.id = existing_id;
+          if held_fp = pg_catalog.md5(row(direction, kind, gross, net, vat,
+              (line #>> '{vat,status}')::public.vat_status, coalesce(nullif(line->>'currency', ''), cur_row.currency),
+              original, (line->>'doc_date')::date, nullif(line->>'cash_date', '')::date,
+              case when existing_void then 'void'::public.line_status else line_status end,
+              (case when existing_void then existing_removed
+                    when line_status = 'void' then coalesce(existing_removed, pg_catalog.now())
+                    else null end) is not null)::text)
+          then
+            seen_ids := array_append(seen_ids, ext);
+            continue;
+          end if;
         end if;
       end if;
       -- Written as the provider sends it: a held change for the line is replaced by this one.
