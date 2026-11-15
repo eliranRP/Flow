@@ -214,37 +214,32 @@ export function useMercuryStatusQuery(active = true) {
  * The read behind the project page. Shared by the page and the prefetch (FLOW-804). A project read
  * before starts from that read saved on the phone, dated when it was read, so the page paints at
  * once and the fresh read replaces it in the background (project-cache.ts).
- *
- * FLOW-1205: `lines` asks for the answer with lines (get_project's p_lines true), the only one that carries
- * `investment.rehab_by_category`; the returns screen reads that. It is a read of its own: never saved on the phone, and
- * with no saved start, since a saved lean read has no rehab rows.
  */
-export function projectQueryOptions(preview: HomePreview, projectId: string, period: PeriodChoice | null, lines = false) {
+export function projectQueryOptions(preview: HomePreview, projectId: string, period: PeriodChoice | null) {
   const range = period ? rangeOf(period) : null;
   // The company's basis (0170) is not in the key: a change of it drops every saved read (company-basis-sheet.tsx).
   const savedKey = [projectId, range?.p_from ?? "", range?.p_to ?? ""].join("|");
   // Read from storage only when the query is created, once for the data and its date.
   let saved: { value: ReturnType<typeof savedProjectRead> } | null = null;
   const savedRead = () => {
-    saved ??= { value: preview === "off" && projectId !== "" && !lines ? savedProjectRead(savedKey) : null };
+    saved ??= { value: preview === "off" && projectId !== "" ? savedProjectRead(savedKey) : null };
     return saved.value;
   };
   return {
-    queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null, ...(lines ? ["lines"] : [])] as const,
+    queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null] as const,
     queryFn: async (): Promise<ProjectDetail> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("get_project", {
         p_id: projectId,
         // get_project's period overload needs p_basis present; null is the company's basis (0170).
         p_basis: COMPANY_BASIS as unknown as string,
-        // FLOW-1171: no screen reads the 40 newest lines, the roll-ups or the waiting sums (flow-mcp does). FLOW-1205:
-        // only the returns screen asks with them, for the renovation's categories.
-        p_lines: lines,
+        // FLOW-1171: no screen reads the 40 newest lines, the roll-ups or the waiting sums (flow-mcp does).
+        p_lines: false,
         ...(range ?? {}),
       });
       if (error) throw error;
       const project = (await loadReadSchemas()).projectDetailSchema.parse(data);
-      if (project != null && !lines) saveProjectRead(savedKey, project);
+      if (project != null) saveProjectRead(savedKey, project);
       return project;
     },
     initialData: () => savedRead()?.data,
@@ -253,10 +248,10 @@ export function projectQueryOptions(preview: HomePreview, projectId: string, per
 }
 
 /** The project's own period (decision 0129): every P&L field, the categories and the lines follow it. */
-export function useProjectQuery(projectId: string, period: PeriodChoice | null = null, lines = false) {
+export function useProjectQuery(projectId: string, period: PeriodChoice | null = null) {
   const preview = useHomePreview();
   return useQuery({
-    ...projectQueryOptions(preview, projectId, period, lines),
+    ...projectQueryOptions(preview, projectId, period),
     enabled: preview === "off" && projectId !== "",
     // A read from the last seconds (the prefetch on the row's touch) is not read again (FLOW-804).
     staleTime: 10_000,

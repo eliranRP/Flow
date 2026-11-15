@@ -16,7 +16,7 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { IconButton } from "../ui/icon-button";
 import { Button } from "../ui/button";
 import { MoreIcon } from "../ui/icons";
-import { BarsIcon, BinIcon, BoltIcon, FlagIcon, InvestIcon, PencilIcon } from "../ui/icons-later";
+import { BarsIcon, BinIcon, BoltIcon, FlagIcon, InvestIcon, PencilIcon, RefreshIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ProjectFormSheet } from "./project-form-sheet";
@@ -83,6 +83,12 @@ export function ProjectMenu({
   const row = sampleRow ?? cash.data?.projects.find((project) => project.id === projectId);
   const pending = row?.pending_count ?? 0;
   const deletable = row?.deletable === true;
+  // FLOW-1204: the two figures come with the project's own read (the list's row has neither). Until it has landed the
+  // menu shows a placeholder where the delete row goes, and a loading line in place of the waiting-lines warning;
+  // if it failed, the same places say so, with ניסיון חוזר.
+  const figuresLanded = sample || sampleRow != null || cash.dataUpdatedAt > 0;
+  const figuresFailed = !figuresLanded && cash.isError;
+  const retryFigures = () => { void cash.refetch(); };
   const action = finished ? "החזרה לפעילים" : "סיום הפרויקט";
   const toast = useToast();
   const client = useQueryClient();
@@ -141,11 +147,13 @@ export function ProjectMenu({
   // What finishing leaves: the items still waiting wait on (they are named here, as the confirm used to).
   const finishHint = finished
     ? "יחזור לרשימה ולבחירת הפרויקטים בשיוך"
-    : pending === 1
-      ? "יש בו פריט אחד לאישור. הוא יחכה גם אחרי הסיום"
-      : pending > 1
-        ? `יש בו ${String(pending)} פריטים לאישור. הם יחכו גם אחרי הסיום`
-        : "הפרויקט יעבור ל״הסתיימו״. התנועות והרווח נשמרים, ואפשר להחזיר אותו בכל זמן.";
+    : !figuresLanded
+      ? (figuresFailed ? "לא הצלחנו לבדוק שורות ממתינות." : "בודקים שורות ממתינות…")
+      : pending === 1
+        ? "יש בו פריט אחד לאישור. הוא יחכה גם אחרי הסיום"
+        : pending > 1
+          ? `יש בו ${String(pending)} פריטים לאישור. הם יחכו גם אחרי הסיום`
+          : "הפרויקט יעבור ל״הסתיימו״. התנועות והרווח נשמרים, ואפשר להחזיר אותו בכל זמן.";
   return (
     <>
       <IconButton
@@ -161,7 +169,8 @@ export function ProjectMenu({
       <Sheet open={menu} onOpenChange={setMenu} title={view === "finish" ? `לסיים את ${name}?` : name} panelClassName="ui-sheet-wide ui-sheet-pad28 ui-project-menu" closeButton={false}>
         {view === "finish" ? (
           <div className="ui-project-menu-finish">
-            <p className="t-line2">{finishHint}</p>
+            <p className="t-line2" role={figuresLanded || finished ? undefined : "status"}>{finishHint}</p>
+            {figuresFailed && !finished ? <Button variant="link" onClick={retryFigures}>ניסיון חוזר</Button> : null}
             <Button
               full
               disabled={setStatus.isPending}
@@ -234,7 +243,19 @@ export function ProjectMenu({
               } else setView("finish");
             }}
           />
-          {deletable ? (
+          {!figuresLanded ? (
+            figuresFailed ? (
+              <ListRow
+                variant="button"
+                title="לא הצלחנו לבדוק אם אפשר למחוק"
+                hint="ניסיון חוזר"
+                icon={<RefreshIcon />}
+                onClick={retryFigures}
+              />
+            ) : (
+              <ListRow variant="skeleton" icon />
+            )
+          ) : deletable ? (
             <ListRow
               variant="button"
               title="מחיקת הפרויקט"

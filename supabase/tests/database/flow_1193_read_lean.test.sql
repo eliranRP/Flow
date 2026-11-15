@@ -4,8 +4,8 @@
 -- - expected_months: p_months 0 answers without months[]: the same today, project_id and recurring[] the full
 --   form gives, for the company and for a project. From 1 to 13 months the answer is what it was (flow-mcp's
 --   get_expected_months); 14 and a negative count are refused.
--- FLOW-1205 left out projects[].deletable, pending_count and group_id and, with p_months 0, project_id, months_seen and
--- source (flow_1204_1205_*.test.sql). (get_project's lean answer is get_project_speed.test.sql's.) Invented data only. "Today" is 2026-09-20.
+-- FLOW-1204 left out projects[].deletable and pending_count (flow_1204_projects_cash_menu.test.sql); FLOW-1205 left out
+-- group_id and, with p_months 0, project_id, months_seen and source (flow_1205_*.test.sql). (get_project's lean answer is get_project_speed.test.sql's.) Invented data only. "Today" is 2026-09-20.
 -- Amounts are agorot.
 
 begin;

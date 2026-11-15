@@ -48,20 +48,18 @@ export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: stri
   const read = usePropertyReturnsQuery(sample == null ? projectId : "");
   // The investment page read the project on the same period, so its name is usually there already.
   const project = useProjectQuery(sample == null ? projectId : "", period);
-  // FLOW-1205: the renovation's categories are in the project read's lines form only (the lean read the other pages share has none).
-  const withLines = useProjectQuery(sample == null ? projectId : "", period, true);
-  const name = sample?.projectName ?? project.data?.name ?? withLines.data?.name ?? null;
+  const name = sample?.projectName ?? project.data?.name ?? null;
   const phase = sample != null ? ({ kind: "ready" } as const) : screenPhase(preview, read);
-  const investment = withLines.data?.investment;
+  const investment = project.data?.investment;
   const rehab: RehabRead = {
     rows: sample != null
       ? (sample.rehab ?? [])
       : investment == null
-        ? (withLines.data === undefined ? null : [])
+        ? (project.data === undefined ? null : [])
         : (investment.rehab_by_category ?? []).map((row) => ({ id: row.category_id, name: row.name, minor: row.amount_minor })),
-    failed: sample == null && withLines.isError,
-    offline: withLines.isPaused,
-    retry: () => { void withLines.refetch(); },
+    failed: sample == null && project.isError,
+    offline: project.isPaused,
+    retry: () => { void project.refetch(); },
   };
   return {
     projectId,

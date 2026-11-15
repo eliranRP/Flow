@@ -3,9 +3,9 @@
 --   open review queue and suggested lines, and six index probes per project) are in the answer only with p_project;
 --   the list asks without it and draws neither. The menu reads its own row. Also left out, with no reader:
 --   projects[].group_id and the top-level month and basis. flow-mcp does not call it.
--- - get_project, lean (p_lines false, as the app asks): no investment.rehab_by_category (only the returns screen reads
---   it, and it now asks with lines), and no from and to (no app reader). With lines (flow-mcp's default) both stay,
---   rehab_by_category[].hidden included.
+-- - get_project, lean (p_lines false, as the app asks): no from and to, and no rehab_by_category[].hidden (no app
+--   reader; the returns screen reads the rest of rehab_by_category from this same lean answer). With lines (flow-mcp's
+--   default) all of them stay.
 -- - expected_months with p_months 0 (the app's): no recurring[].months_seen, recurring[].source or top-level
 --   project_id. With p_months 1 to 13 (flow-mcp's) they stay.
 --
@@ -67,8 +67,11 @@ $a$, $b$$b$);
     'from', case when p_from is null or p_to is null then null else p_from end,
     'to', case when p_from is null or p_to is null then null else p_to end
   ) else '{}'::jsonb end || jsonb_build_object($b$);
-  def := pg_temp.swap(def, $a$    'investment', private.project_investment(cid, p_id),$a$, $b$    -- FLOW-1205: rehab_by_category is for the lines form too; the returns screen asks with lines.
-    'investment', (select case when p_lines then i else i - 'rehab_by_category' end from private.project_investment(cid, p_id) i),$b$);
+  def := pg_temp.swap(def, $a$    'investment', private.project_investment(cid, p_id),$a$, $b$    -- FLOW-1205: rehab_by_category[].hidden is for the lines form (flow-mcp's); the app reads the rows without it.
+    'investment', (select case when p_lines then i else jsonb_set(i, '{rehab_by_category}', coalesce(
+        (select jsonb_agg(e - 'hidden' order by o) from jsonb_array_elements(i->'rehab_by_category') with ordinality t(e, o)),
+        '[]'::jsonb)) end
+      from private.project_investment(cid, p_id) i),$b$);
   execute def;
 
   -- expected_months

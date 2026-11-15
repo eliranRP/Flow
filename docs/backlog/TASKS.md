@@ -765,7 +765,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1202"></a>[FLOW-1202](tasks/FLOW-1202.md) | Perf: the forecast skips come in the inputs read, everywhere | SMALL (perf) |
 | <a id="flow-1203"></a>[FLOW-1203](tasks/FLOW-1203.md) | Perf: `get_property_returns` reads the property's lines once | MEDIUM (perf) |
 | <a id="flow-1204"></a>[FLOW-1204](tasks/FLOW-1204.md) | Perf: the projects list stops computing each project's menu counts | SMALL (perf) |
-| <a id="flow-1205"></a>[FLOW-1205](tasks/FLOW-1205.md) | Perf: drop more read fields no one reads (rehab_by_category, expected_months lean, projects_cash_month, get_project lean) | SMALL (perf) |
+| <a id="flow-1205"></a>[FLOW-1205](tasks/FLOW-1205.md) | Perf: drop more read fields no one reads (rehab hidden flag, expected_months lean, projects_cash_month, get_project lean) | SMALL (perf) |
 | <a id="flow-1206"></a>[FLOW-1206](tasks/FLOW-1206.md) | Perf: the recurring suggestions' look-alike join uses the party index; jev's inputs key once | SMALL (perf) |
 | <a id="flow-1207"></a>[FLOW-1207](tasks/FLOW-1207.md) | Perf: Company profit's date and amount orders read every line in one call | MEDIUM (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |

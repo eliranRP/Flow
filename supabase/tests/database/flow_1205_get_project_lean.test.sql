@@ -1,5 +1,5 @@
 -- FLOW-1205 (20261114123417): get_project's lean answer (p_lines false, the app's) leaves out what no app reader has.
--- - investment.rehab_by_category: only the returns screen reads it, and it asks with lines now.
+-- - investment.rehab_by_category[].hidden: no app reader (the returns screen reads the rest of the row, in the lean answer).
 -- - from and to (the period echo), with no app reader.
 -- With lines (flow-mcp's default) the answer is exactly what it was, rehab_by_category[].hidden, from and to included.
 -- Checked against pg_temp.old_get_project, a copy of the previous body (20261113163849) made here: the lines answer
@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(23);
+select plan(24);
 
 do $users$
 begin
@@ -494,10 +494,12 @@ returns jsonb language sql stable as $$
 $$;
 grant execute on function pg_temp.old(text, text, boolean, date, date) to authenticated;
 
--- The previous lean answer as the lean one gives it now: no from, to or investment.rehab_by_category.
+-- The previous lean answer as the lean one gives it now: no from or to, and no hidden on the rehab rows.
 create function pg_temp.as_lean(p_old jsonb) returns jsonb language sql immutable as $$
   select case when p_old is null then null
-    else (p_old - 'from' - 'to') || jsonb_build_object('investment', (p_old->'investment') - 'rehab_by_category'::text) end;
+    else (p_old - 'from' - 'to') || jsonb_build_object('investment',
+      jsonb_set(p_old->'investment', '{rehab_by_category}', coalesce(
+        (select jsonb_agg(e - 'hidden' order by o) from jsonb_array_elements(p_old->'investment'->'rehab_by_category') with ordinality t(e, o)), '[]'::jsonb))) end;
 $$;
 grant execute on function pg_temp.as_lean(jsonb) to authenticated;
 
@@ -519,17 +521,21 @@ select is(pg_temp.new('house', 'cash', true)->'from', 'null'::jsonb, 'with lines
 select is(pg_temp.new('house', 'cash', true, '2026-06-01', '2026-06-30')->>'to', '2026-06-30', 'and to is the period''s');
 
 -- The lean form (the app's): the previous lean answer less the keys.
-select is(pg_temp.new('house', 'cash', false), pg_temp.as_lean(pg_temp.old('house', 'cash', false)), 'lean: the house, cash, is the previous lean answer less from, to and rehab_by_category');
+select is(pg_temp.new('house', 'cash', false), pg_temp.as_lean(pg_temp.old('house', 'cash', false)), 'lean: the house, cash, is the previous lean answer less from, to and hidden on the rehab rows');
 select is(pg_temp.new('house', 'invoiced', false), pg_temp.as_lean(pg_temp.old('house', 'invoiced', false)), 'the house, invoiced');
 select is(pg_temp.new('barn', 'cash', false), pg_temp.as_lean(pg_temp.old('barn', 'cash', false)), 'the barn');
 select is(pg_temp.new('shed', 'cash', false), pg_temp.as_lean(pg_temp.old('shed', 'cash', false)), 'the shed');
 select is(pg_temp.new('house', 'cash', false, '2026-06-01', '2026-06-30'),
   pg_temp.as_lean(pg_temp.old('house', 'cash', false, '2026-06-01', '2026-06-30')), 'a period');
-select ok(not (pg_temp.new('house', 'cash', false, '2026-06-01', '2026-06-30') ?| array['from', 'to'])
-    and not (pg_temp.new('house', 'cash', false)->'investment' ? 'rehab_by_category'),
-  'the lean answer has no from, to or investment.rehab_by_category, with a period or without');
-select is(pg_temp.new('house', 'cash', false)->'investment', (pg_temp.old('house', 'cash', true)->'investment') - 'rehab_by_category'::text,
-  'the lean investment block is the full one without rehab_by_category (purchase, ARV, value, rehab, equity and loans are there)');
+select ok(not (pg_temp.new('house', 'cash', false, '2026-06-01', '2026-06-30') ?| array['from', 'to']),
+  'the lean answer has no from or to, with a period or without');
+select ok(jsonb_array_length(pg_temp.new('house', 'cash', false)->'investment'->'rehab_by_category') = 3
+    and not exists (select 1 from jsonb_array_elements(pg_temp.new('house', 'cash', false)->'investment'->'rehab_by_category') r where r ? 'hidden')
+    and (select array_agg(r->>'category_id' order by o) from jsonb_array_elements(pg_temp.new('house', 'cash', false)->'investment'->'rehab_by_category') with ordinality t(r, o))
+      is not distinct from (select array_agg(r->>'category_id' order by o) from jsonb_array_elements(pg_temp.new('house', 'cash', true)->'investment'->'rehab_by_category') with ordinality t(r, o)),
+  'the lean answer keeps the three rehab rows (category_id, name, amount_minor), in the same order, with no hidden');
+select is(pg_temp.new('house', 'cash', false)->'investment'->'rehab_by_category'->0 ?& array['category_id', 'name', 'amount_minor'], true,
+  'a lean rehab row has the three keys the returns screen reads');
 select ok(octet_length(pg_temp.new('house', 'cash', false)::text) < octet_length(pg_temp.old('house', 'cash', false)::text),
   'the lean answer is smaller than the previous one');
 select is(pg_temp.new('house', 'cash', false)->'investment'->>'rehab_minor', pg_temp.new('house', 'cash', true)->'investment'->>'rehab_minor',
