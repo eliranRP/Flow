@@ -201,10 +201,11 @@ describe("CompanyProfitScreen live, the current month's next-month reads (FLOW-1
 describe("CompanyProfitScreen live, the next-month read's size (FLOW-1171)", () => {
   it("the month view reads next month without every later month's edits, and sends no overrides read: the skips come with the answer (FLOW-1202)", async () => {
     answerBreakdowns();
-    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithProviders(<CompanyProfitScreen />, { client, route: "/profit" });
     await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
     await waitFor(() => { expect(calls.names).toContain("expected_months"); });
-    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    await waitFor(() => { expect(client.isFetching()).toBe(0); });
     expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: false }]);
     expect(calls.names).not.toContain("forecast_overrides_for");
   });
@@ -212,10 +213,11 @@ describe("CompanyProfitScreen live, the next-month read's size (FLOW-1171)", () 
   it("the year view asks for every later month's edits and skips in one read, and sends no overrides read (FLOW-1195)", async () => {
     answerBreakdowns();
     answerProfitMonths();
-    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year" });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithProviders(<CompanyProfitScreen />, { client, route: "/profit?period=year" });
     await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
     await waitFor(() => { expect(calls.names).toContain("get_profit_months"); });
-    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    await waitFor(() => { expect(client.isFetching()).toBe(0); });
     expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: true }]);
     expect(calls.names).not.toContain("forecast_overrides_for");
   });
