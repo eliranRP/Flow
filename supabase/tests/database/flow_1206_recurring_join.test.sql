@@ -3,20 +3,23 @@
 -- carry both a supplier and a customer, an earlier income line with a customer and a supplier (the
 -- "first seen lately" test must count it, as before FLOW-1192), and the function's own plan (its SQL,
 -- with the arguments as literals) reads a party's lines from transactions_party_date_idx by the party
--- condition.
+-- condition, and an earlier income line with no supplier (the "first seen lately" test's arm b) stops the
+-- income line of its look-alike customer.
 -- (b) private.jev_has_work and public.mcp_jev_status answer as the bodies before this change, on
 -- enabled Jev integrations, with a refusal whose inputs key holds and one a category rename made
--- stale, for two companies. Invented names and example.com emails only.
+-- stale, for two companies, and jev_has_work's true case (a refused line and another open line).
+-- Invented names and example.com emails only.
 
 begin;
 
-select plan(21);
+select plan(24);
 
 do $users$
 begin
   perform tests.create_supabase_user('fj_r', 'fj-r@example.com');
   perform tests.create_supabase_user('fj_a', 'fj-a@example.com');
   perform tests.create_supabase_user('fj_b', 'fj-b@example.com');
+  perform tests.create_supabase_user('fj_c', 'fj-c@example.com');
 end
 $users$;
 
@@ -44,7 +47,8 @@ insert into rj (label, id)
 select p.label, s.id from rj_sup p join public.suppliers s on s.company_id = pg_temp.id('co') and s.name = p.name;
 
 insert into public.customers (company_id, name) values (pg_temp.id('co'), 'Cedar Tenant'), (pg_temp.id('co'), 'Cedar Tenant Annex'),
-  (pg_temp.id('co'), 'Harbor Client'), (pg_temp.id('co'), 'Harbor Client Annex'), (pg_temp.id('co'), 'Harbor Client Extra');
+  (pg_temp.id('co'), 'Harbor Client'), (pg_temp.id('co'), 'Harbor Client Annex'), (pg_temp.id('co'), 'Harbor Client Extra'),
+  (pg_temp.id('co'), 'Juniper Rent Co'), (pg_temp.id('co'), 'Juniper Rent Co Annex');
 insert into rj (label, id)
 select 'tnt', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Cedar Tenant'
 union all
@@ -54,7 +58,11 @@ select 'hbr', c.id from public.customers c where c.company_id = pg_temp.id('co')
 union all
 select 'hbr_annex', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Harbor Client Annex'
 union all
-select 'hbr_extra', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Harbor Client Extra';
+select 'hbr_extra', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Harbor Client Extra'
+union all
+select 'jun', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Juniper Rent Co'
+union all
+select 'jun_annex', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Juniper Rent Co Annex';
 
 -- Lines. tnt_new is an income line with no supplier whose customer is the alike tenant (the tenant's
 -- suggestion, arm b). hbr_old, hbr_new and hbr_extra are income lines with a supplier and a customer
@@ -73,7 +81,9 @@ from (values
   ('hbr_old', 'income', '2026-08-01'::date, 7000::bigint, 'invoice'),
   ('hbr_new', 'income', '2026-09-15'::date, 7950::bigint, 'invoice'),
   ('hbr_extra_inv', 'income', '2026-09-20'::date, 7900::bigint, 'invoice'),
-  ('yard_new', 'expense', '2026-09-25'::date, 5010::bigint, 'receipt')
+  ('yard_new', 'expense', '2026-09-25'::date, 5010::bigint, 'receipt'),
+  ('jun_old', 'income', '2026-07-01'::date, 11900::bigint, 'invoice'),
+  ('jun_new', 'income', '2026-09-15'::date, 12050::bigint, 'invoice')
 ) as l(label, direction, doc_date, amount, doc_kind);
 insert into rj (label, id)
 select 'gl' || n, tests.fixture_line(pg_temp.id('co'), 'rj:gl' || n, 5000 + n, 'expense', null, null,
@@ -89,7 +99,7 @@ from (values
   ('wtr_old', 'expense', 'wtr_annex'), ('wtr_new', 'expense', 'wtr_annex'), ('wtr_late', 'expense', 'wtr_annex'),
   ('tnt_inv', 'income', 'tnt'), ('tnt_new', 'income', 'tnt_annex'), ('yard_new', 'expense', 'yard'),
   ('hbr_old', 'income', 'hbr_annex'), ('hbr_new', 'income', 'hbr_annex'), ('hbr_extra_inv', 'income', 'hbr_extra'),
-  ('gl_gone', 'expense', 'garden_annex')
+  ('gl_gone', 'expense', 'garden_annex'), ('jun_old', 'income', 'jun_annex'), ('jun_new', 'income', 'jun_annex')
 ) as l(label, direction, party)
 where t.id = pg_temp.id(l.label);
 update public.transactions t set supplier_id = pg_temp.id('garden_annex')
@@ -108,7 +118,8 @@ as $$
     jsonb_build_object('direction', 'expense', 'party_id', pg_temp.id('garden'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', -5000),
     jsonb_build_object('direction', 'expense', 'party_id', pg_temp.id('pwr'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', -10000),
     jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('tnt'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 20000),
-    jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('hbr'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 8000)
+    jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('hbr'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 8000),
+    jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('jun'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 12000)
   );
 $$;
 
@@ -212,6 +223,16 @@ select is(
    where g.party_id = pg_temp.id('hbr')),
   pg_temp.id('hbr_extra_inv'),
   'the Harbor charge: an earlier line with a customer and a supplier counts as seen, so the alike annex line is out'
+);
+
+-- The Juniper charge: its alike annex has an earlier income line with no supplier (jun_old, before the window),
+-- so the annex's jun_new line is out. Only the anti-join's arm b tests this: arm c needs a supplier on the earlier
+-- line, and arm a is an expense test. Without arm b, jun_new would be the suggestion.
+select is(
+  (select count(*)::int from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) g
+   where g.party_id = pg_temp.id('jun') and g.suggestion is null),
+  1,
+  'the Juniper charge: an earlier income line with no supplier, from its alike annex, stops the annex line (no suggestion)'
 );
 
 -- Lines for the planner: 40 suppliers and 1,500 lines, analyzed, so the planner has statistics.
@@ -451,12 +472,24 @@ end;
 $$;
 grant execute on function pg_temp.mcp_jev_status_before() to authenticated, service_role;
 
+-- jev_has_work's true case: company C's refused line c1 and its other open line c2 (not refused), so C has work.
+insert into fj (label, id) values
+  ('c', tests.fixture_company('fj_c', 'Example Jev Works C'));
+insert into fj (label, id) values
+  ('c1', tests.fixture_line(pg_temp.fid('c'), 'fj:c1', 3300, p_source => 'sumit', p_doc_date => '2026-11-04')),
+  ('c2', tests.fixture_line(pg_temp.fid('c'), 'fj:c2', 3400, p_source => 'sumit', p_doc_date => '2026-11-05'));
+insert into public.review_queue (company_id, transaction_id, status)
+select t.company_id, t.id, 'open' from public.transactions t where t.id in (pg_temp.fid('c1'), pg_temp.fid('c2'));
+insert into public.company_integrations (company_id, provider, enabled, mode)
+values (pg_temp.fid('c'), 'jev', true, 'auto');
+
 -- Lines a1 and b1 are refused as invalid (the job's call), with the inputs the companies have now.
 set role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 select public.jev_mark_failed(pg_temp.fid('a'), pg_temp.fid('a1'), 'jev-1.13.0', true);
 select public.jev_mark_failed(pg_temp.fid('b'), pg_temp.fid('b1'), 'jev-1.13.0', true);
+select public.jev_mark_failed(pg_temp.fid('c'), pg_temp.fid('c1'), 'jev-1.13.0', true);
 reset role;
 
 -- Step 1: both refusals hold. (jev_has_work is false here, both before and after: each company's only
@@ -475,6 +508,13 @@ select is(public.mcp_jev_status(), pg_temp.mcp_jev_status_before(),
 select is((public.mcp_jev_status()->>'lines_not_retried')::int, 1,
   'company B: its refused line is counted as not retried');
 reset role;
+
+-- The true case: company C has a refused line (c1) and another open line that is not refused (c2), so there is work.
+select is(private.jev_has_work(), pg_temp.jev_has_work_before(),
+  'a refused line and another open line: jev_has_work answers as before');
+select ok(private.jev_has_work(), 'a refused line and another open line: jev_has_work is true');
+-- Company C's open line leaves the queue again, so step 2 sees companies A and B alone.
+delete from public.review_queue where transaction_id = pg_temp.fid('c2');
 
 -- Step 2: a category rename changes company A's inputs key, so its refusal holds nothing.
 update public.categories set name = 'Example Repairs and Upkeep' where id = pg_temp.fid('a_cat');

@@ -20,7 +20,7 @@
 --
 -- 2. private.jev_has_work: a refused line's inputs key (private.jev_inputs_key) was computed once per
 --    refused line. It is now computed once per company that has a refusal still in its wait, for an
---    enabled Jev integration (a materialized CTE), and each line reads its company's key from it.
+--    enabled Jev integration in shadow or auto mode (a materialized CTE), and each line reads its company's key from it.
 --
 -- 3. public.mcp_jev_status: the same key was computed for every row of the count of refused lines.
 --    It is now computed once per call, into a variable, whether or not the company has a refusal.
