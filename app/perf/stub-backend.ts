@@ -86,12 +86,8 @@ function projectCash() {
 
 /** FLOW-445: the Projects list's month cash, one row per demo project (invented figures from the same books). */
 function projectsCashMonth() {
-  const now = new Date();
-  const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
   return {
-    month,
     base_currency: "ILS",
-    basis: "paid",
     projects: demoDashboard(null, null, "invoiced").projects.map((project) => {
       const income = Number(project.income_agorot);
       const out = Math.abs(Number(project.direct_agorot)) + Math.abs(Number(project.shared_agorot));
@@ -102,7 +98,6 @@ function projectsCashMonth() {
         type: null,
         status: project.status,
         is_overhead: false,
-        group_id: null,
         created_at: "2026-01-01T00:00:00Z",
         finished_on: null,
         budget_minor: null,
@@ -110,8 +105,6 @@ function projectsCashMonth() {
         cash: [{ currency: "ILS", in_minor: income, out_minor: out, net_minor: net }],
         profit_all_minor: Number(project.profit_agorot),
         first_month: null,
-        pending_count: 0,
-        deletable: false,
       };
     }),
     unassigned: { count: 0, cash: [] },

@@ -773,8 +773,8 @@ describe("the returns pages", () => {
   });
 });
 
-/** get_project with the renovation's categories, as the server sends them (FLOW-460). */
-function projectJson(rehab: typeof birchLaneRehab, returns = birchLaneReturns) {
+/** get_project with the renovation's categories, as the server sends them (FLOW-460): only with lines (FLOW-1205). */
+function projectJson(rehab: typeof birchLaneRehab, returns = birchLaneReturns, lines = true) {
   return {
     id: "p1", name: "Birch Lane", status: "active", state_label: "rental", budget_agorot: null, income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_agorot: 0,
     categories: [], transactions: [], is_overhead: false, loans: [],
@@ -782,7 +782,7 @@ function projectJson(rehab: typeof birchLaneRehab, returns = birchLaneReturns) {
       currency: "USD", purchase_minor: null, arv_minor: null, value_minor: null, value_date: null,
       rehab_minor: Number(returns.inputs.rehabMinor ?? 0n),
       rehab_other_currencies: [],
-      rehab_by_category: rehab.map((row) => ({ category_id: row.id, name: row.name, hidden: false, amount_minor: Number(row.minor) })),
+      ...(lines ? { rehab_by_category: rehab.map((row) => ({ category_id: row.id, name: row.name, hidden: false, amount_minor: Number(row.minor) })) } : {}),
       loan_balance_minor: 0, loan_balance_other_currencies: [], forced_equity_minor: null, current_equity_minor: null,
     },
   };
@@ -791,7 +791,9 @@ function projectJson(rehab: typeof birchLaneRehab, returns = birchLaneReturns) {
 function serveRehab(rehab: typeof birchLaneRehab, returns = birchLaneReturns) {
   serve(returns);
   const lines = rpc.impl;
-  rpc.impl = (name, args) => (name === "get_project" ? Promise.resolve({ data: projectJson(rehab, returns), error: null }) : lines(name, args));
+  rpc.impl = (name, args) => (name === "get_project"
+    ? Promise.resolve({ data: projectJson(rehab, returns, (args as { p_lines?: boolean }).p_lines === true), error: null })
+    : lines(name, args));
 }
 
 describe("the renovation's page (FLOW-460)", () => {
@@ -814,6 +816,14 @@ describe("the renovation's page (FLOW-460)", () => {
     expect(screen.getByRole("link", { name: "מה לא נספר? לפי קטגוריה" })).toHaveAttribute("href", "/settings/categories");
     expect(await screen.findByRole("link", { name: /Lone Star Roofing/ })).toHaveAttribute("href", "/transactions/t-roof");
     expect(rpc.calls.find((call) => call.name === "get_property_return_lines")?.args).toMatchObject({ p_line: "rehab" });
+  });
+
+  it("asks the project read with lines, the only form that has the categories (FLOW-1205)", async () => {
+    serveRehab(birchLaneRehab);
+    renderAt("/projects/p1/investment/part/rehab");
+    await screen.findByRole("list", { name: "שיפוץ עד היום" });
+    const reads = rpc.calls.filter((call) => call.name === "get_project").map((call) => (call.args as { p_lines?: boolean }).p_lines);
+    expect(reads).toContain(true);
   });
 
   it("shows five categories, then עוד N קטגוריות with the rest's sum, which opens them in place", async () => {

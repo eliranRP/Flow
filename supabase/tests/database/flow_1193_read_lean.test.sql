@@ -4,7 +4,8 @@
 -- - expected_months: p_months 0 answers without months[]: the same today, project_id and recurring[] the full
 --   form gives, for the company and for a project. From 1 to 13 months the answer is what it was (flow-mcp's
 --   get_expected_months); 14 and a negative count are refused.
--- (get_project's lean answer is get_project_speed.test.sql's.) Invented data only. "Today" is 2026-09-20.
+-- FLOW-1205 left out projects[].deletable, pending_count and group_id and, with p_months 0, project_id, months_seen and
+-- source (flow_1204_1205_*.test.sql). (get_project's lean answer is get_project_speed.test.sql's.) Invented data only. "Today" is 2026-09-20.
 -- Amounts are agorot.
 
 begin;
@@ -74,9 +75,9 @@ select tests.authenticate_as('lean_owner');
 -- projects_cash_month.
 select is(
   (select array_agg(k order by k) from jsonb_object_keys(pg_temp.row(pg_temp.cash(), 'house')) k),
-  array['budget_minor', 'cash', 'created_at', 'deletable', 'finished_on', 'first_month', 'group_id', 'id', 'is_overhead',
-    'name', 'pending_count', 'profit_all_minor', 'spent_minor', 'status', 'type'],
-  'a project row has the fifteen fields the app reads, and no profit_month_minor');
+  array['budget_minor', 'cash', 'created_at', 'finished_on', 'first_month', 'id', 'is_overhead',
+    'name', 'profit_all_minor', 'spent_minor', 'status', 'type'],
+  'a list row has the twelve fields the app reads, and no profit_month_minor (FLOW-1204 and FLOW-1205 took out pending_count, deletable and group_id)');
 select ok(not exists (select 1 from jsonb_array_elements(pg_temp.cash()->'projects') r where r ? 'profit_month_minor')
     and not exists (select 1 from jsonb_array_elements(pg_temp.cash('2026-07-01')->'projects') r where r ? 'profit_month_minor'),
   'no project of any month carries it');
@@ -97,16 +98,22 @@ create function pg_temp.em(p_months integer, p_project text default null) return
 $$;
 grant execute on function pg_temp.em(integer, text) to authenticated;
 
-select is((select array_agg(k order by k) from jsonb_object_keys(pg_temp.em(0)) k), array['project_id', 'recurring', 'today'],
-  'p_months 0: today, project_id and recurring[], with no months key');
+create function pg_temp.lean_em(p_full jsonb) returns jsonb language sql immutable as $$
+  select (p_full - 'project_id') || jsonb_build_object('recurring', coalesce((
+    select jsonb_agg(r - 'months_seen' - 'source' order by o) from jsonb_array_elements(p_full->'recurring') with ordinality t(r, o)), '[]'::jsonb));
+$$;
+grant execute on function pg_temp.lean_em(jsonb) to authenticated;
+
+select is((select array_agg(k order by k) from jsonb_object_keys(pg_temp.em(0)) k), array['recurring', 'today'],
+  'p_months 0: today and recurring[], with no months key and no project_id (FLOW-1205)');
 select is(pg_temp.em(0)->>'today', pg_temp.em(3)->>'today', 'the lean today is the full answer''s');
-select ok(jsonb_array_length(pg_temp.em(0)->'recurring') = 2 and pg_temp.em(0)->'recurring' = pg_temp.em(3)->'recurring'
-    and pg_temp.em(0)->'recurring' = pg_temp.em(13)->'recurring',
-  'the lean recurring[] (both charges) is the one 3 and 13 months give');
-select is(pg_temp.em(0, 'house') - 'months', pg_temp.em(2, 'house') - 'months',
-  'for a project: the lean answer is the full one without months, project_id too');
+select ok(jsonb_array_length(pg_temp.em(0)->'recurring') = 2 and pg_temp.em(0)->'recurring' = pg_temp.lean_em(pg_temp.em(3))->'recurring'
+    and pg_temp.em(0)->'recurring' = pg_temp.lean_em(pg_temp.em(13))->'recurring',
+  'the lean recurring[] (both charges) is the one 3 and 13 months give, less months_seen and source');
+select is(pg_temp.em(0, 'house'), pg_temp.lean_em(pg_temp.em(2, 'house') - 'months'),
+  'for a project: the lean answer is the full one without months, project_id, months_seen and source');
 select is(jsonb_array_length(pg_temp.em(0, 'house')->'recurring'), 1, 'and only the house''s charge');
-select is(pg_temp.em(13) - 'months', pg_temp.em(0), 'the full answer less months[] is the lean one');
+select is(pg_temp.lean_em(pg_temp.em(13) - 'months'), pg_temp.em(0), 'the full answer less months[], project_id, months_seen and source is the lean one');
 select is((select array_agg(jsonb_array_length(pg_temp.em(n)->'months') order by n) from generate_series(1, 13) n),
   array[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'from 1 to 13 months the answer keeps its months[], as flow-mcp reads it');
 select is(jsonb_array_length(public.expected_months(p_today => '2026-09-20')->'months'), 3, 'the default is still 3 months');

@@ -148,13 +148,11 @@ export function useProjectsCashMonth(month?: string, projectId?: string, active 
   return useQuery({
     queryKey: ["projects-cash", month, projectId],
     enabled: active && preview === "off",
-    // A project's row starts from the list's read of the same month, as old as that read: it reads
-    // again once the list's copy would have, and at once when a write marked the list stale.
+    // A project's row starts from the list's read of the same month, so the page paints it at once. FLOW-1204: the
+    // list's rows carry no pending_count or deletable (the menu's figures, in the answer for one project only), so the
+    // seed is never fresh: the project's own read, which has them, goes out at once.
     initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),
-    initialDataUpdatedAt: () => {
-      const list = client.getQueryState(listKey);
-      return list?.isInvalidated === true ? 0 : list?.dataUpdatedAt;
-    },
+    initialDataUpdatedAt: () => 0,
     queryFn: async () => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("projects_cash_month", {
