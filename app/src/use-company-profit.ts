@@ -187,6 +187,8 @@ export function monthTotals(dashboard: Dashboard, currency: string): { income: b
 }
 
 const LINES_PAGE = 40;
+/** The largest page get_breakdown_lines gives (FLOW-1207: a direction's every line is one paged read). */
+const LINES_PAGE_ALL = 200;
 
 type Range = { p_from?: string; p_to?: string };
 
@@ -208,19 +210,24 @@ async function fetchBreakdown(period: PeriodChoice, direction: BreakdownDirectio
   return (await loadReadSchemas()).breakdownSchema.parse(data);
 }
 
-/** Every page of one category group's counted lines, in the company currency. */
-async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string, currency: string, excluded = false): Promise<LinesRows> {
+/**
+ * Every page of one category group's counted lines, in the company currency. FLOW-1207: with no key (`null`), every
+ * counted line of the direction, each row naming its group (`group_key`), in pages of the largest size.
+ */
+async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string | null, currency: string, excluded = false): Promise<LinesRows> {
   const rows: LinesRows = [];
   const supabase = await readyClient();
-  for (let offset = 0; ; offset += LINES_PAGE) {
+  const size = key === null ? LINES_PAGE_ALL : LINES_PAGE;
+  for (let offset = 0; ; offset += size) {
     const { data, error } = await supabase.rpc("get_breakdown_lines", {
       ...rangeArgs(period),
       p_direction: direction,
       p_group_by: "category",
-      p_group_key: key,
+      // The generated types type a nullable argument as required (repo precedent: null as unknown as string).
+      p_group_key: key as string,
       p_currency: currency,
       p_excluded: excluded,
-      p_limit: LINES_PAGE,
+      p_limit: size,
       p_offset: offset,
     });
     if (error) throw error;
@@ -251,8 +258,8 @@ export type CompanyProfitRead = {
   /** The company's overhead project (useOverheadProject); undefined while it loads keeps the page loading. */
   overhead: OverheadProject | null | undefined;
   /**
-   * FLOW-1194. The date and amount orders need every counted line, so each category is read. The category order reads
-   * none on entering: a category's lines are read once its id is in `lineIds`.
+   * FLOW-1194, FLOW-1207. The date and amount orders need every counted line: one paged read of each direction, with
+   * no group key. The category order reads none on entering: a category's lines are read once its id is in `lineIds`.
    */
   linesAll: boolean;
   /** The lines reads asked for, by `linesIdOfRow`. */
@@ -294,8 +301,9 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     ...groupsIn(categoryExpense.data ?? null, currency).map((group) => ({ direction: "expense" as const, group })),
   ].filter((entry) => entry.group.key !== "");
   // FLOW-1194: a category's lines are read once, when the page asks for them (its row scrolled near, or a tap); the
-  // cache keeps them. The date and amount orders ask for every category, with the larger page. FLOW-954: every
-  // kept-out line of a direction is one read (p_excluded), when it has a kept-out category.
+  // cache keeps them. FLOW-1207: the date and amount orders read a direction's every counted line in one paged read,
+  // with no group key, instead of one read per category. FLOW-954: every kept-out line of a direction is one read
+  // (p_excluded), when it has a kept-out category.
   const keptOutDirections = (["income", "expense"] as const).filter((direction) =>
     ((direction === "income" ? categoryIncome.data : categoryExpense.data)?.excluded_groups ?? []).some((group) => group.currency === currency));
   const lineReads = [
@@ -305,8 +313,16 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
   const lineQueries = useQueries({
     queries: lineReads.map((read) => ({
       queryKey: ["breakdown-lines", "company-profit", preview, monthRange, read.direction, read.keptOut ? "kept-out" : read.key, currency],
-      enabled: live && categoriesOn && ((linesAll && !read.keptOut) || lineIds.has(read.id)),
+      enabled: live && categoriesOn && lineIds.has(read.id),
       queryFn: () => fetchAllLines(month, read.direction, read.key, currency, read.keptOut),
+    })),
+  });
+  const allDirections = (["income", "expense"] as const).filter((direction) => categoryGroups.some((entry) => entry.direction === direction));
+  const allQueries = useQueries({
+    queries: allDirections.map((direction) => ({
+      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, "all", currency],
+      enabled: live && categoriesOn && linesAll,
+      queryFn: () => fetchAllLines(month, direction, null, currency),
     })),
   });
   // A read that failed in another view or order stays in the cache with its error: only a view that reads it
@@ -325,10 +341,16 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
         ytdProfit: ytdTotals == null ? null : ytdTotals.income - ytdTotals.expense,
         projects: { income: projectIncome.data ?? null, expense: projectExpense.data ?? null },
         categories: { income: categoryIncome.data ?? null, expense: categoryExpense.data ?? null },
-        lines: lineReads.flatMap((read, index) => {
-          const rows = lineQueries[index]?.data;
-          return rows == null ? [] : [{ direction: read.direction, categoryKey: read.key, categoryName: read.name, rows, keptOut: read.keptOut }];
-        }),
+        lines: linesAll
+          // Each direction's rows filed under the categories the breakdown lists, in its order, as the per-category reads were.
+          ? categoryGroups.flatMap(({ direction, group }) => {
+              const rows = allQueries[allDirections.indexOf(direction)]?.data;
+              return rows == null ? [] : [{ direction, categoryKey: group.key, categoryName: group.name ?? "", rows: rows.filter((row) => row.group_key === group.key) }];
+            })
+          : lineReads.flatMap((read, index) => {
+              const rows = lineQueries[index]?.data;
+              return rows == null ? [] : [{ direction: read.direction, categoryKey: read.key, categoryName: read.name, rows, keptOut: read.keptOut }];
+            }),
       }
     : null;
   return {

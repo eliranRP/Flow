@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
-// FLOW-1194: the by-category order reads a category's lines when its row scrolls near (or on a tap), once; the date and
-// amount orders read them all in big pages; the search field asks the server. Invented data only.
+// FLOW-1194: the by-category order reads a category's lines when its row scrolls near (or on a tap), once; the search
+// field asks the server. FLOW-1207: the date and amount orders read a direction's every line in one paged read (no group
+// key, pages of 200), where they read each category's lines before (pages of 40). Invented data only.
 type Calls = { rpc: Array<{ name: string; args: Record<string, unknown> | undefined }>; lines: Record<string, unknown>; search: unknown; failing: string[]; disconnects: number };
 const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0 }));
 
@@ -57,6 +58,16 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
     return { basis: "cash", from: "2006-10-01", to: "2026-10-20", by_currency: [row], months: [{ month: "2026-10", from: "2026-10-01", to: "2026-10-20", open: true, by_currency: [row] }] };
   }
   if (name === "get_breakdown_lines" && args?.p_excluded === true) return { rows: [{ ...line("t-kept", "פיקדון לדוגמה"), category_id: "k1" }], has_more: false };
+  if (name === "get_breakdown_lines" && args?.p_group_key === null) {
+    // The server's one read of the direction: every category's rows, newest first (a tie in the server's own order,
+    // here the last category first), each naming its group.
+    const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : [];
+    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map((row) => ({ ...row, group_key: key })))
+      .sort((a, b) => String(b.doc_date).localeCompare(String(a.doc_date)));
+    const offset = Number(args.p_offset);
+    const limit = Number(args.p_limit);
+    return { rows: all.slice(offset, offset + limit), has_more: all.length > offset + limit };
+  }
   if (name === "get_breakdown_lines") return calls.lines[String(args?.p_group_key)] ?? { rows: [], has_more: false };
   if (name === "search_transactions") return calls.search;
   return null;
@@ -64,6 +75,9 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
 
 const lineReads = () => calls.rpc.filter((call) => call.name === "get_breakdown_lines");
 const keysRead = () => lineReads().filter((call) => call.args?.p_excluded !== true).map((call) => call.args?.p_group_key);
+/** The texts, in the order they sit on the page. */
+const textsInOrder = (...texts: string[]) =>
+  texts.map((text) => screen.getByText(text)).sort((a, b) => (a.compareDocumentPosition(b) === 4 ? -1 : 1)).map((node) => node.textContent);
 
 /** An IntersectionObserver whose nodes report only when the test says so (`see`). */
 const watching: Array<{ target: Element; report: () => void }> = [];
@@ -132,13 +146,37 @@ describe("CompanyProfitScreen, the by-category order loads lines on scroll (FLOW
   });
 });
 
-describe("CompanyProfitScreen, the date and amount orders read every category (FLOW-1194)", () => {
-  it("the date order reads every counted category without a scroll, once each, and no kept-out lines", async () => {
+describe("CompanyProfitScreen, the date and amount orders read every line in one call (FLOW-1207)", () => {
+  // Before: one read per counted category (here 2: p_group_key SALARY and INSURANCE, p_limit 40 each). After: one per
+  // direction with a counted category (here 1: the expense direction, p_group_key null, p_limit 200).
+  it("the date order sends one paged read, with no group key, instead of one per category, and no kept-out read", async () => {
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
     expect(await screen.findByText("משכורת לדוגמה")).toBeInTheDocument();
     expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
-    expect(keysRead().sort()).toEqual([SALARY, INSURANCE]);
-    expect(lineReads().some((call) => call.args?.p_excluded === true)).toBe(false);
+    expect(lineReads()).toHaveLength(1);
+    expect(lineReads()[0]?.args).toMatchObject({ p_direction: "expense", p_group_by: "category", p_group_key: null, p_currency: "USD", p_excluded: false, p_limit: 200, p_offset: 0, p_from: "2026-07-01", p_to: "2026-07-31" });
+  });
+
+  it("the amount order sends the same one read", async () => {
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=amount" });
+    expect(await screen.findByText("משכורת לדוגמה")).toBeInTheDocument();
+    expect(lineReads()).toHaveLength(1);
+    expect(lineReads()[0]?.args).toMatchObject({ p_group_key: null, p_limit: 200 });
+  });
+
+  it("two lines of one day and one size keep the category order, whatever order the server gave them", async () => {
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    await screen.findByText("פוליסה לדוגמה");
+    // SALARY is listed before INSURANCE (the breakdown's order); the server answered INSURANCE first.
+    expect(textsInOrder("משכורת לדוגמה", "פוליסה לדוגמה")).toEqual(["משכורת לדוגמה", "פוליסה לדוגמה"]);
+  });
+
+  it("a direction with more lines than a page reads the next page, and shows every line", async () => {
+    calls.lines[SALARY] = { rows: Array.from({ length: 201 }, (_, index) => ({ ...line(`t-s${String(index)}`, `משכורת ${String(index)}`), doc_date: "2026-07-05" })), has_more: false };
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    expect(await screen.findByText("משכורת 200")).toBeInTheDocument();
+    expect(lineReads().map((call) => [call.args?.p_offset, call.args?.p_limit])).toEqual([[0, 200], [200, 200]]);
+    expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
   });
 });
 
