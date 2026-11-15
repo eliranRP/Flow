@@ -96,6 +96,16 @@ export const SettingsSumitBroken: Story = {
   ),
 };
 
+export const SettingsMercuryStuck: Story = {
+  name: "Settings, Mercury sync stuck",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...pagesBusiness, mercuryLastError: "sync_page_cap" }} />
+    </StoryRoute>
+  ),
+};
+
 export const SettingsSetupNotDone: Story = {
   name: "Settings, setup not done",
   render: () => (
