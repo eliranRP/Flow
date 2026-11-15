@@ -31,7 +31,7 @@ const today = israelToday();
 const next = `${today.slice(0, 7)}-next`;
 const slimKey = [FORECAST_EDITS_KEY, "off", "company", today, false];
 const fullKey = [FORECAST_EDITS_KEY, "off", "company", today, true];
-const seeded = { month: next, overhead_project_id: null, projects: [], general: [], edits: [], rest_edits: [] };
+const seeded = { month: next, overhead_project_id: null, projects: [], general: [], edits: [], rest_edits: [], skips: {} };
 
 function Probe() {
   useCompanyNextMonth("ILS", today, true);
@@ -58,7 +58,7 @@ describe("the slim company inputs start from the full answer (FLOW-1191)", () =>
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
     client.setQueryData(fullKey, seeded);
     renderWithProviders(<Probe />, { route: "/", client });
-    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "forecast_overrides_for")).toBe(true); });
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "expected_months")).toBe(true); });
     await new Promise((resolve) => { setTimeout(resolve, 20); });
     expect(client.getQueryData(slimKey)).toEqual(seeded);
     expect(inputCalls()).toHaveLength(0);

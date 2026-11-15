@@ -16,7 +16,7 @@ import { israelToday } from "./ui/date-math";
  * overhead project's edits, the same part the company's צפי page shows under כללי. So a general row opens the
  * overhead project's edit page, and its writes (the overhead project's edits) reach both pages.
  */
-export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string) {
+export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
   // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
@@ -33,7 +33,7 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
   const currencyRead = useCompanyCurrencyQuery(isOverhead);
   const companyCurrency = currencyRead.data ?? currency;
-  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null, undefined, forMonth);
+  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null, undefined, forMonth, false, withOverrides);
   const currencyFailed = currencyRead.data == null && currencyRead.isError;
   const input = company.input;
   const general = useMemo(() => {

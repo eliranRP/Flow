@@ -47,7 +47,7 @@ export type ForecastWrite = { key: string; patch: ForecastPatch; undo: boolean; 
 export function useSetForecastItem(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastWrite>({
-    onSuccess: () => { dropCompanyInputs(client); },
+    onSuccess: () => { void refreshCompanyInputs(client); },
     run: async ({ key, patch, prior, undo }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -64,13 +64,15 @@ export function useSetForecastItem(month: string) {
 }
 
 /**
- * FLOW-1201: Company profit's year views read the company inputs' skips; no screen with a skip control shows them.
- * A write drops those inputs while no screen holds them, so the year view loads fresh and never shows pre-write
- * figures ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of
- * Home's entry).
+ * FLOW-1201, FLOW-1202: the company inputs carry the skips, which Home's next-month card and the overhead project's
+ * totals count. A write refetches the inputs a screen shows, so those counts follow the skip, and drops the ones no
+ * screen holds (Company profit's year views), so they load fresh and never show pre-write figures
+ * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
  */
-function dropCompanyInputs(client: QueryClient) {
-  client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
+function refreshCompanyInputs(client: QueryClient) {
+  const company = (query: { queryKey: readonly unknown[] }) => query.queryKey[2] === "company";
+  client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: company });
+  return client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: company });
 }
 
 /** The patch that puts an item back to its prior state (null: Flow's number). */
@@ -82,7 +84,7 @@ export function priorPatch(prior: ForecastOverrideRow | null): ForecastPatch {
 export function useResetForecastMonth(month: string) {
   const client = useQueryClient();
   return useWrite({
-    onSuccess: () => { dropCompanyInputs(client); },
+    onSuccess: () => { void refreshCompanyInputs(client); },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -99,7 +101,7 @@ export function useResetForecastMonth(month: string) {
 export function useRestoreForecast(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastOverrideRow[]>({
-    onSuccess: () => { dropCompanyInputs(client); },
+    onSuccess: () => { void refreshCompanyInputs(client); },
     run: async (rows) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
