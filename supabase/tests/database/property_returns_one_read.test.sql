@@ -99,7 +99,10 @@ insert into pp (label, id) values
   ('pl-proc', tests.fixture_line(pg_temp.id('co'), 'pp:pl-proc', 11000000, 'income', pg_temp.id('plain'), pg_temp.id('proceeds'), '2026-01-05')),
   ('pl-hold', tests.fixture_line(pg_temp.id('co'), 'pp:pl-hold', 100000, p_project => pg_temp.id('plain'), p_category => pg_temp.id('repairs'), p_doc_date => '2026-02-01')),
   ('pl-rent', tests.fixture_line(pg_temp.id('co'), 'pp:pl-rent', 2400000, 'income', pg_temp.id('plain'), pg_temp.id('rent'), '2026-03-01')),
-  ('pl-rep', tests.fixture_line(pg_temp.id('co'), 'pp:pl-rep', 300000, p_project => pg_temp.id('plain'), p_category => pg_temp.id('repairs'), p_doc_date => '2026-04-01'));
+  ('pl-rep', tests.fixture_line(pg_temp.id('co'), 'pp:pl-rep', 300000, p_project => pg_temp.id('plain'), p_category => pg_temp.id('repairs'), p_doc_date => '2026-04-01')),
+  -- On the last day of the quarter and of the year read below: the cut keeps both ends of a range.
+  ('pl-q-end', tests.fixture_line(pg_temp.id('co'), 'pp:pl-q-end', 210000, 'income', pg_temp.id('plain'), pg_temp.id('rent'), '2026-09-30')),
+  ('pl-y-end', tests.fixture_line(pg_temp.id('co'), 'pp:pl-y-end', 220000, 'income', pg_temp.id('plain'), pg_temp.id('rent'), '2026-12-31'));
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency, project_id)
 values (pg_temp.id('co'), 'Example plain mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 0, 'ILS', pg_temp.id('plain'));
 -- ==== end of fixtures ====
