@@ -242,12 +242,17 @@ export function initialSearchCursor(filters: SearchFilters): SearchCursor {
   return { text: 0, amount: searchAmountRange(filters.q.trim()) == null ? null : 0 };
 }
 
-export function useSearchQuery(filters: SearchFilters, active = true) {
+/**
+ * `overlap: false` skips the overlap read (both filters, one line), which corrects only the first page's total and
+ * months. A screen that draws neither (Company profit's search lists the rows) passes it and sends one read less.
+ */
+export function useSearchQuery(filters: SearchFilters, active = true, options: { overlap?: boolean } = {}) {
   const preview = useHomePreview();
   const key = searchArgs(filters, 0);
   const amount = searchAmountRange(filters.q.trim());
+  const overlap = options.overlap !== false;
   return useInfiniteQuery({
-    queryKey: ["search", preview, key],
+    queryKey: ["search", preview, key, overlap],
     enabled: active && preview === "off",
     // Typing keeps the last results on screen until the new read lands.
     placeholderData: keepPreviousData,
@@ -266,7 +271,7 @@ export function useSearchQuery(filters: SearchFilters, active = true) {
       const [text, byAmount, both] = await Promise.all([
         pageParam.text == null ? undefined : read(searchArgs(filters, pageParam.text)),
         amount == null || pageParam.amount == null ? undefined : read(searchArgs(filters, pageParam.amount, amount)),
-        amount == null || !first ? undefined : read({ ...searchArgs(filters, 0, amount), p_query: filters.q.trim(), p_limit: 1 }),
+        amount == null || !first || !overlap ? undefined : read({ ...searchArgs(filters, 0, amount), p_query: filters.q.trim(), p_limit: 1 }),
       ]);
       return mergeSearchPages({
         text: text && pageParam.text != null ? { page: text, offset: pageParam.text } : undefined,
