@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { QUERY_STALE_MS } from "../query-client";
@@ -212,13 +212,43 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     expect(lineReads().every((call) => call.args?.p_group_key === null)).toBe(true);
   });
 
-  it("a failed read shows the page's failure with a retry, and the retry brings the lines", async () => {
+  it("a failed read keeps the month's figures, shows the list's own failure line, and the retry brings the lines", async () => {
     calls.failing = ["null"];
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
-    fireEvent.click(await screen.findByRole("button", { name: "נסו שוב" }));
+    expect(await screen.findByText("לא הצלחנו לטעון את התנועות.")).toBeInTheDocument();
+    // The page stays: its title and order chips are drawn, and the page failure is not.
+    expect(screen.getByRole("radio", { name: "לפי קטגוריה" })).toBeInTheDocument();
+    expect(screen.queryByText(/לא נטען/)).toBeNull();
     calls.failing = [];
+    fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
     expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
+    expect(screen.queryByText("לא הצלחנו לטעון את התנועות.")).toBeNull();
     expect(lineReads().map((call) => call.args?.p_group_key)).toEqual([null, null]);
+  });
+
+  it("while the one read is in flight the list shows the loading row", async () => {
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    await screen.findByRole("radio", { name: "לפי קטגוריה" });
+    expect(screen.getAllByRole("status").some((node) => node.textContent === "טוען…")).toBe(true);
+    expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
+    expect(screen.queryAllByRole("status").some((node) => node.textContent === "טוען…")).toBe(false);
+  });
+
+  it("a seeded category's rows equal what the keyed read returns, field for field and in order", async () => {
+    calls.lines[INSURANCE] = { rows: [{ ...line("t-i1", "ראשון"), doc_date: "2026-07-09" }, { ...line("t-i2", "שני"), doc_date: "2026-07-03", amount_minor: 5 }], has_more: false };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date", client });
+    await screen.findByText("ראשון");
+    const seeded = client.getQueriesData<unknown[]>({ queryKey: ["breakdown-lines", "company-profit"] }).find(([key]) => key.includes(INSURANCE))?.[1];
+    // The keyed read of the same category, in its own cache.
+    cleanup();
+    const keyed = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=category", client: keyed });
+    fireEvent.click(await screen.findByRole("button", { name: /ביטוח/ }));
+    await screen.findByText("ראשון");
+    const read = keyed.getQueriesData<unknown[]>({ queryKey: ["breakdown-lines", "company-profit"] }).find(([key]) => key.includes(INSURANCE))?.[1];
+    expect(seeded).toHaveLength(2);
+    expect(seeded).toEqual(read);
   });
 
   it("the category order after the date order shows those lines at once, with no new read", async () => {

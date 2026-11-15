@@ -341,9 +341,11 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
       queryFn: async () => {
         const rows = await fetchAllLines(month, direction, null, currency);
         // Every page is in: each counted category's own read is answered too, in the shape and order that read has,
-        // so the category order shows these lines at once, with no read.
-        for (const entry of categoryGroups) {
-          if (entry.direction === direction) client.setQueryData(lineKey(direction, entry.group.key), rows.filter((row) => row.group_key === entry.group.key).map(({ group_key: _group, ...row }) => row));
+        // so the category order shows these lines at once, with no read. The categories are those the breakdown lists
+        // now, not when the read started.
+        const current = groupsIn(client.getQueryData<NonNullable<typeof categoryIncome.data>>(["breakdown", "company-profit", preview, monthRange, "category", direction]) ?? null, currency).filter((group) => group.key !== "");
+        for (const group of current) {
+          client.setQueryData(lineKey(direction, group.key), rows.filter((row) => row.group_key === group.key).map(({ group_key: _group, ...row }) => row));
         }
         return rows;
       },
@@ -352,9 +354,11 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
   // A read that failed in another view or order stays in the cache with its error: only a view that reads it
   // counts it.
   const failed = projectsOn && (dashboard.isError || projectIncome.isError || projectExpense.isError
-    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError))
-    // FLOW-1207: the one read of a direction's lines is the page's failure, with its retry, as a category's read was a line's.
-    || (categoriesOn && linesAll && allQueries.some((query) => query.isError)));
+    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError)));
+  // FLOW-1207: the one read of a direction's lines failing is the list's own line with its retry, as a category's read
+  // was, and the month's figures stay.
+  const allFailed = categoriesOn && linesAll && allQueries.some((query) => query.isError);
+  const allLoading = categoriesOn && linesAll && !allFailed && allQueries.some((query) => query.isPending);
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
   // A category read the order does not draw is not waited for (FLOW-1171).
   const categoriesReady = !categoriesOn || (categoryIncome.data !== undefined && categoryExpense.data !== undefined);
@@ -381,6 +385,9 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     : null;
   return {
     failed,
+    /** FLOW-1207: where the date and amount orders' one read of every line stands: loading, or failed (retryAll reads again). */
+    allState: allFailed ? "failed" : allLoading ? "loading" : null,
+    retryAll: () => { for (const query of allQueries) if (query.isError) void query.refetch(); },
     /** FLOW-1194: where an asked-for category's lines stand while they are not in: loading, or failed (retryLines reads again). */
     linesState: (rowKey: string): "loading" | "failed" | null => {
       const query = lineQueries[lineReads.findIndex((read) => read.id === linesIdOfRow(rowKey))];
