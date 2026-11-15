@@ -368,7 +368,7 @@ Deno.test("a receipt listed before its invoice waits for it, and one after it ta
   assertEquals(db.stored.size, 5 * PAGE);
 });
 
-Deno.test("receipts held over the bound fail the run as before", async () => {
+Deno.test("receipts over the held bound are stored now at the company rate, and the window goes on", async () => {
   const rows: Record<string, unknown>[] = Array.from(
     { length: 5 * PAGE },
     (_, index) => (index < DEFERRED_CAP + 1 ? receipt(index + 1, 900_000 + index) : invoice(index + 1)),
@@ -376,29 +376,89 @@ Deno.test("receipts held over the bound fail the run as before", async () => {
   const sumit = new FakeSumit(0);
   sumit.rows = rows;
   const db = new FakeDb();
-  let failure = "";
-  try {
-    await db.run(sumit, { cap: 2 });
-  } catch (error) {
-    failure = (error as Error).message;
-  }
-  assertEquals(failure, "sync_page_cap");
-  assertEquals(db.stored.size, 0);
+  const first = await db.run(sumit, { cap: 2 });
+  assertFalse(first.finished);
+  assertEquals(pull(db)?.deferred.length, DEFERRED_CAP, "the bound's worth wait for their invoice");
+  assertEquals(first.plan.batch.filter((doc) => doc.kind === "rec").length, 1, "the overflow receipt is stored now");
+  assertEquals(first.plan.lookup.has(900_000 + DEFERRED_CAP), false, "with no invoice to take a rate from: the company rate");
+  await db.run(sumit, { cap: 2 });
+  const last = await db.run(sumit, { cap: 2 });
+  assert(last.finished);
+  assertEquals(db.stored.size, 5 * PAGE, "every document is stored");
+  assertEquals(db.sweeps, 0);
 });
 
-Deno.test("a continuation whose last row has no id cannot be checked later, so the run fails as before", async () => {
+Deno.test("receipts do not all wait when the invoice list went over its bound: past the held bound they are stored", async () => {
+  const rows: Record<string, unknown>[] = Array.from({ length: 6 * PAGE }, (_, index) => invoice(index + 1));
+  for (let index = 2_100; index < 3_300; index += 1) rows[index] = receipt(index + 1, 5);
+  const sumit = new FakeSumit(0);
+  sumit.rows = rows;
+  const db = new FakeDb();
+  const options = { cap: 2, invoicesCap: 100 };
+  await db.run(sumit, options);
+  assertEquals(pull(db)?.invoices, null);
+  const second = await db.run(sumit, options);
+  assertEquals(pull(db)?.deferred.length, DEFERRED_CAP);
+  assertEquals(second.plan.batch.filter((doc) => doc.kind === "rec").length, 1_200 - DEFERRED_CAP);
+  let last = second;
+  while (!last.finished) last = await db.run(sumit, options);
+  assertEquals(db.stored.size, 6 * PAGE);
+});
+
+Deno.test("invoice rates past the bound are not carried and do not fail the run", async () => {
+  const rows: Record<string, unknown>[] = Array.from({ length: 5 * PAGE }, (_, index) => invoice(index + 1, index < 2_100 ? 0 : 17));
+  const sumit = new FakeSumit(0);
+  sumit.rows = rows;
+  const db = new FakeDb();
+  const first = await db.run(sumit, { cap: 3 });
+  assertFalse(first.finished);
+  assertEquals(Object.keys(pull(db)?.rates ?? {}).length, 2_000);
+  assertEquals(db.stored.size, 3 * PAGE);
+});
+
+Deno.test("a continuation whose last row has no id is stored without an anchor, and counts toward the stuck rule", async () => {
   const sumit = new FakeSumit(25 * PAGE);
   sumit.rows[20 * PAGE - 1] = { ...invoice(20_000), ID: "x" };
   const db = new FakeDb();
-  let failure = "";
-  try {
-    await db.run(sumit);
-  } catch (error) {
-    failure = (error as Error).message;
+  const first = await db.run(sumit);
+  assertFalse(first.finished);
+  assertEquals(db.stored.size, 20 * PAGE - 1, "the pages are stored, not failed");
+  assertEquals(pull(db)?.anchor, null);
+  const states: string[] = [];
+  for (let run = 0; run < 3; run += 1) {
+    const ran = await db.run(sumit);
+    assertEquals(ran.plan.event, "repeated", "it cannot check the list, so it starts over");
+    states.push(pullState(db.settings, SUMIT_COMPANY));
   }
-  assertEquals(failure, "sync_page_cap");
-  assertEquals(db.stored.size, 0);
-  assertEquals(db.settings, {});
+  assertEquals(states, ["once", "twice", "stuck"]);
+  assert(pullSkips(db.settings, SUMIT_COMPANY, { force: false, drained: true }));
+  assertFalse(pullSkips(db.settings, SUMIT_COMPANY, { force: true, drained: false }));
+});
+
+Deno.test("a document that crosses the resume boundary with the anchor row in place is missed until a later window; nothing is removed and the window finishes", async () => {
+  const sumit = new FakeSumit(45 * PAGE);
+  const db = new FakeDb();
+  const missed = 26_001;
+  await db.run(sumit);
+  db.stored.set(missed, { ...(invoice(missed) as unknown as SumitDoc), sumit_id: missed });
+  // Two rows swap places: one already listed (index 5) and one not yet listed (index 26,000). The
+  // anchor row (index 19,999) has not moved, so the shift is not detected, and no run lists the
+  // document that moved to index 5. This is the documented limit: a later window lists it.
+  const early = sumit.rows[5];
+  sumit.rows[5] = sumit.rows[26_000] as Record<string, unknown>;
+  sumit.rows[26_000] = early as Record<string, unknown>;
+  const second = await db.run(sumit);
+  assertEquals(second.plan.event, "capped", "the shift is not detected");
+  const last = await (async () => {
+    let ran = second;
+    while (!ran.finished) ran = await db.run(sumit);
+    return ran;
+  })();
+  assert(last.finished);
+  assertEquals(db.sweeps, 0);
+  assertEquals(db.removed, [], "nothing is removed");
+  assert(db.stored.has(missed), "the missed document is still stored");
+  assertEquals(pull(db), null);
 });
 
 Deno.test("a window restarted by a shifted list that then ends in one run sweeps and clears the pull", async () => {

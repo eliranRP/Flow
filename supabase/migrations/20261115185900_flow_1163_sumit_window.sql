@@ -5,7 +5,7 @@
 --
 -- 1. public.upsert_sumit_window(p_company, p_docs, p_complete, p_pull) is upsert_sumit_documents with two
 --    more arguments, read from its current definition with counted anchors:
---    - p_complete false stores the documents and never sweeps (upsert_connector_lines sweeps only a
+--    - p_complete false (and null, the default) stores the documents and never sweeps (upsert_connector_lines sweeps only a
 --      complete list). Every run of a window that takes more than one run calls it so, the one that
 --      finishes it included: SUMIT's list has no stable order, so a document no run listed could be
 --      one that moved between runs, and a wrong removal deletes a real line. Only a window listed
@@ -50,7 +50,7 @@ begin
     raise exception 'upsert_sumit_documents does not build the expected line list';
   end if;
   def := replace(def, anchor,
-    $n$jsonb_build_object('lines', lines, 'removed_ids', '[]'::jsonb, 'complete', coalesce(p_complete, true))$n$);
+    $n$jsonb_build_object('lines', lines, 'removed_ids', '[]'::jsonb, 'complete', coalesce(p_complete, false))$n$);
   anchor := $a$  return saved.inserted + saved.updated;
 $a$;
   if pg_temp.anchor_count(def, anchor) <> 1 then

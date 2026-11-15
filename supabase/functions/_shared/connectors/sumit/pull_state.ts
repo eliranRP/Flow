@@ -10,7 +10,11 @@ import { PULL_REPEATS, type SumitPullState } from "./machines.ts";
 export const PULL_KEY = "pull";
 /** Invoice ids a window may keep across its runs, to tell a receipt its invoice was listed. Over it the list is dropped. */
 export const INVOICES_CAP = 100_000;
-/** Receipts held back until their invoice is listed, and invoice VAT rates kept; over either, the run fails as before. */
+/**
+ * Receipts held back until their invoice is listed, and invoice VAT rates kept. Over either bound a run does not fail:
+ * a receipt past the bound is stored at once with the company's rate (what a receipt whose invoice never
+ * appears gets), and a rate past it is not carried, so receipts of that invoice take the company rate too.
+ */
 export const DEFERRED_CAP = 1_000;
 export const RATES_CAP = 2_000;
 
@@ -20,9 +24,9 @@ export interface Pull {
   company: number;
   /** When the window opened (informational). */
   at: string;
-  /** The offset the next run continues at, and the id of the row just before it (the check that the list did not shift). */
+  /** The offset the next run continues at, and the id of the row just before it (the check that the list did not shift). A last row with no id leaves null: the next run cannot check, so it starts over and counts toward the stuck rule. */
   start: number;
-  anchor: number;
+  anchor: number | null;
   /** Runs in a row that left the continuation where it was (`PULL_REPEATS`). */
   repeats: number;
   /** Ids of the invoices the window's earlier runs listed (a receipt's rate is read from them); null when over INVOICES_CAP. */
@@ -57,7 +61,7 @@ function isDoc(value: unknown): value is SumitDoc {
 export function readPull(settings: Record<string, unknown>, sumitCompanyId: number): Pull | null {
   const raw = settings[PULL_KEY];
   if (!isRecord(raw) || raw.v !== 1 || raw.company !== sumitCompanyId) return null;
-  if (!isText(raw.at) || !isInt(raw.start) || raw.start < 1 || !isInt(raw.anchor)) return null;
+  if (!isText(raw.at) || !isInt(raw.start) || raw.start < 1 || (raw.anchor !== null && !isInt(raw.anchor))) return null;
   if (!isInt(raw.repeats) || raw.repeats < 0) return null;
   let invoices: number[] | null = null;
   if (raw.invoices !== null) {

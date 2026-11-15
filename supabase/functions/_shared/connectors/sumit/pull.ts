@@ -70,16 +70,18 @@ export interface WindowList {
  */
 export async function listWindow(
   fetchPage: (start: number) => Promise<Record<string, unknown>>,
-  resume: { start: number; anchor: number } | null,
+  resume: { start: number; anchor: number | null } | null,
   cap: number = SUMIT_PAGE_CAP,
 ): Promise<WindowList> {
   let docs: SumitDoc[] = [];
   let tally: CrmTally = { mapped: 0, broken: {} };
   let skippedKinds = new Map<string, number>();
   let reads = 0;
-  let restarted = false;
-  let verify = resume?.anchor ?? null;
-  let start = resume == null ? 0 : resume.start - 1;
+  // A continuation with no anchor cannot be checked: start over (counted as a repeat).
+  const checkable = resume != null && resume.anchor != null;
+  let restarted = resume != null && !checkable;
+  let verify = checkable ? resume.anchor : null;
+  let start = checkable ? resume.start - 1 : 0;
   let last: number | null = null;
   let pages = 0;
   while (pages < cap) {
@@ -183,8 +185,10 @@ export function planRun(input: {
   for (const doc of list.docs) {
     if (doc.kind !== "inv" && doc.kind !== "invrec") continue;
     const bp = doc.gross === 0 ? input.companyRateBp : linkedRateBp(doc, input.companyRateBp);
-    if (bp === input.companyRateBp) delete rates[String(doc.sumit_id)];
-    else rates[String(doc.sumit_id)] = bp;
+    const key = String(doc.sumit_id);
+    if (bp === input.companyRateBp) delete rates[key];
+    // Past RATES_CAP a rate is not carried: receipts of that invoice take the company rate.
+    else if (key in rates || Object.keys(rates).length < RATES_CAP) rates[key] = bp;
   }
   const lookup = new Map(own);
   for (const [id, bp] of Object.entries(rates)) {
@@ -209,11 +213,13 @@ export function planRun(input: {
     };
   }
 
-  if (list.next == null || list.next.anchor == null) return { kind: "fail", code: "sync_page_cap" };
+  // Not reachable (a run that did not end has a continuation), kept so the type narrows.
+  if (list.next == null) return { kind: "fail", code: "sync_page_cap" };
   const earlier = prev == null ? new Set<number>() : prev.invoices == null ? null : new Set(prev.invoices);
   const resolvable = (orig: number): boolean => own.has(orig) || String(orig) in rates || (earlier?.has(orig) ?? false);
-  const deferred = candidates.filter((doc) => doc.kind === "rec" && doc.orig != null && !resolvable(doc.orig));
-  if (deferred.length > DEFERRED_CAP || Object.keys(rates).length > RATES_CAP) return { kind: "fail", code: "sync_page_cap" };
+  // The first DEFERRED_CAP receipts whose invoice is not listed yet wait for it; the rest are stored now
+  // with the company rate and are not re-rated later (the documented trade, FLOW-1163).
+  const deferred = candidates.filter((doc) => doc.kind === "rec" && doc.orig != null && !resolvable(doc.orig)).slice(0, DEFERRED_CAP);
   const held = new Set(deferred.map((doc) => doc.sumit_id));
   let invoices: number[] | null = null;
   if (earlier != null) {

@@ -8,7 +8,7 @@
 
 begin;
 
-select plan(29);
+select plan(30);
 
 do $users$
 begin
@@ -143,6 +143,11 @@ select is((select h.kind || ':' || h.state from private.closed_line_holds h
   where h.company_id = pg_temp.co() and h.transaction_id = (select t.id from public.transactions t
     where t.company_id = pg_temp.co() and t.source = 'sumit' and t.external_id = '200')), 'remove:held',
   'its removal is held (FLOW-1166)');
+
+-- 6b. The default is not to sweep: a caller that sends no p_complete removes nothing.
+select pg_temp.win(pg_temp.docs(1, 11) || jsonb_build_array(pg_temp.sd(103)), false, null);
+select pg_temp.win(pg_temp.docs(1, 11), null, null);
+select is(pg_temp.live(103), true, 'a null p_complete does not sweep');
 
 -- 7. A pull that is not an object is refused.
 select throws_ok(
