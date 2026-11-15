@@ -24,7 +24,7 @@ function ProfitRoute({ entry, data = sample }: { entry: string; data?: typeof sa
   );
 }
 
-/** FLOW-1044 (board V3-ProjectProfit): the band, then לפי חודש with its sticky head. */
+/** FLOW-1044 (board V3-ProjectProfit): the band, then לפי חודש with its sticky head, and a sticky head per year. */
 export const ProjectProfit: Story = {
   name: "Project profit, by month",
   render: () => <ProfitRoute entry="/projects/juniper-ct/profit" />,
@@ -32,6 +32,9 @@ export const ProjectProfit: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("heading", { level: 1, name: "רווח מתחילת הפרויקט" })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "לפי חודש" })).toBeInTheDocument();
+    // Twenty months since March 2025: a sticky head per year, newest first (concept A, sticky year heads).
+    await expect(canvas.getByRole("heading", { name: "2026" })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "2025" })).toBeInTheDocument();
   },
 };
 
