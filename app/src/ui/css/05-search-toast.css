@@ -91,7 +91,7 @@
   max-inline-size: var(--content-max);
   min-block-size: var(--control-height);
   border-radius: var(--radius-toast);
-  padding: 0 var(--space-4);
+  padding: var(--space-2) var(--space-4);
   background: var(--color-toast-bg);
   color: var(--color-toast-text);
   font-size: var(--type-line2-size);

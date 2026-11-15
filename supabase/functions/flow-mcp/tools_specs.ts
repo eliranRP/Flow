@@ -480,12 +480,12 @@ function writeTools() {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
     }, true),
-    toolSpec("set_category_pnl", "Count a category in the P&L or keep it out. Undo restores the prior setting.", {
+    toolSpec("set_category_pnl", "Count a category in the P&L or keep it out. Undo restores the prior setting. Refused while it would move a figure in a closed period (the books are closed through YYYY-MM-DD: this setting changes them); move the closed date back with set_books_closed_through first.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
       excluded: { type: "boolean" },
     }, true),
-    toolSpec("set_overhead_project", "Mark one project as the company's overhead project, so cost filed to it counts as overhead, not direct. project_id null clears it. Undo is kind overhead_project with the company id.", {
+    toolSpec("set_overhead_project", "Mark one project as the company's overhead project, so cost filed to it counts as overhead, not direct. project_id null clears it. Undo is kind overhead_project with the company id. Refused while it would move a figure in a closed period (the books are closed through YYYY-MM-DD: this setting changes them); move the closed date back with set_books_closed_through first.", {
       idempotency_key: { type: "string" },
       project_id: { type: ["string", "null"] },
     }, true),
@@ -711,7 +711,7 @@ function writeTools() {
       mode: { type: "string", enum: ["off", "shadow", "auto"] },
       threshold: { type: "number" },
     }, true),
-    toolSpec("set_category_cash", "Count a category in the cash view (get_cash_months) or keep it out. in_cash false leaves its lines out of the view, unless a line's own set_line_cash keeps it in; a line whose category is only a guess still counts. Separate from the P&L switch (set_category_pnl). Returns id, in_cash and undo_kind; undo is kind category_cash with the category id, a conflict once the flag was changed again.", {
+    toolSpec("set_category_cash", "Count a category in the cash view (get_cash_months) or keep it out. in_cash false leaves its lines out of the view, unless a line's own set_line_cash keeps it in; a line whose category is only a guess still counts. Separate from the P&L switch (set_category_pnl). Returns id, in_cash and undo_kind; undo is kind category_cash with the category id, a conflict once the flag was changed again. Refused while it would move a figure in a closed period (the books are closed through YYYY-MM-DD: this setting changes them); move the closed date back with set_books_closed_through first.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
       in_cash: { type: "boolean" },
@@ -736,7 +736,7 @@ function writeTools() {
         },
       },
     }, true),
-    toolSpec("set_cash_basis", "Set the month the cash view counts a line in (owner only): paid (the default) is the payment date, and an open invoice is not cash yet; invoice is the document date, open invoices included. It is the company's one date choice: the P&L tools called without a basis follow it too (paid as cash, invoice as invoiced), as the app does. Returns basis, prior_basis and undo_kind; undo is kind cash_basis with the company id (id in the result), a conflict once the basis was changed again.", {
+    toolSpec("set_cash_basis", "Set the month the cash view counts a line in (owner only): paid (the default) is the payment date, and an open invoice is not cash yet; invoice is the document date, open invoices included. It is the company's one date choice: the P&L tools called without a basis follow it too (paid as cash, invoice as invoiced), as the app does. Returns basis, prior_basis and undo_kind; undo is kind cash_basis with the company id (id in the result), a conflict once the basis was changed again. Refused while it would move a figure in a closed period (the books are closed through YYYY-MM-DD: this setting changes them); move the closed date back with set_books_closed_through first.", {
       idempotency_key: { type: "string" },
       basis: { type: "string", enum: ["paid", "invoice"] },
     }, true),

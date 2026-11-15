@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { booksClosedSettingNote } from "../company-role-cache";
 import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
 import { CategoriesScreen } from "./flow-screens";
@@ -152,6 +153,19 @@ describe("categories kept out of the P&L", () => {
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
     expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן אי אפשר לשנות אם היא נספרת ברווח.")).toBeInTheDocument();
+  });
+
+  it("says the closed books refuse the switch, with no retry, and the category stays counted (FLOW-1170)", async () => {
+    rpc.pnlRefusal = "the books are closed through 2026-05-31: this setting changes them";
+    renderScreen(<CategoriesScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: /^חומרים/ }));
+    const sheet = await screen.findByRole("dialog", { name: "חומרים" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
+    expect(await screen.findByText(booksClosedSettingNote("2026-05-31"))).toBeInTheDocument();
+    expect(screen.queryByText("לא הצלחנו לעדכן את הקטגוריה.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר", hidden: true })).not.toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "לא לספור ברווח" })).toBeEnabled();
+    expect(screen.getAllByText(/לא נספרת ברווח$/)).toHaveLength(2);
   });
 
   it("waits for the save when the sheet is dismissed mid-write", async () => {

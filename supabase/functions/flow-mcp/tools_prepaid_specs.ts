@@ -110,7 +110,7 @@ export const PREPAID_WRITE_SPECS = [
   ),
   spec(
     "set_books_closed_through",
-    `Set the books-closed date (FLOW-156): date is YYYY-MM-DD, or null to open the books again. Prepaid writes then refuse to add, change or remove a posted month dated on or before it (the books are closed through YYYY-MM-DD). Refused: (only the owner can close the books ; the date is after today ; post the due prepaid rows first). It is shown in list_prepaid_schedules and get_started. Returns books_closed_through, previous and undo_kind books_closed; undo is kind books_closed with the company id and puts the previous date back while it reads as written.`,
+    `Set the books-closed date (FLOW-156): date is YYYY-MM-DD, or null to open the books again. Prepaid writes then refuse to add, change or remove a posted month dated on or before it (the books are closed through YYYY-MM-DD). A setting that would move a figure on or before it is refused too (set_cash_basis, set_category_pnl, set_category_cash, set_category_account, set_overhead_project: the books are closed through YYYY-MM-DD: this setting changes them). Refused: (only the owner can close the books ; the date is after today ; post the due prepaid rows first). It is shown in list_prepaid_schedules and get_started. Returns books_closed_through, previous and undo_kind books_closed; undo is kind books_closed with the company id and puts the previous date back while it reads as written.`,
     {
       idempotency_key: { type: "string" },
       date: { type: ["string", "null"] },

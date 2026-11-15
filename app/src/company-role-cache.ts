@@ -14,6 +14,11 @@ export function booksClosedNote(closedThrough: string): string {
   return `הספרים סגורים עד ${formatDisplay(closedThrough)}. כדי לשנות שורה מהתקופה הזו, הזיזו אחורה את תאריך הסגירה דרך עוזר ה־AI.`;
 }
 
+/** FLOW-1170: the database refuses a setting (the date basis, a category's P&L switch) that would move a closed figure. */
+export function booksClosedSettingNote(closedThrough: string): string {
+  return `הספרים סגורים עד ${formatDisplay(closedThrough)}, וההגדרה הזו משנה אותם. כדי לשנות, הזיזו אחורה את תאריך הסגירה דרך עוזר ה־AI.`;
+}
+
 /** Last successful role, keyed by user id. The value names the company. */
 const COMPANY_ROLE_CACHE_KEY = "flow-company-role";
 
