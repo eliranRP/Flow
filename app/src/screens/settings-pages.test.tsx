@@ -59,6 +59,17 @@ describe("connectionsHint", () => {
     ])).toEqual({ kind: "attention", text: "2 צריכים חיבור" });
   });
 
+  it("shows דורש טיפול for a stuck Mercury sync, and SUMIT's own problem first (FLOW-1162)", () => {
+    expect(connectionsHint([
+      { name: "SUMIT", state: "active" },
+      { name: "Mercury", state: "stuck" },
+    ])).toEqual({ kind: "attention", text: "דורש טיפול" });
+    expect(connectionsHint([
+      { name: "SUMIT", state: "reconnect" },
+      { name: "Mercury", state: "stuck" },
+    ])).toEqual({ kind: "attention", text: "SUMIT צריך חיבור" });
+  });
+
   it("never guesses a count while one status loads or fails", () => {
     expect(connectionsHint([{ name: "SUMIT", state: "loading" }, { name: "Mercury", state: "error" }])).toEqual({ kind: "loading" });
     expect(connectionsHint([{ name: "SUMIT", state: "active" }, { name: "Mercury", state: "error" }])).toEqual({ kind: "error" });
@@ -91,6 +102,19 @@ describe("Settings rows", () => {
     const connections = screen.getByRole("link", { name: /^חיבורים/ });
     expect(valueOf(connections)).toContain("Mercury צריך חיבור");
     expect(connections.querySelector(".ui-row-value-signal")).not.toBeNull();
+  });
+
+  it("shows דורש טיפול in the signal tone while a Mercury sync is stuck, and the count when none is (FLOW-1162)", () => {
+    const { unmount } = renderAt(<SettingsScreen sample={{ ...business, mercuryLastError: "sync_page_cap" }} />);
+    const stuck = screen.getByRole("link", { name: /^חיבורים/ });
+    expect(valueOf(stuck)).toContain("דורש טיפול");
+    expect(valueOf(stuck)).not.toContain("פעילים");
+    expect(stuck.querySelector(".ui-row-value-signal")).toHaveTextContent("דורש טיפול");
+    unmount();
+    renderAt(<SettingsScreen sample={{ ...business, mercuryLastError: null }} />);
+    const normal = screen.getByRole("link", { name: /^חיבורים/ });
+    expect(valueOf(normal)).toContain("3 פעילים");
+    expect(normal.querySelector(".ui-row-value-signal")).toBeNull();
   });
 
   it("counts two broken connectors", () => {

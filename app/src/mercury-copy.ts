@@ -32,6 +32,9 @@ const MERCURY_ERRORS: Record<string, string> = {
 /** FLOW-1178: the connections list says the refresh is stuck before the row's last good update. */
 export const MERCURY_STUCK = "הרענון נתקע";
 
+/** FLOW-1162: the Settings חיבורים row's words while a Mercury sync is stuck (the owner, 2026-11-15): the Home attention section's words. */
+export const MERCURY_NEEDS_ATTENTION = "דורש טיפול";
+
 /** FLOW-1178: the stuck refresh's box links to the support address (FLOW-850). */
 export const MERCURY_SUPPORT = "פנייה לתמיכה";
 

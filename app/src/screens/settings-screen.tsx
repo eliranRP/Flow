@@ -37,6 +37,8 @@ import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-st
 import { ThemeSheet } from "./theme-sheet";
 import { SettingsOfflineLine, SIGN_OUT_OFFLINE, useOfflineRefusal } from "./settings-offline";
 import { flushDisconnects } from "../connection-undo";
+import { MERCURY_NEEDS_ATTENTION } from "../mercury-copy";
+import { mercuryProblem } from "../mercury-state";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -88,7 +90,8 @@ export type SettingsSample = {
 };
 
 /** One connector as the Settings חיבורים row counts it (FLOW-501). */
-export type ConnectorTally = { name: string; state: "loading" | "error" | "active" | "off" | "reconnect" };
+/** "stuck": a Mercury sync ended on the page cap (FLOW-1162); it shows only when no connector needs its key again. */
+export type ConnectorTally = { name: string; state: "loading" | "error" | "active" | "off" | "reconnect" | "stuck" };
 
 export type ConnectionsHint =
   | { kind: "loading" }
@@ -106,6 +109,7 @@ export function connectionsHint(list: readonly ConnectorTally[]): ConnectionsHin
   const broken = list.filter((item) => item.state === "reconnect");
   if (broken.length === 1) return { kind: "attention", text: `${broken[0]?.name ?? ""} צריך חיבור` };
   if (broken.length > 1) return { kind: "attention", text: `${String(broken.length)} צריכים חיבור` };
+  if (list.some((item) => item.state === "stuck")) return { kind: "attention", text: MERCURY_NEEDS_ATTENTION };
   return { kind: "count", active: list.filter((item) => item.state === "active").length, total: list.length };
 }
 
@@ -265,7 +269,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const tallies: ConnectorTally[] = sample
     ? [
       { name: "SUMIT", state: sample.sumit ?? (sample.lastError === "sumit_auth" ? "reconnect" : sample.connected ? "active" : "off") },
-      { name: "Mercury", state: sample.mercury ?? (sample.mercuryLastError === "auth" ? "reconnect" : sample.mercuryConnected === true ? "active" : "off") },
+      { name: "Mercury", state: sample.mercury ?? (sample.mercuryLastError === "auth" ? "reconnect" : sample.mercuryLastError === "sync_page_cap" ? "stuck" : sample.mercuryConnected === true ? "active" : "off") },
       { name: "תיוג חכם", state: (() => {
         const state = sample.jev ?? JEV_DEFAULT;
         if (state.status === "loading" || state.status === "error") return state.status;
@@ -275,7 +279,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     ]
     : [
       queryTally("SUMIT", sumit, () => (sumit.data?.last_error === "sumit_auth" ? "reconnect" : sumit.data?.connected === true ? "active" : "off")),
-      queryTally("Mercury", mercury, () => (mercury.data?.last_error === "auth" ? "reconnect" : mercury.data?.connected === true ? "active" : "off")),
+      queryTally("Mercury", mercury, () => (mercury.data?.last_error === "auth" ? "reconnect" : mercury.data?.connections.some((connection) => mercuryProblem(connection) === "page_cap") ? "stuck" : mercury.data?.connected === true ? "active" : "off")),
       queryTally("תיוג חכם", jev, () => (jevOn && !jevKeyMissing ? "active" : "off")),
       queryTally("AI", assistant, () => {
         const state = assistant.data?.state;
