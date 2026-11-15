@@ -16,7 +16,7 @@ import { OrderChips } from "../ui/order-chips";
 import { List, ListRow } from "../ui/list-row";
 import type { ScreenPhase } from "../ui/screen-phase";
 import { ScreenHeader } from "../ui/screen-header";
-import { ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
+import { LineRowSkeleton, ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { rowSource } from "../ui/line-marks";
@@ -24,7 +24,7 @@ import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, linesIdOfRow, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
 import { EMPTY_FILTERS, SEARCH_DEBOUNCE_MS, searchRowDetails, searchRowTitle, uniqueSearchRows, useDebounced, useSearchQuery } from "../search";
 import { SearchField } from "../ui/search-field";
-import { SearchEmptyState } from "../ui/empty-state";
+import { FailureLine, SearchEmptyState } from "../ui/empty-state";
 import { Button } from "../ui/button";
 import { byDateThenSize, bySizeOnly, companyCategoryGroups, companyKeptOutCategories, companySummaryRows } from "../company-profit-rows";
 import { useAfterFirstPaint } from "../after-paint";
@@ -395,6 +395,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
             </List>
           </section>
         ))}
+        {/* FLOW-1207: the one read of every line, while it is not in: the category rows' own loading row and failure line. */}
+        {sample == null && live.allState === "loading" ? <LineRowSkeleton /> : null}
+        {sample == null && live.allState === "failed" ? <FailureLine offline={false} message="לא הצלחנו לטעון את התנועות." onRetry={live.retryAll} /> : null}
       </>
     );
   }
