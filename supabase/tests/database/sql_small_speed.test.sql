@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(29);
+select plan(30);
 
 do $users$
 begin
@@ -89,35 +89,42 @@ select is(
   'another company''s owner reads its own line, not the first company''s'
 );
 
--- projects_cash_month for the first company: the waiting count of each project.
+-- projects_cash_month for the first company: the waiting count of a project, in the answer for that project (FLOW-1204:
+-- the list's own answer has no counts).
 select tests.authenticate_as('sle_owner');
 
 select is(
   (select (p ->> 'pending_count')::int
-     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', null) -> 'projects') p
+     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', pg_temp.id('house')) -> 'projects') p
     where p ->> 'id' = pg_temp.id('house')::text),
   jsonb_array_length(public.project_waiting(pg_temp.id('house'))),
   'projects_cash_month counts the house''s waiting lines as project_waiting lists them'
 );
 select is(
   (select (p ->> 'pending_count')::int
-     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', null) -> 'projects') p
+     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', pg_temp.id('house')) -> 'projects') p
     where p ->> 'id' = pg_temp.id('house')::text),
   2,
   'the two lines with an open review row wait on the house'
 );
 select is(
   (select (p ->> 'pending_count')::int
-     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', null) -> 'projects') p
+     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', pg_temp.id('shop')) -> 'projects') p
     where p ->> 'id' = pg_temp.id('shop')::text),
   0,
   'a project with no waiting line counts zero'
 );
 select is(
-  (select sum((p ->> 'pending_count')::int)
-     from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', null) -> 'projects') p),
+  (select sum((public.projects_cash_month('2026-09-01', '2026-09-20', s.id) -> 'projects' -> 0 ->> 'pending_count')::int)
+     from public.projects s where s.company_id = pg_temp.id('co')),
   (select sum(jsonb_array_length(public.project_waiting(s.id))) from public.projects s where s.company_id = pg_temp.id('co')),
   'the waiting counts of all the company''s projects add up to project_waiting''s'
+);
+select is(
+  (select count(*)::int from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', null) -> 'projects') p
+    where p ? 'pending_count' or p ? 'deletable'),
+  0,
+  'the list''s answer (no p_project) has neither pending_count nor deletable'
 );
 select is(
   (select count(*)::int from jsonb_array_elements(public.projects_cash_month('2026-09-01', '2026-09-20', null) -> 'projects') p

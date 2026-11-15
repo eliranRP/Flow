@@ -15,7 +15,6 @@ const row = (id: string, name: string) => ({
   type: null,
   status: "active",
   is_overhead: false,
-  group_id: null,
   created_at: "2026-01-01T00:00:00Z",
   finished_on: null,
   budget_minor: null,
@@ -23,15 +22,11 @@ const row = (id: string, name: string) => ({
   cash: [{ currency: "ILS", in_minor: 100_000, out_minor: 40_000, net_minor: 60_000 }],
   profit_all_minor: 60_000,
   first_month: "2026-01-01",
-  pending_count: 0,
-  deletable: false,
 });
 
 // Invented projects only.
 const list = {
-  month: "2026-10-01",
   base_currency: "ILS",
-  basis: "paid",
   projects: [row("p1", "בית הברוש"), row("p2", "מחסן האלה")],
   unassigned: { count: 0, cash: [] },
 };
@@ -41,7 +36,8 @@ vi.mock("./lib/supabase", () => ({
     rpc: (name: string, args: unknown) => {
       rpc.calls.push({ name, args });
       const project = (args as { p_project?: string }).p_project;
-      return Promise.resolve({ data: project == null ? list : { ...list, projects: list.projects.filter((p) => p.id === project) }, error: null });
+      // The server's answer for one project carries the menu's two figures; the list's has neither (FLOW-1204).
+      return Promise.resolve({ data: project == null ? list : { ...list, projects: list.projects.filter((p) => p.id === project).map((p) => ({ ...p, pending_count: 2, deletable: true })) }, error: null });
     },
   }),
 }));
@@ -78,18 +74,23 @@ describe("the app's query client", () => {
 });
 
 describe("a project's row on its page", () => {
-  it("starts from the Projects list's read, with no read of its own while the list's is fresh", async () => {
+  it("paints the Projects list's row at once and reads its own row, which has the menu's figures (FLOW-1204)", async () => {
     const client = createQueryClient();
     client.setQueryData(["projects-cash", undefined, undefined], list);
     const { result } = renderHook(() => useProjectsCashMonth(undefined, "p2"), { wrapper: wrapper(client) });
     expect(result.current.data?.projects.map((p) => p.name)).toEqual(["מחסן האלה"]);
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
-    expect(rpc.calls).toEqual([]);
+    expect(result.current.data?.projects[0]?.pending_count).toBeUndefined();
+    await waitFor(() => { expect(rpc.calls.map((c) => c.name)).toEqual(["projects_cash_month"]); });
+    expect((rpc.calls[0]?.args as { p_project?: string }).p_project).toBe("p2");
+    await waitFor(() => { expect(result.current.data?.projects[0]).toMatchObject({ pending_count: 2, deletable: true }); });
   });
 
-  it("paints the list's row at once and reads again when the list's read is old", async () => {
+  it("reads its own row at once, though the list's read is recent or a write marked it stale", async () => {
     const client = createQueryClient();
-    client.setQueryData(["projects-cash", undefined, undefined], list, { updatedAt: Date.now() - QUERY_STALE_MS - 1_000 });
+    client.setQueryData(["projects-cash", undefined, undefined], list);
+    // A write that saves through Supabase directly and refreshes only "dashboard" (as upsert_project does).
+    const write = renderHook(() => useInvalidateBooks(), { wrapper: wrapper(client) });
+    await act(async () => { await write.result.current(["dashboard"]); });
     const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1"), { wrapper: wrapper(client) });
     expect(result.current.data?.projects.map((p) => p.name)).toEqual(["בית הברוש"]);
     await waitFor(() => { expect(rpc.calls.map((c) => c.name)).toEqual(["projects_cash_month"]); });
@@ -103,16 +104,12 @@ describe("a project's row on its page", () => {
     await waitFor(() => { expect(result.current.data?.projects.map((p) => p.id)).toEqual(["p1"]); });
   });
 
-  it("reads again when a write marked the list stale, though the list's read is recent", async () => {
+  it("reads the list with no project, once", async () => {
     const client = createQueryClient();
-    client.setQueryData(["projects-cash", undefined, undefined], list);
-    // A write that saves through Supabase directly and refreshes only "dashboard" (as upsert_project does).
-    const write = renderHook(() => useInvalidateBooks(), { wrapper: wrapper(client) });
-    await act(async () => { await write.result.current(["dashboard"]); });
-    const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1"), { wrapper: wrapper(client) });
-    expect(result.current.data?.projects.map((p) => p.name)).toEqual(["בית הברוש"]);
-    await waitFor(() => { expect(rpc.calls.map((c) => c.name)).toEqual(["projects_cash_month"]); });
-    expect((rpc.calls[0]?.args as { p_project?: string }).p_project).toBe("p1");
+    const { result } = renderHook(() => useProjectsCashMonth(), { wrapper: wrapper(client) });
+    await waitFor(() => { expect(result.current.data?.projects).toHaveLength(2); });
+    expect((rpc.calls[0]?.args as { p_project?: string }).p_project).toBeUndefined();
+    expect(rpc.calls).toHaveLength(1);
   });
 });
 

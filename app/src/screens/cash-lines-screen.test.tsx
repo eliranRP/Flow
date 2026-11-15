@@ -72,13 +72,10 @@ const lines = {
 
 // FLOW-1157: the project's row of the month, as projects_cash_month answers for one project.
 const projectsMonth = {
-  month: `${earlier}-01`,
   base_currency: "ILS",
-  basis: "paid",
   projects: [{
-    id: "p1", name: "בית לדוגמה", type: null, status: "active", is_overhead: false, group_id: null, created_at: `${earlier}-01T00:00:00Z`,
+    id: "p1", name: "בית לדוגמה", type: null, status: "active", is_overhead: false, created_at: `${earlier}-01T00:00:00Z`,
     finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_all_minor: 0, first_month: null,
-    pending_count: 0, deletable: false,
   }],
   unassigned: { count: 0, cash: [] },
 };

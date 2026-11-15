@@ -6,7 +6,7 @@ import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
 
 /** FLOW-445: one project's row in the month's cash (the list reads projects_cash_month). Invented names only. */
-function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; group?: string | null; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
+function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
   const net = input.net ?? 0;
   return {
     id: input.id,
@@ -14,7 +14,6 @@ function cashRow(input: { id: string; name: string; net?: number; type?: string 
     type: input.type ?? null,
     status: input.status ?? "active",
     is_overhead: input.overhead ?? false,
-    group_id: input.group ?? null,
     created_at: input.fresh ? "2026-10-15T08:00:00Z" : "2026-08-01T08:00:00Z",
     finished_on: input.status === "finished" ? "2026-09-30" : null,
     budget_minor: input.budget ?? null,
@@ -22,16 +21,12 @@ function cashRow(input: { id: string; name: string; net?: number; type?: string 
     cash: net === 0 ? [] : [{ currency: "ILS", in_minor: Math.max(net, 0), out_minor: Math.max(-net, 0), net_minor: net }],
     profit_all_minor: input.profitAll ?? net,
     first_month: input.fresh ? null : "2026-08-01",
-    pending_count: 0,
-    deletable: false,
   };
 }
 
 function cashMonth(projects: ProjectCashRow[], unassigned = { count: 0, net: 0 }): NonNullable<ProjectsCashMonth> {
   return {
-    month: "2026-10-01",
     base_currency: "ILS",
-    basis: "paid",
     projects,
     unassigned: {
       count: unassigned.count,

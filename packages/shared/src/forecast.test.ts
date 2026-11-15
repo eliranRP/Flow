@@ -59,6 +59,19 @@ describe("expectedMonthsSchema", () => {
     expect(parsed.recurring[0]?.handover).toBeUndefined();
   });
 
+  it("reads the p_months 0 answer: no project_id, and no months_seen or source on a charge (FLOW-1205)", () => {
+    const parsed = expectedMonthsSchema.parse({
+      today: "2026-10-08",
+      recurring: [
+        { direction: "expense", party_id: "s1", name: "ספק חשמל לדוגמה", currency: "ILS", typical_amount_minor: -185_000, typical_day: 2, seen_this_month: false, project_id: "p1", category_id: null },
+      ],
+    });
+    expect(parsed.months).toEqual([]);
+    expect(parsed.project_id).toBeUndefined();
+    expect(parsed.recurring[0]?.months_seen).toBeUndefined();
+    expect(parsed.recurring[0]?.project_id).toBe("p1");
+  });
+
   it("reads a charge's handover (FLOW-1037), and null as none", () => {
     const party = { direction: "expense", party_id: "s1", name: "Old Servicer", currency: "ILS", typical_amount_minor: -250_000, typical_day: 5, months_seen: 6, seen_this_month: false, project_id: "p1" };
     const parsed = expectedMonthsSchema.parse({
