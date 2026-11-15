@@ -186,8 +186,8 @@ export const WORKFLOWS: GuideWorkflow[] = [
     steps: [
       "list_review: a row whose reason is the closed-month change carries held, what the sync brought (a new amount or date, a void, a removal, a posting); the line itself did not change.",
       "Ask the owner: keep the line as it is, or take the change.",
-      "Keep it: leave_held_change with the line's id; the row is approved and the same change does not come back.",
-      "Take it: set_books_closed_through (owner) to a date before the line; the next sync applies the change and the row goes.",
+      "Keep it: leave_held_change with the line's id; the row is approved and the same change does not come back, also after the closed date moves back.",
+      "Take it: set_books_closed_through (owner) to a date before the line; the next sync applies the change and the row goes. A change already left is not applied: undo the leave first (undo, with the line's id), then move the date.",
     ],
   },
   {

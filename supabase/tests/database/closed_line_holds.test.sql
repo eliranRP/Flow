@@ -6,12 +6,13 @@
 -- Each held change has one open review row (closed_month_change) and list_review carries it. The
 -- owner leaves one (app and flow-mcp, with the undo); the same change does not reopen it, a different
 -- one does. A close is refused while the period has open review lines; moving the date back is not,
--- and the next sync applies every held change (a left one too), the fetched line winning.
+-- and the next sync applies every held change, the fetched line winning. A left one is not applied and
+-- stays left (FLOW-1197); once its leave is undone (held again) the next sync applies it.
 -- Invented names and figures, @example.com only. Dates follow current_date.
 
 begin;
 
-select plan(73);
+select plan(79);
 
 do $users$
 begin
@@ -451,6 +452,15 @@ select is(pg_temp.try(format('select public.reassign_transaction(%L, %L, %L)', (
 select is((pg_temp.line('m-rcpt2')).category_id::text || ':' || array_to_string(pg_temp.open_rows('m-rcpt2'), ','),
   pg_temp.id('rent')::text || ':closed_month_change', 'the receipt follows, and its held change still waits');
 
+-- A change the owner leaves through the assistant (so it can be undone): used after the period reopens.
+insert into res values ('keep_new', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-keep', 5900, pg_temp.shut()))));
+insert into res values ('keep_move', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-keep', 5950, pg_temp.shut()))));
+select is((pg_temp.hold('m-keep')).state || ':' || ((pg_temp.hold('m-keep')).line->>'amount_original'), 'held:5950',
+  'a changed closed line is held');
+insert into res values ('keep_leave', pg_temp.ask(format('select public.mcp_leave_held_change(%L, %L::uuid)',
+  'ch-leave-keep', (pg_temp.line('m-keep')).id)));
+select is((pg_temp.hold('m-keep')).state, 'left', 'the owner leaves it through the assistant');
+
 -- The hold's state and left_at go together (decision 0266).
 select throws_ok(format($$update private.closed_line_holds set state = 'left' where transaction_id = %L$$,
   (pg_temp.line('m-0')).id), '23514', null, 'a left hold with no left_at is refused');
@@ -482,20 +492,33 @@ select is((select r->'error'->>'code' || ':' || (r->'error'->>'message') from re
   'undoing the move back is refused the same way while a line it would close is open for review');
 
 -- ---------------------------------------------------------------------------------------------
--- The next syncs apply every held change, a left one too; a fetched line wins over its hold.
+-- The next syncs apply every held change but a left one (FLOW-1197); a fetched line wins over its hold.
 -- ---------------------------------------------------------------------------------------------
 insert into res values ('replay', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-1', 6900, pg_temp.shut()))));
 select is((select array_agg(e || '=' || (pg_temp.line(e)).amount_original order by e)
   from unnest(array['m-0', 'm-1', 'm-2', 'm-left']) e),
-  array['m-0=6000', 'm-1=6900', 'm-2=6400', 'm-left=6300'],
-  'the held amounts are applied (the left one too), and the fetched m-1 wins over its hold');
+  array['m-0=6000', 'm-1=6900', 'm-2=6400', 'm-left=5300'],
+  'the held amounts are applied, the left m-left keeps its stored amount, and the fetched m-1 wins over its hold');
 select is((pg_temp.line('m-pend')).line_status::text || ':' || (pg_temp.line('m-void')).line_status::text,
   'posted:void', 'the held posting and the held void are applied');
-select is((select count(*)::integer from private.closed_line_holds where company_id = pg_temp.id('co') and provider = 'mercury'),
-  0, 'every bank hold is applied and deleted');
+select is((select array_agg(t.external_id || '=' || h.state order by t.external_id)
+  from private.closed_line_holds h join public.transactions t on t.id = h.transaction_id
+  where h.company_id = pg_temp.id('co') and h.provider = 'mercury'),
+  array['m-into=left', 'm-keep=left', 'm-left=left'],
+  'the only bank holds that remain are the left ones: they stay left, not applied and not deleted');
+select is((pg_temp.line('m-keep')).amount_original, 5900::bigint, 'a left change is not applied when the period reopens');
 select is((select count(*)::integer from public.review_queue q where q.company_id = pg_temp.id('co') and q.status = 'open'
   and q.reason = 'closed_month_change' and q.transaction_id in (select id from public.transactions where source = 'mercury')),
   0, 'and their review rows are closed in the same run');
+-- Undoing the leave puts the hold back to held, so the next sync applies it.
+insert into res values ('keep_undo', pg_temp.ask(format('select public.mcp_undo(%L, %L, %L::uuid)',
+  'ch-keep-undo', 'held_change_left', (pg_temp.line('m-keep')).id)));
+select is((select r->>'ok' from res where label = 'keep_undo'), 'true', 'the leave is undone after the period reopened');
+select is((pg_temp.hold('m-keep')).state, 'held', 'the undone hold is held again');
+insert into res values ('keep_sync', pg_temp.run('mercury', jsonb_build_array(pg_temp.ml('m-1', 6900, pg_temp.shut()))));
+select is((pg_temp.line('m-keep')).amount_original::text || ':' || (select count(*)::text from private.closed_line_holds h
+  where h.company_id = pg_temp.id('co') and h.provider = 'mercury' and h.transaction_id = (pg_temp.line('m-keep')).id),
+  '5950:0', 'the next sync applies an undone left change and deletes its hold');
 select is((pg_temp.line('m-split')).amount_original || ':' || array_to_string(pg_temp.open_rows('m-split'), ','),
   '6600:split_mismatch', 'the split line takes its amount and its split_mismatch row comes back');
 insert into res values ('replay_sumit', pg_temp.run('sumit', jsonb_build_array(
@@ -541,7 +564,8 @@ insert into res values ('gone_replay', pg_temp.run('mercury', '[]'::jsonb));
 insert into res values ('switch_replay', pg_temp.run('sumit', '[]'::jsonb, '[]'::jsonb, true));
 select is(array_to_string(array[(pg_temp.line('m-gone')).amount_original, (pg_temp.line('s-2')).amount_original]::bigint[], ',')
   || ':' || ((pg_temp.line('m-gone')).removed_at is not null and (pg_temp.line('s-2')).removed_at is not null)::text
-  || ':' || (select count(*) from private.closed_line_holds where company_id = pg_temp.id('co')),
+  || ':' || (select count(*) from private.closed_line_holds where company_id = pg_temp.id('co')
+    and transaction_id in ((pg_temp.line('m-gone')).id, (pg_temp.line('s-2')).id)),
   '5000,7100:true:0', 'reopening the period brings neither removed line back: their held changes are dropped');
 
 select * from finish();
