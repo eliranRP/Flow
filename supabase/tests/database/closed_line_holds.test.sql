@@ -12,7 +12,7 @@
 
 begin;
 
-select plan(79);
+select plan(81);
 
 do $users$
 begin
@@ -391,22 +391,19 @@ select is(pg_temp.try(format('select public.leave_held_change(%L)', pg_temp.revi
   'the owner leaves it');
 select is(pg_temp.try(format('select public.reopen_review(%L)', pg_temp.review_of('m-into'))), 'ok',
   'and reopens the left row');
+-- An open closed_month_change row means its hold is held: the reopen puts the hold back (FLOW-1197).
+select is((pg_temp.hold('m-into')).state || ':' || ((pg_temp.hold('m-into')).left_at is null)::text
+  || ':' || array_to_string(pg_temp.open_rows('m-into'), ','), 'held:true:closed_month_change',
+  'a person''s reopen of a left row puts its hold back to held');
+insert into res values ('list_reopen', pg_temp.ask('select public.list_review()'));
+select is((select i->'held'->>'kind' from res, jsonb_array_elements(r) i where label = 'list_reopen'
+    and i->>'transaction_id' = (pg_temp.line('m-into')).id::text), 'update', 'list_review carries the reopened held change');
 select ok((pg_temp.line('m-into')).category_id is not distinct from pg_temp.id('into_cat')
   and (pg_temp.line('m-into')).pnl_role = 'overhead'
   and exists (select 1 from public.overhead o where o.transaction_id = (pg_temp.line('m-into')).id),
   'the reopen keeps the line''s filing');
--- Jev is kept off a line only while its change waits, not once the owner left it.
-do $jev_left$
-begin
-  perform set_config('request.jwt.claim.sub', '', true);
-  perform set_config('request.jwt.claim.role', 'service_role', true);
-  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
-  insert into pg_temp.res values ('jev_left', public.jev_prefill(pg_temp.id('co'), (pg_temp.line('m-into')).id, null,
-    pg_temp.id('supplies'), 'example-model', 0.9));
-end
-$jev_left$;
-select isnt((select coalesce(r->>'skipped', '-') from res where label = 'jev_left'), 'closed',
-  'Jev may file a line whose held change the owner left');
+-- (Jev needs an open row to file a line, and an open closed_month_change row always has a held hold, so a
+-- left change never has Jev's row.)
 -- FLOW-852: Jev never files a line that is in a closed period, even with an open review row on it
 -- (a person can reopen a skipped row after the close).
 insert into public.review_queue (company_id, transaction_id, status, reason)
@@ -504,8 +501,9 @@ select is((pg_temp.line('m-pend')).line_status::text || ':' || (pg_temp.line('m-
 select is((select array_agg(t.external_id || '=' || h.state order by t.external_id)
   from private.closed_line_holds h join public.transactions t on t.id = h.transaction_id
   where h.company_id = pg_temp.id('co') and h.provider = 'mercury'),
-  array['m-into=left', 'm-keep=left', 'm-left=left'],
+  array['m-keep=left', 'm-left=left'],
   'the only bank holds that remain are the left ones: they stay left, not applied and not deleted');
+select is((pg_temp.line('m-into')).doc_date, pg_temp.shut(), 'the reopened change (held again) is applied');
 select is((pg_temp.line('m-keep')).amount_original, 5900::bigint, 'a left change is not applied when the period reopens');
 select is((select count(*)::integer from public.review_queue q where q.company_id = pg_temp.id('co') and q.status = 'open'
   and q.reason = 'closed_month_change' and q.transaction_id in (select id from public.transactions where source = 'mercury')),

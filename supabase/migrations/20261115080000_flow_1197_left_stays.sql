@@ -12,6 +12,13 @@
 -- The fetched line still wins as before. The undo `held_change_left` puts the hold back to `held` (left_at
 -- null), so the next replay applies it; nothing changes there.
 --
+-- The other half: an open closed_month_change row means its hold is held. A person's reopen of an approved
+-- (left) row (reopen_review, undo_reassign, any other undo that reopens it) used to leave the hold left, which
+-- list_review does not show (it joins held holds only), so the card had no change on it and now the replay
+-- would never take it. A new trigger on review_queue puts the hold back to held, left_at null, whenever a
+-- closed_month_change row turns open, as private.undo_held_change_left does. One choke point, so no reopen
+-- function is patched.
+--
 -- Rows: none rewritten. Same signature, security and grants (create or replace keeps them).
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -49,5 +56,27 @@ $n$);
   execute def;
 end
 $patch$;
+
+create function private.review_held_reopen()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update private.closed_line_holds h
+  set state = 'held', left_at = null
+  where h.company_id = new.company_id and h.transaction_id = new.transaction_id and h.state = 'left';
+  return null;
+end;
+$$;
+
+revoke all on function private.review_held_reopen() from public, anon, authenticated, service_role;
+
+create trigger review_queue_held_reopen
+  after update of status on public.review_queue
+  for each row
+  when (old.status is distinct from 'open' and new.status = 'open' and new.reason = 'closed_month_change')
+  execute function private.review_held_reopen();
 
 commit;
