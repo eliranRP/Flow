@@ -1,0 +1,1 @@
+Send again now sends again. Each invite email carries its own Resend idempotency key, made from the invite and the send number (`invite-<invite id>-<n>`), so a second email for the same invite is no longer dropped as a duplicate within 24 hours. A released send can reuse its number, so its key can repeat; Resend does not keep a refused request, so that is harmless.

@@ -1,5 +1,12 @@
 import { machineProblems } from "../../../packages/shared/src/machine.ts";
-import { handleInviteEmail, inviteBody, inviteSend, inviteSubject, resendRefused } from "./invite_email.ts";
+import {
+  handleInviteEmail,
+  inviteBody,
+  inviteIdempotencyKey,
+  inviteSend,
+  inviteSubject,
+  resendRefused,
+} from "./invite_email.ts";
 
 function assertEquals(actual: unknown, expected: unknown): void {
   const a = JSON.stringify(actual);
@@ -179,4 +186,34 @@ Deno.test("inviteSend: a send's answer before its claim, or after it ended, chan
   assertEquals(inviteSend.next(inviteSend.next("claimed", "lost"), "answered"), "spent");
   assertEquals(inviteSend.next("claimed", "failed"), "spent");
   assertEquals(inviteSend.next("refused", "claimed"), "refused");
+});
+
+// Resend answers a repeat of an idempotency key within 24 hours without sending again. The
+// key is per claim (its number), so "send again" really sends; a retry of the same claim reuses it.
+Deno.test("two sends of one invite with different claim numbers use different keys", () => {
+  assertEquals(inviteIdempotencyKey(INVITE, 1) === inviteIdempotencyKey(INVITE, 2), false);
+  assertEquals(inviteIdempotencyKey(INVITE, 2) === inviteIdempotencyKey(INVITE, 3), false);
+});
+
+Deno.test("the same claim number gives the same key", () => {
+  assertEquals(inviteIdempotencyKey(INVITE, 2), `invite-${INVITE}-2`);
+  assertEquals(inviteIdempotencyKey(INVITE, 2), inviteIdempotencyKey(INVITE, 2));
+});
+
+Deno.test("the key the send sends holds the claim number and never the recipient's email", async () => {
+  const keys: string[] = [];
+  const fake = ((input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/rpc/claim_invite_email")) return Promise.resolve(Response.json({ id: INVITE, email_sends: 2 }));
+    if (url.endsWith("/rpc/list_team")) return Promise.resolve(Response.json(team(true)));
+    if (url.endsWith("/rpc/list_my_companies")) return Promise.resolve(Response.json({ companies: [{ id: "c-1", name: "Acme" }] }));
+    if (url.startsWith("https://api.resend.com/")) {
+      keys.push(new Headers(init?.headers).get("idempotency-key") ?? "");
+    }
+    return Promise.resolve(new Response("{}", { status: 200 }));
+  }) as typeof fetch;
+  await handleInviteEmail(request({ invite_id: INVITE }), { fetch: fake, env });
+  assertEquals(keys, [`invite-${INVITE}-2`]);
+  assertEquals(keys[0].includes("noa"), false);
+  assertEquals(keys[0].includes("@"), false);
 });
