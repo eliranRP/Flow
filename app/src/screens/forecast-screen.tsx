@@ -1,9 +1,10 @@
 import "../ui/lazy.css";
-import { formatAmountText, type ForecastBuild, type ForecastItem, type ForecastOverrideRow } from "@flow/shared";
+import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/shared";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, nextMonth, priorPatch, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
+import { useForecastMoves } from "../forecast-move";
 import { type MonthForecast, useMonthForecastQuery } from "../month-forecast-query";
 import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart, monthEndTakeaway } from "../forecast-chart";
 import { CHART_MONTHS, cashMonthFigures, type MonthFigures } from "../month-figures";
@@ -61,12 +62,6 @@ export type ForecastSample = {
 
 const NO_SO_FAR: ForecastSoFar = { income: [], expense: [] };
 
-/** The moved row folds away this long before its write, then the list is refreshed. */
-const FOLD_MS = 280;
-
-/** A move to next month that waits for its fold: ביטול before it is sent cancels it, after it sends the undo. */
-type PendingMove = { sent: boolean; cancelled: boolean; timer: number | null };
-
 /** `<list path>/item/<key>`: a row's page is open over the list (MonthForecastEdit). */
 const ITEM_PATH = /^(.*?)\/item\/([^/]+)\/?$/;
 
@@ -89,7 +84,7 @@ function ForecastSection({
   items,
   today,
   onOpen,
-  leavingKey,
+  leaving,
   onSkip,
 }: {
   title: string;
@@ -97,7 +92,7 @@ function ForecastSection({
   items: readonly ForecastItem[];
   today: string;
   onOpen: (item: ForecastItem) => void;
-  leavingKey: string | null;
+  leaving: ReadonlySet<string>;
   /** FLOW-1081: a row swipes out of this month's forecast; none for a viewer. */
   onSkip?: (item: ForecastItem) => void;
 }) {
@@ -109,7 +104,7 @@ function ForecastSection({
       </h2>
       <ul className="ui-forecast-list">
         {items.map((item) => (
-          <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpen} leaving={leavingKey === item.key} onSkip={onSkip} />
+          <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpen} leaving={leaving.has(item.key)} onSkip={onSkip} />
         ))}
       </ul>
     </section>
@@ -182,7 +177,9 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const reset = useResetForecastMonth(month);
   const restore = useRestoreForecast(month);
   const [smallOpen, setSmallOpen] = useState(false);
-  const [leavingKey, setLeavingKey] = useState<string | null>(null);
+  // FLOW-1164: a move to next month is its own table (forecast-move.ts): the fold, the one write, ביטול.
+  const moves = useForecastMoves((payload, settled) => { write.mutate(payload, settled); });
+  const { listShown } = moves;
   // FLOW-1048 (V3-Forecast): the 56px bar comes down once the head has gone under it, and the views dock into it.
   const [headEnd, setHeadEnd] = useState<HTMLElement | null>(null);
   const barShown = useScrolledPast(headEnd, true, DETAIL_BAR);
@@ -232,9 +229,6 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const soFar = live ? soFarQuery.data ?? null : sample.soFar ?? NO_SO_FAR;
   // The row that opened the page takes the focus back when it closes.
   const opener = useRef<string | null>(null);
-  /** A move to next month saved on the page: its row folds once the list is back on screen. */
-  const pendingLeave = useRef<(() => void) | null>(null);
-
   /** Where the list was scrolled when a row's page opened: the page starts at the top, the list comes back here. */
   const listScroll = useRef<number | null>(null);
 
@@ -252,10 +246,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
 
   useEffect(() => {
     if (openKey != null) return;
-    const fold = pendingLeave.current;
-    pendingLeave.current = null;
-    // Two frames: the list is drawn again before its row starts to fold.
-    if (fold != null) requestAnimationFrame(() => { requestAnimationFrame(fold); });
+    // A move saved on the page folds its row once the list is back on screen.
+    listShown();
     const scroll = listScroll.current;
     listScroll.current = null;
     if (scroll != null && window.scrollY !== scroll) window.scrollTo(0, scroll);
@@ -264,7 +256,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     opener.current = null;
     const row = Array.from(document.querySelectorAll<HTMLElement>("[data-forecast-key]")).find((node) => node.dataset.forecastKey === key);
     row?.focus({ preventScroll: true });
-  }, [openKey]);
+  }, [openKey, listShown]);
 
   function toggleCategory(key: string) {
     setOpenCategories((current) => {
@@ -278,40 +270,17 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const changed = build?.changed ?? 0;
   const smallUntil = build?.small.reduce<string | null>((latest, item) => { const day = item.due_on ?? item.expected_on; return day != null && (latest == null || day > latest) ? day : latest; }, null) ?? null;
 
-  /** The row folds away, then the move is written; the page has closed first, so the list shows the fold. */
-  function leave(item: ForecastItem, patch: ForecastPatch, prior: ForecastOverrideRow | null, move: PendingMove) {
-    if (move.cancelled) return;
-    setLeavingKey(item.key);
-    move.timer = window.setTimeout(() => {
-      move.timer = null;
-      setLeavingKey(null);
-      move.sent = true;
-      write.mutate({ key: item.key, patch, undo: false, prior });
-    }, FOLD_MS);
-  }
-
   /** `alsoUndo` (FLOW-1018): another write of the same save (the line's pace), undone by this toast's ביטול after the month's change. */
   function save(item: ForecastItem, patch: ForecastPatch, alsoUndo?: () => void) {
     const prior = data?.overrides.find((row) => row.item_key === item.key) ?? null;
     if (patch.moved_out) {
-      const move: PendingMove = { sent: false, cancelled: false, timer: null };
-      const fold = () => { leave(item, patch, prior, move); };
-      if (openKey == null) fold();
-      else pendingLeave.current = fold;
+      const move = moves.move(item.key, patch, prior, openKey != null);
       toast.show(topToast({
         // FLOW-1081: an invoice is still due after the month; a recurring charge is out of this month only.
         message: item.kind === "invoice" ? `${item.name} הועבר לחודש הבא` : `${item.name} הוצא מהצפי של ${monthName(month)}`,
         action: "ביטול",
         onAction: () => {
-          if (move.sent) {
-            write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior });
-          } else {
-            // A ביטול inside the fold, or before the page has closed: the move was never sent, so nothing is.
-            move.cancelled = true;
-            if (move.timer != null) window.clearTimeout(move.timer);
-            if (pendingLeave.current === fold) pendingLeave.current = null;
-            setLeavingKey((key) => (key === item.key ? null : key));
-          }
+          move.undo();
           alsoUndo?.();
         },
       }));
@@ -474,7 +443,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
                 currency={base}
                 today={today}
                 onOpenItem={openItem}
-                leavingKey={leavingKey}
+                leaving={moves.leaving}
               />
             )
           ) : byCategory ? (
@@ -505,7 +474,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               items={income}
               today={today}
               onOpen={openItem}
-              leavingKey={leavingKey}
+              leaving={moves.leaving}
               onSkip={skipItem}
             />
             <section className="ui-forecast-section">
@@ -515,7 +484,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               </h2>
               <ul className="ui-forecast-list">
                 {expense.map((item) => (
-                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={leavingKey === item.key} onSkip={skipItem} />
+                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={moves.leaving.has(item.key)} onSkip={skipItem} />
                 ))}
                 {build.small.length > 0 ? (
                   <li className="ui-forecast-li ui-forecast-li-group">

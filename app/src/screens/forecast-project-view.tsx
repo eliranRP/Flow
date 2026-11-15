@@ -13,13 +13,13 @@ export function ForecastProjectView({
   currency,
   today,
   onOpenItem,
-  leavingKey,
+  leaving,
 }: {
   groups: readonly ForecastProjectGroup[];
   currency: string;
   today: string;
   onOpenItem: (item: ForecastItem) => void;
-  leavingKey: string | null;
+  leaving: ReadonlySet<string>;
 }) {
   return (
     <>
@@ -33,7 +33,7 @@ export function ForecastProjectView({
           </h2>
           <ul className="ui-forecast-list">
             {[...group.income, ...group.expense].map((item) => (
-              <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpenItem} leaving={leavingKey === item.key} />
+              <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpenItem} leaving={leaving.has(item.key)} />
             ))}
           </ul>
         </section>
