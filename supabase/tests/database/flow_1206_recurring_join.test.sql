@@ -1,14 +1,16 @@
 -- FLOW-1206. (a) private.recurring_match_suggestions: its rows equal the body before this change
 -- (a pg_temp copy is the oracle) on invented lines, including an expense and an income line that
--- carry both a supplier and a customer, and the function's own plan (its SQL, with the arguments as
--- literals) reads a party's lines from transactions_party_date_idx by the party condition.
+-- carry both a supplier and a customer, an earlier income line with a customer and a supplier (the
+-- "first seen lately" test must count it, as before FLOW-1192), and the function's own plan (its SQL,
+-- with the arguments as literals) reads a party's lines from transactions_party_date_idx by the party
+-- condition.
 -- (b) private.jev_has_work and public.mcp_jev_status answer as the bodies before this change, on
 -- enabled Jev integrations, with a refusal whose inputs key holds and one a category rename made
 -- stale, for two companies. Invented names and example.com emails only.
 
 begin;
 
-select plan(20);
+select plan(21);
 
 do $users$
 begin
@@ -41,14 +43,24 @@ insert into public.suppliers (company_id, name) select pg_temp.id('co'), name fr
 insert into rj (label, id)
 select p.label, s.id from rj_sup p join public.suppliers s on s.company_id = pg_temp.id('co') and s.name = p.name;
 
-insert into public.customers (company_id, name) values (pg_temp.id('co'), 'Cedar Tenant'), (pg_temp.id('co'), 'Cedar Tenant Annex');
+insert into public.customers (company_id, name) values (pg_temp.id('co'), 'Cedar Tenant'), (pg_temp.id('co'), 'Cedar Tenant Annex'),
+  (pg_temp.id('co'), 'Harbor Client'), (pg_temp.id('co'), 'Harbor Client Annex'), (pg_temp.id('co'), 'Harbor Client Extra');
 insert into rj (label, id)
 select 'tnt', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Cedar Tenant'
 union all
-select 'tnt_annex', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Cedar Tenant Annex';
+select 'tnt_annex', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Cedar Tenant Annex'
+union all
+select 'hbr', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Harbor Client'
+union all
+select 'hbr_annex', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Harbor Client Annex'
+union all
+select 'hbr_extra', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Harbor Client Extra';
 
--- Lines. tnt_both is an income line whose customer is the alike tenant and whose supplier is set too;
--- yard_new is an expense line whose supplier is the alike yard and whose customer is set too.
+-- Lines. tnt_new is an income line with no supplier whose customer is the alike tenant (the tenant's
+-- suggestion, arm b). hbr_old, hbr_new and hbr_extra are income lines with a supplier and a customer
+-- (hbr_old is the earlier line of the alike annex, so it stops hbr_new; hbr_extra is the suggestion of
+-- the Harbor charge, arm c). yard_new is an expense line whose supplier is the alike yard and whose
+-- customer is set too.
 insert into rj (label, id)
 select l.label, tests.fixture_line(pg_temp.id('co'), 'rj:' || l.label, l.amount, l.direction, null, null, l.doc_date,
   p_pnl_role => null, p_doc_kind => l.doc_kind)
@@ -57,7 +69,10 @@ from (values
   ('wtr_new', 'expense', '2026-09-30'::date, 10100::bigint, 'receipt'),
   ('wtr_late', 'expense', '2026-10-05'::date, 9900::bigint, 'receipt'),
   ('tnt_inv', 'income', '2026-09-10'::date, 19500::bigint, 'invoice'),
-  ('tnt_both', 'income', '2026-09-25'::date, 19900::bigint, 'invoice'),
+  ('tnt_new', 'income', '2026-10-05'::date, 20050::bigint, 'invoice'),
+  ('hbr_old', 'income', '2026-08-01'::date, 7000::bigint, 'invoice'),
+  ('hbr_new', 'income', '2026-09-15'::date, 7950::bigint, 'invoice'),
+  ('hbr_extra_inv', 'income', '2026-09-20'::date, 7900::bigint, 'invoice'),
   ('yard_new', 'expense', '2026-09-25'::date, 5010::bigint, 'receipt')
 ) as l(label, direction, doc_date, amount, doc_kind);
 insert into rj (label, id)
@@ -72,14 +87,15 @@ set supplier_id = case when l.direction = 'expense' then pg_temp.id(l.party) end
   customer_id = case when l.direction = 'income' then pg_temp.id(l.party) end
 from (values
   ('wtr_old', 'expense', 'wtr_annex'), ('wtr_new', 'expense', 'wtr_annex'), ('wtr_late', 'expense', 'wtr_annex'),
-  ('tnt_inv', 'income', 'tnt'), ('tnt_both', 'income', 'tnt_annex'), ('yard_new', 'expense', 'yard'),
+  ('tnt_inv', 'income', 'tnt'), ('tnt_new', 'income', 'tnt_annex'), ('yard_new', 'expense', 'yard'),
+  ('hbr_old', 'income', 'hbr_annex'), ('hbr_new', 'income', 'hbr_annex'), ('hbr_extra_inv', 'income', 'hbr_extra'),
   ('gl_gone', 'expense', 'garden_annex')
 ) as l(label, direction, party)
 where t.id = pg_temp.id(l.label);
 update public.transactions t set supplier_id = pg_temp.id('garden_annex')
 where t.id in (select id from rj where label ~ '^gl[0-9]+$');
 update public.transactions set customer_id = pg_temp.id('tnt') where id = pg_temp.id('yard_new');
-update public.transactions set supplier_id = pg_temp.id('pwr') where id = pg_temp.id('tnt_both');
+update public.transactions set supplier_id = pg_temp.id('pwr') where id in (pg_temp.id('hbr_old'), pg_temp.id('hbr_new'), pg_temp.id('hbr_extra_inv'));
 update public.transactions set removed_at = now() where id = pg_temp.id('gl_gone');
 
 create function pg_temp.charges()
@@ -91,11 +107,13 @@ as $$
     jsonb_build_object('direction', 'expense', 'party_id', pg_temp.id('wtr'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', -10000),
     jsonb_build_object('direction', 'expense', 'party_id', pg_temp.id('garden'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', -5000),
     jsonb_build_object('direction', 'expense', 'party_id', pg_temp.id('pwr'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', -10000),
-    jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('tnt'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 20000)
+    jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('tnt'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 20000),
+    jsonb_build_object('direction', 'income', 'party_id', pg_temp.id('hbr'), 'currency', 'ILS', 'due_month', '2026-10-01', 'typical', 8000)
   );
 $$;
 
--- The oracle: the body of private.recurring_match_suggestions before FLOW-1206 (migration 20261114021248).
+-- The oracle: the body of private.recurring_match_suggestions before FLOW-1192 (migration 20261113141912), which
+-- FLOW-1206 restores for the "first seen lately" anti-join: an earlier line counts by its customer or supplier alone.
 create function pg_temp.recurring_before(p_company uuid, p_today date, p_charges jsonb)
 returns table(direction public.txn_direction, party_id uuid, currency text, due_month date, typical bigint, suggestion jsonb)
 language sql
@@ -153,7 +171,6 @@ as $$
          and not exists (
            select 1 from public.transactions o
            where o.company_id = p_company and o.removed_at is null and o.line_status = 'posted'
-             and coalesce(o.supplier_id, o.customer_id) = c.id
              and c.id = case when ch.direction = 'expense' then o.supplier_id else o.customer_id end
              and o.doc_date < (ch.due_month - interval '1 month')::date
          )
@@ -174,19 +191,27 @@ select results_eq(
   'each charge gets the same row as the body before FLOW-1206'
 );
 
--- The two lines with both parties are the suggestions the old join gave: the income line through
--- its customer (the tenant's alike annex), the expense line through its supplier (the alike yard).
+-- The tenant gets the income line with no supplier, through its alike annex's customer (arm b).
 select is(
   (select (g.suggestion->>'transaction_id')::uuid from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) g
    where g.party_id = pg_temp.id('tnt')),
-  pg_temp.id('tnt_both'),
-  'the tenant gets the income line that has a supplier as well as its customer'
+  pg_temp.id('tnt_new'),
+  'the tenant gets the income line with no supplier, through its alike annex customer'
 );
 select is(
   (select (g.suggestion->>'transaction_id')::uuid from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) g
    where g.party_id = pg_temp.id('garden')),
   pg_temp.id('yard_new'),
   'the garden charge gets the expense line that has a customer as well as its supplier'
+);
+-- The Harbor charge: its alike annex has an earlier line whose customer is the annex and whose supplier is
+-- set, so the annex's line is out, as before FLOW-1192 (the coalesce test would have let it in). The alike
+-- extra customer's income line with a supplier is the suggestion (arm c of the look-alike join).
+select is(
+  (select (g.suggestion->>'transaction_id')::uuid from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) g
+   where g.party_id = pg_temp.id('hbr')),
+  pg_temp.id('hbr_extra_inv'),
+  'the Harbor charge: an earlier line with a customer and a supplier counts as seen, so the alike annex line is out'
 );
 
 -- Lines for the planner: 40 suppliers and 1,500 lines, analyzed, so the planner has statistics.
@@ -434,7 +459,8 @@ select public.jev_mark_failed(pg_temp.fid('a'), pg_temp.fid('a1'), 'jev-1.13.0',
 select public.jev_mark_failed(pg_temp.fid('b'), pg_temp.fid('b1'), 'jev-1.13.0', true);
 reset role;
 
--- Step 1: both refusals hold.
+-- Step 1: both refusals hold. (jev_has_work is false here, both before and after: each company's only
+-- open line is refused. So this step only guards the false case; the true case is step 2.)
 select is(private.jev_has_work(), pg_temp.jev_has_work_before(),
   'both refusals hold: jev_has_work answers as before');
 select tests.authenticate_as('fj_a');

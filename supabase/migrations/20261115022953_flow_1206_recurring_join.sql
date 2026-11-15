@@ -10,11 +10,13 @@
 --      b. an income charge, the line has no supplier and its customer is the party: coalesce is the
 --         customer, so the index serves it;
 --      c. an income charge, the line has a supplier too and its customer is the party: the old
---         customer test, with no index (no production line has both parties: 0 of 2,828 on
---         2026-11-14, per the FLOW-1192 note).
+--         customer test, served by transactions_company_id_customer_id_fk_idx (company_id, customer_id)
+--         (no production line has both parties: 0 of 2,828 lines, 2026-11-14, per FLOW-1192).
 --    The arms are exclusive, so union all adds no row twice. A coalesce(supplier, customer) test
 --    alone would drop case c (the supplier is what coalesce returns), which is why the arms are split.
---    The anti-join ("first seen lately") is unchanged from main.
+--    The "first seen lately" anti-join is split the same way (step 1b below). FLOW-1192 had added the
+--    coalesce test to it, so an income line with a supplier stopped counting as an earlier line of its
+--    customer. This migration restores the pre-FLOW-1192 answer exactly (owner decision, 2026-11-15).
 --
 -- 2. private.jev_has_work: a refused line's inputs key (private.jev_inputs_key) was computed once per
 --    refused line. It is now computed once per company that has a refusal still in its wait, for an
@@ -54,7 +56,7 @@ begin
            and ch.direction = 'income' and x.supplier_id is null and x.customer_id = c.id
            and coalesce(x.supplier_id, x.customer_id) = c.id
          union all
-         -- c. an income with a supplier too: the customer is the party (no index; no line has both today)
+         -- c. an income with a supplier too: the customer is the party (served by transactions_company_id_customer_id_fk_idx)
          select x.* from public.transactions x
          where x.company_id = p_company and x.direction = ch.direction and x.currency = ch.currency
            and ch.direction = 'income' and x.supplier_id is not null and x.customer_id = c.id
@@ -62,6 +64,46 @@ begin
   n := (char_length(def) - char_length(replace(def, a, ''))) / char_length(a);
   if n <> 1 then
     raise exception 'recurring_match_suggestions is not the expected definition (%)', n;
+  end if;
+  def := replace(def, a, b);
+
+  -- 1b. The "first seen lately" anti-join, back to the pre-FLOW-1192 test (owner decision, 2026-11-15):
+  -- an earlier line counts when its customer (an income) or its supplier (an expense) is the party, whatever
+  -- its other party. The same three arms as the look-alike join, as separate not exists (each uses its index).
+  a := $a$         and not exists (
+           select 1 from public.transactions o
+           where o.company_id = p_company and o.removed_at is null and o.line_status = 'posted'
+             and coalesce(o.supplier_id, o.customer_id) = c.id
+             and c.id = case when ch.direction = 'expense' then o.supplier_id else o.customer_id end
+             and o.doc_date < (ch.due_month - interval '1 month')::date
+         )$a$;
+  b := $n$         and not exists (
+           -- a. an expense: the supplier is the party (coalesce is the supplier, so the index serves it)
+           select 1 from public.transactions o
+           where o.company_id = p_company and o.removed_at is null and o.line_status = 'posted'
+             and ch.direction = 'expense' and o.supplier_id = c.id
+             and coalesce(o.supplier_id, o.customer_id) = c.id
+             and o.doc_date < (ch.due_month - interval '1 month')::date
+         )
+         and not exists (
+           -- b. an income with no supplier: the customer is the party (coalesce is the customer)
+           select 1 from public.transactions o
+           where o.company_id = p_company and o.removed_at is null and o.line_status = 'posted'
+             and ch.direction = 'income' and o.supplier_id is null and o.customer_id = c.id
+             and coalesce(o.supplier_id, o.customer_id) = c.id
+             and o.doc_date < (ch.due_month - interval '1 month')::date
+         )
+         and not exists (
+           -- c. an income with a supplier too: the customer is the party (no coalesce test, so the
+           -- earlier line counts as before FLOW-1192; served by transactions_company_id_customer_id_fk_idx)
+           select 1 from public.transactions o
+           where o.company_id = p_company and o.removed_at is null and o.line_status = 'posted'
+             and ch.direction = 'income' and o.supplier_id is not null and o.customer_id = c.id
+             and o.doc_date < (ch.due_month - interval '1 month')::date
+         )$n$;
+  n := (char_length(def) - char_length(replace(def, a, ''))) / char_length(a);
+  if n <> 1 then
+    raise exception 'recurring_match_suggestions is not the expected definition (anti-join %)', n;
   end if;
   def := replace(def, a, b);
   execute def;
