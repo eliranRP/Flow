@@ -1,15 +1,14 @@
--- FLOW-1206. (a) private.recurring_match_suggestions joins transactions on coalesce(supplier_id,
--- customer_id) = the party, so transactions_party_date_idx can serve the look-alike join: the plan of
--- that join uses the index, and the plan of the join before (the party only as a join filter) does not.
--- The rows are the same as the body before this change (a pg_temp copy is the oracle, invented data).
--- (b) private.jev_has_work and public.mcp_jev_status read a refused line's inputs key once per company
--- (or once per call), and answer the same as the bodies before (pg_temp copies are the oracles), for
--- a refusal whose key still holds and one whose key a category rename made stale, for two companies.
--- Invented names and example.com emails only.
+-- FLOW-1206. (a) private.recurring_match_suggestions: its rows equal the body before this change
+-- (a pg_temp copy is the oracle) on invented lines, including an expense and an income line that
+-- carry both a supplier and a customer, and the function's own plan (its SQL, with the arguments as
+-- literals) reads a party's lines from transactions_party_date_idx by the party condition.
+-- (b) private.jev_has_work and public.mcp_jev_status answer as the bodies before this change, on
+-- enabled Jev integrations, with a refusal whose inputs key holds and one a category rename made
+-- stale, for two companies. Invented names and example.com emails only.
 
 begin;
 
-select plan(17);
+select plan(20);
 
 do $users$
 begin
@@ -31,11 +30,13 @@ grant execute on function pg_temp.id(text) to authenticated, service_role;
 
 insert into rj (label, id) values ('co', tests.fixture_company('fj_r', 'Example Recurring Join LLC'));
 
--- Suppliers: a water bill's party seen in the window, its alike party, a garden firm with many lines, and
--- an alike party seen only before the window. Customers: a tenant and an alike tenant.
+-- Suppliers: the water party and its alike party (seen before the window), the garden firm with an
+-- alike annex seen before the window and an alike yard seen in it, and the power company.
+-- Customers: a tenant and an alike tenant.
 create temp table rj_sup (label text, name text);
 insert into rj_sup values ('wtr', 'Riverside Water Works'), ('wtr_annex', 'Riverside Water Annex'),
-  ('garden', 'Hilltop Garden Care'), ('garden_annex', 'Hilltop Garden Care Annex'), ('pwr', 'Northgate Power');
+  ('garden', 'Hilltop Garden Care'), ('garden_annex', 'Hilltop Garden Care Annex'), ('yard', 'Hilltop Garden Yard'),
+  ('pwr', 'Northgate Power');
 insert into public.suppliers (company_id, name) select pg_temp.id('co'), name from rj_sup;
 insert into rj (label, id)
 select p.label, s.id from rj_sup p join public.suppliers s on s.company_id = pg_temp.id('co') and s.name = p.name;
@@ -46,7 +47,8 @@ select 'tnt', c.id from public.customers c where c.company_id = pg_temp.id('co')
 union all
 select 'tnt_annex', c.id from public.customers c where c.company_id = pg_temp.id('co') and c.name = 'Cedar Tenant Annex';
 
--- Lines: the water party's lines, and thirty lines of the garden firm's annex spread over the year.
+-- Lines. tnt_both is an income line whose customer is the alike tenant and whose supplier is set too;
+-- yard_new is an expense line whose supplier is the alike yard and whose customer is set too.
 insert into rj (label, id)
 select l.label, tests.fixture_line(pg_temp.id('co'), 'rj:' || l.label, l.amount, l.direction, null, null, l.doc_date,
   p_pnl_role => null, p_doc_kind => l.doc_kind)
@@ -54,27 +56,31 @@ from (values
   ('wtr_old', 'expense', '2026-07-01'::date, 10000::bigint, 'receipt'),
   ('wtr_new', 'expense', '2026-09-30'::date, 10100::bigint, 'receipt'),
   ('wtr_late', 'expense', '2026-10-05'::date, 9900::bigint, 'receipt'),
-  ('tnt_inv', 'income', '2026-09-10'::date, 19500::bigint, 'invoice')
+  ('tnt_inv', 'income', '2026-09-10'::date, 19500::bigint, 'invoice'),
+  ('tnt_both', 'income', '2026-09-25'::date, 19900::bigint, 'invoice'),
+  ('yard_new', 'expense', '2026-09-25'::date, 5010::bigint, 'receipt')
 ) as l(label, direction, doc_date, amount, doc_kind);
 insert into rj (label, id)
 select 'gl' || n, tests.fixture_line(pg_temp.id('co'), 'rj:gl' || n, 5000 + n, 'expense', null, null,
   '2026-01-01'::date + n * 9, p_pnl_role => null, p_doc_kind => 'receipt')
 from generate_series(1, 30) n;
--- A removed line and a line of another direction do not count.
 insert into rj (label, id)
 select 'gl_gone', tests.fixture_line(pg_temp.id('co'), 'rj:gl_gone', 5020, 'expense', null, null, '2026-09-20', p_pnl_role => null, p_doc_kind => 'receipt');
+
 update public.transactions t
 set supplier_id = case when l.direction = 'expense' then pg_temp.id(l.party) end,
   customer_id = case when l.direction = 'income' then pg_temp.id(l.party) end
 from (values
   ('wtr_old', 'expense', 'wtr_annex'), ('wtr_new', 'expense', 'wtr_annex'), ('wtr_late', 'expense', 'wtr_annex'),
-  ('tnt_inv', 'income', 'tnt_annex'), ('gl_gone', 'expense', 'garden_annex')
+  ('tnt_inv', 'income', 'tnt'), ('tnt_both', 'income', 'tnt_annex'), ('yard_new', 'expense', 'yard'),
+  ('gl_gone', 'expense', 'garden_annex')
 ) as l(label, direction, party)
 where t.id = pg_temp.id(l.label);
 update public.transactions t set supplier_id = pg_temp.id('garden_annex')
-where t.id in (select id from rj where label like 'gl%' and label <> 'gl_gone' and label ~ '^gl[0-9]+$');
+where t.id in (select id from rj where label ~ '^gl[0-9]+$');
+update public.transactions set customer_id = pg_temp.id('tnt') where id = pg_temp.id('yard_new');
+update public.transactions set supplier_id = pg_temp.id('pwr') where id = pg_temp.id('tnt_both');
 update public.transactions set removed_at = now() where id = pg_temp.id('gl_gone');
-update public.transactions set customer_id = pg_temp.id('tnt'), supplier_id = null where id = pg_temp.id('tnt_inv');
 
 create function pg_temp.charges()
 returns jsonb
@@ -161,6 +167,68 @@ as $$
   from ch;
 $$;
 
+-- The same rows as the body before this change, for every charge, on lines with both parties.
+select results_eq(
+  $$ select * from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) order by party_id $$,
+  $$ select * from pg_temp.recurring_before(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) order by party_id $$,
+  'each charge gets the same row as the body before FLOW-1206'
+);
+
+-- The two lines with both parties are the suggestions the old join gave: the income line through
+-- its customer (the tenant's alike annex), the expense line through its supplier (the alike yard).
+select is(
+  (select (g.suggestion->>'transaction_id')::uuid from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) g
+   where g.party_id = pg_temp.id('tnt')),
+  pg_temp.id('tnt_both'),
+  'the tenant gets the income line that has a supplier as well as its customer'
+);
+select is(
+  (select (g.suggestion->>'transaction_id')::uuid from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) g
+   where g.party_id = pg_temp.id('garden')),
+  pg_temp.id('yard_new'),
+  'the garden charge gets the expense line that has a customer as well as its supplier'
+);
+
+-- Lines for the planner: 40 suppliers and 1,500 lines, analyzed, so the planner has statistics.
+insert into public.suppliers (company_id, name)
+select pg_temp.id('co'), 'Bulk Vendor ' || lpad(k::text, 2, '0') from generate_series(0, 39) k;
+create temp table rj_bulk as
+select n, (select s.id from public.suppliers s where s.company_id = pg_temp.id('co')
+  and s.name = 'Bulk Vendor ' || lpad((n % 40)::text, 2, '0')) as sid
+from generate_series(1, 1500) n;
+insert into rj (label, id)
+select 'bulk' || b.n, tests.fixture_line(pg_temp.id('co'), 'rj:bulk' || b.n, 1000 + b.n, 'expense', null, null,
+  '2026-01-01'::date + (b.n % 300), p_pnl_role => null, p_doc_kind => 'receipt')
+from rj_bulk b;
+update public.transactions t set supplier_id = b.sid
+from rj_bulk b join rj r on r.label = 'bulk' || b.n
+where t.id = r.id;
+analyze public.transactions;
+
+-- The function's own SQL, with its arguments as literals (pg_get_functiondef's body, with each
+-- argument replaced), explained: the plan of the function's query, not of a copy of it.
+create function pg_temp.body_sql(p_fn regprocedure, p_subs text[])
+returns text
+language plpgsql
+as $$
+declare
+  d text;
+  body text;
+  i integer;
+begin
+  d := pg_get_functiondef(p_fn);
+  body := substring(d from '(?s)AS \$function\$(.*)\$function\$');
+  if body is null then
+    raise exception 'no body in %', p_fn;
+  end if;
+  body := btrim(body, E' \n\t;');
+  for i in 1 .. cardinality(p_subs) / 2 loop
+    body := replace(body, p_subs[2 * i - 1], p_subs[2 * i]);
+  end loop;
+  return body;
+end;
+$$;
+
 -- The plan's text (EXPLAIN without costs) on one line, the plan's lines joined by ' | '.
 create function pg_temp.plan_of(p_sql text)
 returns text
@@ -177,68 +245,18 @@ begin
 end;
 $$;
 
--- The same rows as the body before this change, for every charge (the garden firm's annex has 30 lines).
-select results_eq(
-  $$ select * from private.recurring_match_suggestions(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) order by party_id $$,
-  $$ select * from pg_temp.recurring_before(pg_temp.id('co'), '2026-10-20', pg_temp.charges()) order by party_id $$,
-  'each charge gets the same row as the body before FLOW-1206'
-);
-
--- Enough lines for the planner to have statistics: 40 suppliers of "Bulk Vendor" and 1,500 lines spread over them.
-insert into public.suppliers (company_id, name)
-select pg_temp.id('co'), 'Bulk Vendor ' || lpad(k::text, 2, '0') from generate_series(0, 39) k;
-create temp table rj_bulk as
-select n, (select s.id from public.suppliers s where s.company_id = pg_temp.id('co')
-  and s.name = 'Bulk Vendor ' || lpad((n % 40)::text, 2, '0')) as sid
-from generate_series(1, 1500) n;
-insert into rj (label, id)
-select 'bulk' || b.n, tests.fixture_line(pg_temp.id('co'), 'rj:bulk' || b.n, 1000 + b.n, 'expense', null, null,
-  '2026-01-01'::date + (b.n % 300), p_pnl_role => null, p_doc_kind => 'receipt')
-from rj_bulk b;
-update public.transactions t set supplier_id = b.sid
-from rj_bulk b join rj r on r.label = 'bulk' || b.n
-where t.id = r.id;
-analyze public.transactions;
-
--- The look-alike join's party test is an index condition: the plan of the join uses the party index,
--- and the join as it was (the party only as a join filter) does not. Seqscan is off so the planner
--- picks an index where one applies; the join is the nested loop from one party, as the function runs it.
-set local enable_seqscan = off;
-set local enable_hashjoin = off;
-set local enable_mergejoin = off;
-
--- The party comes from a table (one row per party), so the planner runs the join as a nested loop
--- with the party as a parameter, as the function does for each party of a charge.
 select ok(
-  pg_temp.plan_of($q$
-    select t.id
-    from (select x.id from pg_temp.rj x where x.label = 'garden') c
-    join public.transactions t
-      on t.company_id = pg_temp.id('co') and t.direction = 'expense' and t.currency = 'ILS'
-     and c.id = case when t.direction = 'expense' then t.supplier_id else t.customer_id end
-     and coalesce(t.supplier_id, t.customer_id) = c.id
-    where t.removed_at is null and t.line_status = 'posted'
-    $q$) ~ 'Index Scan using transactions_party_date_idx.*Index Cond: [^|]*COALESCE',
-  'the look-alike join reads a party''s lines from transactions_party_date_idx, by the party (COALESCE) condition'
+  pg_temp.plan_of(pg_temp.body_sql('private.recurring_match_suggestions(uuid,date,jsonb)'::regprocedure, array[
+    'p_company', quote_literal(pg_temp.id('co')::text) || '::uuid',
+    'p_today', '''2026-10-20''::date',
+    'p_charges', quote_literal(pg_temp.charges()::text) || '::jsonb']))
+    ~ 'transactions_party_date_idx[^|]*\|\s*Index Cond: [^|]*COALESCE',
+  'the function''s own plan reads a party''s lines from transactions_party_date_idx, by the party (COALESCE) condition'
 );
-select ok(
-  pg_temp.plan_of($q$
-    select t.id
-    from (select x.id from pg_temp.rj x where x.label = 'garden') c
-    join public.transactions t
-      on t.company_id = pg_temp.id('co') and t.direction = 'expense' and t.currency = 'ILS'
-     and c.id = case when t.direction = 'expense' then t.supplier_id else t.customer_id end
-    where t.removed_at is null and t.line_status = 'posted'
-    $q$) !~ 'Index Cond: [^|]*COALESCE',
-  'the join with the party only as a join filter has no party condition in its index (the reason for the change)'
-);
-reset enable_seqscan;
-reset enable_hashjoin;
-reset enable_mergejoin;
 
 select is(
-  (select p.prosecdef and p.provolatile = 's'
-   from pg_proc p where p.oid = 'private.recurring_match_suggestions(uuid,date,jsonb)'::regprocedure),
+  (select (p.prosecdef and p.provolatile = 's') from pg_proc p
+   where p.oid = 'private.recurring_match_suggestions(uuid,date,jsonb)'::regprocedure),
   true,
   'the function stays security definer and stable'
 );
@@ -266,10 +284,20 @@ insert into fj (label, id) values
   ('a2', tests.fixture_line(pg_temp.fid('a'), 'fj:a2', 5100, p_source => 'sumit', p_doc_date => '2026-11-02')),
   ('b1', tests.fixture_line(pg_temp.fid('b'), 'fj:b1', 6100, p_source => 'sumit', p_doc_date => '2026-11-03'));
 insert into fj (label, id) values
-  ('a_cat', tests.fixture_category(pg_temp.fid('a'), 'Example Repairs')),
-  ('a_cat2', tests.fixture_category(pg_temp.fid('a'), 'Example Upkeep'));
+  ('a_cat', tests.fixture_category(pg_temp.fid('a'), 'Example Repairs'));
 insert into public.review_queue (company_id, transaction_id, status)
 select t.company_id, t.id, 'open' from public.transactions t where t.id in (pg_temp.fid('a1'), pg_temp.fid('a2'), pg_temp.fid('b1'));
+-- Each company's only open line is a refused one: a2 is out of the review queue.
+delete from public.review_queue where transaction_id = pg_temp.fid('a2');
+-- An enabled Jev integration in auto mode for both companies (fixture_company creates none).
+insert into public.company_integrations (company_id, provider, enabled, mode)
+values (pg_temp.fid('a'), 'jev', true, 'auto'), (pg_temp.fid('b'), 'jev', true, 'auto');
+select is(
+  (select count(*)::int from public.company_integrations
+   where company_id in (pg_temp.fid('a'), pg_temp.fid('b')) and provider = 'jev' and enabled and mode = 'auto'),
+  2,
+  'both companies have an enabled Jev integration in auto mode'
+);
 
 -- The oracle: private.jev_has_work before FLOW-1206 (its body after FLOW-1174, migration 20261114093900).
 create function pg_temp.jev_has_work_before()
@@ -306,6 +334,7 @@ as $$
       )
   );
 $$;
+grant execute on function pg_temp.jev_has_work_before() to authenticated, service_role;
 
 -- The oracle: public.mcp_jev_status before FLOW-1206 (its body after FLOW-1168, migration 20261114093900).
 create function pg_temp.mcp_jev_status_before()
@@ -397,14 +426,13 @@ end;
 $$;
 grant execute on function pg_temp.mcp_jev_status_before() to authenticated, service_role;
 
--- Line a1 and line b1 are refused as invalid (the job's call), with the inputs the companies have now.
+-- Lines a1 and b1 are refused as invalid (the job's call), with the inputs the companies have now.
 set role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 select public.jev_mark_failed(pg_temp.fid('a'), pg_temp.fid('a1'), 'jev-1.13.0', true);
 select public.jev_mark_failed(pg_temp.fid('b'), pg_temp.fid('b1'), 'jev-1.13.0', true);
 reset role;
-
 
 -- Step 1: both refusals hold.
 select is(private.jev_has_work(), pg_temp.jev_has_work_before(),
@@ -426,6 +454,7 @@ reset role;
 update public.categories set name = 'Example Repairs and Upkeep' where id = pg_temp.fid('a_cat');
 select is(private.jev_has_work(), pg_temp.jev_has_work_before(),
   'a renamed category: jev_has_work answers as before');
+select ok(private.jev_has_work(), 'a renamed category: company A''s line is work again');
 select tests.authenticate_as('fj_a');
 select is(public.mcp_jev_status(), pg_temp.mcp_jev_status_before(),
   'company A after the rename: mcp_jev_status answers as before');
@@ -439,7 +468,7 @@ select is((public.mcp_jev_status()->>'lines_not_retried')::int, 1,
   'company B: its own key still holds, so its refusal counts');
 reset role;
 
--- The grants stay as they were: clients run the status, and not the cron's gate.
+-- The grants stay as they were.
 select ok(
   has_function_privilege('authenticated', 'public.mcp_jev_status()', 'execute')
   and not has_function_privilege('anon', 'public.mcp_jev_status()', 'execute'),
