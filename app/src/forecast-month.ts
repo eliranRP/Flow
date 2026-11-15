@@ -1,4 +1,5 @@
 import type { ForecastOverrideRow } from "@flow/shared";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { forecastScope } from "./forecast-scope";
 import { assertNoError, useWrite } from "./use-write";
@@ -44,7 +45,9 @@ export type ForecastWrite = { key: string; patch: ForecastPatch; undo: boolean; 
 
 /** The write sets one item; `undo` sends the item's prior state back (the same call, the old values). */
 export function useSetForecastItem(month: string) {
+  const client = useQueryClient();
   return useWrite<ForecastWrite>({
+    onSuccess: () => { dropCompanyInputs(client); },
     run: async ({ key, patch, prior, undo }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -60,6 +63,16 @@ export function useSetForecastItem(month: string) {
   });
 }
 
+/**
+ * FLOW-1201: Company profit's year views read the company inputs' skips; no screen with a skip control shows them.
+ * A write drops those inputs while no screen holds them, so the year view loads fresh and never shows pre-write
+ * figures ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of
+ * Home's entry).
+ */
+function dropCompanyInputs(client: QueryClient) {
+  client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
+}
+
 /** The patch that puts an item back to its prior state (null: Flow's number). */
 export function priorPatch(prior: ForecastOverrideRow | null): ForecastPatch {
   if (prior == null) return { reset: true };
@@ -67,7 +80,9 @@ export function priorPatch(prior: ForecastOverrideRow | null): ForecastPatch {
 }
 
 export function useResetForecastMonth(month: string) {
+  const client = useQueryClient();
   return useWrite({
+    onSuccess: () => { dropCompanyInputs(client); },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -82,7 +97,9 @@ export function useResetForecastMonth(month: string) {
 
 /** The undo of a reset: each override the reset cleared is set back, the same write as a tap. */
 export function useRestoreForecast(month: string) {
+  const client = useQueryClient();
   return useWrite<ForecastOverrideRow[]>({
+    onSuccess: () => { dropCompanyInputs(client); },
     run: async (rows) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

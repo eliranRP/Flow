@@ -8,7 +8,8 @@ import { FORECAST_EDITS_KEY } from "./project-next-month-query";
 // FLOW-1191: the month forecast's writes change forecast_overrides, which expected_months does not read, so a write
 // refetches the month forecast on screen and not expected_months. FLOW-1201: a write does not refetch the company
 // inputs either (the year view's skips are read only on Company profit's year views, which are never on screen
-// when a skip is written). The write marks those inputs stale, so they refetch when they mount again. Invented keys only.
+// when a skip is written). The write drops those inputs while no screen holds them, so the year view loads fresh and
+// never shows the pre-write figures. Invented keys only.
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: unknown }>({ data: null, error: null })));
 vi.mock("./lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
 
@@ -27,6 +28,11 @@ function Probe() {
       <button type="button" onClick={() => { reset.mutate(); }}>reset</button>
     </>
   );
+}
+
+function WriteOnly() {
+  const set = useSetForecastItem("2026-11");
+  return <button type="button" onClick={() => { set.mutate({ key: "party:expense:power:USD", patch: { moved_out: true }, undo: false, prior: null }); }}>set</button>;
 }
 
 function CompanyInputsOnly() {
@@ -61,5 +67,14 @@ describe("the month forecast's writes (FLOW-1191, FLOW-1201)", () => {
     view.unmount();
     renderWithProviders(<CompanyInputsOnly />, { client });
     await waitFor(() => { expect(reads.inputs).toBe(2); });
+  });
+
+  it("a write drops company inputs no screen holds, so the year view never shows the pre-write figures", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(INPUTS_KEY, { stale: true });
+    renderWithProviders(<WriteOnly />, { client });
+    fireEvent.click(screen.getByRole("button", { name: "set" }));
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    await waitFor(() => { expect(client.getQueryData(INPUTS_KEY)).toBeUndefined(); });
   });
 });
