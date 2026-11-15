@@ -134,8 +134,8 @@ select public.upsert_project(pg_temp.id('lark'), 'Lark Hill', 500000, 'active', 
 insert into pt_out (label, body)
 values ('sept', public.projects_cash_month('2026-09-01', '2026-09-20'));
 select is(
-  pg_temp.out_of('sept') ->> 'month', '2026-09-01',
-  'projects_cash_month echoes the month'
+  pg_temp.out_of('sept') ?| array['month', 'basis'], false,
+  'projects_cash_month echoes neither the month nor the basis (FLOW-1205: no reader)'
 );
 select is(
   (select (pg_temp.proj(pg_temp.out_of('sept'), 'Office') ->> 'is_overhead')),
@@ -177,17 +177,17 @@ select is(
   'first_month is the first month with a line'
 );
 select is(
-  pg_temp.proj(pg_temp.out_of('sept'), 'Lark Hill') ->> 'deletable',
+  public.projects_cash_month('2026-09-01', '2026-09-20', pg_temp.id('lark')) -> 'projects' -> 0 ->> 'deletable',
   'false',
   'a project with lines is not deletable'
 );
 select is(
-  pg_temp.proj(pg_temp.out_of('sept'), 'Okafor') ->> 'deletable',
+  public.projects_cash_month('2026-09-01', '2026-09-20', pg_temp.id('okafor')) -> 'projects' -> 0 ->> 'deletable',
   'false',
   'a project with an allocation is not deletable'
 );
 select is(
-  pg_temp.proj(pg_temp.out_of('sept'), 'Fenwick') ->> 'deletable',
+  public.projects_cash_month('2026-09-01', '2026-09-20', pg_temp.id('fenwick')) -> 'projects' -> 0 ->> 'deletable',
   'true',
   'an empty project is deletable'
 );

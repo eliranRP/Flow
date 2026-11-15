@@ -25,7 +25,6 @@ function row(over: Partial<ProjectCashRow> & { id: string; name: string }): Proj
     type: null,
     status: "active",
     is_overhead: false,
-    group_id: null,
     created_at: "2026-09-01T00:00:00Z",
     finished_on: null,
     budget_minor: null,
@@ -33,8 +32,6 @@ function row(over: Partial<ProjectCashRow> & { id: string; name: string }): Proj
     cash: [],
     profit_all_minor: 0,
     first_month: "2026-09-01",
-    pending_count: 0,
-    deletable: false,
     ...over,
   };
 }
@@ -140,7 +137,7 @@ describe("rows grouped by kind (FLOW-1044)", () => {
   });
 
   it("the band adds every project's month in the list's currency", () => {
-    const totals = projectsMonthTotals({ month: "2026-10-01", base_currency: ILS, basis: "paid", projects: rows, unassigned: { count: 0, cash: [] } });
+    const totals = projectsMonthTotals({ base_currency: ILS, projects: rows, unassigned: { count: 0, cash: [] } });
     expect(totals).toEqual({ in: 4800, out: 1500, net: 3300 });
   });
 
