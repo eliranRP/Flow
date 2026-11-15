@@ -1,6 +1,6 @@
 -- FLOW-1163 (decision 0266): a refresh request's moves (claim, requeue, finish, lapse) through
 -- claim_connector_refreshes, settle_connector_refresh and list_due_refresh_requests; `forced` reaches
--- the drain; the lapse uses the claim window (private.sync_claim_window); an auth stop survives note_connector_failure and note_connector_rejection until a
+-- the drain; the lapse uses the claim window (private.sync_claim_window); an auth stop survives note_connector_failure until a
 -- reconnect (replace_connector_connection). Invented names and @example.com emails only.
 
 begin;
@@ -107,8 +107,7 @@ select is(
   'auth:true',
   'the auth stop stays, with no retry time');
 select lives_ok(format($$select public.note_connector_failure(%L, 'sumit', 'auth')$$, pg_temp.rq_id('a')), 'SUMIT stops on auth');
-select is(public.note_connector_rejection(pg_temp.rq_id('a'), 'sumit', 'rejected')->>'code', 'rejected',
-  'a rejection follows');
+select ok(public.note_connector_failure(pg_temp.rq_id('a'), 'sumit', 'rejected') is null, 'a rejection follows');
 select is(
   (select last_error || ':' || (next_attempt_at is null)::text
    from public.connector_connections where company_id = pg_temp.rq_id('a') and provider = 'sumit'),
