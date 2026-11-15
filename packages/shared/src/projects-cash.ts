@@ -2,6 +2,8 @@ import { z } from "zod";
 
 // FLOW-445: projects_cash_month. One month's cash per project (the overhead project included), and the
 // unassigned bucket. Amounts are integer minor units of each currency; the base currency comes first.
+// FLOW-1204: `pending_count` and `deletable` (the project menu's) come only with `p_project`; the list's answer has neither.
+// FLOW-1205: no `group_id` on a row and no `month` or `basis`: nothing reads them.
 
 const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const monthSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -19,7 +21,6 @@ const projectRowSchema = z.object({
   type: z.string().nullable(),
   status: z.enum(["active", "finished"]),
   is_overhead: z.boolean(),
-  group_id: z.string().nullable(),
   created_at: z.string(),
   finished_on: z.string().nullable(),
   budget_minor: z.number().int().nullable(),
@@ -27,16 +28,16 @@ const projectRowSchema = z.object({
   cash: z.array(cashRowSchema),
   profit_all_minor: z.number().int(),
   first_month: monthSchema.nullable(),
-  pending_count: z.number().int(),
-  deletable: z.boolean(),
+  /** Only in the answer for one project (`p_project`): the lines waiting on a review. */
+  pending_count: z.number().int().optional(),
+  /** Only in the answer for one project: nothing refers to it (private.project_is_empty), so the menu may offer to delete it. */
+  deletable: z.boolean().optional(),
 });
 
 /** `projects_cash_month`: null when no company is readable, or the project is another company's. */
 export const projectsCashMonthSchema = z
   .object({
-    month: monthSchema,
     base_currency: currencySchema,
-    basis: z.enum(["paid", "invoice"]),
     projects: z.array(projectRowSchema),
     unassigned: z.object({
       count: z.number().int(),

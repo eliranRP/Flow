@@ -60,6 +60,21 @@ describe("projectDetailSchema", () => {
     expect(saved?.transactions).toHaveLength(1);
   });
 
+  it("parses the investment with its rehab categories (the lines form) and without them (the lean read, FLOW-1205)", () => {
+    const investment = {
+      currency: "USD", purchase_minor: null, arv_minor: null, value_minor: null, value_date: null, rehab_minor: 5_000,
+      rehab_other_currencies: [], loan_balance_minor: 0, loan_balance_other_currencies: [], forced_equity_minor: null, current_equity_minor: null,
+    };
+    const lean = projectDetailSchema.parse({ ...project, categories: [], investment });
+    expect(lean?.investment?.rehab_by_category).toBeUndefined();
+    const withLines = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      investment: { ...investment, rehab_by_category: [{ category_id: "c1", name: "חומרים", hidden: false, amount_minor: 5_000 }] },
+    });
+    expect(withLines?.investment?.rehab_by_category).toEqual([{ category_id: "c1", name: "חומרים", amount_minor: 5_000n }]);
+  });
+
   it("parses the project's loans with a bigint balance, and a payload without them", () => {
     const parsed = projectDetailSchema.parse({
       ...project,

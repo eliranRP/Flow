@@ -51,7 +51,6 @@ function project(id: string, name: string, type: string, dollars: number, overhe
     type,
     status: "active",
     is_overhead: overhead,
-    group_id: null,
     created_at: "2026-05-01T08:00:00Z",
     finished_on: null,
     budget_minor: null,
@@ -59,16 +58,12 @@ function project(id: string, name: string, type: string, dollars: number, overhe
     cash: [{ currency: "USD", in_minor: Math.max(net, 0), out_minor: Math.max(-net, 0), net_minor: net }],
     profit_all_minor: net,
     first_month: "2026-05-01",
-    pending_count: 0,
-    deletable: false,
   };
 }
 
 /** The Projects tab's October on the same projects, so each next-month part lands on its row. */
 export const NEXT_MONTH_PROJECTS: NonNullable<ProjectsCashMonth> = {
-  month: "2026-10-01",
   base_currency: "USD",
-  basis: "paid",
   projects: [
     project("p1", "בית הדקל", "לקוח", 15_000),
     project("p2", "וילה הברושים", "flip", -14_253),
