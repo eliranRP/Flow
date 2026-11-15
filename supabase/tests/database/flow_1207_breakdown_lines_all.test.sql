@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(13);
+select plan(14);
 
 -- The old body, verbatim, renamed.
 create or replace function pg_temp.old_breakdown_lines(
@@ -330,6 +330,12 @@ select is(
   public.get_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', true),
   pg_temp.old_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', true),
   'a kept-out read is as it was');
+
+-- A read of one project with a null key stays empty, as it was.
+select is(
+  public.get_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, 0, pg_temp.ref('alpha')),
+  pg_temp.old_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, 0, pg_temp.ref('alpha')),
+  'a by-project read with no key is as it was');
 
 -- Another company reads none of these lines.
 select tests.authenticate_as('bla_other');

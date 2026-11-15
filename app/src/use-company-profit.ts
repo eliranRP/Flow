@@ -1,7 +1,7 @@
 import type { Breakdown, BreakdownDirection, BreakdownLinesPage, Dashboard } from "@flow/shared";
 
 type LinesRows = NonNullable<BreakdownLinesPage>["rows"];
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectGroupRow } from "./breakdown-project-group";
 import type { OverheadProject } from "./overhead-project";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -12,7 +12,8 @@ import { readyClient } from "./ready-client";
 /**
  * FLOW-140c1. The company profit page reads its figures from the reads the books already have: the
  * month's dashboard, the year's dashboard (מתחילת השנה), one breakdown per direction for projects and
- * for categories, and each category's counted lines. Nothing new on the server.
+ * for categories, and the counted lines: a category's own (the category order), or each direction's in one paged read
+ * (the date and amount orders, FLOW-1207). Nothing else new on the server.
  */
 
 export type BasisName = "cash" | "invoiced";
@@ -212,13 +213,13 @@ async function fetchBreakdown(period: PeriodChoice, direction: BreakdownDirectio
 
 /**
  * Every page of one category group's counted lines, in the company currency. FLOW-1207: with no key (`null`), every
- * counted line of the direction, each row naming its group (`group_key`), in pages of the largest size.
+ * counted line of the direction, each row naming its group (`group_key`), in pages of the largest size: the first page's
+ * `count` says how many pages follow, and they are read together and joined in offset order.
  */
 async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string | null, currency: string, excluded = false): Promise<LinesRows> {
-  const rows: LinesRows = [];
   const supabase = await readyClient();
   const size = key === null ? LINES_PAGE_ALL : LINES_PAGE;
-  for (let offset = 0; ; offset += size) {
+  const readPage = async (offset: number) => {
     const { data, error } = await supabase.rpc("get_breakdown_lines", {
       ...rangeArgs(period),
       p_direction: direction,
@@ -231,7 +232,18 @@ async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection
       p_offset: offset,
     });
     if (error) throw error;
-    const page = (await loadReadSchemas()).breakdownLinesSchema.parse(data);
+    return (await loadReadSchemas()).breakdownLinesSchema.parse(data);
+  };
+  const first = await readPage(0);
+  const rows: LinesRows = [...(first?.rows ?? [])];
+  if (first?.has_more !== true) return rows;
+  if (key === null && first.count !== undefined) {
+    const offsets = Array.from({ length: Math.max(0, Math.ceil(first.count / size) - 1) }, (_, index) => (index + 1) * size);
+    for (const page of await Promise.all(offsets.map(readPage))) rows.push(...(page?.rows ?? []));
+    return rows;
+  }
+  for (let offset = size; ; offset += size) {
+    const page = await readPage(offset);
     rows.push(...(page?.rows ?? []));
     if (page?.has_more !== true) return rows;
   }
@@ -278,6 +290,7 @@ export const linesIdOfRow = (rowKey: string) => (rowKey.startsWith("kept:") ? ro
  */
 export function useCompanyProfitRead({ enabled, month, ytd, currency, categoriesOn, projectsOn, overhead, linesAll, lineIds }: CompanyProfitRead) {
   const preview = useHomePreview();
+  const client = useQueryClient();
   const live = enabled && preview === "off";
   const monthRange = `${month.from ?? ""}..${month.to ?? ""}`;
   const dashboard = useQuery({
@@ -310,9 +323,10 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     ...categoryGroups.map(({ direction, group }) => ({ id: `${direction === "income" ? "in" : "out"}:${group.key}`, direction, key: group.key, name: group.name ?? "", keptOut: false })),
     ...keptOutDirections.map((direction) => ({ id: `kept:${direction}`, direction, key: "", name: "", keptOut: true })),
   ];
+  const lineKey = (direction: BreakdownDirection, key: string) => ["breakdown-lines", "company-profit", preview, monthRange, direction, key, currency];
   const lineQueries = useQueries({
     queries: lineReads.map((read) => ({
-      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, read.direction, read.keptOut ? "kept-out" : read.key, currency],
+      queryKey: lineKey(read.direction, read.keptOut ? "kept-out" : read.key),
       enabled: live && categoriesOn && lineIds.has(read.id),
       queryFn: () => fetchAllLines(month, read.direction, read.key, currency, read.keptOut),
     })),
@@ -320,15 +334,25 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
   const allDirections = (["income", "expense"] as const).filter((direction) => categoryGroups.some((entry) => entry.direction === direction));
   const allQueries = useQueries({
     queries: allDirections.map((direction) => ({
-      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, "all", currency],
+      queryKey: lineKey(direction, "all"),
       enabled: live && categoriesOn && linesAll,
-      queryFn: () => fetchAllLines(month, direction, null, currency),
+      queryFn: async () => {
+        const rows = await fetchAllLines(month, direction, null, currency);
+        // Every page is in: each counted category's own read is answered too, in the shape and order that read has,
+        // so the category order shows these lines at once, with no read.
+        for (const entry of categoryGroups) {
+          if (entry.direction === direction) client.setQueryData(lineKey(direction, entry.group.key), rows.filter((row) => row.group_key === entry.group.key).map(({ group_key: _group, ...row }) => row));
+        }
+        return rows;
+      },
     })),
   });
   // A read that failed in another view or order stays in the cache with its error: only a view that reads it
   // counts it.
   const failed = projectsOn && (dashboard.isError || projectIncome.isError || projectExpense.isError
-    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError)));
+    || (categoriesOn && (categoryIncome.isError || categoryExpense.isError))
+    // FLOW-1207: the one read of a direction's lines is the page's failure, with its retry, as a category's read was a line's.
+    || (categoriesOn && linesAll && allQueries.some((query) => query.isError)));
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
   // A category read the order does not draw is not waited for (FLOW-1171).
   const categoriesReady = !categoriesOn || (categoryIncome.data !== undefined && categoryExpense.data !== undefined);
@@ -376,6 +400,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
         void categoryIncome.refetch();
         void categoryExpense.refetch();
       }
+      if (categoriesOn && linesAll) for (const query of allQueries) if (query.isError) void query.refetch();
     },
   };
 }

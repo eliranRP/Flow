@@ -1,13 +1,15 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { QUERY_STALE_MS } from "../query-client";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
 // FLOW-1194: the by-category order reads a category's lines when its row scrolls near (or on a tap), once; the search
 // field asks the server. FLOW-1207: the date and amount orders read a direction's every line in one paged read (no group
 // key, pages of 200), where they read each category's lines before (pages of 40). Invented data only.
-type Calls = { rpc: Array<{ name: string; args: Record<string, unknown> | undefined }>; lines: Record<string, unknown>; search: unknown; failing: string[]; disconnects: number };
-const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0 }));
+type Calls = { rpc: Array<{ name: string; args: Record<string, unknown> | undefined }>; lines: Record<string, unknown>; search: unknown; failing: string[]; disconnects: number; income: boolean; inFlight: number; maxInFlight: number };
+const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0, income: false, inFlight: 0, maxInFlight: 0 }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
@@ -15,6 +17,12 @@ vi.mock("../lib/supabase", () => ({
     rpc: (name: string, args?: Record<string, unknown>) => {
       calls.rpc.push({ name, args });
       if (name === "get_breakdown_lines" && calls.failing.includes(String(args?.p_group_key))) return Promise.resolve({ data: null, error: new Error("down") });
+      if (name === "get_breakdown_lines" && args?.p_group_key === null) {
+        // The one-direction read is slow enough for two pages asked together to overlap.
+        calls.inFlight += 1;
+        calls.maxInFlight = Math.max(calls.maxInFlight, calls.inFlight);
+        return new Promise((resolve) => { setTimeout(() => { calls.inFlight -= 1; resolve({ data: answer(name, args), error: null }); }, 5); });
+      }
       return Promise.resolve({ data: answer(name, args), error: null });
     },
     from: () => ({ select: () => ({ maybeSingle: () => Promise.resolve({ data: { overhead_project_id: null, overhead: null }, error: null }) }) }),
@@ -24,6 +32,7 @@ vi.mock("../wait-for-session", () => ({ waitForAccessToken: () => Promise.resolv
 
 const SALARY = "00000000-0000-4000-8000-0000000000c1";
 const INSURANCE = "00000000-0000-4000-8000-0000000000c2";
+const RENT = "00000000-0000-4000-8000-0000000000c3";
 
 function breakdown(direction: "income" | "expense", groups: Array<{ key: string; name: string; amount: number; count: number }>) {
   return {
@@ -49,7 +58,7 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
   if (name === "get_breakdown") {
     if (args?.p_group_by === "project") return breakdown(args.p_direction === "income" ? "income" : "expense", []);
     return args?.p_direction === "income"
-      ? breakdown("income", [])
+      ? breakdown("income", calls.income ? [{ key: RENT, name: "שכירות", amount: 70000, count: 1 }] : [])
       : { ...breakdown("expense", [{ key: SALARY, name: "שכר", amount: 30000, count: 1 }, { key: INSURANCE, name: "ביטוח", amount: 20000, count: 1 }]), excluded_groups: [{ currency: "USD", amount_minor: 5000, count: 1, key: "k1", name: "פיקדון", projects: 1, loan_part: null }] };
   }
   if (name === "mcp_company_loan_currency") return "USD";
@@ -61,12 +70,12 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
   if (name === "get_breakdown_lines" && args?.p_group_key === null) {
     // The server's one read of the direction: every category's rows, newest first (a tie in the server's own order,
     // here the last category first), each naming its group.
-    const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : [];
+    const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : [RENT];
     const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map((row) => ({ ...row, group_key: key })))
       .sort((a, b) => String(b.doc_date).localeCompare(String(a.doc_date)));
     const offset = Number(args.p_offset);
     const limit = Number(args.p_limit);
-    return { rows: all.slice(offset, offset + limit), has_more: all.length > offset + limit };
+    return { rows: all.slice(offset, offset + limit), has_more: all.length > offset + limit, count: all.length };
   }
   if (name === "get_breakdown_lines") return calls.lines[String(args?.p_group_key)] ?? { rows: [], has_more: false };
   if (name === "search_transactions") return calls.search;
@@ -103,9 +112,13 @@ beforeEach(() => {
   calls.lines = {
     [SALARY]: { rows: [line("t-salary", "משכורת לדוגמה")], has_more: false },
     [INSURANCE]: { rows: [line("t-insurance", "פוליסה לדוגמה")], has_more: false },
+    [RENT]: { rows: [{ ...line("t-rent", "שכירות לדוגמה"), doc_date: "2026-07-02" }], has_more: false },
   };
   calls.search = { total: 1, expenses: [{ id: "t-found", description: "חשבון מצאנו", doc_date: "2026-07-12", amount_net: -12345, direction: "expense", currency: "USD", project_id: null, category_id: INSURANCE, project_name: null, category_name: "ביטוח", supplier_name: "ספק לדוגמה", customer_name: null, waiting_review: false, kept_out: false, split_parts: 0, loan_matched: false }] };
   calls.failing = [];
+  calls.income = false;
+  calls.inFlight = 0;
+  calls.maxInFlight = 0;
   calls.disconnects = 0;
   watching.length = 0;
   stubObserver();
@@ -171,12 +184,53 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     expect(textsInOrder("משכורת לדוגמה", "פוליסה לדוגמה")).toEqual(["משכורת לדוגמה", "פוליסה לדוגמה"]);
   });
 
+  const manyLines = (count: number) => Array.from({ length: count }, (_, index) => ({ ...line(`t-s${String(index)}`, `משכורת ${String(index)}`), doc_date: "2026-07-05" }));
+
   it("a direction with more lines than a page reads the next page, and shows every line", async () => {
-    calls.lines[SALARY] = { rows: Array.from({ length: 201 }, (_, index) => ({ ...line(`t-s${String(index)}`, `משכורת ${String(index)}`), doc_date: "2026-07-05" })), has_more: false };
+    calls.lines[SALARY] = { rows: manyLines(201), has_more: false };
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
     expect(await screen.findByText("משכורת 200")).toBeInTheDocument();
     expect(lineReads().map((call) => [call.args?.p_offset, call.args?.p_limit])).toEqual([[0, 200], [200, 200]]);
     expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
+  });
+
+  it("401 lines are 3 reads (offsets 0, 200, 400): the first says how many follow, and those are asked together", async () => {
+    calls.lines[SALARY] = { rows: manyLines(400), has_more: false };
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    expect(await screen.findByText("משכורת 399")).toBeInTheDocument();
+    expect(lineReads().map((call) => call.args?.p_offset).sort()).toEqual([0, 200, 400]);
+    expect(calls.maxInFlight).toBe(2);
+    expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
+  });
+
+  it("income and expense are one read each, and both directions' lines show", async () => {
+    calls.income = true;
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    expect(await screen.findByText("שכירות לדוגמה")).toBeInTheDocument();
+    expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
+    expect(lineReads().map((call) => call.args?.p_direction).sort()).toEqual(["expense", "income"]);
+    expect(lineReads().every((call) => call.args?.p_group_key === null)).toBe(true);
+  });
+
+  it("a failed read shows the page's failure with a retry, and the retry brings the lines", async () => {
+    calls.failing = ["null"];
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    fireEvent.click(await screen.findByRole("button", { name: "נסו שוב" }));
+    calls.failing = [];
+    expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
+    expect(lineReads().map((call) => call.args?.p_group_key)).toEqual([null, null]);
+  });
+
+  it("the category order after the date order shows those lines at once, with no new read", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date", client });
+    await screen.findByText("פוליסה לדוגמה");
+    expect(lineReads()).toHaveLength(1);
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    fireEvent.click(await screen.findByRole("button", { name: /ביטוח/ }));
+    expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
+    expect(screen.queryAllByRole("status").some((node) => node.textContent === "טוען…")).toBe(false);
+    expect(lineReads()).toHaveLength(1);
   });
 });
 
