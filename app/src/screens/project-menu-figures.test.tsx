@@ -58,10 +58,13 @@ describe("the menu's delete row and waiting-lines warning wait for the project's
     expect(within(menu).queryByRole("button", { name: DELETE })).not.toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
     expect(screen.getByRole("dialog", { name: /^לסיים את/ })).toHaveTextContent("בודקים שורות ממתינות…");
+    // The confirm waits for the warning, so a fast tap cannot finish before it shows.
+    expect(within(screen.getByRole("dialog", { name: /^לסיים את/ })).getByRole("button", { name: "סיום הפרויקט" })).toBeDisabled();
     await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
     land(answer({ pending_count: 2, deletable: false }));
     await waitFor(() => { expect(screen.getByRole("dialog", { name: /^לסיים את/ })).toHaveTextContent("יש בו 2 פריטים לאישור"); });
     expect(screen.getByRole("dialog", { name: /^לסיים את/ })).not.toHaveTextContent("בודקים");
+    expect(within(screen.getByRole("dialog", { name: /^לסיים את/ })).getByRole("button", { name: "סיום הפרויקט" })).toBeEnabled();
   });
 
   it("swaps the placeholder for the real row when the project can be deleted", async () => {
@@ -89,6 +92,8 @@ describe("the menu's delete row and waiting-lines warning wait for the project's
     const sheet = screen.getByRole("dialog", { name: /^לסיים את/ });
     expect(sheet).toHaveTextContent("לא הצלחנו לבדוק שורות ממתינות");
     expect(within(sheet).getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    // A failing read never blocks finishing.
+    expect(within(sheet).getByRole("button", { name: "סיום הפרויקט" })).toBeEnabled();
     fireEvent.click(within(sheet).getByRole("button", { name: "חזרה" }));
     rpc.answer = () => Promise.resolve(answer({ pending_count: 0, deletable: true }));
     fireEvent.click(within(menu).getByRole("button", { name: /ניסיון חוזר/ }));

@@ -88,6 +88,7 @@ export function ProjectMenu({
   // if it failed, the same places say so, with ניסיון חוזר.
   const figuresLanded = sample || sampleRow != null || cash.dataUpdatedAt > 0;
   const figuresFailed = !figuresLanded && cash.isError;
+  const figuresLoading = !figuresLanded && !figuresFailed;
   const retryFigures = () => { void cash.refetch(); };
   const action = finished ? "החזרה לפעילים" : "סיום הפרויקט";
   const toast = useToast();
@@ -173,7 +174,8 @@ export function ProjectMenu({
             {figuresFailed && !finished ? <Button variant="link" onClick={retryFigures}>ניסיון חוזר</Button> : null}
             <Button
               full
-              disabled={setStatus.isPending}
+              // While the figures load the line above says why; a failed read does not block finishing.
+              disabled={setStatus.isPending || figuresLoading}
               onClick={() => {
                 setMenu(false);
                 if (blocked()) return;
