@@ -761,6 +761,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1194"></a>[FLOW-1194](tasks/FLOW-1194.md) | Perf: Company profit's "by category" order loads category lines on scroll; search finds every line | MEDIUM (perf) |
 | <a id="flow-1195"></a>[FLOW-1195](tasks/FLOW-1195.md) | Perf: Company profit's year view reads forecast skips once, not once per month | SMALL (perf) |
 | <a id="flow-1196"></a>[FLOW-1196](tasks/FLOW-1196.md) | Perf: duplicated fields in reads that flow-mcp names | MEDIUM (perf, MCP contract) |
+| <a id="flow-1203"></a>[FLOW-1203](tasks/FLOW-1203.md) | Perf: `get_property_returns` reads the property's lines once | MEDIUM (perf) |
 | <a id="flow-1204"></a>[FLOW-1204](tasks/FLOW-1204.md) | Perf: the projects list stops computing each project's menu counts | SMALL (perf) |
 | <a id="flow-1205"></a>[FLOW-1205](tasks/FLOW-1205.md) | Perf: drop more read fields no one reads (rehab_by_category, expected_months lean, projects_cash_month, get_project lean) | SMALL (perf) |
 | <a id="flow-1206"></a>[FLOW-1206](tasks/FLOW-1206.md) | Perf: the recurring suggestions' look-alike join uses the party index; jev's inputs key once | SMALL (perf) |
