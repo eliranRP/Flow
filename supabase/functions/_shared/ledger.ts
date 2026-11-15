@@ -88,7 +88,7 @@ function expenseRole(description: string): PnlRole {
   return "project";
 }
 
-function linkedRateBp(
+export function linkedRateBp(
   invoice: SumitDoc | undefined,
   companyRateBp: number,
 ): number {

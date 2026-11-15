@@ -3,19 +3,11 @@ import type { Database } from "../../../packages/shared/src/database.types.ts";
 import { constantTimeEqual } from "../_shared/constant-time.ts";
 import { decodeKek, envelopeFromRow, openApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
-import {
-  assertSumitUrl,
-  crmEntityDrift,
-  type CrmTally,
-  definitionOf,
-  deriveLine,
-  documentUrls,
-  invoicesMissingLinks,
-  isSchemaDrift,
-  mapCrmEntity,
-  pageShapeDrift,
-  type SumitDoc,
-} from "../_shared/ledger.ts";
+import { assertSumitUrl, deriveLine, documentUrls, invoicesMissingLinks, type SumitDoc } from "../_shared/ledger.ts";
+import { isMissingFunction } from "../_shared/connectors/mercury/legacy.ts";
+import { SUMIT_PAGE_CAP, SUMIT_PAGE_SIZE } from "../_shared/connectors/sumit/pull.ts";
+import { pullSkips } from "../_shared/connectors/sumit/pull_state.ts";
+import { pullRun, type StorePlan, type WriteResult } from "../_shared/connectors/sumit/run.ts";
 import { companyHint, ownedCompany } from "../_shared/owner.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 import { refreshSettle, settleRefresh, type RefreshSettle } from "../_shared/refresh_queue.ts";
@@ -28,7 +20,6 @@ declare const Deno: {
 const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
 const LIST_DOCUMENTS = "https://api.sumit.co.il/accounting/documents/list/";
-const PAGE_CAP = 20;
 const CLAIM_MS = 10 * 60 * 1000;
 
 class SyncHold extends Error {
@@ -79,7 +70,7 @@ Deno.serve(async (req) => {
         );
         try {
           // The cron path claims the connection too, so it never overlaps a manual run (FLOW-510).
-          const synced = await syncCompany(admin, row.company_id, decodeKek(kekSecret), row.forced === true, true);
+          const synced = await syncCompany(admin, row.company_id, decodeKek(kekSecret), row.forced === true, true, true);
           const move = refreshSettle(synced);
           await settle(move);
           if (move === "requeue") continue;
@@ -107,7 +98,7 @@ Deno.serve(async (req) => {
     const companyId = await ownedCompany(admin, user.data.user.id, companyHint(req));
     if (!companyId) return json({ error: "no company" }, 400);
     const body = (await req.json().catch(() => ({}))) as { force?: boolean };
-    const result = await syncCompany(admin, companyId, decodeKek(kekSecret), body.force === true, true);
+    const result = await syncCompany(admin, companyId, decodeKek(kekSecret), body.force === true, true, false);
     return json(result);
   } catch (error) {
     if (error instanceof SyncHold) {
@@ -127,7 +118,8 @@ async function syncCompany(
   kek: Uint8Array,
   force: boolean,
   claim: boolean,
-): Promise<{ ok: boolean; documents: number; skipped?: boolean; busy?: boolean; sumit_reads: number }> {
+  drained: boolean,
+): Promise<{ ok: boolean; documents: number; skipped?: boolean; busy?: boolean; partial?: boolean; sumit_reads: number }> {
   const connection = await admin
     .from("sumit_connections")
     .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, last_sync_at, last_error, next_attempt_at")
@@ -138,6 +130,10 @@ async function syncCompany(
   if (row.last_error === "sumit_auth") throw new Error("sumit_auth");
   if (typeof row.next_attempt_at === "string" && Date.parse(row.next_attempt_at) > Date.now()) {
     throw new SyncHold(row.next_attempt_at);
+  }
+  // FLOW-1163: a pull that stopped moving 3 runs in a row waits for the owner's own refresh.
+  if (pullSkips(await readSettings(admin, companyId), Number(row.sumit_company_id), { force, drained })) {
+    return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
   }
   const last = row.last_sync_at ? Date.parse(row.last_sync_at as string) : 0;
   const minGap = force ? 60_000 : 6 * 60 * 60 * 1000;
@@ -180,22 +176,50 @@ async function runSync(
   companyId: string,
   kek: Uint8Array,
   row: Record<string, unknown>,
-): Promise<{ ok: boolean; documents: number; sumit_reads: number }> {
+): Promise<{ ok: boolean; documents: number; partial?: boolean; sumit_reads: number }> {
   const envelope = envelopeFromRow(row);
   const sumitCompanyId = Number(row.sumit_company_id);
   let apiKey = "";
   try {
     apiKey = await openApiKey(envelope, kek, companyId, "sumit");
-    const listed = await listDocuments(sumitCompanyId, apiKey);
-    const documents = listed.docs;
-    const missing = invoicesMissingLinks(documents, await linkedInvoices(admin, companyId));
-    const links = missing.from == null
-      ? { urls: new Map<number, string>(), reads: 0 }
-      : await listDocumentUrls(sumitCompanyId, apiKey, missing.from);
-    await writeLedger(admin, companyId, documents, links.urls);
+    const company = await admin.from("companies").select("vat_rate_bp").eq("id", companyId).single();
+    if (company.error || !company.data) throw new Error("could not read the company");
+    const rate = Number(company.data.vat_rate_bp);
+    const credentials = { CompanyID: sumitCompanyId, APIKey: apiKey };
+    const folder = await documentsFolder(credentials);
+    // FLOW-1163: the claim is held, so this read is the pull's current state.
+    const ran = await pullRun({
+      settings: await readSettings(admin, companyId),
+      sumitCompanyId,
+      companyRateBp: rate,
+      now: new Date().toISOString(),
+      fetchPage: (start) =>
+        sumitCall(LIST_ENTITIES, credentials, {
+          Folder: folder,
+          IncludeInheritedFolders: true,
+          LoadProperties: true,
+          Paging: { StartIndex: start, PageSize: SUMIT_PAGE_SIZE },
+        }),
+      write: async (plan) => {
+        const missing = invoicesMissingLinks(plan.batch, await linkedInvoices(admin, companyId));
+        const links = missing.from == null
+          ? { urls: new Map<number, string>(), reads: 0 }
+          : await listDocumentUrls(sumitCompanyId, apiKey, missing.from);
+        const saved = await writeLedger(admin, companyId, plan, links.urls, rate);
+        return saved ? { saved: true, reads: links.reads } : { saved: false, reason: "missing", reads: links.reads };
+      },
+    });
+    const reads = ran.reads + 1;
+    if (!ran.finished) {
+      // A partial run stores its pages and the continuation (one write), never sweeps, and does not
+      // stamp: the connection reads as it did, not as an error, until a run lists the window to its end.
+      // Three runs in a row that left the continuation where it was end in sync_page_cap, as before.
+      if (ran.stuck) throw new Error("sync_page_cap");
+      return { ok: true, documents: ran.documents, partial: true, sumit_reads: reads };
+    }
     const stamped = await admin.rpc("stamp_sumit_sync", { p_company: companyId });
     if (stamped.error) throw new Error("could not stamp the sync");
-    return { ok: true, documents: documents.length, sumit_reads: listed.reads + links.reads };
+    return { ok: true, documents: ran.documents, sumit_reads: reads };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
     const safe = apiKey === "" ? message : message.replaceAll(apiKey, "[redacted]");
@@ -213,6 +237,18 @@ async function runSync(
     }
     throw new Error(code);
   }
+}
+
+/** The connection's settings (FLOW-1163: where the pull's continuation is kept); `{}` when unreadable. */
+async function readSettings(admin: SupabaseClient<Database>, companyId: string): Promise<Record<string, unknown>> {
+  const read = await admin
+    .from("connector_connections")
+    .select("settings")
+    .eq("company_id", companyId)
+    .eq("provider", "sumit")
+    .maybeSingle();
+  const settings = read.error || !read.data ? null : read.data.settings;
+  return settings && typeof settings === "object" && !Array.isArray(settings) ? (settings as Record<string, unknown>) : {};
 }
 
 /**
@@ -285,75 +321,11 @@ function findFolder(node: unknown, name: string): number | null {
   return null;
 }
 
-async function listDocuments(companyId: number, apiKey: string): Promise<{ docs: SumitDoc[]; reads: number }> {
-  const credentials = { CompanyID: companyId, APIKey: apiKey };
-  let reads = 0;
-  reads += 1;
+async function documentsFolder(credentials: { CompanyID: number; APIKey: string }): Promise<number> {
   const folders = await sumitCall(LIST_FOLDERS, credentials, {});
   const folder = findFolder(folders, "מסמכים");
   if (folder == null) throw new Error("SUMIT documents folder was not found");
-  const docs: SumitDoc[] = [];
-  const tally: CrmTally = { mapped: 0, broken: {} };
-  // Kinds the sync does not read, by definition number: a renumbered kind shows up here.
-  const skippedKinds = new Map<string, number>();
-  let start = 0;
-  for (let page = 0; page < PAGE_CAP; page += 1) {
-    reads += 1;
-    const payload = await sumitCall(LIST_ENTITIES, credentials, {
-      Folder: folder,
-      IncludeInheritedFolders: true,
-      LoadProperties: true,
-      Paging: { StartIndex: start, PageSize: 1000 },
-    });
-    const data = payload.Data;
-    // FLOW-510: a page with a body but no row list means SUMIT changed its shape.
-    if (pageShapeDrift(payload)) {
-      console.error("sumit-sync page without a row list", JSON.stringify(Object.keys(payload).slice(0, 10)));
-      throw new Error("sync_schema_drift");
-    }
-    const entities = extractEntities(data);
-    for (const entity of entities) {
-      if (!entity || typeof entity !== "object") continue;
-      const record = entity as Record<string, unknown>;
-      const mapped = mapCrmEntity(record);
-      if (mapped) {
-        docs.push(mapped);
-        tally.mapped += 1;
-        continue;
-      }
-      const field = crmEntityDrift(record);
-      if (field != null) tally.broken[field] = (tally.broken[field] ?? 0) + 1;
-      else skippedKinds.set(definitionOf(record), (skippedKinds.get(definitionOf(record)) ?? 0) + 1);
-    }
-    const hasNext = Boolean(
-      data && typeof data === "object" && "HasNextPage" in data && (data as { HasNextPage?: boolean }).HasNextPage,
-    );
-    if (!hasNext || entities.length === 0) {
-      logSkippedKinds(skippedKinds);
-      checkDrift(tally);
-      return { docs, reads };
-    }
-    start += entities.length;
-  }
-  logSkippedKinds(skippedKinds);
-  checkDrift(tally);
-  throw new Error("sync_page_cap");
-}
-
-/** FLOW-510. Counts of the kinds the sync skipped by design, so a renumbered kind is visible. */
-function logSkippedKinds(kinds: Map<string, number>): void {
-  if (kinds.size > 0) console.log("sumit-sync kinds not read", JSON.stringify(Object.fromEntries(kinds)));
-}
-
-/**
- * FLOW-510. Logs the SUMIT fields that broke (names and counts, never values). Past the
- * isSchemaDrift share it throws sync_schema_drift before anything is written, so the full sweep
- * cannot void documents SUMIT still has; below it the broken rows are dropped as before.
- */
-function checkDrift(tally: CrmTally): void {
-  if (Object.keys(tally.broken).length === 0) return;
-  console.error("sumit-sync rows that did not map", JSON.stringify({ mapped: tally.mapped, broken: tally.broken }));
-  if (isSchemaDrift(tally)) throw new Error("sync_schema_drift");
+  return folder;
 }
 
 /** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */
@@ -385,7 +357,7 @@ async function listDocumentUrls(
   let reads = 0;
   let start = 0;
   try {
-    for (let page = 0; page < PAGE_CAP; page += 1) {
+    for (let page = 0; page < SUMIT_PAGE_CAP; page += 1) {
       reads += 1;
       const payload = await sumitCall(LIST_DOCUMENTS, credentials, {
         DocumentTypes: [0],
@@ -410,17 +382,6 @@ async function listDocumentUrls(
   return { urls, reads };
 }
 
-function extractEntities(data: unknown): unknown[] {
-  if (Array.isArray(data)) return data;
-  if (!data || typeof data !== "object") return [];
-  const record = data as Record<string, unknown>;
-  for (const key of ["Entities", "Data", "List"]) {
-    const value = record[key];
-    if (Array.isArray(value)) return value;
-  }
-  return [];
-}
-
 function docKind(kind: SumitDoc["kind"]): string {
   if (kind === "inv") return "invoice";
   if (kind === "rec") return "receipt";
@@ -429,15 +390,19 @@ function docKind(kind: SumitDoc["kind"]): string {
   return "expense";
 }
 
+/**
+ * Stores the plan's documents. Returns false when the plan needs `upsert_sumit_window` and the database
+ * does not have it yet (FLOW-1163: edge functions deploy before the migration): the run then fails with
+ * sync_page_cap as before, and nothing was written. A plain run keeps calling `upsert_sumit_documents`.
+ */
 async function writeLedger(
   admin: SupabaseClient<Database>,
   companyId: string,
-  docs: SumitDoc[],
+  plan: StorePlan,
   urls: Map<number, string>,
-): Promise<void> {
-  const company = await admin.from("companies").select("vat_rate_bp").eq("id", companyId).single();
-  if (company.error || !company.data) throw new Error("could not read the company");
-  const rate = Number(company.data.vat_rate_bp);
+  rate: number,
+): Promise<boolean> {
+  const docs = plan.batch;
   const suppliers = await admin.from("suppliers").select("name, vat_exempt").eq("company_id", companyId);
   if (suppliers.error) throw new Error("could not read suppliers");
   const exempt = new Map<string, boolean>();
@@ -445,14 +410,13 @@ async function writeLedger(
     exempt.set(String(row.name), row.vat_exempt === true);
   }
 
-  const byId = new Map(docs.map((doc) => [doc.sumit_id, doc]));
-  const payload = docs.map((doc) => {
+    const payload = docs.map((doc) => {
     const line = deriveLine(
       doc,
       doc.bud == null ? null : String(doc.bud),
       doc.cust_name != null && exempt.get(doc.cust_name) === true,
       rate,
-      byId,
+      plan.lookup,
     );
     const expense = line.kind === "exp";
     return {
@@ -478,6 +442,28 @@ async function writeLedger(
     };
   });
 
-  const saved = await admin.rpc("upsert_sumit_documents", { p_company: companyId, p_docs: payload });
+  if (plan.path === "plain") {
+    const saved = await admin.rpc("upsert_sumit_documents", { p_company: companyId, p_docs: payload });
+    if (saved.error) throw new Error("could not save the documents");
+    return true;
+  }
+  // The documents, the sweep (only when `complete`: a window listed whole in one run) and the
+  // continuation are one transaction.
+  const saved = await (admin as unknown as WindowRpc).rpc("upsert_sumit_window", {
+    p_company: companyId,
+    p_docs: payload,
+    p_complete: plan.complete,
+    p_pull: plan.pull,
+  });
+  if (isMissingFunction(saved.error)) return false;
   if (saved.error) throw new Error("could not save the documents");
+  return true;
+}
+
+/** upsert_sumit_window is not in the generated types until the migration is applied and they are regenerated. */
+interface WindowRpc {
+  rpc(
+    name: "upsert_sumit_window",
+    args: { p_company: string; p_docs: unknown[]; p_complete: boolean; p_pull: unknown },
+  ): PromiseLike<{ error: { code?: string | null; message?: string | null } | null }>;
 }
