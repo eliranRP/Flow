@@ -678,6 +678,8 @@ export const breakdownLinesSchema = z
         gross_up: z.boolean().optional().catch(undefined),
         /** FLOW-954: the row's category, so a kept-out line sits under its own group. Older payloads omit it. */
         category_id: z.string().nullable().optional().catch(undefined),
+        /** FLOW-1207: with no group key, the group the row belongs to (the key a keyed read would be asked with). Else omitted. */
+        group_key: z.string().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),
