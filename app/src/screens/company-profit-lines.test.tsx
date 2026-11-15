@@ -194,6 +194,17 @@ describe("CompanyProfitScreen, more on lines and search (FLOW-1194)", () => {
     expect(await screen.findByText("שכר")).toBeInTheDocument();
   });
 
+  it("a typed amount reads twice, not three times: the overlap read only corrects the total and months, which this page does not draw", async () => {
+    await enterCategories();
+    fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש בתנועות" }), { target: { value: "8940" } });
+    expect(await screen.findByText("ספק לדוגמה")).toBeInTheDocument();
+    const reads = calls.rpc.filter((call) => call.name === "search_transactions");
+    expect(reads.map((call) => call.args)).toEqual([
+      expect.objectContaining({ p_query: "8940" }),
+      expect.objectContaining({ p_amount_min: 894000, p_amount_max: 894099 }),
+    ]);
+  });
+
   it("the search's live region is on the page while the search is still loading", async () => {
     calls.search = new Promise(() => undefined);
     await enterCategories();

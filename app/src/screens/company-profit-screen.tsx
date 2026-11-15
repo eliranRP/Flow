@@ -144,7 +144,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // FLOW-1194: the search asks the server (search_transactions) for the month's lines, so a line in a category that
   // has not loaded is found too.
   const settled = useDebounced(typed, SEARCH_DEBOUNCE_MS).trim();
-  const found = useSearchQuery({ ...EMPTY_FILTERS, q: settled, period: month }, sample == null && period === "month" && settled !== "");
+  const found = useSearchQuery({ ...EMPTY_FILTERS, q: settled, period: month }, sample == null && period === "month" && settled !== "", { overlap: false });
   const model: ProfitModel | null = sample ? buildProfitModel(sample, sample.overhead) : live.model;
   const onCurrent = monthKey === currentKey;
   const long = period !== "month";

@@ -292,7 +292,7 @@ function SearchRoute({ word, rows }: { word: string; rows: SearchRow[] }) {
     next.setQueryData(["company-currency", "off"], "USD");
     const filters = { ...EMPTY_FILTERS, q: word, period: monthPeriod("2026-10") };
     const page = { total: rows.length, expenses: rows, months: null, next: null };
-    next.setQueryData(["search", "off", searchArgs(filters, 0)], { pages: [page], pageParams: [{ text: 0, amount: null }] });
+    next.setQueryData(["search", "off", searchArgs(filters, 0), false], { pages: [page], pageParams: [{ text: 0, amount: null }] });
     return next;
   });
   // The word is typed on mount, so a shot taken without the play function shows the found lines too.
