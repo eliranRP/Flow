@@ -421,6 +421,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       href={`/transactions/${row.id}${search}`}
     />
   );
+  // FLOW-1221: the field sits in the header under the period switch, always in the same slot, so typing keeps its focus.
   const searchBox = (
     <div className="ui-cp-search ui-rep-search">
       <SearchField label="חיפוש בתנועות" value={typed} onChange={setTyped} placeholder="ספק, תיאור או סכום" busy={searching && found.isFetching} />
@@ -443,10 +444,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         backText="בית"
         subtitle={subtitle}
         compactFigure={signedText(profit, currency)}
-        panel={chips}
-        below={<div className="ui-cp-head">{periodSwitch}{figure}{offlineLine}{summary}{nextBlock}{chips}</div>}
+        panel={searching ? undefined : chips}
+        below={<div className="ui-cp-head">{periodSwitch}{searchBox}{figure}{offlineLine}{summary}{searching ? null : nextBlock}{searching ? null : chips}</div>}
       />
-      {period === "month" ? searchBox : null}
       {searching ? foundBody : body}
       {basisFooter}
     </div>

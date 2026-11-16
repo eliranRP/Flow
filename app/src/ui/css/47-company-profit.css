@@ -32,7 +32,8 @@
   --size-seg-track: calc(var(--touch-min) + var(--space-2));
 }
 
-.ui-cp-period + .ui-cp-figure {
+.ui-cp-period + .ui-cp-figure,
+.ui-cp-search + .ui-cp-figure {
   margin-top: var(--space-2);
 }
 
@@ -178,12 +179,7 @@
   font-weight: var(--type-btn-weight);
 }
 
-/* FLOW-1194: the month view's search field, in the list's gutter; its status line is the report search's (.ui-rep-search). */
+/* FLOW-1221: the month view's search field sits in the header under the period switch; its status line is the report search's (.ui-rep-search). */
 .ui-cp-search {
-  margin-inline: var(--space-side);
-}
-
-/* The search box sits between the chips and the first group: no pull-up under it. */
-.ui-cp-screen .ui-cp-search + .ui-pcat-group {
-  margin-top: 0;
+  margin-top: var(--space-2);
 }

@@ -29,7 +29,16 @@ function ProfitRoute({ entry, sample = COMPANY_PROFIT_SAMPLE }: { entry: string;
   );
 }
 
-export const ByProject: Story = { name: "By project", render: () => <ProfitRoute entry="/profit" /> };
+/** FLOW-1221: the month view; the search field sits in the header under the period switch, in view at the top. */
+export const ByProject: Story = {
+  name: "By project",
+  render: () => <ProfitRoute entry="/profit" />,
+  play: async ({ canvasElement }) => {
+    const field = await within(canvasElement).findByRole("searchbox", { name: "חיפוש בתנועות" });
+    await expect(field.closest(".ui-page-below .ui-cp-head")?.firstElementChild?.nextElementSibling).toBe(field.closest(".ui-cp-search"));
+    await expect(canvasElement.ownerDocument.querySelector(".ui-cp-head .ui-cp-chips")).not.toBeNull();
+  },
+};
 
 /**
  * The head (canvas note spec-fcwide, items 0 and 2): the summary rows with dividers, November's card (no link:
@@ -333,6 +342,8 @@ export const Search: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("ברזל ופלדה בע״מ")).toBeInTheDocument();
     await expect(canvas.getByText("לא נספר ברווח")).toBeInTheDocument();
+    // FLOW-1221: while lines show, the order chips and the next-month card and chart are gone.
+    await expect(canvasElement.ownerDocument.querySelector(".ui-cp-chips, .ui-fc-block")).toBeNull();
   },
 };
 
@@ -342,6 +353,7 @@ export const SearchNoMatch: Story = {
   render: () => <SearchRoute word="אאא" rows={[]} />,
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByText("לא מצאנו ״אאא״")).toBeInTheDocument();
+    await expect(canvasElement.ownerDocument.querySelector(".ui-cp-chips, .ui-fc-block")).toBeNull();
   },
 };
 
