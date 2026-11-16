@@ -1,6 +1,6 @@
 // The project's ⋯ menu (board V3-Project, "פעולות לפרויקט"): edit, the investment page, the profit since the
 // start, finish (FLOW-1044: a confirm inside the sheet, then at once with ביטול) or החזרה לפעילים, and delete
-// when the project has no lines (the one that asks).
+// when the project has no lines (the one that asks); with lines, a quiet line keeps the delete slot (FLOW-1220).
 // The sheet is titled with the project's name. The overhead switch and the group live in the edit sheet;
 // adding a line is the + sheet's job.
 import { useRef, useState, type ReactNode } from "react";
@@ -280,7 +280,18 @@ export function ProjectMenu({
                   setRemoving(true);
                 }}
               />
-            ) : null}
+            ) : (
+              // FLOW-1220: a project with lines cannot be deleted. The slot stays as a quiet, non-tappable line, so the rows above do not move.
+              <ListRow
+                variant="static"
+                tone="muted"
+                muted
+                wrapTitle
+                title="אי אפשר למחוק: יש בו תנועות"
+                icon={<BinIcon />}
+                className="ui-project-menu-quiet"
+              />
+            )}
           </List>
         </>
         )}

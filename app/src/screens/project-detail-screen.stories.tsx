@@ -285,6 +285,29 @@ export const ProjectMenuChecking: Story = {
   },
 };
 
+const linedRow = devProjectsCash.projects.find((project) => project.id === "p1");
+/** FLOW-1220: a project with lines cannot be deleted. The delete slot stays as a quiet line, so the rows above do not move. */
+export const ProjectMenuCantDelete: Story = {
+  name: "Project, ⋯ menu, can't delete",
+  render: () => (
+    <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={overviewProject}
+        sampleInvestment={filledInvestment}
+        sectionTo={sectionTo}
+        sampleMenuRow={linedRow && { ...linedRow, deletable: false }}
+      />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "וילה לדוגמה" });
+    await expect(within(dialog).getByText("אי אפשר למחוק: יש בו תנועות")).toBeInTheDocument();
+    await expect(within(dialog).queryByRole("button", { name: /^מחיקת הפרויקט/ })).not.toBeInTheDocument();
+  },
+};
+
 /** The menu when its figures read failed: the list is not busy, the status line is empty, ניסיון חוזר is offered. */
 export const ProjectMenuCheckFailed: Story = {
   name: "Project, ⋯ menu, check failed",
