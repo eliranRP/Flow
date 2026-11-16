@@ -7,8 +7,9 @@ import { FORECAST_EDITS_KEY } from "./project-next-month-query";
 
 // FLOW-1191: the month forecast's writes change forecast_overrides, which expected_months does not read, so a write
 // refetches the month forecast on screen and not expected_months. FLOW-1201, FLOW-1202: the company inputs carry the
-// skips Home's next-month card counts, so a write refetches the inputs a screen shows and drops the ones no screen
-// holds (Company profit's year views load fresh and never show the pre-write figures). Invented keys only.
+// skips Home's next-month card counts, and a write drops the ones no screen holds (Company profit's year views load
+// fresh and never show the pre-write figures). FLOW-1214: a write patches the skips the shown inputs carry (no read:
+// see forecast-skip-patch.test.tsx). Invented keys only.
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: unknown }>({ data: null, error: null })));
 vi.mock("./lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
 
@@ -35,7 +36,7 @@ function WriteOnly() {
 }
 
 describe("the month forecast's writes (FLOW-1191, FLOW-1201)", () => {
-  it.each(["set", "reset"])("%s refetches the month forecast and the company inputs on screen, not expected_months", async (name) => {
+  it.each(["set", "reset"])("%s refetches the month forecast on screen, and neither expected_months nor the company inputs (FLOW-1214)", async (name) => {
     reads.forecast = 0;
     reads.expected = 0;
     reads.inputs = 0;
@@ -44,10 +45,10 @@ describe("the month forecast's writes (FLOW-1191, FLOW-1201)", () => {
     await waitFor(() => { expect(reads).toEqual({ forecast: 1, expected: 1, inputs: 1 }); });
     fireEvent.click(screen.getByRole("button", { name }));
     await waitFor(() => { expect(reads.forecast).toBe(2); });
-    await waitFor(() => { expect(reads.inputs).toBe(2); });
     await waitFor(() => { expect(client.isFetching()).toBe(0); });
     expect(reads.forecast).toBe(2);
     expect(reads.expected).toBe(1);
+    expect(reads.inputs).toBe(1);
   });
 
   it("a write drops company inputs no screen holds, so the year view never shows the pre-write figures", async () => {

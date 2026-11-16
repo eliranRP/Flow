@@ -47,7 +47,8 @@ export type ForecastWrite = { key: string; patch: ForecastPatch; undo: boolean; 
 export function useSetForecastItem(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastWrite>({
-    onSuccess: () => { void refreshCompanyInputs(client); },
+    onSuccess: () => { dropInactiveCompanyInputs(client); },
+    apply: ({ key, patch, prior, undo }) => changeSkips(client, month, (keys) => withSkip(keys, key, skipSet(undo ? priorPatch(prior) : patch))),
     run: async ({ key, patch, prior, undo }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -63,16 +64,86 @@ export function useSetForecastItem(month: string) {
   });
 }
 
+/** The company inputs' answers carry `skips` (FLOW-1195, FLOW-1202); the same shape as company-next-month-query's. */
+type CompanySkips = { skips?: Record<string, string[]> };
+
+/** The skip a write sets: true takes the item out of the month, false puts it back, undefined leaves the skip alone (an amount or a day). */
+function skipSet(patch: ForecastPatch): boolean | undefined {
+  if (patch.reset === true) return false;
+  return patch.moved_out;
+}
+
+function withSkip(keys: readonly string[], key: string, out: boolean | undefined): readonly string[] {
+  if (out == null) return keys;
+  if (!out) return keys.filter((item) => item !== key);
+  return keys.includes(key) ? keys : [...keys, key];
+}
+
 /**
- * FLOW-1201, FLOW-1202: the company inputs carry the skips, which Home's next-month card and the overhead project's
- * totals count. A write refetches the inputs a screen shows, so those counts follow the skip, and drops the ones no
- * screen holds (Company profit's year views), so they load fresh and never show pre-write figures
+ * FLOW-1214: moves one month's skip keys in every cached company inputs answer that carries `skips` (the full answer and
+ * the slim one), with setQueryData and no read: the month's total follows the tap. Returns the undo, which takes out the
+ * keys this change added and puts back the ones it took out, so a failed write leaves the answers as the other writes left them.
+ */
+function changeSkips(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
+  watchForecastWrites(client);
+  const touched: Array<{ key: readonly unknown[]; added: string[]; removed: string[] }> = [];
+  const queries = client.getQueryCache().findAll({ queryKey: ["project-forecast-edits"], predicate: (query) => query.queryKey[2] === "company" });
+  for (const query of queries) {
+    const data = client.getQueryData<CompanySkips>(query.queryKey);
+    if (data?.skips == null) continue;
+    const before = data.skips[month] ?? [];
+    const after = change(before);
+    const added = after.filter((key) => !before.includes(key));
+    const removed = before.filter((key) => !after.includes(key));
+    if (added.length === 0 && removed.length === 0) continue;
+    client.setQueryData(query.queryKey, { ...data, skips: { ...data.skips, [month]: [...after] } });
+    touched.push({ key: query.queryKey, added, removed });
+  }
+  return () => {
+    for (const { key, added, removed } of touched) {
+      const data = client.getQueryData<CompanySkips>(key);
+      if (data?.skips == null) continue;
+      const now = data.skips[month] ?? [];
+      const restored = [...now.filter((item) => !added.includes(item)), ...removed.filter((item) => !now.includes(item))];
+      client.setQueryData(key, { ...data, skips: { ...data.skips, [month]: restored } });
+    }
+  };
+}
+
+/**
+ * FLOW-1201, FLOW-1202, FLOW-1214: a skip, reset or undo patches the skips above and reads no company inputs. The inputs
+ * no screen holds (Company profit's year views) are dropped, so they load fresh and never show pre-write figures
  * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
  */
-function refreshCompanyInputs(client: QueryClient) {
-  const company = (query: { queryKey: readonly unknown[] }) => query.queryKey[2] === "company";
-  client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: company });
-  return client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: company });
+function dropInactiveCompanyInputs(client: QueryClient) {
+  client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
+}
+
+const watchedClients = new WeakSet<QueryClient>();
+
+/**
+ * FLOW-1214 (review): a write that fails can leave the cache ahead of the server. An overlapping write's delta is recorded
+ * at its tap, so a later undo can remove or restore a key the server never changed, and a restore that fails partway
+ * leaves the rows before it on the server. So once every write of a month's scope has settled and one of them failed,
+ * the inputs no screen holds are dropped and the active ones are read again: the cache ends at the server's answer.
+ */
+function watchForecastWrites(client: QueryClient) {
+  if (watchedClients.has(client)) return;
+  watchedClients.add(client);
+  const failedScopes = new Set<string>();
+  client.getMutationCache().subscribe((event) => {
+    if (event.type !== "updated") return;
+    const { mutation } = event;
+    const scope = mutation.options.scope?.id;
+    if (scope == null || !scope.startsWith(forecastScope(""))) return;
+    if (mutation.state.status === "error") failedScopes.add(scope);
+    if (!failedScopes.has(scope) || mutation.state.status === "pending") return;
+    const unsettled = client.getMutationCache().findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
+    if (unsettled.length > 0) return;
+    failedScopes.delete(scope);
+    dropInactiveCompanyInputs(client);
+    void client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: (query) => query.queryKey[2] === "company" });
+  });
 }
 
 /** The patch that puts an item back to its prior state (null: Flow's number). */
@@ -84,7 +155,8 @@ export function priorPatch(prior: ForecastOverrideRow | null): ForecastPatch {
 export function useResetForecastMonth(month: string) {
   const client = useQueryClient();
   return useWrite({
-    onSuccess: () => { void refreshCompanyInputs(client); },
+    onSuccess: () => { dropInactiveCompanyInputs(client); },
+    apply: () => changeSkips(client, month, () => []),
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -101,7 +173,8 @@ export function useResetForecastMonth(month: string) {
 export function useRestoreForecast(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastOverrideRow[]>({
-    onSuccess: () => { void refreshCompanyInputs(client); },
+    onSuccess: () => { dropInactiveCompanyInputs(client); },
+    apply: (rows) => changeSkips(client, month, (keys) => rows.reduce((next, row) => withSkip(next, row.item_key, row.moved_out), keys)),
     run: async (rows) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

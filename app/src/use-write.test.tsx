@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BOOKS_CLOSED_MS, booksClosedNote, booksClosedSettingNote, MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
@@ -204,5 +204,62 @@ describe("useWrite", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("לא נשמר. בדקו את הפרטים ונסו שוב.")).toBeInTheDocument();
     expect(reread).not.toHaveBeenCalledWith({ queryKey: [MY_COMPANIES_KEY] });
+  });
+});
+
+// FLOW-1214 (review): `apply` changes the cache at the tap and its undo runs on failure, before the optimistic snapshot
+// goes back. The undo records what the cache holds when it runs: the tapped value means it ran first.
+const ROWS = [{ id: 1, paid: false }];
+const PAID_ROWS = [{ id: 1, paid: true }];
+
+function ApplyWrite({ run, seen, withApply }: { run: () => Promise<void>; seen: unknown[]; withApply: boolean }) {
+  const client = useQueryClient();
+  const write = useWrite({
+    keys: [],
+    failure: "לא נשמר.",
+    run,
+    optimistic: () => [{ key: ["rows"], update: () => PAID_ROWS }],
+    ...(withApply ? { apply: () => () => { seen.push(client.getQueryData(["rows"])); } } : {}),
+  });
+  return <button type="button" onClick={() => { write.mutate(); }}>שמירה</button>;
+}
+
+function renderApply(run: () => Promise<void>, seen: unknown[], withApply = true): QueryClient {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  client.setQueryData(["rows"], ROWS);
+  render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <ApplyWrite run={run} seen={seen} withApply={withApply} />
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+  return client;
+}
+
+describe("useWrite's apply (FLOW-1214)", () => {
+  it("on failure the undo runs before the snapshot restore", async () => {
+    const seen: unknown[] = [];
+    const client = renderApply(() => Promise.reject(new Error("refused")), seen);
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("לא נשמר.")).toBeInTheDocument();
+    expect(seen).toEqual([PAID_ROWS]);
+    expect(client.getQueryData(["rows"])).toEqual(ROWS);
+  });
+
+  it("does not undo a write that succeeded", async () => {
+    const seen: unknown[] = [];
+    const client = renderApply(() => Promise.resolve(), seen);
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    expect(seen).toEqual([]);
+    expect(client.getQueryData(["rows"])).toEqual(PAID_ROWS);
+  });
+
+  it("a failure with no apply still restores the snapshot and shows the failure", async () => {
+    const client = renderApply(() => Promise.reject(new Error("refused")), [], false);
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("לא נשמר.")).toBeInTheDocument();
+    expect(client.getQueryData(["rows"])).toEqual(ROWS);
   });
 });
