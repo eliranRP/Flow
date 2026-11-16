@@ -113,6 +113,12 @@ export default defineConfig(({ mode }) => {
         { find: /^@supabase\/storage-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
         // auth-js's passkey (WebAuthn) factor code, which GoTrueClient imports and Flow never calls.
         { find: /^\.\/lib\/webauthn$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
+        // FLOW-1215: auth-js's Ethereum sign-in helpers (signInWithWeb3), which Flow never calls.
+        { find: /^\.\/lib\/web3\/ethereum$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
+        // FLOW-1215: zod's JSON Schema conversion and its compiled-parser code writer, which Flow never calls.
+        { find: /^\.\.\/core\/json-schema-processors\.js$/, replacement: path.resolve(__dirname, "src/lib/zod-json-schema-unused.ts") },
+        { find: /^\.\.\/core\/to-json-schema\.js$/, replacement: path.resolve(__dirname, "src/lib/zod-json-schema-unused.ts") },
+        { find: /^\.\/doc\.js$/, replacement: path.resolve(__dirname, "src/lib/zod-json-schema-unused.ts") },
         // Decision 0192: zod without its new Function probe, which the CSP (no 'unsafe-eval') reports.
         { find: /^zod$/, replacement: path.resolve(__dirname, "src/lib/zod-jitless.ts") },
       ],

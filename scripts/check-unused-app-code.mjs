@@ -25,6 +25,7 @@ export const supportFiles = new Map([
   ["src/ui/reduced-motion.tsx", "a Storybook decorator"],
   ["src/lib/supabase-unused.ts", "vite.config aliases supabase-js's realtime and storage clients to it"],
   ["src/lib/zod-jitless.ts", "vite.config aliases zod to it"],
+  ["src/lib/zod-json-schema-unused.ts", "vite.config aliases zod's JSON Schema conversion to it"],
 ]);
 
 const supportName = /(^|[/.-])(test|tests|stories|story|sample|harness)([/.-]|$)|\.d\.ts$/;
