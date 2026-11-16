@@ -51,7 +51,7 @@ function useCachedProjectName(projectId: string | null): string | null {
  */
 export function useProjectName(projectId: string | null, month: string, active = true): { name: string | null; loading: boolean } {
   const cached = useCachedProjectName(projectId);
-  const read = useProjectsCashMonth(month, projectId ?? undefined, active && projectId != null && cached == null);
+  const read = useProjectsCashMonth(month, projectId ?? undefined, { active: active && projectId != null && cached == null });
   if (cached != null || projectId == null) return { name: cached, loading: false };
   const name = read.data?.projects.find((row) => row.id === projectId)?.name ?? null;
   return { name, loading: name == null && read.isPending && read.fetchStatus === "fetching" };
@@ -147,7 +147,8 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
  * paint, not at mount: only the ⋯ menu's figures need the answer, and the menu asks for it at once when it opens
  * (`urgent`). A deep link has no seed, so its read goes out at mount.
  */
-export function useProjectsCashMonth(month?: string, projectId?: string, active = true, urgent = false) {
+export function useProjectsCashMonth(month?: string, projectId?: string, options: { active?: boolean; urgent?: boolean } = {}) {
+  const { active = true, urgent = false } = options;
   const preview = useHomePreview();
   const client = useQueryClient();
   const listKey = ["projects-cash", month, undefined] as const;

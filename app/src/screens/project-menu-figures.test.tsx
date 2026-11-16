@@ -156,4 +156,24 @@ describe("the menu's read after the first paint when the list has a seed (FLOW-1
     await new Promise((resolve) => { setTimeout(resolve, 200); });
     expect(rpc.calls).toHaveLength(1);
   });
+
+  it("a touch on the ⋯ button, before the menu opens, starts the read, so the menu opens with it in flight or landed", async () => {
+    let land: (value: Answer) => void = () => undefined;
+    rpc.answer = () => new Promise((resolve) => { land = resolve; });
+    renderClosedMenu();
+    expect(rpc.calls).toHaveLength(0);
+    // The pointer goes down on ⋯: the read starts now, and the menu is still shut.
+    fireEvent.pointerDown(screen.getByRole("button", { name: "עוד" }));
+    await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
+    expect(screen.queryByRole("dialog", { name: "Oak Ridge" })).not.toBeInTheDocument();
+    // The menu opens after the read has landed: the delete row is there, with no placeholder.
+    land(answer({ pending_count: 0, deletable: true }));
+    await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    const menu = screen.getByRole("dialog", { name: "Oak Ridge" });
+    expect(within(menu).getByRole("button", { name: DELETE })).toBeInTheDocument();
+    expect(menu.querySelector(".ui-skeleton-bar")).toBeNull();
+    expect(rpc.calls).toHaveLength(1);
+  });
 });

@@ -68,6 +68,9 @@ export function ProjectMenu({
   const blocked = useBlockedPreview();
   const navigate = useNavigate();
   const [menu, setMenuState] = useState(false);
+  // FLOW-1212 (review): a touch, focus or key on the ⋯ button starts the deferred figures read, so the menu opens on it.
+  const [primed, setPrimed] = useState(false);
+  const prime = () => { setPrimed(true); };
   // FLOW-1044 (board): סיום הפרויקט asks inside the sheet first, since it moves the project to another list.
   const [view, setView] = useState<"menu" | "finish">("menu");
   const setMenu = (open: boolean) => {
@@ -79,8 +82,8 @@ export function ProjectMenu({
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.
-  // FLOW-1212: a read the page deferred starts at once when the menu opens.
-  const cash = useProjectsCashMonth(undefined, projectId, true, menu);
+  // FLOW-1212: a read the page deferred starts at once when the ⋯ button is touched or the menu opens.
+  const cash = useProjectsCashMonth(undefined, projectId, { urgent: menu || primed });
   const row = sampleRow ?? cash.data?.projects.find((project) => project.id === projectId);
   const pending = row?.pending_count ?? 0;
   const deletable = row?.deletable === true;
@@ -162,6 +165,9 @@ export function ProjectMenu({
         ref={opener}
         label="עוד"
         onBand
+        onPointerDown={prime}
+        onFocus={prime}
+        onKeyDown={prime}
         onClick={() => {
           setMenu(true);
         }}

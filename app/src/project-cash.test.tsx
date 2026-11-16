@@ -74,7 +74,7 @@ describe("useProjectsCashMonth's project read (FLOW-1212)", () => {
 
   it("starts the deferred read at once when its menu opens (urgent) before the idle moment", async () => {
     const client = makeClient(true);
-    const { result, rerender } = renderHook(({ urgent }) => useProjectsCashMonth(undefined, "p1", true, urgent), {
+    const { result, rerender } = renderHook(({ urgent }) => useProjectsCashMonth(undefined, "p1", { urgent }), {
       wrapper: wrapper(client),
       initialProps: { urgent: false },
     });
@@ -101,9 +101,20 @@ describe("useProjectsCashMonth's project read (FLOW-1212)", () => {
     // prefetch.tsx reads the one-project key (projectsCashMonthOptions) with a staleness window, on the row's touch.
     await client.query({ ...projectsCashMonthOptions(undefined, "p1"), staleTime: 60_000, retry: false }).catch(() => undefined);
     expect(rpc.calls).toHaveLength(1);
-    const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1", true, true), { wrapper: wrapper(client) });
+    const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1", { urgent: true }), { wrapper: wrapper(client) });
     expect(result.current.data?.projects[0]?.pending_count).toBe(3);
     expect(result.current.dataUpdatedAt).toBeGreaterThan(0);
+    await new Promise((resolve) => { setTimeout(resolve, 200); });
+    expect(rpc.calls).toHaveLength(1);
+  });
+
+  it("with a warm prefetch and no urgent read (the after-paint path), makes exactly one read in total", async () => {
+    const client = makeClient(true);
+    await client.query({ ...projectsCashMonthOptions(undefined, "p1"), staleTime: 60_000, retry: false }).catch(() => undefined);
+    expect(rpc.calls).toHaveLength(1);
+    const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1"), { wrapper: wrapper(client) });
+    // The page's deferred read finds the prefetched row fresh: it lands at once and no second read goes out.
+    expect(result.current.data?.projects[0]?.pending_count).toBe(3);
     await new Promise((resolve) => { setTimeout(resolve, 200); });
     expect(rpc.calls).toHaveLength(1);
   });
