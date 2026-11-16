@@ -274,8 +274,10 @@ $$;
 create function pg_temp.old_by_key(p_dir text) returns jsonb
 language sql stable
 as $$
-  select coalesce(jsonb_object_agg(g ->> 'key',
-    pg_temp.old_breakdown_lines(p_dir, 'category', g ->> 'key', 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, 0) -> 'rows'), '{}'::jsonb)
+  -- FLOW-1211: the no-key row has no category_id and no kept_out (the keyed read's row less those, as it was).
+  select coalesce(jsonb_object_agg(g ->> 'key', (
+    select coalesce(jsonb_agg(r - 'category_id' - 'kept_out' order by n), '[]'::jsonb)
+    from jsonb_array_elements(pg_temp.old_breakdown_lines(p_dir, 'category', g ->> 'key', 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, 0) -> 'rows') with ordinality t(r, n))), '{}'::jsonb)
   from jsonb_array_elements(public.get_breakdown(p_dir, '2026-06-01', '2026-06-30', 'category', 'cash') -> 'groups') g
   where g ->> 'currency' = 'USD' and g ->> 'key' <> ''
 $$;

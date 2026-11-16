@@ -658,39 +658,6 @@ export const breakdownSchema = z
   })
   .nullable();
 
-export const breakdownLinesSchema = z
-  .object({
-    rows: z.array(
-      z.object({
-        transaction_id: z.string(),
-        part: z.string().nullable(),
-        description: z.string(),
-        supplier_name: z.string().nullable(),
-        project_name: z.string().nullable(),
-        category_name: z.string().nullable(),
-        doc_date: z.string(),
-        currency: z.string().regex(/^[A-Z]{3}$/),
-        amount_minor: agorotSchema,
-        shared: z.boolean(),
-        /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
-        source: z.string().optional().catch(undefined),
-        /** FLOW-946: a gross-up part (paid from a deposit / netted against the line). Older payloads omit it. */
-        gross_up: z.boolean().optional().catch(undefined),
-        /** FLOW-954: the row's category, so a kept-out line sits under its own group. Older payloads omit it. */
-        category_id: z.string().nullable().optional().catch(undefined),
-        /** FLOW-1207: with no group key, the group the row belongs to (the key a keyed read would be asked with). Else omitted. */
-        group_key: z.string().optional().catch(undefined),
-      }),
-    ),
-    has_more: z.boolean(),
-    /** FLOW-165: the whole group's total and row count, whatever page this is. Older payloads omit them. */
-    total_minor: agorotSchema.optional().catch(undefined),
-    count: z.number().int().nonnegative().optional().catch(undefined),
-    /** FLOW-989: the group by project, as `get_pnl_statement` by project counts it (key: a project id, "overhead", "unassigned" or null). */
-    projects: z.array(z.object({ key: z.string().nullable(), project_id: z.string().nullable(), name: z.string().nullable(), total_minor: agorotSchema })).optional().catch(undefined),
-  })
-  .nullable();
-
 /**
  * One page of `search_transactions` (FLOW-323, decision 0140): every matching line, newest first,
  * with how it stands. `amount_net` is signed in the line's own currency, minor units.
@@ -774,7 +741,6 @@ export type Basis = z.infer<typeof basisSchema>;
 export type BreakdownGroupBy = z.infer<typeof breakdownGroupBySchema>;
 export type BreakdownDirection = z.infer<typeof breakdownDirectionSchema>;
 export type Breakdown = z.infer<typeof breakdownSchema>;
-export type BreakdownLinesPage = z.infer<typeof breakdownLinesSchema>;
 export type SearchPage = z.infer<typeof searchPageSchema>;
 export type SearchRow = SearchPage["expenses"][number];
 export type Dashboard = z.infer<typeof dashboardSchema>;

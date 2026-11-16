@@ -6,10 +6,17 @@ import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
 // FLOW-1194: the by-category order reads a category's lines when its row scrolls near (or on a tap), once; the search
-// field asks the server. FLOW-1207: the date and amount orders read a direction's every line in one paged read (no group
-// key, pages of 200), where they read each category's lines before (pages of 40). Invented data only.
-type Calls = { rpc: Array<{ name: string; args: Record<string, unknown> | undefined }>; lines: Record<string, unknown>; search: unknown; failing: string[]; disconnects: number; income: boolean; inFlight: number; maxInFlight: number };
-const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0, income: false, inFlight: 0, maxInFlight: 0 }));
+// field asks the server. FLOW-1207, FLOW-1211: the date and amount orders read a direction's every line in one call (no
+// group key, no page, lean rows), where they read each category's lines before (pages of 40). FLOW-1210: that read starts
+// with the page, and the project breakdowns do not hold the other orders. Invented data only.
+type Calls = {
+  rpc: Array<{ name: string; args: Record<string, unknown> | undefined }>; lines: Record<string, unknown>; search: unknown; failing: string[]; disconnects: number; income: boolean;
+  /** While set, the category breakdowns (hold.categories) or the project breakdowns (hold.projects) do not answer. */
+  hold: { categories: Promise<void> | null; projects: Promise<void> | null };
+  /** An older database function: a null limit binds to its default of 40 (a rollback, or the app ahead of the migration). */
+  legacy: boolean;
+};
+const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0, income: false, hold: { categories: null, projects: null }, legacy: false }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
@@ -18,11 +25,11 @@ vi.mock("../lib/supabase", () => ({
       calls.rpc.push({ name, args });
       if (name === "get_breakdown_lines" && calls.failing.includes(String(args?.p_group_key))) return Promise.resolve({ data: null, error: new Error("down") });
       if (name === "get_breakdown_lines" && args?.p_group_key === null) {
-        // The one-direction read is slow enough for two pages asked together to overlap.
-        calls.inFlight += 1;
-        calls.maxInFlight = Math.max(calls.maxInFlight, calls.inFlight);
-        return new Promise((resolve) => { setTimeout(() => { calls.inFlight -= 1; resolve({ data: answer(name, args), error: null }); }, 5); });
+        // The one-direction read takes a moment, so the loading row can be seen.
+        return new Promise((resolve) => { setTimeout(() => { resolve({ data: answer(name, args), error: null }); }, 5); });
       }
+      const held = name === "get_breakdown" ? (args?.p_group_by === "project" ? calls.hold.projects : calls.hold.categories) : null;
+      if (held != null) return held.then(() => ({ data: answer(name, args), error: null }));
       return Promise.resolve({ data: answer(name, args), error: null });
     },
     from: () => ({ select: () => ({ maybeSingle: () => Promise.resolve({ data: { overhead_project_id: null, overhead: null }, error: null }) }) }),
@@ -33,6 +40,7 @@ vi.mock("../wait-for-session", () => ({ waitForAccessToken: () => Promise.resolv
 const SALARY = "00000000-0000-4000-8000-0000000000c1";
 const INSURANCE = "00000000-0000-4000-8000-0000000000c2";
 const RENT = "00000000-0000-4000-8000-0000000000c3";
+const NAMES: Record<string, string> = { [SALARY]: "שכר", [INSURANCE]: "ביטוח", [RENT]: "שכירות" };
 
 function breakdown(direction: "income" | "expense", groups: Array<{ key: string; name: string; amount: number; count: number }>) {
   return {
@@ -68,16 +76,20 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
   }
   if (name === "get_breakdown_lines" && args?.p_excluded === true) return { rows: [{ ...line("t-kept", "פיקדון לדוגמה"), category_id: "k1" }], has_more: false };
   if (name === "get_breakdown_lines" && args?.p_group_key === null) {
-    // The server's one read of the direction: every category's rows, newest first (a tie in the server's own order,
-    // here the last category first), each naming its group.
-    const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : [RENT];
-    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map((row) => ({ ...row, group_key: key })))
+    // The server's one read of the direction, whole: every category's rows, newest first (a tie in the server's own
+    // order, here the last category first), each a keyed row without category_id and kept_out, with its group.
+    const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : calls.income ? [RENT] : [];
+    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map(({ category_id: _id, ...row }) => ({ ...row, category_name: NAMES[key] ?? null, group_key: key })))
       .sort((a, b) => String(b.doc_date).localeCompare(String(a.doc_date)));
-    const offset = Number(args.p_offset);
-    const limit = Number(args.p_limit);
-    return { rows: all.slice(offset, offset + limit), has_more: all.length > offset + limit, count: all.length };
+    const limit = args.p_limit == null ? (calls.legacy ? 40 : all.length) : Number(args.p_limit);
+    const offset = args.p_limit == null ? 0 : Number(args.p_offset ?? 0);
+    return { rows: all.slice(offset, offset + limit), has_more: all.length > offset + limit, count: all.length, total_minor: 0, projects: [] };
   }
-  if (name === "get_breakdown_lines") return calls.lines[String(args?.p_group_key)] ?? { rows: [], has_more: false };
+  if (name === "get_breakdown_lines") {
+    // A keyed read: the category's own name and id on every row.
+    const page = (calls.lines[String(args?.p_group_key)] ?? { rows: [], has_more: false }) as { rows: Array<Record<string, unknown>>; has_more: boolean };
+    return args?.p_excluded === true ? page : { ...page, rows: page.rows.map((row) => ({ ...row, category_id: args?.p_group_key, category_name: NAMES[String(args?.p_group_key)] ?? null })) };
+  }
   if (name === "search_transactions") return calls.search;
   return null;
 }
@@ -117,8 +129,8 @@ beforeEach(() => {
   calls.search = { total: 1, expenses: [{ id: "t-found", description: "חשבון מצאנו", doc_date: "2026-07-12", amount_net: -12345, direction: "expense", currency: "USD", project_id: null, category_id: INSURANCE, project_name: null, category_name: "ביטוח", supplier_name: "ספק לדוגמה", customer_name: null, waiting_review: false, kept_out: false, split_parts: 0, loan_matched: false }] };
   calls.failing = [];
   calls.income = false;
-  calls.inFlight = 0;
-  calls.maxInFlight = 0;
+  calls.hold = { categories: null, projects: null };
+  calls.legacy = false;
   calls.disconnects = 0;
   watching.length = 0;
   stubObserver();
@@ -159,22 +171,95 @@ describe("CompanyProfitScreen, the by-category order loads lines on scroll (FLOW
   });
 });
 
-describe("CompanyProfitScreen, the date and amount orders read every line in one call (FLOW-1207)", () => {
-  // Before: one read per counted category (here 2: p_group_key SALARY and INSURANCE, p_limit 40 each). After: one per
-  // direction with a counted category (here 1: the expense direction, p_group_key null, p_limit 200).
-  it("the date order sends one paged read, with no group key, instead of one per category, and no kept-out read", async () => {
+describe("CompanyProfitScreen, the date and amount orders read every line in one call (FLOW-1207, FLOW-1211)", () => {
+  // Before: one read per counted category (p_group_key SALARY and INSURANCE, p_limit 40 each), then FLOW-1207's pages of
+  // 200 with a recomputation of the direction each. After: one read per direction, whole (p_group_key null, no page).
+  it("the date order sends one read per direction, with no group key and no page, and no kept-out read", async () => {
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
     expect(await screen.findByText("משכורת לדוגמה")).toBeInTheDocument();
     expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
-    expect(lineReads()).toHaveLength(1);
-    expect(lineReads()[0]?.args).toMatchObject({ p_direction: "expense", p_group_by: "category", p_group_key: null, p_currency: "USD", p_excluded: false, p_limit: 200, p_offset: 0, p_from: "2026-07-01", p_to: "2026-07-31" });
+    expect(lineReads().map((call) => call.args?.p_direction).sort()).toEqual(["expense", "income"]);
+    const expense = lineReads().find((call) => call.args?.p_direction === "expense");
+    expect(expense?.args).toMatchObject({ p_group_by: "category", p_group_key: null, p_currency: "USD", p_excluded: false, p_from: "2026-07-01", p_to: "2026-07-31" });
+    // No limit asks for the whole direction (the FLOW-1207 app sends 200, and is paged as before); an omitted one would default to 40.
+    expect(expense?.args).toHaveProperty("p_limit", null);
+    expect(expense?.args).not.toHaveProperty("p_offset");
   });
 
-  it("the amount order sends the same one read", async () => {
+  it("the amount order sends the same reads", async () => {
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=amount" });
     expect(await screen.findByText("משכורת לדוגמה")).toBeInTheDocument();
-    expect(lineReads()).toHaveLength(1);
-    expect(lineReads()[0]?.args).toMatchObject({ p_group_key: null, p_limit: 200 });
+    expect(lineReads()).toHaveLength(2);
+    expect(lineReads().every((call) => call.args?.p_group_key === null)).toBe(true);
+  });
+
+  // FLOW-1210: the read takes no key and each row names its group, so it does not wait for the breakdowns.
+  it("the lines are asked before the breakdowns answer, and filed once both are in", async () => {
+    let release = () => {};
+    calls.hold.categories = new Promise<void>((resolve) => { release = resolve; });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    await waitFor(() => { expect(lineReads()).toHaveLength(2); });
+    // The breakdowns are still unanswered: the page is on its skeleton, and no line is drawn.
+    expect(screen.queryByText("פוליסה לדוגמה")).toBeNull();
+    release();
+    expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
+    expect(screen.getByText("משכורת לדוגמה")).toBeInTheDocument();
+    expect(lineReads()).toHaveLength(2);
+  });
+
+  it("lines that answer before the breakdown still seed the category order's reads", async () => {
+    let release = () => {};
+    calls.hold.categories = new Promise<void>((resolve) => { release = resolve; });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date", client });
+    await waitFor(() => { expect(lineReads()).toHaveLength(2); });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    release();
+    await screen.findByText("פוליסה לדוגמה");
+    await waitFor(() => { expect(client.getQueriesData({ queryKey: ["breakdown-lines", "company-profit"] }).some(([key]) => key.includes(INSURANCE))).toBe(true); });
+  });
+
+  // FLOW-1210: the category, date and amount orders do not draw the project rows.
+  it.each(["date", "amount", "category"])("the %s order does not wait for the project breakdowns, and reads them after the first paint", async (order) => {
+    calls.hold.projects = new Promise<void>(() => undefined);
+    renderWithProviders(<CompanyProfitScreen />, { route: `/profit?month=2026-07&by=${order}` });
+    // The figures are drawn while both project reads stay unanswered.
+    expect(await screen.findByRole("radio", { name: "לפי קטגוריה" })).toBeInTheDocument();
+    expect(screen.queryByText(/לא נטען/)).toBeNull();
+    await waitFor(() => { expect(calls.rpc.filter((call) => call.name === "get_breakdown" && call.args?.p_group_by === "project").map((call) => call.args?.p_direction).sort()).toEqual(["expense", "income"]); });
+  });
+
+  it("the project reads start after the figures are drawn, not with them", async () => {
+    let release = () => {};
+    calls.hold.categories = new Promise<void>((resolve) => { release = resolve; });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    await waitFor(() => { expect(lineReads()).toHaveLength(2); });
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    expect(calls.rpc.some((call) => call.name === "get_breakdown" && call.args?.p_group_by === "project")).toBe(false);
+    release();
+    await waitFor(() => { expect(calls.rpc.some((call) => call.name === "get_breakdown" && call.args?.p_group_by === "project")).toBe(true); });
+  });
+
+  it("לפי פרויקט still waits for its project breakdowns", async () => {
+    let release = () => {};
+    calls.hold.projects = new Promise<void>((resolve) => { release = resolve; });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=project" });
+    await waitFor(() => { expect(calls.rpc.filter((call) => call.name === "get_breakdown" && call.args?.p_group_by === "project")).toHaveLength(2); });
+    expect(screen.queryByRole("radio", { name: "לפי קטגוריה" })).toBeNull();
+    release();
+    expect(await screen.findByRole("radio", { name: "לפי קטגוריה" })).toBeInTheDocument();
+  });
+
+  it("a switch to לפי פרויקט after the first paint finds the project reads in: no new read", async () => {
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    await screen.findByText("פוליסה לדוגמה");
+    await waitFor(() => { expect(calls.rpc.filter((call) => call.name === "get_breakdown" && call.args?.p_group_by === "project")).toHaveLength(2); });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    const before = calls.rpc.length;
+    fireEvent.click(screen.getByRole("radio", { name: "לפי פרויקט" }));
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "לפי פרויקט", checked: true })).toBeInTheDocument(); });
+    expect(calls.rpc.filter((call) => call.name === "get_breakdown" && call.args?.p_group_by === "project")).toHaveLength(2);
+    expect(calls.rpc.length).toBe(before);
   });
 
   it("two lines of one day and one size keep the category order, whatever order the server gave them", async () => {
@@ -186,21 +271,24 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
 
   const manyLines = (count: number) => Array.from({ length: count }, (_, index) => ({ ...line(`t-s${String(index)}`, `משכורת ${String(index)}`), doc_date: "2026-07-05" }));
 
-  it("a direction with more lines than a page reads the next page, and shows every line", async () => {
-    calls.lines[SALARY] = { rows: manyLines(201), has_more: false };
+  it("a direction with more than 200 lines is still one call, and shows every line", async () => {
+    calls.lines[SALARY] = { rows: manyLines(401), has_more: false };
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
-    expect(await screen.findByText("משכורת 200")).toBeInTheDocument();
-    expect(lineReads().map((call) => [call.args?.p_offset, call.args?.p_limit])).toEqual([[0, 200], [200, 200]]);
+    expect(await screen.findByText("משכורת 400")).toBeInTheDocument();
+    expect(lineReads().filter((call) => call.args?.p_direction === "expense")).toHaveLength(1);
     expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
   });
 
-  it("401 lines are 3 reads (offsets 0, 200, 400): the first says how many follow, and those are asked together", async () => {
-    calls.lines[SALARY] = { rows: manyLines(400), has_more: false };
+  it("an answer that says there is more (an older function) is read again in pages of 200, so every line shows", async () => {
+    calls.legacy = true;
+    calls.lines[SALARY] = { rows: manyLines(401), has_more: false };
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
-    expect(await screen.findByText("משכורת 399")).toBeInTheDocument();
-    expect(lineReads().map((call) => call.args?.p_offset).sort()).toEqual([0, 200, 400]);
-    expect(calls.maxInFlight).toBe(2);
+    expect(await screen.findByText("משכורת 400")).toBeInTheDocument();
     expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
+    const expense = lineReads().filter((call) => call.args?.p_direction === "expense").map((call) => [call.args?.p_limit ?? null, call.args?.p_offset ?? null]);
+    // The null limit, then pages of 200 at offsets 0, 200 and 400 (402 lines).
+    expect(expense.slice(0, 1)).toEqual([[null, null]]);
+    expect(expense.slice(1).sort()).toEqual([[200, 0], [200, 200], [200, 400]]);
   });
 
   it("income and expense are one read each, and both directions' lines show", async () => {
@@ -223,7 +311,8 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
     expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
     expect(screen.queryByText("לא הצלחנו לטעון את התנועות.")).toBeNull();
-    expect(lineReads().map((call) => call.args?.p_group_key)).toEqual([null, null]);
+    // Both directions' reads failed, and the retry asks each once more.
+    expect(lineReads().map((call) => call.args?.p_group_key)).toEqual([null, null, null, null]);
   });
 
   it("while the one read is in flight the list shows the loading row", async () => {
@@ -249,18 +338,19 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     const read = keyed.getQueriesData<unknown[]>({ queryKey: ["breakdown-lines", "company-profit"] }).find(([key]) => key.includes(INSURANCE))?.[1];
     expect(seeded).toHaveLength(2);
     expect(seeded).toEqual(read);
+    expect(seeded).toEqual([expect.objectContaining({ category_id: INSURANCE, category_name: "ביטוח" }), expect.objectContaining({ category_id: INSURANCE, category_name: "ביטוח" })]);
   });
 
   it("the category order after the date order shows those lines at once, with no new read", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date", client });
     await screen.findByText("פוליסה לדוגמה");
-    expect(lineReads()).toHaveLength(1);
+    expect(lineReads()).toHaveLength(2);
     fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
     fireEvent.click(await screen.findByRole("button", { name: /ביטוח/ }));
     expect(await screen.findByText("פוליסה לדוגמה")).toBeInTheDocument();
     expect(screen.queryAllByRole("status").some((node) => node.textContent === "טוען…")).toBe(false);
-    expect(lineReads()).toHaveLength(1);
+    expect(lineReads()).toHaveLength(2);
   });
 });
 
