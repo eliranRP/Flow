@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
+import { libraryAliases } from "./library-aliases";
 import { defineConfig, type TestProjectInlineConfiguration } from "vitest/config";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,6 +14,18 @@ const unit: TestProjectInlineConfiguration = {
     css: true,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "e2e/**/*.test.ts"],
     setupFiles: ["./src/test-setup.ts"],
+  },
+};
+
+// The same unit suite with the build's library aliases (library-aliases.ts) active and zod inlined
+// so vite applies them to its files too (FLOW-1215). `pnpm test:aliased`; not part of `pnpm test`,
+// which would run every unit test twice.
+const unitAliased: TestProjectInlineConfiguration = {
+  resolve: { alias: libraryAliases },
+  test: {
+    ...unit.test,
+    name: "unit-aliased",
+    server: { deps: { inline: [/zod/] } },
   },
 };
 
@@ -36,5 +49,5 @@ const storybookProject = async (name: string, setupFile: string): Promise<TestPr
 export default defineConfig(async () => {
   const storybook = await storybookProject("storybook", "./.storybook/vitest.setup.ts");
   const storybookDark = await storybookProject("storybook-dark", "./.storybook/vitest.setup-dark.ts");
-  return { test: { projects: [unit, storybook, storybookDark] } };
+  return { test: { projects: [unit, unitAliased, storybook, storybookDark] } };
 });

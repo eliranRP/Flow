@@ -23,9 +23,10 @@ export const supportFiles = new Map([
   ["src/ui/index.ts", "the barrel the stories import"],
   ["src/demo/model.ts", "the unit tests' copy of the demo company"],
   ["src/ui/reduced-motion.tsx", "a Storybook decorator"],
-  ["src/lib/supabase-unused.ts", "vite.config aliases supabase-js's realtime and storage clients to it"],
-  ["src/lib/zod-jitless.ts", "vite.config aliases zod to it"],
-  ["src/lib/zod-json-schema-unused.ts", "vite.config aliases zod's JSON Schema conversion to it"],
+  ["src/lib/supabase-unused.ts", "library-aliases.ts (vite.config and the unit-aliased tests) aliases supabase-js's realtime and storage clients to it"],
+  ["src/lib/zod-jitless.ts", "library-aliases.ts (vite.config and the unit-aliased tests) aliases zod to it"],
+  ["src/lib/zod-json-schema-unused.ts", "library-aliases.ts (vite.config and the unit-aliased tests) aliases zod's JSON Schema conversion to it"],
+  ["src/lib/zod-doc-unused.ts", "library-aliases.ts aliases the code writer of zod's compiled parser to it"],
 ]);
 
 const supportName = /(^|[/.-])(test|tests|stories|story|sample|harness)([/.-]|$)|\.d\.ts$/;

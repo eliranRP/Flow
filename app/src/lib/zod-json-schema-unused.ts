@@ -4,20 +4,22 @@
  * Flow calls it: Flow parses data with zod and never reads a schema back out as JSON Schema. zod's
  * classic schemas import their `*Processor` functions from `core/json-schema-processors.js` and
  * `createToJSONSchemaMethod` from `core/to-json-schema.js`, so every schema keeps all of both.
- * vite.config points those two files here, and `core/doc.js` (the writer behind the compiled
- * object parser that zod-jitless.ts turns off). Using any of it throws, so a feature that needs it
+ * library-aliases.ts points those two files here. Using any of it throws, so a feature that needs it
  * fails loudly and drops the aliases.
  * zod-json-schema-unused.test.ts checks the names match what zod imports.
  */
 
-function unused(): never {
-  throw new Error("zod's JSON Schema conversion is not in Flow's build. Remove its aliases in vite.config.ts to use it.");
+function unused(..._args: unknown[]): never {
+  throw new Error("zod's JSON Schema conversion is not in Flow's build. Remove its aliases in library-aliases.ts to use it.");
 }
 
-/** What the schema getters `.minLength`, `.maxValue` and the like read; no schema in Flow reads one. */
-export function aggregateChecks(_schema: unknown): Record<string, undefined> {
-  return {};
-}
+/**
+ * What the schema getters `.minLength`, `.maxValue`, `.isInt`, `.format` and `.minDate` compute from.
+ * zod reads it only inside those lazy getters, never when a schema is built or parses, and no Flow
+ * code reads one. Returning `{}` would make them answer wrongly (`.minLength` null, `.isInt` false),
+ * so it throws like the rest.
+ */
+export const aggregateChecks = unused;
 
 export const toJSONSchema = unused;
 export const createToJSONSchemaMethod = () => unused;
@@ -66,10 +68,3 @@ export {
   unused as voidProcessor,
 };
 
-/**
- * The code writer behind zod's compiled object parser. zod-jitless.ts turns that parser off before
- * any schema is built (`jit` is false), so nothing constructs one. It has no methods, so a build
- * that did would fail at its first `write`.
- */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- the name zod imports; an empty class is the cheapest stand-in
-export class Doc {}
