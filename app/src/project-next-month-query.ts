@@ -61,24 +61,39 @@ function useProjectExpectedQuery(projectId: string) {
   });
 }
 
+type BalanceDbRow = { loan_id: string | null; balance_minor: number | null; flagged_parts: number | null };
+
+/** Each row's balance, looked up by its loan id: a balance row of a loan not in `rows` is never read. */
+function withBalances(rows: LoanDetailDbRow[], balances: BalanceDbRow[]): ForecastLoan[] {
+  const byLoan = new Map(balances.map((row) => [row.loan_id, row]));
+  return rows.map((row) => {
+    const balance = byLoan.get(row.id);
+    return readLoanRow(row, balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? 0), flaggedParts: balance.flagged_parts ?? 0 });
+  });
+}
+
 /**
  * The loans filed under the project (or, with null, every loan of the company), as the loan page reads a loan:
  * its row with the rates, and its balance in the books (the payments left start from it, FLOW-427).
  */
 export async function readForecastLoans(projectId: string | null): Promise<ForecastLoan[]> {
   const supabase = await readyClient();
-  const query = supabase.from("loans").select(LOAN_DETAIL_COLUMNS);
-  const { data, error } = await (projectId == null ? query : query.eq("project_id", projectId));
-  if (error) throw error;
-  const rows = data as unknown as LoanDetailDbRow[];
+  const balanceColumns = () => supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts");
+  if (projectId == null) {
+    // The company's loans and their balances at once. loan_balances is a security_invoker view with company_id, so RLS
+    // gives it the same rows the loans read gets, and withBalances takes only the balances of the loans it returned.
+    const [loans, balances] = await Promise.all([supabase.from("loans").select(LOAN_DETAIL_COLUMNS), balanceColumns()]);
+    if (loans.error) throw loans.error;
+    if (balances.error) throw balances.error;
+    return withBalances(loans.data, balances.data);
+  }
+  const loans = await supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId);
+  if (loans.error) throw loans.error;
+  const rows = loans.data as unknown as LoanDetailDbRow[];
   if (rows.length === 0) return [];
-  const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts").in("loan_id", rows.map((row) => row.id));
+  const balances = await balanceColumns().in("loan_id", rows.map((row) => row.id));
   if (balances.error) throw balances.error;
-  const byLoan = new Map(balances.data.map((row) => [row.loan_id, row]));
-  return rows.map((row) => {
-    const balance = byLoan.get(row.id);
-    return readLoanRow(row, balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? 0), flaggedParts: balance.flagged_parts ?? 0 });
-  });
+  return withBalances(rows, balances.data);
 }
 
 /** The project's loans for its forecast. Under "loans", so a loan write refreshes it. */
