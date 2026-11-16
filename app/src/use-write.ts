@@ -67,6 +67,9 @@ function failureRetries(failure: WriteFailure, error: Error): boolean {
 /** A query the write changed, with the value it held before, so a failure can put it back. */
 type Snapshot = { key: QueryKey; before: unknown };
 
+/** What a write's tap changed: the snapshots `optimistic` took, and the undo of `apply` (FLOW-1214). */
+type WriteContext = { snapshots: Snapshot[]; undo?: () => void };
+
 /**
  * A write that checks the PostgREST error and toasts a retry for a transient failure. It stays busy
  * until the server answers, unless `optimistic` draws its result at once (decision 0180).
@@ -92,6 +95,8 @@ export function useWrite<T = void>(options: {
   persistFailure?: boolean;
   /** The queries the write changes and each one's value after it. The tap shows it at once; a failure restores it. */
   optimistic?: (payload: T) => Array<{ key: QueryKey; update: (old: unknown) => unknown }>;
+  /** FLOW-1214: changes what the tap shows without refetching anything; the function it returns undoes that change when the write fails. */
+  apply?: (payload: T) => () => void;
   /** Writes in one scope run one after another, in the order tapped (a finish, then its ביטול). */
   scope?: string;
 }) {
@@ -105,7 +110,7 @@ export function useWrite<T = void>(options: {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
-  const mutationOptions: MutationOptions<void, Error, T, Snapshot[]> = {
+  const mutationOptions: MutationOptions<void, Error, T, WriteContext> = {
     ...(options.scope == null ? {} : { scope: { id: options.scope } }),
     mutationFn: (payload: T) => options.run(payload),
     onMutate: async (payload) => {
@@ -114,16 +119,19 @@ export function useWrite<T = void>(options: {
         retryToast.current = null;
         toast.dismiss(id);
       }
-      if (!options.optimistic) return [];
+      const undo = options.apply?.(payload);
+      if (!options.optimistic) return { snapshots: [], undo };
       const updates = options.optimistic(payload);
       await Promise.all(updates.map(({ key }) => client.cancelQueries({ queryKey: key })));
-      return updates.map(({ key, update }) => {
+      const snapshots = updates.map(({ key, update }) => {
         const before = client.getQueryData(key);
         client.setQueryData(key, update);
         return { key, before };
       });
+      return { snapshots, undo };
     },
-    onSuccess: async (_data, payload, snapshots) => {
+    onSuccess: async (_data, payload, context) => {
+      const snapshots = context.snapshots;
       if (options.optimistic) {
         // The tapped result is already drawn; the refresh only corrects it, so it runs behind the toast.
         void invalidate(options.keys);
@@ -136,9 +144,10 @@ export function useWrite<T = void>(options: {
       if (success) toast.show(options.place === "top" ? topToast({ message: success }) : { message: success, ...(options.place ? { place: options.place } : {}) });
       options.onSuccess?.(payload);
     },
-    onError: (error, payload, snapshots) => {
+    onError: (error, payload, context) => {
       const failure = error instanceof Error ? error : new Error("failed");
-      for (const { key, before } of snapshots ?? []) {
+      context?.undo?.();
+      for (const { key, before } of context?.snapshots ?? []) {
         client.setQueryData(key, before);
         void client.invalidateQueries({ queryKey: key });
       }
