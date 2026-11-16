@@ -75,12 +75,18 @@ describe("the menu's delete row and waiting-lines warning wait for the project's
     expect(rpc.calls.map((call) => (call.args as { p_project?: string }).p_project)).toEqual(["p1"]);
   });
 
-  it("leaves nothing in its place when the project cannot be deleted", async () => {
+  // FLOW-1220: the slot keeps its place as a quiet line, so the rows above do not move when the read lands.
+  it("shows a quiet, non-tappable line in the delete slot when the project cannot be deleted", async () => {
     rpc.answer = () => Promise.resolve(answer({ pending_count: 0, deletable: false }));
     const menu = renderMenu();
     await waitFor(() => { expect(menu.querySelector(".ui-skeleton-bar")).toBeNull(); });
     expect(within(menu).queryByRole("button", { name: DELETE })).not.toBeInTheDocument();
     expect(within(menu).queryByRole("button", { name: /ניסיון חוזר/ })).not.toBeInTheDocument();
+    const line = within(menu).getByText("אי אפשר למחוק: יש בו תנועות").closest(".ui-row");
+    expect(line).not.toBeNull();
+    expect(line?.tagName).toBe("DIV");
+    expect(within(menu).queryByRole("button", { name: /אי אפשר למחוק/ })).not.toBeInTheDocument();
+    expect(line?.querySelector(".ui-row-chevron")).toBeNull();
   });
 
   it("says so when the read fails, in the row and in the finish sheet, and ניסיון חוזר reads again", async () => {
