@@ -409,7 +409,7 @@ select is((select array_agg(k order by k) from jsonb_object_keys(pg_temp.new('20
 select is((select array_agg(k order by k) from jsonb_object_keys(pg_temp.new('2026-09-01', 'house')) k),
   array['base_currency', 'projects'], 'and its answer has no month or basis either (FLOW-1213: no unassigned)');
 select is(jsonb_array_length(pg_temp.new('2026-09-01', 'house')->'projects'), 1, 'one row');
-select is(pg_temp.new('2026-09-01', 'house'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'house')), 'the house: the previous answer less month, basis and group_id');
+select is(pg_temp.new('2026-09-01', 'house'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'house')), 'the house: the previous answer less month, basis, group_id and unassigned');
 select is(pg_temp.new('2026-09-01', 'barn'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'barn')), 'the barn');
 select is(pg_temp.new('2026-09-01', 'shed'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'shed')), 'the shed');
 select is(pg_temp.new('2026-09-01', 'lark'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'lark')), 'the finished project');
