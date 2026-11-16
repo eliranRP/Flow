@@ -1,7 +1,10 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState, type ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
+import { ProjectMenu as ProjectActionMenu } from "./project-menu";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
 import { ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
@@ -236,6 +239,68 @@ export const ProjectMenuFinished: Story = {
     </StoryRoute>
   ),
   play: ProjectMenu.play,
+};
+
+// FLOW-1219: the menu alone, its figures not landed. A preview holds the menu's read off, so the figures stay as they are.
+const menuOfLiveProject = {
+  projectId: PROJECT_ID,
+  name: "וילה לדוגמה",
+  budget: 100_000_000n,
+  finished: false,
+  investmentTo: `/projects/${PROJECT_ID}/investment`,
+  hasInvestment: false,
+  profitTo: `/projects/${PROJECT_ID}/profit`,
+};
+
+/** Seeds the menu's read as failed, so the menu shows ניסיון חוזר where the delete row goes. */
+function FailedFigures({ children }: { children: ReactNode }) {
+  const client = useQueryClient();
+  useState(() => {
+    const query = client.getQueryCache().build(client, { queryKey: ["projects-cash", undefined, PROJECT_ID] });
+    query.setState({
+      ...query.state,
+      status: "error",
+      fetchStatus: "idle",
+      error: new Error("offline"),
+      errorUpdateCount: 1,
+      errorUpdatedAt: Date.now(),
+    });
+  });
+  return children;
+}
+
+/** The menu while its figures are read: the list is busy and says it is checking; the delete row is a placeholder. */
+export const ProjectMenuChecking: Story = {
+  name: "Project, ⋯ menu while checking",
+  render: () => (
+    <StoryRoute entry={`/projects/${PROJECT_ID}?preview=loading`} tabs>
+      <ProjectActionMenu {...menuOfLiveProject} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "וילה לדוגמה" });
+    await expect(dialog.querySelector(".ui-project-menu-list")).toHaveAttribute("aria-busy", "true");
+    await expect(within(dialog).getByRole("status")).toHaveTextContent("בודקים אם אפשר למחוק…");
+  },
+};
+
+/** The menu when its figures read failed: the list is not busy, the status line is empty, ניסיון חוזר is offered. */
+export const ProjectMenuCheckFailed: Story = {
+  name: "Project, ⋯ menu, check failed",
+  render: () => (
+    <StoryRoute entry={`/projects/${PROJECT_ID}?preview=error`} tabs>
+      <FailedFigures>
+        <ProjectActionMenu {...menuOfLiveProject} />
+      </FailedFigures>
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
+    const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "וילה לדוגמה" });
+    await expect(dialog.querySelector(".ui-project-menu-list")).not.toHaveAttribute("aria-busy");
+    await expect(within(dialog).getByRole("button", { name: /ניסיון חוזר/ })).toBeInTheDocument();
+  },
 };
 
 /** FLOW-961: past the budget, the bar runs on beyond a tick in the error colour, and the note names the overrun. */

@@ -100,6 +100,29 @@ describe("the menu's delete row and waiting-lines warning wait for the project's
     expect(await within(menu).findByRole("button", { name: DELETE })).toBeInTheDocument();
     expect(rpc.calls).toHaveLength(2);
   });
+
+  // FLOW-1219: the menu list is busy and a status line says it is checking, until the read lands or fails.
+  it("marks the menu list busy and says it is checking, and clears both when the read lands", async () => {
+    let land: (value: Answer) => void = () => undefined;
+    rpc.answer = () => new Promise((resolve) => { land = resolve; });
+    const menu = renderMenu();
+    const list = menu.querySelector(".ui-project-menu-list");
+    expect(list).toHaveAttribute("aria-busy", "true");
+    expect(within(menu).getByRole("status")).toHaveTextContent("בודקים אם אפשר למחוק…");
+    await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
+    land(answer({ pending_count: 0, deletable: true }));
+    expect(await within(menu).findByRole("button", { name: DELETE })).toBeInTheDocument();
+    expect(list).not.toHaveAttribute("aria-busy");
+    expect(within(menu).getByRole("status")).toHaveTextContent("");
+  });
+
+  it("clears the busy mark and the checking line when the read fails", async () => {
+    rpc.answer = () => Promise.resolve({ data: null, error: { message: "boom" } });
+    const menu = renderMenu();
+    await within(menu).findByRole("button", { name: /ניסיון חוזר/ });
+    expect(menu.querySelector(".ui-project-menu-list")).not.toHaveAttribute("aria-busy");
+    expect(within(menu).getByRole("status")).toHaveTextContent("");
+  });
 });
 
 /** The page with the menu closed: the list's seed is there, and the menu's read has not been asked for yet. */

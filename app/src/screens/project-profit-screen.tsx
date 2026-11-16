@@ -89,9 +89,13 @@ function monthYears(rows: readonly ProfitMonth[], currency: string): MonthYear[]
   return years;
 }
 
-/** A head's "count · profit" line: the profit signed, a gain with + in the income colour. */
-function profitSummary(count: number, profit: bigint, currency: string) {
-  return <><bdi dir="ltr">{String(count)}</bdi> · <bdi dir="ltr">{formatAmountText(profit, currency, { plus: profit > 0n, direction: profit > 0n ? "income" : undefined })}</bdi></>;
+/**
+ * A head's "count · profit" line: the profit signed, a gain with + in the income colour. With no count
+ * (FLOW-1218: the months are still loading or failed) it is the profit alone, never a count of zero.
+ */
+function profitSummary(count: number | null, profit: bigint, currency: string) {
+  const amount = <bdi dir="ltr">{formatAmountText(profit, currency, { plus: profit > 0n, direction: profit > 0n ? "income" : undefined })}</bdi>;
+  return count == null ? amount : <><bdi dir="ltr">{String(count)}</bdi> · {amount}</>;
 }
 
 function countWord(count: number): string {
@@ -333,7 +337,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       ) : (
         <>
           <section className="ui-month" aria-labelledby="pp-months">
-            <GroupHead id="pp-months" title="לפי חודש" summary={profitSummary(rows.length, profit, currency)} />
+            <GroupHead id="pp-months" title="לפי חודש" summary={profitSummary(monthsLoading || monthsFailed ? null : rows.length, profit, currency)} />
             <div className="ui-pp-next">
               <NextMonthBlock
                 forecast={nextMonth.forecast}
