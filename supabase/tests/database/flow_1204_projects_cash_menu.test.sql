@@ -368,9 +368,10 @@ create function pg_temp.as_list(p_old jsonb) returns jsonb language sql immutabl
 $$;
 grant execute on function pg_temp.as_list(jsonb) to authenticated;
 
--- ... and as a project's own answer gives it: the same, but pending_count and deletable stay.
+-- ... and as a project's own answer gives it: the same, but pending_count and deletable stay. FLOW-1213: and no unassigned,
+-- which only the list has.
 create function pg_temp.as_menu(p_old jsonb) returns jsonb language sql immutable as $$
-  select (p_old - 'month' - 'basis') || jsonb_build_object('projects', coalesce((
+  select (p_old - 'month' - 'basis' - 'unassigned') || jsonb_build_object('projects', coalesce((
     select jsonb_agg(r - 'group_id' order by o)
     from jsonb_array_elements(p_old->'projects') with ordinality t(r, o)), '[]'::jsonb));
 $$;
@@ -406,7 +407,7 @@ select is((select array_agg(k order by k) from jsonb_object_keys(pg_temp.new('20
     'pending_count', 'profit_all_minor', 'spent_minor', 'status', 'type'],
   'a project''s own row has the two menu fields beside the twelve, and no group_id');
 select is((select array_agg(k order by k) from jsonb_object_keys(pg_temp.new('2026-09-01', 'house')) k),
-  array['base_currency', 'projects', 'unassigned'], 'and its answer has no month or basis either');
+  array['base_currency', 'projects'], 'and its answer has no month or basis either (FLOW-1213: no unassigned)');
 select is(jsonb_array_length(pg_temp.new('2026-09-01', 'house')->'projects'), 1, 'one row');
 select is(pg_temp.new('2026-09-01', 'house'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'house')), 'the house: the previous answer less month, basis and group_id');
 select is(pg_temp.new('2026-09-01', 'barn'), pg_temp.as_menu(pg_temp.old('2026-09-01', 'barn')), 'the barn');
