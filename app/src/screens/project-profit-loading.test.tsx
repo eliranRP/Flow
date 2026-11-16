@@ -1,6 +1,6 @@
 import type { ProfitMonths, ProjectDetail } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectProfitScreen } from "./project-profit-screen";
@@ -86,5 +86,23 @@ describe("ProjectProfitScreen while its months and forecast load", () => {
     expect(screen.getByRole("status").textContent).toContain("לא הצלחנו לטעון");
     fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
     expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  // FLOW-1218: the לפי חודש head shows the profit alone while the months load or fail, never "• 0" months.
+  it("shows no month count on the לפי חודש head while the months load, and none when they fail", () => {
+    const monthsHead = () => document.getElementById("pp-months")?.closest(".ui-group-head")?.querySelector(".ui-group-summary");
+    state.months = { data: undefined, isPending: true, isLoading: true, isError: false, isPaused: false, fetchStatus: "fetching", status: "pending", refetch: vi.fn() };
+    state.forecast = { ...forecastBase, pending: true, paused: false };
+    renderScreen();
+    expect(monthsHead()?.textContent).toMatch(/4,000/);
+    expect(monthsHead()?.textContent).not.toContain("·");
+    cleanup();
+
+    state.months = { data: undefined, isPending: false, isLoading: false, isError: true, isPaused: false, fetchStatus: "idle", status: "error", refetch: vi.fn() };
+    state.forecast = { ...forecastBase, pending: false, paused: false };
+    renderScreen();
+    expect(monthsHead()?.textContent).toMatch(/4,000/);
+    expect(monthsHead()?.textContent).not.toContain("·");
+    cleanup();
   });
 });

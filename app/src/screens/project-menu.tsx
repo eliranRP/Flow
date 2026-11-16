@@ -195,89 +195,94 @@ export function ProjectMenu({
           </div>
         ) : (
         /* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */
-        <List className="ui-project-menu-list">
-          {finished ? null : (
-            <ListRow
-              variant="button"
-              title="עריכת פרטים"
-              hint="שם, סוג ותקציב"
-              icon={<PencilIcon />}
-              chevron
-              onClick={() => {
-                setMenu(false);
-                setEditing(true);
-              }}
-            />
-          )}
-          {hasInvestment ? (
-            <ListRow
-              variant="item"
-              title="השקעה והלוואות"
-              hint="מחיר קנייה, ARV, שווי והלוואות"
-              icon={<InvestIcon />}
-              href={investmentTo}
-              chevron
-            />
-          ) : null}
-          <ListRow
-            variant="item"
-            title="רווח מתחילת הפרויקט"
-            hint="רווח והפסד לפי חודש וקטגוריה"
-            icon={<BarsIcon />}
-            href={profitTo}
-            chevron
-          />
-          {utilitiesTo == null ? null : (
-            <ListRow
-              variant="item"
-              title="חשבונות"
-              hint="מה הוחזר ומה לא"
-              icon={<BoltIcon />}
-              href={utilitiesTo}
-              chevron
-            />
-          )}
-          <ListRow
-            variant="button"
-            title={action}
-            hint={finished ? finishHint : "יעבור ל״הסתיימו״. אפשר לבטל."}
-            icon={<FlagIcon />}
-            chevron={!finished}
-            disabled={setStatus.isPending}
-            onClick={() => {
-              if (finished) {
-                setMenu(false);
-                if (blocked()) return;
-                setStatus.mutate("active");
-              } else setView("finish");
-            }}
-          />
-          {!figuresLanded ? (
-            figuresFailed ? (
+        <>
+          {/* FLOW-1219: a live region that is empty until the figures are read, so a screen reader hears "checking" and then nothing. */}
+          <p className="sr-only" role="status">{figuresLoading ? "בודקים אם אפשר למחוק…" : null}</p>
+          <List className="ui-project-menu-list" busy={figuresLoading}>
+            {finished ? null : (
               <ListRow
                 variant="button"
-                title="לא הצלחנו לבדוק אם אפשר למחוק"
-                hint="ניסיון חוזר"
-                icon={<RefreshIcon />}
-                onClick={retryFigures}
+                title="עריכת פרטים"
+                hint="שם, סוג ותקציב"
+                icon={<PencilIcon />}
+                chevron
+                onClick={() => {
+                  setMenu(false);
+                  setEditing(true);
+                }}
               />
-            ) : (
-              <ListRow variant="skeleton" icon />
-            )
-          ) : deletable ? (
+            )}
+            {hasInvestment ? (
+              <ListRow
+                variant="item"
+                title="השקעה והלוואות"
+                hint="מחיר קנייה, ARV, שווי והלוואות"
+                icon={<InvestIcon />}
+                href={investmentTo}
+                chevron
+              />
+            ) : null}
+            <ListRow
+              variant="item"
+              title="רווח מתחילת הפרויקט"
+              hint="רווח והפסד לפי חודש וקטגוריה"
+              icon={<BarsIcon />}
+              href={profitTo}
+              chevron
+            />
+            {utilitiesTo == null ? null : (
+              <ListRow
+                variant="item"
+                title="חשבונות"
+                hint="מה הוחזר ומה לא"
+                icon={<BoltIcon />}
+                href={utilitiesTo}
+                chevron
+              />
+            )}
             <ListRow
               variant="button"
-              title="מחיקת הפרויקט"
-              hint="אין בו תנועות, אז אפשר למחוק אותו"
-              icon={<BinIcon />}
-              className="ui-project-menu-delete"
+              title={action}
+              hint={finished ? finishHint : "יעבור ל״הסתיימו״. אפשר לבטל."}
+              icon={<FlagIcon />}
+              chevron={!finished}
+              disabled={setStatus.isPending}
               onClick={() => {
-                setMenu(false);
-                setRemoving(true);
+                if (finished) {
+                  setMenu(false);
+                  if (blocked()) return;
+                  setStatus.mutate("active");
+                } else setView("finish");
               }}
             />
-          ) : null}
-        </List>
+            {!figuresLanded ? (
+              figuresFailed ? (
+                <ListRow
+                  variant="button"
+                  title="לא הצלחנו לבדוק אם אפשר למחוק"
+                  wrapTitle
+                  hint="ניסיון חוזר"
+                  icon={<RefreshIcon />}
+                  onClick={retryFigures}
+                />
+              ) : (
+                <ListRow variant="skeleton" icon />
+              )
+            ) : deletable ? (
+              <ListRow
+                variant="button"
+                title="מחיקת הפרויקט"
+                hint="אין בו תנועות, אז אפשר למחוק אותו"
+                icon={<BinIcon />}
+                className="ui-project-menu-delete"
+                onClick={() => {
+                  setMenu(false);
+                  setRemoving(true);
+                }}
+              />
+            ) : null}
+          </List>
+        </>
         )}
       </Sheet>
       <ProjectFormSheet

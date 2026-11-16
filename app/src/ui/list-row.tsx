@@ -699,7 +699,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   );
 }
 
-export function List({ children, className, layout }: { children: ReactNode; className?: string; layout?: ListLayout }) {
+export function List({ children, className, layout, busy }: { children: ReactNode; className?: string; layout?: ListLayout; /** FLOW-1219: the rows are still being read. */ busy?: boolean }) {
   const layoutClass = layout === "inset" ? "ui-list-inset" : false;
-  return <div className={cx("ui-project-list", layoutClass, className)}>{children}</div>;
+  return <div className={cx("ui-project-list", layoutClass, className)} aria-busy={busy === true || undefined}>{children}</div>;
 }
