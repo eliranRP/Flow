@@ -121,7 +121,7 @@ describe("the forecast's loans for the company (FLOW-1209)", () => {
     expect(loans).toEqual(expected());
   });
 
-  it("gives no loans and no balances when the company has no loans", async () => {
+  it("gives no loans when the company has none", async () => {
     db.answers.loans = { data: [], error: null };
     const result = readForecastLoans(null);
     openGate();
