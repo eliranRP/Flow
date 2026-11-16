@@ -73,6 +73,7 @@ export const Step1BusinessBooksClosed: Story = {
     await userEvent.click(canvas.getByRole("radio", { name: BASIS_OPTIONS[1].label }));
     await userEvent.click(canvas.getByRole("button", { name: NEXT }));
     await waitFor(() => expect(canvas.getByRole("alert")).toHaveTextContent(booksClosedSettingNote(CLOSED_THROUGH)));
+    await expect(canvas.getByRole("radio", { name: BASIS_OPTIONS[0].label })).toHaveAttribute("aria-checked", "true");
   },
 };
 

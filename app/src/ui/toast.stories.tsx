@@ -65,7 +65,7 @@ export const Skip: Story = {
   render: () => <AboveFloor action="">דילגנו על הפריט</AboveFloor>,
 };
 
-function PlacedToast({ children }: { children: string }) {
+function PlacedToast({ children, place }: { children: string; place?: "top" }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = host.current;
@@ -78,7 +78,7 @@ function PlacedToast({ children }: { children: string }) {
     };
   }, []);
   return (
-    <div className="ui-toast-host" ref={host}>
+    <div className="ui-toast-host" data-place={place} ref={host}>
       <Toast tone="info">{children}</Toast>
     </div>
   );
@@ -165,7 +165,7 @@ function ClosedLineToast({ children }: { children: string }) {
       <form className="ui-page-pad ui-stack">
         <TextField label="תיאור" value="ספק לדוגמה" onChange={() => undefined} />
       </form>
-      <PlacedToast>{children}</PlacedToast>
+      <PlacedToast place="top">{children}</PlacedToast>
     </>
   );
 }
