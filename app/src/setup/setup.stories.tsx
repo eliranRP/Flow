@@ -1,11 +1,34 @@
 
+import { useLayoutEffect, type ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { booksClosedSettingNote } from "../company-role-cache";
 import { StoryRoute } from "../ui/story-route";
-import { PROJECT_ADD, PROJECT_NAME_EMPTY, REVIEW_APPROVE, REVIEW_BEFORE } from "./copy";
+import { BASIS_OPTIONS, NEXT, PROJECT_ADD, PROJECT_NAME_EMPTY, REVIEW_APPROVE, REVIEW_BEFORE } from "./copy";
 import { SetupDone } from "./done";
 import { SkipSheet } from "./skip-sheet";
 import { StepBusiness, StepConnect, StepInstall, StepJev, StepProjects, StepReview, type StepProps } from "./steps";
+
+/** The closed-books date the refusal names (FLOW-1170). */
+const CLOSED_THROUGH = "2026-05-31";
+
+/**
+ * Storybook has no backend: the company's set_cash_basis call gets the lock's answer instead, a
+ * PostgREST 400 with the message the database sends (FLOW-1170). Other calls pass through. The
+ * real fetch comes back when the story unmounts.
+ */
+function RefusedBasisBooks({ children }: { children: ReactNode }) {
+  useLayoutEffect(() => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (input, init) => {
+      if (!String(input instanceof Request ? input.url : input).includes("/rpc/set_cash_basis")) return original(input, init);
+      const body = { code: "P0001", details: null, hint: null, message: `the books are closed through ${CLOSED_THROUGH}: this setting changes them` };
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 400, headers: { "Content-Type": "application/json" } }));
+    };
+    return () => { globalThis.fetch = original; };
+  }, []);
+  return <>{children}</>;
+}
 
 /** Invented names only (Birch Lane, Northline Supply, Lantern Home Loans). Never a board sample. */
 const noop: StepProps = {
@@ -32,6 +55,26 @@ export const Step1Business: Story = {
       <StepBusiness {...noop} companyId={null} initial={null} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-1170: the basis the closed books refuse shows their sentence in place of the save error, and goes back. */
+export const Step1BusinessBooksClosed: Story = {
+  name: "Step 1 · basis refused by closed books",
+  parameters: { flowRouter: false },
+  render: () => (
+    <StoryRoute entry="/setup/1">
+      <RefusedBasisBooks>
+        <StepBusiness {...noop} companyId="company-story" initial={{ name: "Birch Lane Realty", currency: "USD", basis: "paid" }} />
+      </RefusedBasisBooks>
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("radio", { name: BASIS_OPTIONS[1].label }));
+    await userEvent.click(canvas.getByRole("button", { name: NEXT }));
+    await waitFor(() => expect(canvas.getByRole("alert")).toHaveTextContent(booksClosedSettingNote(CLOSED_THROUGH)));
+    await expect(canvas.getByRole("radio", { name: BASIS_OPTIONS[0].label })).toHaveAttribute("aria-checked", "true");
+  },
 };
 
 export const Step2Connect: Story = {

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { booksClosedNote, booksClosedSettingNote } from "../company-role-cache";
 import { ActionBar, ActionBarRow } from "./action-bar";
 import { Button } from "./button";
 import { SegmentedControl } from "./segmented-control";
@@ -64,7 +65,7 @@ export const Skip: Story = {
   render: () => <AboveFloor action="">דילגנו על הפריט</AboveFloor>,
 };
 
-function PlacedToast({ children }: { children: string }) {
+function PlacedToast({ children, place }: { children: string; place?: "top" }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = host.current;
@@ -77,14 +78,14 @@ function PlacedToast({ children }: { children: string }) {
     };
   }, []);
   return (
-    <div className="ui-toast-host" ref={host}>
+    <div className="ui-toast-host" data-place={place} ref={host}>
       <Toast tone="info">{children}</Toast>
     </div>
   );
 }
 
 /** A short sheet: the toast sits clear of שמירה, above the sheet when the sheet has no room. */
-function ShortSheetToast() {
+function ShortSheetToast({ children }: { children: string }) {
   return (
     <>
       <header className="ui-page">
@@ -99,7 +100,7 @@ function ShortSheetToast() {
       >
         <TextField label="שם" value="" onChange={() => undefined} />
       </Sheet>
-      <PlacedToast>במצב תצוגה זה לא נשמר.</PlacedToast>
+      <PlacedToast>{children}</PlacedToast>
     </>
   );
 }
@@ -130,7 +131,7 @@ function FormToastStory() {
 
 export const ShortSheet: Story = {
   args: { children: "במצב תצוגה זה לא נשמר." },
-  render: () => <ShortSheetToast />,
+  render: () => <ShortSheetToast>במצב תצוגה זה לא נשמר.</ShortSheetToast>,
   globals: {
     viewport: {
       value: "flow390-short",
@@ -145,6 +146,48 @@ export const FormToast: Story = {
   globals: {
     viewport: {
       value: "flow390-short",
+      isRotated: false
+    }
+  },
+};
+
+/** FLOW-1166 / FLOW-1170: the closed-books refusals are about 20 words, so they wrap at 320 (the toast is 8s). */
+const CLOSED_THROUGH = "2026-05-31";
+
+/** The line refusal (FLOW-1166) over a page: an edit to a closed line, shown as the toast. */
+function ClosedLineToast({ children }: { children: string }) {
+  return (
+    <>
+      <header className="ui-page">
+        <p className="t-line2">תנועות</p>
+        <h1 className="t-total">הוצאה</h1>
+      </header>
+      <form className="ui-page-pad ui-stack">
+        <TextField label="תיאור" value="ספק לדוגמה" onChange={() => undefined} />
+      </form>
+      <PlacedToast place="top">{children}</PlacedToast>
+    </>
+  );
+}
+
+/** The setting refusal (FLOW-1170) on a short sheet, as the date and category sheets show it. */
+export const BooksClosedSetting: Story = {
+  args: { children: booksClosedSettingNote(CLOSED_THROUGH) },
+  render: () => <ShortSheetToast>{booksClosedSettingNote(CLOSED_THROUGH)}</ShortSheetToast>,
+  globals: {
+    viewport: {
+      value: "flow320-short",
+      isRotated: false
+    }
+  },
+};
+
+export const BooksClosedLine: Story = {
+  args: { children: booksClosedNote(CLOSED_THROUGH) },
+  render: () => <ClosedLineToast>{booksClosedNote(CLOSED_THROUGH)}</ClosedLineToast>,
+  globals: {
+    viewport: {
+      value: "flow320-short",
       isRotated: false
     }
   },
