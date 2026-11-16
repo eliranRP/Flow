@@ -79,7 +79,8 @@ export function ProjectMenu({
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.
-  const cash = useProjectsCashMonth(undefined, projectId);
+  // FLOW-1212: a read the page deferred starts at once when the menu opens.
+  const cash = useProjectsCashMonth(undefined, projectId, true, menu);
   const row = sampleRow ?? cash.data?.projects.find((project) => project.id === projectId);
   const pending = row?.pending_count ?? 0;
   const deletable = row?.deletable === true;
