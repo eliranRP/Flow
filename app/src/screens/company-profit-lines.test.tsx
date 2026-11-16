@@ -385,6 +385,26 @@ describe("CompanyProfitScreen, more on lines and search (FLOW-1194)", () => {
     expect(lineReads().map((call) => call.args?.p_excluded)).toEqual([true]);
   });
 
+  it("the field sits in the header under the period switch; typing keeps focus; the chips go while lines show and come back with the order kept (FLOW-1221)", async () => {
+    await enterCategories();
+    const field = screen.getByRole("searchbox", { name: "חיפוש בתנועות" });
+    const head = document.querySelector(".ui-page-below .ui-cp-head");
+    expect(head?.contains(field)).toBe(true);
+    expect(head?.firstElementChild?.classList.contains("ui-cp-period")).toBe(true);
+    expect(head?.querySelector(".ui-cp-period + .ui-cp-search")).not.toBeNull();
+    expect(document.querySelector(".ui-cp-chips")).not.toBeNull();
+    field.focus();
+    fireEvent.change(field, { target: { value: "מצאנו" } });
+    expect(await screen.findByText("ספק לדוגמה")).toBeInTheDocument();
+    expect(document.querySelector(".ui-cp-chips")).toBeNull();
+    expect(document.querySelector(".ui-cp-head .ui-fc-block")).toBeNull();
+    expect(document.activeElement).toBe(field);
+    fireEvent.click(screen.getByRole("button", { name: "ניקוי" }));
+    expect(await screen.findByText("שכר")).toBeInTheDocument();
+    expect(document.querySelector(".ui-cp-chips")).not.toBeNull();
+    expect(screen.getByRole("radio", { name: "לפי קטגוריה" })).toBeChecked();
+  });
+
   it("clearing the search brings the category list back", async () => {
     await enterCategories();
     fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש בתנועות" }), { target: { value: "מצאנו" } });

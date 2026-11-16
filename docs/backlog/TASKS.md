@@ -633,7 +633,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1218"></a>[FLOW-1218](tasks/FLOW-1218.md) | Project profit: the month count waits for the months | SMALL UI |
 | <a id="flow-1219"></a>[FLOW-1219](tasks/FLOW-1219.md) | The project ⋯ menu says when it is still checking, and its waiting states have stories | SMALL UI |
 | <a id="flow-1220"></a>[FLOW-1220](tasks/FLOW-1220.md) | The project ⋯ menu does not move under a finger when the delete check lands | PLAN FIRST |
-| <a id="flow-1221"></a>[FLOW-1221](tasks/FLOW-1221.md) | Company profit's search: where it sits, and what it hides while it shows results | PLAN FIRST |
+| <a id="flow-1221"></a>[FLOW-1221](tasks/FLOW-1221.md) | Company profit's search: where it sits, and what it hides while it shows results | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
