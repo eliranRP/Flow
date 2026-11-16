@@ -278,8 +278,9 @@ function keyedRowsOf(rows: AllRows, key: string, name: string | null, currency: 
 const DIRECTIONS = ["income", "expense"] as const;
 
 /** The cache key of a category group's lines (or, with "all", a direction's lean lines; with "kept-out", its kept-out lines). */
-const lineKeyOf = (preview: string, monthRange: string, direction: BreakdownDirection, key: string, currency: string) =>
-  ["breakdown-lines", "company-profit", preview, monthRange, direction, key, currency];
+function linesCacheKey(preview: string, monthRange: string, direction: BreakdownDirection, key: string, currency: string) {
+  return ["breakdown-lines", "company-profit", preview, monthRange, direction, key, currency];
+}
 
 export type CompanyProfitRead = {
   /** False for a sample: nothing is read. */
@@ -372,7 +373,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
   ];
   const lineQueries = useQueries({
     queries: lineReads.map((read) => ({
-      queryKey: lineKeyOf(preview, monthRange, read.direction, read.keptOut ? "kept-out" : read.key, currency),
+      queryKey: linesCacheKey(preview, monthRange, read.direction, read.keptOut ? "kept-out" : read.key, currency),
       enabled: live && categoriesOn && lineIds.has(read.id),
       queryFn: () => fetchAllLines(month, read.direction, read.key, currency, read.keptOut),
     })),
@@ -381,7 +382,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
   // answered: its rows name their group, and are filed under the breakdown's categories once both are in.
   const allQueries = useQueries({
     queries: DIRECTIONS.map((direction) => ({
-      queryKey: lineKeyOf(preview, monthRange, direction, "all", currency),
+      queryKey: linesCacheKey(preview, monthRange, direction, "all", currency),
       enabled: live && categoriesOn && linesAll && currencyKnown,
       queryFn: () => fetchDirectionLines(month, direction, currency),
     })),
@@ -397,7 +398,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
       const breakdown = client.getQueryData<NonNullable<typeof categoryIncome.data>>(["breakdown", "company-profit", preview, monthRange, "category", direction]);
       if (rows == null || breakdown == null) return;
       for (const group of groupsIn(breakdown, currency)) {
-        if (group.key !== "") client.setQueryData(lineKeyOf(preview, monthRange, direction, group.key, currency), keyedRowsOf(rows, group.key, group.name ?? null, currency));
+        if (group.key !== "") client.setQueryData(linesCacheKey(preview, monthRange, direction, group.key, currency), keyedRowsOf(rows, group.key, group.name ?? null, currency));
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the rows and the breakdowns' read times are the triggers
