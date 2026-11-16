@@ -769,6 +769,14 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1205"></a>[FLOW-1205](tasks/FLOW-1205.md) | Perf: drop more read fields no one reads (rehab hidden flag, expected_months lean, projects_cash_month, get_project lean) | SMALL (perf) |
 | <a id="flow-1206"></a>[FLOW-1206](tasks/FLOW-1206.md) | Perf: the recurring suggestions' look-alike join uses the party index; jev's inputs key once | SMALL (perf) |
 | <a id="flow-1207"></a>[FLOW-1207](tasks/FLOW-1207.md) | Perf: Company profit's date and amount orders read every line in one call | MEDIUM (perf) |
+| <a id="flow-1209"></a>[FLOW-1209](tasks/FLOW-1209.md) | Perf: the forecast's loans and loan balances are read together | SMALL (perf) |
+| <a id="flow-1210"></a>[FLOW-1210](tasks/FLOW-1210.md) | Perf: Company profit's lines start without waiting for the breakdowns; project breakdowns stop holding the other orders | SMALL (perf) |
+| <a id="flow-1211"></a>[FLOW-1211](tasks/FLOW-1211.md) | Perf: get_breakdown_lines with no key is one computation and a lean row | MEDIUM (perf) |
+| <a id="flow-1212"></a>[FLOW-1212](tasks/FLOW-1212.md) | Perf: the project page's menu figures load after the first paint when the list has a seed | SMALL (perf) |
+| <a id="flow-1213"></a>[FLOW-1213](tasks/FLOW-1213.md) | Perf: small read trims (one project's unassigned, mcp_jev_status's key), and a wrong comment | SMALL (perf) |
+| <a id="flow-1214"></a>[FLOW-1214](tasks/FLOW-1214.md) | Owner: a forecast skip updates the month's total at once, without refetching the inputs | SMALL (perf, owner decision) |
+| <a id="flow-1215"></a>[FLOW-1215](tasks/FLOW-1215.md) | Perf: trim the JavaScript budget's headroom back | MEDIUM (perf) |
+| <a id="flow-1216"></a>[FLOW-1216](tasks/FLOW-1216.md) | Perf: company_next_month_inputs is the heaviest read (profile and cut) | LARGE (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
