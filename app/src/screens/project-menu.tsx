@@ -260,6 +260,7 @@ export function ProjectMenu({
                 <ListRow
                   variant="button"
                   title="לא הצלחנו לבדוק אם אפשר למחוק"
+                  wrapTitle
                   hint="ניסיון חוזר"
                   icon={<RefreshIcon />}
                   onClick={retryFigures}
