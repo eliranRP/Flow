@@ -9,7 +9,7 @@
  * The same goes for auth-js's WebAuthn (passkey) multi-factor code, about 8 KB minified that
  * GoTrueClient always imports: Flow signs in with Google and magic links and never enrols a
  * factor. vite.config points auth-js's `./lib/webauthn` here; the names below are the ones
- * GoTrueClient imports, and using one throws.
+ * GoTrueClient imports, and using one throws. FLOW-1215 does the same for `./lib/web3/ethereum`.
  */
 
 function unused(part: string): Error {
@@ -68,3 +68,12 @@ export const deserializeCredentialCreationOptions = createCredential;
 export const deserializeCredentialRequestOptions = createCredential;
 export const serializeCredentialCreationResponse = createCredential;
 export const serializeCredentialRequestResponse = createCredential;
+
+// auth-js's Ethereum sign-in helpers (`signInWithWeb3`), which Flow never calls. GoTrueClient imports
+// them from `./lib/web3/ethereum`; using one throws.
+export function getAddress(..._args: unknown[]): never {
+  throw unused("Web3 sign-in");
+}
+export const fromHex = getAddress;
+export const toHex = getAddress;
+export const createSiweMessage = getAddress;
