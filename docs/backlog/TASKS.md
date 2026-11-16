@@ -630,6 +630,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1138"></a>[FLOW-1138](tasks/FLOW-1138.md) | Skeletons in the content's shape: projects and property returns | SMALL UI |
 | <a id="flow-1139"></a>[FLOW-1139](tasks/FLOW-1139.md) | Skeletons in the content's shape: forecast, invoices, loans, reports and Home's parts | SMALL UI |
 | <a id="flow-1140"></a>[FLOW-1140](tasks/FLOW-1140.md) | A cold open and a screen's code: the screen's own skeleton, not Home's or a blank page, and an offline line | SMALL UI |
+| <a id="flow-1218"></a>[FLOW-1218](tasks/FLOW-1218.md) | Project profit: the month count waits for the months | SMALL UI |
+| <a id="flow-1219"></a>[FLOW-1219](tasks/FLOW-1219.md) | The project ⋯ menu says when it is still checking, and its waiting states have stories | SMALL UI |
+| <a id="flow-1220"></a>[FLOW-1220](tasks/FLOW-1220.md) | The project ⋯ menu does not move under a finger when the delete check lands | PLAN FIRST |
+| <a id="flow-1221"></a>[FLOW-1221](tasks/FLOW-1221.md) | Company profit's search: where it sits, and what it hides while it shows results | PLAN FIRST |
 
 ## Onboarding, Settings and connectors
 
@@ -669,6 +673,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1162"></a>[FLOW-1162](tasks/FLOW-1162.md) | Mercury sync: a page-capped run resets the missing-since clocks; the cursor's phases as one table | BUG |
 | <a id="flow-1178"></a>[FLOW-1178](tasks/FLOW-1178.md) | A stuck Mercury refresh keeps its last good time and says what to do | SMALL UI |
 | <a id="flow-1163"></a>[FLOW-1163](tasks/FLOW-1163.md) | Refresh queue and connections: a skipped run uses up the request, `forced` is dropped, claims are not per slot | BUG |
+| <a id="flow-1222"></a>[FLOW-1222](tasks/FLOW-1222.md) | The closed-books refusal of a setting has stories | SMALL UI |
 
 ## Multi-company and team
 

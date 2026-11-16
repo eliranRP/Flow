@@ -620,6 +620,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1138
 - FLOW-1139
 - FLOW-1140
+- FLOW-1218
+- FLOW-1219
+- FLOW-1220
+- FLOW-1221
 
 ## Onboarding, Settings and connectors
 
@@ -655,6 +659,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1162
 - FLOW-1178
 - FLOW-1163
+- FLOW-1222
 
 ## Multi-company and team
 
