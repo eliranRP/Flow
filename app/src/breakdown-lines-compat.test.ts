@@ -4,7 +4,7 @@ import { z } from "zod";
 
 // FLOW-1211. Phones keep running the FLOW-1207 app for hours or days after a deploy, and the migration applies on merge,
 // before it. That app parses the no-key read with its own schema, copied below from main as it was (packages/shared/src/
-// dashboard.ts at 79d7395b): a row must still parse with it. Delete this file when no FLOW-1207 app is in use.
+// dashboard.ts at 79d7395b): a row must still parse with it. Delete this file when no FLOW-1207 app is in use (FLOW-1217, on hold until about 2026-11-24).
 const agorotSchema = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]).transform((value) => BigInt(value));
 
 const oldBreakdownLinesSchema = z

@@ -235,26 +235,50 @@ async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection
   }
 }
 
+/** The page size of the fallback below (the largest a paged read gives). */
+const LINES_PAGE_ALL = 200;
+
 /**
- * FLOW-1207, FLOW-1211. Every counted line of a direction in one read, with no group key: lean rows, each naming its group
- * (`group_key`: the category id, or "none"). The read has no page.
+ * FLOW-1207, FLOW-1211. Every counted line of a direction in one read, with no group key: each row names its group
+ * (`group_key`: the category id, or "none"). The read has no page. Should the database answer a page all the same (an
+ * older function that binds the null limit to its default of 40: a rollback, or this app ahead of the migration), the
+ * lines are read again in pages of 200 by offset, the first page's `count` saying how many follow, so they are always
+ * complete.
  */
 async function fetchDirectionLines(period: PeriodChoice, direction: BreakdownDirection, currency: string): Promise<AllRows> {
   const supabase = await readyClient();
-  const { data, error } = await supabase.rpc("get_breakdown_lines", {
-    ...rangeArgs(period),
-    p_direction: direction,
-    p_group_by: "category",
-    // The generated types type a nullable argument as required (repo precedent: null as unknown as string).
-    p_group_key: null as unknown as string,
-    p_currency: currency,
-    p_excluded: false,
-    // No limit: the whole direction (the FLOW-1207 app asks for pages of 200, and the server still pages for it). An
-    // omitted argument would default to 40.
-    p_limit: null as unknown as number,
-  });
-  if (error) throw error;
-  return (await loadReadSchemas()).breakdownLinesAllSchema.parse(data)?.rows ?? [];
+  const schemas = await loadReadSchemas();
+  const readPage = async (limit: number | null, offset: number) => {
+    const { data, error } = await supabase.rpc("get_breakdown_lines", {
+      ...rangeArgs(period),
+      p_direction: direction,
+      p_group_by: "category",
+      // The generated types type a nullable argument as required (repo precedent: null as unknown as string).
+      p_group_key: null as unknown as string,
+      p_currency: currency,
+      p_excluded: false,
+      // No limit: the whole direction. An omitted argument would default to 40.
+      p_limit: limit as number,
+      ...(limit === null ? {} : { p_offset: offset }),
+    });
+    if (error) throw error;
+    return schemas.breakdownLinesAllSchema.parse(data);
+  };
+  const whole = await readPage(null, 0);
+  if (whole?.has_more !== true) return whole?.rows ?? [];
+  const first = await readPage(LINES_PAGE_ALL, 0);
+  const rows: AllRows = [...(first?.rows ?? [])];
+  if (first?.has_more !== true) return rows;
+  if (first.count !== undefined) {
+    const offsets = Array.from({ length: Math.max(0, Math.ceil(first.count / LINES_PAGE_ALL) - 1) }, (_, index) => (index + 1) * LINES_PAGE_ALL);
+    for (const page of await Promise.all(offsets.map((offset) => readPage(LINES_PAGE_ALL, offset)))) rows.push(...(page?.rows ?? []));
+    return rows;
+  }
+  for (let offset = LINES_PAGE_ALL; ; offset += LINES_PAGE_ALL) {
+    const page = await readPage(LINES_PAGE_ALL, offset);
+    rows.push(...(page?.rows ?? []));
+    if (page?.has_more !== true) return rows;
+  }
 }
 
 /**

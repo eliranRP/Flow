@@ -13,8 +13,10 @@ type Calls = {
   rpc: Array<{ name: string; args: Record<string, unknown> | undefined }>; lines: Record<string, unknown>; search: unknown; failing: string[]; disconnects: number; income: boolean;
   /** While set, the category breakdowns (hold.categories) or the project breakdowns (hold.projects) do not answer. */
   hold: { categories: Promise<void> | null; projects: Promise<void> | null };
+  /** An older database function: a null limit binds to its default of 40 (a rollback, or the app ahead of the migration). */
+  legacy: boolean;
 };
-const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0, income: false, hold: { categories: null, projects: null } }));
+const calls = vi.hoisted((): Calls => ({ rpc: [], lines: {}, search: null, failing: [], disconnects: 0, income: false, hold: { categories: null, projects: null }, legacy: false }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
@@ -79,7 +81,9 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
     const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : calls.income ? [RENT] : [];
     const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map(({ category_id: _id, ...row }) => ({ ...row, category_name: NAMES[key] ?? null, group_key: key })))
       .sort((a, b) => String(b.doc_date).localeCompare(String(a.doc_date)));
-    return { rows: all, has_more: false, count: all.length, total_minor: 0, projects: [] };
+    const limit = args.p_limit == null ? (calls.legacy ? 40 : all.length) : Number(args.p_limit);
+    const offset = args.p_limit == null ? 0 : Number(args.p_offset ?? 0);
+    return { rows: all.slice(offset, offset + limit), has_more: all.length > offset + limit, count: all.length, total_minor: 0, projects: [] };
   }
   if (name === "get_breakdown_lines") {
     // A keyed read: the category's own name and id on every row.
@@ -126,6 +130,7 @@ beforeEach(() => {
   calls.failing = [];
   calls.income = false;
   calls.hold = { categories: null, projects: null };
+  calls.legacy = false;
   calls.disconnects = 0;
   watching.length = 0;
   stubObserver();
@@ -272,6 +277,18 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     expect(await screen.findByText("משכורת 400")).toBeInTheDocument();
     expect(lineReads().filter((call) => call.args?.p_direction === "expense")).toHaveLength(1);
     expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
+  });
+
+  it("an answer that says there is more (an older function) is read again in pages of 200, so every line shows", async () => {
+    calls.legacy = true;
+    calls.lines[SALARY] = { rows: manyLines(401), has_more: false };
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?month=2026-07&by=date" });
+    expect(await screen.findByText("משכורת 400")).toBeInTheDocument();
+    expect(screen.getByText("פוליסה לדוגמה")).toBeInTheDocument();
+    const expense = lineReads().filter((call) => call.args?.p_direction === "expense").map((call) => [call.args?.p_limit ?? null, call.args?.p_offset ?? null]);
+    // The null limit, then pages of 200 at offsets 0, 200 and 400 (402 lines).
+    expect(expense.slice(0, 1)).toEqual([[null, null]]);
+    expect(expense.slice(1).sort()).toEqual([[200, 0], [200, 200], [200, 400]]);
   });
 
   it("income and expense are one read each, and both directions' lines show", async () => {
