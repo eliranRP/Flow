@@ -1,5 +1,7 @@
 import type { CashCurrencyRow, CashLine, CashMonths, ProjectsCashMonth } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useAfterFirstPaint } from "./after-paint";
 import { cashLinesPath, cashSummaryRows } from "./cash";
 import { loadReadSchemas } from "./load-read-schemas";
 import { CHART_MONTHS } from "./month-figures";
@@ -49,7 +51,7 @@ function useCachedProjectName(projectId: string | null): string | null {
  */
 export function useProjectName(projectId: string | null, month: string, active = true): { name: string | null; loading: boolean } {
   const cached = useCachedProjectName(projectId);
-  const read = useProjectsCashMonth(month, projectId ?? undefined, active && projectId != null && cached == null);
+  const read = useProjectsCashMonth(month, projectId ?? undefined, { active: active && projectId != null && cached == null });
   if (cached != null || projectId == null) return { name: cached, loading: false };
   const name = read.data?.projects.find((row) => row.id === projectId)?.name ?? null;
   return { name, loading: name == null && read.isPending && read.fetchStatus === "fetching" };
@@ -140,18 +142,31 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
  * FLOW-445: one month's cash for every project and the unassigned bucket (projects_cash_month). The
  * list reads it with no project; the project page reads its own row. `month` is `YYYY-MM`, or the
  * current month when omitted.
+ *
+ * FLOW-1212: a project's row with a list seed (the Projects list's read of the same month) is read after the first
+ * paint, not at mount: only the ⋯ menu's figures need the answer, and the menu asks for it at once when it opens
+ * (`urgent`). A deep link has no seed, so its read goes out at mount.
  */
-export function useProjectsCashMonth(month?: string, projectId?: string, active = true) {
+export function useProjectsCashMonth(month?: string, projectId?: string, options: { active?: boolean; urgent?: boolean } = {}) {
+  const { active = true, urgent = false } = options;
   const preview = useHomePreview();
   const client = useQueryClient();
   const listKey = ["projects-cash", month, undefined] as const;
+  // useAfterFirstPaint starts true when it mounts already true, so a project page starts false and turns true after its first commit.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (projectId) setMounted(true);
+  }, [projectId]);
+  const seed = projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId);
+  const afterPaint = useAfterFirstPaint(mounted && seed != null);
+  const deferred = seed != null && !urgent && !afterPaint;
   return useQuery({
     ...projectsCashMonthOptions(month, projectId),
-    enabled: active && preview === "off",
+    enabled: active && preview === "off" && !deferred,
     // A project's row starts from the list's read of the same month, so the page paints it at once. FLOW-1204: the
     // list's rows carry no pending_count or deletable (the menu's figures, in the answer for one project only), so the
-    // seed is never fresh: the project's own read, which has them, goes out at once.
-    initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),
+    // seed is never fresh: the project's own read, which has them, goes out after the first paint (FLOW-1212).
+    initialData: () => seed,
     initialDataUpdatedAt: () => 0,
   });
 }
