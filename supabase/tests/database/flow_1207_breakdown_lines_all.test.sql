@@ -1,4 +1,4 @@
--- FLOW-1207: get_breakdown_lines with no group key reads every counted line of a direction (FLOW-1211: in one call, lean rows). Parity
+-- FLOW-1207: get_breakdown_lines with no group key reads every counted line of a direction, paged. Parity
 -- against a pg_temp copy of the body as it was (20261029190012_category_by_project_parts.sql), read one
 -- category at a time, on invented data; amounts are cents.
 
@@ -274,9 +274,9 @@ $$;
 create function pg_temp.old_by_key(p_dir text) returns jsonb
 language sql stable
 as $$
-  -- FLOW-1211: the no-key row is lean; the keyed read's row less what it dropped is that row (flow_1211 checks the rest).
+  -- FLOW-1211: the no-key row has no category_id and no kept_out (the keyed read's row less those, as it was).
   select coalesce(jsonb_object_agg(g ->> 'key', (
-    select coalesce(jsonb_agg(r - 'currency' - 'shared' - 'category_name' - 'category_id' - 'kept_out' order by n), '[]'::jsonb)
+    select coalesce(jsonb_agg(r - 'category_id' - 'kept_out' order by n), '[]'::jsonb)
     from jsonb_array_elements(pg_temp.old_breakdown_lines(p_dir, 'category', g ->> 'key', 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, 0) -> 'rows') with ordinality t(r, n))), '{}'::jsonb)
   from jsonb_array_elements(public.get_breakdown(p_dir, '2026-06-01', '2026-06-30', 'category', 'cash') -> 'groups') g
   where g ->> 'currency' = 'USD' and g ->> 'key' <> ''
@@ -312,16 +312,16 @@ select is(
   (select array_agg(x ->> 'doc_date' order by x ->> 'doc_date' desc) from bla_new b, jsonb_array_elements(b.body -> 'rows') x where b.dir = 'expense'),
   'newest first');
 
--- FLOW-1211: the read has no page: a limit and an offset are ignored, and nothing is left over.
+-- Paged by 5: the pages join into the one read, and only the last has no more.
 create temp table bla_pages as
 select o as off, public.get_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, 5, o) as body
 from generate_series(0, 10, 5) o;
 grant all on bla_pages to authenticated;
 select is(
-  (select array_agg(body -> 'rows' order by off) from bla_pages),
-  (select array_agg((select body -> 'rows' from bla_new where dir = 'expense') order by o) from generate_series(0, 10, 5) o),
-  'a limit of 5 and an offset are ignored: every page is the whole read');
-select is((select array_agg((body ->> 'has_more')::boolean order by off) from bla_pages), array[false, false, false], 'no page has more');
+  (select jsonb_agg(x order by p.off, n) from bla_pages p, jsonb_array_elements(p.body -> 'rows') with ordinality t(x, n)),
+  (select body -> 'rows' from bla_new where dir = 'expense'),
+  'pages of 5 join into the whole read');
+select is((select array_agg((body ->> 'has_more')::boolean order by off) from bla_pages), array[true, true, false], 'only the last page has no more');
 
 -- What a key or kept-out read returned stays as it was, with no group_key.
 select is(

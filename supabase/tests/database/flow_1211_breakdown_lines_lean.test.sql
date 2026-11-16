@@ -1,15 +1,14 @@
--- FLOW-1211: get_breakdown_lines with no key is one computation and a lean row. Parity against a pg_temp copy of the
--- body as FLOW-1207 left it (20261114123209_flow_1207_breakdown_lines_all.sql), on invented data; amounts are cents.
--- - The no-key read of a direction with more than 200 lines is one call: no page, has_more false, a limit and an
---   offset ignored.
--- - Its rows hold exactly the lean keys, and per category they equal the keyed read's rows less the dropped
---   fields, in order; with the dropped constants put back (currency, category_id, category_name from the breakdown,
---   kept_out false) they equal the keyed rows less `shared`.
+-- FLOW-1211: get_breakdown_lines with no key and no limit is one computation. Parity against a pg_temp copy of the body
+-- as FLOW-1207 left it (20261114123209_flow_1207_breakdown_lines_all.sql), on invented data; amounts are cents.
+-- - The no-key read with a null limit (the new app) of a direction with more than 200 lines is one call: no page,
+--   has_more false. With a limit of 200 (the FLOW-1207 app, live on phones) it pages as before.
+-- - Its rows are the keyed row less category_id and kept_out, with group_key: per category they equal the keyed
+--   read's rows less those two, in order; with category_id put back they equal the keyed rows less kept_out.
 -- - A keyed read, a kept-out read and a read by project are unchanged, field for field.
 
 begin;
 
-select plan(23);
+select plan(25);
 
 create or replace function pg_temp.old_breakdown_lines(
   p_direction text,
@@ -279,7 +278,7 @@ from generate_series(1, 242) i;
 select tests.authenticate_as('b11_owner');
 
 create temp table b11_new as
-select d.dir, public.get_breakdown_lines(d.dir, 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, 0) as body
+select d.dir, public.get_breakdown_lines(d.dir, 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, null, 0) as body
 from (values ('expense'), ('income')) d(dir);
 grant all on b11_new to authenticated;
 
@@ -301,17 +300,12 @@ as $$
   where b.dir = p_dir and x ->> 'group_key' = p_key
 $$;
 
--- What the app puts back to seed a group's keyed cache: the constants it dropped, the category's name from the breakdown.
+-- What the app puts back to seed a group's keyed cache: the category id, the key (null for none).
 create function pg_temp.lean_row(p_dir text, p_key text, x jsonb) returns jsonb
 language sql stable
 as $$
   select x || jsonb_build_object(
-    'currency', 'USD',
-    'kept_out', false,
-    'category_id', case when p_key = 'none' then null else to_jsonb(p_key) end,
-    'category_name', case when p_key = 'none' then null else (
-      select to_jsonb(g ->> 'name') from jsonb_array_elements(public.get_breakdown(p_dir, '2026-06-01', '2026-06-30', 'category', 'cash') -> 'groups') g
-      where g ->> 'key' = p_key and g ->> 'currency' = 'USD') end)
+    'category_id', case when p_key = 'none' then null else to_jsonb(p_key) end)
 $$;
 create function pg_temp.seeded(p_dir text, p_key text) returns jsonb
 language sql stable
@@ -338,21 +332,35 @@ select is(
   (select sum((g ->> 'amount_minor')::bigint)::bigint from jsonb_array_elements(public.get_breakdown('expense', '2026-06-01', '2026-06-30', 'category', 'cash') -> 'groups') g where g ->> 'currency' = 'USD'),
   'the total is the breakdown''s counted total');
 select is(
-  public.get_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, 3, 50),
+  public.get_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, null, 50),
   (select body from b11_new where dir = 'expense'),
-  'a limit and an offset change nothing');
+  'with no limit an offset changes nothing');
+
+-- The FLOW-1207 app, still live on phones, asks for pages of 200 by offset: they are as before, disjoint, and join into the whole read.
+create temp table b11_pages as
+select o as off, public.get_breakdown_lines('expense', 'category', null, 'USD', '2026-06-01', '2026-06-30', 'cash', false, 200, o) as body
+from generate_series(0, 200, 200) o;
+grant all on b11_pages to authenticated;
+select is(
+  (select jsonb_agg(x order by p.off, n) from b11_pages p, jsonb_array_elements(p.body -> 'rows') with ordinality t(x, n)),
+  (select body -> 'rows' from b11_new where dir = 'expense'),
+  'a limit of 200 at offsets 0 and 200: the two pages are disjoint and together are the whole read, in order');
+select is(
+  (select jsonb_build_array(jsonb_array_length(body -> 'rows'), body -> 'has_more', body -> 'count') from b11_pages where off = 0),
+  (select jsonb_build_array(200, true, jsonb_array_length(body -> 'rows')) from b11_new where dir = 'expense'),
+  'the first page of 200 says there is more, and the count is the whole direction''s');
 
 -- The row.
 select is(
   (select array_agg(distinct k order by k) from b11_new b, jsonb_array_elements(b.body -> 'rows') x, jsonb_object_keys(x) k where b.dir = 'expense'),
-  array['amount_minor', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'source', 'supplier_name', 'transaction_id'],
+  array['amount_minor', 'category_name', 'currency', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'shared', 'source', 'supplier_name', 'transaction_id'],
   'every expense row holds exactly the lean keys');
 select is(
-  (select count(*)::int from b11_new b, jsonb_array_elements(b.body -> 'rows') x where b.dir = 'expense' and (select count(*) from jsonb_object_keys(x)) <> 10),
-  0, 'and all ten, null or not');
+  (select count(*)::int from b11_new b, jsonb_array_elements(b.body -> 'rows') x where b.dir = 'expense' and (select count(*) from jsonb_object_keys(x)) <> 13),
+  0, 'and all thirteen, null or not');
 select is(
   (select array_agg(distinct k order by k) from b11_new b, jsonb_array_elements(b.body -> 'rows') x, jsonb_object_keys(x) k where b.dir = 'income'),
-  array['amount_minor', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'source', 'supplier_name', 'transaction_id'],
+  array['amount_minor', 'category_name', 'currency', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'shared', 'source', 'supplier_name', 'transaction_id'],
   'every income row holds exactly the lean keys');
 select is(
   (select array_agg(k order by k) from jsonb_object_keys((select body from b11_new where dir = 'expense')) k),
@@ -361,31 +369,31 @@ select is(
 
 -- Parity per category, in order, against the keyed read (its pages joined).
 select is(pg_temp.lean('expense', pg_temp.ref('repairs')::text),
-  pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['currency', 'shared', 'category_name', 'category_id', 'kept_out']),
+  pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['category_id', 'kept_out']),
   'repairs (more than 200 lines, two keyed pages): the no-key rows are the keyed rows less the dropped fields, in order');
 select is(pg_temp.lean('expense', pg_temp.ref('reno')::text),
-  pg_temp.keyed_less('expense', pg_temp.ref('reno')::text, array['currency', 'shared', 'category_name', 'category_id', 'kept_out']),
+  pg_temp.keyed_less('expense', pg_temp.ref('reno')::text, array['category_id', 'kept_out']),
   'renovation: the same');
 select is(pg_temp.lean('expense', 'none'),
-  pg_temp.keyed_less('expense', 'none', array['currency', 'shared', 'category_name', 'category_id', 'kept_out']),
+  pg_temp.keyed_less('expense', 'none', array['category_id', 'kept_out']),
   'no category: the same');
 select is(pg_temp.lean('income', pg_temp.ref('rent')::text),
-  pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['currency', 'shared', 'category_name', 'category_id', 'kept_out']),
+  pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['category_id', 'kept_out']),
   'income, rent: the same');
 select is(pg_temp.lean('income', pg_temp.ref('fees')::text),
-  pg_temp.keyed_less('income', pg_temp.ref('fees')::text, array['currency', 'shared', 'category_name', 'category_id', 'kept_out']),
+  pg_temp.keyed_less('income', pg_temp.ref('fees')::text, array['category_id', 'kept_out']),
   'income, fees: the same');
 select is(
   (select sum(jsonb_array_length(pg_temp.lean('expense', k))) from unnest(array[pg_temp.ref('repairs')::text, pg_temp.ref('reno')::text, 'none']) k)::int,
   (select jsonb_array_length(body -> 'rows') from b11_new where dir = 'expense'),
   'the groups hold every row: none is filed nowhere');
 
--- Seeding: the dropped constants put back make the keyed row, but for `shared` (no reader).
-select is(pg_temp.seeded('expense', pg_temp.ref('repairs')::text), pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['shared']),
-  'repairs: the row, the constants and the breakdown''s name are the keyed row less shared');
-select is(pg_temp.seeded('expense', 'none'), pg_temp.keyed_less('expense', 'none', array['shared']),
+-- Seeding: the category id put back makes the keyed row (kept_out is never read).
+select is(pg_temp.seeded('expense', pg_temp.ref('repairs')::text), pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['kept_out']),
+  'repairs: the row with its category id is the keyed row less kept_out');
+select is(pg_temp.seeded('expense', 'none'), pg_temp.keyed_less('expense', 'none', array['kept_out']),
   'no category: the same');
-select is(pg_temp.seeded('income', pg_temp.ref('rent')::text), pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['shared']),
+select is(pg_temp.seeded('income', pg_temp.ref('rent')::text), pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['kept_out']),
   'income: the same');
 
 -- A keyed read, a kept-out read and a read by project are as they were.

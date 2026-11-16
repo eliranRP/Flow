@@ -75,9 +75,9 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
   if (name === "get_breakdown_lines" && args?.p_excluded === true) return { rows: [{ ...line("t-kept", "פיקדון לדוגמה"), category_id: "k1" }], has_more: false };
   if (name === "get_breakdown_lines" && args?.p_group_key === null) {
     // The server's one read of the direction, whole: every category's rows, newest first (a tie in the server's own
-    // order, here the last category first), each lean: only what the list reads, and its group.
+    // order, here the last category first), each a keyed row without category_id and kept_out, with its group.
     const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : calls.income ? [RENT] : [];
-    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map(({ currency: _currency, shared: _shared, category_name: _name, category_id: _id, ...row }) => ({ ...row, group_key: key })))
+    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map(({ category_id: _id, ...row }) => ({ ...row, category_name: NAMES[key] ?? null, group_key: key })))
       .sort((a, b) => String(b.doc_date).localeCompare(String(a.doc_date)));
     return { rows: all, has_more: false, count: all.length, total_minor: 0, projects: [] };
   }
@@ -176,7 +176,8 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     expect(lineReads().map((call) => call.args?.p_direction).sort()).toEqual(["expense", "income"]);
     const expense = lineReads().find((call) => call.args?.p_direction === "expense");
     expect(expense?.args).toMatchObject({ p_group_by: "category", p_group_key: null, p_currency: "USD", p_excluded: false, p_from: "2026-07-01", p_to: "2026-07-31" });
-    expect(expense?.args).not.toHaveProperty("p_limit");
+    // No limit asks for the whole direction (the FLOW-1207 app sends 200, and is paged as before); an omitted one would default to 40.
+    expect(expense?.args).toHaveProperty("p_limit", null);
     expect(expense?.args).not.toHaveProperty("p_offset");
   });
 
@@ -319,9 +320,8 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     await screen.findByText("ראשון");
     const read = keyed.getQueriesData<unknown[]>({ queryKey: ["breakdown-lines", "company-profit"] }).find(([key]) => key.includes(INSURANCE))?.[1];
     expect(seeded).toHaveLength(2);
-    // The keyed row's `shared` has no reader, and the lean read does not carry it; every other field is the keyed read's.
-    expect(seeded).toEqual(((read ?? []) as Array<Record<string, unknown>>).map(({ shared: _shared, ...row }) => row));
-    expect(seeded).toEqual([expect.objectContaining({ currency: "USD", category_id: INSURANCE, category_name: "ביטוח" }), expect.objectContaining({ currency: "USD", category_id: INSURANCE, category_name: "ביטוח" })]);
+    expect(seeded).toEqual(read);
+    expect(seeded).toEqual([expect.objectContaining({ category_id: INSURANCE, category_name: "ביטוח" }), expect.objectContaining({ category_id: INSURANCE, category_name: "ביטוח" })]);
   });
 
   it("the category order after the date order shows those lines at once, with no new read", async () => {

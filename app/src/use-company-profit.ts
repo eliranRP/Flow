@@ -14,16 +14,9 @@ type KeyedRow = NonNullable<BreakdownLinesPage>["rows"][number];
 type AllRows = NonNullable<BreakdownLinesAll>["rows"];
 
 /**
- * One line as the page reads it: a keyed read's row, or the no-key read's lean row filed under its category (FLOW-1211:
- * no `currency`, `shared`, `category_name` or `category_id`; the page reads the name from the breakdown).
- */
-export type ProfitLineRow = Pick<KeyedRow, "transaction_id" | "part" | "description" | "supplier_name" | "project_name" | "doc_date" | "amount_minor" | "source" | "gross_up">
-  & Partial<Pick<KeyedRow, "category_name" | "category_id" | "currency" | "shared">>;
-
-/**
  * FLOW-140c1. The company profit page reads its figures from the reads the books already have: the
  * month's dashboard, the year's dashboard (מתחילת השנה), one breakdown per direction for projects and
- * for categories, and the counted lines: a category's own (the category order), or each direction's in one paged read
+ * for categories, and the counted lines: a category's own (the category order), or each direction's in one read
  * (the date and amount orders, FLOW-1207). Nothing else new on the server.
  */
 
@@ -74,7 +67,7 @@ export type ProfitKeptOutRow = {
  * The lines of one category group, as the read returned them (unsigned, on the group's direction). `keptOut`: every
  * kept-out line of the direction, each under its own category (`category_id`).
  */
-export type ProfitLinesInput = { direction: BreakdownDirection; categoryKey: string; categoryName: string; rows: ProfitLineRow[]; keptOut?: boolean };
+export type ProfitLinesInput = { direction: BreakdownDirection; categoryKey: string; categoryName: string; rows: KeyedRow[]; keptOut?: boolean };
 
 /** Every read the page needs, before it is shaped. The sample builds the same shape. */
 export type ProfitInputs = {
@@ -256,23 +249,20 @@ async function fetchDirectionLines(period: PeriodChoice, direction: BreakdownDir
     p_group_key: null as unknown as string,
     p_currency: currency,
     p_excluded: false,
+    // No limit: the whole direction (the FLOW-1207 app asks for pages of 200, and the server still pages for it). An
+    // omitted argument would default to 40.
+    p_limit: null as unknown as number,
   });
   if (error) throw error;
   return (await loadReadSchemas()).breakdownLinesAllSchema.parse(data)?.rows ?? [];
 }
 
 /**
- * A category's own read, as the keyed read answers it, from the direction's lean rows: in the same order, with what the
- * lean row dropped put back: the category id (the key, none for "none"), the currency, and the category's name from the
- * breakdown. (`shared` is not put back: nothing reads it.)
+ * A category's own read, as the keyed read answers it, from the direction's rows: in the same order, with the category id
+ * put back (the key, null for "none"), the one field the no-key row drops that a keyed row has.
  */
-function keyedRowsOf(rows: AllRows, key: string, name: string | null, currency: string): ProfitLineRow[] {
-  return rows.filter((row) => row.group_key === key).map(({ group_key: _group, ...row }) => ({
-    ...row,
-    currency,
-    category_id: key === "none" ? null : key,
-    category_name: key === "none" ? null : name,
-  }));
+function keyedRowsOf(rows: AllRows, key: string): KeyedRow[] {
+  return rows.filter((row) => row.group_key === key).map(({ group_key: _group, ...row }) => ({ ...row, category_id: key === "none" ? null : key }));
 }
 
 const DIRECTIONS = ["income", "expense"] as const;
@@ -398,7 +388,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
       const breakdown = client.getQueryData<NonNullable<typeof categoryIncome.data>>(["breakdown", "company-profit", preview, monthRange, "category", direction]);
       if (rows == null || breakdown == null) return;
       for (const group of groupsIn(breakdown, currency)) {
-        if (group.key !== "") client.setQueryData(linesCacheKey(preview, monthRange, direction, group.key, currency), keyedRowsOf(rows, group.key, group.name ?? null, currency));
+        if (group.key !== "") client.setQueryData(linesCacheKey(preview, monthRange, direction, group.key, currency), keyedRowsOf(rows, group.key));
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the rows and the breakdowns' read times are the triggers
