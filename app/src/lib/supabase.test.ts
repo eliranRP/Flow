@@ -56,4 +56,13 @@ describe("supabase-unused (FLOW-804)", () => {
     for (const name of names) expect(unused, name).toHaveProperty(name);
     expect(() => unused.createCredential()).toThrow(/vite\.config\.ts/);
   });
+
+  it("exports every name GoTrueClient imports from ./lib/web3/ethereum (FLOW-1215)", () => {
+    const authEntry = createRequire(entry).resolve("@supabase/auth-js");
+    const gotrue = readFileSync(path.join(path.dirname(authEntry), "..", "module", "GoTrueClient.js"), "utf8");
+    const names = (/import \{([^}]*)\} from '\.\/lib\/web3\/ethereum'/.exec(gotrue)?.[1] ?? "").split(",").map((name) => name.trim()).filter(Boolean);
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) expect(unused, name).toHaveProperty(name);
+    expect(() => unused.getAddress("0x0")).toThrow(/vite\.config\.ts/);
+  });
 });
