@@ -71,4 +71,5 @@ export {
  * any schema is built (`jit` is false), so nothing constructs one. It has no methods, so a build
  * that did would fail at its first `write`.
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- the name zod imports; an empty class is the cheapest stand-in
 export class Doc {}
