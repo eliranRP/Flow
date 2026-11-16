@@ -4,6 +4,7 @@ import { z } from "zod";
 // unassigned bucket. Amounts are integer minor units of each currency; the base currency comes first.
 // FLOW-1204: `pending_count` and `deletable` (the project menu's) come only with `p_project`; the list's answer has neither.
 // FLOW-1205: no `group_id` on a row and no `month` or `basis`: nothing reads them.
+// FLOW-1213: `unassigned` comes only with the list (no `p_project`); one project's answer has no `unassigned`.
 
 const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const monthSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -39,10 +40,13 @@ export const projectsCashMonthSchema = z
   .object({
     base_currency: currencySchema,
     projects: z.array(projectRowSchema),
-    unassigned: z.object({
-      count: z.number().int(),
-      cash: z.array(cashRowSchema),
-    }),
+    /** Only in the list's answer (no `p_project`): the lines with no project. */
+    unassigned: z
+      .object({
+        count: z.number().int(),
+        cash: z.array(cashRowSchema),
+      })
+      .optional(),
   })
   .nullable();
 
