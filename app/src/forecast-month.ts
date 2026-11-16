@@ -85,6 +85,7 @@ function withSkip(keys: readonly string[], key: string, out: boolean | undefined
  * keys this change added and puts back the ones it took out, so a failed write leaves the answers as the other writes left them.
  */
 function changeSkips(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
+  watchForecastWrites(client);
   const touched: Array<{ key: readonly unknown[]; added: string[]; removed: string[] }> = [];
   const queries = client.getQueryCache().findAll({ queryKey: ["project-forecast-edits"], predicate: (query) => query.queryKey[2] === "company" });
   for (const query of queries) {
@@ -116,6 +117,33 @@ function changeSkips(client: QueryClient, month: string, change: (keys: readonly
  */
 function dropInactiveCompanyInputs(client: QueryClient) {
   client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
+}
+
+const watchedClients = new WeakSet<QueryClient>();
+
+/**
+ * FLOW-1214 (review): a write that fails can leave the cache ahead of the server. An overlapping write's delta is recorded
+ * at its tap, so a later undo can remove or restore a key the server never changed, and a restore that fails partway
+ * leaves the rows before it on the server. So once every write of a month's scope has settled and one of them failed,
+ * the inputs no screen holds are dropped and the active ones are read again: the cache ends at the server's answer.
+ */
+function watchForecastWrites(client: QueryClient) {
+  if (watchedClients.has(client)) return;
+  watchedClients.add(client);
+  const failedScopes = new Set<string>();
+  client.getMutationCache().subscribe((event) => {
+    if (event.type !== "updated") return;
+    const { mutation } = event;
+    const scope = mutation.options.scope?.id;
+    if (scope == null || !scope.startsWith(forecastScope(""))) return;
+    if (mutation.state.status === "error") failedScopes.add(scope);
+    if (!failedScopes.has(scope) || mutation.state.status === "pending") return;
+    const unsettled = client.getMutationCache().findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
+    if (unsettled.length > 0) return;
+    failedScopes.delete(scope);
+    dropInactiveCompanyInputs(client);
+    void client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: (query) => query.queryKey[2] === "company" });
+  });
 }
 
 /** The patch that puts an item back to its prior state (null: Flow's number). */

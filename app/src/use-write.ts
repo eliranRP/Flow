@@ -131,7 +131,8 @@ export function useWrite<T = void>(options: {
       return { snapshots, undo };
     },
     onSuccess: async (_data, payload, context) => {
-      const snapshots = context.snapshots;
+      // The context is absent when onMutate threw; a write with no optimistic step then has no snapshots to refresh.
+      const snapshots = (context as WriteContext | undefined)?.snapshots ?? [];
       if (options.optimistic) {
         // The tapped result is already drawn; the refresh only corrects it, so it runs behind the toast.
         void invalidate(options.keys);

@@ -16,7 +16,7 @@ type Rpc = {
   calls: Array<{ name: string; args: unknown }>;
   answers: Record<string, unknown>;
   /** The answer a month-forecast write waits for: a test replaces it to hold the write, or to refuse it. */
-  write: () => Promise<Answer>;
+  write: (name: string, args: unknown) => Promise<Answer>;
 };
 const rpc = vi.hoisted((): Rpc => ({
   calls: [],
@@ -28,7 +28,7 @@ vi.mock("./lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
       rpc.calls.push({ name, args });
-      if (name === "set_forecast_item" || name === "reset_forecast_month") return rpc.write();
+      if (name === "set_forecast_item" || name === "reset_forecast_month") return rpc.write(name, args);
       return Promise.resolve({ data: rpc.answers[name] ?? null, error: null });
     },
     from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
@@ -148,8 +148,9 @@ describe("a skip, reset or undo patches the cached skips (FLOW-1214)", () => {
     refuse();
     await waitFor(() => { expect(total()).toBe("18600"); });
     await waitFor(() => { expect(client.isMutating()).toBe(0); });
-    expect(skipsOf(client)?.[NEXT]).toEqual([]);
-    expect(calls(INPUT_CALL)).toHaveLength(1);
+    // A failed write reads the active inputs again, so the cache takes the server's answer (FLOW-1214 review).
+    await waitFor(() => { expect(calls(INPUT_CALL)).toHaveLength(2); });
+    await waitFor(() => { expect(skipsOf(client)?.[NEXT] ?? []).toEqual([]); });
     await screen.findByText("לא הצלחנו לעדכן את הצפי");
   });
 
@@ -182,5 +183,92 @@ describe("a skip, reset or undo patches the cached skips (FLOW-1214)", () => {
     await waitFor(() => { expect(client.isMutating()).toBe(0); });
     expect(skipsOf(client)).toEqual({ [NEXT]: [POWER], "2026-03": [POWER] });
     expect(calls(INPUT_CALL)).toHaveLength(1);
+  });
+});
+
+// FLOW-1214 (review): the month's writes answered by a held server model. `held` lists the writes sent (the month's scope
+// sends one at a time); settle(true) applies a write to `server` and answers it, settle(false) refuses it.
+const HOA = "party:expense:hoa:ILS";
+const server = { skips: [] as string[] };
+const held: Array<{ args: unknown; settle: (ok: boolean) => void }> = [];
+
+function serve(args: unknown) {
+  const { p_item_key: key, p_patch: patch } = args as { p_item_key: string; p_patch: { moved_out?: boolean; reset?: boolean } };
+  const out = patch.reset === true ? false : patch.moved_out;
+  if (out === true && !server.skips.includes(key)) server.skips = [...server.skips, key];
+  if (out === false) server.skips = server.skips.filter((item) => item !== key);
+  rpc.answers[INPUT_CALL] = { ...inputs, skips: { [NEXT]: [...server.skips] } };
+}
+
+function holdWrites() {
+  rpc.write = (_name, args) => new Promise<Answer>((resolve) => {
+    held.push({
+      args,
+      settle: (ok) => {
+        if (ok) serve(args);
+        resolve(ok ? { data: null, error: null } : { data: null, error: { message: "refused" } });
+      },
+    });
+  });
+}
+
+const row = (item_key: string) => ({ item_key, amount_minor: null, due_on: null, moved_out: true });
+
+function RestoreTwo() {
+  const month = useCompanyNextMonth("ILS", today, true);
+  const restore = useRestoreForecast(NEXT);
+  return (
+    <>
+      <p data-testid="total">{month.forecast == null ? "loading" : String(month.forecast.expenseMinor)}</p>
+      <button type="button" onClick={() => { restore.mutate([row(POWER), row(HOA)]); }}>restore</button>
+    </>
+  );
+}
+
+describe("a failed write leaves the cache at the server's answer (FLOW-1214 review)", () => {
+  beforeEach(() => {
+    server.skips = [];
+    held.length = 0;
+  });
+
+  it("overlapping writes with a refusal: the total ends at the server's answer, not at the taps' deltas", async () => {
+    holdWrites();
+    const client = newClient();
+    renderWithProviders(<Harness />, { route: "/", client });
+    await waitFor(() => { expect(total()).toBe("18600"); });
+    // skip (held), then undo and skip queue behind it in the month's scope; their taps apply at once.
+    fireEvent.click(screen.getByRole("button", { name: "skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "undo" }));
+    fireEvent.click(screen.getByRole("button", { name: "skip" }));
+    await waitFor(() => { expect(total()).toBe("0"); });
+    await waitFor(() => { expect(held).toHaveLength(1); });
+    held[0]?.settle(false);
+    await waitFor(() => { expect(held).toHaveLength(2); });
+    held[1]?.settle(true);
+    await waitFor(() => { expect(held).toHaveLength(3); });
+    held[2]?.settle(true);
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    expect(server.skips).toEqual([POWER]);
+    // The refusal read the active inputs again, so the cache holds the server's skip and the total follows it.
+    await waitFor(() => { expect(calls(INPUT_CALL)).toHaveLength(2); });
+    await waitFor(() => { expect(total()).toBe("0"); });
+    expect(skipsOf(client)?.[NEXT]).toEqual([POWER]);
+  });
+
+  it("a restore that fails partway: the rows before the failure stay on the server, and the inputs are read again", async () => {
+    holdWrites();
+    const client = newClient();
+    renderWithProviders(<RestoreTwo />, { route: "/", client });
+    await waitFor(() => { expect(total()).toBe("18600"); });
+    fireEvent.click(screen.getByRole("button", { name: "restore" }));
+    await waitFor(() => { expect(held).toHaveLength(1); });
+    held[0]?.settle(true);
+    await waitFor(() => { expect(held).toHaveLength(2); });
+    held[1]?.settle(false);
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    expect(server.skips).toEqual([POWER]);
+    await waitFor(() => { expect(calls(INPUT_CALL)).toHaveLength(2); });
+    await waitFor(() => { expect(total()).toBe("0"); });
+    expect(skipsOf(client)?.[NEXT]).toEqual([POWER]);
   });
 });
