@@ -477,6 +477,11 @@
   color: var(--color-bad);
 }
 
+/* FLOW-1220: the quiet line is not a control, so a fine pointer gets no hover tint (the shared .ui-row:hover::before would give it one). */
+.ui-project-menu .ui-row.ui-project-menu-quiet:hover::before {
+  background: transparent;
+}
+
 /* The secondary line under a title or amount: the shared muted text colour. */
 .ui-muted {
   color: var(--color-text-muted);
@@ -648,4 +653,8 @@
 .ui-band-reports:focus-visible {
   outline: 2px solid var(--color-focus-on-band);
   outline-offset: 2px;
+}
+
+.ui-project-menu .ui-row.ui-project-menu-quiet .ui-row-icon {
+  color: var(--color-text-muted);
 }

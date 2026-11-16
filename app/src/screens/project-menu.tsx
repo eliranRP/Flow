@@ -289,6 +289,7 @@ export function ProjectMenu({
                 wrapTitle
                 title="אי אפשר למחוק: יש בו תנועות"
                 icon={<BinIcon />}
+                className="ui-project-menu-quiet"
               />
             )}
           </List>
