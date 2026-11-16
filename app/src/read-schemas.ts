@@ -3,6 +3,7 @@
  * file, so zod and the schemas load next to the first read instead of with Home's first paint.
  */
 export {
+  breakdownLinesAllSchema,
   breakdownLinesSchema,
   breakdownSchema,
   cashLinesSchema,

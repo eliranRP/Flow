@@ -28,6 +28,7 @@ export type {
 } from "./schemas.ts";
 export { expenseRole, normalizeSumitDocument } from "./pnl.ts";
 export {
+  breakdownLinesAllSchema,
   breakdownLinesSchema,
   breakdownSchema,
   categoryRowSchema,
@@ -54,6 +55,7 @@ export type {
   Breakdown,
   BreakdownDirection,
   BreakdownGroupBy,
+  BreakdownLinesAll,
   BreakdownLinesPage,
   CategoryRow,
   ProjectCategoryMonthRow,

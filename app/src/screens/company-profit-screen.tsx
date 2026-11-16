@@ -136,8 +136,10 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     categoriesOn: period === "month" && by !== "project",
     // FLOW-1191: the year and since-the-start views read the years' months only.
     projectsOn: period === "month",
+    // FLOW-1210: only לפי פרויקט draws the project breakdowns; the other orders load them after the first paint.
+    projectsDrawn: monthByProject,
     overhead: monthByProject ? overhead : overhead ?? null,
-    // The date and amount lists need every line, in one paged read; the category order reads a category when it is near.
+    // The date and amount lists need every line, in one read per direction; the category order reads a category when it is near.
     linesAll: by === "date" || by === "amount",
     lineIds: wanted,
   });
