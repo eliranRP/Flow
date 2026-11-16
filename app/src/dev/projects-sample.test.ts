@@ -14,7 +14,7 @@ describe("projects list sample", () => {
   it("adds up to the board's month net, and Home's sample stays a separate figure", () => {
     const base = devProjectsCash.base_currency;
     const projects = devProjectsCash.projects.reduce((sum, row) => sum + netIn(row.cash, base), 0);
-    const unassigned = netIn(devProjectsCash.unassigned.cash, base);
+    const unassigned = netIn(devProjectsCash.unassigned?.cash ?? [], base);
     expect(projects + unassigned).toBe(-1_636_764);
     const home = sampleBoardCashMonths(NOW).months[0]?.by_currency.find((row) => row.currency === base);
     expect(home?.net_minor).toBe(-1_719_200n);

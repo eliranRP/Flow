@@ -202,7 +202,9 @@ function ProjectsOverview({
   const barShown = useScrolledPast(bandMark, true, 0);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
   const groups = groupProjectRows(month.projects, filter, base);
-  const unassignedNet = BigInt(netIn(month.unassigned.cash, base));
+  // The list's answer always has `unassigned` (FLOW-1213: only one project's answer leaves it out).
+  const unassigned = month.unassigned ?? { count: 0, cash: [] };
+  const unassignedNet = BigInt(netIn(unassigned.cash, base));
   const control = (onBand: boolean) => (
     <SegmentedControl
       label="סינון פרויקטים"
@@ -296,11 +298,11 @@ function ProjectsOverview({
         ))}
         {/* The owner (2026-11-05): no דורש טיפול on the list (each project's page keeps its own); the lines with
             no project keep their way in as one quiet row at the end. */}
-        {month.unassigned.count > 0 ? (
+        {unassigned.count > 0 ? (
           <List className="ui-projects-unassigned">
             <ListRow
               variant="project"
-              title={unassignedCountLabel(month.unassigned.count)}
+              title={unassignedCountLabel(unassigned.count)}
               hint="נספרות בתזרים החברה, לא ברווח של פרויקט"
               agorot={unassignedNet < 0n ? -unassignedNet : unassignedNet}
               currency={base}

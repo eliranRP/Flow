@@ -335,7 +335,7 @@ const projectInvestmentSchema = z.object({
   value_date: z.string().nullable(),
   rehab_minor: agorotSchema,
   rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: agorotSchema })).catch([]),
-  /** FLOW-460: rehab_minor by category, largest first, from the same lines (0247); a null id is no category. FLOW-1205: only in an answer with lines (`p_lines` true): the returns screen asks for it, the lean read has none. */
+  /** FLOW-460: rehab_minor by category, largest first, from the same lines (0247); a null id is no category. FLOW-1205: the lean get_project keeps it (without `hidden`, which only the lines form has), and the returns screen reads it from that lean read. */
   rehab_by_category: z.array(z.object({ category_id: z.string().nullable(), name: z.string().nullable(), amount_minor: agorotSchema })).catch([]).optional(),
   loan_balance_minor: agorotSchema,
   loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: agorotSchema })).catch([]),
