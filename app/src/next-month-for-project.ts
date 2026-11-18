@@ -15,15 +15,21 @@ import { israelToday } from "./ui/date-math";
  * the general costs (decision 0237): what carries no project and what the overhead project carries, with the
  * overhead project's edits, the same part the company's צפי page shows under כללי. So a general row opens the
  * overhead project's edit page, and its writes (the overhead project's edits) reach both pages.
+ *
+ * FLOW-1229: `overheadKnown` is the page's own answer to "is this the overhead project" when it already holds one
+ * (get_project's `is_overhead`, the same `companies.overhead_project_id` test). With it the forecast's reads start
+ * at once instead of after the company read (`/companies`, 0.6 s on the phone profile); the company read still runs
+ * beside them, keeps the cache the צפי page opens from, and wins when it lands.
  */
-export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false) {
+export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
+  const answer = overhead.project !== undefined ? overhead.project?.id === projectId : overheadKnown;
   // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
   // read fails, every project (the overhead one too) falls back to its own forecast, as before FLOW-1002, rather
   // than every project page failing over one small read.
-  const deciding = live && overhead.project === undefined && !overhead.failed;
-  const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
+  const deciding = live && answer === undefined && !overhead.failed;
+  const isOverhead = live && answer === true;
   const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead, month);
   const today = israelToday();
   // FLOW-1066: a month of the forecast (?month=), next month by default.

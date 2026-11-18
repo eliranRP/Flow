@@ -102,6 +102,28 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
     reads.currency = { data: "USD", isError: false };
   });
 
+  it("FLOW-1229: starts the project's own reads at once when the page already knows it is not the overhead project", () => {
+    reads.overhead = { project: undefined, failed: false };
+    reads.ownEnabled.length = 0;
+    const { result } = renderHook(() => useProjectNextMonth("p1", "USD", undefined, true, undefined, false, false));
+    // The company read has not answered, and the project's own reads are on, with its forecast not held back.
+    expect(reads.ownEnabled.at(-1)).toBe(true);
+    expect(result.current.forecast).toBe("own");
+    // Told it is the overhead project, its own reads stay off while the company read is out.
+    reads.ownEnabled.length = 0;
+    renderHook(() => useProjectNextMonth(OVERHEAD, "USD", undefined, true, undefined, false, true));
+    expect(reads.ownEnabled.every((enabled) => !enabled)).toBe(true);
+    // Without the page's answer it still waits for the read.
+    reads.ownEnabled.length = 0;
+    renderHook(() => useProjectNextMonth("p1", "USD"));
+    expect(reads.ownEnabled.at(-1)).toBe(false);
+    // The company read wins once it lands.
+    reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
+    reads.ownEnabled.length = 0;
+    renderHook(() => useProjectNextMonth("p1", "USD", undefined, true, undefined, false, true));
+    expect(reads.ownEnabled.at(-1)).toBe(true);
+  });
+
   it("gives any other project its own forecast", () => {
     reads.ownEnabled.length = 0;
     const { result } = renderHook(() => useProjectNextMonth("p1", "USD"));

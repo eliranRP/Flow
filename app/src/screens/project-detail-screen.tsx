@@ -176,16 +176,20 @@ export function ProjectDetailScreen({
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   // Next month's forecast, as the profit page and the צפי page read it: the currency of the project's
-  // lifetime figures, read once the project's own read has landed (FLOW-804).
+  // lifetime figures.
   const lifetimeProject = lifetime.data ?? sample ?? null;
   const forecastCurrency = lifetimeProject == null ? companyCurrency : projectRows(lifetimeProject, companyCurrency)[0]?.currency ?? companyCurrency;
-  // The forecast waits for the lifetime read too, so it is never built first in the company's currency.
+  // FLOW-1229: the forecast's reads (none of them takes the currency) start once the project's own read has
+  // landed (FLOW-804: after the page's first paint, beside the groups), not after the lifetime read, which on the
+  // phone profile answers 2.5 s later. Only the figure waits for the lifetime read, so it is never built first in
+  // the company's currency.
   const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
-  const forecastLive = sample == null && detail.data != null && lifetime.data != null;
-  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastLive);
+  const forecastReads = sample == null && detail.data != null;
+  const forecastLive = forecastReads && lifetime.data != null;
+  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastReads, undefined, false, detail.data?.is_overhead);
   // Decision 0196: the page is about cash, so its card and chart take the forecast in cash terms (the loans'
   // principal due next month included), derived from the one forecast the צפי page shows.
-  const nextForecast = next.forecast == null ? null : cashForecast(next.forecast);
+  const nextForecast = next.forecast == null || (sample == null && !forecastLive) ? null : cashForecast(next.forecast);
   const nextLoading = currencyPending || (forecastLive && next.pending && !next.paused && !next.failed);
   // FLOW-1044: the month's lines in groups: the project's recurring charges (Home's schedule read, usually
   // cached) and the month's lines, for the one-off group once they say which are recurring (FLOW-1035).
