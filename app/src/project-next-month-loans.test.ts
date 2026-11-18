@@ -136,17 +136,23 @@ describe("the forecast's loans for the company (FLOW-1209)", () => {
   });
 });
 
-describe("the forecast's loans for a project (FLOW-1209: the project read keeps its filter)", () => {
-  it("filters the loans by the project and reads the balances of those loans only after they answer", async () => {
+describe("the forecast's loans for a project (FLOW-1209: the project read keeps its filter; FLOW-1226: one round trip)", () => {
+  it("filters the loans by the project and sends the balances with them, before either answers", async () => {
     const result = readForecastLoans("project-1");
     await settle();
 
-    expect(db.sent).toHaveLength(1);
+    expect(db.sent).toHaveLength(2);
     expect(db.sent[0]).toMatch(/^loans select\(.*\) eq\(project_id, project-1\)$/);
+    expect(db.sent[1]).toBe("loan_balances select(loan_id, balance_minor, flagged_parts)");
 
     openGate();
     await expect(result).resolves.toEqual(expected());
-    expect(db.sent).toHaveLength(2);
-    expect(db.sent[1]).toBe("loan_balances select(loan_id, balance_minor, flagged_parts) in(loan_id, loan-b,loan-a)");
+  });
+
+  it("a balance row of a loan of another project does not change the project's loans", async () => {
+    db.answers.loans = { data: [LOAN_A], error: null };
+    const result = readForecastLoans("project-1");
+    openGate();
+    await expect(result).resolves.toEqual([readLoanRow(LOAN_A, null)]);
   });
 });

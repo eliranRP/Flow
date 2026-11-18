@@ -191,7 +191,8 @@ export function monthTotals(dashboard: Dashboard, currency: string): { income: b
   return { income: 0n, expense: 0n };
 }
 
-const LINES_PAGE = 40;
+/** The page size of the paged line reads: the largest one the server gives (get_breakdown_lines caps p_limit at 200). */
+const LINES_PAGE_ALL = 200;
 
 type Range = { p_from?: string; p_to?: string };
 
@@ -217,7 +218,7 @@ async function fetchBreakdown(period: PeriodChoice, direction: BreakdownDirectio
 async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string, currency: string, excluded = false): Promise<KeyedRow[]> {
   const supabase = await readyClient();
   const rows: KeyedRow[] = [];
-  for (let offset = 0; ; offset += LINES_PAGE) {
+  for (let offset = 0; ; offset += LINES_PAGE_ALL) {
     const { data, error } = await supabase.rpc("get_breakdown_lines", {
       ...rangeArgs(period),
       p_direction: direction,
@@ -225,7 +226,7 @@ async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection
       p_group_key: key,
       p_currency: currency,
       p_excluded: excluded,
-      p_limit: LINES_PAGE,
+      p_limit: LINES_PAGE_ALL,
       p_offset: offset,
     });
     if (error) throw error;
@@ -234,9 +235,6 @@ async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection
     if (page?.has_more !== true) return rows;
   }
 }
-
-/** The page size of the fallback below (the largest a paged read gives). */
-const LINES_PAGE_ALL = 200;
 
 /**
  * FLOW-1207, FLOW-1211. Every counted line of a direction in one read, with no group key: each row names its group

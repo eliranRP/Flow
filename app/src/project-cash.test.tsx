@@ -96,24 +96,13 @@ describe("useProjectsCashMonth's project read (FLOW-1212)", () => {
     expect((rpc.calls[0]?.args as { p_project?: string }).p_project).toBeUndefined();
   });
 
-  it("keeps the row-touch prefetch: a row a touch read under the menu's key is found fresh, so no second read goes out", async () => {
+  it("with a warm read under the menu's key and no urgent read (the after-paint path), makes exactly one read in total", async () => {
     const client = makeClient(true);
-    // prefetch.tsx reads the one-project key (projectsCashMonthOptions) with a staleness window, on the row's touch.
-    await client.query({ ...projectsCashMonthOptions(undefined, "p1"), staleTime: 60_000, retry: false }).catch(() => undefined);
-    expect(rpc.calls).toHaveLength(1);
-    const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1", { urgent: true }), { wrapper: wrapper(client) });
-    expect(result.current.data?.projects[0]?.pending_count).toBe(3);
-    expect(result.current.dataUpdatedAt).toBeGreaterThan(0);
-    await new Promise((resolve) => { setTimeout(resolve, 200); });
-    expect(rpc.calls).toHaveLength(1);
-  });
-
-  it("with a warm prefetch and no urgent read (the after-paint path), makes exactly one read in total", async () => {
-    const client = makeClient(true);
+    // An earlier read under the same key (the menu's own, or a previous mount of the page).
     await client.query({ ...projectsCashMonthOptions(undefined, "p1"), staleTime: 60_000, retry: false }).catch(() => undefined);
     expect(rpc.calls).toHaveLength(1);
     const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1"), { wrapper: wrapper(client) });
-    // The page's deferred read finds the prefetched row fresh: it lands at once and no second read goes out.
+    // The page's deferred read finds the warm row fresh: it lands at once and no second read goes out.
     expect(result.current.data?.projects[0]?.pending_count).toBe(3);
     await new Promise((resolve) => { setTimeout(resolve, 200); });
     expect(rpc.calls).toHaveLength(1);
