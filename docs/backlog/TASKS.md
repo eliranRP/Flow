@@ -783,6 +783,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1215"></a>[FLOW-1215](tasks/FLOW-1215.md) | Perf: trim the JavaScript budget's headroom back | MEDIUM (perf) |
 | <a id="flow-1216"></a>[FLOW-1216](tasks/FLOW-1216.md) | Perf: company_next_month_inputs is the heaviest read (profile and cut) | LARGE (perf) |
 | <a id="flow-1217"></a>[FLOW-1217](tasks/FLOW-1217.md) | Remove the FLOW-1207 compatibility test once no FLOW-1207 app is in use | SMALL |
+| <a id="flow-1223"></a>[FLOW-1223](tasks/FLOW-1223.md) | One project's cash answer keeps a stub `unassigned` for the app before FLOW-1213 | SMALL |
+| <a id="flow-1224"></a>[FLOW-1224](tasks/FLOW-1224.md) | Drop the `unassigned` stub from one project's cash answer once no app before FLOW-1213 is in use | SMALL |
 | <a id="flow-1225"></a>[FLOW-1225](tasks/FLOW-1225.md) | Perf: a touched project row no longer reads the ⋯ menu's figures | SMALL (perf) |
 | <a id="flow-1226"></a>[FLOW-1226](tasks/FLOW-1226.md) | Perf: a project's forecast loans read the loans and their balances at once | SMALL (perf) |
 | <a id="flow-1227"></a>[FLOW-1227](tasks/FLOW-1227.md) | Perf: a category's lines are read in pages of 200, not 40 | SMALL (perf) |

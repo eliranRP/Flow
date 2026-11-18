@@ -1,6 +1,6 @@
 -- FLOW-1213 (20261115185901): two trims in the database, checked against copies of their bodies from before this change.
 -- (a) public.projects_cash_month: with p_project, the answer is the previous body's answer less `unassigned` (only the
---     list reads it); the list (no p_project) is the previous answer exactly. The copy is pg_temp.old_pcm_1213.
+--     list reads it), FLOW-1223: plus a constant stub in its place; the list (no p_project) is the previous answer exactly. The copy is pg_temp.old_pcm_1213.
 -- (b) public.mcp_jev_status: the answer is the previous body's answer with no refusal, with a refusal that holds, and
 --     with that refusal made stale by a category rename. The copy is pg_temp.old_jev_1213. With no refused line, the
 --     company's key is not read: a trap that raises when private.jev_inputs_key is read shows it (rolled back below).
@@ -465,24 +465,31 @@ create function pg_temp.old(p_month date, p_project text default null) returns j
 $$;
 grant execute on function pg_temp.old(date, text) to authenticated, service_role;
 
+-- FLOW-1223 (20261118013500): one project's answer carries this constant in place of the unassigned figures.
+create function pg_temp.stub() returns jsonb language sql immutable as $$
+  select '{"unassigned": {"count": 0, "cash": []}}'::jsonb;
+$$;
+grant execute on function pg_temp.stub() to authenticated, service_role;
+
 select tests.authenticate_as('fx_a');
 
 select ok((pg_temp.old('2026-09-01')->'unassigned'->>'count')::int > 0,
   'fixture: the list has lines with no project, so the unassigned figures are not empty');
 select is(pg_temp.new('2026-09-01'), pg_temp.old('2026-09-01'), 'the list is the previous answer exactly (September)');
 select is(pg_temp.new('2026-07-01'), pg_temp.old('2026-07-01'), 'the list is the previous answer exactly (July)');
-select is(pg_temp.new('2026-09-01', 'house'), pg_temp.old('2026-09-01', 'house') - 'unassigned', 'the house: the previous answer less unassigned');
-select is(pg_temp.new('2026-09-01', 'barn'), pg_temp.old('2026-09-01', 'barn') - 'unassigned', 'the barn (a share of a shared line)');
-select is(pg_temp.new('2026-09-01', 'shed'), pg_temp.old('2026-09-01', 'shed') - 'unassigned', 'the shed (empty)');
-select is(pg_temp.new('2026-09-01', 'lark'), pg_temp.old('2026-09-01', 'lark') - 'unassigned', 'the finished project');
-select is(pg_temp.new('2026-07-01', 'house'), pg_temp.old('2026-07-01', 'house') - 'unassigned', 'the house in July');
-select ok((pg_temp.new('2026-09-01', 'house')->'unassigned') is null, 'one project''s answer has no unassigned key');
+select is(pg_temp.new('2026-09-01', 'house'), (pg_temp.old('2026-09-01', 'house') - 'unassigned') || pg_temp.stub(), 'the house: the previous answer less unassigned, with the stub');
+select is(pg_temp.new('2026-09-01', 'barn'), (pg_temp.old('2026-09-01', 'barn') - 'unassigned') || pg_temp.stub(), 'the barn (a share of a shared line), with the stub');
+select is(pg_temp.new('2026-09-01', 'shed'), (pg_temp.old('2026-09-01', 'shed') - 'unassigned') || pg_temp.stub(), 'the shed (empty), with the stub');
+select is(pg_temp.new('2026-09-01', 'lark'), (pg_temp.old('2026-09-01', 'lark') - 'unassigned') || pg_temp.stub(), 'the finished project, with the stub');
+select is(pg_temp.new('2026-07-01', 'house'), (pg_temp.old('2026-07-01', 'house') - 'unassigned') || pg_temp.stub(), 'the house in July, with the stub');
+select is(pg_temp.new('2026-09-01', 'house')->'unassigned', '{"count": 0, "cash": []}'::jsonb,
+  'FLOW-1223: one project''s unassigned is the constant stub the app before FLOW-1213 parses');
 select is(pg_temp.new('2026-09-01', 'b_house'), null::jsonb, 'another company''s project is not read');
 select is(pg_temp.old('2026-09-01', 'b_house'), null::jsonb, 'as before');
 
 select tests.authenticate_as('fx_b');
 select is(pg_temp.new('2026-09-01'), pg_temp.old('2026-09-01'), 'company B: the list is the previous answer exactly');
-select is(pg_temp.new('2026-09-01', 'b_house'), pg_temp.old('2026-09-01', 'b_house') - 'unassigned', 'company B: its project, less unassigned');
+select is(pg_temp.new('2026-09-01', 'b_house'), (pg_temp.old('2026-09-01', 'b_house') - 'unassigned') || pg_temp.stub(), 'company B: its project, less unassigned, with the stub');
 
 -- ---------------------------------------------------------------------------------------------
 -- B. mcp_jev_status
