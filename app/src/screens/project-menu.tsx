@@ -20,7 +20,7 @@ import { BarsIcon, BinIcon, BoltIcon, FlagIcon, InvestIcon, PencilIcon, RefreshI
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ProjectFormSheet } from "./project-form-sheet";
-import { NO_GROUP, ProjectGroupSheets, type ProjectGroups } from "./project-group-sheets";
+import { NO_GROUP, ProjectGroupSheets, useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 
 /** How long a finish offers ביטול (FLOW-961, decision 0213). */
 export const FINISH_UNDO_MS = 5000;
@@ -36,7 +36,7 @@ export function ProjectMenu({
   name,
   budget,
   finished,
-  groups,
+  groups: sampleGroups,
   sample = false,
   sampleRow,
   overhead,
@@ -49,7 +49,7 @@ export function ProjectMenu({
   name: string;
   budget: bigint | null;
   finished: boolean;
-  /** FLOW-360 A: the קבוצה row shows once the groups are read. */
+  /** FLOW-360 A: a sample's groups (stories, tests). A live menu reads them itself (FLOW-1230). */
   groups?: ProjectGroups;
   sample?: boolean;
   /** A sample project's month row (stories and the proof fixture); a live menu reads it from the month. */
@@ -79,6 +79,12 @@ export function ProjectMenu({
   };
   const [removing, setRemoving] = useState(false);
   const [editing, setEditing] = useState(false);
+  // FLOW-360 A: the קבוצה row in the edit sheet shows once the groups are read. FLOW-1230: only that sheet shows them,
+  // two taps after the ⋯ button, so the read (list_project_groups and the project's group) starts on the button's touch
+  // (FLOW-1212's prime), or at once when the menu or the edit sheet opens, not at the page's first paint, where it
+  // competed with the forecast's reads for the page's last skeleton.
+  const liveGroups = useProjectGroups(projectId, !sample && sampleGroups == null && (menu || primed || editing));
+  const groups = sampleGroups ?? liveGroups;
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.

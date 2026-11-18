@@ -12,6 +12,9 @@ const server = vi.hoisted(() => ({
   tables: [] as string[],
   /** The lifetime read (no period) stays out until a test lets it go. */
   releaseLifetime: (): void => undefined,
+  /** FLOW-1230: the lifetime read answers at once, and the page's own (period) read stays out until a test lets it go. */
+  holdPeriod: false,
+  releasePeriod: (): void => undefined,
   /** The company read (/companies) stays out until a test lets it go. */
   holdCompanies: false,
   releaseCompanies: (): void => undefined,
@@ -28,7 +31,10 @@ const cashMonths = {
 
 function rpc(name: string, args: Record<string, unknown>): Promise<Reply> {
   server.rpcCalls.push({ name, args });
-  if (name === "get_project" && args.p_from == null) {
+  if (name === "get_project" && args.p_from != null && server.holdPeriod) {
+    return new Promise((resolve) => { server.releasePeriod = () => { resolve({ data: server.project, error: null }); }; });
+  }
+  if (name === "get_project" && args.p_from == null && !server.holdPeriod) {
     return new Promise((resolve) => { server.releaseLifetime = () => { resolve({ data: server.project, error: null }); }; });
   }
   const data = name === "get_project" ? server.project : name === "project_cash_months" ? cashMonths : name === "mcp_company_loan_currency" ? "ILS" : null;
@@ -69,6 +75,7 @@ afterEach(() => {
   server.rpcCalls.length = 0;
   server.tables.length = 0;
   server.holdCompanies = false;
+  server.holdPeriod = false;
   server.project.is_overhead = false;
 });
 
@@ -117,5 +124,30 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
     expect(row.querySelector(".ui-project-row-figure")).toBeNull();
     await act(async () => { server.releaseCompanies(); server.releaseLifetime(); await Promise.resolve(); });
+  });
+
+  it("start when the lifetime read lands first, with the page's own read still out (FLOW-1230)", async () => {
+    // The same get_project answered twice: whichever lands first starts the reads.
+    server.holdPeriod = true;
+    renderLive();
+    await vi.waitFor(() => {
+      for (const name of FORECAST_RPCS) expect(names()).toContain(name);
+      expect(server.tables).toContain("loans");
+    });
+    // The page itself still waits for its own read: nothing of the project is drawn yet.
+    expect(screen.queryByRole("heading", { name: "וילה רעננה" })).not.toBeInTheDocument();
+    await act(async () => { server.releasePeriod(); await Promise.resolve(); });
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+  });
+
+  it("the overhead project, lifetime read first: the company's reads start, not its own (FLOW-1230)", async () => {
+    server.project.is_overhead = true;
+    server.holdPeriod = true;
+    server.holdCompanies = true;
+    renderLive();
+    await vi.waitFor(() => { expect(names()).toContain("company_next_month_inputs"); });
+    expect(server.rpcCalls.some((call) => call.name === "expected_months" && call.args.p_project_id != null)).toBe(false);
+    expect(names()).not.toContain("project_category_months");
+    await act(async () => { server.releaseCompanies(); server.releasePeriod(); await Promise.resolve(); });
   });
 });

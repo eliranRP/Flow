@@ -170,7 +170,7 @@ describe("rejected reads", () => {
     resetShownCompanyForTests();
   });
 
-  it("reads a project's groups only once its own read has landed (FLOW-804)", async () => {
+  it("reads a project's groups only when its ⋯ button is touched, not at the page's first paint (FLOW-804, FLOW-1230)", async () => {
     const wire = JSON.parse(JSON.stringify(demoProject("herzl"), (_key, value: unknown) => (
       typeof value === "bigint" ? value.toString() : value
     ))) as unknown;
@@ -192,6 +192,10 @@ describe("rejected reads", () => {
     expect(reads).toContain("project_recurring_changes");
     await act(async () => { for (const answer of answers) answer({ data: wire, error: null }); await Promise.resolve(); });
     expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    // FLOW-1230: only the edit sheet shows the groups, so the page's own reads go first and the groups wait for the button.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(reads).not.toContain("list_project_groups");
+    fireEvent.pointerDown(screen.getByRole("button", { name: "עוד" }));
     await waitFor(() => { expect(reads).toContain("list_project_groups"); });
   });
 
