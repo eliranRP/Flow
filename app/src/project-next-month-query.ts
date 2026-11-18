@@ -78,22 +78,16 @@ function withBalances(rows: LoanDetailDbRow[], balances: BalanceDbRow[]): Foreca
  */
 export async function readForecastLoans(projectId: string | null): Promise<ForecastLoan[]> {
   const supabase = await readyClient();
-  const balanceColumns = () => supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts");
-  if (projectId == null) {
-    // The company's loans and their balances at once. loan_balances is a security_invoker view with company_id, so RLS
-    // gives it the same rows the loans read gets, and withBalances takes only the balances of the loans it returned.
-    const [loans, balances] = await Promise.all([supabase.from("loans").select(LOAN_DETAIL_COLUMNS), balanceColumns()]);
-    if (loans.error) throw loans.error;
-    if (balances.error) throw balances.error;
-    return withBalances(loans.data, balances.data);
-  }
-  const loans = await supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId);
+  // The loans (the project's, or every loan of the company) and their balances at once. loan_balances is a
+  // security_invoker view with company_id, so RLS gives it the same rows the loans read gets, and withBalances
+  // takes only the balances of the loans it returned.
+  const loansRead = projectId == null
+    ? supabase.from("loans").select(LOAN_DETAIL_COLUMNS)
+    : supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId);
+  const [loans, balances] = await Promise.all([loansRead, supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts")]);
   if (loans.error) throw loans.error;
-  const rows = loans.data as unknown as LoanDetailDbRow[];
-  if (rows.length === 0) return [];
-  const balances = await balanceColumns().in("loan_id", rows.map((row) => row.id));
   if (balances.error) throw balances.error;
-  return withBalances(rows, balances.data);
+  return withBalances(loans.data, balances.data);
 }
 
 /** The project's loans for its forecast. Under "loans", so a loan write refreshes it. */
