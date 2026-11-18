@@ -164,6 +164,17 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
       reads.own = { failed: false, paused: false };
     });
 
+    it("while the answer is out, the data fields are empty whatever is cached (no consumer draws them while pending)", () => {
+      reads.overhead = pending;
+      const { result } = startsFor("p1", false);
+      expect(result.current.pending).toBe(true);
+      expect(result.current.overrides).toBeNull();
+      expect(result.current.edits).toEqual([]);
+      expect(result.current.recurring).toEqual([]);
+      expect(result.current.categoryMonths).toBeNull();
+      expect(result.current.categories).toEqual([]);
+    });
+
     it("a shared read already in a cached error shows it when the overhead answer lands, not while it is out", () => {
       // The mocked own forecast stands for the reads it shares (the overrides, the company's categories).
       reads.own = { failed: true, paused: false };

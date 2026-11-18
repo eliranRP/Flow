@@ -27,11 +27,14 @@ const NONE: never[] = [];
  * was true). A stale hint starts the wrong set of reads; the right set starts when the answer lands. That costs
  * extra reads, never a wrong figure.
  *
- * While the answer is out, `failed`, `paused` and the data fields (overrides, edits, recurring, categories) are
- * masked, so the row reads as loading. A shared read (the overrides, the company's categories) that already holds a
- * cached error or pause therefore shows it when the overhead answer lands (a few hundred ms), not at once; the final
- * state is the same. No consumer renders the data fields while `pending`: screen-state.tsx:99-102 draws the
- * skeleton until the phase is ready, and next-month-block.tsx:55-58 draws its skeleton while `loading`.
+ * While the answer is out, `failed`, `paused` and the data fields (overrides, edits, recurring, categoryMonths,
+ * categories) are masked, so the row reads as loading. Two return values differ from before this change, and only
+ * while `pending`: (1) a shared read (the overrides, the company's categories) that already holds a cached error or
+ * pause shows it when the overhead answer lands (a few hundred ms), not at once; (2) the data fields are empty here,
+ * where before a disabled read could still hand back its cached data. (1) moves only when an error appears, and the
+ * final state is the same; (2) changes nothing drawn, since no consumer renders the data fields while `pending`
+ * (screen-state.tsx:99-102 draws the skeleton until the phase is ready, and next-month-block.tsx:55-58 draws its
+ * skeleton while `loading`).
  */
 export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
   const live = sample == null && enabled;
