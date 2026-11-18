@@ -9,14 +9,34 @@ import { type NextMonthSample, useNextMonthForecast } from "./project-next-month
 import { shiftMonthKey } from "./period";
 import { israelToday } from "./ui/date-math";
 
+/** One stable empty list for the rows returned while the overhead answer is out. */
+const NONE: never[] = [];
+
 /**
  * FLOW-1002 (owner, 2026-10-31: "the row should behave the same as a regular project"): a project's next month,
  * as its צפי page, its edit page, its profit page and its card read it. For the company's overhead project it is
  * the general costs (decision 0237): what carries no project and what the overhead project carries, with the
  * overhead project's edits, the same part the company's צפי page shows under כללי. So a general row opens the
  * overhead project's edit page, and its writes (the overhead project's edits) reach both pages.
+ *
+ * FLOW-1229: `overheadKnown` is the page's own guess at "is this the overhead project" (get_project's `is_overhead`,
+ * the same `companies.overhead_project_id` test, possibly from a cached read). It only STARTS reads early, never
+ * decides what is shown: while the company read is out, a false hint starts the project's own reads and a true one
+ * the company's, and the row stays in its loading state as before. What is shown is the company read's answer, or,
+ * if that read failed, the FLOW-1002 fallback to the project's own forecast (whose reads then start, if the hint
+ * was true). A stale hint starts the wrong set of reads; the right set starts when the answer lands. That costs
+ * extra reads, never a wrong figure.
+ *
+ * While the answer is out, `failed`, `paused` and the data fields (overrides, edits, recurring, categoryMonths,
+ * categories) are masked, so the row reads as loading. Two return values differ from before this change, and only
+ * while `pending`: (1) a shared read (the overrides, the company's categories) that already holds a cached error or
+ * pause shows it when the overhead answer lands (a few hundred ms), not at once; (2) the data fields are empty here,
+ * where before a disabled read could still hand back its cached data. (1) moves only when an error appears, and the
+ * final state is the same; (2) changes nothing drawn, since no consumer renders the data fields while `pending`
+ * (screen-state.tsx:99-102 draws the skeleton until the phase is ready, and next-month-block.tsx:55-58 draws its
+ * skeleton while `loading`).
  */
-export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false) {
+export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
   // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
@@ -24,16 +44,19 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   // than every project page failing over one small read.
   const deciding = live && overhead.project === undefined && !overhead.failed;
   const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
-  const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead, month);
+  // The reads that may start before the answer: the hint's set only; what shows is decided above.
+  const startOwn = enabled && (deciding ? overheadKnown === false : !isOverhead);
+  const startCompany = isOverhead || (deciding && overheadKnown === true);
+  const own = useNextMonthForecast(projectId, currency, sample, startOwn, month);
   const today = israelToday();
   // FLOW-1066: a month of the forecast (?month=), next month by default.
   const forMonth = month ?? nextMonthKey(today);
   // The general costs are the company's, in its books currency (0147), as the company's צפי page reads them,
   // whatever currency the overhead project's own figures are in. The pages show them in the currency returned.
   // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
-  const currencyRead = useCompanyCurrencyQuery(isOverhead);
+  const currencyRead = useCompanyCurrencyQuery(startCompany);
   const companyCurrency = currencyRead.data ?? currency;
-  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null, undefined, forMonth, false, withOverrides);
+  const company = useCompanyNextMonth(companyCurrency, today, startCompany && currencyRead.data != null, undefined, forMonth, false, withOverrides);
   const currencyFailed = currencyRead.data == null && currencyRead.isError;
   const input = company.input;
   const general = useMemo(() => {
@@ -51,7 +74,13 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     const edits: ProjectForecastEdit[] = input.inputs.edits.filter((edit) => edit.project_id === projectId);
     return { forecast: companyGeneralForecast(input), recurring, categoryMonths, edits };
   }, [isOverhead, input, projectId]);
-  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true, currency, general: false } : { ...own, currency, general: false };
+  // While the answer is out the row is loading, whatever the early reads (a false hint's) hold: no forecast, no data,
+  // no failure and no pause of theirs, as when the own reads were off.
+  if (!isOverhead) {
+    return deciding
+      ? { ...own, forecast: null, overrides: null, edits: NONE, recurring: NONE, categoryMonths: null, categories: NONE, pending: true, failed: false, paused: false, currency, general: false }
+      : { ...own, currency, general: false };
+  }
   return {
     currency: companyCurrency,
     /** FLOW-1079: the general costs' page (the overhead project's): a charge with no project is its own. */
