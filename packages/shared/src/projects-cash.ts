@@ -4,7 +4,8 @@ import { z } from "zod";
 // unassigned bucket. Amounts are integer minor units of each currency; the base currency comes first.
 // FLOW-1204: `pending_count` and `deletable` (the project menu's) come only with `p_project`; the list's answer has neither.
 // FLOW-1205: no `group_id` on a row and no `month` or `basis`: nothing reads them.
-// FLOW-1213: `unassigned` comes only with the list (no `p_project`); one project's answer has no `unassigned`.
+// FLOW-1213: `unassigned` is the list's only (no `p_project`). FLOW-1223: one project's answer holds a constant stub
+// ({count: 0, cash: []}) for the app before FLOW-1213, which requires the key, until FLOW-1224 drops it.
 
 const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const monthSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

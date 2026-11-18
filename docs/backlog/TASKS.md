@@ -783,6 +783,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1215"></a>[FLOW-1215](tasks/FLOW-1215.md) | Perf: trim the JavaScript budget's headroom back | MEDIUM (perf) |
 | <a id="flow-1216"></a>[FLOW-1216](tasks/FLOW-1216.md) | Perf: company_next_month_inputs is the heaviest read (profile and cut) | LARGE (perf) |
 | <a id="flow-1217"></a>[FLOW-1217](tasks/FLOW-1217.md) | Remove the FLOW-1207 compatibility test once no FLOW-1207 app is in use | SMALL |
+| <a id="flow-1223"></a>[FLOW-1223](tasks/FLOW-1223.md) | One project's cash answer keeps a stub `unassigned` for the app before FLOW-1213 | SMALL |
+| <a id="flow-1224"></a>[FLOW-1224](tasks/FLOW-1224.md) | Drop the `unassigned` stub from one project's cash answer once no app before FLOW-1213 is in use | SMALL |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
