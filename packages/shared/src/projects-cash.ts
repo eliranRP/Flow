@@ -41,7 +41,7 @@ export const projectsCashMonthSchema = z
   .object({
     base_currency: currencySchema,
     projects: z.array(projectRowSchema),
-    /** Only in the list's answer (no `p_project`): the lines with no project. */
+    /** The lines with no project, in the list's answer (no `p_project`); one project's answer carries a stub (FLOW-1223). */
     unassigned: z
       .object({
         count: z.number().int(),

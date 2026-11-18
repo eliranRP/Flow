@@ -202,7 +202,7 @@ function ProjectsOverview({
   const barShown = useScrolledPast(bandMark, true, 0);
   const { markRef, docked, scrollUnderBar } = useDockedFilter({ barShown, bar: BAND_BAR });
   const groups = groupProjectRows(month.projects, filter, base);
-  // The list's answer always has `unassigned` (FLOW-1213: only one project's answer leaves it out).
+  // The list's answer always has `unassigned` (one project's answer carries a stub, FLOW-1223; FLOW-1224 drops it).
   const unassigned = month.unassigned ?? { count: 0, cash: [] };
   const unassignedNet = BigInt(netIn(unassigned.cash, base));
   const control = (onBand: boolean) => (
