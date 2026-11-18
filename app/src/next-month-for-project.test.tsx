@@ -164,6 +164,20 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
       reads.own = { failed: false, paused: false };
     });
 
+    it("a shared read already in a cached error shows it when the overhead answer lands, not while it is out", () => {
+      // The mocked own forecast stands for the reads it shares (the overrides, the company's categories).
+      reads.own = { failed: true, paused: false };
+      reads.overhead = pending;
+      const { result, rerender } = renderHook(() => useProjectNextMonth("p1", "USD", undefined, true, undefined, false, false));
+      expect(result.current.pending).toBe(true);
+      expect(result.current.failed).toBe(false);
+      reads.overhead = { project: null, failed: false };
+      rerender();
+      expect(result.current.failed).toBe(true);
+      expect(result.current.pending).toBe(false);
+      reads.own = { failed: false, paused: false };
+    });
+
     it("a failed company read falls back to the project's own forecast whatever the hint, starting its reads then", () => {
       reads.overhead = { project: undefined, failed: true };
       expect(startsFor(OVERHEAD, true).result.current.forecast).toBe("own");

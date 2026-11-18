@@ -26,6 +26,12 @@ const NONE: never[] = [];
  * if that read failed, the FLOW-1002 fallback to the project's own forecast (whose reads then start, if the hint
  * was true). A stale hint starts the wrong set of reads; the right set starts when the answer lands. That costs
  * extra reads, never a wrong figure.
+ *
+ * While the answer is out, `failed`, `paused` and the data fields (overrides, edits, recurring, categories) are
+ * masked, so the row reads as loading. A shared read (the overrides, the company's categories) that already holds a
+ * cached error or pause therefore shows it when the overhead answer lands (a few hundred ms), not at once; the final
+ * state is the same. No consumer renders the data fields while `pending`: screen-state.tsx:99-102 draws the
+ * skeleton until the phase is ready, and next-month-block.tsx:55-58 draws its skeleton while `loading`.
  */
 export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
   const live = sample == null && enabled;
