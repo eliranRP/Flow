@@ -124,6 +124,12 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
     expect(reads.ownEnabled.at(-1)).toBe(true);
   });
 
+  it("FLOW-1229: a failed company read ignores the page's answer, so the overhead project falls back to its own forecast", () => {
+    reads.overhead = { project: undefined, failed: true };
+    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD", undefined, true, undefined, false, true)).result.current.forecast).toBe("own");
+    reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
+  });
+
   it("gives any other project its own forecast", () => {
     reads.ownEnabled.length = 0;
     const { result } = renderHook(() => useProjectNextMonth("p1", "USD"));

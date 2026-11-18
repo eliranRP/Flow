@@ -12,6 +12,9 @@ const server = vi.hoisted(() => ({
   tables: [] as string[],
   /** The lifetime read (no period) stays out until a test lets it go. */
   releaseLifetime: (): void => undefined,
+  /** The company read (/companies) stays out until a test lets it go. */
+  holdCompanies: false,
+  releaseCompanies: (): void => undefined,
   project: {
     id: "a", name: "וילה רעננה", status: "active", state_label: "פעיל", budget_agorot: null, is_overhead: false,
     income_agorot: 20_000_000, direct_agorot: 10_000_000, shared_agorot: 0, profit_agorot: 10_000_000, categories: [], transactions: [],
@@ -39,7 +42,9 @@ vi.mock("../lib/supabase", () => {
     const data = name === "companies" ? overhead : [];
     const chain: Record<string, unknown> = {};
     for (const method of ["select", "eq", "limit", "order", "in"]) chain[method] = () => chain;
-    chain.maybeSingle = () => Promise.resolve({ data, error: null });
+    chain.maybeSingle = () => (name === "companies" && server.holdCompanies
+      ? new Promise<Reply>((resolve) => { server.releaseCompanies = () => { resolve({ data, error: null }); }; })
+      : Promise.resolve({ data, error: null }));
     chain.then = (resolve: (reply: Reply) => unknown) => resolve({ data, error: null });
     return chain;
   };
@@ -60,36 +65,54 @@ function renderLive() {
 }
 
 const FORECAST_RPCS = ["expected_months", "project_category_months", "project_forecast_edits_for", "forecast_overrides_for"];
-
 afterEach(() => {
   server.rpcCalls.length = 0;
   server.tables.length = 0;
+  server.holdCompanies = false;
+  server.project.is_overhead = false;
 });
+
+const names = () => server.rpcCalls.map((call) => call.name);
 
 describe("the project page's forecast reads (FLOW-1229)", () => {
   it("start once the project's own read has landed, without waiting for the lifetime read or the company read", async () => {
+    // Both reads stay out: the lifetime get_project and /companies.
+    server.holdCompanies = true;
     renderLive();
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
-    // The lifetime read (every period) is still out, and the forecast's reads have gone out all the same.
     await vi.waitFor(() => {
-      const names = server.rpcCalls.map((call) => call.name);
-      for (const name of FORECAST_RPCS) expect(names).toContain(name);
+      for (const name of FORECAST_RPCS) expect(names()).toContain(name);
       expect(server.tables).toContain("loans");
     });
-    // The company read runs beside them, not before them.
+    // The company read went out beside them, and has not answered.
     expect(server.tables).toContain("companies");
-    await act(async () => { server.releaseLifetime(); await Promise.resolve(); });
+    // While the lifetime read is pending the row shows its loading bar and no figure.
+    const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
+    expect(row.querySelector(".ui-skeleton-w-sm")).not.toBeNull();
+    expect(row.querySelector(".ui-project-row-figure")).toBeNull();
+    await act(async () => { server.releaseCompanies(); server.releaseLifetime(); await Promise.resolve(); });
   });
 
-  it("keeps the project's own forecast reads off for the overhead project, whose forecast is the company's", async () => {
+  it("keeps the figure out until the lifetime read lands, though the forecast's reads are all in", async () => {
+    renderLive();
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    await vi.waitFor(() => { expect(server.tables).toContain("loans"); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
+    expect(row.querySelector(".ui-project-row-figure")).toBeNull();
+    expect(row.querySelector(".ui-skeleton-w-sm")).not.toBeNull();
+  });
+
+  it("holds the overhead project's own forecast reads off while the company read is out", async () => {
     server.project.is_overhead = true;
-    try {
-      renderLive();
-      expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
-      await vi.waitFor(() => { expect(server.tables).toContain("companies"); });
-      expect(server.rpcCalls.map((call) => call.name)).not.toContain("expected_months");
-    } finally {
-      server.project.is_overhead = false;
-    }
+    server.holdCompanies = true;
+    renderLive();
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    await vi.waitFor(() => { expect(server.tables).toContain("companies"); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(names()).not.toContain("expected_months");
+    await act(async () => { server.releaseCompanies(); await Promise.resolve(); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(names()).not.toContain("expected_months");
   });
 });

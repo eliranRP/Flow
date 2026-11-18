@@ -19,12 +19,15 @@ import { israelToday } from "./ui/date-math";
  * FLOW-1229: `overheadKnown` is the page's own answer to "is this the overhead project" when it already holds one
  * (get_project's `is_overhead`, the same `companies.overhead_project_id` test). With it the forecast's reads start
  * at once instead of after the company read (`/companies`, 0.6 s on the phone profile); the company read still runs
- * beside them, keeps the cache the צפי page opens from, and wins when it lands.
+ * beside them, keeps the cache the צפי page opens from, and wins when it lands. A failed company read ignores the
+ * hint, so the fallback below holds for every project. Transient: a stale hint (get_project's cached answer from
+ * before the owner moved the overhead project) that says "not overhead" can show the project's own forecast briefly,
+ * until the company read's answer lands and the general costs replace it.
  */
 export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
-  const answer = overhead.project !== undefined ? overhead.project?.id === projectId : overheadKnown;
+  const answer = overhead.project !== undefined ? overhead.project?.id === projectId : overhead.failed ? undefined : overheadKnown;
   // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
   // read fails, every project (the overhead one too) falls back to its own forecast, as before FLOW-1002, rather
   // than every project page failing over one small read.
