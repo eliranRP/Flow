@@ -2,8 +2,9 @@
 -- as FLOW-1207 left it (20261114123209_flow_1207_breakdown_lines_all.sql), on invented data; amounts are cents.
 -- - The no-key read with a null limit (the new app) of a direction with more than 200 lines is one call: no page,
 --   has_more false. With a limit of 200 (the FLOW-1207 app, live on phones) it pages as before.
--- - Its rows are the keyed row less category_id and kept_out, with group_key: per category they equal the keyed
---   read's rows less those two, in order; with category_id put back they equal the keyed rows less kept_out.
+-- - Its rows are the keyed row less category_id, kept_out, category_name, currency and shared (FLOW-1228), with
+--   group_key: per category they equal the keyed read's rows less those five, in order; with category_id put back they
+--   equal the keyed rows less kept_out, category_name, currency and shared.
 -- - A keyed read, a kept-out read and a read by project are unchanged, field for field.
 
 begin;
@@ -353,14 +354,14 @@ select is(
 -- The row.
 select is(
   (select array_agg(distinct k order by k) from b11_new b, jsonb_array_elements(b.body -> 'rows') x, jsonb_object_keys(x) k where b.dir = 'expense'),
-  array['amount_minor', 'category_name', 'currency', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'shared', 'source', 'supplier_name', 'transaction_id'],
+  array['amount_minor', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'source', 'supplier_name', 'transaction_id'],
   'every expense row holds exactly the lean keys');
 select is(
-  (select count(*)::int from b11_new b, jsonb_array_elements(b.body -> 'rows') x where b.dir = 'expense' and (select count(*) from jsonb_object_keys(x)) <> 13),
-  0, 'and all thirteen, null or not');
+  (select count(*)::int from b11_new b, jsonb_array_elements(b.body -> 'rows') x where b.dir = 'expense' and (select count(*) from jsonb_object_keys(x)) <> 10),
+  0, 'and all ten, null or not');
 select is(
   (select array_agg(distinct k order by k) from b11_new b, jsonb_array_elements(b.body -> 'rows') x, jsonb_object_keys(x) k where b.dir = 'income'),
-  array['amount_minor', 'category_name', 'currency', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'shared', 'source', 'supplier_name', 'transaction_id'],
+  array['amount_minor', 'description', 'doc_date', 'gross_up', 'group_key', 'part', 'project_name', 'source', 'supplier_name', 'transaction_id'],
   'every income row holds exactly the lean keys');
 select is(
   (select array_agg(k order by k) from jsonb_object_keys((select body from b11_new where dir = 'expense')) k),
@@ -369,31 +370,32 @@ select is(
 
 -- Parity per category, in order, against the keyed read (its pages joined).
 select is(pg_temp.lean('expense', pg_temp.ref('repairs')::text),
-  pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['category_id', 'kept_out']),
+  pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['category_id', 'kept_out', 'category_name', 'currency', 'shared']),
   'repairs (more than 200 lines, two keyed pages): the no-key rows are the keyed rows less the dropped fields, in order');
 select is(pg_temp.lean('expense', pg_temp.ref('reno')::text),
-  pg_temp.keyed_less('expense', pg_temp.ref('reno')::text, array['category_id', 'kept_out']),
+  pg_temp.keyed_less('expense', pg_temp.ref('reno')::text, array['category_id', 'kept_out', 'category_name', 'currency', 'shared']),
   'renovation: the same');
 select is(pg_temp.lean('expense', 'none'),
-  pg_temp.keyed_less('expense', 'none', array['category_id', 'kept_out']),
+  pg_temp.keyed_less('expense', 'none', array['category_id', 'kept_out', 'category_name', 'currency', 'shared']),
   'no category: the same');
 select is(pg_temp.lean('income', pg_temp.ref('rent')::text),
-  pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['category_id', 'kept_out']),
+  pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['category_id', 'kept_out', 'category_name', 'currency', 'shared']),
   'income, rent: the same');
 select is(pg_temp.lean('income', pg_temp.ref('fees')::text),
-  pg_temp.keyed_less('income', pg_temp.ref('fees')::text, array['category_id', 'kept_out']),
+  pg_temp.keyed_less('income', pg_temp.ref('fees')::text, array['category_id', 'kept_out', 'category_name', 'currency', 'shared']),
   'income, fees: the same');
 select is(
   (select sum(jsonb_array_length(pg_temp.lean('expense', k))) from unnest(array[pg_temp.ref('repairs')::text, pg_temp.ref('reno')::text, 'none']) k)::int,
   (select jsonb_array_length(body -> 'rows') from b11_new where dir = 'expense'),
   'the groups hold every row: none is filed nowhere');
 
--- Seeding: the category id put back makes the keyed row (kept_out is never read).
-select is(pg_temp.seeded('expense', pg_temp.ref('repairs')::text), pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['kept_out']),
-  'repairs: the row with its category id is the keyed row less kept_out');
-select is(pg_temp.seeded('expense', 'none'), pg_temp.keyed_less('expense', 'none', array['kept_out']),
+-- Seeding: the category id put back makes the keyed row less what the no-key row never holds (kept_out, category_name,
+-- currency, shared: the app has the name from get_breakdown, and reads the other two nowhere).
+select is(pg_temp.seeded('expense', pg_temp.ref('repairs')::text), pg_temp.keyed_less('expense', pg_temp.ref('repairs')::text, array['kept_out', 'category_name', 'currency', 'shared']),
+  'repairs: the row with its category id is the keyed row less kept_out, category_name, currency and shared');
+select is(pg_temp.seeded('expense', 'none'), pg_temp.keyed_less('expense', 'none', array['kept_out', 'category_name', 'currency', 'shared']),
   'no category: the same');
-select is(pg_temp.seeded('income', pg_temp.ref('rent')::text), pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['kept_out']),
+select is(pg_temp.seeded('income', pg_temp.ref('rent')::text), pg_temp.keyed_less('income', pg_temp.ref('rent')::text, array['kept_out', 'category_name', 'currency', 'shared']),
   'income: the same');
 
 -- A keyed read, a kept-out read and a read by project are as they were.

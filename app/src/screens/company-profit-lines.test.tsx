@@ -77,9 +77,10 @@ function answer(name: string, args: Record<string, unknown> | undefined): unknow
   if (name === "get_breakdown_lines" && args?.p_excluded === true) return { rows: [{ ...line("t-kept", "פיקדון לדוגמה"), category_id: "k1" }], has_more: false };
   if (name === "get_breakdown_lines" && args?.p_group_key === null) {
     // The server's one read of the direction, whole: every category's rows, newest first (a tie in the server's own
-    // order, here the last category first), each a keyed row without category_id and kept_out, with its group.
+    // order, here the last category first), each a keyed row without category_id, kept_out, category_name, currency and
+    // shared (FLOW-1228), with its group.
     const keys = args.p_direction === "expense" ? [INSURANCE, SALARY] : calls.income ? [RENT] : [];
-    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map(({ category_id: _id, ...row }) => ({ ...row, category_name: NAMES[key] ?? null, group_key: key })))
+    const all = keys.flatMap((key): Array<Record<string, unknown>> => (calls.lines[key] as { rows: Array<Record<string, unknown>> }).rows.map(({ category_id: _id, category_name: _name, currency: _currency, shared: _shared, ...row }) => ({ ...row, group_key: key })))
       .sort((a, b) => String(b.doc_date).localeCompare(String(a.doc_date)));
     const limit = args.p_limit == null ? (calls.legacy ? 40 : all.length) : Number(args.p_limit);
     const offset = args.p_limit == null ? 0 : Number(args.p_offset ?? 0);
@@ -337,8 +338,11 @@ describe("CompanyProfitScreen, the date and amount orders read every line in one
     await screen.findByText("ראשון");
     const read = keyed.getQueriesData<unknown[]>({ queryKey: ["breakdown-lines", "company-profit"] }).find(([key]) => key.includes(INSURANCE))?.[1];
     expect(seeded).toHaveLength(2);
-    expect(seeded).toEqual(read);
-    expect(seeded).toEqual([expect.objectContaining({ category_id: INSURANCE, category_name: "ביטוח" }), expect.objectContaining({ category_id: INSURANCE, category_name: "ביטוח" })]);
+    // The same rows less what the no-key row never holds (FLOW-1228); the page names them from the category's group.
+    const lean = (rows: unknown) => (rows as Array<Record<string, unknown>>).map(({ category_name: _name, currency: _currency, shared: _shared, ...row }) => row);
+    expect(lean(seeded)).toEqual(lean(read));
+    expect(seeded).toEqual([expect.objectContaining({ category_id: INSURANCE }), expect.objectContaining({ category_id: INSURANCE })]);
+    expect((seeded as Array<Record<string, unknown>>).some((row) => "category_name" in row || "currency" in row || "shared" in row)).toBe(false);
   });
 
   it("the category order after the date order shows those lines at once, with no new read", async () => {
