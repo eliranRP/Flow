@@ -36,7 +36,7 @@ import { List, ListRow } from "../ui/list-row";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { useForecastOverrides, useForecastSkip } from "../forecast-skip";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
-import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
+import type { ProjectGroups } from "./project-group-sheets";
 import { investmentLoansRow, ProjectCashOverview, ProjectReportsLink } from "./project-cash-screens";
 import { LineGroupsSkeleton } from "./project-skeletons";
 import type { ProjectLink } from "./project-page-cards";
@@ -163,10 +163,6 @@ export function ProjectDetailScreen({
   // Home's late bills (the company read Home already holds) and the project's changed charges. They
   // need only the project id, so they are read beside the project, not after it.
   const recurring = useProjectRecurring(projectId, sample == null, sampleRecurring);
-  // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
-  // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
-  const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
-  const groups = sampleGroups ?? liveGroups;
   // The profit since the project began: a read over every period, beside the page's own read.
   const lifetime = useProjectQuery(sample == null ? projectId : "", ALL_PERIOD);
   // The project's row (the same cached read the ⋯ menu uses): the month it began. It starts from the
@@ -180,13 +176,17 @@ export function ProjectDetailScreen({
   const lifetimeProject = lifetime.data ?? sample ?? null;
   const forecastCurrency = lifetimeProject == null ? companyCurrency : projectRows(lifetimeProject, companyCurrency)[0]?.currency ?? companyCurrency;
   // FLOW-1229: the forecast's reads (none of them takes the currency) start once the project's own read has
-  // landed (FLOW-804: after the page's first paint, beside the groups), not after the lifetime read, which on the
+  // landed (FLOW-804: after the page's first paint), not after the lifetime read, which on the
   // phone profile answers 2.5 s later. Only the figure waits for the lifetime read, so it is never built first in
   // the company's currency.
+  // FLOW-1230: the two reads are the same function, so whichever lands first starts the forecast's reads (and gives
+  // the overhead hint); the page still draws from its own read. Starting them at mount instead delayed the page's
+  // first data (nine more requests beside its own), so they wait for one of the two.
   const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
-  const forecastReads = sample == null && detail.data != null;
+  const landed = detail.data ?? lifetime.data;
+  const forecastReads = sample == null && landed != null;
   const forecastLive = forecastReads && lifetime.data != null;
-  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastReads, undefined, false, detail.data?.is_overhead);
+  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastReads, undefined, false, landed?.is_overhead);
   // Decision 0196: the page is about cash, so its card and chart take the forecast in cash terms (the loans'
   // principal due next month included), derived from the one forecast the צפי page shows.
   const nextForecast = next.forecast == null || (sample == null && !forecastLive) ? null : cashForecast(next.forecast);
@@ -315,7 +315,7 @@ export function ProjectDetailScreen({
       name={project.name}
       budget={project.budget_agorot ?? null}
       finished={project.status === "finished"}
-      groups={groups}
+      groups={sampleGroups}
       sample={sample != null}
       sampleRow={sampleMenuRow}
       overhead={overhead}

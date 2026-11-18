@@ -17,6 +17,8 @@ const rpc = vi.hoisted(() => ({
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
+      // FLOW-1230: a live menu also reads the groups (on a touch or an open); these tests count the month read only.
+      if (name !== "projects_cash_month") return Promise.resolve({ data: [], error: null });
       rpc.calls.push({ name, args });
       return rpc.answer();
     },
