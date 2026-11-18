@@ -10,7 +10,9 @@ import { type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import { readyClient } from "./ready-client";
 
-type KeyedRow = NonNullable<BreakdownLinesPage>["rows"][number];
+type PageRow = NonNullable<BreakdownLinesPage>["rows"][number];
+/** A keyed read's row, or the no-key read's with its category id put back, which has no `category_name`, `currency` or `shared` (FLOW-1228). */
+type KeyedRow = Omit<PageRow, "category_name" | "currency" | "shared"> & Partial<Pick<PageRow, "category_name" | "currency" | "shared">>;
 type AllRows = NonNullable<BreakdownLinesAll>["rows"];
 
 /**
@@ -149,6 +151,7 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
         title: row.supplier_name ?? row.description,
         date: row.doc_date,
         project: row.project_name,
+        // The no-key read's rows have no name of their own (FLOW-1228): the group's name, from get_breakdown. A keyed read's row names its category.
         category: row.category_name ?? input.categoryName,
         categoryKey: kept ? (row.category_id ?? "none") : input.categoryKey,
         direction: input.direction,
@@ -281,7 +284,8 @@ async function fetchDirectionLines(period: PeriodChoice, direction: BreakdownDir
 
 /**
  * A category's own read, as the keyed read answers it, from the direction's rows: in the same order, with the category id
- * put back (the key, null for "none"), the one field the no-key row drops that a keyed row has.
+ * put back (the key, null for "none"). The no-key row also lacks `category_name`, `currency` and `shared` (FLOW-1228): the page
+ * takes the name from the category's group (`ProfitLinesInput.categoryName`) and reads the other two nowhere.
  */
 function keyedRowsOf(rows: AllRows, key: string): KeyedRow[] {
   return rows.filter((row) => row.group_key === key).map(({ group_key: _group, ...row }) => ({ ...row, category_id: key === "none" ? null : key }));

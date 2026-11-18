@@ -33,14 +33,15 @@ const breakdownLinesPaging = {
 export const breakdownLinesSchema = z.object({ rows: z.array(breakdownLineSchema), ...breakdownLinesPaging }).nullable();
 
 /**
- * FLOW-1207, FLOW-1211. The read with no group key (and no limit): every counted line of a direction in one call, each
- * row a keyed row with `group_key`, the key a keyed read would have been asked with (the category id, or "none"), which
- * files it, and without `category_id` (that key, null for "none") and `kept_out` (always false). It keeps `category_name`,
- * `currency` and `shared`, which the FLOW-1207 app's schema requires while phones still run it.
+ * FLOW-1207, FLOW-1211, FLOW-1228. The read with no group key (and no limit): every counted line of a direction in one
+ * call, each row a keyed row with `group_key`, the key a keyed read would have been asked with (the category id, or
+ * "none"), which files it, and without `category_id` (that key, null for "none"), `kept_out` (always false),
+ * `category_name` (the group's name, which the caller has), `currency` (the one asked for) and `shared` (never read).
+ * The three last are optional here: the row has none of them.
  */
 export const breakdownLinesAllSchema = z
   .object({
-    rows: z.array(breakdownLineSchema.omit({ category_id: true }).extend({ group_key: z.string() })),
+    rows: z.array(breakdownLineSchema.omit({ category_id: true }).partial({ category_name: true, currency: true, shared: true }).extend({ group_key: z.string() })),
     ...breakdownLinesPaging,
   })
   .nullable();
