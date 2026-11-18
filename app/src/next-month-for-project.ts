@@ -16,33 +16,35 @@ import { israelToday } from "./ui/date-math";
  * overhead project's edits, the same part the company's צפי page shows under כללי. So a general row opens the
  * overhead project's edit page, and its writes (the overhead project's edits) reach both pages.
  *
- * FLOW-1229: `overheadKnown` is the page's own answer to "is this the overhead project" when it already holds one
- * (get_project's `is_overhead`, the same `companies.overhead_project_id` test). With it the forecast's reads start
- * at once instead of after the company read (`/companies`, 0.6 s on the phone profile); the company read still runs
- * beside them, keeps the cache the צפי page opens from, and wins when it lands. A failed company read ignores the
- * hint, so the fallback below holds for every project. Transient: a stale hint (get_project's cached answer from
- * before the owner moved the overhead project) that says "not overhead" can show the project's own forecast briefly,
- * until the company read's answer lands and the general costs replace it.
+ * FLOW-1229: `overheadKnown` is the page's own guess at "is this the overhead project" (get_project's `is_overhead`,
+ * the same `companies.overhead_project_id` test, possibly from a cached read). It only STARTS reads early, never
+ * decides what is shown: while the company read is out, a false hint starts the project's own reads and a true one
+ * the company's, and the row stays in its loading state as before. What is shown is the company read's answer, or,
+ * if that read failed, the FLOW-1002 fallback to the project's own forecast (whose reads then start, if the hint
+ * was true). A stale hint starts the wrong set of reads; the right set starts when the answer lands. That costs
+ * extra reads, never a wrong figure.
  */
 export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
-  const answer = overhead.project !== undefined ? overhead.project?.id === projectId : overhead.failed ? undefined : overheadKnown;
   // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
   // read fails, every project (the overhead one too) falls back to its own forecast, as before FLOW-1002, rather
   // than every project page failing over one small read.
-  const deciding = live && answer === undefined && !overhead.failed;
-  const isOverhead = live && answer === true;
-  const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead, month);
+  const deciding = live && overhead.project === undefined && !overhead.failed;
+  const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
+  // The reads that may start before the answer: the hint's set only; what shows is decided above.
+  const startOwn = enabled && (deciding ? overheadKnown === false : !isOverhead);
+  const startCompany = isOverhead || (deciding && overheadKnown === true);
+  const own = useNextMonthForecast(projectId, currency, sample, startOwn, month);
   const today = israelToday();
   // FLOW-1066: a month of the forecast (?month=), next month by default.
   const forMonth = month ?? nextMonthKey(today);
   // The general costs are the company's, in its books currency (0147), as the company's צפי page reads them,
   // whatever currency the overhead project's own figures are in. The pages show them in the currency returned.
   // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
-  const currencyRead = useCompanyCurrencyQuery(isOverhead);
+  const currencyRead = useCompanyCurrencyQuery(startCompany);
   const companyCurrency = currencyRead.data ?? currency;
-  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null, undefined, forMonth, false, withOverrides);
+  const company = useCompanyNextMonth(companyCurrency, today, startCompany && currencyRead.data != null, undefined, forMonth, false, withOverrides);
   const currencyFailed = currencyRead.data == null && currencyRead.isError;
   const input = company.input;
   const general = useMemo(() => {

@@ -31,7 +31,7 @@ function rpc(name: string, args: Record<string, unknown>): Promise<Reply> {
   if (name === "get_project" && args.p_from == null) {
     return new Promise((resolve) => { server.releaseLifetime = () => { resolve({ data: server.project, error: null }); }; });
   }
-  const data = name === "get_project" ? server.project : name === "project_cash_months" ? cashMonths : null;
+  const data = name === "get_project" ? server.project : name === "project_cash_months" ? cashMonths : name === "mcp_company_loan_currency" ? "ILS" : null;
   return Promise.resolve({ data, error: null });
 }
 
@@ -103,16 +103,19 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     expect(row.querySelector(".ui-skeleton-w-sm")).not.toBeNull();
   });
 
-  it("holds the overhead project's own forecast reads off while the company read is out", async () => {
+  it("the overhead project starts the company's forecast reads, not its own, while /companies and the lifetime read are out", async () => {
     server.project.is_overhead = true;
     server.holdCompanies = true;
     renderLive();
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
-    await vi.waitFor(() => { expect(server.tables).toContain("companies"); });
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
-    expect(names()).not.toContain("expected_months");
-    await act(async () => { server.releaseCompanies(); await Promise.resolve(); });
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
-    expect(names()).not.toContain("expected_months");
+    await vi.waitFor(() => { expect(names()).toContain("company_next_month_inputs"); });
+    expect(server.tables).toContain("companies");
+    // The company's expected_months has no project; the project's own has p_project_id.
+    expect(server.rpcCalls.some((call) => call.name === "expected_months" && call.args.p_project_id != null)).toBe(false);
+    expect(names()).not.toContain("project_category_months");
+    // Still loading: nothing is drawn from the hint.
+    const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
+    expect(row.querySelector(".ui-project-row-figure")).toBeNull();
+    await act(async () => { server.releaseCompanies(); server.releaseLifetime(); await Promise.resolve(); });
   });
 });

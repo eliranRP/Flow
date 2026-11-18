@@ -13,7 +13,7 @@ type OverheadRead = { project: { id: string; name: string } | null | undefined; 
 const reads = vi.hoisted(() => {
   const currency: { data: string | undefined; isError: boolean } = { data: "USD", isError: false };
   const overhead: OverheadRead = { project: { id: "p0", name: "משרד" }, failed: false };
-  return { ownEnabled: [] as boolean[], companyCurrency: [] as string[], currency, overhead, company: { pending: false, failed: false, paused: false } };
+  return { ownEnabled: [] as boolean[], companyEnabled: [] as boolean[], companyCurrency: [] as string[], currency, overhead, company: { pending: false, failed: false, paused: false } };
 });
 
 vi.mock("./overhead-project", () => ({
@@ -25,7 +25,7 @@ vi.mock("./company-currency", () => ({
 }));
 
 vi.mock("./company-next-month-query", () => ({
-  useCompanyNextMonth: (currency: string, _today: string, enabled: boolean) => (reads.companyCurrency.push(currency), {
+  useCompanyNextMonth: (currency: string, _today: string, enabled: boolean) => (reads.companyCurrency.push(currency), reads.companyEnabled.push(enabled), {
     forecast: null, input: enabled && !reads.company.pending ? INPUT : null, rest: null, categories: [], ...reads.company, refetch: () => Promise.resolve(),
   }),
 }));
@@ -102,32 +102,67 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
     reads.currency = { data: "USD", isError: false };
   });
 
-  it("FLOW-1229: starts the project's own reads at once when the page already knows it is not the overhead project", () => {
-    reads.overhead = { project: undefined, failed: false };
-    reads.ownEnabled.length = 0;
-    const { result } = renderHook(() => useProjectNextMonth("p1", "USD", undefined, true, undefined, false, false));
-    // The company read has not answered, and the project's own reads are on, with its forecast not held back.
-    expect(reads.ownEnabled.at(-1)).toBe(true);
-    expect(result.current.forecast).toBe("own");
-    // Told it is the overhead project, its own reads stay off while the company read is out.
-    reads.ownEnabled.length = 0;
-    renderHook(() => useProjectNextMonth(OVERHEAD, "USD", undefined, true, undefined, false, true));
-    expect(reads.ownEnabled.every((enabled) => !enabled)).toBe(true);
-    // Without the page's answer it still waits for the read.
-    reads.ownEnabled.length = 0;
-    renderHook(() => useProjectNextMonth("p1", "USD"));
-    expect(reads.ownEnabled.at(-1)).toBe(false);
-    // The company read wins once it lands.
-    reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
-    reads.ownEnabled.length = 0;
-    renderHook(() => useProjectNextMonth("p1", "USD", undefined, true, undefined, false, true));
-    expect(reads.ownEnabled.at(-1)).toBe(true);
-  });
+  describe("FLOW-1229: the page's overhead hint starts reads early and decides nothing shown", () => {
+    const pending = { project: undefined, failed: false } as const;
+    const isOverhead = { project: { id: "p0", name: "משרד" }, failed: false } as const;
+    const startsFor = (id: string, hint?: boolean) => {
+      reads.ownEnabled.length = 0;
+      reads.companyEnabled.length = 0;
+      const { result } = renderHook(() => useProjectNextMonth(id, "USD", undefined, true, undefined, false, hint));
+      return { result, own: reads.ownEnabled.at(-1), company: reads.companyEnabled.at(-1) };
+    };
 
-  it("FLOW-1229: a failed company read ignores the page's answer, so the overhead project falls back to its own forecast", () => {
-    reads.overhead = { project: undefined, failed: true };
-    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD", undefined, true, undefined, false, true)).result.current.forecast).toBe("own");
-    reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
+    it("a false hint starts the project's own reads while the company read is out, and the row stays loading", () => {
+      reads.overhead = pending;
+      const started = startsFor("p1", false);
+      expect(started.own).toBe(true);
+      expect(started.company).toBe(false);
+      expect(started.result.current.forecast).toBeNull();
+      expect(started.result.current.pending).toBe(true);
+    });
+
+    it("a true hint starts the company's reads while the company read is out, and the row stays loading", () => {
+      reads.overhead = pending;
+      const started = startsFor(OVERHEAD, true);
+      expect(started.own).toBe(false);
+      expect(started.company).toBe(true);
+      expect(started.result.current.forecast).toBeNull();
+      expect(started.result.current.pending).toBe(true);
+    });
+
+    it("no hint starts nothing until the company read answers, as before", () => {
+      reads.overhead = pending;
+      const started = startsFor("p1");
+      expect(started.own).toBe(false);
+      expect(started.company).toBe(false);
+    });
+
+    it("a stale not-overhead hint shows the company forecast once the answer says overhead, never the project's own figure before", () => {
+      reads.overhead = pending;
+      const { result, rerender } = renderHook(() => useProjectNextMonth(OVERHEAD, "USD", undefined, true, undefined, false, false));
+      expect(result.current.forecast).toBeNull();
+      expect(result.current.pending).toBe(true);
+      reads.overhead = isOverhead;
+      rerender();
+      expect(result.current.forecast).toEqual(companyGeneralForecast(INPUT));
+      expect(result.current.forecast).not.toBe("own");
+      // The own reads the stale hint started are off again, and the company's are on.
+      expect(reads.ownEnabled.at(-1)).toBe(false);
+      expect(reads.companyEnabled.at(-1)).toBe(true);
+    });
+
+    it("a failed company read falls back to the project's own forecast whatever the hint, starting its reads then", () => {
+      reads.overhead = { project: undefined, failed: true };
+      expect(startsFor(OVERHEAD, true).result.current.forecast).toBe("own");
+      expect(reads.ownEnabled.at(-1)).toBe(true);
+      expect(startsFor(OVERHEAD, false).result.current.forecast).toBe("own");
+    });
+
+    it("the company read's answer decides, whatever the hint", () => {
+      reads.overhead = { project: null, failed: false };
+      expect(startsFor("p1", true).result.current.forecast).toBe("own");
+      reads.overhead = isOverhead;
+    });
   });
 
   it("gives any other project its own forecast", () => {
