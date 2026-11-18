@@ -9,6 +9,9 @@ import { type NextMonthSample, useNextMonthForecast } from "./project-next-month
 import { shiftMonthKey } from "./period";
 import { israelToday } from "./ui/date-math";
 
+/** One stable empty list for the rows returned while the overhead answer is out. */
+const NONE: never[] = [];
+
 /**
  * FLOW-1002 (owner, 2026-10-31: "the row should behave the same as a regular project"): a project's next month,
  * as its צפי page, its edit page, its profit page and its card read it. For the company's overhead project it is
@@ -62,7 +65,13 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     const edits: ProjectForecastEdit[] = input.inputs.edits.filter((edit) => edit.project_id === projectId);
     return { forecast: companyGeneralForecast(input), recurring, categoryMonths, edits };
   }, [isOverhead, input, projectId]);
-  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true, currency, general: false } : { ...own, currency, general: false };
+  // While the answer is out the row is loading, whatever the early reads (a false hint's) hold: no forecast, no data,
+  // no failure and no pause of theirs, as when the own reads were off.
+  if (!isOverhead) {
+    return deciding
+      ? { ...own, forecast: null, overrides: null, edits: NONE, recurring: NONE, categoryMonths: null, categories: NONE, pending: true, failed: false, paused: false, currency, general: false }
+      : { ...own, currency, general: false };
+  }
   return {
     currency: companyCurrency,
     /** FLOW-1079: the general costs' page (the overhead project's): a charge with no project is its own. */

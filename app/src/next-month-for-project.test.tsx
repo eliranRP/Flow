@@ -13,7 +13,7 @@ type OverheadRead = { project: { id: string; name: string } | null | undefined; 
 const reads = vi.hoisted(() => {
   const currency: { data: string | undefined; isError: boolean } = { data: "USD", isError: false };
   const overhead: OverheadRead = { project: { id: "p0", name: "משרד" }, failed: false };
-  return { ownEnabled: [] as boolean[], companyEnabled: [] as boolean[], companyCurrency: [] as string[], currency, overhead, company: { pending: false, failed: false, paused: false } };
+  return { ownEnabled: [] as boolean[], companyEnabled: [] as boolean[], own: { failed: false, paused: false }, companyCurrency: [] as string[], currency, overhead, company: { pending: false, failed: false, paused: false } };
 });
 
 vi.mock("./overhead-project", () => ({
@@ -33,7 +33,7 @@ vi.mock("./company-next-month-query", () => ({
 vi.mock("./project-next-month-query", () => ({
   useNextMonthForecast: (_id: string, _currency: string, _sample: unknown, enabled: boolean) => {
     reads.ownEnabled.push(enabled);
-    return { forecast: "own", month: "2026-11", today: NEXT_MONTH_TODAY, edits: [], recurring: [], categoryMonths: null, categories: [], pending: false, failed: false, paused: false, refetch: () => undefined };
+    return { forecast: "own", month: "2026-11", today: NEXT_MONTH_TODAY, edits: [], recurring: [], categoryMonths: null, categories: [], pending: false, ...reads.own, refetch: () => undefined };
   },
 }));
 
@@ -149,6 +149,19 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
       // The own reads the stale hint started are off again, and the company's are on.
       expect(reads.ownEnabled.at(-1)).toBe(false);
       expect(reads.companyEnabled.at(-1)).toBe(true);
+    });
+
+    it("while the answer is out, the early own reads' failure and pause are not reported: the row stays loading", () => {
+      reads.overhead = pending;
+      for (const state of [{ failed: true, paused: false }, { failed: false, paused: true }]) {
+        reads.own = state;
+        const { result } = startsFor("p1", false);
+        expect(result.current.pending).toBe(true);
+        expect(result.current.failed).toBe(false);
+        expect(result.current.paused).toBe(false);
+        expect(result.current.forecast).toBeNull();
+      }
+      reads.own = { failed: false, paused: false };
     });
 
     it("a failed company read falls back to the project's own forecast whatever the hint, starting its reads then", () => {
