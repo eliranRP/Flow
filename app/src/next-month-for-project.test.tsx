@@ -164,9 +164,12 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
       reads.own = { failed: false, paused: false };
     });
 
-    it("while the answer is out, the data fields are empty whatever is cached (no consumer draws them while pending)", () => {
+    it("while the answer is out, the data fields are empty even when the own read holds cached data (no consumer draws them while pending)", () => {
       reads.overhead = pending;
+      // The own read hands back cached data, as a disabled or early read with a warm cache would.
+      Object.assign(reads.own, { overrides: { "2026-11": [] }, edits: [{ id: "e1" }], recurring: [{ id: "r1" }], categoryMonths: { months: ["2026-10-01"] }, categories: [{ id: "c1" }] });
       const { result } = startsFor("p1", false);
+      reads.own = { failed: false, paused: false };
       expect(result.current.pending).toBe(true);
       expect(result.current.overrides).toBeNull();
       expect(result.current.edits).toEqual([]);
