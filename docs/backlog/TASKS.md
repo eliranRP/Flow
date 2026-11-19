@@ -797,6 +797,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
 | <a id="flow-1027"></a>[FLOW-1027](tasks/FLOW-1027.md) | Jev labels the lines a manual Mercury sync brings in right away | SMALL CYCLE |
 | <a id="flow-1028"></a>[FLOW-1028](tasks/FLOW-1028.md) | The legal pages go live: terms, privacy, cookies and storage, accessibility | SMALL UI |
+| <a id="flow-1233"></a>[FLOW-1233](tasks/FLOW-1233.md) | Perf: one read for a project's forecast inputs (the project page's second wave) | LARGE (perf) |
+| <a id="flow-1234"></a>[FLOW-1234](tasks/FLOW-1234.md) | Perf: company_next_month_inputs stops rescanning the recurring charges' lines | SMALL (perf) |
+| <a id="flow-1235"></a>[FLOW-1235](tasks/FLOW-1235.md) | Perf: company_next_month_inputs stops sending next month's edits twice | MEDIUM (perf) |
+| <a id="flow-1236"></a>[FLOW-1236](tasks/FLOW-1236.md) | Perf: profile project_category_months_lean, the largest part of company_next_month_inputs | MEDIUM (perf) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
@@ -818,6 +822,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-834"></a>[FLOW-834](tasks/FLOW-834.md) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
 | <a id="flow-835"></a>[FLOW-835](tasks/FLOW-835.md) | PR check under 100 seconds | INFRA |
 | <a id="flow-837"></a>[FLOW-837](tasks/FLOW-837.md) | Storybook preview on ready pull requests only | INFRA |
+| <a id="flow-1237"></a>[FLOW-1237](tasks/FLOW-1237.md) | CI: "Wait for local Supabase" times out in the e2e shards | SMALL (infra) |
 | <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Test flakes under load: line-split dialog close, toast rAF and three more | BUG |
 | <a id="flow-928"></a>[FLOW-928](tasks/FLOW-928.md) | Invite send caps and redundant indexes (advisors review) | SMALL CYCLE |
 | <a id="flow-929"></a>[FLOW-929](tasks/FLOW-929.md) | Cross-company sweep: every client function, called as another company | SMALL CYCLE |
