@@ -12,16 +12,20 @@ const rpc = vi.hoisted(() => ({
   calls: [] as { name: string; args: unknown }[],
   /** The next projects_cash_month answer; a test holds it to see the menu before the read lands. */
   answer: (): Promise<unknown> => Promise.resolve(null),
+  /** FLOW-1231: the next list_project_groups answer; a test holds it to see the edit sheet while the groups load. */
+  groups: (): Promise<unknown> => Promise.resolve({ data: [], error: null }),
 }));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
-      // FLOW-1230: a live menu also reads the groups (on a touch or an open); these tests count the month read only.
+      // FLOW-1230: a live menu also reads the groups (on a touch or an open); the month read is the one these tests count.
+      if (name === "list_project_groups") return rpc.groups();
       if (name !== "projects_cash_month") return Promise.resolve({ data: [], error: null });
       rpc.calls.push({ name, args });
       return rpc.answer();
     },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { group_id: null }, error: null }) }) }) }),
   }),
 }));
 
@@ -206,5 +210,64 @@ describe("the menu's read after the first paint when the list has a seed (FLOW-1
     expect(within(menu).getByRole("button", { name: DELETE })).toBeInTheDocument();
     expect(menu.querySelector(".ui-skeleton-bar")).toBeNull();
     expect(rpc.calls).toHaveLength(1);
+  });
+});
+
+/** The edit sheet opened from the menu (its extras hold the קבוצה row or its place). */
+function openEditSheet(menu: HTMLElement) {
+  fireEvent.click(within(menu).getByRole("button", { name: /^עריכת פרטים/ }));
+  return screen.getByRole("dialog", { name: "עריכת פרויקט" });
+}
+
+// The skeleton is an aria-hidden row in the edit sheet's extras.
+const skeletonRow = (sheet: HTMLElement) => sheet.querySelector<HTMLElement>('.ui-row[aria-hidden="true"]');
+
+describe("the edit sheet holds the קבוצה row's place while the groups load (FLOW-1231)", () => {
+  beforeEach(() => {
+    rpc.calls.length = 0;
+    rpc.answer = () => Promise.resolve(answer({ pending_count: 0, deletable: true }));
+    rpc.groups = () => Promise.resolve({ data: [], error: null });
+  });
+
+  it("shows a skeleton in the row's place while the groups read is in flight, then the row in the same list", async () => {
+    let land: (value: unknown) => void = () => undefined;
+    rpc.groups = () => new Promise((resolve) => { land = resolve; });
+    const sheet = openEditSheet(renderMenu());
+    const skeleton = skeletonRow(sheet);
+    expect(skeleton).not.toBeNull();
+    const holder = skeleton?.parentElement;
+    expect(holder?.classList.contains("ui-project-list")).toBe(true);
+    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
+    land({ data: [{ id: "g1", name: "בניין לדוגמה" }], error: null });
+    const group = await within(sheet).findByRole("button", { name: /^קבוצה/ });
+    expect(skeletonRow(sheet)).toBeNull();
+    // The row takes the skeleton's place: the same list, so the rows below it (שמירה) do not move.
+    expect(group.closest(".ui-project-list")).toBe(holder);
+    expect(group.closest(".ui-row")?.parentElement).toBe(holder);
+  });
+
+  it("shows nothing in the row's place when the groups read fails, since the row never showed", async () => {
+    rpc.groups = () => Promise.resolve({ data: null, error: { message: "boom" } });
+    const sheet = openEditSheet(renderMenu());
+    await waitFor(() => { expect(skeletonRow(sheet)).toBeNull(); });
+    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
+  });
+
+  it("shows no skeleton for a sample without groups, since no read is in flight", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/projects/p1"]}>
+            <ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={false} sample sampleRow={row as never} investmentTo="/projects/p1/investment" hasInvestment={false} profitTo="/projects/p1/profit" />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    const sheet = openEditSheet(screen.getByRole("dialog", { name: "Oak Ridge" }));
+    expect(skeletonRow(sheet)).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
+    expect(rpc.calls).toHaveLength(0);
   });
 });

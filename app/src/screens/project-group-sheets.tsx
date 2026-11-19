@@ -20,11 +20,12 @@ export const NO_GROUP = "בלי קבוצה";
 
 /**
  * The company's groups and this project's own. Under the "project" key, so a move's refetch
- * reaches it; off in a preview and for a sample.
+ * reaches it; off in a preview and for a sample. The whole query, so the edit sheet can hold the
+ * קבוצה row's place while it is in flight (FLOW-1231).
  */
-export function useProjectGroups(projectId: string, active: boolean): ProjectGroups | undefined {
+export function useProjectGroupsRead(projectId: string, active: boolean) {
   const preview = useHomePreview();
-  const read = useQuery({
+  return useQuery({
     queryKey: ["project", "groups", projectId],
     enabled: active && preview === "off" && projectId !== "",
     // FLOW-804: one read a minute at most; a move refetches it under the "project" key.
@@ -42,7 +43,6 @@ export function useProjectGroups(projectId: string, active: boolean): ProjectGro
       return { groups: rows.map(({ id, name }) => ({ id, name })), currentId: project.data?.group_id ?? null };
     },
   });
-  return read.data;
 }
 export const GROUP_NAME_MIN = 2;
 export const GROUP_NAME_MAX = 120;
