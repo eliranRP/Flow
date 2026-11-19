@@ -78,13 +78,14 @@ function withBalances(rows: LoanDetailDbRow[], balances: BalanceDbRow[]): Foreca
  */
 export async function readForecastLoans(projectId: string | null): Promise<ForecastLoan[]> {
   const supabase = await readyClient();
-  // The loans (the project's, or every loan of the company) and their balances at once. loan_balances is a
-  // security_invoker view with company_id, so RLS gives it the same rows the loans read gets, and withBalances
-  // takes only the balances of the loans it returned.
-  const loansRead = projectId == null
-    ? supabase.from("loans").select(LOAN_DETAIL_COLUMNS)
-    : supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId);
-  const [loans, balances] = await Promise.all([loansRead, supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts")]);
+  // The loans and their balances at once, both of the project (or both of the company, with null). loan_balances is
+  // a security_invoker view with company_id and project_id (FLOW-1231), so RLS gives it the same rows the loans
+  // read gets, and a project's read makes the server total only that project's loans. withBalances takes only the
+  // balances of the loans it returned.
+  const balancesRead = supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts");
+  const [loans, balances] = projectId == null
+    ? await Promise.all([supabase.from("loans").select(LOAN_DETAIL_COLUMNS), balancesRead])
+    : await Promise.all([supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId), balancesRead.eq("project_id", projectId)]);
   if (loans.error) throw loans.error;
   if (balances.error) throw balances.error;
   return withBalances(loans.data, balances.data);

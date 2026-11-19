@@ -136,14 +136,15 @@ describe("the forecast's loans for the company (FLOW-1209)", () => {
   });
 });
 
-describe("the forecast's loans for a project (FLOW-1209: the project read keeps its filter; FLOW-1226: one round trip)", () => {
-  it("filters the loans by the project and sends the balances with them, before either answers", async () => {
+describe("the forecast's loans for a project (FLOW-1209: the project read keeps its filter; FLOW-1226: one round trip; FLOW-1231: the balances too)", () => {
+  it("filters the loans and the balances by the project, and sends both before either answers", async () => {
     const result = readForecastLoans("project-1");
     await settle();
 
     expect(db.sent).toHaveLength(2);
     expect(db.sent[0]).toMatch(/^loans select\(.*\) eq\(project_id, project-1\)$/);
-    expect(db.sent[1]).toBe("loan_balances select(loan_id, balance_minor, flagged_parts)");
+    // FLOW-1231: the view totals only the project's loans, not the company's.
+    expect(db.sent[1]).toBe("loan_balances select(loan_id, balance_minor, flagged_parts) eq(project_id, project-1)");
 
     openGate();
     await expect(result).resolves.toEqual(expected());

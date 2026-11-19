@@ -791,6 +791,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1228"></a>[FLOW-1228](tasks/FLOW-1228.md) | Drop the unread fields from `get_breakdown_lines`' no-key row once no FLOW-1207 app is in use | SMALL (perf) |
 | <a id="flow-1229"></a>[FLOW-1229](tasks/FLOW-1229.md) | Perf: the project page's forecast reads start when the project lands, not after two more reads | SMALL (perf) |
 | <a id="flow-1230"></a>[FLOW-1230](tasks/FLOW-1230.md) | Perf: the project page's second wave of reads starts a hop earlier and carries two reads fewer | SMALL (perf) |
+| <a id="flow-1231"></a>[FLOW-1231](tasks/FLOW-1231.md) | Perf: a project's loan balances are read for the project, not the company | SMALL (perf) |
 | <a id="flow-1145"></a>[FLOW-1145](tasks/FLOW-1145.md) | Home's first load leaves out the other screens' skeleton blocks | SMALL CYCLE (perf) |
 | <a id="flow-1025"></a>[FLOW-1025](tasks/FLOW-1025.md) | All the cash out but losing money: money in counts the losses, and ∞ only for a gain | BUG |
 | <a id="flow-1026"></a>[FLOW-1026](tasks/FLOW-1026.md) | Cash-on-cash and the cover line with all the cash out: the review nits of FLOW-1025 | BACKLOG NIT |
