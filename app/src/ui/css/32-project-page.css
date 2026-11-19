@@ -438,6 +438,12 @@
   color: var(--color-bad);
 }
 
+/* FLOW-1231: the edit sheet's קבוצה row is one line (its title; the value sits at the end), so its placeholder keeps one
+   bar. Two bars would make the row 7px taller than the real one, and the שמירה button below it would move when it lands. */
+.ui-project-edit-group-skel .ui-skel-copy > :last-child {
+  display: none;
+}
+
 /* The project menu (board V3-Project, FLOW-1053): a short sheet titled with the project's name, 6px between rows,
    each row 64px with a 40px icon circle in the raised colour, the name 17 over its line 13 in secondary. The
    delete row takes the bad colour on its circle too. */

@@ -20,7 +20,7 @@ import { BarsIcon, BinIcon, BoltIcon, FlagIcon, InvestIcon, PencilIcon, RefreshI
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ProjectFormSheet } from "./project-form-sheet";
-import { NO_GROUP, ProjectGroupSheets, useProjectGroups, type ProjectGroups } from "./project-group-sheets";
+import { NO_GROUP, ProjectGroupSheets, useProjectGroupsRead, type ProjectGroups } from "./project-group-sheets";
 
 /** How long a finish offers ביטול (FLOW-961, decision 0213). */
 export const FINISH_UNDO_MS = 5000;
@@ -83,8 +83,11 @@ export function ProjectMenu({
   // two taps after the ⋯ button, so the read (list_project_groups and the project's group) starts on the button's touch
   // (FLOW-1212's prime), or at once when the menu or the edit sheet opens, not at the page's first paint, where it
   // competed with the forecast's reads for the page's last skeleton.
-  const liveGroups = useProjectGroups(projectId, !sample && sampleGroups == null && (menu || primed || editing));
-  const groups = sampleGroups ?? liveGroups;
+  // FLOW-1231: while that live read is in flight, the edit sheet holds the קבוצה row's place with a skeleton. A failed read
+  // shows nothing, as the row never showed; a sample's groups (or a sample with none) never read, so nothing holds.
+  const liveGroups = useProjectGroupsRead(projectId, !sample && sampleGroups == null && (menu || primed || editing));
+  const groupsLoading = liveGroups.isLoading;
+  const groups = sampleGroups ?? liveGroups.data;
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.
@@ -312,7 +315,12 @@ export function ProjectMenu({
             <List>
               <ListRow variant="item" title="נתוני השקעה" hint="מחיר קנייה, ARV, שווי והלוואות" href={investmentTo} chevron />
             </List>
-            {groups == null ? null : (
+            {groups == null ? (groupsLoading ? (
+              // FLOW-1231: the row's place while the groups load, so the שמירה button does not move when the row lands.
+              <List className="ui-project-edit-group-skel">
+                <ListRow variant="skeleton" />
+              </List>
+            ) : null) : (
               <List>
                 <ListRow
                   variant="button"
