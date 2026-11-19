@@ -1622,6 +1622,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "loans_company_id_project_id_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"sumit_connection_status": {
