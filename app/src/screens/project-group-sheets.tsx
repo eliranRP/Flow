@@ -20,13 +20,9 @@ export const NO_GROUP = "בלי קבוצה";
 
 /**
  * The company's groups and this project's own. Under the "project" key, so a move's refetch
- * reaches it; off in a preview and for a sample.
+ * reaches it; off in a preview and for a sample. The whole query, so the edit sheet can hold the
+ * קבוצה row's place while it is in flight (FLOW-1231).
  */
-export function useProjectGroups(projectId: string, active: boolean): ProjectGroups | undefined {
-  return useProjectGroupsRead(projectId, active).data;
-}
-
-/** The same read as useProjectGroups, with its state: the edit sheet holds the קבוצה row's place while it is in flight (FLOW-1231). */
 export function useProjectGroupsRead(projectId: string, active: boolean) {
   const preview = useHomePreview();
   return useQuery({
