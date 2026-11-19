@@ -8,56 +8,56 @@ select plan(15);
 
 do $users$
 begin
-  perform tests.create_supabase_user('f1231_a', 'f1231a@example.com');
-  perform tests.create_supabase_user('f1231_b', 'f1231b@example.com');
+  perform tests.create_supabase_user('f1232_a', 'f1232a@example.com');
+  perform tests.create_supabase_user('f1232_b', 'f1232b@example.com');
 end
 $users$;
 
-create temp table f1231 (label text primary key, id uuid);
-grant all on f1231 to authenticated, service_role;
+create temp table f1232 (label text primary key, id uuid);
+grant all on f1232 to authenticated, service_role;
 
-insert into public.companies (owner_id, name) values (tests.get_supabase_uid('f1231_a'), 'Example A');
-insert into public.companies (owner_id, name) values (tests.get_supabase_uid('f1231_b'), 'Example B');
-insert into f1231 select 'co_a', id from public.companies where name = 'Example A';
-insert into f1231 select 'co_b', id from public.companies where name = 'Example B';
+insert into public.companies (owner_id, name) values (tests.get_supabase_uid('f1232_a'), 'Example A');
+insert into public.companies (owner_id, name) values (tests.get_supabase_uid('f1232_b'), 'Example B');
+insert into f1232 select 'co_a', id from public.companies where name = 'Example A';
+insert into f1232 select 'co_b', id from public.companies where name = 'Example B';
 
 insert into public.projects (company_id, name, status)
-select (select id from f1231 where label = v.co), v.name, 'active'
+select (select id from f1232 where label = v.co), v.name, 'active'
 from (values ('co_a', 'Site One'), ('co_a', 'Site Two'), ('co_b', 'Site B')) v(co, name);
-insert into f1231 select 'p1', id from public.projects where name = 'Site One';
-insert into f1231 select 'p2', id from public.projects where name = 'Site Two';
-insert into f1231 select 'pb', id from public.projects where name = 'Site B';
+insert into f1232 select 'p1', id from public.projects where name = 'Site One';
+insert into f1232 select 'p2', id from public.projects where name = 'Site Two';
+insert into f1232 select 'pb', id from public.projects where name = 'Site B';
 
 -- Four loans: one per project of A, one with no project, one of B.
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor,
   escrow_minor, currency, project_id)
-select (select id from f1231 where label = v.co), v.name, v.principal, 60000, 360, '2026-01-01', 1000, 100, v.currency,
-  (select id from f1231 where label = v.project)
+select (select id from f1232 where label = v.co), v.name, v.principal, 60000, 360, '2026-01-01', 1000, 100, v.currency,
+  (select id from f1232 where label = v.project)
 from (values
   ('co_a', 'Loan P1', 120000, 'USD', 'p1'),
   ('co_a', 'Loan P2', 90000, 'ILS', 'p2'),
   ('co_a', 'Loan none', 50000, 'USD', null),
   ('co_b', 'Loan B', 70000, 'USD', 'pb')
 ) v(co, name, principal, currency, project);
-insert into f1231 select 'l1', id from public.loans where name = 'Loan P1';
-insert into f1231 select 'l2', id from public.loans where name = 'Loan P2';
-insert into f1231 select 'l3', id from public.loans where name = 'Loan none';
-insert into f1231 select 'lb', id from public.loans where name = 'Loan B';
+insert into f1232 select 'l1', id from public.loans where name = 'Loan P1';
+insert into f1232 select 'l2', id from public.loans where name = 'Loan P2';
+insert into f1232 select 'l3', id from public.loans where name = 'Loan none';
+insert into f1232 select 'lb', id from public.loans where name = 'Loan B';
 
 -- One 10000 line per loan except l3, split into interest 5000, escrow 2000 and principal 3000. l2's line is then
 -- flagged, so l2 has its three parts flagged and its principal does not count.
 insert into public.transactions (company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
   vat_amount, vat_status, doc_date, currency, source, idempotency_key, description)
 select l.company_id, 'expense', 'expense', -10000, -10000, 10000, 0, 'unknown', '2026-02-01', l.currency, 'manual',
-  'f1231:' || f.label, 'Example payment'
-from f1231 f join public.loans l on l.id = f.id
+  'f1232:' || f.label, 'Example payment'
+from f1232 f join public.loans l on l.id = f.id
 where f.label in ('l1', 'l2', 'lb');
 
 select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount,
   'scheduled_minor', v.amount, 'category_id', c.id)))
-from f1231 f
+from f1232 f
 join public.loans l on l.id = f.id
-join public.transactions t on t.company_id = l.company_id and t.idempotency_key = 'f1231:' || f.label
+join public.transactions t on t.company_id = l.company_id and t.idempotency_key = 'f1232:' || f.label
 cross join (values ('interest', 'ריבית משכנתא', 5000), ('escrow', 'מסים וביטוח', 2000),
   ('principal', 'תשלומי הלוואה', 3000)) v(part, category, amount)
 join public.categories c on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
@@ -65,7 +65,7 @@ where f.label in ('l1', 'l2', 'lb')
 group by t.id, l.id;
 
 select tests.loan_split_review(t.id, true)
-from public.transactions t where t.idempotency_key = 'f1231:l2';
+from public.transactions t where t.idempotency_key = 'f1232:l2';
 
 -- The old definition, as 20261028093217_ledger_only.sql has it (without project_id), run as the owner.
 create temp view old_loan_balances as
@@ -84,7 +84,7 @@ grant select on old_loan_balances to authenticated, service_role;
 
 -- The fixture has what the comparison needs: a paid loan, a flagged one, one with no parts.
 select results_eq(
-  $$select f.label, b.balance_minor, b.flagged_parts from f1231 f join public.loan_balances b on b.loan_id = f.id
+  $$select f.label, b.balance_minor, b.flagged_parts from f1232 f join public.loan_balances b on b.loan_id = f.id
     where f.label like 'l%' order by f.label$$,
   $$values ('l1'::text, 117000::bigint, 0), ('l2', 90000, 3), ('l3', 50000, 0), ('lb', 67000, 0)$$,
   'the fixture: a paid loan, a flagged one, a loan with no parts, a loan of another company'
@@ -119,8 +119,8 @@ select is_empty(
 );
 
 select is(
-  (select b.project_id from public.loan_balances b where b.loan_id = (select id from f1231 where label = 'l2')),
-  (select id from f1231 where label = 'p2'),
+  (select b.project_id from public.loan_balances b where b.loan_id = (select id from f1232 where label = 'l2')),
+  (select id from f1232 where label = 'p2'),
   'a loan of project two carries project two'
 );
 
@@ -144,7 +144,7 @@ select ok(
   'the grants are unchanged: select for authenticated and service_role, nothing for anon'
 );
 
-select tests.authenticate_as('f1231_a');
+select tests.authenticate_as('f1232_a');
 
 select is(
   (select count(*)::int from public.loan_balances),
@@ -153,34 +153,34 @@ select is(
 );
 
 select is(
-  (select count(*)::int from public.loan_balances where loan_id = (select id from f1231 where label = 'lb')),
+  (select count(*)::int from public.loan_balances where loan_id = (select id from f1232 where label = 'lb')),
   0,
   'RLS: company A''s owner does not read B''s loan, even by its id'
 );
 
 select is(
-  (select count(*)::int from public.loan_balances where project_id = (select id from f1231 where label = 'pb')),
+  (select count(*)::int from public.loan_balances where project_id = (select id from f1232 where label = 'pb')),
   0,
   'RLS: a filter by B''s project gives A''s owner nothing'
 );
 
 select results_eq(
-  $$select loan_id from public.loan_balances where project_id = (select id from f1231 where label = 'p1')$$,
-  $$select id from f1231 where label = 'l1'$$,
+  $$select loan_id from public.loan_balances where project_id = (select id from f1232 where label = 'p1')$$,
+  $$select id from f1232 where label = 'l1'$$,
   'a filter by project one gives only project one''s loan'
 );
 
 select tests.clear_authentication();
-select tests.authenticate_as('f1231_b');
+select tests.authenticate_as('f1232_b');
 
 select results_eq(
   $$select loan_id, project_id from public.loan_balances$$,
-  $$select l.id, p.id from f1231 l, f1231 p where l.label = 'lb' and p.label = 'pb'$$,
+  $$select l.id, p.id from f1232 l, f1232 p where l.label = 'lb' and p.label = 'pb'$$,
   'RLS: company B''s owner reads only B''s loan, with B''s project'
 );
 
 select is(
-  (select count(*)::int from public.loan_balances where project_id = (select id from f1231 where label = 'p1')),
+  (select count(*)::int from public.loan_balances where project_id = (select id from f1232 where label = 'p1')),
   0,
   'RLS: B''s owner filtering by A''s project gets nothing'
 );
