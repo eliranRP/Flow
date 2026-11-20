@@ -43,4 +43,6 @@ $b$);
 end
 $patch$;
 
+drop function pg_temp.swap(text, text, text);
+
 commit;

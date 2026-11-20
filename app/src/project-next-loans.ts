@@ -19,11 +19,13 @@ type ProjectLoan = NonNullable<NonNullable<ProjectDetail>["loans"]>[number];
 /**
  * The forecast's loans from the project's own get_project answer (FLOW-1240), the same loans the loans and
  * loan_balances reads gave (readLoanRow, so the rates, the balance and the categories are read the same way). A
- * project with no loans, or no project at all, gives none. A field an older answer lacks reads as empty: the four
- * category ids of a cached answer from before FLOW-1240 are null (the company's keyed categories apply).
+ * project with no loans, or no project at all, gives none. Undefined (not read yet) when a loan lacks the category id
+ * keys (undefined, not null): an answer saved on the phone before FLOW-1240 would file a loan's interest and escrow to
+ * the company's keyed category instead of the loan's own, so the forecast waits for the fresh read.
  */
-export function forecastLoansOf(project: ProjectDetail): ForecastLoan[] {
+export function forecastLoansOf(project: ProjectDetail): ForecastLoan[] | undefined {
   if (project == null) return [];
+  if (project.loans?.some((loan) => loan.interest_category_id === undefined) === true) return undefined;
   return (project.loans ?? []).map((loan) => {
     const { id, currency, projectId, categoryIds, status, balanceMinor, kind, termMonths, paymentMinor, rates, principalMinor, annualRatePpm, startDate, escrowMinor, interestOnlyMonths, amortizationMonths } =
       readLoanRow(loanDbRow(loan, project.id), { balanceMinor: loan.balance_minor, flaggedParts: 0 });
@@ -31,7 +33,7 @@ export function forecastLoansOf(project: ProjectDetail): ForecastLoan[] {
   });
 }
 
-/** One get_project loan as the loans read's row. */
+/** One get_project loan as the loans read's row. The "" company_id and rate ids are placeholders: the forecast reads neither. */
 function loanDbRow(loan: ProjectLoan, projectId: string): LoanDetailDbRow {
   return {
     id: loan.id,

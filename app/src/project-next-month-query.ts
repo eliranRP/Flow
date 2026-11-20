@@ -93,11 +93,12 @@ export async function readForecastLoans(): Promise<ForecastLoan[]> {
  * The project's loans for its forecast (FLOW-1240), from the get_project answer the page already reads (the one over
  * every period, which the page and the צפי, edit and profit screens all hold; the loans do not depend on the period),
  * so no loans or loan_balances request is sent. A loan write refreshes it through "project", as it does the page.
- * `read` is that answer's read, which the forecast waits on.
+ * `read` is that answer's read, which the forecast waits on. The previous project's answer (placeholder data while the
+ * project changes) and an answer saved before the category ids existed are not read: the loans wait for the fresh one.
  */
 function useProjectLoans(projectId: string) {
   const read = useProjectQuery(projectId, allTime());
-  const loans = useMemo(() => (read.data === undefined ? undefined : forecastLoansOf(read.data)), [read.data]);
+  const loans = useMemo(() => (read.data === undefined || read.isPlaceholderData ? undefined : forecastLoansOf(read.data)), [read.data, read.isPlaceholderData]);
   return { loans, read };
 }
 

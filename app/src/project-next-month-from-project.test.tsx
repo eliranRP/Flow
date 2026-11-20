@@ -11,18 +11,24 @@ import { israelToday } from "./ui/date-math";
 
 // FLOW-1240: the project's forecast builds its loans from the get_project answer, not from the loans and loan_balances
 // reads. The fake client logs every rpc and every table read. Invented rows only.
-const server = vi.hoisted((): { rpcs: string[]; tables: string[]; answers: Record<string, unknown>; tableAnswers: Record<string, unknown[]> } => ({
+const server = vi.hoisted((): { rpcs: string[]; tables: string[]; answers: Record<string, unknown>; tableAnswers: Record<string, unknown[]>; holdSecond: Promise<void> | null } => ({
   rpcs: [],
   tables: [],
   answers: {},
   tableAnswers: {},
+  /** While set, the second project's get_project waits for it. */
+  holdSecond: null,
 }));
 
 vi.mock("./lib/supabase", () => ({
   getSupabase: () => ({
-    rpc: (name: string) => {
+    rpc: async (name: string, args?: { p_id?: string }) => {
       server.rpcs.push(name);
-      return Promise.resolve({ data: server.answers[name] ?? null, error: null });
+      if (name === "get_project" && args?.p_id === "project-2") {
+        await server.holdSecond;
+        return { data: server.answers.get_project_2 ?? null, error: null };
+      }
+      return { data: server.answers[name] ?? null, error: null };
     },
     from: (table: string) => {
       server.tables.push(table);
@@ -38,6 +44,7 @@ vi.mock("./wait-for-session", () => ({ waitForAccessToken: () => Promise.resolve
 const today = israelToday();
 const month = nextMonthKey(today);
 const PROJECT = "project-1";
+const SECOND = "project-2";
 
 const RATES = [
   { id: "rate-1", effective_date: "2025-01-15", annual_rate_ppm: 60_000 },
@@ -113,11 +120,11 @@ function projectLoan(row: LoanDetailDbRow, balance: number, withCategories = tru
   };
 }
 
-function projectAnswer(balances: number[], withCategories = true) {
+function projectAnswer(balances: number[], withCategories = true, id = PROJECT) {
   return {
-    id: PROJECT, name: "Example House", status: "active", state_label: "פעיל", budget_agorot: null, is_overhead: false,
+    id, name: "Example House", status: "active", state_label: "פעיל", budget_agorot: null, is_overhead: false,
     income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_agorot: 0, categories: [],
-    loans: DB_ROWS.map((row, index) => projectLoan(row, balances[index] ?? 0, withCategories)),
+    loans: DB_ROWS.map((row, index) => projectLoan({ ...row, project_id: id }, balances[index] ?? 0, withCategories)),
   };
 }
 
@@ -140,12 +147,13 @@ beforeEach(() => {
     list_categories: CATEGORIES,
   };
   server.tableAnswers = { loans: DB_ROWS, loan_balances: BALANCES };
+  server.holdSecond = null;
 });
 
 let latest: ReturnType<typeof useNextMonthForecast> | null = null;
 
-function Probe({ currency }: { currency: string }) {
-  latest = useNextMonthForecast(PROJECT, currency);
+function Probe({ currency, id = PROJECT }: { currency: string; id?: string }) {
+  latest = useNextMonthForecast(id, currency);
   return null;
 }
 
@@ -212,13 +220,39 @@ describe("the project forecast's loans come from get_project (FLOW-1240)", () =>
     expect(server.tables).toEqual([]);
   });
 
-  it("a cached answer from before the migration (no category ids) reads them as empty: no loans request, the keyed categories apply", async () => {
+  it("an answer from before the migration (no category ids, as a saved read has) leaves the forecast not ready, sends no loans request, and the fresh answer gives the right figures", async () => {
     server.answers.get_project = projectAnswer([19_000_000, 18_000_000, 0], false);
-    renderWithProviders(<Probe currency="USD" />);
-    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    const view = renderWithProviders(<Probe currency="USD" />);
+    // Every other read lands, and the forecast still waits: its loans would file to the company's keyed categories.
+    await waitFor(() => { expect(server.rpcs).toEqual(expect.arrayContaining(["expected_months", "project_category_months", "project_forecast_edits_for", "forecast_overrides_for", "list_categories"])); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(latest?.forecast).toBeNull();
+    expect(latest?.pending).toBe(false);
     expect(server.tables).toEqual([]);
-    // loan-a's escrow has no own category now, so it files to the company's keyed escrow category.
-    expect(latest?.forecast?.rows.filter((row) => row.kind === "loan").map((row) => row.key).sort()).toEqual(["avg:cat-escrow", "avg:cat-interest"]);
+
+    server.answers.get_project = projectAnswer([19_000_000, 18_000_000, 0]);
+    await act(async () => { await view.client.invalidateQueries({ queryKey: ["project"] }); });
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(latest?.forecast).toEqual(oldForecast("USD"));
+    expect(server.tables).toEqual([]);
+  });
+
+  it("when the project changes, the forecast is not ready until the new project's read lands (the old answer is placeholder data)", async () => {
+    let release: () => void = () => undefined;
+    const view = renderWithProviders(<Probe currency="USD" />);
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+
+    server.holdSecond = new Promise<void>((resolve) => { release = resolve; });
+    server.answers.get_project_2 = projectAnswer([19_000_000, 18_000_000, 0], true, SECOND);
+    view.rerender(<Probe currency="USD" id={SECOND} />);
+    // The other reads of the new project land at once; get_project's is held, and the first project's answer stands in.
+    await waitFor(() => { expect(server.rpcs.filter((name) => name === "get_project")).toHaveLength(2); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(latest?.forecast).toBeNull();
+
+    await act(async () => { release(); await Promise.resolve(); });
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(latest?.forecast?.rows.filter((row) => row.kind === "loan")).not.toHaveLength(0);
   });
 });
 
@@ -233,13 +267,18 @@ describe("forecastLoansOf (FLOW-1240)", () => {
       const balance = BALANCES.find((entry) => entry.loan_id === row.id);
       return readLoanRow(row, balance == null ? null : { balanceMinor: BigInt(balance.balance_minor), flaggedParts: balance.flagged_parts });
     });
-    expect(loans.map(forecastFields)).toEqual(old.map((loan) => {
+    expect(loans?.map(forecastFields)).toEqual(old.map((loan) => {
       const { id, currency, projectId, categoryIds, status, balanceMinor, kind, termMonths, paymentMinor, rates, principalMinor, annualRatePpm, startDate, escrowMinor, interestOnlyMonths, amortizationMonths } = loan;
       return forecastFields({ id, currency, projectId, categoryIds, status, balanceMinor, kind, termMonths, paymentMinor, rates, principalMinor, annualRatePpm, startDate, escrowMinor, interestOnlyMonths, amortizationMonths });
     }));
 
     const input = { projectId: PROJECT, currency: "USD", month, today, categories: CATEGORIES };
-    expect(loanParts({ ...input, loans })).toEqual(loanParts({ ...input, loans: old }));
+    expect(loanParts({ ...input, loans: loans ?? [] })).toEqual(loanParts({ ...input, loans: old }));
+  });
+
+  it("is undefined (not read) when a loan lacks the category id keys, null ids being read", async () => {
+    expect(forecastLoansOf(await parsed(projectAnswer([0, 0, 0], false)))).toBeUndefined();
+    expect(forecastLoansOf(await parsed(projectAnswer([0, 0, 0])))).toHaveLength(3);
   });
 
   it("gives none for a project with no loans, an answer with no loans block, or no project", async () => {
