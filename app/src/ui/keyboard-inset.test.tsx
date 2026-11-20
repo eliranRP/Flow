@@ -237,6 +237,15 @@ describe("useKeyboardInset", () => {
     expect(document.documentElement.dataset.kb).toBeUndefined();
   });
 
+  // FLOW-1238: back from another app, iOS reported a short viewport with no field focused, and the
+  // sheet rose by that height to mid-screen.
+  it("does not lift sheets when no field is focused, though the viewport is short", () => {
+    mountWithViewport();
+    viewport.height = 500;
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(document.documentElement.style.getPropertyValue("--kb")).toBe("0px");
+  });
+
   it("brings the tab bar back when the field loses focus, though the viewport never resized", () => {
     vi.useFakeTimers();
     try {

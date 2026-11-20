@@ -824,6 +824,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-835"></a>[FLOW-835](tasks/FLOW-835.md) | PR check under 100 seconds | INFRA |
 | <a id="flow-837"></a>[FLOW-837](tasks/FLOW-837.md) | Storybook preview on ready pull requests only | INFRA |
 | <a id="flow-1237"></a>[FLOW-1237](tasks/FLOW-1237.md) | CI: "Wait for local Supabase" times out in the e2e shards | SMALL (infra) |
+| <a id="flow-1238"></a>[FLOW-1238](tasks/FLOW-1238.md) | Bug: a sheet floats mid-screen after coming back from another app | BUG |
 | <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Test flakes under load: line-split dialog close, toast rAF and three more | BUG |
 | <a id="flow-928"></a>[FLOW-928](tasks/FLOW-928.md) | Invite send caps and redundant indexes (advisors review) | SMALL CYCLE |
 | <a id="flow-929"></a>[FLOW-929](tasks/FLOW-929.md) | Cross-company sweep: every client function, called as another company | SMALL CYCLE |
