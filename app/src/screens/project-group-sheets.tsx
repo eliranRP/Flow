@@ -19,9 +19,9 @@ export type ProjectGroups = { groups: readonly ProjectGroupChoice[]; currentId: 
 export const NO_GROUP = "בלי קבוצה";
 
 /**
- * The company's groups and this project's own. Under the "project" key, so a move's refetch
- * reaches it; off in a preview and for a sample. The whole query, so the edit sheet can hold the
- * קבוצה row's place while it is in flight (FLOW-1231).
+ * The company's groups, one request (FLOW-1243: the project's own group comes from the page's get_project).
+ * Under the "project" key, so a move's refetch reaches it; off in a preview and for a sample. The whole
+ * query, so the edit sheet can hold the קבוצה row's place while it is in flight (FLOW-1231).
  */
 export function useProjectGroupsRead(projectId: string, active: boolean) {
   const preview = useHomePreview();
@@ -30,17 +30,13 @@ export function useProjectGroupsRead(projectId: string, active: boolean) {
     enabled: active && preview === "off" && projectId !== "",
     // FLOW-804: one read a minute at most; a move refetches it under the "project" key.
     staleTime: 60_000,
-    queryFn: async (): Promise<ProjectGroups> => {
+    queryFn: async (): Promise<readonly ProjectGroupChoice[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      const [groups, project] = await Promise.all([
-        supabase.rpc("list_project_groups"),
-        supabase.from("projects").select("group_id").eq("id", projectId).maybeSingle(),
-      ]);
+      const groups = await supabase.rpc("list_project_groups");
       assertNoError(groups);
-      assertNoError(project);
       const rows = Array.isArray(groups.data) ? groups.data as { id: string; name: string }[] : [];
-      return { groups: rows.map(({ id, name }) => ({ id, name })), currentId: project.data?.group_id ?? null };
+      return rows.map(({ id, name }) => ({ id, name }));
     },
   });
 }

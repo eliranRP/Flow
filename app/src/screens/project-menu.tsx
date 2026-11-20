@@ -37,6 +37,7 @@ export function ProjectMenu({
   budget,
   finished,
   groups: sampleGroups,
+  groupId,
   sample = false,
   sampleRow,
   overhead,
@@ -51,6 +52,12 @@ export function ProjectMenu({
   finished: boolean;
   /** FLOW-360 A: a sample's groups (stories, tests). A live menu reads them itself (FLOW-1230). */
   groups?: ProjectGroups;
+  /**
+   * FLOW-1243: the project's group id, from the page's own get_project read (the picker's current row). undefined
+   * means the read saved on the phone predates the key: the groups wait for a read that has it, so no move starts
+   * from a guessed "no group".
+   */
+  groupId?: string | null | undefined;
   sample?: boolean;
   /** A sample project's month row (stories and the proof fixture); a live menu reads it from the month. */
   sampleRow?: ProjectCashRow;
@@ -86,8 +93,11 @@ export function ProjectMenu({
   // FLOW-1231: while that live read is in flight, the edit sheet holds the קבוצה row's place with a skeleton. A failed read
   // shows nothing, as the row never showed; a sample's groups (or a sample with none) never read, so nothing holds.
   const liveGroups = useProjectGroupsRead(projectId, !sample && sampleGroups == null && (menu || primed || editing));
-  const groupsLoading = liveGroups.isLoading;
-  const groups = sampleGroups ?? liveGroups.data;
+  const groupKnown = groupId !== undefined;
+  const groupsLoading = liveGroups.isLoading || (sampleGroups == null && liveGroups.data != null && !groupKnown);
+  const groups: ProjectGroups | undefined = sampleGroups ?? (liveGroups.data == null || !groupKnown
+    ? undefined
+    : { groups: liveGroups.data, currentId: groupId ?? null });
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.
