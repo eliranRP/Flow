@@ -24,7 +24,10 @@ export function useKeyboardInset() {
       // Space below the visual viewport: the sheet's lift above the keyboard (FLOW-1024). On iOS
       // it drops to 0 when the visual viewport is panned down with the keyboard still up, which
       // is right for the lift (the panned view already ends at the keyboard) but can't detect it.
-      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // FLOW-1238: no focused field, no lift. Back from another app, iOS can report a short visual
+      // viewport with no keyboard, which left every sheet floating mid-screen.
+      const focused = editableFocused();
+      const kb = focused ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
       // Screen height the visual viewport doesn't cover. Panning (offsetTop) and
       // pinch-zoom (scale) leave it unchanged; only the keyboard takes it away.
       const scale = vv.scale > 0 ? vv.scale : 1;
@@ -34,7 +37,7 @@ export function useKeyboardInset() {
       // FLOW-1074: no focused field, no keyboard. iOS can close the keyboard without a visualViewport
       // resize (the app sent to the background, a field blurred by a route change), which left
       // data-kb "open" and the tab bar hidden on every page until the next resize.
-      const open = covered > 120 && editableFocused();
+      const open = covered > 120 && focused;
       if (open !== (root.dataset.kb === "open")) {
         if (open) root.dataset.kb = "open";
         else delete root.dataset.kb;
