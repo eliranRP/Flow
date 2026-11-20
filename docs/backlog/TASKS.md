@@ -802,6 +802,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1234"></a>[FLOW-1234](tasks/FLOW-1234.md) | Perf: company_next_month_inputs stops rescanning the recurring charges' lines | SMALL (perf) |
 | <a id="flow-1235"></a>[FLOW-1235](tasks/FLOW-1235.md) | Perf: company_next_month_inputs stops sending next month's edits twice | MEDIUM (perf) |
 | <a id="flow-1236"></a>[FLOW-1236](tasks/FLOW-1236.md) | Perf: profile project_category_months_lean, the largest part of company_next_month_inputs | MEDIUM (perf) |
+| <a id="flow-1239"></a>[FLOW-1239](tasks/FLOW-1239.md) | Perf: get_project totals only the project's loan balances | SMALL (perf) |
+| <a id="flow-1240"></a>[FLOW-1240](tasks/FLOW-1240.md) | Perf: the project forecast takes its loans from get_project instead of reading them again | MEDIUM (perf) |
+| <a id="flow-1241"></a>[FLOW-1241](tasks/FLOW-1241.md) | Perf: the overhead project's page reads only the general costs, not the company's whole forecast | MEDIUM (perf) |
+| <a id="flow-1242"></a>[FLOW-1242](tasks/FLOW-1242.md) | Perf: Company profit reads the loans with their balances in one request | SMALL (perf) |
+| <a id="flow-1243"></a>[FLOW-1243](tasks/FLOW-1243.md) | Perf: the project's groups read is one request | SMALL (perf) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
