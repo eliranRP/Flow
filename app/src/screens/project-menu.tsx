@@ -37,6 +37,7 @@ export function ProjectMenu({
   budget,
   finished,
   groups: sampleGroups,
+  groupId = null,
   sample = false,
   sampleRow,
   overhead,
@@ -51,6 +52,8 @@ export function ProjectMenu({
   finished: boolean;
   /** FLOW-360 A: a sample's groups (stories, tests). A live menu reads them itself (FLOW-1230). */
   groups?: ProjectGroups;
+  /** FLOW-1243: the project's group id, from the page's own get_project read (its group is the picker's current row). */
+  groupId?: string | null;
   sample?: boolean;
   /** A sample project's month row (stories and the proof fixture); a live menu reads it from the month. */
   sampleRow?: ProjectCashRow;
@@ -87,7 +90,9 @@ export function ProjectMenu({
   // shows nothing, as the row never showed; a sample's groups (or a sample with none) never read, so nothing holds.
   const liveGroups = useProjectGroupsRead(projectId, !sample && sampleGroups == null && (menu || primed || editing));
   const groupsLoading = liveGroups.isLoading;
-  const groups = sampleGroups ?? liveGroups.data;
+  const groups: ProjectGroups | undefined = sampleGroups ?? (liveGroups.data == null
+    ? undefined
+    : { groups: liveGroups.data, currentId: groupId });
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.

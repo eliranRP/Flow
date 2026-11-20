@@ -349,6 +349,8 @@ export const projectDetailSchema = z
     name: z.string(),
     status: z.string(),
     state_label: z.string().nullable(),
+    /** FLOW-1243: the project's group (projects.group_id); the ⋯ menu's current group. */
+    group_id: z.string().nullable().optional(),
     budget_agorot: agorotOrNull,
     income_agorot: agorotSchema,
     direct_agorot: agorotSchema,

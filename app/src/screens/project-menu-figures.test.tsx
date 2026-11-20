@@ -14,18 +14,24 @@ const rpc = vi.hoisted(() => ({
   answer: (): Promise<unknown> => Promise.resolve(null),
   /** FLOW-1231: the next list_project_groups answer; a test holds it to see the edit sheet while the groups load. */
   groups: (): Promise<unknown> => Promise.resolve({ data: [], error: null }),
+  /** FLOW-1243: every read the menu starts, as an rpc name or "from:<table>". */
+  reads: [] as string[],
 }));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
+      rpc.reads.push(name);
       // FLOW-1230: a live menu also reads the groups (on a touch or an open); the month read is the one these tests count.
       if (name === "list_project_groups") return rpc.groups();
       if (name !== "projects_cash_month") return Promise.resolve({ data: [], error: null });
       rpc.calls.push({ name, args });
       return rpc.answer();
     },
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { group_id: null }, error: null }) }) }) }),
+    from: (table: string) => {
+      rpc.reads.push(`from:${table}`);
+      return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }) };
+    },
   }),
 }));
 
@@ -269,5 +275,15 @@ describe("the edit sheet holds the קבוצה row's place while the groups load 
     expect(skeletonRow(sheet)).toBeNull();
     expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
     expect(rpc.calls).toHaveLength(0);
+  });
+});
+
+describe("the ⋯ menu's groups read is one request (FLOW-1243)", () => {
+  it("reads list_project_groups once and no projects row", async () => {
+    rpc.reads.length = 0;
+    renderMenu();
+    await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
+    expect(rpc.reads.filter((read) => read === "list_project_groups")).toHaveLength(1);
+    expect(rpc.reads.some((read) => read.startsWith("from:projects"))).toBe(false);
   });
 });
