@@ -101,7 +101,7 @@ beforeEach(() => {
 
 describe("the forecast's loans for the company (FLOW-1209)", () => {
   it("sends the loans and the loan balances before either answers, and gives the same loans", async () => {
-    const result = readForecastLoans(null);
+    const result = readForecastLoans();
     await settle();
 
     expect(db.sent).toHaveLength(2);
@@ -113,7 +113,7 @@ describe("the forecast's loans for the company (FLOW-1209)", () => {
   });
 
   it("a balance row of a loan the loans read did not return does not change the result", async () => {
-    const result = readForecastLoans(null);
+    const result = readForecastLoans();
     openGate();
     const loans = await result;
 
@@ -123,37 +123,15 @@ describe("the forecast's loans for the company (FLOW-1209)", () => {
 
   it("gives no loans when the company has none", async () => {
     db.answers.loans = { data: [], error: null };
-    const result = readForecastLoans(null);
+    const result = readForecastLoans();
     openGate();
     await expect(result).resolves.toEqual([]);
   });
 
   it("throws the loans error when the loans read fails", async () => {
     db.answers.loans = { data: null, error: { message: "loans down" } };
-    const result = readForecastLoans(null);
+    const result = readForecastLoans();
     openGate();
     await expect(result).rejects.toEqual({ message: "loans down" });
-  });
-});
-
-describe("the forecast's loans for a project (FLOW-1209: the project read keeps its filter; FLOW-1226: one round trip; FLOW-1232: the balances too)", () => {
-  it("filters the loans and the balances by the project, and sends both before either answers", async () => {
-    const result = readForecastLoans("project-1");
-    await settle();
-
-    expect(db.sent).toHaveLength(2);
-    expect(db.sent[0]).toMatch(/^loans select\(.*\) eq\(project_id, project-1\)$/);
-    // FLOW-1232: the view totals only the project's loans, not the company's.
-    expect(db.sent[1]).toBe("loan_balances select(loan_id, balance_minor, flagged_parts) eq(project_id, project-1)");
-
-    openGate();
-    await expect(result).resolves.toEqual(expected());
-  });
-
-  it("a balance row of a loan of another project does not change the project's loans", async () => {
-    db.answers.loans = { data: [LOAN_A], error: null };
-    const result = readForecastLoans("project-1");
-    openGate();
-    await expect(result).resolves.toEqual([readLoanRow(LOAN_A, null)]);
   });
 });

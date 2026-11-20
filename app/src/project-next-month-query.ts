@@ -6,14 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { loadReadSchemas } from "./load-read-schemas";
-import { monthPeriod } from "./period";
+import { allTime, monthPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { useProjectCategoryMonthsQuery } from "./project-category-months";
-import type { ForecastLoan } from "./project-next-loans";
+import { type ForecastLoan, forecastLoansOf } from "./project-next-loans";
 import { applyForecastEdits, nextMonthForecast, nextMonthKey, type NextMonthForecast, type ProjectForecastEdit } from "./project-next-month";
 import { LOAN_DETAIL_COLUMNS, type LoanDetailDbRow, readLoanRow } from "./screens/loan-detail-data";
 import { israelToday } from "./ui/date-math";
-import { useCategoriesQuery } from "./use-books";
+import { useCategoriesQuery, useProjectQuery } from "./use-books";
 import { readyClient } from "./ready-client";
 
 /**
@@ -73,32 +73,32 @@ function withBalances(rows: LoanDetailDbRow[], balances: BalanceDbRow[]): Foreca
 }
 
 /**
- * The loans filed under the project (or, with null, every loan of the company), as the loan page reads a loan:
- * its row with the rates, and its balance in the books (the payments left start from it, FLOW-427).
+ * Every loan of the company, as the loan page reads a loan: its row with the rates, and its balance in the books
+ * (the payments left start from it, FLOW-427). The company's forecast reads them; a project's forecast takes its
+ * loans from get_project (FLOW-1240).
  */
-export async function readForecastLoans(projectId: string | null): Promise<ForecastLoan[]> {
+export async function readForecastLoans(): Promise<ForecastLoan[]> {
   const supabase = await readyClient();
-  // The loans and their balances at once, both of the project (or both of the company, with null). loan_balances is
-  // a security_invoker view with company_id and project_id (FLOW-1232), so RLS gives it the same rows the loans
-  // read gets, and a project's read makes the server total only that project's loans. withBalances takes only the
-  // balances of the loans it returned.
-  const balancesRead = supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts");
-  const [loans, balances] = projectId == null
-    ? await Promise.all([supabase.from("loans").select(LOAN_DETAIL_COLUMNS), balancesRead])
-    : await Promise.all([supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId), balancesRead.eq("project_id", projectId)]);
+  // The loans and their balances at once.
+  const [loans, balances] = await Promise.all([
+    supabase.from("loans").select(LOAN_DETAIL_COLUMNS),
+    supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts"),
+  ]);
   if (loans.error) throw loans.error;
   if (balances.error) throw balances.error;
   return withBalances(loans.data, balances.data);
 }
 
-/** The project's loans for its forecast. Under "loans", so a loan write refreshes it. */
-function useProjectLoansQuery(projectId: string) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["loans", "project", preview, projectId],
-    enabled: preview === "off" && projectId !== "",
-    queryFn: () => readForecastLoans(projectId),
-  });
+/**
+ * The project's loans for its forecast (FLOW-1240), from the get_project answer the page already reads (the one over
+ * every period, which the page and the צפי, edit and profit screens all hold; the loans do not depend on the period),
+ * so no loans or loan_balances request is sent. A loan write refreshes it through "project", as it does the page.
+ * `read` is that answer's read, which the forecast waits on.
+ */
+function useProjectLoans(projectId: string) {
+  const read = useProjectQuery(projectId, allTime());
+  const loans = useMemo(() => (read.data === undefined ? undefined : forecastLoansOf(read.data)), [read.data]);
+  return { loans, read };
 }
 
 /** project_forecast_edits_for: the user's edits that apply to the month. */
@@ -136,7 +136,7 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   const expected = useProjectExpectedQuery(live);
   const categories = useProjectCategoryMonthsQuery(live, monthPeriod(today.slice(0, 7)));
   const editsRead = useForecastEditsQuery(live, month);
-  const loansRead = useProjectLoansQuery(live);
+  const projectLoans = useProjectLoans(live);
   // FLOW-1079: what Home or a charge's page took out of this month only (the month forecast's overrides).
   const overridesRead = useForecastOverrides(month, live !== "");
   const overrides = sample == null ? overridesRead.data : NO_OVERRIDES;
@@ -144,10 +144,10 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   const recurring = sample?.expected.recurring ?? expected.data?.recurring;
   const categoryMonths = sample == null ? categories.data : sample.categoryMonths;
   const edits = sample == null ? editsRead.data : sample.edits ?? [];
-  const loans = sample == null ? loansRead.data : sample.loans ?? NO_LOANS;
+  const loans = sample == null ? projectLoans.loans : sample.loans ?? NO_LOANS;
   const categoryList = sample == null ? companyCategories.data : sample.categories ?? NO_CATEGORIES;
   const ready = sample != null
-    || (expected.data != null && categories.data !== undefined && editsRead.data != null && loansRead.data != null && companyCategories.data != null && overridesRead.data != null);
+    || (expected.data != null && categories.data !== undefined && editsRead.data != null && projectLoans.loans != null && companyCategories.data != null && overridesRead.data != null);
   // Each loan's schedule is built here, so the forecast is rebuilt only when what it reads changes.
   const base: NextMonthForecast | null = useMemo(
     () => (ready && recurring != null
@@ -155,7 +155,7 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
       : null),
     [ready, recurring, projectId, currency, today, categoryMonths, loans, categoryList, month],
   );
-  const reads = [expected, categories, editsRead, loansRead, companyCategories, overridesRead];
+  const reads = [expected, categories, editsRead, projectLoans.read, companyCategories, overridesRead];
   const skips = useMemo(() => skipEdits([...skippedKeys(overrides ?? [])], projectId, null, month), [overrides, projectId, month]);
   return {
     forecast: base == null ? null : applyForecastEdits(base, [...(edits ?? []), ...skips]),

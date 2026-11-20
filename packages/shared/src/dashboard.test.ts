@@ -32,6 +32,20 @@ describe("projectDetailSchema", () => {
     expect(parsed?.categories[0]).toEqual({ id: "c", name: "מלט", amount_agorot: 100n });
   });
 
+  it("parses the loans' four category ids (null when unset) and leaves them undefined on an answer from before FLOW-1240", () => {
+    const loan = { id: "l", name: "הלוואת דוגמה", currency: "USD", balance_minor: 100 };
+    const parsed = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      loans: [
+        { ...loan, interest_category_id: "c1", escrow_category_id: null, principal_category_id: null, fees_category_id: "c4" },
+        loan,
+      ],
+    });
+    expect(parsed?.loans?.[0]).toMatchObject({ interest_category_id: "c1", escrow_category_id: null, principal_category_id: null, fees_category_id: "c4" });
+    expect(parsed?.loans?.[1]?.interest_category_id).toBeUndefined();
+  });
+
   it("parses excluded_categories_by_currency when present", () => {
     const parsed = projectDetailSchema.parse({
       ...project,

@@ -69,7 +69,7 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const live = enabled && sample == null && preview === "off";
   // FLOW-1171: the same read as Home's forecast (expected-months-query), so one request serves both.
   const expected = useQuery({ ...expectedMonthsQueryOptions(preview), enabled: live });
-  const loans = useQuery({ queryKey: ["loans", "company-forecast", preview], enabled: live, queryFn: () => readForecastLoans(null) });
+  const loans = useQuery({ queryKey: ["loans", "company-forecast", preview], enabled: live, queryFn: () => readForecastLoans() });
   // A later month is built from rest_edits; the slim answer (no rest_edits) holds next month's edits only.
   const full = withRest || (month != null && month !== nextMonthKey(today));
   const client = useQueryClient();
