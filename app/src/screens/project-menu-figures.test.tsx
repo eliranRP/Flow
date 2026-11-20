@@ -16,12 +16,15 @@ const rpc = vi.hoisted(() => ({
   groups: (): Promise<unknown> => Promise.resolve({ data: [], error: null }),
   /** FLOW-1243: every read the menu starts, as an rpc name or "from:<table>". */
   reads: [] as string[],
+  /** FLOW-1243: the group writes the menu sends, with their arguments. */
+  writes: [] as { name: string; args: unknown }[],
 }));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
       rpc.reads.push(name);
+      if (name === "set_project_group") rpc.writes.push({ name, args });
       // FLOW-1230: a live menu also reads the groups (on a touch or an open); the month read is the one these tests count.
       if (name === "list_project_groups") return rpc.groups();
       if (name !== "projects_cash_month") return Promise.resolve({ data: [], error: null });
@@ -38,7 +41,7 @@ vi.mock("../lib/supabase", () => ({
 const row = { id: "p1", name: "Oak Ridge", status: "active", is_overhead: false, type: null, created_at: "2026-01-01T00:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_all_minor: 0, first_month: null };
 const answer = (extra: object): Answer => ({ data: { base_currency: "ILS", projects: [{ ...row, ...extra }], unassigned: { count: 0, cash: [] } }, error: null });
 
-function renderMenu() {
+function renderMenu(props: { groupId?: string | null } = { groupId: null }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 }, mutations: { retry: false } } });
   // The Projects list's row, as it holds it: it has neither of the menu's figures (FLOW-1204).
   client.setQueryData<ProjectsCashMonth>(["projects-cash", undefined, undefined], { base_currency: "ILS", projects: [row as never], unassigned: { count: 0, cash: [] } } as never);
@@ -46,7 +49,7 @@ function renderMenu() {
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={["/projects/p1"]}>
-          <ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={false} investmentTo="/projects/p1/investment" hasInvestment={false} profitTo="/projects/p1/profit" />
+          <ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={false} investmentTo="/projects/p1/investment" hasInvestment={false} profitTo="/projects/p1/profit" groupId={props.groupId} />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
@@ -285,5 +288,41 @@ describe("the ⋯ menu's groups read is one request (FLOW-1243)", () => {
     await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
     expect(rpc.reads.filter((read) => read === "list_project_groups")).toHaveLength(1);
     expect(rpc.reads.some((read) => read.startsWith("from:projects"))).toBe(false);
+  });
+});
+
+describe("the live menu's current group comes from the page's own read (FLOW-1243)", () => {
+  const twoGroups = { data: [{ id: "g1", name: "מתחם הגפן" }, { id: "g2", name: "בניין לדוגמה" }], error: null };
+
+  beforeEach(() => {
+    rpc.writes.length = 0;
+    rpc.reads.length = 0;
+    rpc.answer = () => Promise.resolve(answer({ pending_count: 0, deletable: true }));
+    rpc.groups = () => Promise.resolve(twoGroups);
+  });
+
+  it("shows the group the page's read names in the קבוצה row", async () => {
+    const sheet = openEditSheet(renderMenu({ groupId: "g1" }));
+    const group = await within(sheet).findByRole("button", { name: /^קבוצה/ });
+    expect(group).toHaveTextContent("מתחם הגפן");
+  });
+
+  it("a move to the other group sends the project's group g1 as its undo target", async () => {
+    const sheet = openEditSheet(renderMenu({ groupId: "g1" }));
+    fireEvent.click(await within(sheet).findByRole("button", { name: /^קבוצה/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "בניין לדוגמה" }));
+    await screen.findByText("הפרויקט עבר לקבוצה בניין לדוגמה");
+    expect(rpc.writes.at(-1)).toEqual({ name: "set_project_group", args: { p_project_id: "p1", p_group_id: "g2" } });
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(rpc.writes.at(-1)).toEqual({ name: "set_project_group", args: { p_project_id: "p1", p_group_id: "g1" } }); });
+  });
+
+  it("with no key in the saved read (undefined), the row keeps its skeleton and no move can start", async () => {
+    const sheet = openEditSheet(renderMenu({}));
+    await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    expect(skeletonRow(sheet)).not.toBeNull();
+    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
+    expect(rpc.writes).toHaveLength(0);
   });
 });

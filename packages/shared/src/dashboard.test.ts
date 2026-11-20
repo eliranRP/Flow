@@ -32,6 +32,13 @@ describe("projectDetailSchema", () => {
     expect(parsed?.categories[0]).toEqual({ id: "c", name: "מלט", amount_agorot: 100n });
   });
 
+  it("keeps group_id null for an ungrouped project, and reads one saved before the key as undefined (FLOW-1243)", () => {
+    const base = { ...project, categories: [] };
+    expect(projectDetailSchema.parse({ ...base, group_id: null })?.group_id).toBeNull();
+    expect(projectDetailSchema.parse({ ...base, group_id: "g" })?.group_id).toBe("g");
+    expect(projectDetailSchema.parse(base)?.group_id).toBeUndefined();
+  });
+
   it("parses excluded_categories_by_currency when present", () => {
     const parsed = projectDetailSchema.parse({
       ...project,
