@@ -157,6 +157,9 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
     [ready, recurring, projectId, currency, today, categoryMonths, loans, categoryList, month],
   );
   const reads = [expected, categories, editsRead, projectLoans.read, companyCategories, overridesRead];
+  // The loans' read is not pending while it holds the previous project's answer or one saved before the category ids
+  // (FLOW-1240): the forecast is still loading, so a screen shows its skeleton, not "no data".
+  const loansWaiting = live !== "" && projectLoans.loans === undefined && !projectLoans.read.isError;
   const skips = useMemo(() => skipEdits([...skippedKeys(overrides ?? [])], projectId, null, month), [overrides, projectId, month]);
   return {
     forecast: base == null ? null : applyForecastEdits(base, [...(edits ?? []), ...skips]),
@@ -169,7 +172,7 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
     recurring: recurring ?? [],
     categoryMonths: categoryMonths ?? null,
     categories: categoryList ?? NO_CATEGORIES,
-    pending: sample == null && reads.some((read) => read.isPending),
+    pending: sample == null && (reads.some((read) => read.isPending) || loansWaiting),
     failed: sample == null && reads.some((read) => read.isError),
     paused: sample == null && reads.some((read) => read.isPaused),
     refetch: () => {

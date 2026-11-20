@@ -227,12 +227,14 @@ describe("the project forecast's loans come from get_project (FLOW-1240)", () =>
     await waitFor(() => { expect(server.rpcs).toEqual(expect.arrayContaining(["expected_months", "project_category_months", "project_forecast_edits_for", "forecast_overrides_for", "list_categories"])); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(latest?.forecast).toBeNull();
-    expect(latest?.pending).toBe(false);
+    // Still loading, so a screen shows its skeleton, not "not enough data".
+    expect(latest?.pending).toBe(true);
     expect(server.tables).toEqual([]);
 
     server.answers.get_project = projectAnswer([19_000_000, 18_000_000, 0]);
     await act(async () => { await view.client.invalidateQueries({ queryKey: ["project"] }); });
     await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(latest?.pending).toBe(false);
     expect(latest?.forecast).toEqual(oldForecast("USD"));
     expect(server.tables).toEqual([]);
   });
@@ -249,9 +251,11 @@ describe("the project forecast's loans come from get_project (FLOW-1240)", () =>
     await waitFor(() => { expect(server.rpcs.filter((name) => name === "get_project")).toHaveLength(2); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(latest?.forecast).toBeNull();
+    expect(latest?.pending).toBe(true);
 
     await act(async () => { release(); await Promise.resolve(); });
     await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(latest?.pending).toBe(false);
     expect(latest?.forecast?.rows.filter((row) => row.kind === "loan")).not.toHaveLength(0);
   });
 });

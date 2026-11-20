@@ -26,6 +26,7 @@ type ProjectLoan = NonNullable<NonNullable<ProjectDetail>["loans"]>[number];
 export function forecastLoansOf(project: ProjectDetail): ForecastLoan[] | undefined {
   if (project == null) return [];
   if (project.loans?.some((loan) => loan.interest_category_id === undefined) === true) return undefined;
+  // The `??` fallbacks in loanDbRow only fill fields an old answer lacks; the category id keys were checked above.
   return (project.loans ?? []).map((loan) => {
     const { id, currency, projectId, categoryIds, status, balanceMinor, kind, termMonths, paymentMinor, rates, principalMinor, annualRatePpm, startDate, escrowMinor, interestOnlyMonths, amortizationMonths } =
       readLoanRow(loanDbRow(loan, project.id), { balanceMinor: loan.balance_minor, flaggedParts: 0 });
