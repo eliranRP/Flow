@@ -21,6 +21,8 @@ const server = vi.hoisted(() => ({
   project: {
     id: "a", name: "וילה רעננה", status: "active", state_label: "פעיל", budget_agorot: null, is_overhead: false,
     income_agorot: 20_000_000, direct_agorot: 10_000_000, shared_agorot: 0, profit_agorot: 10_000_000, categories: [], transactions: [],
+    // FLOW-1240: the project has no loans; the forecast takes them from this answer.
+    loans: [],
   },
 }));
 
@@ -80,6 +82,8 @@ afterEach(() => {
 });
 
 const names = () => server.rpcCalls.map((call) => call.name);
+/** FLOW-1240: the forecast's loans come from get_project, so neither loans table is ever read on the project path. */
+const loanTablesRead = () => server.tables.filter((name) => name === "loans" || name === "loan_balances");
 
 describe("the project page's forecast reads (FLOW-1229)", () => {
   it("start once the project's own read has landed, without waiting for the lifetime read or the company read", async () => {
@@ -89,7 +93,6 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
     await vi.waitFor(() => {
       for (const name of FORECAST_RPCS) expect(names()).toContain(name);
-      expect(server.tables).toContain("loans");
     });
     // The company read went out beside them, and has not answered.
     expect(server.tables).toContain("companies");
@@ -97,17 +100,19 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
     expect(row.querySelector(".ui-skeleton-w-sm")).not.toBeNull();
     expect(row.querySelector(".ui-project-row-figure")).toBeNull();
+    expect(loanTablesRead()).toEqual([]);
     await act(async () => { server.releaseCompanies(); server.releaseLifetime(); await Promise.resolve(); });
   });
 
   it("keeps the figure out until the lifetime read lands, though the forecast's reads are all in", async () => {
     renderLive();
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
-    await vi.waitFor(() => { expect(server.tables).toContain("loans"); });
+    await vi.waitFor(() => { for (const name of FORECAST_RPCS) expect(names()).toContain(name); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
     expect(row.querySelector(".ui-project-row-figure")).toBeNull();
     expect(row.querySelector(".ui-skeleton-w-sm")).not.toBeNull();
+    expect(loanTablesRead()).toEqual([]);
   });
 
   it("the overhead project starts the company's forecast reads, not its own, while /companies and the lifetime read are out", async () => {
@@ -132,7 +137,6 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     renderLive();
     await vi.waitFor(() => {
       for (const name of FORECAST_RPCS) expect(names()).toContain(name);
-      expect(server.tables).toContain("loans");
     });
     // The page itself still waits for its own read: nothing of the project is drawn yet.
     expect(screen.queryByRole("heading", { name: "וילה רעננה" })).not.toBeInTheDocument();

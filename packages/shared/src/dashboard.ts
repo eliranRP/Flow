@@ -479,6 +479,11 @@ export const projectDetailSchema = z
       amortization_months: z.number().nullable().optional(),
       closed_on: z.string().nullable().optional(),
       rates: z.array(z.object({ effective_date: z.string(), annual_rate_ppm: z.number() })).optional(),
+      /** FLOW-1240. The categories the loan's payment parts file to (null: the company's keyed one), which the project forecast reads. Omitted on payloads from before the migration. */
+      interest_category_id: z.string().nullable().optional(),
+      escrow_category_id: z.string().nullable().optional(),
+      principal_category_id: z.string().nullable().optional(),
+      fees_category_id: z.string().nullable().optional(),
     })).optional(),
     /** The company's overhead project (0021). Omitted on older payloads. */
     is_overhead: z.boolean().optional(),
