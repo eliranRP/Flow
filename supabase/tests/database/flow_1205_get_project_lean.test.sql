@@ -484,7 +484,8 @@ grant execute on function pg_temp.old_get_project(uuid, text, date, date, boolea
 
 create function pg_temp.new(p_project text, p_basis text, p_lines boolean, p_from date default null, p_to date default null)
 returns jsonb language sql stable as $$
-  select public.get_project(pg_temp.id(p_project), p_basis, p_from, p_to, p_lines);
+  -- FLOW-1243 added group_id to both answers; this file compares them with the body before it, so the key is left out here.
+  select public.get_project(pg_temp.id(p_project), p_basis, p_from, p_to, p_lines) - 'group_id';
 $$;
 grant execute on function pg_temp.new(text, text, boolean, date, date) to authenticated;
 
@@ -512,7 +513,7 @@ select is(pg_temp.new('barn', 'cash', true), pg_temp.old('barn', 'cash', true), 
 select is(pg_temp.new('shed', 'cash', true), pg_temp.old('shed', 'cash', true), 'the shed (no lines)');
 select is(pg_temp.new('house', 'cash', true, '2026-06-01', '2026-06-30'), pg_temp.old('house', 'cash', true, '2026-06-01', '2026-06-30'),
   'a period: from and to are echoed, as before');
-select is(public.get_project(pg_temp.id('house'), 'cash'), pg_temp.old('house', 'cash', true), 'the default (flow-mcp''s) is the lines form');
+select is(public.get_project(pg_temp.id('house'), 'cash') - 'group_id', pg_temp.old('house', 'cash', true), 'the default (flow-mcp''s) is the lines form');
 select ok(jsonb_array_length(pg_temp.new('house', 'cash', true)->'investment'->'rehab_by_category') = 3
     and (select bool_or((r->>'hidden')::boolean) and not bool_and((r->>'hidden')::boolean)
          from jsonb_array_elements(pg_temp.new('house', 'cash', true)->'investment'->'rehab_by_category') r),

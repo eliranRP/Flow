@@ -316,6 +316,7 @@ export function ProjectDetailScreen({
       budget={project.budget_agorot ?? null}
       finished={project.status === "finished"}
       groups={sampleGroups}
+      groupId={project.group_id}
       sample={sample != null}
       sampleRow={sampleMenuRow}
       overhead={overhead}

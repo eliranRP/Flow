@@ -315,11 +315,11 @@ select is(
   (select array_agg(k order by k) from jsonb_object_keys(public.get_project(pg_temp.id('house'), 'cash')) k),
   array['after_overhead', 'base_currency', 'budget_agorot', 'by_currency', 'categories', 'categories_by_currency',
     'category_rollups', 'category_rollups_by_currency', 'direct_agorot', 'excluded_categories_by_currency',
-    'excluded_category_rollups_by_currency', 'excluded_income_by_currency', 'from', 'id', 'income_agorot', 'investment',
+    'excluded_category_rollups_by_currency', 'excluded_income_by_currency', 'from', 'group_id', 'id', 'income_agorot', 'investment',
     'is_overhead', 'loans', 'name', 'other_currencies', 'overhead_share_agorot', 'overhead_share_minor',
     'overhead_weighted', 'pending_agorot', 'pending_count', 'pending_other_currencies', 'profit_after_overhead_agorot',
     'profit_agorot', 'shared_agorot', 'state_label', 'status', 'sumit_budget_section_id', 'to', 'transactions'],
-  'the default answer, flow-mcp''s, has all 34 keys it had');
+  'the default answer, flow-mcp''s, has all 34 keys it had, and group_id (FLOW-1243)');
 select is(public.get_project(pg_temp.id('house'), 'cash'), pg_temp.gp('house', 'cash', true),
   'omitting p_lines is p_lines true');
 select is(public.get_project(pg_temp.id('house')), public.get_project(pg_temp.id('house'), 'invoiced'),
