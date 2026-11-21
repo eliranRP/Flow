@@ -85,10 +85,14 @@ export const HomeLateNamed: Story = {
     await expect(bill).toHaveAttribute("href", "/recurring/expense/s-water");
     await expect(income).toHaveAttribute("href", "/recurring/income/c-rent");
     // A typical name fits one line at 393 (the 13px caption role), so the card is its normal height.
+    // The title's text, after the webfont has loaded: one line tall. The element's own box can be taller than its text.
+    await document.fonts.ready;
     for (const link of [bill, income]) {
       const text = link.querySelector<HTMLElement>(".ui-attn-text");
       if (text == null) throw new Error("a named row has no title");
-      await expect(text.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(text).lineHeight) + 1);
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      await expect(range.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(text).lineHeight) + 1);
     }
     await expect((await canvas.findByRole("link", { name: "קבועים, 2 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("2");
   },
