@@ -647,7 +647,7 @@ export const HomeLateNamedLong: Story = {
     for (const link of [await canvas.findByRole("link", { name: /^החשבון של .+ לא הגיע$/ }), canvas.getByRole("link", { name: /^התנועה הקבועה של .+ לא הגיעה$/ })]) {
       const item = link.closest("li");
       if (item == null) throw new Error("a named row has no list item");
-      const [card, text, name] = [".ui-attn-card", ".ui-attn-text", ".ui-attn-name"].map((selector) => part(item, selector));
+      const card = part(item, ".ui-attn-card"), text = part(item, ".ui-attn-text"), name = part(item, ".ui-attn-name");
       // A finite cap (so dismissing folds to 0) that the card fits; two lines at most, uncut; the name ends in "…" in its own box.
       await expect(getComputedStyle(item).maxBlockSize).toMatch(/^\d+(\.\d+)?px$/);
       await expect(card.offsetHeight + parseFloat(getComputedStyle(card).marginBlockEnd)).toBeLessThanOrEqual(item.clientHeight);
