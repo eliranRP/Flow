@@ -7,4 +7,4 @@
 - [x] `jev_prefill` and `jev_prefill_loan` read the date `FOR SHARE` too.
 - [x] A close (`mcp_set_books_closed_through`, and the undo of a move back) waits for a write in flight, and a write waits for a close in flight and then reads the new date. The lock order is in the migration's header.
 
-**Acceptance:** each closed-date read takes the company row `FOR SHARE`; a person's write to an open line still goes through, one to a closed line is still refused with `the books are closed through YYYY-MM-DD`, and the category setting guard still refuses a closed change.
+**Acceptance:** each closed-date read on a write path takes the company row `FOR SHARE`: the line, line-parts and category-setting guards, Jev's two prefill functions, `follow_invoice`, `fill_suggested_category` and `review_held_change_guard`; a person's write to an open line still goes through, one to a closed line is still refused with `the books are closed through YYYY-MM-DD`, and the category setting guard still refuses a closed change.

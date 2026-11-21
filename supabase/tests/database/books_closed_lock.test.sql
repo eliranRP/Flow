@@ -8,7 +8,7 @@
 -- closed_line_holds.test.sql covers the rest). The undo of the closed date
 -- works, and with no date nothing is refused.
 -- Invented names and figures, @example.com only. Dates follow current_date.
--- FLOW-856: the guards these cases reach now read the closed date for share; this file runs again to show they behave as before.
+-- Covers private.books_closed_guard, private.books_closed_check and private.follow_invoice, so a migration that patches them runs this file (scripts/pgtap-specs.mjs).
 
 begin;
 

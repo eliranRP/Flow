@@ -4,7 +4,8 @@
 -- write in flight, and the write waits for the close and then reads the new date. Two sessions cannot
 -- race in pgTAP, so the structure is asserted from each function's definition: private.books_closed_guard,
 -- private.books_closed_check, private.books_closed_setting_guard, public.jev_prefill and
--- public.jev_prefill_loan read the date with FOR SHARE, and no unlocked read of it is left. Then the
+-- public.jev_prefill_loan, private.follow_invoice, private.fill_suggested_category and
+-- private.review_held_change_guard read the date with FOR SHARE, and no unlocked read of it is left. Then the
 -- behaviour in one session: a person's write to an open line still goes through, one to a closed line
 -- is still refused with `the books are closed through YYYY-MM-DD`, a line's parts likewise, the category
 -- setting guard still refuses a closed change, a write with no user still passes, and Jev still skips a
@@ -13,7 +14,7 @@
 
 begin;
 
-select plan(25);
+select plan(30);
 
 do $users$
 begin
@@ -134,14 +135,18 @@ insert into fns values
   ('private.books_closed_check(uuid,uuid)'),
   ('private.books_closed_setting_guard()'),
   ('public.jev_prefill(uuid,uuid,uuid,uuid,text,numeric)'),
-  ('public.jev_prefill_loan(uuid,uuid,uuid,jsonb,text,numeric)');
+  ('public.jev_prefill_loan(uuid,uuid,uuid,jsonb,text,numeric)'),
+  ('private.fill_suggested_category()'),
+  ('private.review_held_change_guard()');
 
-select ok(pg_temp.def(fn) ~* 'books_closed_through[^;]*from public\.companies c\s+where c\.id = [a-z_]+\s+for share',
+select ok(pg_temp.def(fn) ~* 'books_closed_through[^;]*from public\.companies c\s+where c\.id = [a-z_.]+\s+for share',
   fn || ' reads the closed date FOR SHARE')
 from fns order by fn;
-select ok(pg_temp.def(fn) !~* 'from public\.companies c\s+where c\.id = [a-z_]+\s*[;)]',
+select ok(pg_temp.def(fn) !~* 'from public\.companies c\s+where c\.id = [a-z_.]+\s*[;)]',
   fn || ' has no unlocked read of the company row')
 from fns order by fn;
+select ok(pg_temp.def('private.follow_invoice(uuid,boolean)') ~* 'join public\.companies c on c\.id = t\.company_id[^;]*books_closed_through[^;]*for share of c',
+  'private.follow_invoice(uuid,boolean) reads the closed date FOR SHARE');
 select is((select p.provolatile from pg_catalog.pg_proc p where p.oid = 'private.books_closed_check(uuid,uuid)'::regprocedure),
   'v'::"char", 'books_closed_check is volatile, so its locking read is allowed');
 
