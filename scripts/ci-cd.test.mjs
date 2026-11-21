@@ -1053,7 +1053,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   assert.match(aggregate, /test "\$DB" = success\n/);
   assert.match(aggregate, /test "\$DB" = skipped\n/);
   // A docs-only diff skips types and tests, and only then; static runs on every diff (backlog-index reads docs/backlog).
-  assert.match(jobIn(pr, "changes"), /if \[ -n "\$files" \] && ! grep -qvE '\^\(docs\/\|design\/\)\|\\\.md\$' <<<"\$files"; then\n {12}echo "docs=true"/);
+  assert.match(jobIn(pr, "changes"), /if \[ -n "\$files" \] && ! grep -qvE '[^']+' <<<"\$files"; then\n {12}echo "docs=true"/);
   assert.match(jobIn(pr, "types"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
   // The e2e run covers the shared packages and the database files the app loads, not only app/ and the root config.
   assert.ok(jobIn(pr, "changes").includes("|packages/|supabase/(migrations|seed|functions)/)' <<<\"$files\"; then"));
@@ -1062,6 +1062,46 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   assert.match(aggregate, /if \[ "\$DOCS" = true \]; then\n {12}test "\$TYPES" = skipped\n {12}test "\$TESTS" = skipped\n/);
   assert.match(aggregate, /DOCS: \$\{\{ needs\.changes\.outputs\.docs \}\}\n/);
   assert.equal(aggregate.includes("|| true"), false);
+});
+
+// FLOW-855: the pr check's path rules must not call a file harmless that the build or the deploy reads.
+test("the pr check's docs and e2e rules cover every file the app ships", () => {
+  const pr = readFileSync(new URL("../.github/workflows/pr.yml", import.meta.url), "utf8");
+  const ui = pr.match(/if grep -Eq '([^']+)' <<<"\$files"; then\n {12}echo "ui=true"/)?.[1];
+  const docs = pr.match(/! grep -qvE '([^']+)' <<<"\$files"; then\n {12}echo "docs=true"/)?.[1];
+  assert.ok(ui && docs, "pr.yml has one ui rule and one docs rule");
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  assert.equal(docs, local.match(/^docs_files='([^']+)'$/m)?.[1], "pr.yml and local-ci.sh share one docs rule");
+  const isDocs = (file) => new RegExp(docs).test(file);
+  const isUi = (file) => new RegExp(ui).test(file);
+  // The app imports the design system's CSS, so it is code, and the e2e run covers it.
+  assert.equal(isDocs("design/system/implementation-tokens.css"), false);
+  assert.equal(isDocs("design/screens/a.png"), true);
+  for (const file of [
+    "design/system/implementation-tokens.css",
+    "app/public/push-sw.js",
+    "app/public/_headers",
+    "app/public/_redirects",
+    "app/index.html",
+    "app/library-aliases.ts",
+    "app/src/a.tsx",
+  ]) {
+    assert.equal(isUi(file), true, `${file} runs the e2e job`);
+  }
+  for (const file of ["docs/x.md", "scripts/a.mjs", "design/screens/a.png", "design/system/implementation-guide.md"]) {
+    assert.equal(isUi(file), false, `${file} skips the e2e job`);
+  }
+  assert.equal(isDocs("design/system/implementation-guide.md"), true);
+  // The shell conditions as the job runs them, on newline-separated diffs.
+  const run = (condition, files) =>
+    execFileSync("bash", ["-c", `files="$1"; if ${condition}; then echo yes; else echo no; fi`, "_", files], { encoding: "utf8" }).trim();
+  const docsIf = `[ -n "$files" ] && ! grep -qvE '${docs}' <<<"$files"`;
+  const uiIf = `grep -Eq '${ui}' <<<"$files"`;
+  assert.equal(run(docsIf, ""), "no", "an empty diff is not docs-only");
+  assert.equal(run(docsIf, "docs/a.md\ndesign/screens/a.png"), "yes");
+  assert.equal(run(docsIf, "docs/a.md\ndesign/system/implementation-tokens.css"), "no");
+  assert.equal(run(uiIf, "docs/a.md\napp/public/_headers"), "yes");
+  assert.equal(run(uiIf, "docs/a.md\nscripts/a.mjs"), "no");
 });
 
 test("main runs the full suite on every push and deploys only when the plan's batch rule says so", () => {
