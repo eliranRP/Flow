@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 43123 --strictPort",
+    "dev": "vite --port 43123 --strictPort",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
     "test:aliased": "vitest run --project unit-aliased",
-    "storybook": "storybook dev -p 6006 --host 0.0.0.0",
+    "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:storybook": "vitest run --project storybook --project storybook-dark",
     "test:storybook:smoke": "playwright test -c playwright.storybook.config.ts",
@@ -17,7 +17,7 @@
     "test:e2e:live": "playwright test -c playwright.live.config.ts",
     "test:e2e:smoke": "playwright test -c playwright.smoke.config.ts",
     "test:perf": "playwright test -c playwright.perf.config.ts",
-    "preview": "vite preview --host 0.0.0.0 --port 43123 --strictPort"
+    "preview": "vite preview --port 43123 --strictPort"
   },
   "dependencies": {
     "@flow/shared": "workspace:*",
