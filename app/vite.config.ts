@@ -120,7 +120,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: "0.0.0.0",
+      // FLOW-857: this machine only; FLOW_DEV_HOST=0.0.0.0 opens the dev server and preview to the network.
+      host: process.env.FLOW_DEV_HOST || "127.0.0.1",
       // Storybook and the story tests must not take the app's port.
       ...(storybook ? { strictPort: false } : { port: 43123, strictPort: true }),
       fs: {
