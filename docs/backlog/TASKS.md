@@ -635,6 +635,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1220"></a>[FLOW-1220](tasks/FLOW-1220.md) | The project ⋯ menu does not move under a finger when the delete check lands | SMALL UI |
 | <a id="flow-1221"></a>[FLOW-1221](tasks/FLOW-1221.md) | Company profit's search: where it sits, and what it hides while it shows results | SMALL UI |
 | <a id="flow-1231"></a>[FLOW-1231](tasks/FLOW-1231.md) | The project edit sheet holds the קבוצה row's place while the groups load | SMALL UI |
+| <a id="flow-1246"></a>[FLOW-1246](tasks/FLOW-1246.md) | A late row names its one bill or income | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

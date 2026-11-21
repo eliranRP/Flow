@@ -1,5 +1,5 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
-import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, lateItemName, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
 import { BUDGET_ALERT_PERCENT, budgetPercent } from "../project-list";
 import type { BannerRow } from "../ui/banner";
 import type { UtilityRefundCount } from "../utility-refund-count";
@@ -52,7 +52,8 @@ export function projectAttentionRows({
   /** FLOW-1135: the property's utility bills not refunded. */
   utilities?: UtilityRefundCount;
 }): BannerRow[] {
-  const counts = lateCounts(late.filter((row) => row.project_id === projectId));
+  const projectLate = late.filter((row) => row.project_id === projectId);
+  const counts = lateCounts(projectLate);
   const own = changes.filter((row) => row.project_id === projectId);
   const views = chargeChangeViews(own, search);
   const rows = attentionRows({
@@ -61,6 +62,8 @@ export function projectAttentionRows({
     unpaidGross: 0n,
     missingCount: counts.expense,
     missingIncome: counts.income,
+    missingName: lateItemName(projectLate, false),
+    missingIncomeName: lateItemName(projectLate, true),
     changes: views,
     search,
   });

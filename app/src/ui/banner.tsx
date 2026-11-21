@@ -51,6 +51,11 @@ export type BannerRow = {
   to: string;
   title: ReactNode;
   /**
+   * FLOW-1246: an attention card wraps this title to a second line instead of cutting its end, so the verb of a
+   * named late row ("לא הגיע") always shows. Names wrap before they truncate (DESIGN-RULES).
+   */
+  wrapTitle?: boolean;
+  /**
    * FLOW-1097: under 360px an attention card draws, with both set, this one- or two-word title of what is needed
    * and `tag` (a count, an amount or a time) on one line; the link's name stays `title`. Without them the title is cut.
    */

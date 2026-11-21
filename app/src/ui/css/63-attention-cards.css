@@ -113,6 +113,35 @@
   white-space: nowrap;
 }
 
+/* FLOW-1246: a named late row's title may take a second line, and its item's cap is sized to that card (two lines,
+   a finite height, so the dismiss fold still animates from it to 0). */
+.ui-attn-item:not([data-leaving]):has(> .ui-attn-card-wrap) {
+  max-block-size: calc(var(--touch-min) + var(--space-8) + var(--space-1));
+}
+
+.ui-attn-card-wrap {
+  block-size: auto;
+  min-block-size: calc(var(--touch-min) + var(--space-3));
+  padding-block: var(--space-2);
+}
+
+.ui-attn-link-wrap .ui-attn-text {
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* The party's name is one line that ends in "…" when it is long. It never takes more than the text's width less the
+   verb's (5.5em), so "name + verb" always fit one line and the title is 2 lines at most, ending with its verb. */
+.ui-attn-name {
+  display: inline-block;
+  max-inline-size: calc(100% - 5.5em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
 /* FLOW-1097 (the owner's choice B, replacing FLOW-1085's two lines): under 360px a card with a short title draws it
    and a tag on one line, the tag 13/500 in the accent on the tint. Both are drawn from data-text, so the words are
    in the page once (the title, hidden here); the link's aria-label keeps the full title as its name. */

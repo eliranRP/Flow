@@ -137,10 +137,10 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
           const short = row.short != null && row.tag != null;
           return (
             <li key={row.id} className="ui-attn-item" data-leaving={out || undefined}>
-              <div className={cx("ui-attn-card", row.button == null && row.dismissKey != null && "ui-attn-card-x")}>
+              <div className={cx("ui-attn-card", row.button == null && row.dismissKey != null && "ui-attn-card-x", row.wrapTitle && "ui-attn-card-wrap")}>
                 <Link
                   to={row.to}
-                  className={cx("ui-attn-link ui-hit m-press", short && "ui-attn-link-short")}
+                  className={cx("ui-attn-link ui-hit m-press", short && "ui-attn-link-short", row.wrapTitle && "ui-attn-link-wrap")}
                   aria-label={short ? textOf(row.title) : undefined}
                   inert={out || undefined}
                 >
