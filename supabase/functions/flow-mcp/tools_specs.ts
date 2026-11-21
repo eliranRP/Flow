@@ -1,14 +1,14 @@
 // MCP tools: the tool descriptions and input schemas each scope lists (toolsFor).
 // Split out of tools.ts (FLOW-807). Decision 0080.
 
-import { READ_TOOL_NAMES, SYNC_STATUS_TOOL, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
+import { READ_TOOL_NAMES, SYNC_STATUS_TOOL, UNDO_KINDS, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
 import { LEDGER_READ_SPECS, LEDGER_WRITE_SPECS } from "./tools_ledger_specs.ts";
-import { THREAD_READ_SPECS, THREAD_UNDO_KINDS, THREAD_WRITE_SPECS } from "./tools_thread.ts";
+import { THREAD_READ_SPECS, THREAD_WRITE_SPECS } from "./tools_thread.ts";
 import { MEMBER_SHARE_READ_SPECS, MEMBER_SHARE_WRITE_SPECS } from "./tools_member_share.ts";
 import { PROPERTY_READ_SPECS, PROPERTY_WRITE_SPECS } from "./tools_property.ts";
-import { HANDOVER_UNDO_KINDS, HANDOVER_WRITE_SPECS } from "./tools_handover.ts";
-import { UTILITY_READ_SPECS, UTILITY_UNDO_KINDS, UTILITY_WRITE_SPECS } from "./tools_utility_refunds.ts";
-import { HELD_REVIEW_NOTE, HELD_UNDO_KINDS, HELD_WRITE_SPECS } from "./tools_held.ts";
+import { HANDOVER_WRITE_SPECS } from "./tools_handover.ts";
+import { UTILITY_READ_SPECS, UTILITY_WRITE_SPECS } from "./tools_utility_refunds.ts";
+import { HELD_REVIEW_NOTE, HELD_WRITE_SPECS } from "./tools_held.ts";
 
 function toolSpec(
   name: string,
@@ -780,7 +780,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS, ...HELD_UNDO_KINDS] },
+      kind: { type: "string", enum: [...UNDO_KINDS] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects, create_categories or reassign_recurring_charge batch.", {
