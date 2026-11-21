@@ -145,7 +145,7 @@ export function AttentionCards({ rows, storageKey, title = "דורש טיפול"
                   inert={out || undefined}
                 >
                   <span className="ui-attn-icon">{row.icon ?? <InboxIcon size={20} />}</span>
-                  <span className="ui-attn-text t-body" dir="rtl" data-clip-ok="">
+                  <span className={cx("ui-attn-text", row.wrapTitle ? "t-caption" : "t-body")} dir="rtl" data-clip-ok="">
                     {row.title}
                   </span>
                   {short ? (

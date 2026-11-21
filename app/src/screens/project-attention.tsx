@@ -1,5 +1,5 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
-import { chargeChangeViews, lateCounts, lateItemName, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
 import { BUDGET_ALERT_PERCENT, budgetPercent } from "../project-list";
 import type { BannerRow } from "../ui/banner";
 import type { UtilityRefundCount } from "../utility-refund-count";
@@ -64,6 +64,8 @@ export function projectAttentionRows({
     missingIncome: counts.income,
     missingName: lateItemName(projectLate, false),
     missingIncomeName: lateItemName(projectLate, true),
+    missingTarget: lateTarget(projectLate, false),
+    missingIncomeTarget: lateTarget(projectLate, true),
     changes: views,
     search,
   });

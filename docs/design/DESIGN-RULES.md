@@ -125,6 +125,8 @@ Rubik 400, 500 and 600. Text is light: weight 400 is for text, 500 for body-size
 
 The 12px label is `--type-label-size` (with `-line` and `-weight`; `.t-label` is not added until a screen needs a class). The role scale stays; a new size is a new role, never a raw number (the owner, 2026-11-13).
 
+A named late row on Home's דורש טיפול (FLOW-1247) sets its title in `caption`, not `body`, so "התנועה הקבועה של {name} לא הגיעה" fits one line at 393 (the owner, 2026-11-21). Count rows and other attention rows keep `body`. [design log](log/2026-11-21-flow-1247.md).
+
 Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. There are no old names: the aliases are deleted and every screen uses the role names. `.t-muted` adds the muted text colour to any role (a note is `t-caption t-muted`). Numbers use `tabular-nums` and `lining-nums`. Input text is at least 16px so iOS does not zoom.
 
 ### 2.4 Spacing

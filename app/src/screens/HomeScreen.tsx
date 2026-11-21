@@ -37,7 +37,7 @@ import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
-import { chargeChangeViews, lateCounts, lateItemName, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
 import { useUtilityRefundCountQuery } from "../utility-refund-count";
@@ -338,6 +338,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         missingIncome: late.income,
         missingName: lateItemName(missing.data ?? [], false),
         missingIncomeName: lateItemName(missing.data ?? [], true),
+        missingTarget: lateTarget(missing.data ?? [], false),
+        missingIncomeTarget: lateTarget(missing.data ?? [], true),
         changes: chargeChangeViews(changes.data ?? [], search),
         search,
       }) : []}

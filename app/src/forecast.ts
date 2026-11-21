@@ -37,11 +37,27 @@ export function missingBillsTitle(count: number, income = false): string {
  * name. Two or more, or none, return undefined: the row keeps its count.
  */
 export function lateItemName(rows: readonly MissingBill[], income: boolean): string | undefined {
-  const items = rows.filter((row) => (row.direction === "income") === income);
-  const [only] = items;
-  if (items.length !== 1 || only == null) return undefined;
+  const only = onlyLate(rows, income);
+  if (only == null) return undefined;
   const name = knownPartyName(only);
   return name === "" ? undefined : name;
+}
+
+/** FLOW-1247: the one late item's party and project, the charge page its row opens (chargeHref). */
+export type LateTarget = { partyId: string; projectId: string | null };
+
+/** FLOW-1247: the target of the one late item of that direction; undefined with two or more, none, or no party. */
+export function lateTarget(rows: readonly MissingBill[], income: boolean): LateTarget | undefined {
+  const only = onlyLate(rows, income);
+  if (only?.party_id == null) return undefined;
+  return { partyId: only.party_id, projectId: only.project_id ?? null };
+}
+
+/** The late item of that direction when there is exactly one. */
+function onlyLate(rows: readonly MissingBill[], income: boolean): MissingBill | undefined {
+  const items = rows.filter((row) => (row.direction === "income") === income);
+  const [only] = items;
+  return items.length === 1 ? only : undefined;
 }
 
 /** FLOW-415 (b-2): Home counts late bills and late income on their own rows. */

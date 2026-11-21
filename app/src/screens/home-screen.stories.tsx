@@ -129,7 +129,6 @@ function CashHomeStory({
   offlineSince = null,
   recurringTip = false,
   late = recurringTip ? 1 : 0,
-  lateNamed,
   forecast = null,
   forecastPending = false,
   example = true,
@@ -148,8 +147,6 @@ function CashHomeStory({
   offlineSince?: number | null;
   recurringTip?: boolean;
   late?: number;
-  /** FLOW-1246: one late bill and one late income, each named (the party's name); `late` is ignored. */
-  lateNamed?: { expense: string; income: string };
   forecast?: bigint | null;
   forecastPending?: boolean;
   /** The "Example data" strip on the band; the board comparisons draw the band without it (FLOW-1052). */
@@ -173,10 +170,7 @@ function CashHomeStory({
           transfers: 2,
           unpaidCount: 3,
           unpaidGross: 460_000n,
-          missingCount: lateNamed ? 1 : late,
-          missingIncome: lateNamed ? 1 : 0,
-          missingName: lateNamed?.expense,
-          missingIncomeName: lateNamed?.income,
+          missingCount: late,
           search: "",
         }) : []}
         activity={monthBack > 0 ? pastActivity ?? samplePastActivity(shiftMonthKey(currentKey, -monthBack)) : activity}
@@ -189,7 +183,7 @@ function CashHomeStory({
         sameDay={monthBack > 0 ? null : sampleCashToDay()}
         offlineSince={offlineSince}
         recurringTip={recurringTip}
-        lateRecurring={lateNamed ? 2 : late}
+        lateRecurring={late}
         forecast={forecast}
         forecastPending={forecastPending}
         skip={skip}
@@ -624,38 +618,6 @@ export const HomeLateRecurring: Story = {
     const canvas = within(canvasElement);
     await expect((await canvas.findByRole("link", { name: "קבועים, 3 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("3");
     await expect(canvas.getByRole("link", { name: "כל הקבועים" })).toHaveAttribute("href", "/recurring");
-  },
-};
-
-/** FLOW-1246: one late bill and one late income, each row names its party (the count is 2 on the band). */
-export const HomeLateNamed: Story = {
-  render: () => <CashHomeStory lateNamed={{ expense: "מים טובים", income: "שוכר לדוגמה" }} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    // Both named titles wrap, so the verb is never cut off (FLOW-1246).
-    await expect(await canvas.findByRole("link", { name: /החשבון של מים טובים לא הגיע/ })).toHaveClass("ui-attn-link-wrap");
-    await expect(canvas.getByRole("link", { name: /התנועה הקבועה של שוכר לדוגמה לא הגיעה/ })).toHaveClass("ui-attn-link-wrap");
-    await expect((await canvas.findByRole("link", { name: "קבועים, 2 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("2");
-  },
-};
-
-/** FLOW-1246: very long party names. The name ends in "…" so the title keeps to 2 lines and ends with its verb. */
-export const HomeLateNamedLong: Story = {
-  render: () => <CashHomeStory lateNamed={{ expense: "החברה הארצית לאספקת מים ושירותי ביוב לדוגמה בעירבון מוגבל", income: "שוכר לדוגמה עם שם ארוך מאוד של חברה ושל שותפים" }} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement), part = (root: Element, selector: string) => { const el = root.querySelector<HTMLElement>(selector); if (el == null) throw new Error(`no ${selector}`); return el; };
-    for (const link of [await canvas.findByRole("link", { name: /^החשבון של .+ לא הגיע$/ }), canvas.getByRole("link", { name: /^התנועה הקבועה של .+ לא הגיעה$/ })]) {
-      const item = link.closest("li");
-      if (item == null) throw new Error("a named row has no list item");
-      const card = part(item, ".ui-attn-card"), text = part(item, ".ui-attn-text"), name = part(item, ".ui-attn-name");
-      // A finite cap (so dismissing folds to 0) that the card fits; two lines at most, uncut; the name ends in "…" in its own box.
-      await expect(getComputedStyle(item).maxBlockSize).toMatch(/^\d+(\.\d+)?px$/);
-      await expect(card.offsetHeight + parseFloat(getComputedStyle(card).marginBlockEnd)).toBeLessThanOrEqual(item.clientHeight);
-      await expect(text.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(text).lineHeight) * 2 + 1);
-      await expect(text.scrollHeight).toBeLessThanOrEqual(text.clientHeight + 1);
-      await expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
-      await expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
-    }
   },
 };
 
