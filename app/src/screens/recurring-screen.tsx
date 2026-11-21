@@ -131,6 +131,7 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
       paid: line.arrived,
       minor: line.minor,
       mark: line.arrived ? "paid" : late ? "late" : "due",
+      ...(skipped ? { skipped } : {}),
       status: skipped ? `לא צפוי ב${skip?.monthLabel ?? ""}` : statusWords(row, hint.hint, late),
       ...hint,
       ...(alert == null ? {} : { alertKey: alert.alertKey, suggestion: alert.suggestion == null ? null : suggestionRow(alert.suggestion) }),

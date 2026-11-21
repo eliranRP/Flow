@@ -18,7 +18,7 @@ import { useAfterFirstPaint } from "../after-paint";
 import { useMonthForecastQuery } from "../month-forecast-query";
 import { FutureForecastRow, HomeBandActions, HomeCompactBar, HomeFigures, HomeFutureFigures, HomeMonthPill, HomeSwipeFigures, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { ActivityFilterControl, HomeActivity, HomeFutureActivity, type ActivityFilter, type ActivitySkip, type HomeActivityData, type HomeFuture } from "./home-activity";
-import { markSkipPeekSeen, skipPeekSeen, useForecastSkip } from "../forecast-skip";
+import { markSkipPeekSeen, skipPeekSeen, useForecastSkip, useLateBillsQuery } from "../forecast-skip";
 import { useHoldWrites } from "../use-is-viewer";
 import { useRecurringScheduleQuery } from "../recurring-schedule";
 import { AttentionCards } from "../ui/attention-cards";
@@ -37,7 +37,7 @@ import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useDashboardQuery, useUnpaidQuery } from "../use-books";
 import { SetupHomeSlot } from "../setup/home";
-import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
+import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
 import { useUtilityRefundCountQuery } from "../utility-refund-count";
@@ -154,9 +154,6 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const years = useCashYearsQuery();
   const dashboard = useDashboardQuery();
   const unpaid = useUnpaidQuery();
-  // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
-  const missing = useMissingBillsQuery();
-  const late = lateCounts(missing.data ?? []);
   // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
   const changes = useRecurringChangesQuery();
   // FLOW-941: suggested transfers between two Mercury connections, a count. A failed read hides the row.
@@ -200,6 +197,10 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   // FLOW-1019 (owner, 2026-11-03): the forecast row and החודש הבא read once Home has drawn its figures.
   const afterPaint = useAfterFirstPaint(showBooks);
   const monthForecast = useMonthForecastQuery(currentKey, isCurrent && afterPaint);
+  // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
+  // FLOW-1248: without the charges taken out of this month; those overrides are read after first paint, like the forecast's.
+  const missing = useLateBillsQuery(true, afterPaint);
+  const late = lateCounts(missing.data ?? []);
   // FLOW-1079: a charge in נותר לשלם swipes out of this month's forecast (the forecast's own "לא החודש"). An editor may; a viewer not.
   const holdForecast = useHoldWrites();
   const forecastSkip = useForecastSkip(currentKey, monthName(currentKey), monthForecast.data?.overrides ?? null);

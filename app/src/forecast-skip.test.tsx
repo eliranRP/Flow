@@ -1,8 +1,8 @@
-import type { ForecastOverrideRow } from "@flow/shared";
+import type { ForecastOverrideRow, MissingBill } from "@flow/shared";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-render";
-import { forecastKeyOf, scheduleForecastKey, skippedKeys, useForecastSkip } from "./forecast-skip";
+import { forecastKeyOf, lateIsSkipped, scheduleForecastKey, skippedKeys, useForecastSkip, withoutSkippedLate } from "./forecast-skip";
 import { futureForecastKey, projectRowForecastKey } from "./forecast-future-keys";
 import type { ScheduleRow } from "./recurring-schedule";
 
@@ -92,5 +92,39 @@ describe("useForecastSkip", () => {
     act(() => { fireEvent.click(screen.getByRole("button", { name: "in" })); });
     expect(screen.getByRole("button", { name: "out" })).toBeInTheDocument();
     writes.fail = true;
+  });
+});
+
+describe("a late charge taken out of this month (FLOW-1248)", () => {
+  const bill = (extra: Partial<MissingBill> = {}) => ({ direction: "income" as const, party_id: "tenant", currency: "USD", project_id: "p1", ...extra });
+  const split = new Set(["party:income:tenant:USD:p1"]);
+  const whole = new Set(["party:income:tenant:USD"]);
+
+  it("is skipped by the split key of its project, and by the party's own key", () => {
+    expect(lateIsSkipped(bill(), split, "USD")).toBe(true);
+    expect(lateIsSkipped(bill(), whole, "USD")).toBe(true);
+  });
+
+  it("is not skipped for another project of a split party, another party, or another direction", () => {
+    expect(lateIsSkipped(bill({ project_id: "p2" }), split, "USD")).toBe(false);
+    expect(lateIsSkipped(bill({ party_id: "other" }), split, "USD")).toBe(false);
+    expect(lateIsSkipped(bill({ direction: "expense" }), split, "USD")).toBe(false);
+  });
+
+  it("keys a charge with no project as :none, and reads a missing direction as an expense", () => {
+    expect(lateIsSkipped(bill({ project_id: null }), new Set(["party:income:tenant:USD:none"]), "USD")).toBe(true);
+    expect(lateIsSkipped(bill({ direction: undefined }), new Set(["party:expense:tenant:USD"]), "USD")).toBe(true);
+  });
+
+  it("stays late in another currency than the forecast's, and with no party id", () => {
+    expect(lateIsSkipped(bill({ currency: "ILS" }), new Set(["party:income:tenant:ILS"]), "USD")).toBe(false);
+    expect(lateIsSkipped(bill({ party_id: undefined }), whole, "USD")).toBe(false);
+  });
+
+  it("filters a list, and keeps all of it with no skips known", () => {
+    const rows = [bill(), bill({ party_id: "other" })] as MissingBill[];
+    expect(withoutSkippedLate(rows, split, "USD").map((row) => row.party_id)).toEqual(["other"]);
+    expect(withoutSkippedLate(rows, undefined, "USD")).toHaveLength(2);
+    expect(withoutSkippedLate(rows, new Set(), "USD")).toHaveLength(2);
   });
 });

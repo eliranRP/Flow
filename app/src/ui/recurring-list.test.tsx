@@ -20,6 +20,18 @@ function renderScreen(props: Partial<Parameters<typeof RecurringScreen>[0]> = {}
   );
 }
 
+function renderView(skip?: Parameters<typeof recurringView>[5]) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/recurring"]}>
+        <ToastProvider>
+          <RecurringList {...recurringView(RECURRING_FIXTURE, "2026-10-11", null, undefined, "", skip)} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -147,5 +159,25 @@ describe("the add row (FLOW-1014)", () => {
     );
     expect(screen.getByText("עוד Flow לומד")).toBeTruthy();
     expect(screen.getByRole("button", { name: "הוספת קבוע" }).closest(".ui-empty-action")).not.toBeNull();
+  });
+});
+
+describe("a charge taken out of this month's forecast (FLOW-1248)", () => {
+  const skip = { skipped: new Set(["party:expense:power:USD", "party:income:rent-elm:USD"]), base: "USD", monthLabel: "אוקטובר" };
+  const summary = (name: string) => screen.getByRole("region", { name }).querySelector(".ui-group-summary")?.textContent;
+
+  it("leaves the skipped row out of its group head's עוד, and keeps the row in its group", () => {
+    const { unmount } = renderView();
+    const before = { power: summary("חשמל ומים"), rent: summary("שכירות") };
+    expect(before.power).toMatch(/^עוד \$/);
+    expect(before.rent).toMatch(/^עוד \+\$/);
+    unmount();
+    renderView(skip);
+    expect(summary("חשמל ומים")).not.toBe(before.power);
+    expect(summary("שכירות")).not.toBe(before.rent);
+    expect(summary("שכירות")).not.toMatch(/עוד \+\$1,650/);
+    const group = screen.getByRole("region", { name: "חשמל ומים" });
+    expect(within(group).getByText("Brightline Power")).toBeTruthy();
+    expect(within(group).getByText(/לא צפוי באוקטובר/)).toBeTruthy();
   });
 });
