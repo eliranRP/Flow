@@ -638,6 +638,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1246"></a>[FLOW-1246](tasks/FLOW-1246.md) | A late row names its one bill or income | SMALL UI |
 | <a id="flow-1247"></a>[FLOW-1247](tasks/FLOW-1247.md) | A named late row fits one line and opens its charge | SMALL UI |
 | <a id="flow-1248"></a>[FLOW-1248](tasks/FLOW-1248.md) | A charge taken out of this month is quiet everywhere | SMALL CYCLE |
+| <a id="flow-1249"></a>[FLOW-1249](tasks/FLOW-1249.md) | Tests for the late list's skip filter on Home | SMALL TEST |
 
 ## Onboarding, Settings and connectors
 
