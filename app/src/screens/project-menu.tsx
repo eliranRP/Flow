@@ -87,12 +87,12 @@ export function ProjectMenu({
   const [removing, setRemoving] = useState(false);
   const [editing, setEditing] = useState(false);
   // FLOW-360 A: the קבוצה row in the edit sheet shows once the groups are read. FLOW-1230: only that sheet shows them,
-  // two taps after the ⋯ button, so the read (list_project_groups and the project's group) starts on the button's touch
+  // two taps after the ⋯ button, so the read (list_project_groups) starts on the button's touch
   // (FLOW-1212's prime), or at once when the menu or the edit sheet opens, not at the page's first paint, where it
   // competed with the forecast's reads for the page's last skeleton.
   // FLOW-1231: while that live read is in flight, the edit sheet holds the קבוצה row's place with a skeleton. A failed read
   // shows nothing, as the row never showed; a sample's groups (or a sample with none) never read, so nothing holds.
-  const liveGroups = useProjectGroupsRead(projectId, !sample && sampleGroups == null && (menu || primed || editing));
+  const liveGroups = useProjectGroupsRead(!sample && sampleGroups == null && (menu || primed || editing));
   const groupKnown = groupId !== undefined;
   const groupsLoading = liveGroups.isLoading || (sampleGroups == null && liveGroups.data != null && !groupKnown);
   const groups: ProjectGroups | undefined = sampleGroups ?? (liveGroups.data == null || !groupKnown

@@ -326,3 +326,36 @@ describe("the live menu's current group comes from the page's own read (FLOW-124
     expect(rpc.writes).toHaveLength(0);
   });
 });
+
+describe("the company's groups are read once for every project's menu (FLOW-1245)", () => {
+  /** One project's menu on a shared client, so a second project's ⋯ reads what the first one read. */
+  function menuOf(client: QueryClient, projectId: string) {
+    return render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={[`/projects/${projectId}`]}>
+            <ProjectMenu projectId={projectId} name={projectId} budget={null} finished={false} investmentTo="/projects/x/investment" hasInvestment={false} profitTo="/projects/x/profit" groupId={null} />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  beforeEach(() => {
+    rpc.reads.length = 0;
+    rpc.answer = () => Promise.resolve(answer({ pending_count: 0, deletable: true }));
+    rpc.groups = () => Promise.resolve({ data: [{ id: "g1", name: "מתחם הגפן" }], error: null });
+  });
+
+  it("a second project's ⋯ within 60 s sends no list_project_groups request", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 }, mutations: { retry: false } } });
+    const first = menuOf(client, "p1");
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
+    first.unmount();
+    menuOf(client, "p2");
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    expect(rpc.reads.filter((read) => read === "list_project_groups")).toHaveLength(1);
+  });
+});

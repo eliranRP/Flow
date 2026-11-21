@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import type { ProjectDetail } from "@flow/shared";
+import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
@@ -19,16 +20,17 @@ export type ProjectGroups = { groups: readonly ProjectGroupChoice[]; currentId: 
 export const NO_GROUP = "בלי קבוצה";
 
 /**
- * The company's groups, one request (FLOW-1243: the project's own group comes from the page's get_project).
- * Under the "project" key, so a move's refetch reaches it; off in a preview and for a sample. The whole
- * query, so the edit sheet can hold the קבוצה row's place while it is in flight (FLOW-1231).
+ * The company's groups, one request for every project's menu (FLOW-1245: list_project_groups does not depend on the
+ * project, so the key has no project id; FLOW-1243: the project's own group comes from the page's get_project).
+ * Under the "project" key, so a move's or a group write's refetch reaches it; off in a preview and for a sample. The
+ * whole query, so the edit sheet can hold the קבוצה row's place while it is in flight (FLOW-1231).
  */
-export function useProjectGroupsRead(projectId: string, active: boolean) {
+export function useProjectGroupsRead(active: boolean) {
   const preview = useHomePreview();
   return useQuery({
-    queryKey: ["project", "groups", projectId],
-    enabled: active && preview === "off" && projectId !== "",
-    // FLOW-804: one read a minute at most; a move refetches it under the "project" key.
+    queryKey: ["project", "groups"],
+    enabled: active && preview === "off",
+    // FLOW-804: one read a minute at most; a group write refetches it under the "project" key.
     staleTime: 60_000,
     queryFn: async (): Promise<readonly ProjectGroupChoice[]> => {
       const supabase = getSupabase();
@@ -78,6 +80,21 @@ function groupFailureText(error: Error): string {
   return "לא הצלחנו לשנות את הקבוצה.";
 }
 
+/**
+ * The project's cached get_project answers (one per period, under "project", the preview and the project id) with
+ * their group set to `groupId` (FLOW-1244). The page's ⋯ menu reads its current group from them, so the picker moves at the tap.
+ * get_project's key has five parts (use-books.ts projectQueryOptions); the project's returns and return-lines keys share the prefix and are left out.
+ */
+function projectGroupUpdates(client: QueryClient, preview: string, projectId: string, groupId: string | null) {
+  return client.getQueriesData<ProjectDetail>({
+    queryKey: ["project", preview, projectId],
+    predicate: (query) => query.queryKey.length === 5,
+  }).map(([key]) => ({
+    key,
+    update: (old: unknown) => (old == null ? old : { ...(old as ProjectDetail), group_id: groupId }),
+  }));
+}
+
 type Move = {
   /** The group to put the project in; null takes it out (or, with `create`, the new group). */
   to: string | null;
@@ -117,6 +134,8 @@ export function ProjectGroupSheets({
   sample?: boolean;
 }) {
   const toast = useToast();
+  const client = useQueryClient();
+  const preview = useHomePreview();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
@@ -128,6 +147,9 @@ export function ProjectGroupSheets({
   const move = useWrite<Move>({
     failure: (failed) => groupFailureText(failed),
     keys: ["dashboard", "project"],
+    // FLOW-1244: the project's cached answers take the new group at the tap. The sheet closes when the write succeeds,
+    // and the refresh runs behind it. A new group's id is known only after its upsert, so the create path sets it after the move.
+    optimistic: (change) => (sample || change.create != null ? [] : projectGroupUpdates(client, preview, projectId, change.to)),
     onSuccess: (done) => {
       const to = done.create != null ? created.current?.id ?? null : done.to;
       setSavingId(null);
@@ -163,6 +185,12 @@ export function ProjectGroupSheets({
         created.current = { id: to, name: change.create.trim() };
       }
       assertNoError(await supabase.rpc("set_project_group", { p_project_id: projectId, p_group_id: to as string }));
+      if (change.create != null) {
+        // A get_project read in flight from before the move would land over the new group: cancel it first.
+        const updates = projectGroupUpdates(client, preview, projectId, to);
+        await Promise.all(updates.map(({ key }) => client.cancelQueries({ queryKey: key, exact: true })));
+        for (const { key, update } of updates) client.setQueryData(key, update);
+      }
     },
   });
 
