@@ -1,5 +1,6 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
-import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
+import { useLateBillsQuery } from "../forecast-skip";
+import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useProjectRecurringChangesQuery } from "../forecast";
 import { BUDGET_ALERT_PERCENT, budgetPercent } from "../project-list";
 import type { BannerRow } from "../ui/banner";
 import type { UtilityRefundCount } from "../utility-refund-count";
@@ -97,7 +98,7 @@ export function projectAttentionRows({
 
 /** The reads behind the rows: Home's, so a hide or a new bill refreshes both. Off for a sample or another section. */
 export function useProjectRecurring(projectId: string, active: boolean, sample?: ProjectRecurringSample): ProjectRecurringSample {
-  const missing = useMissingBillsQuery(active && sample == null);
+  const missing = useLateBillsQuery(active && sample == null);
   // FLOW-441: the project's own changes, not Home's company-wide ones filtered by project.
   const changes = useProjectRecurringChangesQuery(projectId, active && sample == null);
   if (sample) return sample;

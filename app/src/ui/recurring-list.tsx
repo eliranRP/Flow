@@ -49,6 +49,8 @@ export type RecurringListRow = {
   alertKey?: string | null;
   /** FLOW-447b: a late bill that may be another party under another name. */
   suggestion?: RecurringListSuggestion | null;
+  /** FLOW-1248: taken out of this month's forecast ("לא צפוי ב…"): not part of what is still to come. */
+  skipped?: boolean;
   /** FLOW-447c: where the row opens, the party's charge page. */
   href: string;
 };
@@ -132,13 +134,13 @@ function lateCard(row: RecurringListRow, money: (minor: bigint) => string): Bann
   };
 }
 
-/** A group head's summary: "עוד $607 · שולם $76" (income: "עוד +$2,650 · התקבל $3,200"). */
+/** A group head's summary: "עוד $607 · שולם $76" (income: "עוד +$2,650 · התקבל $3,200"). A skipped row is not still to come (FLOW-1248). */
 function groupSummary(group: RecurringListGroup, money: (minor: bigint) => string): ReactNode {
   let left = 0n;
   let done = 0n;
   for (const row of group.rows) {
     if (row.paid) done += row.minor;
-    else left += row.minor;
+    else if (row.skipped !== true) left += row.minor;
   }
   const plus = group.income ? "+" : "";
   const parts: ReactNode[] = [];
@@ -160,7 +162,7 @@ const FILTERS: { value: RecurringFilter; label: string }[] = [
 /** "5 מתוך 11": the charges of a side still to come, out of all of them. */
 function leftOf(groups: readonly RecurringListGroup[], income: boolean): string {
   const rows = groups.filter((group) => group.income === income).flatMap((group) => group.rows);
-  return `${String(rows.filter((row) => !row.paid).length)} מתוך ${String(rows.length)}`;
+  return `${String(rows.filter((row) => !row.paid && row.skipped !== true).length)} מתוך ${String(rows.length)}`;
 }
 
 /**

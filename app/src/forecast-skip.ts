@@ -1,10 +1,13 @@
-import type { ForecastOverrideRow } from "@flow/shared";
+import type { ForecastOverrideRow, MissingBill } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { priorPatch, useSetForecastItem } from "./forecast-month";
+import { useCompanyCurrency } from "./company-currency";
+import { useMissingBillsQuery } from "./forecast";
 import { overridesQuery } from "./forecast-overrides-query";
 import { useHomePreview } from "./preview";
 import type { ScheduleRow } from "./recurring-schedule";
+import { israelToday } from "./ui/date-math";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
 
@@ -28,6 +31,38 @@ export function scheduleForecastKey(schedule: readonly ScheduleRow[], item: Sche
   if (base != null && item.currency !== base) return undefined;
   const split = schedule.filter((other) => other.direction === item.direction && other.party_id === item.party_id && other.currency === item.currency).length > 1;
   return forecastKeyOf(item, split);
+}
+
+/**
+ * FLOW-1248: whether a late charge (`missing_bills`) is taken out of this month's forecast, so it is quiet: not
+ * counted, named or linked as late. A charge in another currency than the forecast's is never in it, so it cannot be
+ * skipped. The row does not say whether its party is split by project (decision 0185: more than one charge in the
+ * same currency), so it is skipped when either key the forecast could give it is: `party:<direction>:<party>:<currency>`
+ * or that with `:<project|none>`. A row with no party id has no key and stays late.
+ */
+export function lateIsSkipped(bill: Pick<MissingBill, "direction" | "party_id" | "currency" | "project_id">, skipped: ReadonlySet<string>, base: string): boolean {
+  if (bill.party_id == null || bill.currency !== base) return false;
+  const row = { direction: bill.direction ?? "expense", party_id: bill.party_id, currency: bill.currency, project_id: bill.project_id ?? null };
+  return skipped.has(forecastKeyOf(row, false)) || skipped.has(forecastKeyOf(row, true));
+}
+
+/** The late charges that are not taken out of this month's forecast. With no skips known, all of them. */
+export function withoutSkippedLate(bills: readonly MissingBill[], skipped: ReadonlySet<string> | undefined, base: string): MissingBill[] {
+  return skipped == null || skipped.size === 0 ? [...bills] : bills.filter((bill) => !lateIsSkipped(bill, skipped, base));
+}
+
+/**
+ * FLOW-1248 ("skipped means quiet", the owner, 2026-11-21): `missing_bills` without the charges taken out of this
+ * month's forecast (Israel's month, decision 0182). Home and the project page read late charges from it. While the
+ * overrides load or fail the list is whole: an error never hides an alert.
+ */
+export function useLateBillsQuery(active = true, overridesActive = active) {
+  const bills = useMissingBillsQuery(active);
+  const overrides = useForecastOverrides(israelToday().slice(0, 7), active && overridesActive);
+  const base = useCompanyCurrency();
+  const skipped = overrides.data == null ? undefined : skippedKeys(overrides.data);
+  const data = bills.data == null ? undefined : withoutSkippedLate(bills.data, skipped, base);
+  return { ...bills, data };
 }
 
 /** The keys of the month's items taken out of the forecast. */
