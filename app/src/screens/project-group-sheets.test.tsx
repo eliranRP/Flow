@@ -103,14 +103,14 @@ describe("project group sheets (FLOW-360)", () => {
   });
 
   it("cleans a name the way the server stores it, so the local duplicate check matches", () => {
-    expect(cleanGroupName("  בניין לדוגמה ")).toBe("בניין לדוגמה");
+    expect(cleanGroupName("  בניין\u00A0לדוגמה ")).toBe("בניין לדוגמה");
     expect(cleanGroupName("בניין  א")).toBe("בניין  א");
   });
 
   it("puts an existing name on the field instead of making a group", async () => {
     rpc.mockClear();
     renderSheets(null, "new");
-    fireEvent.change(screen.getByLabelText("שם הקבוצה"), { target: { value: " בניין לדוגמה" } });
+    fireEvent.change(screen.getByLabelText("שם הקבוצה"), { target: { value: " בניין\u00A0לדוגמה" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await screen.findByText("הפרויקט עבר לקבוצה בניין לדוגמה");
     expect(rpc).not.toHaveBeenCalledWith("upsert_project_group", expect.anything());
@@ -160,12 +160,17 @@ describe("a group move closes its sheet after the write, not after the refetch (
 
   it("a failed write puts the old group back in the cache and keeps the sheet open", async () => {
     rpc.mockClear();
-    rpc.mockImplementationOnce(() => Promise.resolve({ data: null, error: { message: "boom" } as never }));
+    // The write is held open, so the test sees the new group while it is pending, then the refusal.
+    let refuse: (answer: unknown) => void = () => undefined;
+    rpc.mockImplementationOnce((() => new Promise((resolve) => { refuse = resolve; })) as never);
     const client = new QueryClient();
     client.setQueryData(PROJECT_KEY, projectAnswer("g1"));
     const onViewSpy = vi.fn();
     renderSheets("g1", "pick", { client, onViewSpy });
     fireEvent.click(screen.getByRole("radio", { name: "מתחם לדוגמה" }));
+    await waitFor(() => { expect(client.getQueryData<{ group_id: string }>(PROJECT_KEY)?.group_id).toBe("g2"); });
+    expect(onViewSpy).not.toHaveBeenCalledWith(null);
+    refuse({ data: null, error: { message: "boom" } });
     await screen.findByText("לא הצלחנו לשנות את הקבוצה.");
     expect(client.getQueryData<{ group_id: string }>(PROJECT_KEY)?.group_id).toBe("g1");
     expect(onViewSpy).not.toHaveBeenCalledWith(null);

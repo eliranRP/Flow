@@ -83,9 +83,13 @@ function groupFailureText(error: Error): string {
 /**
  * The project's cached get_project answers (one per period, under "project", the preview and the project id) with
  * their group set to `groupId` (FLOW-1244). The page's ⋯ menu reads its current group from them, so the picker moves at the tap.
+ * get_project's key has five parts (use-books.ts projectQueryOptions); the project's returns and return-lines keys share the prefix and are left out.
  */
 function projectGroupUpdates(client: QueryClient, preview: string, projectId: string, groupId: string | null) {
-  return client.getQueriesData<ProjectDetail>({ queryKey: ["project", preview, projectId] }).map(([key]) => ({
+  return client.getQueriesData<ProjectDetail>({
+    queryKey: ["project", preview, projectId],
+    predicate: (query) => query.queryKey.length === 5,
+  }).map(([key]) => ({
     key,
     update: (old: unknown) => (old == null ? old : { ...(old as ProjectDetail), group_id: groupId }),
   }));
@@ -182,7 +186,10 @@ export function ProjectGroupSheets({
       }
       assertNoError(await supabase.rpc("set_project_group", { p_project_id: projectId, p_group_id: to as string }));
       if (change.create != null) {
-        for (const { key, update } of projectGroupUpdates(client, preview, projectId, to)) client.setQueryData(key, update);
+        // A get_project read in flight from before the move would land over the new group: cancel it first.
+        const updates = projectGroupUpdates(client, preview, projectId, to);
+        await Promise.all(updates.map(({ key }) => client.cancelQueries({ queryKey: key, exact: true })));
+        for (const { key, update } of updates) client.setQueryData(key, update);
       }
     },
   });
