@@ -4,6 +4,7 @@
 -- balance-sheet balances follow, and the entry stays out of every cash view. Refused: a stale version,
 -- a line that is not a journal entry, the books-closed date, a viewer and another company's entry.
 -- Fixed dates. Invented data only.
+-- Covers private.journal_entry_editable, so a migration that patches it runs this file (scripts/pgtap-specs.mjs).
 
 begin;
 

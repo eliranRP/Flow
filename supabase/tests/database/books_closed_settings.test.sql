@@ -6,6 +6,7 @@
 -- never affects company B. Also: a rename keeps the flag in a closed period, the refusal reaches the
 -- MCP envelope, and a category merge that reaches a closed line is refused by the line lock.
 -- Invented names and figures, @example.com only. Dates follow current_date.
+-- Covers private.books_closed_setting_guard, so a migration that patches it runs this file (scripts/pgtap-specs.mjs).
 
 begin;
 

@@ -8,6 +8,7 @@
 -- closed_line_holds.test.sql covers the rest). The undo of the closed date
 -- works, and with no date nothing is refused.
 -- Invented names and figures, @example.com only. Dates follow current_date.
+-- Covers private.books_closed_guard and private.books_closed_check, so a migration that patches them runs this file (scripts/pgtap-specs.mjs).
 
 begin;
 
