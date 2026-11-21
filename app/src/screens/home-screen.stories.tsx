@@ -636,8 +636,6 @@ export const HomeLateNamed: Story = {
     await expect(await canvas.findByRole("link", { name: /החשבון של מים טובים לא הגיע/ })).toHaveClass("ui-attn-link-wrap");
     await expect(canvas.getByRole("link", { name: /התנועה הקבועה של שוכר לדוגמה לא הגיעה/ })).toHaveClass("ui-attn-link-wrap");
     await expect((await canvas.findByRole("link", { name: "קבועים, 2 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("2");
-    // A named row's item has a finite cap, so its fold animates (FLOW-1246).
-    await expect(getComputedStyle(canvas.getByRole("link", { name: /החשבון של מים טובים/ }).closest("li") as HTMLElement).maxBlockSize).toMatch(/px$/);
   },
 };
 
@@ -645,28 +643,18 @@ export const HomeLateNamed: Story = {
 export const HomeLateNamedLong: Story = {
   render: () => <CashHomeStory lateNamed={{ expense: "החברה הארצית לאספקת מים ושירותי ביוב לדוגמה בעירבון מוגבל", income: "שוכר לדוגמה עם שם ארוך מאוד של חברה ושל שותפים" }} />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const bill = await canvas.findByRole("link", { name: /^החשבון של .+ לא הגיע$/ });
-    const income = canvas.getByRole("link", { name: /^התנועה הקבועה של .+ לא הגיעה$/ });
-    for (const link of [bill, income]) {
+    const canvas = within(canvasElement), part = (root: Element, selector: string) => { const el = root.querySelector<HTMLElement>(selector); if (el == null) throw new Error(`no ${selector}`); return el; };
+    for (const link of [await canvas.findByRole("link", { name: /^החשבון של .+ לא הגיע$/ }), canvas.getByRole("link", { name: /^התנועה הקבועה של .+ לא הגיעה$/ })]) {
       const item = link.closest("li");
       if (item == null) throw new Error("a named row has no list item");
-      // The item's cap is finite, so dismissing it folds from a height to 0 (a cap of none cannot animate).
+      const [card, text, name] = [".ui-attn-card", ".ui-attn-text", ".ui-attn-name"].map((selector) => part(item, selector));
+      // A finite cap (so dismissing folds to 0) that the card fits; two lines at most, uncut; the name ends in "…" in its own box.
       await expect(getComputedStyle(item).maxBlockSize).toMatch(/^\d+(\.\d+)?px$/);
-      // Two lines at most: the card fits inside the item's cap and the item does not clip it.
-      const card = item.querySelector<HTMLElement>(".ui-attn-card");
-      if (card == null) throw new Error("a named row has no card");
       await expect(card.offsetHeight + parseFloat(getComputedStyle(card).marginBlockEnd)).toBeLessThanOrEqual(item.clientHeight);
-      const text = link.querySelector<HTMLElement>(".ui-attn-text");
-      if (text == null) throw new Error("a named row has no text");
-      const line = parseFloat(getComputedStyle(text).lineHeight);
-      await expect(text.getBoundingClientRect().height).toBeLessThanOrEqual(line * 2 + 1);
-      // The long name is cut with an ellipsis in its own box, and the verb after it is inside the text, uncut.
-      const name = link.querySelector<HTMLElement>(".ui-attn-name");
-      if (name == null) throw new Error("a named row has no name box");
+      await expect(text.getBoundingClientRect().height).toBeLessThanOrEqual(parseFloat(getComputedStyle(text).lineHeight) * 2 + 1);
+      await expect(text.scrollHeight).toBeLessThanOrEqual(text.clientHeight + 1);
       await expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
       await expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
-      await expect(text.scrollHeight).toBeLessThanOrEqual(text.clientHeight + 1);
     }
   },
 };
