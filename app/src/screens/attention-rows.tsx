@@ -1,5 +1,6 @@
 import { formatAmountText } from "@flow/shared";
-import { missingBillsTitle, type ChargeChangeView } from "../forecast";
+import { missingBillsTitle, type ChargeChangeView, type LateTarget } from "../forecast";
+import { chargeHref } from "../recurring-charge";
 import { countTag } from "../ui/attention-cards";
 import type { BannerRow } from "../ui/banner";
 import type { UtilityRefundCount } from "../utility-refund-count";
@@ -32,6 +33,8 @@ export function attentionRows({
   missingIncome = 0,
   missingName,
   missingIncomeName,
+  missingTarget,
+  missingIncomeTarget,
   missingTo = "/missing-bills",
   changes = [],
   search,
@@ -54,6 +57,10 @@ export function attentionRows({
   missingName?: string;
   /** FLOW-1246: the party's name of the one late income (lateItemName); used only when missingIncome is 1. */
   missingIncomeName?: string;
+  /** FLOW-1247: the one late bill's party and project; its named row opens that charge's page. */
+  missingTarget?: LateTarget;
+  /** FLOW-1247: the one late income's party and project. */
+  missingIncomeTarget?: LateTarget;
   /** The קבועים screen; each row opens it at its section. */
   missingTo?: string;
   changes?: readonly ChargeChangeView[];
@@ -121,6 +128,9 @@ export function attentionRows({
   // (b-2): late income has its own row; both open the קבועים screen at לא הגיעו. FLOW-1246: one late
   // item names its party ("החשבון של X לא הגיע"); two or more keep the count.
   const named = (n: number, name: string | undefined): name is string => n === 1 && name != null;
+  // FLOW-1247: a named row opens its own charge's page; two or more, or no party, keep the list at its late section.
+  const lateTo = (n: number, name: string | undefined, target: LateTarget | undefined, income: boolean) =>
+    named(n, name) && target != null ? chargeHref(income ? "income" : "expense", target.partyId, search, target.projectId) : `${missingTo}${search}#late`;
   const count = (n: number, income: boolean, name: string | undefined) => {
     if (named(n, name)) {
       return income ? <>התנועה הקבועה של <bdi className="ui-attn-name">{name}</bdi> לא הגיעה</> : <>החשבון של <bdi className="ui-attn-name">{name}</bdi> לא הגיע</>;
@@ -128,10 +138,10 @@ export function attentionRows({
     return n === 1 ? missingBillsTitle(1, income) : <><bdi dir="ltr">{String(n)}</bdi> {income ? "תנועות קבועות לא הגיעו" : "חשבונות לא הגיעו"}</>;
   };
   if (missingCount > 0) {
-    rows.push({ id: "missing", dismissKey: `missing:${String(missingCount)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false, missingName), wrapTitle: named(missingCount, missingName), short: "לא הגיעו", tag: countTag(missingCount, "חשבון אחד", "חשבונות") });
+    rows.push({ id: "missing", dismissKey: `missing:${String(missingCount)}`, to: lateTo(missingCount, missingName, missingTarget, false), icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false, missingName), wrapTitle: named(missingCount, missingName), short: "לא הגיעו", tag: countTag(missingCount, "חשבון אחד", "חשבונות") });
   }
   if (missingIncome > 0) {
-    rows.push({ id: "missing-income", dismissKey: `missing-income:${String(missingIncome)}`, to: `${missingTo}${search}#late`, icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true, missingIncomeName), wrapTitle: named(missingIncome, missingIncomeName), short: "לא הגיעו", tag: countTag(missingIncome, "הכנסה אחת", "הכנסות") });
+    rows.push({ id: "missing-income", dismissKey: `missing-income:${String(missingIncome)}`, to: lateTo(missingIncome, missingIncomeName, missingIncomeTarget, true), icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true, missingIncomeName), wrapTitle: named(missingIncome, missingIncomeName), short: "לא הגיעו", tag: countTag(missingIncome, "הכנסה אחת", "הכנסות") });
   }
   // FLOW-415: one changed charge opens its payment. FLOW-1021: two or more share a row that opens
   // חיובים שהשתנו, the list of just those charges, each with its amount and its usual one.

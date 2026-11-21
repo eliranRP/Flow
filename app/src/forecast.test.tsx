@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { chargeChangeViews, lateItemName } from "./forecast";
+import { chargeChangeViews, lateItemName, lateTarget } from "./forecast";
 import { monthForecastBoardSample, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
 import { nextMonth } from "./forecast-month";
@@ -36,7 +36,7 @@ describe("a late row names its one item (FLOW-1246)", () => {
     expect(named[0]?.short).toBe("לא הגיעו");
     expect(named[0]?.tag).toBe("חשבון אחד");
     expect(named[0]?.dismissKey).toBe("missing:1");
-    // A named title wraps to a second line rather than cutting its verb.
+    // A named title is one line at 393 for a typical name; a long one may take a second line, never cut its verb.
     expect(named[0]?.wrapTitle).toBe(true);
     // The name sits in its own ellipsizing box, so a long one is cut with "…" and the verb after it still shows.
     expect(render(<MemoryRouter><span>{named[0]?.title}</span></MemoryRouter>).container.querySelector("bdi.ui-attn-name")?.textContent).toBe("מים טובים");
@@ -50,6 +50,34 @@ describe("a late row names its one item (FLOW-1246)", () => {
     // One late item with no name keeps today's wording.
     const unnamed = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 1, search: "" });
     expect(titleText(unnamed[0]?.title)).toBe("חשבון אחד לא הגיע");
+  });
+});
+
+describe("a named late row opens its own charge (FLOW-1247)", () => {
+  it("links one named bill or income to its charge page, with its project when it has one", () => {
+    const water = { partyId: "s-water", projectId: null };
+    const rent = { partyId: "c-rent", projectId: "p-flat" };
+    const bill = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 1, missingName: "מים טובים", missingTarget: water, search: "?preview=1" });
+    expect(bill[0]?.to).toBe("/recurring/expense/s-water?preview=1");
+    const income = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingIncome: 1, missingIncomeName: "שוכר לדוגמה", missingIncomeTarget: rent, search: "" });
+    expect(income[0]?.to).toBe("/recurring/income/c-rent?project=p-flat");
+    // The dismissal key is the same as before the link changed.
+    expect(income[0]?.dismissKey).toBe("missing-income:1");
+  });
+
+  it("keeps the late section's list for two or more, or a named row with no party", () => {
+    const two = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, missingName: "מים טובים", missingTarget: { partyId: "s-water", projectId: null }, search: "" });
+    expect(two[0]?.to).toBe("/missing-bills#late");
+    const noParty = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 1, missingName: "מים טובים", search: "?project=p-flat" });
+    expect(noParty[0]?.to).toBe("/missing-bills?project=p-flat#late");
+  });
+
+  it("finds the one late item's target only when exactly one of its direction is late", () => {
+    if (WATER == null || POWER == null) throw new Error("sample bills missing");
+    expect(lateTarget([WATER], false)).toEqual({ partyId: "s-water", projectId: "p2" });
+    expect(lateTarget([WATER, RENT], true)).toEqual({ partyId: "c-rent", projectId: RENT.project_id ?? null });
+    expect(lateTarget([WATER, POWER], false)).toBeUndefined();
+    expect(lateTarget([{ ...WATER, party_id: undefined }], false)).toBeUndefined();
   });
 });
 
