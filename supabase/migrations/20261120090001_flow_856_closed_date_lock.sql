@@ -16,14 +16,21 @@
 -- 4. public.jev_prefill and public.jev_prefill_loan (Jev, as the service role).
 -- 5. private.review_held_change_guard (a person's change to a held, closed line's review row: a
 --    review row, which the line guard does not cover).
+-- 6. private.journal_entry_editable (a journal entry's edit and its undo): the entry's split parts
+--    are public.legs rows, which the line guard does not cover, and a split-only edit changes no
+--    column the line's guard fires on, so this read is the only check.
 -- The early return when no person writes (auth.uid() is null) stays first in the four guards, so a
 -- sync takes no lock there. Jev, as the service role, takes the share lock: it acts on the date.
--- Not locked, on purpose: the other readers on a person's path (private.follow_invoice,
--- private.fill_suggested_category, private.journal_entry_editable, private.prepaid_apply) read the
--- date for a filing choice or an early message, and every line, part or overhead row a person's
--- transaction writes then passes private.books_closed_guard, which reads it FOR SHARE. If a close
--- commits between the two reads, the guard sees the new date and refuses the write. The first two
--- also run for the sync, where a lock would add a deadlock with no person to retry it.
+-- Not locked, on purpose:
+-- - private.follow_invoice and private.fill_suggested_category read the date for a filing choice.
+--   The line they then write (a receipt's filing, a line's category) passes
+--   private.books_closed_guard for a person, which reads the date FOR SHARE; if a close commits
+--   between the two reads, the guard sees the new date and refuses the write. Both also run for the
+--   sync, where a lock would add a deadlock with no person to retry it.
+-- - private.prepaid_apply: both its callers (the prepaid undo and the MCP delete) lock the company
+--   row in an earlier statement, so its read already sees any close committed before that lock.
+-- The line guard covers a line, an allocation and an overhead row; a line's parts (public.legs)
+-- only through books_closed_check or the line's own update when a column its guard fires on changes.
 --
 -- Lock order. A writer holds its line (or category) row and then share-locks the company row. A close
 -- takes the company row FOR UPDATE and after that only reads (prepaid_rows, review_queue and
@@ -112,6 +119,12 @@ select pg_temp.patch('private.review_held_change_guard()',
   array[$n$  -- FLOW-856: held against a books-closed change until this write commits.
   select c.books_closed_through into closed from public.companies c where c.id = old.company_id for share;$n$]);
 
+-- 6. A journal entry's edit.
+select pg_temp.patch('private.journal_entry_editable(uuid,uuid,date)',
+  array[$a$  select c.books_closed_through into closed from public.companies c where c.id = p_company;$a$],
+  array[$n$  -- FLOW-856: held against a books-closed change until this write commits.
+  select c.books_closed_through into closed from public.companies c where c.id = p_company for share;$n$]);
+
 -- Privileges, restated as they are.
 revoke all on function private.books_closed_guard() from public, anon, authenticated;
 revoke all on function private.books_closed_check(uuid, uuid) from public, anon, authenticated;
@@ -121,6 +134,7 @@ grant execute on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numer
 revoke all on function public.jev_prefill_loan(uuid, uuid, uuid, jsonb, text, numeric) from public, anon, authenticated;
 grant execute on function public.jev_prefill_loan(uuid, uuid, uuid, jsonb, text, numeric) to service_role;
 revoke all on function private.review_held_change_guard() from public, anon, authenticated, service_role;
+revoke all on function private.journal_entry_editable(uuid, uuid, date) from public, anon, authenticated, service_role;
 
 -- The helpers are session-wide: a later migration in the same session can make its own.
 drop function pg_temp.patch(text, text[], text[]);

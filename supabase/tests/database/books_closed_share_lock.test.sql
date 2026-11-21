@@ -4,7 +4,9 @@
 -- write in flight, and the write waits for the close and then reads the new date. Two sessions cannot
 -- race in pgTAP, so the structure is asserted from each function's definition: private.books_closed_guard,
 -- private.books_closed_check, private.books_closed_setting_guard, public.jev_prefill and
--- public.jev_prefill_loan and private.review_held_change_guard read the date with FOR SHARE, and no unlocked read of it is left. Then the
+-- public.jev_prefill_loan, private.review_held_change_guard and private.journal_entry_editable read
+-- the date with FOR SHARE, and none of these seven reads it unlocked (the other readers stay plain by
+-- design: the migration's header says why). Then the
 -- behaviour in one session: a person's write to an open line still goes through, one to a closed line
 -- is still refused with `the books are closed through YYYY-MM-DD`, a line's parts likewise, the category
 -- setting guard still refuses a closed change, a write with no user still passes, and Jev still skips a
@@ -13,7 +15,7 @@
 
 begin;
 
-select plan(27);
+select plan(29);
 
 do $users$
 begin
@@ -125,7 +127,7 @@ returns text language sql set search_path = '' as $$ select pg_catalog.pg_get_fu
 grant execute on all functions in schema pg_temp to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------------------------
--- The structure: each closed-date read holds the company row (FOR SHARE), and no unlocked read of
+-- The structure: in each function below, the closed-date read holds the company row (FOR SHARE), and no unlocked read of
 -- it is left.
 -- ---------------------------------------------------------------------------------------------
 create temp table fns (fn text primary key);
@@ -135,7 +137,8 @@ insert into fns values
   ('private.books_closed_setting_guard()'),
   ('public.jev_prefill(uuid,uuid,uuid,uuid,text,numeric)'),
   ('public.jev_prefill_loan(uuid,uuid,uuid,jsonb,text,numeric)'),
-  ('private.review_held_change_guard()');
+  ('private.review_held_change_guard()'),
+  ('private.journal_entry_editable(uuid,uuid,date)');
 
 select ok(pg_temp.def(fn) ~* 'books_closed_through[^;]*from public\.companies c\s+where c\.id = [a-z_.]+\s+for share',
   fn || ' reads the closed date FOR SHARE')
