@@ -15,10 +15,14 @@ export function abs(minor: bigint): bigint {
   return minor < 0n ? -minor : minor;
 }
 
-/** The party's name: a customer's on income (decision 0175), else the supplier's. */
+/** The party's name, or "" when the row has none: a customer's on income (decision 0175), else the supplier's. */
+function knownPartyName(row: { party_name?: string | null; supplier_name: string }): string {
+  return row.party_name != null && row.party_name !== "" ? row.party_name : row.supplier_name;
+}
+
+/** The party's name for display: ללא שם when the row has none. */
 export function partyName(row: { party_name?: string | null; supplier_name: string }): string {
-  // An empty party name falls back to the supplier's, then to ללא שם.
-  const name = row.party_name != null && row.party_name !== "" ? row.party_name : row.supplier_name;
+  const name = knownPartyName(row);
   return name === "" ? "ללא שם" : name;
 }
 
@@ -26,6 +30,18 @@ export function partyName(row: { party_name?: string | null; supplier_name: stri
 export function missingBillsTitle(count: number, income = false): string {
   if (income) return count === 1 ? "תנועה קבועה אחת לא הגיעה" : `${String(count)} תנועות קבועות לא הגיעו`;
   return count === 1 ? "חשבון אחד לא הגיע" : `${String(count)} חשבונות לא הגיעו`;
+}
+
+/**
+ * FLOW-1246: the party's name when a list holds exactly one late item of that direction and it has a
+ * name. Two or more, or none, return undefined: the row keeps its count.
+ */
+export function lateItemName(rows: readonly MissingBill[], income: boolean): string | undefined {
+  const items = rows.filter((row) => (row.direction === "income") === income);
+  const [only] = items;
+  if (items.length !== 1 || only == null) return undefined;
+  const name = knownPartyName(only);
+  return name === "" ? undefined : name;
 }
 
 /** FLOW-415 (b-2): Home counts late bills and late income on their own rows. */
