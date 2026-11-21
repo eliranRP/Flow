@@ -632,8 +632,9 @@ export const HomeLateNamed: Story = {
   render: () => <CashHomeStory lateNamed={{ expense: "מים טובים", income: "שוכר לדוגמה" }} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("link", { name: /החשבון של מים טובים לא הגיע/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /התנועה הקבועה של שוכר לדוגמה לא הגיעה/ })).toBeInTheDocument();
+    // Both named titles wrap, so the verb is never cut off (FLOW-1246).
+    await expect(await canvas.findByRole("link", { name: /החשבון של מים טובים לא הגיע/ })).toHaveClass("ui-attn-link-wrap");
+    await expect(canvas.getByRole("link", { name: /התנועה הקבועה של שוכר לדוגמה לא הגיעה/ })).toHaveClass("ui-attn-link-wrap");
     await expect((await canvas.findByRole("link", { name: "קבועים, 2 לא הגיעו" })).querySelector(".ui-band-count")?.textContent).toBe("2");
   },
 };

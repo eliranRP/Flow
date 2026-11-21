@@ -113,6 +113,24 @@
   white-space: nowrap;
 }
 
+/* FLOW-1246: a named late row's title wraps (its verb must show), so the text takes more lines, not an ellipsis,
+   and the card grows to hold them. */
+.ui-attn-item:not([data-leaving]):has(> .ui-attn-card-wrap) {
+  max-block-size: none;
+}
+
+.ui-attn-card-wrap {
+  block-size: auto;
+  min-block-size: calc(var(--touch-min) + var(--space-3));
+  padding-block: var(--space-2);
+}
+
+.ui-attn-link-wrap .ui-attn-text {
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 /* FLOW-1097 (the owner's choice B, replacing FLOW-1085's two lines): under 360px a card with a short title draws it
    and a tag on one line, the tag 13/500 in the accent on the tint. Both are drawn from data-text, so the words are
    in the page once (the title, hidden here); the link's aria-label keeps the full title as its name. */

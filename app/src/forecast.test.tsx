@@ -36,12 +36,15 @@ describe("a late row names its one item (FLOW-1246)", () => {
     expect(named[0]?.short).toBe("לא הגיעו");
     expect(named[0]?.tag).toBe("חשבון אחד");
     expect(named[0]?.dismissKey).toBe("missing:1");
+    // A named title wraps to a second line rather than cutting its verb.
+    expect(named[0]?.wrapTitle).toBe(true);
     const income = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingIncome: 1, missingIncomeName: "שוכר לדוגמה", search: "" });
     expect(titleText(income[0]?.title)).toBe("התנועה הקבועה של שוכר לדוגמה לא הגיעה");
     expect(income[0]?.tag).toBe("הכנסה אחת");
     // Two or more keep today's count wording, even when a name is passed.
     const two = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, missingName: "מים טובים", missingIncome: 2, missingIncomeName: "שוכר לדוגמה", search: "" });
     expect(two.map((row) => titleText(row.title))).toEqual(["2 חשבונות לא הגיעו", "2 תנועות קבועות לא הגיעו"]);
+    expect(two.map((row) => row.wrapTitle)).toEqual([false, false]);
     // One late item with no name keeps today's wording.
     const unnamed = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 1, search: "" });
     expect(titleText(unnamed[0]?.title)).toBe("חשבון אחד לא הגיע");
