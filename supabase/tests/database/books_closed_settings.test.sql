@@ -6,6 +6,7 @@
 -- never affects company B. Also: a rename keeps the flag in a closed period, the refusal reaches the
 -- MCP envelope, and a category merge that reaches a closed line is refused by the line lock.
 -- Invented names and figures, @example.com only. Dates follow current_date.
+-- FLOW-856: the guards these cases reach now read the closed date for share; this file runs again to show they behave as before.
 
 begin;
 
