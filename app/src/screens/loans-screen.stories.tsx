@@ -109,7 +109,8 @@ export const Docked: Story = {
   name: "Loans, docked",
   args: { data: "long" },
   play: async ({ canvasElement }) => {
-    window.scrollTo({ top: 700, behavior: "instant" });
+    // Scroll to the end, not a fixed offset: the דורש טיפול cards above the segment follow the real date (SOON_DAYS).
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" });
     await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
   },
 };
