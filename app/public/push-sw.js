@@ -6,7 +6,9 @@ function sameOrigin(value) {
   if (typeof value !== "string" || value === "") return "/";
   try {
     const url = new URL(value, self.location.origin);
-    return url.origin === self.location.origin ? `${url.pathname}${url.search}${url.hash}` : "/";
+    // FLOW-857: a path that normalises to "//host" would itself open another site when used as a link.
+    if (url.origin !== self.location.origin || url.pathname.startsWith("//")) return "/";
+    return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return "/";
   }

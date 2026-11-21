@@ -10,7 +10,7 @@ pnpm build-storybook
 pnpm test:storybook
 ```
 
-`pnpm storybook` listens on port 6006. The toolbar switches בהיר and כהה. Both set `data-theme` on `<html>`. The default viewport is 390×844.
+`pnpm storybook` listens on port 6006, on this machine only (FLOW-857). To open it from a phone on the same network, run `pnpm storybook --host 0.0.0.0`; for `pnpm dev` and `pnpm preview`, set `FLOW_DEV_HOST=0.0.0.0`. The toolbar switches בהיר and כהה. Both set `data-theme` on `<html>`. The default viewport is 390×844.
 
 `pnpm build-storybook` writes `app/storybook-static`. That folder is gitignored. A checkpoint zips it to `storybook-static.zip` so a reviewer can open `index.html` locally without installing the repo.
 
