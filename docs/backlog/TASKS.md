@@ -808,6 +808,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1241"></a>[FLOW-1241](tasks/FLOW-1241.md) | Perf: the overhead project's page reads only the general costs, not the company's whole forecast | MEDIUM (perf) |
 | <a id="flow-1242"></a>[FLOW-1242](tasks/FLOW-1242.md) | Perf: Company profit reads the loans with their balances in one request | SMALL (perf) |
 | <a id="flow-1243"></a>[FLOW-1243](tasks/FLOW-1243.md) | Perf: the project's groups read is one request | SMALL (perf) |
+| <a id="flow-1244"></a>[FLOW-1244](tasks/FLOW-1244.md) | Perf: a group move closes its sheet after the write, not after the page's reads refetch | SMALL (perf) |
+| <a id="flow-1245"></a>[FLOW-1245](tasks/FLOW-1245.md) | Perf: the groups list is read once per company, not once per project | SMALL (perf) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
