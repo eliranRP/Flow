@@ -38,6 +38,8 @@ describe("a late row names its one item (FLOW-1246)", () => {
     expect(named[0]?.dismissKey).toBe("missing:1");
     // A named title wraps to a second line rather than cutting its verb.
     expect(named[0]?.wrapTitle).toBe(true);
+    // The name sits in its own ellipsizing box, so a long one is cut with "…" and the verb after it still shows.
+    expect(render(<MemoryRouter><span>{named[0]?.title}</span></MemoryRouter>).container.querySelector("bdi.ui-attn-name")?.textContent).toBe("מים טובים");
     const income = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingIncome: 1, missingIncomeName: "שוכר לדוגמה", search: "" });
     expect(titleText(income[0]?.title)).toBe("התנועה הקבועה של שוכר לדוגמה לא הגיעה");
     expect(income[0]?.tag).toBe("הכנסה אחת");

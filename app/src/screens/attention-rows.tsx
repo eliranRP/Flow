@@ -120,10 +120,10 @@ export function attentionRows({
   // FLOW-403 (plan option A1): a count, no hint and no total, only when a bill is late. FLOW-415
   // (b-2): late income has its own row; both open the קבועים screen at לא הגיעו. FLOW-1246: one late
   // item names its party ("החשבון של X לא הגיע"); two or more keep the count.
-  const named = (n: number, name: string | undefined) => n === 1 && name != null;
+  const named = (n: number, name: string | undefined): name is string => n === 1 && name != null;
   const count = (n: number, income: boolean, name: string | undefined) => {
     if (named(n, name)) {
-      return income ? <>התנועה הקבועה של <bdi>{name}</bdi> לא הגיעה</> : <>החשבון של <bdi>{name}</bdi> לא הגיע</>;
+      return income ? <>התנועה הקבועה של <bdi className="ui-attn-name">{name}</bdi> לא הגיעה</> : <>החשבון של <bdi className="ui-attn-name">{name}</bdi> לא הגיע</>;
     }
     return n === 1 ? missingBillsTitle(1, income) : <><bdi dir="ltr">{String(n)}</bdi> {income ? "תנועות קבועות לא הגיעו" : "חשבונות לא הגיעו"}</>;
   };

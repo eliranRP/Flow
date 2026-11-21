@@ -113,10 +113,10 @@
   white-space: nowrap;
 }
 
-/* FLOW-1246: a named late row's title wraps (its verb must show), so the text takes more lines, not an ellipsis,
-   and the card grows to hold them. */
+/* FLOW-1246: a named late row's title may take a second line, and its item's cap is sized to that card (two lines,
+   a finite height, so the dismiss fold still animates from it to 0). */
 .ui-attn-item:not([data-leaving]):has(> .ui-attn-card-wrap) {
-  max-block-size: none;
+  max-block-size: calc(var(--touch-min) + var(--space-8) + var(--space-1));
 }
 
 .ui-attn-card-wrap {
@@ -129,6 +129,17 @@
   overflow-wrap: anywhere;
   text-overflow: clip;
   white-space: normal;
+}
+
+/* The party's name is one line that ends in "…" when it is long. It never takes more than the text's width less the
+   verb's (5.5em), so "name + verb" always fit one line and the title is 2 lines at most, ending with its verb. */
+.ui-attn-name {
+  display: inline-block;
+  max-inline-size: calc(100% - 5.5em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
 }
 
 /* FLOW-1097 (the owner's choice B, replacing FLOW-1085's two lines): under 360px a card with a short title draws it
