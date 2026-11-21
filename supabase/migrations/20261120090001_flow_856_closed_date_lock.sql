@@ -14,12 +14,16 @@
 -- 3. private.books_closed_setting_guard (a category's settings; the companies branch reads the row it
 --    fires on, which the update already holds).
 -- 4. public.jev_prefill and public.jev_prefill_loan (Jev, as the service role).
--- 5. The other readers on a write path: private.follow_invoice (a receipt in a closed period keeps
---    its filing), private.fill_suggested_category (an update never fills a closed line's category)
---    and private.review_held_change_guard (a person's change to a held, closed line's review row).
--- The early return when no person writes (auth.uid() is null) stays first in the three guards, so
--- a sync takes no lock there. Jev, follow_invoice and fill_suggested_category also run for the sync
--- and jobs, and they take the share lock too: they act on the date they read.
+-- 5. private.review_held_change_guard (a person's change to a held, closed line's review row: a
+--    review row, which the line guard does not cover).
+-- The early return when no person writes (auth.uid() is null) stays first in the four guards, so a
+-- sync takes no lock there. Jev, as the service role, takes the share lock: it acts on the date.
+-- Not locked, on purpose: the other readers on a person's path (private.follow_invoice,
+-- private.fill_suggested_category, private.journal_entry_editable, private.prepaid_apply) read the
+-- date for a filing choice or an early message, and every line, part or overhead row a person's
+-- transaction writes then passes private.books_closed_guard, which reads it FOR SHARE. If a close
+-- commits between the two reads, the guard sees the new date and refuses the write. The first two
+-- also run for the sync, where a lock would add a deadlock with no person to retry it.
 --
 -- Lock order. A writer holds its line (or category) row and then share-locks the company row. A close
 -- takes the company row FOR UPDATE and after that only reads (prepaid_rows, review_queue and
@@ -102,18 +106,7 @@ select pg_temp.patch('public.jev_prefill_loan(uuid,uuid,uuid,jsonb,text,numeric)
   array[$n$    -- FLOW-856: held against a books-closed change until this write commits.
     (select c.books_closed_through from public.companies c where c.id = p_company for share), line, null)$n$]);
 
--- 5. The other write-path readers.
-select pg_temp.patch('private.follow_invoice(uuid,boolean)',
-  array[$a$        and private.books_closed_hit(c.books_closed_through, t, null)
-    ) then$a$],
-  array[$n$        and private.books_closed_hit(c.books_closed_through, t, null)
-      -- FLOW-856: held against a books-closed change until this write commits.
-      for share of c
-    ) then$n$]);
-select pg_temp.patch('private.fill_suggested_category()',
-  array[$a$    (select c.books_closed_through from public.companies c where c.id = old.company_id), old, null)$a$],
-  array[$n$    -- FLOW-856: held against a books-closed change until this write commits.
-    (select c.books_closed_through from public.companies c where c.id = old.company_id for share), old, null)$n$]);
+-- 5. The held line's review row.
 select pg_temp.patch('private.review_held_change_guard()',
   array[$a$  select c.books_closed_through into closed from public.companies c where c.id = old.company_id;$a$],
   array[$n$  -- FLOW-856: held against a books-closed change until this write commits.
@@ -127,9 +120,6 @@ revoke all on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric)
 grant execute on function public.jev_prefill(uuid, uuid, uuid, uuid, text, numeric) to service_role;
 revoke all on function public.jev_prefill_loan(uuid, uuid, uuid, jsonb, text, numeric) from public, anon, authenticated;
 grant execute on function public.jev_prefill_loan(uuid, uuid, uuid, jsonb, text, numeric) to service_role;
-revoke all on function private.follow_invoice(uuid, boolean) from public, anon, authenticated;
-grant execute on function private.follow_invoice(uuid, boolean) to service_role;
-revoke all on function private.fill_suggested_category() from public, anon, authenticated;
 revoke all on function private.review_held_change_guard() from public, anon, authenticated, service_role;
 
 -- The helpers are session-wide: a later migration in the same session can make its own.
