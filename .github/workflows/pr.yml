@@ -51,7 +51,7 @@ jobs:
           # seed, edge functions) count too. Script-only and doc-only changes skip the e2e job.
           # FLOW-855: so do the files the build ships as they are (app/public, index.html), the build's alias list,
           # and the design system CSS the app imports.
-          if grep -Eq '^(app/(src|e2e|public)/|app/index\.html$|app/library-aliases\.ts$|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$|design/system/|packages/|supabase/(migrations|seed|functions)/)' <<<"$files"; then
+          if grep -Eq '^(app/(src|e2e|public)/|app/index\.html$|app/library-aliases\.ts$|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$|design/system/.*\.css$|packages/|supabase/(migrations|seed|functions)/)' <<<"$files"; then
             echo "ui=true" >> "$GITHUB_OUTPUT"
           else
             echo "ui=false" >> "$GITHUB_OUTPUT"

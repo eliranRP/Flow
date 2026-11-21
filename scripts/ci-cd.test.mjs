@@ -1088,9 +1088,20 @@ test("the pr check's docs and e2e rules cover every file the app ships", () => {
   ]) {
     assert.equal(isUi(file), true, `${file} runs the e2e job`);
   }
-  for (const file of ["docs/x.md", "scripts/a.mjs", "design/screens/a.png"]) {
+  for (const file of ["docs/x.md", "scripts/a.mjs", "design/screens/a.png", "design/system/implementation-guide.md"]) {
     assert.equal(isUi(file), false, `${file} skips the e2e job`);
   }
+  assert.equal(isDocs("design/system/implementation-guide.md"), true);
+  // The shell conditions as the job runs them, on newline-separated diffs.
+  const run = (condition, files) =>
+    execFileSync("bash", ["-c", `files="$1"; if ${condition}; then echo yes; else echo no; fi`, "_", files], { encoding: "utf8" }).trim();
+  const docsIf = `[ -n "$files" ] && ! grep -qvE '${docs}' <<<"$files"`;
+  const uiIf = `grep -Eq '${ui}' <<<"$files"`;
+  assert.equal(run(docsIf, ""), "no", "an empty diff is not docs-only");
+  assert.equal(run(docsIf, "docs/a.md\ndesign/screens/a.png"), "yes");
+  assert.equal(run(docsIf, "docs/a.md\ndesign/system/implementation-tokens.css"), "no");
+  assert.equal(run(uiIf, "docs/a.md\napp/public/_headers"), "yes");
+  assert.equal(run(uiIf, "docs/a.md\nscripts/a.mjs"), "no");
 });
 
 test("main runs the full suite on every push and deploys only when the plan's batch rule says so", () => {
