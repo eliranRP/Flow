@@ -317,6 +317,7 @@ export function ProjectDetailScreen({
       finished={project.status === "finished"}
       groups={sampleGroups}
       groupId={project.group_id}
+      projectFetching={detail.isFetching}
       sample={sample != null}
       sampleRow={sampleMenuRow}
       overhead={overhead}

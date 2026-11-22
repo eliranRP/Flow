@@ -41,7 +41,7 @@ vi.mock("../lib/supabase", () => ({
 const row = { id: "p1", name: "Oak Ridge", status: "active", is_overhead: false, type: null, created_at: "2026-01-01T00:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_all_minor: 0, first_month: null };
 const answer = (extra: object): Answer => ({ data: { base_currency: "ILS", projects: [{ ...row, ...extra }], unassigned: { count: 0, cash: [] } }, error: null });
 
-function renderMenu(props: { groupId?: string | null } = { groupId: null }) {
+function renderMenu(props: { groupId?: string | null; projectFetching?: boolean } = { groupId: null }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 }, mutations: { retry: false } } });
   // The Projects list's row, as it holds it: it has neither of the menu's figures (FLOW-1204).
   client.setQueryData<ProjectsCashMonth>(["projects-cash", undefined, undefined], { base_currency: "ILS", projects: [row as never], unassigned: { count: 0, cash: [] } } as never);
@@ -49,7 +49,7 @@ function renderMenu(props: { groupId?: string | null } = { groupId: null }) {
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={["/projects/p1"]}>
-          <ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={false} investmentTo="/projects/p1/investment" hasInvestment={false} profitTo="/projects/p1/profit" groupId={props.groupId} />
+          <ProjectMenu projectId="p1" name="Oak Ridge" budget={null} finished={false} investmentTo="/projects/p1/investment" hasInvestment={false} profitTo="/projects/p1/profit" groupId={props.groupId} projectFetching={props.projectFetching} />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
@@ -317,13 +317,43 @@ describe("the live menu's current group comes from the page's own read (FLOW-124
     await waitFor(() => { expect(rpc.writes.at(-1)).toEqual({ name: "set_project_group", args: { p_project_id: "p1", p_group_id: "g1" } }); });
   });
 
-  it("with no key in the saved read (undefined), the row keeps its skeleton and no move can start", async () => {
-    const sheet = openEditSheet(renderMenu({}));
+  it("with no key in the saved read (undefined) and the project's read in flight, the row keeps its skeleton and no move can start", async () => {
+    const sheet = openEditSheet(renderMenu({ projectFetching: true }));
     await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
     await new Promise((resolve) => { setTimeout(resolve, 0); });
     expect(skeletonRow(sheet)).not.toBeNull();
     expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
     expect(rpc.writes).toHaveLength(0);
+  });
+});
+
+describe("the קבוצה skeleton ends when the project's read fails (FLOW-1257)", () => {
+  beforeEach(() => {
+    rpc.reads.length = 0;
+    rpc.answer = () => Promise.resolve(answer({ pending_count: 0, deletable: true }));
+    rpc.groups = () => Promise.resolve({ data: [{ id: "g1", name: "מתחם הגפן" }], error: null });
+  });
+
+  it("shows no skeleton once the project's read has failed without a group id", async () => {
+    const sheet = openEditSheet(renderMenu({ projectFetching: false }));
+    await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    expect(skeletonRow(sheet)).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the row, not a skeleton, when the group is known while the project's read is in flight", async () => {
+    const sheet = openEditSheet(renderMenu({ groupId: "g1", projectFetching: true }));
+    expect(await within(sheet).findByRole("button", { name: /^קבוצה/ })).toHaveTextContent("מתחם הגפן");
+    expect(skeletonRow(sheet)).toBeNull();
+  });
+
+  it("shows no skeleton when the groups read failed while the project's read is still in flight", async () => {
+    rpc.groups = () => Promise.resolve({ data: null, error: { message: "boom" } });
+    const sheet = openEditSheet(renderMenu({ projectFetching: true }));
+    await waitFor(() => { expect(rpc.reads).toContain("list_project_groups"); });
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    expect(skeletonRow(sheet)).toBeNull();
   });
 });
 

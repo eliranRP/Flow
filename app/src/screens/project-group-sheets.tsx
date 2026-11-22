@@ -240,11 +240,14 @@ export function ProjectGroupSheets({
         title="קבוצה"
         returnFocusRef={returnFocusRef}
         leading={(
-          <IconButton label="חזרה" className="ui-back-btn" onClick={onBack}>
+          <IconButton label="חזרה" className="ui-back-btn" disabled={move.isPending} onClick={onBack}>
             <BackIcon />
           </IconButton>
         )}
-        onEscape={onBack}
+        onEscape={() => {
+          // FLOW-1256: a move in flight keeps the picker open, as the swipe and ✕ close do.
+          if (!move.isPending) onBack();
+        }}
       >
         <div className="ui-change-picker">
           <div role="radiogroup" aria-label="קבוצה">

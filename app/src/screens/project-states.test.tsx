@@ -1,9 +1,11 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
 import { devProjectsCash } from "../dev/projects-sample";
+import { defaultPeriod } from "../period";
+import { projectQueryOptions } from "../use-books";
 import { ProjectDetailScreen } from "./flow-screens";
 import { offlineSinceOf } from "./project-detail-screen";
 
@@ -44,8 +46,7 @@ const listMonth = {
   projects: [{ ...devProjectsCash.projects[0], id: "a", name: "וילה רעננה" }],
 };
 
-function renderLive() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderLive(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
@@ -105,5 +106,51 @@ describe("the project page's read (FLOW-1171)", () => {
     const reads = rpc.calls.filter((call) => call.name === "get_project");
     expect(reads.length).toBeGreaterThan(0);
     for (const read of reads) expect(read.args).toMatchObject({ p_id: "a", p_lines: false });
+  });
+});
+
+/** FLOW-1257: the project page's saved copy, from before the read carried group_id (updatedAt 0: stale, so it refetches). */
+function seedSavedCopyWithoutGroup(client: QueryClient) {
+  const { queryKey } = projectQueryOptions("off", "a", defaultPeriod());
+  client.setQueryData(queryKey, serverProject, { updatedAt: 0 });
+}
+
+function openEditSheetOfPage() {
+  fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+  const menu = screen.getByRole("dialog", { name: "וילה רעננה" });
+  fireEvent.click(within(menu).getByRole("button", { name: /^עריכת פרטים/ }));
+  return screen.getByRole("dialog", { name: "עריכת פרויקט" });
+}
+
+describe("the קבוצה skeleton on the project page (FLOW-1257)", () => {
+  const groupsAnswer = { data: [{ id: "g1", name: "מתחם הגפן" }], error: null };
+
+  it("ends with no skeleton when the project's read fails and the saved copy has no group id", async () => {
+    rpc.impl = (name) => Promise.resolve(name === "get_project"
+      ? { data: null, error: { message: "boom" } }
+      : name === "list_project_groups" ? groupsAnswer : { data: null, error: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    seedSavedCopyWithoutGroup(client);
+    renderLive(client);
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    const sheet = openEditSheetOfPage();
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "list_project_groups")).toBe(true); });
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0); }); });
+    expect(sheet.querySelector('.ui-row[aria-hidden="true"]')).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
+  });
+
+  it("holds the skeleton while the project's read is still pending", async () => {
+    rpc.impl = (name) => (name === "get_project"
+      ? new Promise<never>(() => undefined)
+      : Promise.resolve({ data: name === "list_project_groups" ? groupsAnswer.data : null, error: null }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    seedSavedCopyWithoutGroup(client);
+    renderLive(client);
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    const sheet = openEditSheetOfPage();
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "list_project_groups")).toBe(true); });
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0); }); });
+    expect(sheet.querySelector('.ui-row[aria-hidden="true"]')).not.toBeNull();
   });
 });

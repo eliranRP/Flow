@@ -38,6 +38,7 @@ export function ProjectMenu({
   finished,
   groups: sampleGroups,
   groupId,
+  projectFetching = false,
   sample = false,
   sampleRow,
   overhead,
@@ -58,6 +59,11 @@ export function ProjectMenu({
    * from a guessed "no group".
    */
   groupId?: string | null | undefined;
+  /**
+   * FLOW-1257: whether the project's own read (get_project) is in flight. While groupId is undefined, the groups wait
+   * for that read; once it has failed or settled without a group id, the edit sheet shows nothing in the row's place.
+   */
+  projectFetching?: boolean;
   sample?: boolean;
   /** A sample project's month row (stories and the proof fixture); a live menu reads it from the month. */
   sampleRow?: ProjectCashRow;
@@ -94,7 +100,8 @@ export function ProjectMenu({
   // shows nothing, as the row never showed; a sample's groups (or a sample with none) never read, so nothing holds.
   const liveGroups = useProjectGroupsRead(!sample && sampleGroups == null && (menu || primed || editing));
   const groupKnown = groupId !== undefined;
-  const groupsLoading = liveGroups.isLoading || (sampleGroups == null && liveGroups.data != null && !groupKnown);
+  // FLOW-1257: without the group id, only the project's read in flight can still bring it; a failed or settled read shows nothing.
+  const groupsLoading = sampleGroups == null && (groupKnown ? liveGroups.isLoading : projectFetching && !liveGroups.isError);
   const groups: ProjectGroups | undefined = sampleGroups ?? (liveGroups.data == null || !groupKnown
     ? undefined
     : { groups: liveGroups.data, currentId: groupId ?? null });
