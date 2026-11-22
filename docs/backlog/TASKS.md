@@ -639,6 +639,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1247"></a>[FLOW-1247](tasks/FLOW-1247.md) | A named late row fits one line and opens its charge | SMALL UI |
 | <a id="flow-1248"></a>[FLOW-1248](tasks/FLOW-1248.md) | A charge taken out of this month is quiet everywhere | SMALL CYCLE |
 | <a id="flow-1249"></a>[FLOW-1249](tasks/FLOW-1249.md) | Tests for the late list's skip filter on Home | SMALL TEST |
+| <a id="flow-1254"></a>[FLOW-1254](tasks/FLOW-1254.md) | Home's late row waits for the month's skips before it draws | SMALL UI |
+| <a id="flow-1255"></a>[FLOW-1255](tasks/FLOW-1255.md) | Hiding a named late row hides that item, not the next one | SMALL UI |
+| <a id="flow-1256"></a>[FLOW-1256](tasks/FLOW-1256.md) | The group picker's Back and Escape wait for a move to save | SMALL UI |
+| <a id="flow-1257"></a>[FLOW-1257](tasks/FLOW-1257.md) | The קבוצה skeleton ends when the project's read fails | SMALL UI |
 
 ## Onboarding, Settings and connectors
 
