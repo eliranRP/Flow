@@ -68,7 +68,7 @@ export function useLateBillsQuery(active = true, overridesActive = active, overr
   // Pending is "no answer yet": an error is an answer (the whole list), and so is data.
   const waitsForOverrides = (overridesActive || overridesLater) && overrides.isPending;
   // The skips are matched in the company's currency, so a cold currency read holds the list too, only when it matters.
-  const waitsForCurrency = skipped != null && skipped.size > 0 && currency.isPending && currency.data == null;
+  const waitsForCurrency = skipped != null && skipped.size > 0 && currency.isPending;
   const data = bills.data == null || waitsForOverrides || waitsForCurrency ? undefined : withoutSkippedLate(bills.data, skipped, base);
   return { ...bills, data };
 }
