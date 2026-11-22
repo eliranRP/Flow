@@ -65,10 +65,11 @@ export function useLateBillsQuery(active = true, overridesActive = active, overr
   const currency = useCompanyCurrencyQuery();
   const base = currency.data ?? "ILS";
   const skipped = overrides.data == null ? undefined : skippedKeys(overrides.data);
-  // Pending is "no answer yet": an error is an answer (the whole list), and so is data.
-  const waitsForOverrides = (overridesActive || overridesLater) && overrides.isPending;
+  // Pending is "no answer yet": an error is an answer (the whole list), and so is data. A read that is paused (offline)
+  // is not running, so nothing is coming: the whole list draws, as it does for a failed read.
+  const waitsForOverrides = (overridesActive || overridesLater) && overrides.isPending && overrides.fetchStatus !== "paused";
   // The skips are matched in the company's currency, so a cold currency read holds the list too, only when it matters.
-  const waitsForCurrency = skipped != null && skipped.size > 0 && currency.isPending;
+  const waitsForCurrency = skipped != null && skipped.size > 0 && currency.isPending && currency.fetchStatus !== "paused";
   const data = bills.data == null || waitsForOverrides || waitsForCurrency ? undefined : withoutSkippedLate(bills.data, skipped, base);
   return { ...bills, data };
 }

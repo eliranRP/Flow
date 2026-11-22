@@ -1,6 +1,7 @@
 import type { ForecastOverrideRow, MissingBill } from "@flow/shared";
+import { onlineManager, QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-render";
 import { forecastKeyOf, lateIsSkipped, scheduleForecastKey, skippedKeys, useForecastSkip, useLateBillsQuery, withoutSkippedLate } from "./forecast-skip";
 import { lateItemName, lateTarget } from "./forecast";
@@ -191,6 +192,43 @@ describe("useLateBillsQuery (FLOW-1254)", () => {
     reply(() => new Promise(() => undefined));
     renderWithProviders(<Late overridesActive={false} />);
     await waitFor(() => { expect(shown()).toBe("s-a,s-b"); });
+  });
+
+  describe("offline and a cold currency", () => {
+    afterEach(() => { onlineManager.setOnline(true); });
+    const seeded = (skips: unknown[]) => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      client.setQueryData(["missing-bills", "off"], LATE);
+      if (skips.length > 0) client.setQueryData(["month-forecast", "off", "overrides", month], skips);
+      return client;
+    };
+
+    it("draws the cached whole list offline, when the overrides read is paused and never ran", async () => {
+      onlineManager.setOnline(false);
+      renderWithProviders(<Late overridesActive later />, { client: seeded([]) });
+      await waitFor(() => { expect(shown()).toBe("s-a,s-b"); });
+    });
+
+    it("holds the list while a cold currency read runs, with skips present, and filters once it lands", async () => {
+      let land: (currency: string) => void = () => undefined;
+      reads.impl = (name) => {
+        if (name === "mcp_company_loan_currency") return new Promise((resolve) => { land = (value) => { resolve({ data: value, error: null }); }; });
+        return Promise.resolve({ data: name === "missing_bills" ? LATE : name === "forecast_overrides_for" ? [skipA] : [], error: null });
+      };
+      window.localStorage.clear();
+      renderWithProviders(<Late />, { client: seeded([skipA]) });
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+      expect(shown()).toBe("none");
+      await act(async () => { land("ILS"); await Promise.resolve(); });
+      await waitFor(() => { expect(shown()).toBe("s-b"); });
+    });
+
+    it("draws the list when the cold currency read is paused offline", async () => {
+      onlineManager.setOnline(false);
+      window.localStorage.clear();
+      renderWithProviders(<Late />, { client: seeded([skipA]) });
+      await waitFor(() => { expect(shown()).toBe("s-b"); });
+    });
   });
 
   it("drops an item an override moves out, and names the other one on its row (the 2 to 1 case)", async () => {
