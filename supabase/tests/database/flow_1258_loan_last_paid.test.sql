@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(8);
+select plan(9);
 
 do $users$
 begin
@@ -97,6 +97,12 @@ select ok(
 );
 
 select tests.authenticate_as('f1258_a');
+
+select is(
+  (select last_paid_on from public.loan_balances where loan_id = (select id from f1258 where label = 'paid')),
+  '2026-03-05'::date,
+  'RLS: company A''s owner reads A''s own loan and its payment'
+);
 
 select is(
   (select count(*)::int from public.loan_balances where loan_id = (select id from f1258 where label = 'lb')),

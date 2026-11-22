@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AttentionCards } from "./attention-cards";
 import type { BannerRow } from "./banner";
-import { AlertIcon, CalendarIcon, InvoiceIcon, RepeatIcon, TrendUpIcon } from "./icons";
+import { AlertIcon, InvoiceIcon, RepeatIcon, TrendUpIcon } from "./icons";
 import { longHebrew, oneLineAttention, padded, withToasts } from "./story-support";
 
 /** FLOW-1043: the "דורש טיפול" row-cards. Invented rows; each story starts with nothing hidden. */
@@ -17,7 +17,7 @@ const ROWS: BannerRow[] = [
 const ONE_LINE: BannerRow[] = [
   { id: "check-2", to: "/loans/1", title: "2 תשלומים ממתינים לבדיקה · משכנתא אלון", short: "לבדיקה", tag: "2 תשלומים", icon: <AlertIcon size={20} />, dismissKey: "check:2" },
   { id: "check-1", to: "/loans/2", title: "תשלום אחד ממתין לבדיקה · הלוואת ציוד", short: "לבדיקה", tag: "תשלום אחד", icon: <AlertIcon size={20} />, dismissKey: "check:1" },
-  { id: "soon", to: "/loans/2", title: "תשלום הלוואת ציוד בעוד 8 ימים · $1,312", short: "הלוואת ציוד", tag: "8 ימים", icon: <CalendarIcon size={20} />, dismissKey: "soon:2026-10-23" },
+  { id: "late", to: "/loans/2", title: "תשלום באיחור · הלוואת ציוד", short: "הלוואת ציוד", tag: "באיחור", icon: <AlertIcon size={20} />, dismissKey: "late:2026-10-01" },
   ...ROWS.filter((row) => row.short != null),
 ];
 
@@ -71,7 +71,7 @@ export const OneLine320: Story = {
     await expect(oneLineAttention(canvasElement)).toEqual([
       "לבדיקה · 2 תשלומים",
       "לבדיקה · תשלום אחד",
-      "הלוואת ציוד · 8 ימים",
+      "הלוואת ציוד · באיחור",
       "חיובים קבועים השתנו · 4",
       "לגבייה · $21,300",
     ]);

@@ -101,8 +101,21 @@ describe("latePayment", () => {
     expect(latePayment(SAMPLE_AMORTIZING, "2026-11-05", "2026-12-12")).toBe("2026-12-01");
   });
 
-  it("calls a loan with no payment at all late once its latest due date is past the grace", () => {
-    expect(latePayment(SAMPLE_AMORTIZING, null, "2026-11-22")).toBe("2026-11-01");
+  it("calls a loan with no payment at all late only for its first payment", () => {
+    // Its first payment, 11-01, missed.
+    expect(latePayment({ ...SAMPLE_AMORTIZING, startDate: "2026-11-01" }, null, "2026-11-22")).toBe("2026-11-01");
+    // Started 2025: its history predates the books, so no card on its first day in the app.
+    expect(latePayment(SAMPLE_AMORTIZING, null, "2026-11-22")).toBeNull();
+  });
+
+  it("counts a payment from 15 days before the due date on, and not a day earlier", () => {
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-11-16", "2026-12-12")).toBeNull();
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-11-15", "2026-12-12")).toBe("2026-12-01");
+  });
+
+  it("checks only the latest past due date: a gap before it is not late once that date is paid", () => {
+    // Nothing for 10-01 or 11-01, but 12-01 paid on 12-03.
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-12-03", "2026-12-20")).toBeNull();
   });
 
   it("never calls a demand loan or a paid-off loan late", () => {
