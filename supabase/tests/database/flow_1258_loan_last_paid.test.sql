@@ -44,15 +44,17 @@ from f1258_lines v
 join f1258 f on f.label = v.label
 join public.loans l on l.id = f.id;
 
-select tests.loan_split(t.id, l.id, jsonb_build_array(
-  jsonb_build_object('part', 'interest', 'amount_minor', 500, 'scheduled_minor', 500, 'category_id', ci.id),
-  jsonb_build_object('part', 'principal', 'amount_minor', 500, 'scheduled_minor', 500, 'category_id', cp.id)))
+-- Each line is interest 400, escrow 100 and principal 500 (a split needs all three parts).
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', p.part, 'amount_minor', p.amount,
+  'scheduled_minor', p.amount, 'category_id', c.id)))
 from f1258_lines v
 join f1258 f on f.label = v.label
 join public.loans l on l.id = f.id
 join public.transactions t on t.company_id = l.company_id and t.idempotency_key = 'f1258:' || v.key
-join public.categories ci on ci.company_id = l.company_id and ci.name = 'ריבית משכנתא' and ci.kind = 'expense'
-join public.categories cp on cp.company_id = l.company_id and cp.name = 'תשלומי הלוואה' and cp.kind = 'expense';
+cross join (values ('interest', 'ריבית משכנתא', 400), ('escrow', 'מסים וביטוח', 100),
+  ('principal', 'תשלומי הלוואה', 500)) p(part, category, amount)
+join public.categories c on c.company_id = l.company_id and c.name = p.category and c.kind = 'expense'
+group by t.id, l.id;
 
 update public.transactions set removed_at = now() where idempotency_key = 'f1258:p3';
 select tests.loan_split_review(t.id, true) from public.transactions t where t.idempotency_key = 'f1258:f1';
