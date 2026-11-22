@@ -61,8 +61,9 @@ describe("a named late row opens its own charge (FLOW-1247)", () => {
     expect(bill[0]?.to).toBe("/recurring/expense/s-water?preview=1");
     const income = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingIncome: 1, missingIncomeName: "שוכר לדוגמה", missingIncomeTarget: rent, search: "" });
     expect(income[0]?.to).toBe("/recurring/income/c-rent?project=p-flat");
-    // The dismissal key is the same as before the link changed.
-    expect(income[0]?.dismissKey).toBe("missing-income:1");
+    // FLOW-1255: the hide key carries the item (party and project), so a hide on A's row does not hide B's.
+    expect(income[0]?.dismissKey).toBe("missing-income:1:c-rent:p-flat");
+    expect(bill[0]?.dismissKey).toBe("missing:1:s-water:none");
   });
 
   it("keeps the late section's list for two or more, or a named row with no party", () => {

@@ -17,7 +17,7 @@ import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from 
  * count row, and a recurring payment 20% or more off its usual amount gets a row with an up or down
  * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו", that opens the list of
  * those charges (FLOW-1021). FLOW-1036: every row but the review carries its `dismissKey`, `<id>:<count>[:<amount>]`,
- * so a row hidden on Home's cards shows again once what it counts changes. The late count rows open the קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
+ * so a row hidden on Home's cards shows again once what it counts changes (FLOW-1255: a named late row, what it names). The late count rows open the קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
  * count row under the review row, opening העברות לבדיקה. FLOW-1135: the utility bills the tenant did not pay back get
  * a row after it (V3-Home-UtilityRefunds), opening החזרי חשבונות.
  */
@@ -131,6 +131,13 @@ export function attentionRows({
   // FLOW-1247: a named row opens its own charge's page; two or more, or no party, keep the list at its late section.
   const lateTo = (n: number, name: string | undefined, target: LateTarget | undefined, income: boolean) =>
     named(n, name) && target != null ? chargeHref(income ? "income" : "expense", target.partyId, search, target.projectId) : `${missingTo}${search}#late`;
+  /**
+   * FLOW-1255: a named row's hide key carries its item, `<id>:1:<party>:<project|none>`, so a hide made on A's row does
+   * not hide B's. Two or more keep `<id>:<count>`. The old `<id>:1` no longer matches a named row: a row hidden before
+   * this shows once more, the safe side for an alert (feedback-and-states § 4).
+   */
+  const lateKey = (id: string, n: number, name: string | undefined, target: LateTarget | undefined): string =>
+    named(n, name) && target != null ? `${id}:1:${target.partyId}:${target.projectId ?? "none"}` : `${id}:${String(n)}`;
   const count = (n: number, income: boolean, name: string | undefined) => {
     if (named(n, name)) {
       return income ? <>התנועה הקבועה של <bdi className="ui-attn-name">{name}</bdi> לא הגיעה</> : <>החשבון של <bdi className="ui-attn-name">{name}</bdi> לא הגיע</>;
@@ -138,10 +145,10 @@ export function attentionRows({
     return n === 1 ? missingBillsTitle(1, income) : <><bdi dir="ltr">{String(n)}</bdi> {income ? "תנועות קבועות לא הגיעו" : "חשבונות לא הגיעו"}</>;
   };
   if (missingCount > 0) {
-    rows.push({ id: "missing", dismissKey: `missing:${String(missingCount)}`, to: lateTo(missingCount, missingName, missingTarget, false), icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false, missingName), wrapTitle: named(missingCount, missingName), short: "לא הגיעו", tag: countTag(missingCount, "חשבון אחד", "חשבונות") });
+    rows.push({ id: "missing", dismissKey: lateKey("missing", missingCount, missingName, missingTarget), to: lateTo(missingCount, missingName, missingTarget, false), icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingCount, false, missingName), wrapTitle: named(missingCount, missingName), short: "לא הגיעו", tag: countTag(missingCount, "חשבון אחד", "חשבונות") });
   }
   if (missingIncome > 0) {
-    rows.push({ id: "missing-income", dismissKey: `missing-income:${String(missingIncome)}`, to: lateTo(missingIncome, missingIncomeName, missingIncomeTarget, true), icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true, missingIncomeName), wrapTitle: named(missingIncome, missingIncomeName), short: "לא הגיעו", tag: countTag(missingIncome, "הכנסה אחת", "הכנסות") });
+    rows.push({ id: "missing-income", dismissKey: lateKey("missing-income", missingIncome, missingIncomeName, missingIncomeTarget), to: lateTo(missingIncome, missingIncomeName, missingIncomeTarget, true), icon: <CalendarIcon size={24} stroke={1.9} />, title: count(missingIncome, true, missingIncomeName), wrapTitle: named(missingIncome, missingIncomeName), short: "לא הגיעו", tag: countTag(missingIncome, "הכנסה אחת", "הכנסות") });
   }
   // FLOW-415: one changed charge opens its payment. FLOW-1021: two or more share a row that opens
   // חיובים שהשתנו, the list of just those charges, each with its amount and its usual one.

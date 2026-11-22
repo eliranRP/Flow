@@ -5,6 +5,8 @@ import { sampleCashMonths } from "../dev/cash-sample";
 import { renderWithProviders } from "../test-render";
 import type { ChargeChangeView } from "../forecast";
 import type { HomeActivityData } from "./home-activity";
+import { AttentionCards } from "../ui/attention-cards";
+import type { BannerRow } from "../ui/banner";
 import { attentionRows, CashHome } from "./HomeScreen";
 
 const ACTIVITY: HomeActivityData = { schedule: [], scheduleFailed: false, lines: [], linesFailed: false, onRetry: () => undefined };
@@ -146,5 +148,37 @@ describe("Home's sync strip (board States, syncing)", () => {
   it("draws no strip when nothing syncs", () => {
     renderHome({ review: 0, unpaid: 0 });
     expect(document.querySelector(".ui-sync")).toBeNull();
+  });
+});
+
+// FLOW-1255: a hide applies to the item the person hid, not to whichever late item is next.
+describe("a hidden named late row (FLOW-1255)", () => {
+  const late = (name: string, partyId: string, projectId: string | null = null) =>
+    attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 1, missingName: name, missingTarget: { partyId, projectId }, search: "" });
+  const renderRows = (rows: BannerRow[]) => renderWithProviders(<AttentionCards rows={rows} storageKey="home" />);
+
+  it("keys a named row by its party and project, and a count row by its count", () => {
+    expect(late("A", "s-a")[0]?.dismissKey).toBe("missing:1:s-a:none");
+    expect(late("A", "s-a", "p1")[0]?.dismissKey).toBe("missing:1:s-a:p1");
+    const two = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, missingCount: 2, missingName: "A", missingTarget: { partyId: "s-a", projectId: null }, search: "" });
+    expect(two[0]?.dismissKey).toBe("missing:2");
+  });
+
+  it("keeps A's row hidden, and shows a new single late item B", () => {
+    const first = renderRows(late("A", "s-a"));
+    fireEvent.click(screen.getByRole("button", { name: /^הסתרה: / }));
+    expect(JSON.parse(window.localStorage.getItem("flow.attention.home") ?? "{}")).toEqual({ missing: "missing:1:s-a:none" });
+    first.unmount();
+    const again = renderRows(late("A", "s-a"));
+    expect(screen.queryByRole("link", { name: /החשבון של A/ })).toBeNull();
+    again.unmount();
+    renderRows(late("B", "s-b"));
+    expect(screen.getByRole("link", { name: /החשבון של B/ })).toBeInTheDocument();
+  });
+
+  it("is not hidden by the old missing:1 key: a row hidden before this change shows once more", () => {
+    window.localStorage.setItem("flow.attention.home", JSON.stringify({ missing: "missing:1" }));
+    renderRows(late("A", "s-a"));
+    expect(screen.getByRole("link", { name: /החשבון של A/ })).toBeInTheDocument();
   });
 });

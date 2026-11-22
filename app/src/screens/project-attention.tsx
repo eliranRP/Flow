@@ -21,6 +21,8 @@ export type ProjectRecurringSample = { late: MissingBill[]; changes: RecurringCh
  */
 function keyed(row: BannerRow, counts: Record<string, string>): BannerRow {
   if (row.button != null) return row;
+  // FLOW-1255: the late rows keep the key attentionRows gave them (a named row's carries its item).
+  if (row.id === "missing" || row.id === "missing-income") return row;
   const count = counts[row.id] ?? (row.id.startsWith("change:") ? row.id : undefined);
   return count == null ? row : { ...row, dismissKey: `${row.id}:${count}` };
 }
@@ -89,8 +91,6 @@ export function projectAttentionRows({
   const nowById = Object.fromEntries(views.map((view) => [`change:${view.id}`, view.now]));
   return routed.map((row) => keyed(row, {
     ...nowById,
-    missing: String(counts.expense),
-    "missing-income": String(counts.income),
     changes: String(own.length),
     budget: percent == null ? "" : percent > 100 ? "over" : String(BUDGET_ALERT_PERCENT),
   }));
