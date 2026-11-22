@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
-import { useHomePreview } from "./preview";
+import { type HomePreview, useHomePreview } from "./preview";
 import { saveCompanyCurrency, savedCompanyCurrency } from "./project-cache";
 
 /**
@@ -30,6 +30,16 @@ export function useCompanyCurrency(): string {
   return useCompanyCurrencyQuery().data ?? "ILS";
 }
 
+/** The query's key and read, shared with the month forecast (FLOW-1253) so a cold Home sends one request. */
+export function companyCurrencyQueryOptions(preview: HomePreview) {
+  return {
+    queryKey: ["company-currency", preview] as const,
+    staleTime: 10 * 60_000,
+    retry: false,
+    queryFn: readStoredCurrency,
+  };
+}
+
 /** The read itself, for Settings: its row waits for the stored value before it offers a change. */
 export function useCompanyCurrencyQuery(enabled = true) {
   const preview = useHomePreview();
@@ -40,14 +50,11 @@ export function useCompanyCurrencyQuery(enabled = true) {
     return stored.value;
   };
   return useQuery({
-    queryKey: ["company-currency", preview],
+    ...companyCurrencyQueryOptions(preview),
     enabled: enabled && preview === "off",
-    staleTime: 10 * 60_000,
     // FLOW-804: the last read saved on the phone, dated, so a new visit's first screen has it at
     // once and reads it again behind the page.
     initialData: () => saved()?.value,
     initialDataUpdatedAt: () => saved()?.at,
-    retry: false,
-    queryFn: readStoredCurrency,
   });
 }

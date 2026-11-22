@@ -820,6 +820,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1250"></a>[FLOW-1250](tasks/FLOW-1250.md) | Perf: an optimistic write refreshes each cached answer once, not twice | SMALL (perf) |
 | <a id="flow-1251"></a>[FLOW-1251](tasks/FLOW-1251.md) | Home: a late charge taken out of the month does not show and then drop on a cold load | SMALL (owner decision: Home's attention box) |
 | <a id="flow-1252"></a>[FLOW-1252](tasks/FLOW-1252.md) | Perf: Home on another month does not read this month's late bills | SMALL (perf) |
+| <a id="flow-1253"></a>[FLOW-1253](tasks/FLOW-1253.md) | Perf: a cold Home reads the company's loan currency once, not twice | SMALL (perf) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |

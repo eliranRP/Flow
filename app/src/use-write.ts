@@ -64,6 +64,11 @@ function failureRetries(failure: WriteFailure, error: Error): boolean {
   return isTransientWriteError(error);
 }
 
+/** FLOW-1250: `keys` cover a query when its key starts with one of them, as useInvalidateBooks matches (`[key]` by prefix). */
+function isCoveredBy(key: QueryKey, keys: readonly string[]): boolean {
+  return keys.includes(key[0] as string);
+}
+
 /** A query the write changed, with the value it held before, so a failure can put it back. */
 type Snapshot = { key: QueryKey; before: unknown };
 
@@ -136,7 +141,8 @@ export function useWrite<T = void>(options: {
       if (options.optimistic) {
         // The tapped result is already drawn; the refresh only corrects it, so it runs behind the toast.
         void invalidate(options.keys);
-        for (const { key } of snapshots) void client.invalidateQueries({ queryKey: key });
+        // FLOW-1250: a snapshot under one of `keys` is refetched by the line above; only the others need their own.
+        for (const { key } of snapshots) if (!isCoveredBy(key, options.keys)) void client.invalidateQueries({ queryKey: key });
       } else {
         await invalidate(options.keys);
       }

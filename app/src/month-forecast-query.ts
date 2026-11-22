@@ -1,6 +1,6 @@
 import type { ForecastBuild, ForecastOverrideRow } from "@flow/shared";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
-import { readStoredCurrency } from "./company-currency";
+import { companyCurrencyQueryOptions } from "./company-currency";
 import { expectedMonthsQueryOptions } from "./expected-months-query";
 import { overridesQuery } from "./forecast-overrides-query";
 import { useHomePreview } from "./preview";
@@ -41,7 +41,8 @@ export function useMonthForecastQuery(month: string, active = true) {
         client.query({ ...overridesQuery(month, preview, true), staleTime: QUERY_STALE_MS }),
         supabase.rpc("company_forecast_edits_for", { p_month: month }),
         // A failed read fails the forecast: counting a dollar company in shekels would show nothing due.
-        readStoredCurrency(),
+        // FLOW-1253: the same key as Home's currency read, so the two share one request.
+        client.query({ ...companyCurrencyQueryOptions(preview), staleTime: QUERY_STALE_MS }),
       ]);
       if (edits.error) throw edits.error;
       const { buildMonthForecast, parseMonthEdits } = await import("./month-forecast-build");
