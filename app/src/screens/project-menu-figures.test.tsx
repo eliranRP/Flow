@@ -342,6 +342,12 @@ describe("the קבוצה skeleton ends when the project's read fails (FLOW-1257)
     expect(within(sheet).queryByRole("button", { name: /^קבוצה/ })).not.toBeInTheDocument();
   });
 
+  it("shows the row, not a skeleton, when the group is known while the project's read is in flight", async () => {
+    const sheet = openEditSheet(renderMenu({ groupId: "g1", projectFetching: true }));
+    expect(await within(sheet).findByRole("button", { name: /^קבוצה/ })).toHaveTextContent("מתחם הגפן");
+    expect(skeletonRow(sheet)).toBeNull();
+  });
+
   it("shows no skeleton when the groups read failed while the project's read is still in flight", async () => {
     rpc.groups = () => Promise.resolve({ data: null, error: { message: "boom" } });
     const sheet = openEditSheet(renderMenu({ projectFetching: true }));
