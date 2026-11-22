@@ -93,8 +93,8 @@ select results_eq(
 select is(
   (select array_agg(a.attname::text order by a.attnum) from pg_attribute a
    where a.attrelid = 'public.loan_balances'::regclass and a.attnum > 0 and not a.attisdropped),
-  array['company_id', 'loan_id', 'currency', 'balance_minor', 'flagged_parts', 'project_id'],
-  'the old columns keep their order and project_id comes last'
+  array['company_id', 'loan_id', 'currency', 'balance_minor', 'flagged_parts', 'project_id', 'last_paid_on'],
+  'the old columns keep their order; project_id, then last_paid_on (FLOW-1258) come last'
 );
 
 select is(

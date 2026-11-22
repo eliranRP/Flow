@@ -61,21 +61,20 @@ describe("attentionRows' short titles (Home and a project)", () => {
 describe("loansAttention's short titles", () => {
   const row = (id: string, name: string, extra: Partial<LoanListRow> = {}): LoanListRow => ({ id, name, currency: "USD", balanceMinor: 1_000_000n, flaggedParts: 0, projectId: null, projectName: null, ...extra });
 
-  it("says לבדיקה with the payments' count, and a payment due soon by its loan and when", () => {
+  it("says לבדיקה with the payments' count, and a late payment by its loan and באיחור", () => {
     const cards = loansAttention([
       row("a", "משכנתא אלון", { flaggedParts: 2 }),
       row("b", "שטר הזית", { flaggedParts: 1 }),
       row("c", "הלוואת ציוד", { next: { dueDate: "2026-11-15", amountMinor: 131_200n } }),
-      row("d", "גישור", { next: { dueDate: "2026-11-07", amountMinor: 100n } }),
-    ], "2026-11-07", (id) => `/loans/${id}`);
+      row("d", "גישור", { lateOn: "2026-10-01" }),
+    ], (id) => `/loans/${id}`);
     expect(short(cards)).toEqual([
+      ["גישור", "באיחור"],
       ["לבדיקה", "2 תשלומים"],
       ["לבדיקה", "תשלום אחד"],
-      ["גישור", "היום"],
-      ["הלוואת ציוד", "8 ימים"],
     ]);
     // The full title is still the card's name.
-    expect(cards[0]?.title).toBe("2 תשלומים ממתינים לבדיקה · משכנתא אלון");
+    expect(cards[1]?.title).toBe("2 תשלומים ממתינים לבדיקה · משכנתא אלון");
   });
 });
 

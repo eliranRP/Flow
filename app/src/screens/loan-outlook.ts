@@ -108,6 +108,44 @@ export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | nul
   };
 }
 
+/** FLOW-1258: a payment is late this many days after its due date with nothing recorded for it. */
+const LATE_GRACE_DAYS = 10;
+
+/** FLOW-1258: a payment recorded up to this many days before a due date pays that date (paid early). */
+const EARLY_PAY_DAYS = 15;
+
+/** `iso` (yyyy-mm-dd) moved by `days`. */
+function addDays(iso: string, days: number): string {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * FLOW-1258: the due date of the latest scheduled payment past its grace (LATE_GRACE_DAYS) with no payment recorded
+ * for it: none on or after EARLY_PAY_DAYS before its due date. `lastPaidOn` is the loan's latest posted payment, a
+ * payment waiting for review included (null with none). Null for a loan that is on time, a demand loan, a closed
+ * one, or one with no schedule. Only the latest past date is checked, and a loan with no payment in the books at all
+ * is late only for its first payment: the books may start after the loan did, so a loan whose history predates them
+ * is not called late on its first day. One payment pays one date: a late payment made within EARLY_PAY_DAYS of the
+ * next date covers that date too, so a missed month right after a late one shows a month later.
+ */
+export function latePayment(loan: OutlookLoan, lastPaidOn: string | null, today: string): string | null {
+  if (loan.status !== "open" || loan.balanceMinor <= 0n) return null;
+  const terms = loanScheduleTerms(loan);
+  if (terms == null) return null;
+  let rows: readonly LoanScheduleRow[];
+  try {
+    rows = buildLoanSchedule(terms).rows;
+  } catch {
+    return null;
+  }
+  const cutoff = addDays(today, -LATE_GRACE_DAYS);
+  const due = rows.filter((row) => row.dueDate < cutoff).at(-1);
+  if (due == null) return null;
+  if (lastPaidOn == null) return due === rows[0] ? due.dueDate : null;
+  if (lastPaidOn >= addDays(due.dueDate, -EARLY_PAY_DAYS)) return null;
+  return due.dueDate;
+}
+
 /** The payments from `first` on, from `balanceMinor` instead of the schedule's balance (FLOW-427). */
 function remainingFromBalance(terms: LoanTerms, balanceMinor: bigint, first: LoanScheduleRow): LoanScheduleRow[] {
   const done = first.period - 1;

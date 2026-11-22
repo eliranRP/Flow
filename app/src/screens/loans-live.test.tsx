@@ -103,6 +103,17 @@ describe("live Loans tab", () => {
     ]);
   });
 
+  it("marks a loan late from its last payment in loan_balances (FLOW-1258)", async () => {
+    const scheduled = { payment_minor: 60_000, start_date: "2026-01-01" };
+    answers.loans = [{ ...loanRow("l1", "הלוואת גשר", "p1"), ...scheduled }, { ...loanRow("l2", "הלוואת ציוד", null), ...scheduled }];
+    answers.loan_balances = [
+      { loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, currency: "ILS", last_paid_on: "2026-11-05" },
+      { loan_id: "l2", balance_minor: 4_000_000, flagged_parts: 0, currency: "ILS", last_paid_on: "2026-09-05" },
+    ];
+    const list = await readLoanList(TEST_COMPANY_ID, "2026-11-22");
+    expect(list.rows.map((row) => [row.name, row.lateOn])).toEqual([["הלוואת גשר", undefined], ["הלוואת ציוד", "2026-11-01"]]);
+  });
+
   it("lists the loans with the company the app holds, without waiting for get_dashboard", async () => {
     renderWithProviders(<LoansScreen />, { route: "/loans", client: withCompanies("u1") });
     expect(await screen.findByRole("button", { name: /^הלוואת גשר, / })).toHaveTextContent("בית הברוש");

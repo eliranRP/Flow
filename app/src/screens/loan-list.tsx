@@ -7,7 +7,7 @@ import { assertNoError } from "../use-write";
 import { LOAN_KIND_LIST_LABEL } from "./loan-copy";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetailDbRow } from "./loan-detail-data";
 import type { LoanBalanceRow } from "./loan-match";
-import { loanOutlook, type OutlookLoan } from "./loan-outlook";
+import { latePayment, loanOutlook, type OutlookLoan } from "./loan-outlook";
 import { readLoanBalances, readProjectNames } from "./loan-reads";
 
 /**
@@ -25,6 +25,8 @@ export type LoanListRow = LoanBalanceRow & {
   ratePpm?: number;
   /** FLOW-1046: the next scheduled payment; missing for a demand loan, a closed one, or a sample without it. */
   next?: { dueDate: string; amountMinor: bigint };
+  /** FLOW-1258: the due date of a scheduled payment past its grace with nothing recorded for it; missing when on time. */
+  lateOn?: string;
 };
 
 export function isClosedLoan(row: Pick<LoanListRow, "status">): boolean {
@@ -116,7 +118,9 @@ export async function readLoanList(companyId: string | null, today: string = isr
     const balance = byLoan.get(loan.id);
     // A balance row missing from the read: nothing counted against it, so the principal is left.
     const balanceMinor = BigInt(balance?.balance_minor ?? loan.principal_minor);
-    const next = nextPaymentOf(readLoanRow(loan, { balanceMinor, flaggedParts: 0 }), today);
+    const outlookLoan = readLoanRow(loan, { balanceMinor, flaggedParts: 0 });
+    const next = nextPaymentOf(outlookLoan, today);
+    const lateOn = latePayment(outlookLoan, balance?.last_paid_on ?? null, today);
     return {
       id: loan.id,
       name: loan.name,
@@ -130,6 +134,7 @@ export async function readLoanList(companyId: string | null, today: string = isr
       closedOn: loan.closed_on,
       ratePpm: rateInForRow(loan, today),
       ...(next == null ? {} : { next }),
+      ...(lateOn == null ? {} : { lateOn }),
     };
   }));
   const detailRows = (loans.data ?? []).map((row) => {

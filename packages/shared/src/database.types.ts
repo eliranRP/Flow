@@ -1613,7 +1613,7 @@ isOneToOne: false
                   ]
                 },"loan_balances": {
                   Row: {
-                    "balance_minor": number | null,"company_id": string | null,"currency": string | null,"flagged_parts": number | null,"loan_id": string | null,"project_id": string | null
+                    "balance_minor": number | null,"company_id": string | null,"currency": string | null,"flagged_parts": number | null,"last_paid_on": string | null,"loan_id": string | null,"project_id": string | null
                   }
                   Relationships: [
                     {
