@@ -2,7 +2,7 @@ import type { ForecastOverrideRow, MissingBill } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { priorPatch, useSetForecastItem } from "./forecast-month";
-import { useCompanyCurrency } from "./company-currency";
+import { useCompanyCurrencyQuery } from "./company-currency";
 import { useMissingBillsQuery } from "./forecast";
 import { overridesQuery } from "./forecast-overrides-query";
 import { useHomePreview } from "./preview";
@@ -53,15 +53,23 @@ export function withoutSkippedLate(bills: readonly MissingBill[], skipped: Reado
 
 /**
  * FLOW-1248 ("skipped means quiet", the owner, 2026-11-21): `missing_bills` without the charges taken out of this
- * month's forecast (Israel's month, decision 0182). Home and the project page read late charges from it. While the
- * overrides load or fail the list is whole: an error never hides an alert.
+ * month's forecast (Israel's month, decision 0182). Home and the project page read late charges from it.
+ * FLOW-1254: the list is not known (`data` undefined, so no late row draws) until the overrides are in, so the row
+ * draws once, at its final count and name. A failed overrides read draws the whole list: an error never hides an
+ * alert. `overridesActive` turns the overrides read on; `overridesLater` says it is turned on later on this screen
+ * (Home, after first paint) and will run, so the list waits for it. A read that is neither is never waited on.
  */
-export function useLateBillsQuery(active = true, overridesActive = active) {
+export function useLateBillsQuery(active = true, overridesActive = active, overridesLater = false) {
   const bills = useMissingBillsQuery(active);
   const overrides = useForecastOverrides(israelToday().slice(0, 7), active && overridesActive);
-  const base = useCompanyCurrency();
+  const currency = useCompanyCurrencyQuery();
+  const base = currency.data ?? "ILS";
   const skipped = overrides.data == null ? undefined : skippedKeys(overrides.data);
-  const data = bills.data == null ? undefined : withoutSkippedLate(bills.data, skipped, base);
+  // Pending is "no answer yet": an error is an answer (the whole list), and so is data.
+  const waitsForOverrides = (overridesActive || overridesLater) && overrides.isPending;
+  // The skips are matched in the company's currency, so a cold currency read holds the list too, only when it matters.
+  const waitsForCurrency = skipped != null && skipped.size > 0 && currency.isPending && currency.data == null;
+  const data = bills.data == null || waitsForOverrides || waitsForCurrency ? undefined : withoutSkippedLate(bills.data, skipped, base);
   return { ...bills, data };
 }
 
