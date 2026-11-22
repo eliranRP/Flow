@@ -29,7 +29,7 @@ function HangingProjectRead() {
   return null;
 }
 
-function Harness({ currentId, start, onViewSpy, hang }: { currentId: string | null; start: "pick" | "new"; onViewSpy?: (view: View) => void; hang?: boolean }) {
+function Harness({ currentId, start, onViewSpy, onBackSpy, hang }: { currentId: string | null; start: "pick" | "new"; onViewSpy?: (view: View) => void; onBackSpy?: () => void; hang?: boolean }) {
   const [view, setView] = useState<View>(start);
   return (
     <>
@@ -43,20 +43,23 @@ function Harness({ currentId, start, onViewSpy, hang }: { currentId: string | nu
           onViewSpy?.(next);
           setView(next);
         }}
-        onBack={() => { setView(null); }}
+        onBack={() => {
+          onBackSpy?.();
+          setView(null);
+        }}
         blocked={() => false}
       />
     </>
   );
 }
 
-function renderSheets(currentId: string | null, start: "pick" | "new" = "pick", options: { client?: QueryClient; onViewSpy?: (view: View) => void; hang?: boolean } = {}) {
+function renderSheets(currentId: string | null, start: "pick" | "new" = "pick", options: { client?: QueryClient; onViewSpy?: (view: View) => void; onBackSpy?: () => void; hang?: boolean } = {}) {
   return render(
     <QueryClientProvider client={options.client ?? new QueryClient()}>
       <ToastProvider>
         <BooksProvider>
           <MemoryRouter>
-            <Harness currentId={currentId} start={start} onViewSpy={options.onViewSpy} hang={options.hang} />
+            <Harness currentId={currentId} start={start} onViewSpy={options.onViewSpy} onBackSpy={options.onBackSpy} hang={options.hang} />
           </MemoryRouter>
         </BooksProvider>
       </ToastProvider>
@@ -195,5 +198,28 @@ describe("a group move closes its sheet after the write, not after the refetch (
     fireEvent.click(screen.getByRole("radio", { name: "מתחם לדוגמה" }));
     await screen.findByText("הפרויקט עבר לקבוצה מתחם לדוגמה");
     await waitFor(() => { expect(client.getQueryState(["project", "groups"])?.isInvalidated).toBe(true); });
+  });
+});
+
+describe("the picker waits for its move (FLOW-1256)", () => {
+  it("Back and Escape leave the picker open while a move is pending, and Escape works once it settles", async () => {
+    rpc.mockClear();
+    // The move is held open, so the test sees the picker while it is pending, then the refusal.
+    let refuse: (answer: unknown) => void = () => undefined;
+    rpc.mockImplementationOnce((() => new Promise((resolve) => { refuse = resolve; })) as never);
+    const onBackSpy = vi.fn();
+    renderSheets("g1", "pick", { onBackSpy });
+    fireEvent.click(screen.getByRole("radio", { name: "מתחם לדוגמה" }));
+    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("set_project_group", { p_project_id: "p1", p_group_id: "g2" }); });
+    expect(screen.getByRole("button", { name: "חזרה" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onBackSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("radiogroup", { name: "קבוצה" })).toBeInTheDocument();
+    refuse({ data: null, error: { message: "boom" } });
+    await screen.findByText("לא הצלחנו לשנות את הקבוצה.");
+    expect(screen.getByRole("button", { name: "חזרה" })).toBeEnabled();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onBackSpy).toHaveBeenCalledTimes(1);
   });
 });
