@@ -6,12 +6,11 @@ import { BandOfflineLine, PageLoadFailed } from "../ui/band-states";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
 import { CompactBar } from "../ui/compact-bar";
-import { israelToday } from "../ui/date-math";
 import { DockSlot, useDockedFilter } from "../ui/dock-filter";
 import { EmptyState } from "../ui/empty-state";
 import { GroupHead } from "../ui/group-head";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, CalendarIcon, ChevronIcon, PlusIcon } from "../ui/icons";
+import { AlertIcon, ChevronIcon, PlusIcon } from "../ui/icons";
 import { PercentIcon } from "../ui/icons-later";
 import { List, ListRow } from "../ui/list-row";
 import { PartsBar } from "../ui/parts-bar";
@@ -31,18 +30,10 @@ import { percentOf } from "./loans-paid";
 /** FLOW-1046: the band bar's height (6 + 52 + 6), the docking hook's `bar`. */
 const BAND_BAR = 64;
 
-/** A payment due within this many days shows as a דורש טיפול card. */
-const SOON_DAYS = 10;
-
 export type LoansFilter = "open" | "closed";
 
 function money(minor: bigint, currency: string): string {
   return wholeMoney(minor, currency === "USD" ? "USD" : "ILS");
-}
-
-/** Whole days from `today` to `iso` (both yyyy-mm-dd). */
-function daysUntil(iso: string, today: string): number {
-  return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
 }
 
 /**
@@ -62,11 +53,12 @@ export function loanRowHint(row: LoanListRow): string {
 }
 
 /**
- * FLOW-1046: the list's דורש טיפול cards. A loan whose payments wait for a check (the loan Jev filled from the
- * bank, or a payment it split), then a payment due within SOON_DAYS. Each is keyed by what it counts, so a
- * hidden card comes back when the count or the date changes.
+ * FLOW-1046, FLOW-1258: the list's דורש טיפול cards. A loan whose payments wait for a check (the loan Jev filled
+ * from the bank, or a payment it split), then a loan with a late payment: a scheduled date past its grace with no
+ * payment recorded for it (latePayment). A payment merely due soon is not a card; the band shows the next one.
+ * Each is keyed by what it counts, so a hidden card comes back when the count or the late date changes.
  */
-export function loansAttention(rows: readonly LoanListRow[], today: string, loanHref: (id: string) => string): BannerRow[] {
+export function loansAttention(rows: readonly LoanListRow[], loanHref: (id: string) => string): BannerRow[] {
   const open = groupLoans(rows).open;
   const checks: BannerRow[] = open.filter((row) => row.flaggedParts > 0).map((row) => ({
     id: `check:${row.id}`,
@@ -78,24 +70,18 @@ export function loansAttention(rows: readonly LoanListRow[], today: string, loan
     icon: <AlertIcon size={20} />,
     dismissKey: `check:${String(row.flaggedParts)}`,
   }));
-  const soon: BannerRow[] = open.flatMap((row) => {
-    if (row.next == null) return [];
-    const days = daysUntil(row.next.dueDate, today);
-    if (days < 0 || days > SOON_DAYS) return [];
-    const when = days === 0 ? "היום" : days === 1 ? "מחר" : `בעוד ${String(days)} ימים`;
-    return [{
-      id: `soon:${row.id}`,
-      to: loanHref(row.id),
-      title: `תשלום ${row.name} ${when} · ${money(row.next.amountMinor, row.currency)}`,
-      // Under 360px the loan and when ("10 ימים", not "בעוד 10 ימים", so a loan's name fits beside it at 320);
-      // the amount is on its page.
-      short: row.name,
-      tag: days > 1 ? `${String(days)} ימים` : when,
-      icon: <CalendarIcon size={20} />,
-      dismissKey: `soon:${row.next.dueDate}`,
-    }];
-  });
-  return [...checks, ...soon];
+  const late: BannerRow[] = open.flatMap((row) => row.lateOn == null ? [] : [{
+    id: `late:${row.id}`,
+    to: loanHref(row.id),
+    // What is wrong first, as the check card does, so a long name is what the line cuts; the date and amount
+    // are on the loan's page. Under 360px the loan and באיחור.
+    title: `תשלום באיחור · ${row.name}`,
+    short: row.name,
+    tag: "באיחור",
+    icon: <AlertIcon size={20} />,
+    dismissKey: `late:${row.lateOn}`,
+  }]);
+  return [...checks, ...late];
 }
 
 /** A group head's summary: the count, and the balances (one per currency). */
@@ -155,10 +141,9 @@ export function BandPaid({ principalMinor, leftMinor, currency }: { principalMin
   );
 }
 
-function LoanRow({ row, onOpen, today }: { row: LoanListRow; onOpen: (id: string) => void; today: string }) {
+function LoanRow({ row, onOpen }: { row: LoanListRow; onOpen: (id: string) => void }) {
   const hint = loanRowHint(row);
   const closed = isClosedLoan(row);
-  const late = row.next != null && row.next.dueDate < today;
   return (
     <ListRow
       variant="project"
@@ -166,7 +151,7 @@ function LoanRow({ row, onOpen, today }: { row: LoanListRow; onOpen: (id: string
       title={row.name}
       hintParts={hint.split(" · ")}
       tone={row.flaggedParts > 0 && !closed ? "warning" : undefined}
-      icon={closed ? <StatusMark kind="paid" /> : row.next == null ? undefined : <StatusMark kind={late ? "late" : "due"} />}
+      icon={closed ? <StatusMark kind="paid" /> : row.next == null ? undefined : <StatusMark kind={row.lateOn != null ? "late" : "due"} />}
       agorot={row.balanceMinor}
       currency={row.currency}
       label={[row.name, formatLoanMoney(row.balanceMinor, row.currency === "USD" ? "USD" : "ILS"), hint].join(", ")}
@@ -180,7 +165,7 @@ function LoanRow({ row, onOpen, today }: { row: LoanListRow; onOpen: (id: string
  * and + for a new loan; דורש טיפול; the פעילות / נסגרו segment, which docks into the band bar; then the rows in
  * groups by kind under one-line sticky heads. `closedOpen` opens on נסגרו (the dev fixture's ?closed=1).
  */
-export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { ctx: LoansHostCtx; closedOpen?: boolean; today?: string }) {
+export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; closedOpen?: boolean }) {
   const [filter, setFilter] = useState<LoansFilter>(closedOpen ? "closed" : "open");
   const [bandMark, setBandMark] = useState<HTMLElement | null>(null);
   const barShown = useScrolledPast(bandMark, true, BAND_BAR);
@@ -284,7 +269,7 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
         ) : (
           <>
             {ctx.offlineSince == null ? null : <BandOfflineLine since={ctx.offlineSince} onPage />}
-            <AttentionCards rows={loansAttention(ctx.rows, today, ctx.loanHref)} storageKey="loans" />
+            <AttentionCards rows={loansAttention(ctx.rows, ctx.loanHref)} storageKey="loans" />
             {hasRows ? (
               <>
                 <span ref={markRef} className="ui-compact-mark" aria-hidden="true" />
@@ -310,7 +295,7 @@ export function LoansList({ ctx, closedOpen = false, today = israelToday() }: { 
               <section key={group.kind} className="ui-month ui-loans-group" aria-labelledby={`loans-${filter}-${group.kind}`}>
                 <GroupHead id={`loans-${filter}-${group.kind}`} title={group.title} summary={groupSummary(group)} />
                 <List layout="flat">
-                  {group.rows.map((row) => <LoanRow key={row.id} row={row} onOpen={ctx.openLoan} today={today} />)}
+                  {group.rows.map((row) => <LoanRow key={row.id} row={row} onOpen={ctx.openLoan} />)}
                 </List>
               </section>
             ))}

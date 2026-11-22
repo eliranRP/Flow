@@ -18,6 +18,8 @@ const ROWS = sampleLoanStore().rows();
 const pagesLoans: LoanListRow[] = [
   { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 2, projectId: "p1", projectName: "וילה אלון", next: { dueDate: "2026-11-20", amountMinor: 524_000n } },
   { id: "l2", name: "הלוואת ציוד", currency: "USD", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן", kind: "interest_only", next: { dueDate: "2026-11-15", amountMinor: 131_200n } },
+  // FLOW-1258: a scheduled payment with nothing recorded for it.
+  { id: "l3", name: "גישור הגפן", currency: "USD", balanceMinor: 8_000_000n, flaggedParts: 0, projectId: "p2", projectName: "פרויקט גפן", next: { dueDate: "2026-12-01", amountMinor: 210_000n }, lateOn: "2026-11-01" },
 ];
 
 /** Long names and many rows, for the long-content state (V3-States). */
@@ -109,13 +111,13 @@ export const Docked: Story = {
   name: "Loans, docked",
   args: { data: "long" },
   play: async ({ canvasElement }) => {
-    // Scroll to the end, not a fixed offset: the דורש טיפול cards above the segment follow the real date (SOON_DAYS).
+    // Scroll to the end, not a fixed offset.
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" });
     await waitFor(() => expect(canvasElement.querySelector(".ui-compact-dock")).toHaveAttribute("data-open"));
   },
 };
 
-/** דורש טיפול: the loan waiting for a check and the payment due soon. */
+/** דורש טיפול: the loans waiting for a check and the late payment (FLOW-1258). */
 export const Attention: Story = {
   name: "Loans, attention",
   args: { data: "pages" },
@@ -129,8 +131,7 @@ export const Attention320: Story = {
   play: async ({ canvasElement }) => {
     await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
     await within(canvasElement).findByRole("link", { name: "2 תשלומים ממתינים לבדיקה · משכנתא אלון" });
-    // A payment due soon adds its card, as the date the story runs on allows.
-    await expect(oneLineAttention(canvasElement).slice(0, 2)).toEqual(["לבדיקה · תשלום אחד", "לבדיקה · 2 תשלומים"]);
+    await expect(oneLineAttention(canvasElement)).toEqual(["לבדיקה · תשלום אחד", "לבדיקה · 2 תשלומים", "גישור הגפן · באיחור"]);
   },
 };
 

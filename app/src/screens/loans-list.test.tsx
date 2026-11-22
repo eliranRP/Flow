@@ -48,25 +48,21 @@ describe("loanRowHint", () => {
 describe("loansAttention", () => {
   const href = (id: string) => `/loans/${id}`;
 
-  it("lists the loans waiting for a check, then a payment due within ten days, each keyed by what it counts", () => {
+  it("lists the loans waiting for a check, then a late payment, each keyed by what it counts", () => {
     const rows = [
       row("n", "שטר הזית", { flaggedParts: 1 }),
-      row("b", "גישור", { next: { dueDate: "2026-11-15", amountMinor: 131_200n } }),
-      row("m", "משכנתא", { next: { dueDate: "2026-11-30", amountMinor: 524_000n } }),
+      row("b", "גישור", { next: { dueDate: "2026-12-01", amountMinor: 131_200n }, lateOn: "2026-11-01" }),
       row("c", "סגורה", { flaggedParts: 3, status: "closed" }),
     ];
-    const cards = loansAttention(rows, "2026-11-05", href);
+    const cards = loansAttention(rows, href);
     expect(cards.map((card) => [card.id, card.title, card.to, card.dismissKey])).toEqual([
       ["check:n", "תשלום אחד ממתין לבדיקה · שטר הזית", "/loans/n", "check:1"],
-      ["soon:b", "תשלום גישור בעוד 10 ימים · $1,312", "/loans/b", "soon:2026-11-15"],
+      ["late:b", "תשלום באיחור · גישור", "/loans/b", "late:2026-11-01"],
     ]);
   });
 
-  it("says היום and מחר for the nearest days", () => {
-    const cards = loansAttention([
-      row("a", "א", { next: { dueDate: "2026-11-05", amountMinor: 100n } }),
-      row("b", "ב", { next: { dueDate: "2026-11-06", amountMinor: 100n } }),
-    ], "2026-11-05", href);
-    expect(cards.map((card) => card.title)).toEqual(["תשלום א היום · $1", "תשלום ב מחר · $1"]);
+  it("has no card for a payment that is only due soon", () => {
+    expect(loansAttention([row("m", "משכנתא", { next: { dueDate: "2026-11-25", amountMinor: 524_000n } })], href)).toEqual([]);
   });
 });
+

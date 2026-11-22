@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_AMORTIZING, SAMPLE_BALLOON, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
 import type { LoanPayment } from "./loan-detail-data";
-import { loanOutlook, paidInPeriod, wholeMinor } from "./loan-outlook";
+import { latePayment, loanOutlook, paidInPeriod, wholeMinor } from "./loan-outlook";
 
 // FLOW-434: the loan page's next payment, years ahead and paid this year (invented loans).
 
@@ -85,5 +85,33 @@ describe("labels", () => {
   it("rounds to whole units", () => {
     expect(wholeMinor(12_349n)).toBe(12_300n);
     expect(wholeMinor(12_350n)).toBe(12_400n);
+  });
+});
+
+// FLOW-1258: a scheduled payment more than 10 days past with nothing recorded from 15 days before it on.
+describe("latePayment", () => {
+  it("is on time when the last due date was paid, early or late in its grace", () => {
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-11-05", "2026-11-22")).toBeNull();
+    // December's payment made in November, before its date.
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-11-20", "2026-12-20")).toBeNull();
+  });
+
+  it("waits out the grace: due 12-01, nothing since 11-05, late only after 12-11", () => {
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-11-05", "2026-12-11")).toBeNull();
+    expect(latePayment(SAMPLE_AMORTIZING, "2026-11-05", "2026-12-12")).toBe("2026-12-01");
+  });
+
+  it("calls a loan with no payment at all late once its latest due date is past the grace", () => {
+    expect(latePayment(SAMPLE_AMORTIZING, null, "2026-11-22")).toBe("2026-11-01");
+  });
+
+  it("never calls a demand loan or a paid-off loan late", () => {
+    expect(latePayment(SAMPLE_DEMAND, null, "2026-11-22")).toBeNull();
+    expect(latePayment(SAMPLE_PAID_OFF, null, "2026-11-22")).toBeNull();
+  });
+
+  it("has nothing late before the first due date passes its grace", () => {
+    // The first payment is due on the start date: 11-15 is still inside its grace on 11-22.
+    expect(latePayment({ ...SAMPLE_AMORTIZING, startDate: "2026-11-15" }, null, "2026-11-22")).toBeNull();
   });
 });
