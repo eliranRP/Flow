@@ -227,6 +227,42 @@ describe("Home on next month (FLOW-1056)", () => {
   });
 });
 
+// FLOW-1252: the late rows are drawn on the current month only, so another month reads neither the late bills nor this month's overrides.
+describe("Home's late bills by month (FLOW-1252)", () => {
+  it("opened on a past month, sends neither missing_bills nor forecast_overrides_for", async () => {
+    wrap(0, `/?month=${month(1)}`);
+    expect(await screen.findByText("תזרים · חודש סגור")).toBeInTheDocument();
+    // The month's own lines wait for first paint, as the late bills' overrides did: once they went out, the late read had its turn.
+    await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
+    expect(rpc.calls.some((c) => c.name === "missing_bills")).toBe(false);
+    expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(false);
+  });
+
+  it("on the current month, reads the late bills and this month's overrides", async () => {
+    wrap(0, "/");
+    await screen.findByText("תזרים · עד היום");
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "missing_bills")).toBe(true); });
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
+  });
+});
+
+// FLOW-1253: the late bills (their currency read is keyed) and the month forecast (which reads it too) share one request.
+describe("Home's company currency read (FLOW-1253)", () => {
+  it("a cold Home sends mcp_company_loan_currency once, for the late bills and the month forecast together", async () => {
+    rpc.impl = (name) => {
+      if (name === "mcp_company_loan_currency") return Promise.resolve({ data: "ILS", error: null });
+      if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
+      if (name === "list_unpaid" || name === "missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    // The forecast's own reads go out together, after first paint: once its edits read is out, its currency read has gone out too.
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_forecast_edits_for")).toBe(true); });
+    expect(rpc.calls.filter((c) => c.name === "mcp_company_loan_currency")).toHaveLength(1);
+  });
+});
+
 describe("Home's forecast row while it loads (FLOW-1031)", () => {
   it("keeps the row's place until the read answers, and lets it go when the read fails", async () => {
     let failForecast: () => void = () => undefined;
