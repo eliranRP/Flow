@@ -48,7 +48,7 @@ describe("loanRowHint", () => {
 describe("loansAttention", () => {
   const href = (id: string) => `/loans/${id}`;
 
-  it("lists the loans waiting for a check, then a late payment, each keyed by what it counts", () => {
+  it("lists a late payment first, then the loans waiting for a check, each keyed by what it counts", () => {
     const rows = [
       row("n", "שטר הזית", { flaggedParts: 1 }),
       row("b", "גישור", { next: { dueDate: "2026-12-01", amountMinor: 131_200n }, lateOn: "2026-11-01" }),
@@ -56,8 +56,8 @@ describe("loansAttention", () => {
     ];
     const cards = loansAttention(rows, href);
     expect(cards.map((card) => [card.id, card.title, card.to, card.dismissKey])).toEqual([
-      ["check:n", "תשלום אחד ממתין לבדיקה · שטר הזית", "/loans/n", "check:1"],
       ["late:b", "תשלום באיחור · גישור", "/loans/b", "late:2026-11-01"],
+      ["check:n", "תשלום אחד ממתין לבדיקה · שטר הזית", "/loans/n", "check:1"],
     ]);
   });
 

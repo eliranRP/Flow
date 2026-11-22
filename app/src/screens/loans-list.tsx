@@ -53,8 +53,8 @@ export function loanRowHint(row: LoanListRow): string {
 }
 
 /**
- * FLOW-1046, FLOW-1258: the list's דורש טיפול cards. A loan whose payments wait for a check (the loan Jev filled
- * from the bank, or a payment it split), then a loan with a late payment: a scheduled date past its grace with no
+ * FLOW-1046, FLOW-1258: the list's דורש טיפול cards. A loan with a late payment first (the more urgent), then a loan
+ * whose payments wait for a check (the loan Jev filled from the bank, or a payment it split). Late: a scheduled date past its grace with no
  * payment recorded for it (latePayment). A payment merely due soon is not a card; the band shows the next one.
  * Each is keyed by what it counts, so a hidden card comes back when the count or the late date changes.
  */
@@ -81,7 +81,7 @@ export function loansAttention(rows: readonly LoanListRow[], loanHref: (id: stri
     icon: <AlertIcon size={20} />,
     dismissKey: `late:${row.lateOn}`,
   }]);
-  return [...checks, ...late];
+  return [...late, ...checks];
 }
 
 /** A group head's summary: the count, and the balances (one per currency). */

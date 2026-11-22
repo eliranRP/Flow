@@ -131,7 +131,7 @@ export const Attention320: Story = {
   play: async ({ canvasElement }) => {
     await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
     await within(canvasElement).findByRole("link", { name: "2 תשלומים ממתינים לבדיקה · משכנתא אלון" });
-    await expect(oneLineAttention(canvasElement)).toEqual(["לבדיקה · תשלום אחד", "לבדיקה · 2 תשלומים", "גישור הגפן · באיחור"]);
+    await expect(oneLineAttention(canvasElement)).toEqual(["גישור הגפן · באיחור", "לבדיקה · תשלום אחד", "לבדיקה · 2 תשלומים"]);
   },
 };
 

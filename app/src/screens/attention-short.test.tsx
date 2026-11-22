@@ -69,12 +69,12 @@ describe("loansAttention's short titles", () => {
       row("d", "גישור", { lateOn: "2026-10-01" }),
     ], (id) => `/loans/${id}`);
     expect(short(cards)).toEqual([
+      ["גישור", "באיחור"],
       ["לבדיקה", "2 תשלומים"],
       ["לבדיקה", "תשלום אחד"],
-      ["גישור", "באיחור"],
     ]);
     // The full title is still the card's name.
-    expect(cards[0]?.title).toBe("2 תשלומים ממתינים לבדיקה · משכנתא אלון");
+    expect(cards[1]?.title).toBe("2 תשלומים ממתינים לבדיקה · משכנתא אלון");
   });
 });
 
