@@ -28,14 +28,6 @@ export type KeptStore = {
 const DB_NAME = "flow-kept-reads";
 const STORE = "reads";
 
-function done(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => { resolve(); };
-    tx.onerror = () => { reject(tx.error ?? new Error("kept store")); };
-    tx.onabort = () => { reject(tx.error ?? new Error("kept store")); };
-  });
-}
-
 export function idbKeptStore(factory: () => IDBFactory | undefined = () => globalThis.indexedDB): KeptStore {
   let opened: Promise<IDBDatabase | null> | null = null;
   const open = (): Promise<IDBDatabase | null> => {
@@ -45,48 +37,30 @@ export function idbKeptStore(factory: () => IDBFactory | undefined = () => globa
         if (request == null) { resolve(null); return; }
         request.onupgradeneeded = () => { request.result.createObjectStore(STORE, { keyPath: "id" }); };
         request.onsuccess = () => { resolve(request.result); };
-        request.onerror = () => { resolve(null); };
-        request.onblocked = () => { resolve(null); };
+        request.onerror = request.onblocked = () => { resolve(null); };
       } catch {
         resolve(null);
       }
     });
     return opened;
   };
-  const run = async <T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => T, fallback: T): Promise<T> => {
+  /** Runs the work in one transaction and resolves when it is done; a store that cannot open or fails gives nothing. */
+  const run = async <T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => T): Promise<T | undefined> => {
     const db = await open();
-    if (db == null) return fallback;
     try {
-      const tx = db.transaction(STORE, mode);
-      const result = work(tx.objectStore(STORE));
-      await done(tx);
+      const tx = db?.transaction(STORE, mode);
+      const result = tx && work(tx.objectStore(STORE));
+      if (tx) await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = tx.onabort = reject; });
       return result;
     } catch {
-      return fallback;
+      return undefined;
     }
   };
   return {
-    async all() {
-      const rows: KeptRow[] = [];
-      const db = await open();
-      if (db == null) return rows;
-      try {
-        const request = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
-        return await new Promise<KeptRow[]>((resolve) => {
-          request.onsuccess = () => { resolve(request.result as KeptRow[]); };
-          request.onerror = () => { resolve(rows); };
-        });
-      } catch {
-        return rows;
-      }
-    },
-    put: (rows) => run("readwrite", (store) => {
-      // A value that cannot be cloned is not kept; the others are.
-      for (const row of rows) {
-        try { store.put(row); } catch { /* not kept */ }
-      }
-    }, undefined),
-    remove: (ids) => run("readwrite", (store) => { for (const id of ids) store.delete(id); }, undefined),
-    clear: () => run("readwrite", (store) => { store.clear(); }, undefined),
+    all: async () => ((await run("readonly", (store) => store.getAll()))?.result ?? []) as KeptRow[],
+    // A value that cannot be cloned is not kept; the others are.
+    put: async (rows) => { await run("readwrite", (store) => { for (const row of rows) try { store.put(row); } catch { /* not kept */ } }); },
+    remove: async (ids) => { await run("readwrite", (store) => { for (const id of ids) store.delete(id); }); },
+    clear: async () => { await run("readwrite", (store) => { store.clear(); }); },
   };
 }
