@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { daysBetween } from "./recurring-schedule";
+import { daysBetween } from "./ui/date-math";
 import { formatDayMonth } from "./ui/date-math";
 import type { UtilityBill, UtilityIncome, UtilityIncomeBill, UtilityPayment } from "./utility-refunds";
 
