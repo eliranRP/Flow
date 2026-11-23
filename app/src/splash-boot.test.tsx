@@ -63,4 +63,44 @@ describe("startSplash", () => {
     expect(startSplash()).toBe(false);
     expect(document.body.children).toHaveLength(0);
   });
+
+  it("takes the cover down after the failsafe when the splash's code never arrives, and then shows nothing", async () => {
+    webdriver(false);
+    vi.useFakeTimers();
+    vi.resetModules();
+    vi.doMock("./ui/splash", () => new Promise(() => undefined));
+    try {
+      const { startSplash } = await import("./splash-boot");
+      startSplash();
+      expect(document.body.children).toHaveLength(1);
+      vi.advanceTimersByTime(2999);
+      expect(document.body.children).toHaveLength(1);
+      vi.advanceTimersByTime(1);
+      expect(document.body.children).toHaveLength(0);
+    } finally {
+      vi.doUnmock("./ui/splash");
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves no cover and no host when the splash throws while drawing", async () => {
+    webdriver(false);
+    vi.resetModules();
+    vi.doMock("./ui/splash", () => ({
+      Splash: () => {
+        throw new Error("draw failed");
+      },
+    }));
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { startSplash } = await import("./splash-boot");
+      startSplash();
+      await waitFor(() => {
+        expect(document.body.children).toHaveLength(0);
+      });
+    } finally {
+      error.mockRestore();
+      vi.doUnmock("./ui/splash");
+    }
+  });
 });

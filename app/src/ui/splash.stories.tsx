@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { Decorator } from "@storybook/react-vite";
+import { useEffect, type ReactNode } from "react";
 import { expect, within } from "storybook/test";
 import { SplashMark } from "./splash";
 
@@ -41,10 +42,25 @@ export const Done: Story = {
   render: () => <SplashMark at={2800} />,
 };
 
-const forceDark: Decorator = (Story) => {
+function ForceDark({ children }: { children: ReactNode }) {
+  // Dark for this story only; the theme comes back when it unmounts, so it never leaks into the next story.
+  const before = document.documentElement.dataset.theme;
   document.documentElement.dataset.theme = "dark";
-  return <Story />;
-};
+  useEffect(
+    () => () => {
+      if (before === undefined) delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = before;
+    },
+    [before],
+  );
+  return children;
+}
+
+const forceDark: Decorator = (Story) => (
+  <ForceDark>
+    <Story />
+  </ForceDark>
+);
 
 /** On the dark page colour: the tile and the liquid stay the icon's violet; the wordmark takes the dark logo tone. */
 export const Dark: Story = {

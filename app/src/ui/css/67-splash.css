@@ -2,7 +2,8 @@
    transform. The durations are the --motion-splash-* tokens (splash.tsx holds the same numbers for its timer,
    and its test checks they match). The tile and the liquid are the icon's violet in both themes; the F inside
    takes the icon's white where the liquid covers it. Reduced motion needs no block of its own: the tokens are
-   0ms there, so the finished icon and wordmark show at once. */
+   0ms there, so the finished icon and wordmark show at once. The translate distances in the rise and wave
+   keyframes are viewBox-100 units (the icon's own), not CSS pixels. */
 
 .ui-splash {
   position: fixed;

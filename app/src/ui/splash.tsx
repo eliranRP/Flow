@@ -18,6 +18,7 @@ export const SPLASH_FADE_MS = 160;
 /** Reduced motion: the finished icon and wordmark stay this long. */
 export const SPLASH_REDUCED_HOLD_MS = 400;
 
+// The path, wave and translate numbers here and in css/67-splash.css are viewBox-100 units, not CSS pixels.
 const F_PATH =
   "M35.07 75.00 C34.07 75.00 33.29 74.21 33.29 73.21 L33.29 26.79 C33.29 25.79 34.07 25.00 35.07 25.00 L67.93 25.00 C68.93 25.00 69.71 25.79 69.71 26.79 L69.71 34.00 C69.71 35.00 68.93 35.79 67.93 35.79 L45.86 35.79 L45.86 46.29 L66.50 46.29 C67.50 46.29 68.29 47.07 68.29 48.07 L68.29 55.29 C68.29 56.29 67.50 57.07 66.50 57.07 L45.86 57.07 L45.86 73.21 C45.86 74.21 45.07 75.00 44.07 75.00 Z";
 /** The liquid's surface: a wave of period 50, wide enough to slide a whole cycle left. */
