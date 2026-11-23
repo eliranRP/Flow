@@ -1,10 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
+import { reducedMotion } from "./period-swipe";
 import { useScrolledPast } from "./screen-header";
 import { safeTopPx } from "./toast-layout";
-
-function reducedMotion(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 /** How far above the bar's edge a pick parks the mark, so rounding never puts it back in view. */
 const DOCK_KEEP = 8;

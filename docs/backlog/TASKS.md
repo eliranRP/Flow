@@ -835,7 +835,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1261"></a>[FLOW-1261](tasks/FLOW-1261.md) | Perf: the Loans list's balances read does not send the currency twice | SMALL (perf) |
 | <a id="flow-1262"></a>[FLOW-1262](tasks/FLOW-1262.md) | CI: the get_project speed test does not fail on a slow runner, and names the state when it is slow | SMALL (CI test) |
 | <a id="flow-1276"></a>[FLOW-1276](tasks/FLOW-1276.md) | Perf: report three times per screen (data shown, fresh data shown, first visit) | SMALL (perf) |
-| <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Perf: cold Home sends its first two reads before the app's code arrives | MEDIUM (perf) |
+| <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |
 | <a id="flow-1283"></a>[FLOW-1283](tasks/FLOW-1283.md) | Perf: build a loan's schedule only when something needs it | SMALL (perf) |

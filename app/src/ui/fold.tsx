@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { cx } from "./cx";
+import { reducedMotion } from "./period-swipe";
 
 /** The v3 row-card fold (HANDOFF §2): the slide and the max-height fold over --motion-sheet-out (220ms), with a frame to spare. */
 export const FOLD_MS = 240;
-
-function reducedMotion(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 /**
  * FLOW-1141: the rows folding away, shared by the attention row-cards and the utility refunds list. `fold(id)`

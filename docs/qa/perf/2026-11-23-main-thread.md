@@ -4,16 +4,18 @@ The perf steward's profile for [FLOW-1274](../../backlog/tasks/FLOW-1274.md), de
 
 ## Summary
 
-- A first visit to a main screen keeps the main thread busy for 0.33 to 0.99 s (medians of 3: Projects 0.51, the project page 0.88, Loans 0.60, Recurring 0.53, Profit month 0.51, year 0.33, by date 0.81, Review 0.66, Forecast 0.70). With the screen's data kept on the device, the same visit takes 0.28 to 0.71 s. A third to a half of every visit is the browser's own work (style, layout, paint, the native cost of requests), and the rest is mostly React rendering the screen.
-- The biggest group is **React render and commit**: 164 to 446 ms inclusive on a first visit (Projects 320, the project page 446, Recurring 337, Review 342, Profit by date 312). Varying list lengths puts it at about 5 ms for each Projects row and 9 ms for each Recurring row, since every row is drawn at once (FLOW-1282).
-- The second group is **layout read while the page is built**: the hero figure fit (`readPad` 25 to 48 ms on three screens), the safe-area probe (`safeTop` 7 to 17 ms) and the scroll read in the first commit (15 to 100 ms) each make the browser lay the page out again (FLOW-1281).
-- **Dates built the slow way** cost 8 to 71 ms a visit (the project page 57 to 71 ms) and 45 to 93 ms before Home's first read: `israelToday` built a new `Intl.DateTimeFormat` with a time zone on every call, about 0.37 ms each on the phone, against 0.001 ms to format with a built one. Fixed in this PR (below).
+- A first visit to a main screen keeps the main thread busy for 0.33 to 0.88 s (medians of 3: Projects 0.51, the project page 0.88, Loans 0.60, Recurring 0.53, Profit month 0.51, year 0.33, by date 0.81, Review 0.66, Forecast 0.70). With the screen's data kept on the device, the same visit takes 0.28 to 0.71 s. Style, layout and paint are 17% to 38% of a first visit's busy time (Recurring 38%, Projects 36%, Profit month 17%), and React rendering the screen is the largest part of the rest.
+- The biggest group is **React render and commit**: 164 to 446 ms inclusive on a first visit (Projects 320, the project page 446, Recurring 337, Review 342, Profit by date 312). Raising the number of rows adds time (about 5 ms for each Projects row and 9 ms for each Recurring row from a 10-against-40 comparison, with a wide spread between runs; see [Row counts](#row-counts)), since every row is drawn at once (FLOW-1282).
+- The second group is **layout read while the page is built**: the hero figure fit (`readPad` 25 to 46 ms on Projects, the project page and Loans), the safe-area probe (`safeTop` 2 to 17 ms) and the scroll read in the first commit (7 to 100 ms; 100 ms on Recurring) each make the browser lay the page out again (FLOW-1281).
+- **Dates built the slow way** cost 2 to 71 ms a visit in the per-screen tables (the project page 71 ms; 56 to 88 ms over 5 later runs, median 69), and 25 to 93 ms before Home's first read (median 42 ms over the 5 later runs; 81 ms in the first set's median run): `israelToday` built a new `Intl.DateTimeFormat` with a time zone on every call, about 0.37 ms each on the phone against 0.001 ms to format with a built one (method under [What was fixed here](#what-was-fixed-here)). Fixed in this PR.
 - **Schema parsing (zod)** is small on the stub's small answers: 0 to 33 ms a visit. **The big answers were not measured** (the stub sends none of the 127 KB kind), so the forecast, next-month and profit math is not profiled yet (FLOW-1284).
-- Cold Home's first read leaves at a median of 715 ms; the entry has been downloaded for 196 ms by then. The read waits for code it does not need (FLOW-1280).
+- Cold Home's first read leaves at a median of 715 ms; the entry has been downloaded for 196 ms by then. The first read waits for the app's code to start (FLOW-1280). That is the idea FLOW-1116 built and the owner dropped on 2026-11-14: its inline early reads cut the first read from 801 to 234 ms, but the figures moved only from 1,489 to 1,429 ms, because the app's start-up was the bottleneck. So this profile does not claim the figures would show sooner by the time the first read moves.
 
 ## Method
 
-**Build and server.** `vite build` with the perf stub's address (`VITE_SUPABASE_URL=http://127.0.0.1:43199`, as `playwright.perf.config.ts` and `scripts/load-report.mjs` do), with source maps on in a scratch build only, served gzipped by `scripts/serve-dist.mjs`. The stub is `app/perf/stub-backend.ts` (it signs the page in and answers every request to its address) with 85 ms added to each answer, plus larger invented answers for the dashboard (40 projects), projects cash, the recurring schedule (60 charges), expected months (60 parties), the review page (50 cards), the unpaid list (60 bills) and the loans tables (12 loans, each with two rate rows). Every other read gets the stub's default (`[]`).
+**Build and server.** `vite build` with the perf stub's address (`VITE_SUPABASE_URL=http://127.0.0.1:43199`, as `app/playwright.perf.config.ts` and `scripts/load-report.mjs` do), with source maps on in a scratch build only, served gzipped by `scripts/serve-dist.mjs`. The stub is `app/perf/stub-backend.ts` (it signs the page in and answers every request to its address) with 85 ms added to each answer, plus larger invented answers for the dashboard (40 projects), projects cash, the recurring schedule (60 charges), expected months (60 parties), the review page (50 cards), the unpaid list (60 bills) and the loans tables (12 loans, each with two rate rows). Every other read gets the stub's default (`[]`).
+
+**Where this was run.** In a scratch harness that is not in this PR: the committed stub (`app/perf/stub-backend.ts`) has no 85 ms delay and answers most reads with `[]`, and the larger invented answers above and the tracing script live only in the author's scratch directory. So these tables cannot be re-run from the repository as they stand. FLOW-1284 puts realistic answers into the committed stub and FLOW-1276 adds the sweep script, which together make the profile repeatable.
 
 **The FLOW-804 phone.** Chromium 412 x 915 with touch, CPU 4x (`Emulation.setCPUThrottlingRate`), 85 ms latency, 9 Mbps down and 1.5 Mbps up (`Network.emulateNetworkConditions`).
 
@@ -23,7 +25,7 @@ The perf steward's profile for [FLOW-1274](../../backlog/tasks/FLOW-1274.md), de
 
 **What the numbers are not.**
 - They are an upper bound on cost, as in the split: the whole 6 s window counts, including work after the screen settled.
-- The profiler and the stub's request interception add to the native part: `fetch` and `Headers` show 20 to 100 ms on screens with 13 to 19 reads, and "(program)" (time the profiler cannot place) 120 to 480 ms. Compare screens, not the totals, with the production numbers of the split.
+- The profiler and the stub's request interception add native work to every total, so compare screens with one another, not the totals with the production numbers of the split.
 - The machine was shared with other jobs (load average about 5 while the second set of runs went), so two runs of the same build differ by up to 40%. The totals before and after the fixes below are therefore not compared; the fixes are shown by their own functions' time.
 - The stub's answers are small. Real companies have more rows, so row-driven costs (rendering, schema parse, schedule math) will be larger.
 
@@ -247,6 +249,18 @@ All times are milliseconds on the phone profile. The first function rows are the
 | `anon@165` in `kept-reads.ts`, own time | 2 | 0 |
 | `toJson` in `kept-reads.ts`, own time (kept data: JSON of each entry) | 2 | 0 |
 
+## Row counts
+
+The same build, with the stub's lists cut to 10 rows (invented projects, charges, review cards) or left at 40 (the tables above used 40 projects, 60 charges and 50 cards). Main thread over 3 first visits each, in ms:
+
+| Screen | 10 rows | 40 rows | Per row, from the medians |
+| --- | --- | --- | ---: |
+| Projects | 302, 411, 388 (median 388) | 630, 550, 321 (median 550) | 5.4 ms |
+| Recurring | 250, 322, 290 (median 290) | 612, 330, 575 (median 575) | 9.5 ms |
+| Review (control: one card at a time) | 553, 455, 555 (median 553) | 632, 523, 542 (median 542) | none |
+
+The spread inside each cell is as large as the difference between the medians for Projects (321 to 630 ms at 40 rows), so the per-row figures are rough: they say rows matter, not how much. FLOW-1282 measures it again.
+
 ## Cold Home
 
 Three cold loads on the profile above, with the stub backend (medians). Times are from the start of navigation in milliseconds.
@@ -262,39 +276,50 @@ Three cold loads on the profile above, with the stub backend (medians). Times ar
 | The next reads (`list_my_companies` and others, after React renders and the session is known) | about 1,100 | 945 to 1,154 |
 | First contentful paint | 932 | 778 to 935 |
 
-So the first read waits 196 ms (111 to 238) after the entry finishes. In that gap the profile (before the first read, median run) shows 524 ms of main thread over the whole 715 ms: 91 ms in our code (81 ms of it in `israelToday`), 43 ms in supabase-js (the auth client's constructor and session recovery), 17 ms in react-query, and 231 ms the profiler cannot place, which is mostly the browser starting the page and the network. `israelToday` was the single largest function: the first `Intl.DateTimeFormat` with a time zone loads the zone data (about 30 to 55 ms on this CPU in a bare page, measured separately) and `defaultPeriod()` in `startHomeReads` was the first to ask for today.
+So the first read waits 196 ms (111 to 238) after the entry finishes. In that gap the profile (before the first read, median run of the first 3) shows 524 ms of main thread over the whole 715 ms: 91 ms in our code (81 ms of it in `israelToday`), 43 ms in supabase-js (the auth client's constructor and session recovery), 17 ms in react-query, 231 ms the profiler cannot place (the browser starting the page), and 142 ms for the rest: about 48 ms of native calls, 18 ms of bundle code the source maps do not cover, 18 ms of HTML parsing, 30 ms of style and layout, 10 ms of compile, and about 18 ms unattributed (these groups overlap a little, so the parts are approximate). `israelToday` was the single largest function: the first `Intl.DateTimeFormat` with a time zone loads the zone data and `defaultPeriod()` in `startHomeReads` was the first to ask for today. Over 5 further cold loads on the build before the fix it took 25 to 51 ms before the first read (median 42), and 25 to 93 ms over all 8 loads.
 
 **What could start the first read sooner**
-1. **Take the time-zone start-up off the path (done here).** `index.html`'s inline script now builds the formatter in the idle wait while the entry downloads (the main thread is idle between 146 and 500 ms), and `israelToday` reuses one formatter. The gap between the entry finishing and the first read fell from a median of 196 ms to 85 ms (101, 78, 85 against 111, 196, 238 over 3 runs each), so the first read leaves about 110 ms sooner.
-2. **Send the first two reads from the inline script, before the entry arrives (FLOW-1280).** The reads need only the saved session's token, the project URL and key and the date; none needs the entry's code. They could leave at about 150 to 200 ms after navigation instead of 715 ms, 0.5 s sooner, with the fallback of today's path when the token has expired.
+1. **Take the time-zone start-up off the path (done here).** `index.html`'s inline script now builds the formatter in the idle wait while the entry downloads (the main thread is idle between 146 and 500 ms), and `israelToday` reuses one formatter. The gap between the entry finishing and the first read fell from a median of 196 ms to 85 ms (101, 78, 85 against 111, 196, 238 over 3 runs each), and in 5 further runs each from 104 ms to 67 ms (the first read at a median of 656 against 568 ms after navigation, `israelToday` gone from the path), so the first read leaves 90 to 110 ms sooner. **Only the time the first read leaves was measured**, not when the figures show: by FLOW-1116's finding the figures may not move by that much, and `load-report`'s Home ready (7 paired runs) moved from 1,236 to 1,259 ms, which is within noise (the branch was slower in 3 of 7 pairs).
+2. **Send the first two reads from the inline script, before the entry arrives (FLOW-1280).** The reads need only the saved session's token, the project URL and key and the date; none needs the entry's code. They could leave at about 150 to 200 ms after navigation instead of 715 ms. **This is FLOW-1116 again**, which the owner dropped on 2026-11-14 after building it: the first read left 567 ms sooner (801 to 234 ms) but the figures showed only 60 ms sooner (1,489 to 1,429 ms), because they waited for the app's code, and the owner chose to shrink Home's start-up instead. FLOW-1280 is therefore a plan-first task that needs the owner's go, and is judged by when the figures show, not by when the read leaves.
 3. **Skip the auth client for the token (part of FLOW-1280).** `startHomeReads` waits for `getSession` only to learn whether there is a session; the first read does not need the client's recovery work (43 ms of supabase-js and the microtask wait).
-4. **A smaller entry.** Each 10 KB gzipped is about 9 ms of download at 9 Mbps plus about 3 ms of parse. The entry is 245 KB of the 248 KB budget, so any new code that Home needs delays the first read directly; the sheet and screen code stay lazy.
+4. **A smaller entry.** Each 10 KB gzipped is about 9 ms of download at 9 Mbps plus about 3 ms of parse. The entry (JavaScript and CSS) is 246.1 KB of the 248 KB budget, so any new code that Home needs delays the first read directly; the sheet and screen code stay lazy.
 
 ## What was fixed here
 
 Small, with nothing a user sees changed.
-- `israelToday` (`ui/date-math.ts`) builds one `Intl.DateTimeFormat` instead of one per call. Its own time per visit fell on every screen that showed it: the project page 71 to 4 ms, Projects 12 ms to under the top 10, Loans 15 ms to the same, Profit by date 29 ms to the same. The duplicate in `recurring-schedule.ts` now uses it.
-- `reviewCountText` (`ui/review-count.tsx`) uses one `Intl.NumberFormat` instead of `toLocaleString` per call: 15 ms on Review, gone from its top 10.
+- `israelToday` (`ui/date-math.ts`) builds one `Intl.DateTimeFormat` instead of one per call, and the duplicate in `recurring-schedule.ts` is gone (its two callers import from `ui/date-math`).
+- `reviewCountText` (`ui/review-count.tsx`) uses one `Intl.NumberFormat` instead of `toLocaleString` per call.
 - `index.html` warms the same formatter while the entry downloads (above).
+
+**Method for the formatter's cost.** In a bare page (`about:blank`) at CPU 4x, in a new context each time. The first `new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(date)` took 41.1, 55.1, 41.3, 41.2 and 30.5 ms over 5 contexts (30 to 55 ms: the zone data loading). After it, a loop of 200 calls that each built a formatter took 0.372 ms a call; 200 calls on one built formatter took 0.001 ms a call. These came from a scratch script, not committed.
+
+**After the fix, the touched functions** (own time in ms, 5 cold first visits each on the build before the fix and on this branch, the median in bold; the same scratch harness; the machine was shared, which moves totals but not these small figures much):
+
+| Function, screen | Before (5 runs) | After (5 runs) |
+| --- | --- | --- |
+| `israelToday`, project page | 88, 80, 56, 69, 58 (**69**) | 3.7, 1.9, 3.3, 2.3, 3.3 (**3.3**) |
+| `israelToday`, Projects | 16, 9, 12, 19, 6 (**12**) | 1.4, 0.9, 0.5, 1.8, 0.9 (**0.9**) |
+| `israelToday`, Loans | 9, 8, 12, 13, 9 (**9**) | 0.8, 1.2, 1.1, 1.2, 0 (**1.1**) |
+| `reviewCountText`, Review | 11, 9, 8, 10, 11 (**9.5**) | 0, 1.5, 1.3, 1.3, 4.4 (**1.3**) |
+| `israelToday`, before Home's first read | 43, 25, 51, 38, 42 (**42**) | not in the profile in any of 5 runs |
 
 ## Costs filed as tasks
 
 | Task | Cost | Measured |
 | --- | --- | --- |
-| [FLOW-1280](../../backlog/tasks/FLOW-1280.md) | Cold Home's first read waits for the app's code | 0.5 s of room, 196 ms after the entry finishes |
+| [FLOW-1280](../../backlog/tasks/FLOW-1280.md) (plan first) | Cold Home's first read waits for the app's code (the idea of FLOW-1116, dropped by the owner) | the first read leaves 196 ms after the entry finishes; FLOW-1116 measured the figures at only 60 ms sooner |
 | [FLOW-1281](../../backlog/tasks/FLOW-1281.md) | Layout read while the page is built (`readPad`, `safeTop`, the first commit) | 60 to 100 ms a visit on Projects, Loans, Recurring |
-| [FLOW-1282](../../backlog/tasks/FLOW-1282.md) | Projects and Recurring draw every row at mount | about 5 and 9 ms a row |
-| [FLOW-1283](../../backlog/tasks/FLOW-1283.md) | Loan schedules built for every loan at list read | 25 to 30 ms with 12 loans |
+| [FLOW-1282](../../backlog/tasks/FLOW-1282.md) | Projects and Recurring draw every row at mount | about 5 ms a Projects row and 9 ms a Recurring row, rough ([Row counts](#row-counts)) |
+| [FLOW-1283](../../backlog/tasks/FLOW-1283.md) | Loan schedules built for every loan at list read | about 21 ms with 12 loans (`powBig` 8, `buildLoanSchedule` 7, `divHalfEven` 6) |
 | [FLOW-1284](../../backlog/tasks/FLOW-1284.md) | The big answers are not in the stub, so the forecast and profit math and large schema parses are unmeasured | |
 
 Not filed:
 - **Kept data's own cost** (`sizeOf`, `toJson` and `put` in `kept-reads.ts` and `kept-store.ts`): 25 to 35 ms on the Loans visit and 4 to 15 ms elsewhere on a first visit, where it measures each answer and writes it. The files belong to the FLOW-1267 line of work, so the owner of that line should look (for example, write after the screen settles and size by the response's length).
-- **Request overhead**: `fetch` and `Headers` natives, 20 to 100 ms on screens with 13 to 19 reads. Part of it is the stub interception and the profiler, so the production cost is unknown; FLOW-1270 to FLOW-1272 cut the number of reads.
 - **Zod parse of the small answers** (0 to 33 ms): nothing to cut on this data. FLOW-1273 moves the read-schemas chunk earlier.
 
 ## Bundle room
 
-The budget sits at 739.6 of 740 KB (all JavaScript) and 246.1 of 248 KB (Home entry). This change leaves both where they were (739.7 and 246.1: the formatters add about 0.1 KB). **It did not free the 3 KB that was asked for**: every way found that frees that much changes what loads when or what a library does, so each is reported here instead of done.
+The budget sat at 739.6 of 740 KB (all JavaScript) and 246.1 of 248 KB (Home entry) when this started, and main (abe335b) is at 739.88 KB (757,634 bytes). This branch is at 739.97 KB (757,727 bytes, 33 bytes under the limit) and 246.1 KB for the entry: the shared formatters added about 160 bytes, and three exact duplicate helpers were removed to bring it back under (`reducedMotion` in `fold.tsx` and `dock-filter.tsx` now import the one in `period-swipe.tsx`, and `utility-refund-view.ts` imports `daysBetween` from `recurring-schedule.ts`). **It did not free the 3 KB that was asked for**: every way found that frees that much changes what loads when or what a library does, so each is reported here instead of done.
 
 Measured with the same build (all JavaScript, gzip of each file as the budget counts it):
 
@@ -307,7 +332,7 @@ Measured with the same build (all JavaScript, gzip of each file as the budget co
 | Stub zod's English error texts (`locales/en.js`) | -0.4 KB | 0 | Changes the text of every failed parse |
 | `build.modulePreload.polyfill: false` | +0.1 KB | -0.2 | Nothing |
 
-What else was checked and found clean: no exact duplicate helper of any size (about 1.2 KB of source in all), no unused export or dead CSS, no library at two versions, no dev, demo or story file in the production build apart from the loan sample below, no Hebrew text escaped in the JavaScript, and the global stylesheet has no rule that only stories or tests need.
+What else was checked and found clean: exact duplicate helpers were about 1.2 KB of source in all (the three above were removed), no unused export or dead CSS, no library at two versions, no dev, demo or story file in the production build apart from the loan sample below, no Hebrew text escaped in the JavaScript, and the global stylesheet has no rule that only stories or tests need.
 
 Where the room is, for whoever builds next:
 - **Home entry CSS, about 13 KB gzipped.** `29-loan-detail.css` (4.3 KB gzipped), `13-line-split.css` (3.3), `28-forecast.css` (2.7), `16-transaction.css` (3.4) and `48-invite.css` (2.4) are global but style mostly one on-demand screen each; the entry modules mention only 4 to 10 of their classes, and those are shared classes (`ui-btn`, `ui-band`, `ui-num`, `ui-field`). FLOW-974 left them global because their rules must keep their place in the cascade. A rule-level split, with the story style check, could move most of it to `lazy.css`; it is a UI-lane change (shared CSS files are hot spots) and was not done here. The smaller whole files that no later global file mentions (`30-prompt-card`, `43-counted-in`, `52-notifications`) are 0.4 KB gzipped together.

@@ -2,10 +2,6 @@ import type { MissingBill, RecurringPace } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { RecurringLine } from "./recurring-layout";
 import { readyClient } from "./ready-client";
-import { israelToday } from "./ui/date-math";
-
-/** The Israel calendar day as YYYY-MM-DD, the day the server counts lateness from (ui/date-math.ts). */
-export { israelToday };
 
 /** One row of `recurring_schedule` (FLOW-447): a recurring party with its state this month. */
 export type ScheduleRow = {
