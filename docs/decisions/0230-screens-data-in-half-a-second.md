@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-28
 **Status:** Accepted
+**Amended by:** [0271](0271-half-second-by-kept-data-and-one-wave.md) (what "data shown" counts, and how the target is met)
 
 ## Context
 

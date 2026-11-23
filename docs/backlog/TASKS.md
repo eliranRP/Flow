@@ -834,6 +834,16 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1260"></a>[FLOW-1260](tasks/FLOW-1260.md) | Perf: the Loans list builds each loan's schedule once | SMALL (perf) |
 | <a id="flow-1261"></a>[FLOW-1261](tasks/FLOW-1261.md) | Perf: the Loans list's balances read does not send the currency twice | SMALL (perf) |
 | <a id="flow-1262"></a>[FLOW-1262](tasks/FLOW-1262.md) | CI: the get_project speed test does not fail on a slow runner, and names the state when it is slow | SMALL (CI test) |
+| <a id="flow-1276"></a>[FLOW-1276](tasks/FLOW-1276.md) | Perf: report three times per screen (data shown, fresh data shown, first visit) | SMALL (perf tooling) |
+| <a id="flow-1267"></a>[FLOW-1267](tasks/FLOW-1267.md) | Perf: keep the main screens' reads on the device and draw them at once | MEDIUM (perf) |
+| <a id="flow-1268"></a>[FLOW-1268](tasks/FLOW-1268.md) | UI: a small hint while a screen shows kept figures and fresh ones load | SMALL UI |
+| <a id="flow-1269"></a>[FLOW-1269](tasks/FLOW-1269.md) | Perf: read the main screens in the background once Home has settled | MEDIUM (perf) |
+| <a id="flow-1270"></a>[FLOW-1270](tasks/FLOW-1270.md) | Perf: the project page's first view in one wave | MEDIUM (perf) |
+| <a id="flow-1271"></a>[FLOW-1271](tasks/FLOW-1271.md) | Perf: Profit's first view in one wave | MEDIUM (perf) |
+| <a id="flow-1272"></a>[FLOW-1272](tasks/FLOW-1272.md) | Perf: Review's first card in one wave | MEDIUM (perf) |
+| <a id="flow-1273"></a>[FLOW-1273](tasks/FLOW-1273.md) | Perf: code a screen needs loads with the screen, not after its data | SMALL (perf) |
+| <a id="flow-1274"></a>[FLOW-1274](tasks/FLOW-1274.md) | Perf: profile each main screen's main thread on the phone and cut the largest costs | MEDIUM (perf, findings first) |
+| <a id="flow-1275"></a>[FLOW-1275](tasks/FLOW-1275.md) | Plan: forecast, loan and profit math in the database, with summary tables kept current on write | PLAN FIRST |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
