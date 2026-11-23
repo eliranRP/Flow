@@ -482,7 +482,8 @@ test("the homepage and /settings retry like build.txt, list reads wait for the s
 
   // FLOW-1191: the reads take their client from readyClient(), which waits for the session's token first.
   const ready = readFileSync(new URL("../app/src/ready-client.ts", import.meta.url), "utf8");
-  assert.match(ready, /if \(!supabase\) throw new Error\("supabase"\);\n\s+await waitForAccessToken\(supabase\);\n\s+return supabase;/);
+  // FLOW-1273: the schemas start loading (a comment and preloadReadSchemas()) before the token wait.
+  assert.match(ready, /if \(!supabase\) throw new Error\("supabase"\);\n(?:\s+\/\/[^\n]*\n)?(?:\s+preloadReadSchemas\(\);\n)?\s+await waitForAccessToken\(supabase\);\n\s+return supabase;/);
   const books = readFileSync(new URL("../app/src/use-books.ts", import.meta.url), "utf8");
   const waits = books.split("const supabase = await readyClient();").length - 1;
   const rpcs = books.split(".rpc(").length - 1;
