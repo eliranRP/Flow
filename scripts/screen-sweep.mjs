@@ -28,7 +28,8 @@
  *   tap (printed, and kept in the JSON); a first visit has none, so it has no such value.
  * - fresh data shown: the same visit, until every read the visit started in its first 6 s has
  *   answered, and the page has drawn the answers and gone quiet: the first DOM change after the last
- *   response, then on through changes less than 100 ms apart. Taken from the requests, not the hint.
+ *   response, then on through changes less than 100 ms apart; if no DOM change follows the last response,
+ *   it is that response's time. Taken from the requests, not the hint.
  *   It does not depend on data shown. It is null only when the visit starts no
  *   read, or a read has not answered within the window (printed as a dash). A chart animation that
  *   changes the DOM can extend it.
@@ -58,7 +59,7 @@ const WINDOW_MS = 6000;
 const QUIET_MS = 100;
 const WAVE_GAP_MS = 250;
 /** A generous estimate of one screen's run (both states, with their waits and browser launches), and a margin, for the token check. */
-const RUN_SECONDS_PER_SCREEN = 60;
+const RUN_SECONDS_PER_SCREEN = 90;
 const MARGIN_SECONDS = 300;
 const SKELETON = ".ui-skeleton-bar, .ui-skel-row, .ui-skel-leaving, [aria-busy=true], .ui-chart-skel";
 const REST = /\/rest\/v1\//;
@@ -115,7 +116,12 @@ const progress = (line) => process.stderr.write(`${line}\n`);
 function authKey() {
   let url = process.env.FLOW_SWEEP_SUPABASE_URL;
   if (!url) {
-    const env = readFileSync(path.join(root, "app/.env.production"), "utf8");
+    let env = "";
+    try {
+      env = readFileSync(path.join(root, "app/.env.production"), "utf8");
+    } catch {
+      // Falls through to the message below.
+    }
     url = /^VITE_SUPABASE_URL=(.+)$/m.exec(env)?.[1]?.trim();
   }
   if (!url) fail("No VITE_SUPABASE_URL in app/.env.production (or FLOW_SWEEP_SUPABASE_URL).");
@@ -266,7 +272,7 @@ async function collect(phone, taskBefore, readsBefore) {
     const after = s.mut.map((t) => t - s.t0).filter((m) => m > last).sort((a, b) => a - b);
     let at = after.length > 0 ? after[0] : last;
     for (const m of after) {
-      if (m <= at + QUIET_MS) at = m;
+      if (m < at + QUIET_MS) at = m;
       else break;
     }
     fresh = at;
@@ -357,7 +363,7 @@ function printTables(result) {
 /** One line per run on stderr: the evidence that data shown was taken on the right route and marker. */
 function logRun(label, row) {
   const f = (x) => (x === null ? "—" : String(Math.round(x)));
-  progress(`  ${label}: shown ${f(row.shown)} ms, fresh ${f(row.fresh)} ms, route ${row.route}, marker ${row.marker ? "matched" : "NOT matched"}, reads before ${row.readsBefore === null ? "—" : String(row.readsBefore)}`);
+  progress(`  ${label}: shown ${f(row.shown)} ms, fresh ${f(row.fresh)} ms, route ${row.route}, data shown ${row.marker ? "reached (route and marker matched)" : "not reached"}, reads before ${row.readsBefore === null ? "—" : String(row.readsBefore)}`);
 }
 
 async function main() {
