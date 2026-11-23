@@ -91,13 +91,31 @@ select is(
   'the 1,500 direct lines count in full'
 );
 
--- About 0.8 s on a fresh local database; the n-squared plans took about four minutes here.
+-- The limit guards against the n-squared plan, which took about four minutes here. It is 30 s,
+-- not 3 s, because the same code has run this in 0.16 to 6.06 s in CI, depending on the tables'
+-- planner statistics when the file runs. About 0.8 s on a fresh local database.
 select ok(
-  (select finished - started from pps_run) < interval '3 seconds',
+  (select finished - started from pps_run) < interval '30 seconds',
   'get_project on 2,100 lines stays fast with no planner statistics'
 );
 
 select diag((select (finished - started)::text from pps_run));
+select diag((
+  select string_agg(
+    format(
+      '%s reltuples=%s relpages=%s size=%s last_autoanalyze=%s last_autovacuum=%s',
+      c.relname, c.reltuples, c.relpages, pg_relation_size(c.oid),
+      coalesce(s.last_autoanalyze::text, '-'), coalesce(s.last_autovacuum::text, '-')
+    ),
+    E'\n' order by c.relname
+  )
+  from pg_class c
+  left join pg_stat_user_tables s on s.relid = c.oid
+  where c.oid = any (array[
+    'public.transactions'::regclass, 'public.legs'::regclass,
+    'public.allocations'::regclass, 'public.accounts'::regclass
+  ])
+));
 
 -- A `create or replace` of get_project drops this setting unless it repeats it.
 select ok(
