@@ -58,7 +58,7 @@ vi.mock("../lib/supabase", () => {
 
 function renderLive() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  return { client, ...render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={["/projects/a"]}>
@@ -66,7 +66,7 @@ function renderLive() {
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
-  );
+  ) };
 }
 
 afterEach(() => {
@@ -107,12 +107,21 @@ describe("the project page's first view in one wave (FLOW-1270)", () => {
 
   it("draws the same figures and lines once the reads answer", async () => {
     server.answer = true;
-    renderLive();
+    const { client } = renderLive();
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    // A money figure: the project's profit (10,000,000 agorot) in the band and the cash overview.
+    expect((await screen.findAllByText("₪100,000")).length).toBeGreaterThan(0);
     // The forecast's reads start once the project's own read has landed.
     await vi.waitFor(() => { for (const name of ["expected_months", "project_category_months", "project_forecast_edits_for", "list_categories"]) expect(names()).toContain(name); });
     expect(await screen.findByText("קבלן א")).toBeInTheDocument();
     // The lines were read once for the cash read's own month: the answer's month matches the one asked for at mount.
-    expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(2);
+    // Cold (no saved company currency) the read starts with the currency still null; when the currency lands the key
+    // is the books currency's and the lines are read once more under it: two reads of each side, no more.
+    // Once the currency is known the read sits under the key the month's profit page reads (project-month-profit-screen.tsx):
+    // going there reuses these lines.
+    await vi.waitFor(() => {
+      expect(client.getQueryCache().find({ queryKey: ["breakdown-lines", "project-cash-month", "off", "a", month, "ILS"] })?.state.data).toBeDefined();
+    });
+    expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(4);
   });
 });

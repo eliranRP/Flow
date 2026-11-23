@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { formatAmountText, type CashLine, type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
-import { useCompanyCurrency } from "../company-currency";
+import { useCompanyCurrency, useCompanyCurrencyQuery } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
@@ -171,6 +171,7 @@ export function ProjectDetailScreen({
   const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
+  const companyRead = useCompanyCurrencyQuery();
   // Next month's forecast, as the profit page and the צפי page read it: the currency of the project's
   // lifetime figures.
   const lifetimeProject = lifetime.data ?? sample ?? null;
@@ -182,9 +183,9 @@ export function ProjectDetailScreen({
   // FLOW-1230: the two reads are the same function, so whichever lands first starts the forecast's reads (and gives
   // the overhead hint); the page still draws from its own read. Starting them at mount instead delayed the page's
   // first data (nine more requests beside its own), so they wait for one of the two.
-  // FLOW-1270: kept gated (decision 0271: the figures first, as the owner chose for Home and Profit in FLOW-1019 and
-  // FLOW-1080). The measurement of 2026-11-23 (phone profile, stub backend) showed no later first figure without the
-  // gate, but could not rule one out; the touch prefetch (prefetch.tsx) starts these reads under the same keys instead.
+  // FLOW-1270: kept gated. This is decision 0271 item 3's measured choice for this page (2026-11-23, phone profile,
+  // stub backend: no later first figure without the gate, but none ruled out), not an owner order; FLOW-1019 and
+  // FLOW-1080 are the owner's orders for Home and Profit only. The touch prefetch (prefetch.tsx) starts these reads.
   const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
   const landed = detail.data ?? lifetime.data;
   const forecastReads = sample == null && landed != null;
@@ -202,11 +203,13 @@ export function ProjectDetailScreen({
   const skipMonth = HEBREW_MONTHS[Number(thisMonth.slice(5, 7)) - 1] ?? thisMonth;
   const overrides = useForecastOverrides(thisMonth, sample == null && preview === "off");
   const forecastSkip = useForecastSkip(thisMonth, skipMonth, overrides.data ?? null);
-  // FLOW-1270: the lines read starts at mount. Its month is the cash read's current month (Israel's today, as the
-  // server counts it) and its currency the company's books currency, which the server fills in (null), the same
-  // `base_currency` project_cash_months returns. So it need not wait for that read.
+  // FLOW-1270: the lines read starts at mount. Its month is the cash read's current month, else Israel's today (the
+  // server's flow_today): with a skewed device clock the first read is for the client's month, and a different
+  // `months[0]` switches the key, and the read, once the cash read lands. Its currency is the books currency
+  // (project_cash_months' `base_currency`, which is the company currency): that read's once landed, else the company
+  // currency query's (cached from Home), else null, which the server fills in. So the key is the month profit page's.
   const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? thisMonth;
-  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, null, sample == null);
+  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? companyRead.data ?? null, sample == null);
   // The schedule and the month's lines are read only for a live page (not a sample or a preview).
   const linesLive = sample == null && preview === "off";
   // FLOW-1135: the property's utilities (who pays each), and, once one is the tenant's, its bills not refunded.

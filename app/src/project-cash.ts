@@ -114,13 +114,14 @@ export type ProjectCashMonthLines = { counted: CashLine[]; kept: CashLine[]; mor
 /**
  * FLOW-438: the project's lines for one month, as its cash month page lists them under the figures.
  * FLOW-1270: `currency` null is the company's books currency, which the server fills in (p_currency absent), so the
- * project page starts this read at mount and need not wait for project_cash_months' `base_currency`.
+ * project page starts this read at mount and need not wait for project_cash_months' `base_currency`. An empty string is
+ * no currency yet: the read stays off (the server would not fill it in).
  */
 export function useProjectCashMonthLinesQuery(projectId: string, month: string, currency: string | null, active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["breakdown-lines", "project-cash-month", preview, projectId, month, currency ?? ""],
-    enabled: active && preview === "off" && projectId !== "",
+    enabled: active && preview === "off" && projectId !== "" && currency !== "",
     queryFn: async (): Promise<ProjectCashMonthLines> => {
       const supabase = await readyClient();
       const schemas = await loadReadSchemas();
