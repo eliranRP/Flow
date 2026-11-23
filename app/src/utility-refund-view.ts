@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { daysBetween } from "./ui/date-math";
 import { formatDayMonth } from "./ui/date-math";
 import type { UtilityBill, UtilityIncome, UtilityIncomeBill, UtilityPayment } from "./utility-refunds";
 
@@ -173,11 +174,6 @@ export function paymentParts(payment: UtilityPayment): { key: string; text: stri
     ].filter((item): item is string => item != null).join(" · "),
     amount: formatAmountText(part.amount_minor, payment.currency, { detail: true }),
   }));
-}
-
-/** Whole days from one ISO date to another (negative when `to` is earlier). */
-function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
 }
 
 /** FLOW-1159: a bill's category for the type views, or "בלי קטגוריה". */

@@ -10,6 +10,12 @@
           const theme = localStorage.getItem("flow.theme");
           if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
         } catch {}
+        // FLOW-1274: the first Intl.DateTimeFormat with a time zone loads the zone data (about 40 ms on the
+        // phone profile), and Home's first read needs today's date. Doing it in the idle wait for the entry
+        // download takes it off the path to that read. defaultPeriod (period.ts) uses the same zone.
+        setTimeout(function () {
+          try { new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(0); } catch {}
+        }, 0);
       })();
     </script>
     <style>

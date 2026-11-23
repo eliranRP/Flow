@@ -842,6 +842,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1292"></a>[FLOW-1292](tasks/FLOW-1292.md) | Perf: kept data covers each screen's whole first view | MEDIUM (perf) |
 | <a id="flow-1293"></a>[FLOW-1293](tasks/FLOW-1293.md) | Perf: kept reads that name a day are found on the next day | SMALL (perf) |
 | <a id="flow-1294"></a>[FLOW-1294](tasks/FLOW-1294.md) | Perf: why Profit's next-month card still waits on a repeat visit | SMALL (perf) |
+| <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
+| <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
+| <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |
+| <a id="flow-1283"></a>[FLOW-1283](tasks/FLOW-1283.md) | Perf: build a loan's schedule only when something needs it | SMALL (perf) |
+| <a id="flow-1284"></a>[FLOW-1284](tasks/FLOW-1284.md) | Perf: the stub backend answers with realistic sizes, so the profile covers the big reads | SMALL (perf) |
 | <a id="flow-1267"></a>[FLOW-1267](tasks/FLOW-1267.md) | Perf: keep the main screens' reads on the device and draw them at once | MEDIUM (perf) |
 | <a id="flow-1268"></a>[FLOW-1268](tasks/FLOW-1268.md) | UI: a small hint while a screen shows kept figures and fresh ones load | SMALL UI |
 | <a id="flow-1269"></a>[FLOW-1269](tasks/FLOW-1269.md) | Perf: read the main screens in the background once Home has settled | MEDIUM (perf) |

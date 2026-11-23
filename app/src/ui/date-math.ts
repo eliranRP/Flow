@@ -17,8 +17,22 @@ export const WEEKDAY_HEADS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "�
 
 const WEEKDAY_NAMES = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "שבת"] as const;
 
+/**
+ * One formatter for every call: building an Intl.DateTimeFormat with a time zone costs about 0.4 ms on the
+ * FLOW-804 phone (CPU 4x), and a screen asks for today once per row, so a built-per-call formatter cost a
+ * project page 57 to 71 ms (FLOW-1274). format() on a built one takes about a microsecond.
+ */
+// Built when this module loads, not on first use: index.html's inline script has already built one with the same
+// options during the entry's download, so the time-zone data is warm and this costs about a microsecond.
+const ISRAEL_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" });
+
 export function israelToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(now);
+  return ISRAEL_DAY.format(now);
+}
+
+/** Whole days from one YYYY-MM-DD day to another. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
 }
 
 export function pad(value: number): string {

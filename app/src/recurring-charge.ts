@@ -2,7 +2,8 @@ import { formatAmountText, type PartyCharges } from "@flow/shared";
 import { absAgorot } from "./agorot";
 import type { MissingBill, RecurringChange } from "@flow/shared";
 import type { PartyChangeView } from "./party-charges";
-import { changePercentOf, daysBetween, type ScheduleRow } from "./recurring-schedule";
+import { changePercentOf, type ScheduleRow } from "./recurring-schedule";
+import { daysBetween } from "./ui/date-math";
 
 /**
  * FLOW-447c: the charge page's own rules, as pure functions. The page is one recurring party: its

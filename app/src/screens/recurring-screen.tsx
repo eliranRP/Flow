@@ -6,7 +6,7 @@ import { useMissingBillsQuery } from "../forecast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { chargeHref, comparable, dayMonth } from "../recurring-charge";
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
-import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
+import { alertState, changePercentOf, isSplitParty, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { type RecurringListGroup, type RecurringListRow, RecurringHead, RecurringList, RecurringListEmpty } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
@@ -15,7 +15,7 @@ import { useOverheadProject } from "../overhead-project";
 import { addLineReady, ForecastAddLine, lineProjects } from "./forecast-add-line";
 import { useCompanyCurrency } from "../company-currency";
 import { scheduleForecastKey, skippedKeys, useForecastOverrides } from "../forecast-skip";
-import { HEBREW_MONTHS } from "../ui/date-math";
+import { daysBetween, HEBREW_MONTHS, israelToday } from "../ui/date-math";
 
 /** "אוקטובר 2026" for the day's month. */
 function monthTitle(today: string): string {
