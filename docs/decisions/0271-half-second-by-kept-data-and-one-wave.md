@@ -20,7 +20,7 @@
 | Review | 1.65 s | 0.68 s | 1.42 s | 3 | 27 |
 | Forecast | 0.85 s | 0.86 s | 0.54 s | 1 | 4 |
 
-Cold Home shows its data at a median of 3.25 s (5 loads on `36cb136`, the split's "Home" section; 3.49 s in the daily report on `dc189b8`), and its first read leaves about 0.8 s after navigation start, before any network wait.
+Cold Home shows its data at a median of 3.25 s (5 loads on `36cb136`, the split's "Home" section; 3.49 s in the daily report on `dc189b8`), and its first read leaves about 0.8 s after navigation start (the entry's download, parse and run, and the session restore).
 
 The database is not the limit: each read's round trip from the measuring machine has a median of 155 to 382 ms (`pnpm latency`, 10 calls each; the split's "Round trips" section), and the slowest function takes about 140 ms in the database itself.
 
@@ -29,7 +29,7 @@ The time goes to three things:
 2. **Many reads per screen.** They share the 4G pipe.
 3. **Browser work.** Parsing, the forecast and loan-schedule math (for example the 127 KB `company_next_month_inputs`), and drawing, all on a CPU 4× slower.
 
-A wave of reads on this profile keeps the network busy about 0.4 to 0.65 s before anything is drawn: Recurring's one wave 0.42 s, and Projects' one wave of two reads 0.63 s (the split's network-busy column). So a screen that must fetch before it draws cannot reach 0.5 s, however fast its queries are.
+A single wave of reads on this profile keeps the network busy about 0.4 to 0.9 s before anything is drawn: Recurring 0.42 s, Forecast 0.54 s, Projects 0.63 s and Loans (ten reads) 0.91 s (the split's network-busy column). So a screen that must fetch before it draws cannot reach 0.5 s, however fast its queries are.
 
 ## Decision
 
@@ -37,7 +37,7 @@ A wave of reads on this profile keeps the network busy about 0.4 to 0.65 s befor
    - **What is kept:** an allowlist of query keys, for the signed-in user and the shown company. Entries older than 7 days are not used.
    - **Where:** IndexedDB, cleared on sign-out. Each restored entry is checked against its read schema, and one that fails is dropped.
    - **Opening a screen:** it draws the kept data at once and reads fresh data in the background. While the fresh read is in flight, a small hint says the figures are updating. When the fresh data lands, the screen updates in place.
-2. **Background reads.** Once Home has settled and the phone is idle, the app reads the main screens' first-view data once per session: Projects, Loans, Recurring, Profit (month), Review's first page and Forecast. That list is the perf steward's reading of the owner's "main screens": the project page already reads on touch (`PrefetchProjects`), and Profit's year and by-date views are read when chosen. The owner can widen it. It skips this when the browser asks to save data (`navigator.connection.saveData`) or the connection is 2G.
+2. **Background reads.** Once Home has settled and the phone is idle, the app reads the main screens' first-view data once per session: Projects, Loans, Recurring, Profit (month), Review's first page and Forecast. The option the owner chose named Projects, Loans, Recurring, Profit and Review; Forecast, Profit's default month view and Review's first page are the perf steward's additions and reading. The project page already reads on touch (`PrefetchProjects`), and Profit's year and by-date views are read when chosen. The owner can widen the list. It skips this when the browser asks to save data (`navigator.connection.saveData`) or the connection is `2g` or `slow-2g`.
 3. **One wave per screen, within the owner's earlier orders.** A screen's first-view reads all start when the screen is opened: nothing in the first view waits for another read's answer or for a code chunk that loads after data. Two orders the owner chose stay: Home's forecast cards load after Home first appears (FLOW-1019, owner 2026-11-03), and Profit's next-month card reads after its figures are drawn (FLOW-1080, owner 2026-11-07, "Keep it", measured: figures at a median 964 ms against 1,428 ms). With kept data those cards draw at once anyway; changing either order needs the owner's go with a measurement. The project page's forecast card also waits for the page's own read today; that wait is the perf steward's earlier measured choice, not an owner order, and FLOW-1270 moves it to mount only if the page's first figure does not get later. Reads for below the fold, a sheet or a later tap can still wait.
 4. **Less browser work.** The perf steward profiles each screen's main thread on the phone and cuts the largest costs. Moving the forecast, loan-schedule and profit math into the database, and adding summary tables kept current on write, is a separate plan. It needs the owner's approval before any build (FLOW-1275).
 
