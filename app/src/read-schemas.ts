@@ -22,6 +22,7 @@ export {
   profitMonthsSchema,
   recurringChangesSchema,
   recurringThisMonthSchema,
+  projectCategoryMonthsSchema,
   projectCategorySchema,
   projectDetailSchema,
   projectsCashMonthSchema,

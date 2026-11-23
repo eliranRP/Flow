@@ -175,6 +175,11 @@ export function keepReadsOf(client: QueryClient): () => void {
       else startedFor.set(hash, owner);
       return;
     }
+    // A read that failed is no longer under way: a hand-written copy beside it is not kept for it.
+    if (action.type === "error") {
+      startedFor.delete(hash);
+      return;
+    }
     if (action.type !== "success") return;
     const manual = "manual" in action && action.manual === true;
     if (manual && rule.manual !== true) return;
