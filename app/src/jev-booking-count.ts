@@ -16,6 +16,10 @@ export function jevBookingsQueryOptions(preview: string, enabled: boolean) {
   return {
     queryKey: jevBookingsKey(preview),
     enabled: enabled && preview === "off",
+    // One query serves Home and Review, so it has one retry setting (a shared query takes the options of the
+    // observer that rendered last): none. לאישור waits for this read before its first draw, so a failure ends
+    // that wait at once; Home counts a failed read as zero, and the next refresh reads it again.
+    retry: false,
     queryFn: async (): Promise<unknown> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("list_jev_bookings");
@@ -30,7 +34,6 @@ export function useJevBookingCountQuery(enabled = true) {
   const preview = useHomePreview();
   return useQuery({
     ...jevBookingsQueryOptions(preview, enabled),
-    retry: 1,
     select: (data) => (Array.isArray(data) ? data.length : 0),
   });
 }

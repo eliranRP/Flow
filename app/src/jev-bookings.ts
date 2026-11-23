@@ -39,8 +39,6 @@ export function useJevBookingsQuery(enabled = true) {
   const preview = useHomePreview();
   return useQuery({
     ...jevBookingsQueryOptions(preview, enabled),
-    // לאישור waits for this read before its first draw, so a failure ends the wait at once.
-    retry: false,
     select: parseJevBookings,
   });
 }

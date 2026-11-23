@@ -6,11 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import { jevBookingsKey, reviewWaiting, useJevBookingCountQuery } from "./jev-booking-count";
 import { useJevBookingsQuery } from "./jev-bookings";
 
-const server = vi.hoisted(() => ({ reads: 0 }));
+const server = vi.hoisted(() => ({ reads: 0, fail: false }));
 vi.mock("./ready-client", () => ({
   readyClient: () => Promise.resolve({
     rpc: () => {
       server.reads += 1;
+      if (server.fail) return Promise.resolve({ data: null, error: new Error("offline") });
       return Promise.resolve({
         data: [{
           write_id: "w1", transaction_id: "t1", kind: "book_line", party: "Example Co", doc_date: "2026-10-20",
@@ -68,5 +69,25 @@ describe("Jev's bookings read", () => {
     await waitFor(() => { expect(both.result.current.queue.data).toHaveLength(1); });
     expect(both.result.current.count.data).toBe(1);
     expect(server.reads).toBe(1);
+  });
+
+  it("is not retried after a failure, for Home's count or Review's queue, whichever rendered last", async () => {
+    server.reads = 0;
+    server.fail = true;
+    try {
+      // The app's own default would retry: the read's options must say no retry for both hooks.
+      const client = new QueryClient({ defaultOptions: { queries: { retry: 3, retryDelay: 0 } } });
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>
+          <MemoryRouter>{children}</MemoryRouter>
+        </QueryClientProvider>
+      );
+      const both = renderHook(() => ({ queue: useJevBookingsQuery(), count: useJevBookingCountQuery() }), { wrapper });
+      await waitFor(() => { expect(both.result.current.count.isError).toBe(true); });
+      expect(both.result.current.queue.isError).toBe(true);
+      expect(server.reads).toBe(1);
+    } finally {
+      server.fail = false;
+    }
   });
 });
