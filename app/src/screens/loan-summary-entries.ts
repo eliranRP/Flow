@@ -21,9 +21,9 @@ export function useLoanSummary(companyId: string | null, currency: LoanCurrency 
     queryFn: () => readLoanList(companyId),
     select: useCallback((data: LoanListData): LoanListSummary | null => {
       if (currency == null) return null;
-      const entries = data.loans.map(({ row, balance }) => {
+      const entries = data.loans.map(({ row, balance, schedule }) => {
         const loan = readLoanRow(row, balance);
-        return { loan, outlook: loanOutlook(loan, today) };
+        return { loan, outlook: loanOutlook(loan, today, schedule) };
       });
       return loanListSummary(entries, currency);
     }, [currency, today]),

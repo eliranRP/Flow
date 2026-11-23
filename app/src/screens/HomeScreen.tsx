@@ -198,10 +198,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const afterPaint = useAfterFirstPaint(showBooks);
   const monthForecast = useMonthForecastQuery(currentKey, isCurrent && afterPaint);
   // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
-  // FLOW-1248: without the charges taken out of this month; those overrides are read after first paint, like the forecast's.
+  // FLOW-1248: without the charges taken out of this month, so the overrides are read with the bills.
   // FLOW-1252: the late rows are drawn on the current month only, so another month reads neither of the two.
-  // FLOW-1254: the late row waits for those overrides (they are due once the books show), so it draws once, at its final count.
-  const missing = useLateBillsQuery(isCurrent, isCurrent && afterPaint, isCurrent && showBooks);
+  // FLOW-1254: the late row waits for those overrides, so it draws once, at its final count.
+  // FLOW-1259: on the current month both reads start at mount, not after first paint.
+  const missing = useLateBillsQuery(isCurrent);
   const late = lateCounts(missing.data ?? []);
   // FLOW-1079: a charge in נותר לשלם swipes out of this month's forecast (the forecast's own "לא החודש"). An editor may; a viewer not.
   const holdForecast = useHoldWrites();

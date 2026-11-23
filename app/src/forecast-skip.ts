@@ -56,18 +56,17 @@ export function withoutSkippedLate(bills: readonly MissingBill[], skipped: Reado
  * month's forecast (Israel's month, decision 0182). Home and the project page read late charges from it.
  * FLOW-1254: the list is not known (`data` undefined, so no late row draws) until the overrides are in, so the row
  * draws once, at its final count and name. A failed overrides read draws the whole list: an error never hides an
- * alert. `overridesActive` turns the overrides read on; `overridesLater` says it is turned on later on this screen
- * (Home, after first paint) and will run, so the list waits for it. A read that is neither is never waited on.
+ * alert. FLOW-1259: both reads start together, when `active` turns on (Home's current month: at mount).
  */
-export function useLateBillsQuery(active = true, overridesActive = active, overridesLater = false) {
+export function useLateBillsQuery(active = true) {
   const bills = useMissingBillsQuery(active);
-  const overrides = useForecastOverrides(israelToday().slice(0, 7), active && overridesActive);
+  const overrides = useForecastOverrides(israelToday().slice(0, 7), active);
   const currency = useCompanyCurrencyQuery();
   const base = currency.data ?? "ILS";
   const skipped = overrides.data == null ? undefined : skippedKeys(overrides.data);
   // Pending is "no answer yet": an error is an answer (the whole list), and so is data. A read that is paused (offline)
   // is not running, so nothing is coming: the whole list draws, as it does for a failed read.
-  const waitsForOverrides = (overridesActive || overridesLater) && overrides.isPending && overrides.fetchStatus !== "paused";
+  const waitsForOverrides = active && overrides.isPending && overrides.fetchStatus !== "paused";
   // The skips are matched in the company's currency, so a cold currency read holds the list too, only when it matters.
   const waitsForCurrency = skipped != null && skipped.size > 0 && currency.isPending && currency.fetchStatus !== "paused";
   const data = bills.data == null || waitsForOverrides || waitsForCurrency ? undefined : withoutSkippedLate(bills.data, skipped, base);

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { LoanKind, LoanStatus } from "@flow/shared";
+import type { LoanKind, LoanScheduleRow, LoanStatus } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
 import { rateOnDate } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
@@ -7,7 +7,7 @@ import { assertNoError } from "../use-write";
 import { LOAN_KIND_LIST_LABEL } from "./loan-copy";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetailDbRow } from "./loan-detail-data";
 import type { LoanBalanceRow } from "./loan-match";
-import { latePayment, loanOutlook, type OutlookLoan } from "./loan-outlook";
+import { latePayment, loanOutlook, type OutlookLoan, scheduleRowsOf } from "./loan-outlook";
 import { readLoanBalances, readProjectNames } from "./loan-reads";
 
 /**
@@ -88,9 +88,12 @@ function rateInForRow(loan: LoanDetailDbRow, today: string): number | undefined 
   return rateOnDate(loan.annual_rate_ppm, rates, today);
 }
 
-/** FLOW-1046: an open loan's next scheduled payment, its parts summed; null for a closed loan or one with no schedule. */
-export function nextPaymentOf(loan: OutlookLoan, today: string): LoanListRow["next"] | null {
-  const outlook = loan.status === "open" ? loanOutlook(loan, today) : null;
+/**
+ * FLOW-1046: an open loan's next scheduled payment, its parts summed; null for a closed loan or one with no schedule.
+ * `rows` is the loan's schedule (scheduleRowsOf), passed in when the caller already built it (FLOW-1260).
+ */
+export function nextPaymentOf(loan: OutlookLoan, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): LoanListRow["next"] | null {
+  const outlook = loan.status === "open" ? loanOutlook(loan, today, rows) : null;
   if (outlook == null) return null;
   const { dueDate, principalMinor, interestMinor, escrowMinor } = outlook.next;
   return { dueDate, amountMinor: principalMinor + interestMinor + escrowMinor };
@@ -99,8 +102,8 @@ export function nextPaymentOf(loan: OutlookLoan, today: string): LoanListRow["ne
 /** The loans of a company: the list's rows (alphabetical) and each loan's full detail for the band's figures. */
 export type LoanListData = {
   rows: LoanListRow[];
-  /** Each loan's row and its balance, mapped to a LoanDetail by the band's summary. */
-  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null }>;
+  /** Each loan's row, its balance (mapped to a LoanDetail by the band's summary) and its schedule (FLOW-1260). */
+  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null; schedule: readonly LoanScheduleRow[] | null }>;
 };
 
 /** One read, shared by the list and the band's summary through the same query key. */
@@ -114,17 +117,19 @@ export async function readLoanList(companyId: string | null, today: string = isr
     readProjectNames(supabase, companyId),
   ]);
   assertNoError(loans);
-  const rows = sortLoans((loans.data ?? []).map((loan): LoanListRow => {
+  const built = (loans.data ?? []).map((loan) => {
     const balance = byLoan.get(loan.id);
     // A balance row missing from the read: nothing counted against it, so the principal is left.
     const balanceMinor = BigInt(balance?.balance_minor ?? loan.principal_minor);
     const outlookLoan = readLoanRow(loan, { balanceMinor, flaggedParts: 0 });
-    const next = nextPaymentOf(outlookLoan, today);
-    const lateOn = latePayment(outlookLoan, balance?.last_paid_on ?? null, today);
-    return {
+    // FLOW-1260: the loan's schedule is built once here; its next payment and its late flag both read it.
+    const schedule = scheduleRowsOf(outlookLoan);
+    const next = nextPaymentOf(outlookLoan, today, schedule);
+    const lateOn = latePayment(outlookLoan, balance?.last_paid_on ?? null, today, schedule);
+    const row: LoanListRow = {
       id: loan.id,
       name: loan.name,
-      currency: balance?.currency ?? loan.currency,
+      currency: loan.currency,
       balanceMinor,
       flaggedParts: balance?.flagged_parts ?? 0,
       projectId: loan.project_id,
@@ -136,12 +141,10 @@ export async function readLoanList(companyId: string | null, today: string = isr
       ...(next == null ? {} : { next }),
       ...(lateOn == null ? {} : { lateOn }),
     };
-  }));
-  const detailRows = (loans.data ?? []).map((row) => {
-    const balance = byLoan.get(row.id);
-    return { row, balance: balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? row.principal_minor), flaggedParts: balance.flagged_parts ?? 0 } };
+    const detail = { row: loan, balance: balance == null ? null : { balanceMinor, flaggedParts: balance.flagged_parts ?? 0 }, schedule };
+    return { row, detail };
   });
-  return { rows, loans: detailRows };
+  return { rows: sortLoans(built.map((item) => item.row)), loans: built.map((item) => item.detail) };
 }
 
 /** The loans with their balances, kind and status, alphabetical. */

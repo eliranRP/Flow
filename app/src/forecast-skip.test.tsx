@@ -138,7 +138,7 @@ describe("a late charge taken out of this month (FLOW-1248)", () => {
   });
 });
 
-// FLOW-1254, FLOW-1249: the late list waits for the month's skips, falls back to the whole list when that read fails, and is not held by a read that will not run.
+// FLOW-1254, FLOW-1249, FLOW-1259: the late list waits for the month's skips, falls back to the whole list when that read fails, and is not held by a read that will not run.
 describe("useLateBillsQuery (FLOW-1254)", () => {
   const month = new Date().toISOString().slice(0, 7);
   const late = (party: string, name: string) => ({
@@ -156,8 +156,8 @@ describe("useLateBillsQuery (FLOW-1254)", () => {
   };
   const skipA = { item_key: "party:expense:s-a:ILS", amount_minor: null, due_on: null, moved_out: true };
 
-  function Late({ active = true, overridesActive = active, later = false }: { active?: boolean; overridesActive?: boolean; later?: boolean }) {
-    const { data } = useLateBillsQuery(active, overridesActive, later);
+  function Late({ active = true }: { active?: boolean }) {
+    const { data } = useLateBillsQuery(active);
     return <p data-testid="late">{data == null ? "none" : data.map((bill) => bill.party_id).join(",")}</p>;
   }
   const shown = () => screen.getByTestId("late").textContent;
@@ -173,25 +173,20 @@ describe("useLateBillsQuery (FLOW-1254)", () => {
     await waitFor(() => { expect(shown()).toBe("s-b"); });
   });
 
-  it("waits for overrides that are turned on later on the screen, and draws the whole list when they fail", async () => {
-    reply(() => Promise.resolve({ data: null, error: { message: "down" } }));
-    const view = renderWithProviders(<Late overridesActive={false} later />);
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
-    expect(shown()).toBe("none");
-    view.rerender(<Late overridesActive later />);
-    await waitFor(() => { expect(shown()).toBe("s-a,s-b"); });
-  });
-
   it("gives every late item when the overrides read fails", async () => {
     reply(() => Promise.resolve({ data: null, error: { message: "down" } }));
     renderWithProviders(<Late />);
     await waitFor(() => { expect(shown()).toBe("s-a,s-b"); });
   });
 
-  it("does not wait on overrides that are never turned on", async () => {
-    reply(() => new Promise(() => undefined));
-    renderWithProviders(<Late overridesActive={false} />);
-    await waitFor(() => { expect(shown()).toBe("s-a,s-b"); });
+  it("reads neither the bills nor the overrides while it is not active (another month, FLOW-1252)", async () => {
+    const names: string[] = [];
+    reads.impl = (name) => { names.push(name); return Promise.resolve({ data: [], error: null }); };
+    renderWithProviders(<Late active={false} />);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+    expect(shown()).toBe("none");
+    expect(names).not.toContain("missing_bills");
+    expect(names).not.toContain("forecast_overrides_for");
   });
 
   describe("offline and a cold currency", () => {
@@ -205,7 +200,7 @@ describe("useLateBillsQuery (FLOW-1254)", () => {
 
     it("draws the cached whole list offline, when the overrides read is paused and never ran", async () => {
       onlineManager.setOnline(false);
-      renderWithProviders(<Late overridesActive later />, { client: seeded([]) });
+      renderWithProviders(<Late />, { client: seeded([]) });
       await waitFor(() => { expect(shown()).toBe("s-a,s-b"); });
     });
 

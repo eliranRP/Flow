@@ -77,24 +77,41 @@ export function loanScheduleTerms(loan: ScheduleLoan): LoanTerms | null {
 }
 
 /**
- * The payments due today or later, from the balance in the books (FLOW-427). Null for a demand loan, one
- * that ended, or terms the schedule refuses. The loan page's outlook and the project forecast's loan rows
- * (decision 0190) both read it, so the two show the same payment.
+ * The loan's schedule on its own terms, the rows the payment reads start from: an open loan's, or null for a demand
+ * loan, one that ended, or terms the schedule refuses. It does not depend on today or on the balance, so a read
+ * builds it once per loan and passes it to paymentsLeft, latePayment and loanOutlook (FLOW-1260).
  */
-export function paymentsLeft(loan: OutlookLoan, today: string): readonly LoanScheduleRow[] | null {
-  if (loan.status !== "open" || loan.balanceMinor <= 0n) return null;
+export function scheduleRowsOf(loan: OutlookLoan): readonly LoanScheduleRow[] | null {
+  if (loan.status !== "open") return null;
   const terms = loanScheduleTerms(loan);
   if (terms == null) return null;
   try {
-    const first = buildLoanSchedule(terms).rows.find((row) => row.dueDate >= today);
+    return buildLoanSchedule(terms).rows;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The payments due today or later, from the balance in the books (FLOW-427). Null for a demand loan, one
+ * that ended, or terms the schedule refuses. The loan page's outlook and the project forecast's loan rows
+ * (decision 0190) both read it, so the two show the same payment. `rows` is scheduleRowsOf(loan), passed in
+ * when the caller already has it.
+ */
+export function paymentsLeft(loan: OutlookLoan, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): readonly LoanScheduleRow[] | null {
+  if (loan.status !== "open" || loan.balanceMinor <= 0n || rows == null) return null;
+  const terms = loanScheduleTerms(loan);
+  if (terms == null) return null;
+  try {
+    const first = rows.find((row) => row.dueDate >= today);
     return first == null ? null : remainingFromBalance(terms, loan.balanceMinor, first);
   } catch {
     return null;
   }
 }
 
-export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | null {
-  const left = paymentsLeft(loan, today);
+export function loanOutlook(loan: OutlookLoan, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): LoanOutlook | null {
+  const left = paymentsLeft(loan, today, rows);
   if (left == null) return null;
   const next = left[0];
   if (next == null) return null;
@@ -128,16 +145,8 @@ function addDays(iso: string, days: number): string {
  * is not called late on its first day. One payment pays one date: a late payment made within EARLY_PAY_DAYS of the
  * next date covers that date too, so a missed month right after a late one shows a month later.
  */
-export function latePayment(loan: OutlookLoan, lastPaidOn: string | null, today: string): string | null {
-  if (loan.status !== "open" || loan.balanceMinor <= 0n) return null;
-  const terms = loanScheduleTerms(loan);
-  if (terms == null) return null;
-  let rows: readonly LoanScheduleRow[];
-  try {
-    rows = buildLoanSchedule(terms).rows;
-  } catch {
-    return null;
-  }
+export function latePayment(loan: OutlookLoan, lastPaidOn: string | null, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): string | null {
+  if (loan.status !== "open" || loan.balanceMinor <= 0n || rows == null) return null;
   const cutoff = addDays(today, -LATE_GRACE_DAYS);
   const due = rows.filter((row) => row.dueDate < cutoff).at(-1);
   if (due == null) return null;

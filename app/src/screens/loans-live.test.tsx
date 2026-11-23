@@ -16,7 +16,22 @@ const db = vi.hoisted(() => ({
   pending: [] as Pending[],
   rpc: [] as string[],
   hold: false,
+  selects: [] as Array<{ table: string; columns: string }>,
+  // FLOW-1260: how many times the schedule builder ran.
+  scheduleRuns: 0,
 }));
+
+// The builder is counted, and otherwise runs as it does (FLOW-1260).
+vi.mock("@flow/shared", async (original) => {
+  const shared = await original<typeof import("@flow/shared")>();
+  return {
+    ...shared,
+    buildLoanSchedule: (terms: Parameters<typeof shared.buildLoanSchedule>[0]) => {
+      db.scheduleRuns += 1;
+      return shared.buildLoanSchedule(terms);
+    },
+  };
+});
 
 let answers: Record<string, unknown> = {};
 
@@ -26,7 +41,10 @@ function query(table: string) {
     return new Promise<{ data: unknown; error: null }>((resolve) => { db.pending.push({ table, resolve }); });
   };
   const next = {
-    select: () => next,
+    select: (columns?: string) => {
+      if (columns != null) db.selects.push({ table, columns });
+      return next;
+    },
     eq: () => next,
     in: () => next,
     order: () => result(),
@@ -75,6 +93,8 @@ beforeEach(() => {
   db.pending = [];
   db.rpc = [];
   db.hold = false;
+  db.selects = [];
+  db.scheduleRuns = 0;
   answers = {
     loans: [loanRow("l1", "הלוואת גשר", "p1"), loanRow("l2", "הלוואת ציוד", null)],
     loan_balances: [{ loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, currency: "ILS" }],
@@ -112,6 +132,29 @@ describe("live Loans tab", () => {
     ];
     const list = await readLoanList(TEST_COMPANY_ID, "2026-11-22");
     expect(list.rows.map((row) => [row.name, row.lateOn])).toEqual([["הלוואת גשר", undefined], ["הלוואת ציוד", "2026-11-01"]]);
+  });
+
+  it("builds each open loan's schedule once, for its next payment and its late flag (FLOW-1260)", async () => {
+    const scheduled = { payment_minor: 60_000, start_date: "2026-01-01" };
+    answers.loans = [{ ...loanRow("l1", "הלוואת גשר", "p1"), ...scheduled }, { ...loanRow("l2", "הלוואת ציוד", null), ...scheduled }];
+    answers.loan_balances = [
+      { loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-11-05" },
+      { loan_id: "l2", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-09-05" },
+    ];
+    const list = await readLoanList(TEST_COMPANY_ID, "2026-11-22");
+    // Per loan: the schedule on its own terms, built once and read by both the late flag and the next payment; and the
+    // schedule from its balance, which only the next payment reads. Before FLOW-1260 the terms schedule was built twice.
+    expect(db.scheduleRuns).toBe(4);
+    expect(list.rows.map((row) => [row.name, row.next != null, row.lateOn])).toEqual([["הלוואת גשר", true, undefined], ["הלוואת ציוד", true, "2026-11-01"]]);
+  });
+
+  it("shows each loan in its own currency, read from the loan and not from its balance (FLOW-1261)", async () => {
+    answers.loans = [{ ...loanRow("l1", "הלוואת גשר", "p1"), currency: "USD" }, loanRow("l2", "הלוואת ציוד", null)];
+    answers.loan_balances = [{ loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0 }];
+    const list = await readLoanList(TEST_COMPANY_ID);
+    expect(list.rows.map((row) => [row.name, row.currency])).toEqual([["הלוואת גשר", "USD"], ["הלוואת ציוד", "ILS"]]);
+    const balances = db.selects.find((select) => select.table === "loan_balances");
+    expect(balances?.columns).not.toContain("currency");
   });
 
   it("lists the loans with the company the app holds, without waiting for get_dashboard", async () => {
