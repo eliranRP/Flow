@@ -91,7 +91,7 @@ describe("labels", () => {
 // FLOW-1258: a scheduled payment more than 10 days past with nothing recorded from 15 days before it on.
 describe("latePayment", () => {
   // The sample loan was added to the app long ago unless a test says otherwise.
-  const paid = (lastPaidOn: string | null, addedOn: string | null = "2025-01-01T09:00:00Z") => ({ lastPaidOn, addedOn });
+  const paid = (lastPaidOn: string | null, addedOn: string | null = "2025-01-01") => ({ lastPaidOn, addedOn });
 
   it("is on time when the last due date was paid, early or late in its grace", () => {
     expect(latePayment(SAMPLE_AMORTIZING, paid("2026-11-05"), "2026-11-22")).toBeNull();
@@ -107,9 +107,9 @@ describe("latePayment", () => {
   it("calls a loan with no payment in the books late for a date on or after the day it was added (FLOW-1263)", () => {
     const fresh = { ...SAMPLE_AMORTIZING, startDate: "2026-10-01" };
     // Added 09-20, before its first date: 10-01 and 11-01 both missed, still late, for the latest.
-    expect(latePayment(fresh, paid(null, "2026-09-20T08:00:00Z"), "2026-11-22")).toBe("2026-11-01");
+    expect(latePayment(fresh, paid(null, "2026-09-20"), "2026-11-22")).toBe("2026-11-01");
     // Added after its latest past date: its history predates the books, so no card.
-    expect(latePayment(fresh, paid(null, "2026-11-10T08:00:00Z"), "2026-11-22")).toBeNull();
+    expect(latePayment(fresh, paid(null, "2026-11-10"), "2026-11-22")).toBeNull();
     // The day it was added unknown: never late without a payment.
     expect(latePayment(fresh, paid(null, null), "2026-11-22")).toBeNull();
   });

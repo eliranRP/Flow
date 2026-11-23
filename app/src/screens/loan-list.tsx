@@ -138,7 +138,10 @@ export async function readLoanList(companyId: string | null, today: string = isr
     const next = nextPaymentOf(outlookLoan, today, schedule);
     // FLOW-1264: a bank line not split to the loan yet that matches its payment counts as paid for this check.
     const lastPaidOn = laterOf(balance?.last_paid_on, unsplit.get(loan.id));
-    const lateOn = latePayment(outlookLoan, { lastPaidOn, addedOn: loan.created_at }, today, schedule);
+    // The day it was added, in Israel time, as `today` is; none when the read has no valid time.
+    const addedAt = Date.parse(loan.created_at);
+    const addedOn = Number.isNaN(addedAt) ? null : israelToday(new Date(addedAt));
+    const lateOn = latePayment(outlookLoan, { lastPaidOn, addedOn }, today, schedule);
     const row: LoanListRow = {
       id: loan.id,
       name: loan.name,

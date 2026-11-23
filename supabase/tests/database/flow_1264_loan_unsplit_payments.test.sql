@@ -1,10 +1,11 @@
 -- FLOW-1264: loan_unsplit_payments gives, per open loan with a monthly payment, the latest posted, not removed
--- expense line of the last 75 days in the loan's currency, within 2% of the payment, that no loan split covers.
+-- expense line of the last 75 days in the loan's currency, within 2% of the payment, that no loan split covers,
+-- from a supplier an earlier line split to the loan came from.
 -- RLS limits the rows to the caller's company. @example.com only.
 
 begin;
 
-select plan(10);
+select plan(11);
 
 do $users$
 begin
@@ -38,38 +39,51 @@ insert into f1264 select 'demand', id from public.loans where name = 'Loan deman
 insert into f1264 select 'done', id from public.loans where name = 'Loan done';
 insert into f1264 select 'lb', id from public.loans where name = 'Loan B';
 
--- Lines of company A (days before today, amount, currency, direction): one that matches 20 days ago (101500 is
--- 1.5% off), a later one split to the loan, a later one removed, a later income, a later one in ILS, a later one 5%
--- off, and an older matching one past the 75 days. B has one matching line.
-create temp table f1264_lines (key text primary key, co text, days int, amount bigint, currency text, direction text);
+-- Suppliers: the lender, and a shop that happens to charge about the payment.
+insert into public.suppliers (company_id, name)
+select (select id from f1264 where label = v.co), v.name
+from (values ('co_a', 'Example Lender'), ('co_a', 'Example Shop'), ('co_b', 'Example Lender B')) v(co, name);
+insert into f1264 select 'lender', id from public.suppliers where name = 'Example Lender';
+insert into f1264 select 'shop', id from public.suppliers where name = 'Example Shop';
+insert into f1264 select 'lender_b', id from public.suppliers where name = 'Example Lender B';
+
+-- Lines (days before today, amount, currency, direction, supplier): A's lender line that matches 20 days ago
+-- (101500 is 1.5% off), an older lender line split to the loan (it ties the lender to the loan), and later lines
+-- that must not count: a removed one, an income, one in ILS, one 5% off, one from the shop for the exact payment,
+-- and an older matching one past the 75 days. B: a split lender line and an unsplit one.
+create temp table f1264_lines (key text primary key, co text, days int, amount bigint, currency text, direction text,
+  supplier text);
 insert into f1264_lines values
-  ('match', 'co_a', 20, 101500, 'USD', 'expense'),
-  ('split', 'co_a', 5, 100000, 'USD', 'expense'),
-  ('removed', 'co_a', 6, 100000, 'USD', 'expense'),
-  ('income', 'co_a', 7, 100000, 'USD', 'income'),
-  ('ils', 'co_a', 8, 100000, 'ILS', 'expense'),
-  ('off', 'co_a', 9, 105000, 'USD', 'expense'),
-  ('old', 'co_a', 90, 100000, 'USD', 'expense'),
-  ('b', 'co_b', 10, 100000, 'USD', 'expense');
+  ('match', 'co_a', 20, 101500, 'USD', 'expense', 'lender'),
+  ('split', 'co_a', 50, 100000, 'USD', 'expense', 'lender'),
+  ('removed', 'co_a', 6, 100000, 'USD', 'expense', 'lender'),
+  ('income', 'co_a', 7, 100000, 'USD', 'income', 'lender'),
+  ('ils', 'co_a', 8, 100000, 'ILS', 'expense', 'lender'),
+  ('off', 'co_a', 9, 105000, 'USD', 'expense', 'lender'),
+  ('shop', 'co_a', 3, 100000, 'USD', 'expense', 'shop'),
+  ('old', 'co_a', 90, 100000, 'USD', 'expense', 'lender'),
+  ('b_split', 'co_b', 40, 100000, 'USD', 'expense', 'lender_b'),
+  ('b', 'co_b', 10, 100000, 'USD', 'expense', 'lender_b');
 
 insert into public.transactions (company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
-  vat_amount, vat_status, doc_date, currency, source, idempotency_key, description)
+  vat_amount, vat_status, doc_date, currency, source, idempotency_key, description, supplier_id)
 select (select id from f1264 where label = v.co), v.direction::public.txn_direction,
   (case when v.direction = 'expense' then 'expense' else 'receipt' end)::public.doc_kind,
   case when v.direction = 'expense' then -v.amount else v.amount end,
   case when v.direction = 'expense' then -v.amount else v.amount end,
-  v.amount, 0, 'unknown', current_date - v.days, v.currency, 'manual', 'f1264:' || v.key, 'Example line'
+  v.amount, 0, 'unknown', current_date - v.days, v.currency, 'manual', 'f1264:' || v.key, 'Example line',
+  (select id from f1264 where label = v.supplier)
 from f1264_lines v;
 
--- The split line is the loan's: interest 40000, escrow 10000, principal 50000.
+-- The split lines are their loans': interest 40000, escrow 10000, principal 50000.
 select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', p.part, 'amount_minor', p.amount,
   'scheduled_minor', p.amount, 'category_id', c.id)))
-from public.transactions t
-join public.loans l on l.id = (select id from f1264 where label = 'main')
+from (values ('f1264:split', 'main'), ('f1264:b_split', 'lb')) k(key, loan)
+join public.transactions t on t.idempotency_key = k.key
+join public.loans l on l.id = (select id from f1264 where label = k.loan)
 cross join (values ('interest', 'ריבית משכנתא', 40000), ('escrow', 'מסים וביטוח', 10000),
   ('principal', 'תשלומי הלוואה', 50000)) p(part, category, amount)
 join public.categories c on c.company_id = l.company_id and c.name = p.category and c.kind = 'expense'
-where t.idempotency_key = 'f1264:split'
 group by t.id, l.id;
 
 update public.transactions set removed_at = now() where idempotency_key = 'f1264:removed';
@@ -77,7 +91,14 @@ update public.transactions set removed_at = now() where idempotency_key = 'f1264
 select is(
   (select last_on from public.loan_unsplit_payments where loan_id = (select id from f1264 where label = 'main')),
   current_date - 20,
-  'the matching unsplit line counts, not the later split, removed, income, ILS or 5% off lines'
+  'the matching lender line counts, not the later removed, income, ILS, 5% off or shop lines'
+);
+
+select is(
+  (select count(*)::int from public.loan_unsplit_payments v
+   join public.transactions t on t.idempotency_key = 'f1264:shop' and t.doc_date = v.last_on),
+  0,
+  'an unrelated expense for exactly the payment, from a supplier never split to the loan, does not count'
 );
 
 select is(

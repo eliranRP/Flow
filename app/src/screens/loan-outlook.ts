@@ -138,7 +138,8 @@ function addDays(iso: string, days: number): string {
 
 /**
  * What the late check knows of a loan's payments. `lastPaidOn`: its latest posted payment, one waiting for review or
- * not yet split to it included (null with none). `addedOn`: the day the loan was added to the app (null unknown).
+ * not yet split to it included (null with none). `addedOn`: the day the loan was added to the app, yyyy-mm-dd in
+ * Israel time (null unknown).
  */
 export type LoanPaidFacts = { lastPaidOn: string | null; addedOn: string | null };
 
@@ -156,7 +157,7 @@ export function latePayment(loan: OutlookLoan, paid: LoanPaidFacts, today: strin
   const cutoff = addDays(today, -LATE_GRACE_DAYS);
   const due = rows.filter((row) => row.dueDate < cutoff).at(-1);
   if (due == null) return null;
-  if (paid.lastPaidOn == null) return paid.addedOn != null && due.dueDate >= paid.addedOn.slice(0, 10) ? due.dueDate : null;
+  if (paid.lastPaidOn == null) return paid.addedOn != null && due.dueDate >= paid.addedOn ? due.dueDate : null;
   if (paid.lastPaidOn >= addDays(due.dueDate, -EARLY_PAY_DAYS)) return null;
   return due.dueDate;
 }
