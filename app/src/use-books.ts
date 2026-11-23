@@ -11,7 +11,7 @@ import type {
   UnpaidRow,
 } from "@flow/shared";
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { loadReadSchemas } from "./load-read-schemas";
 import { readyClient } from "./ready-client";
 import { defaultPeriod, type PeriodChoice } from "./period";
@@ -34,10 +34,6 @@ export function BooksProvider({ children }: { children: ReactNode }) {
     setPeriodState(next);
   }, []);
   const [overheadOn, setOverheadOn] = useState(false);
-  useEffect(() => {
-    // Fetch the schemas while the first reads are on the wire. A read retries the fetch if this fails.
-    void loadReadSchemas().catch(() => undefined);
-  }, []);
   const value = useMemo(
     () => ({ period, setPeriod, overheadOn, setOverheadOn }),
     [period, overheadOn, setPeriod],

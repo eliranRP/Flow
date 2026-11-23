@@ -2,7 +2,7 @@ import type { ReviewCursor, ReviewRow } from "@flow/shared";
 import { skipToken, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "./lib/supabase";
-import { loadReadSchemas } from "./load-read-schemas";
+import { loadReadSchemas, preloadReadSchemas } from "./load-read-schemas";
 import { waitForAccessToken } from "./wait-for-session";
 import { useHomePreview } from "./preview";
 import {
@@ -211,6 +211,8 @@ function reviewQueryOptions(preview: string, project: string | null) {
     queryFn: async ({ client }: { client: QueryClient }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      // FLOW-1273: the schemas this answer is parsed with load beside the read, not after it.
+      preloadReadSchemas();
       await waitForAccessToken(supabase);
       dropLegacyJevConnectorKey();
       // After an invalidation the list is read again up to the rows it held (the approved ones are gone from
