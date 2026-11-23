@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { followConnection } from "./connection";
 import { startHomeReads } from "./home-early-reads";
+import { startKeptReads } from "./kept-reads";
 import { createQueryClient } from "./query-client";
 import { applyThemeChoice, readThemeChoice } from "./theme-store";
 import "./styles/app.css";
@@ -32,6 +33,9 @@ const root = document.getElementById("root");
 if (!root) {
   throw new Error("Missing #root");
 }
+
+// FLOW-1267: the kept reads start coming back now, beside the first render (kept-reads.ts: waiting for them delays it).
+void startKeptReads(queryClient);
 
 createRoot(root).render(
   <StrictMode>

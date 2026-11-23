@@ -1,11 +1,11 @@
-import { expect, test, type Browser } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { median, RUNS, runsLine } from "./runs";
 import { stubBackend } from "./stub-backend";
 
 /**
  * FLOW-804, the owner's ask of 2026-10-09 with the database staying on Micro (2026-10-10): through
  * REST every read pays a 150 to 500 ms floor plus 1 to 4 s spikes. A project opened before paints
- * from its last read saved on the phone, so a repeat open, after a reload too, shows its figures
+ * from its last read kept on the phone (kept-reads.ts), so a repeat open, after a reload too, shows its figures
  * within 0.7 s of the tap even while the server takes 2 s, and the fresh read lands behind it.
  * Production build, CPU ×4, the median of 5.
  */
@@ -15,6 +15,23 @@ const LIMIT_MS = 700;
 const SPIKE_MS = Number(process.env.FLOW_PERF_SPIKE_MS ?? 2_000);
 const FLOOR_MS = 300;
 const project = { id: "herzl", name: "שיפוץ הרצל 12" } as const;
+
+/** Whether the device holds a kept project read yet (kept-reads.ts writes it a moment after the read lands). */
+function projectIsKept(page: Page): Promise<boolean> {
+  return page.evaluate(async () => {
+    // Opening a store that is not there yet would create it empty, and the app could not write to it.
+    if (!(await indexedDB.databases()).some((db) => db.name === "flow-kept-reads")) return false;
+    return new Promise<boolean>((resolve) => {
+      const open = indexedDB.open("flow-kept-reads");
+      open.onerror = () => { resolve(false); };
+      open.onsuccess = () => {
+        if (!open.result.objectStoreNames.contains("reads")) { resolve(false); return; }
+        const request = open.result.transaction("reads").objectStore("reads").getAll();
+        request.onsuccess = () => { resolve((request.result as { key: string }[]).some((row) => row.key.startsWith('["project"'))); };
+      };
+    });
+  });
+}
 
 async function timedOpen(browser: Browser, warm: boolean): Promise<{ ms: number; early: string[]; late: string[] }> {
   const context = await browser.newContext();
@@ -27,14 +44,8 @@ async function timedOpen(browser: Browser, warm: boolean): Promise<{ ms: number;
     await page.goto(`/projects/${project.id}`);
     await expect(page.getByRole("heading", { level: 1, name: project.name, exact: true })).toBeVisible({ timeout: 30_000 });
     await expect.poll(stub.inflight).toBe(0);
-    // That visit was an hour ago, so its saved read is stale and is read again (project-cache.ts).
-    await page.evaluate(() => {
-      const raw = localStorage.getItem("flow-project-reads");
-      if (raw == null) throw new Error("no saved project read");
-      const saved = JSON.parse(raw) as { entries: { at: number }[] };
-      for (const entry of saved.entries) entry.at -= 3_600_000;
-      localStorage.setItem("flow-project-reads", JSON.stringify(saved));
-    });
+    // The read is kept on the device a moment after it lands (kept-reads.ts); a restored read is stale, so it is read again.
+    await expect.poll(() => projectIsKept(page), { timeout: 10_000 }).toBe(true);
   }
   await page.goto("/projects");
   await expect(row).toBeVisible({ timeout: 30_000 });
