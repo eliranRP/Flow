@@ -196,9 +196,12 @@ Short, calm and functional. Nothing bounces, overshoots or loops for attention. 
 | `--motion-pull-spin` | 880ms | Pull to refresh: one stepped turn of the iOS spinner (FLOW-1050) |
 | `--motion-pull-return` | 400ms | Pull to refresh: the screen's glide to the rest and back to the top, on `--ease-enter` (FLOW-1050) |
 | `--skeleton-delay` | 300ms | Nothing shows before this |
+| `--motion-splash-fill` / `--motion-splash-wave` / `--motion-splash-word` / `--motion-splash-word-delay` | 2400ms / 600ms / 400ms / 2300ms | The splash: the liquid rises (`--ease-splash-fill`), the surface wave (one cycle), the wordmark's fade and rise and when it starts (FLOW-1277) |
 | `--rise-page` / `--rise-push` | 8px / 24px | Page-enter rise; push offset (in RTL the push comes from the left, the end side, and back leaves the same way) |
 
 Utilities in `app/src/ui/css/00-motion.css`: `.m-press`, `.m-page-enter` (with `--i` for the stagger index), `.m-push-in`, `.m-push-back`, `.m-sheet-in`, `.m-sheet-out`, `.m-bar-in`, `.m-bar-out`, `.m-row-leave`, `.m-bar-grow`.
+
+**The splash (FLOW-1277).** On every cold start (once per page load, never on a route change, never under an automated browser) a splash covers the app while it loads: the tile fills with the icon's violet liquid, the F inside turns white where the liquid covers it, the wordmark fades in under it, and the splash fades out at about 2.9s in all (`--motion-toast-out` for the fade); a tap or a key skips it. The surface wave runs 4 cycles during the rise and stops, so it is not a loop; **the owner's explicit pick (2026-11-23), an exception to "nothing loops for attention"**. Under reduced motion the finished icon and wordmark show for about 400ms. The page colour shows before the splash (`index.html`), and the manifest's `background_color` is the light page colour, so a dark phone shows light until the page paints: a known limit, the manifest takes one colour. [Log](log/2026-11-23-flow-1277.md).
 
 **Reduced motion.** Under `prefers-reduced-motion: reduce`, every `--motion-*` token is `0ms` and every rise is `0`, so the end state shows at once. Two sheet tokens stay `1ms` (`--motion-sheet-in` and `--motion-sheet-out`), because Vaul needs a transition end. The scroll-linked band fade is not timed, so it still follows the finger.
 

@@ -648,6 +648,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1263"></a>[FLOW-1263](tasks/FLOW-1263.md) | Loans: a loan never paid in the books stays late | BUG |
 | <a id="flow-1264"></a>[FLOW-1264](tasks/FLOW-1264.md) | Loans: a payment not yet split to its loan is not called late | BUG |
 | <a id="flow-1265"></a>[FLOW-1265](tasks/FLOW-1265.md) | A row's one-line hint shows a sliver of its hidden second line | SMALL UI |
+| <a id="flow-1277"></a>[FLOW-1277](tasks/FLOW-1277.md) | A splash screen: the icon fills with liquid on every cold start | UI |
 
 ## Onboarding, Settings and connectors
 
@@ -835,6 +836,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1261"></a>[FLOW-1261](tasks/FLOW-1261.md) | Perf: the Loans list's balances read does not send the currency twice | SMALL (perf) |
 | <a id="flow-1262"></a>[FLOW-1262](tasks/FLOW-1262.md) | CI: the get_project speed test does not fail on a slow runner, and names the state when it is slow | SMALL (CI test) |
 | <a id="flow-1276"></a>[FLOW-1276](tasks/FLOW-1276.md) | Perf: report three times per screen (data shown, fresh data shown, first visit) | SMALL (perf) |
+| <a id="flow-1278"></a>[FLOW-1278](tasks/FLOW-1278.md) | Perf: Profit's repeat visit does not fall back to skeletons while kept figures refresh | SMALL (perf) |
+| <a id="flow-1290"></a>[FLOW-1290](tasks/FLOW-1290.md) | Perf: `get_breakdown_lines` takes no currency, so Profit's date and amount lines start at mount | SMALL (perf, database) |
+| <a id="flow-1291"></a>[FLOW-1291](tasks/FLOW-1291.md) | Perf: Profit's next-month card shows kept data on a repeat visit | SMALL (perf) |
 | <a id="flow-1267"></a>[FLOW-1267](tasks/FLOW-1267.md) | Perf: keep the main screens' reads on the device and draw them at once | MEDIUM (perf) |
 | <a id="flow-1268"></a>[FLOW-1268](tasks/FLOW-1268.md) | UI: a small hint while a screen shows kept figures and fresh ones load | SMALL UI |
 | <a id="flow-1269"></a>[FLOW-1269](tasks/FLOW-1269.md) | Perf: read the main screens in the background once Home has settled | MEDIUM (perf) |

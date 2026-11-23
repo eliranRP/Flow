@@ -182,7 +182,9 @@ export default defineConfig(({ mode }) => {
         dir: "rtl",
         display: "standalone",
         orientation: "portrait",
-        background_color: "#FFFFFF",
+        // FLOW-1277: the light page colour (--color-bg). The manifest takes one colour, so a dark phone shows this
+        // until the page paints: a known limit (index.html paints the dark colour from its first byte).
+        background_color: "#F6F4FA",
         theme_color: "#7B3FE4",
         start_url: "/",
         icons: [
