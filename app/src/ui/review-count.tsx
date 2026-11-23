@@ -26,9 +26,12 @@ export function reviewCountDigits(total: number): number {
   return reviewCountText(total).length;
 }
 
+/** One formatter: toLocaleString builds a new one per call, which cost the review queue 15 ms on the phone profile (FLOW-1274). */
+const COUNT_FORMAT = new Intl.NumberFormat("en-US");
+
 /** FLOW-984: a count with thousands commas ("1,287"); the queue can hold more than a thousand. */
 export function reviewCountText(value: number): string {
-  return value.toLocaleString("en-US");
+  return COUNT_FORMAT.format(value);
 }
 
 /** FLOW-960: the most items the meter draws as segments. */

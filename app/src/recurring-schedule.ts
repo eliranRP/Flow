@@ -2,6 +2,10 @@ import type { MissingBill, RecurringPace } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { RecurringLine } from "./recurring-layout";
 import { readyClient } from "./ready-client";
+import { israelToday } from "./ui/date-math";
+
+/** The Israel calendar day as YYYY-MM-DD, the day the server counts lateness from (ui/date-math.ts). */
+export { israelToday };
 
 /** One row of `recurring_schedule` (FLOW-447): a recurring party with its state this month. */
 export type ScheduleRow = {
@@ -107,11 +111,6 @@ export function alertState(rows: readonly ScheduleRow[], missing: readonly Missi
 
 function magnitude(minor: number): bigint {
   return BigInt(Math.abs(minor));
-}
-
-/** The Israel calendar day as YYYY-MM-DD, the day the server counts lateness from. */
-export function israelToday(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(now);
 }
 
 /** Whole days from one YYYY-MM-DD day to another. */
