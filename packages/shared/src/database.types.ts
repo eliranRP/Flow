@@ -1630,6 +1630,19 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"loan_unsplit_payments": {
+                  Row: {
+                    "company_id": string | null,"last_on": string | null,"loan_id": string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loans_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"sumit_connection_status": {
                   Row: {
                     "company_id": string | null,"connected": boolean | null,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null

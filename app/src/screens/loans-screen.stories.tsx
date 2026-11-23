@@ -132,6 +132,14 @@ export const Attention320: Story = {
     await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
     await within(canvasElement).findByRole("link", { name: "2 תשלומים ממתינים לבדיקה · משכנתא אלון" });
     await expect(oneLineAttention(canvasElement)).toEqual(["גישור הגפן · באיחור", "לבדיקה · תשלום אחד", "לבדיקה · 2 תשלומים"]);
+    // FLOW-1265: a row's hint part that wraps is wholly below its box, never a sliver under the first line.
+    const parts = [...canvasElement.querySelectorAll<HTMLElement>(".ui-row-hint-line .ui-hint-part")];
+    await expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) {
+      const box = (part.parentElement as HTMLElement).getBoundingClientRect();
+      const rect = part.getBoundingClientRect();
+      await expect(rect.bottom <= box.bottom + 0.5 || rect.top >= box.bottom - 0.5).toBe(true);
+    }
   },
 };
 
