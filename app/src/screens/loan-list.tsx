@@ -8,7 +8,7 @@ import { LOAN_KIND_LIST_LABEL } from "./loan-copy";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetailDbRow } from "./loan-detail-data";
 import type { LoanBalanceRow } from "./loan-match";
 import { latePayment, loanOutlook, type OutlookLoan, scheduleRowsOf } from "./loan-outlook";
-import { readLoanBalances, readProjectNames } from "./loan-reads";
+import { readLoanBalances, readProjectNames, readUnsplitPayments } from "./loan-reads";
 
 /**
  * FLOW-106 §3.1, FLOW-1046. The loans list: open loans and closed loans (the פעילות / נסגרו segment), each in
@@ -106,15 +106,26 @@ export type LoanListData = {
   loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null; schedule: readonly LoanScheduleRow[] | null }>;
 };
 
+/** The list's loan columns: the detail's, and the day the loan was added (FLOW-1263, the late check). */
+const LOAN_LIST_COLUMNS = `${LOAN_DETAIL_COLUMNS}, created_at` as const;
+
+/** The later of two ISO dates, either missing. */
+function laterOf(a: string | null | undefined, b: string | null | undefined): string | null {
+  if (a == null) return b ?? null;
+  if (b == null) return a;
+  return a > b ? a : b;
+}
+
 /** One read, shared by the list and the band's summary through the same query key. */
 export async function readLoanList(companyId: string | null, today: string = israelToday()): Promise<LoanListData> {
   const supabase = getSupabase();
   if (!supabase || companyId == null) return { rows: [], loans: [] };
-  // Three reads at once: none needs another's answer.
-  const [loans, byLoan, projectNames] = await Promise.all([
-    supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("company_id", companyId).order("name"),
+  // Four reads at once: none needs another's answer.
+  const [loans, byLoan, projectNames, unsplit] = await Promise.all([
+    supabase.from("loans").select(LOAN_LIST_COLUMNS).eq("company_id", companyId).order("name"),
     readLoanBalances(supabase, companyId),
     readProjectNames(supabase, companyId),
+    readUnsplitPayments(supabase, companyId),
   ]);
   assertNoError(loans);
   const built = (loans.data ?? []).map((loan) => {
@@ -125,7 +136,12 @@ export async function readLoanList(companyId: string | null, today: string = isr
     // FLOW-1260: the loan's schedule is built once here; its next payment and its late flag both read it.
     const schedule = scheduleRowsOf(outlookLoan);
     const next = nextPaymentOf(outlookLoan, today, schedule);
-    const lateOn = latePayment(outlookLoan, balance?.last_paid_on ?? null, today, schedule);
+    // FLOW-1264: a bank line not split to the loan yet that matches its payment counts as paid for this check.
+    const lastPaidOn = laterOf(balance?.last_paid_on, unsplit.get(loan.id));
+    // The day it was added, in Israel time, as `today` is; none when the read has no valid time.
+    const addedAt = Date.parse(loan.created_at);
+    const addedOn = Number.isNaN(addedAt) ? null : israelToday(new Date(addedAt));
+    const lateOn = latePayment(outlookLoan, { lastPaidOn, addedOn }, today, schedule);
     const row: LoanListRow = {
       id: loan.id,
       name: loan.name,

@@ -152,10 +152,13 @@
   white-space: nowrap;
 }
 
-/* Its parts: whole parts in order; the ones that do not fit wrap to a hidden second line. */
+/* Its parts: whole parts in order; the ones that do not fit wrap to a hidden second line. FLOW-1265: the cap is
+   line2's line, taller than a smaller hint's own line, so the second line starts a whole cap lower and none of it
+   shows; the box keeps its height. */
 .ui-hint-parts {
   display: flex;
   flex-wrap: wrap;
+  row-gap: calc(var(--type-line2-size) * var(--type-line2-line));
   max-block-size: calc(var(--type-line2-size) * var(--type-line2-line));
   min-inline-size: 0;
   overflow: hidden;

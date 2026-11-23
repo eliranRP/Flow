@@ -8,7 +8,7 @@ import { myCompaniesFor, TEST_COMPANY_ID } from "../team-test-support";
 import { readLoanList } from "./loan-list";
 import { LoansScreen } from "./loans-screen";
 
-// The live Loans tab: the company from what the app holds, and the list's three reads at once.
+// The live Loans tab: the company from what the app holds, and the list's four reads at once.
 
 type Pending = { table: string; resolve: (value: { data: unknown; error: null }) => void };
 
@@ -110,11 +110,11 @@ function withCompanies(ownerId: string | null) {
 }
 
 describe("live Loans tab", () => {
-  it("sends the loans, balances and project names reads together, before any answers", async () => {
+  it("sends the loans, balances, project names and unsplit payments reads together, before any answers", async () => {
     db.hold = true;
     const read = readLoanList(TEST_COMPANY_ID);
     await Promise.resolve();
-    expect(db.pending.map((p) => p.table).sort()).toEqual(["loan_balances", "loans", "projects"]);
+    expect(db.pending.map((p) => p.table).sort()).toEqual(["loan_balances", "loan_unsplit_payments", "loans", "projects"]);
     for (const p of db.pending) p.resolve({ data: answers[p.table] ?? [], error: null });
     const list = await read;
     expect(list.rows.map((row) => [row.name, row.projectName, row.balanceMinor])).toEqual([
@@ -123,15 +123,30 @@ describe("live Loans tab", () => {
     ]);
   });
 
-  it("marks a loan late from its last payment in loan_balances (FLOW-1258)", async () => {
-    const scheduled = { payment_minor: 60_000, start_date: "2026-01-01" };
-    answers.loans = [{ ...loanRow("l1", "הלוואת גשר", "p1"), ...scheduled }, { ...loanRow("l2", "הלוואת ציוד", null), ...scheduled }];
-    answers.loan_balances = [
-      { loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, currency: "ILS", last_paid_on: "2026-11-05" },
-      { loan_id: "l2", balance_minor: 4_000_000, flagged_parts: 0, currency: "ILS", last_paid_on: "2026-09-05" },
+  it("marks a loan late from its last payment, a line not split yet included, and the day it was added (FLOW-1258, FLOW-1263, FLOW-1264)", async () => {
+    const scheduled = { payment_minor: 60_000, start_date: "2026-01-01", created_at: "2025-12-20T08:00:00Z" };
+    answers.loans = [
+      { ...loanRow("l1", "הלוואת גשר", "p1"), ...scheduled },
+      { ...loanRow("l2", "הלוואת ציוד", null), ...scheduled },
+      { ...loanRow("l3", "הלוואת מחסן", null), ...scheduled },
+      { ...loanRow("l4", "הלוואת רכב", null), ...scheduled },
     ];
+    answers.loan_balances = [
+      { loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-11-05" },
+      { loan_id: "l2", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-09-05" },
+      { loan_id: "l3", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-09-05" },
+      { loan_id: "l4", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: null },
+    ];
+    // l3's November payment came in from the bank but is not split to it yet.
+    answers.loan_unsplit_payments = [{ loan_id: "l3", last_on: "2026-11-04" }];
     const list = await readLoanList(TEST_COMPANY_ID, "2026-11-22");
-    expect(list.rows.map((row) => [row.name, row.lateOn])).toEqual([["הלוואת גשר", undefined], ["הלוואת ציוד", "2026-11-01"]]);
+    expect(list.rows.map((row) => [row.name, row.lateOn])).toEqual([
+      ["הלוואת גשר", undefined],
+      ["הלוואת מחסן", undefined],
+      ["הלוואת ציוד", "2026-11-01"],
+      // Never paid in the books and added before its dates: late for the latest.
+      ["הלוואת רכב", "2026-11-01"],
+    ]);
   });
 
   it("builds each open loan's schedule once, for its next payment and its late flag (FLOW-1260)", async () => {
