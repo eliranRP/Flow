@@ -336,6 +336,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1077"></a>[FLOW-1077](tasks/FLOW-1077.md) | A loan's last payments: the date sits over its split | BUG |
 | <a id="flow-1078"></a>[FLOW-1078](tasks/FLOW-1078.md) | Back from the background, the tab bar sits mid-screen on iOS | BUG |
 | <a id="flow-1079"></a>[FLOW-1079](tasks/FLOW-1079.md) | Take a recurring charge out of this month's forecast | SMALL CYCLE |
+| <a id="flow-1266"></a>[FLOW-1266](tasks/FLOW-1266.md) | A recurring charge can have an end date | SMALL UI |
 | <a id="flow-1081"></a>[FLOW-1081](tasks/FLOW-1081.md) | Take a charge out of a month on the project page, תזרים צפוי and the other forecast lists | SMALL CYCLE |
 | <a id="flow-1188"></a>[FLOW-1188](tasks/FLOW-1188.md) | A line added to the forecast can be removed from the month's צפי, for that month only or from it on | BUG |
 | <a id="flow-1096"></a>[FLOW-1096](tasks/FLOW-1096.md) | A month taken out of the forecast: the year view, one key per charge, and an instant put-back | SMALL CYCLE |
