@@ -1,11 +1,14 @@
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
+import { QueryClient } from "@tanstack/react-query";
+import { IDBFactory } from "fake-indexeddb";
 import { Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { demoProject } from "../demo/model";
 import { resetShownCompanyForTests, setShownCompany } from "../lib/company-header";
-import { forgetProjectReads } from "../project-cache";
+import { flushKeptReads, keepReadsOf, resetKeptReadsForTests, restoreKeptReads } from "../kept-reads";
+import { idbKeptStore } from "../kept-store";
 import { renderWithProviders } from "../test-render";
 import { BusinessScreen } from "./business-screen";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
@@ -83,7 +86,7 @@ const cashMonths = {
   ],
 };
 
-function renderAt(path: string) {
+function renderAt(path: string, client?: QueryClient) {
   return renderWithProviders(
     <AuthProvider>
       <Routes>
@@ -100,14 +103,20 @@ function renderAt(path: string) {
         <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
       </Routes>
     </AuthProvider>,
-    { route: path },
+    { route: path, ...(client == null ? {} : { client }) },
   );
   act(() => {
     for (const handler of rpc.handlers) handler("INITIAL_SESSION", session);
   });
 }
 
+beforeEach(() => {
+  const factory = new IDBFactory();
+  resetKeptReadsForTests(idbKeptStore(() => factory));
+});
+
 afterEach(() => {
+  resetKeptReadsForTests();
   vi.restoreAllMocks();
   rpc.handlers.length = 0;
   rpc.impl = () => Promise.resolve({ data: null, error: { message: "db down" } });
@@ -144,20 +153,21 @@ describe("rejected reads", () => {
     rpc.impl = (name) => Promise.resolve(
       name === "get_project" ? { data: wire, error: null } : name === "project_cash_months" ? { data: cashMonths, error: null } : { data: null, error: { message: "db down" } },
     );
-    const first = renderAt("/projects/herzl");
+    const firstClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    keepReadsOf(firstClient);
+    const first = renderAt("/projects/herzl", firstClient);
     expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    await flushKeptReads();
     first.unmount();
-    // That visit was an hour ago, so the saved read is stale and is read again.
-    const saved = JSON.parse(localStorage.getItem("flow-project-reads") ?? "null") as { entries: { at: number }[] };
-    for (const entry of saved.entries) entry.at -= 3_600_000;
-    localStorage.setItem("flow-project-reads", JSON.stringify(saved));
-    // The next open (a reload): the server is away, and the saved read is the page.
+    // The next open (a reload, a new session): the kept read is put back before the first frame, stale; the server is away.
+    const next = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await restoreKeptReads(next);
     const reads: string[] = [];
     rpc.impl = (name) => {
       reads.push(name);
       return Promise.resolve(name === "project_cash_months" ? { data: cashMonths, error: null } : { data: null, error: { message: "db down" } });
     };
-    renderAt("/projects/herzl");
+    renderAt("/projects/herzl", next);
     expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await Promise.resolve(); });
@@ -166,7 +176,6 @@ describe("rejected reads", () => {
     // show their retry line under the band and keep the rest of the page.
     expect(screen.queryByRole("heading", { name: /לא נטען/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "נסו שוב" }).closest(".ui-failure")).not.toBeNull();
-    forgetProjectReads();
     resetShownCompanyForTests();
   });
 

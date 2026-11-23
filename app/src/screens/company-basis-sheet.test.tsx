@@ -1,9 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { IDBFactory } from "fake-indexeddb";
 import { useState } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { booksClosedSettingNote } from "../company-role-cache";
+import { flushKeptReads, KEPT_VERSION, resetKeptReadsForTests } from "../kept-reads";
+import { idbKeptStore } from "../kept-store";
 import * as supabaseModule from "../lib/supabase";
 import { sheetStack } from "../ui/back";
 import type { BasisChoice } from "../ui/company-choices";
@@ -69,13 +72,17 @@ describe("CompanyBasisSheet (FLOW-103)", () => {
     expect(keys).toEqual(expect.arrayContaining(["dashboard", "project", "project-category", "profit-months", "breakdown", "breakdown-lines"]));
   });
 
-  it("drops the project figures saved on the phone, which count by the old date (FLOW-804)", async () => {
+  it("drops the figures kept on the phone, which count by the old date (FLOW-804, FLOW-1267)", async () => {
     mockRpc(() => ({ error: null }));
-    localStorage.setItem("flow-project-reads", JSON.stringify({ user: "u", company: "c", entries: [] }));
+    const kept = idbKeptStore(() => new IDBFactory());
+    resetKeptReadsForTests(kept);
+    await kept.put([{ id: "h", owner: "u|c", version: KEPT_VERSION, at: Date.now(), size: 1, key: '["unpaid","off"]', data: [] }]);
     renderSheet();
     fireEvent.click(invoice());
     await screen.findByText(BASIS_SAVED);
-    expect(localStorage.getItem("flow-project-reads")).toBeNull();
+    await flushKeptReads();
+    expect(await kept.all()).toEqual([]);
+    resetKeptReadsForTests();
   });
 
   it("writes the previous basis back on ביטול", async () => {

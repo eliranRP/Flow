@@ -6,7 +6,7 @@ import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-co
 import { forgetCompanyRole, keepOnlyCompanyRole } from "./company-role-cache";
 import { noteShownCompanyUser } from "./lib/company-header";
 import { keepSplitDraftsFor } from "./split-drafts";
-import { forgetProjectReads, keepProjectReadsFor } from "./project-cache";
+import { forgetKeptReads, keepKeptReadsFor } from "./kept-reads";
 import { pinReviewLine } from "./review-pin";
 import { pushOwner } from "./push-owner";
 
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // FLOW-601: this user's shown company names the next requests; another user's is dropped.
       noteShownCompanyUser(nextId);
       keepSplitDraftsFor(nextId);
-      keepProjectReadsFor(nextId);
+      void keepKeptReadsFor(queryClient, nextId);
       // FLOW-516: this browser's push subscription stays through an expired session (iOS would not ask
       // again), and goes when another user signs in, even after a reload. An explicit sign-out drops
       // it in Settings, before the session ends. Loads only then, not with Home. Nothing waits on it.
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // The review pin names a line of the previous user's books.
         pinReviewLine(null);
         forgetCompanyRole(previous);
-        forgetProjectReads();
+        void forgetKeptReads();
         queryClient.clear();
         setGeneration((count) => count + 1);
       }
