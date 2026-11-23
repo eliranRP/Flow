@@ -31,6 +31,10 @@ export function useMonthForecastQuery(month: string, active = true) {
     queryKey: ["month-forecast", preview, month],
     enabled: active && preview === "off",
     queryFn: async ({ client }: { client: QueryClient }): Promise<MonthForecast> => {
+      // FLOW-1273: the builder's chunk loads beside the four reads, not after them; the await below takes the same promise.
+      const builder = import("./month-forecast-build");
+      // A failed fetch must not be an unhandled rejection while the reads are out; the await below still throws it.
+      builder.catch(() => undefined);
       const supabase = await readyClient();
       const [expected, rows, current, edits, base] = await Promise.all([
         // The company's expected months, shared with the profit page's next month (FLOW-1171): one request.
@@ -45,7 +49,7 @@ export function useMonthForecastQuery(month: string, active = true) {
         client.query({ ...companyCurrencyQueryOptions(preview), staleTime: QUERY_STALE_MS }),
       ]);
       if (edits.error) throw edits.error;
-      const { buildMonthForecast, parseMonthEdits } = await import("./month-forecast-build");
+      const { buildMonthForecast, parseMonthEdits } = await builder;
       const projectEdits = parseMonthEdits(edits.data);
       return {
         month,

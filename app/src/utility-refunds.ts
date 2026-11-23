@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, createElement, useContext, type ReactNode } from "react";
 import type { z } from "zod";
 import { getSupabase } from "./lib/supabase";
-import { loadReadSchemas } from "./load-read-schemas";
+import { loadReadSchemas, preloadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import type { RpcClient } from "./recurring-actions";
 import type { utilityIncomeSchema, utilityPayersSchema, utilityRefundsSchema } from "./utility-refund-schema";
@@ -61,6 +61,8 @@ function useReadClient(): () => Promise<RpcClient> {
   const rpc = useUtilityRpc();
   return async () => {
     const supabase = rpc();
+    // FLOW-1273: the schemas these answers are parsed with load beside the read, not after it.
+    preloadReadSchemas();
     await waitForAccessToken(supabase);
     return supabase;
   };

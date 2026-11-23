@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { CASH_MONTHS } from "./cash";
 import { getSupabase } from "./lib/supabase";
+import { preloadReadSchemas } from "./load-read-schemas";
 import { defaultPeriod } from "./period";
 import { dashboardQueryOptions } from "./use-books";
 import { cashMonthsQueryOptions } from "./use-cash";
@@ -18,6 +19,8 @@ export function startHomeReads(client: QueryClient, location: { pathname: string
   if (!supabase) return;
   void supabase.auth.getSession().then(({ data }) => {
     if (data.session == null) return;
+    // FLOW-1273: the schemas' chunk goes out with the reads (one shared fetch), so it is there when the first answer is parsed.
+    preloadReadSchemas();
     client.query(cashMonthsQueryOptions("off", CASH_MONTHS)).catch(() => undefined);
     client.query(dashboardQueryOptions("off", defaultPeriod())).catch(() => undefined);
   }, () => undefined);
