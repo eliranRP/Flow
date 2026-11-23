@@ -47,18 +47,21 @@ export const editSchema = z.object({
 });
 
 /** expected_months for one project, its charges only (FLOW-1193: no months[]; decision 0185: a charge's project is its own). */
-function useProjectExpectedQuery(projectId: string) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["expected-months", preview, "project", projectId, 0],
-    enabled: preview === "off" && projectId !== "",
+export function projectExpectedOptions(preview: string, projectId: string) {
+  return {
+    queryKey: ["expected-months", preview, "project", projectId, 0] as const,
     queryFn: async (): Promise<ExpectedMonths> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("expected_months", { p_months: 0, p_project_id: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
     },
-  });
+  };
+}
+
+function useProjectExpectedQuery(projectId: string) {
+  const preview = useHomePreview();
+  return useQuery({ ...projectExpectedOptions(preview, projectId), enabled: preview === "off" && projectId !== "" });
 }
 
 type BalanceDbRow = { loan_id: string | null; balance_minor: number | null; flagged_parts: number | null };
@@ -103,18 +106,21 @@ function useProjectLoans(projectId: string) {
 }
 
 /** project_forecast_edits_for: the user's edits that apply to the month. */
-function useForecastEditsQuery(projectId: string, month: string) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: [FORECAST_EDITS_KEY, preview, projectId, month],
-    enabled: preview === "off" && projectId !== "",
+export function forecastEditsOptions(preview: string, projectId: string, month: string) {
+  return {
+    queryKey: [FORECAST_EDITS_KEY, preview, projectId, month] as const,
     queryFn: async (): Promise<ProjectForecastEdit[]> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("project_forecast_edits_for", { p_project_id: projectId, p_month: month });
       if (error) throw error;
       return editSchema.array().parse(data ?? []);
     },
-  });
+  };
+}
+
+function useForecastEditsQuery(projectId: string, month: string) {
+  const preview = useHomePreview();
+  return useQuery({ ...forecastEditsOptions(preview, projectId, month), enabled: preview === "off" && projectId !== "" });
 }
 
 /** Stable empties, so the memoized forecast and the screens' memos keep their inputs while a read loads. */

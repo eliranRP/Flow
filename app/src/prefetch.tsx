@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { periodFromSearch } from "./period";
+import { allTime, periodFromSearch } from "./period";
 import { useHomePreview } from "./preview";
 import { projectCashMonthsOptions } from "./project-cash";
 import { projectQueryOptions, useBooks } from "./use-books";
@@ -34,6 +34,11 @@ export function PrefetchProjects() {
       client.query({ ...projectQueryOptions(preview, projectId, linkPeriod), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
       // FLOW-419: the page opens on the project's cash, read beside the project.
       client.query({ ...projectCashMonthsOptions(preview, projectId), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
+      // FLOW-1270: the forecast card's reads wait for the project's own read on the page (the card loads after the
+      // figures), so the touch starts them (prefetch-forecast.ts, loaded now: not in Home's entry), with the project
+      // over every period, under the keys the screen reads.
+      client.query({ ...projectQueryOptions(preview, projectId, allTime()), staleTime: FRESH_MS, retry: false }).catch(() => undefined);
+      void import("./prefetch-forecast").then((module) => { module.prefetchForecastReads(client, preview, projectId, FRESH_MS); }).catch(() => undefined);
     }
     function onPress(event: Event) {
       const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;

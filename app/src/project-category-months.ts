@@ -17,19 +17,25 @@ export function markDay(period: PeriodChoice | null): string | null {
 }
 
 /** project_category_months for the month the period ends in (the server's "this month"). */
-export function useProjectCategoryMonthsQuery(projectId: string, period: PeriodChoice | null) {
-  const preview = useHomePreview();
-  const day = markDay(period);
-  return useQuery({
+export function projectCategoryMonthsOptions(preview: string, projectId: string, day: string | null) {
+  return {
     // Under "project", so every write that refreshes the project refreshes the marks too.
-    queryKey: ["project", "category-months", preview, projectId, day],
-    enabled: preview === "off" && projectId !== "" && day != null,
+    queryKey: ["project", "category-months", preview, projectId, day] as const,
     queryFn: async (): Promise<ProjectCategoryMonths | null> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("project_category_months", { p_project_id: projectId, p_today: day ?? undefined });
       if (error) throw error;
       return data == null ? null : projectCategoryMonthsSchema.parse(data);
     },
+  };
+}
+
+export function useProjectCategoryMonthsQuery(projectId: string, period: PeriodChoice | null) {
+  const preview = useHomePreview();
+  const day = markDay(period);
+  return useQuery({
+    ...projectCategoryMonthsOptions(preview, projectId, day),
+    enabled: preview === "off" && projectId !== "" && day != null,
   });
 }
 
