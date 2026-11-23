@@ -32,6 +32,19 @@ function overheadFromRow(row: OverheadRow | null): OverheadProject | null {
   return { id, name };
 }
 
+/** The read, for the hook and for the project row's touch prefetch (FLOW-1270). */
+export function overheadProjectOptions(preview: string) {
+  return {
+    queryKey: ["company-overhead", preview] as const,
+    queryFn: async (): Promise<OverheadProject | null> => {
+      const supabase = await readyClient();
+      const { data, error } = await supabase.from("companies").select(OVERHEAD_SELECT).maybeSingle();
+      if (error) throw error;
+      return overheadFromRow(data);
+    },
+  };
+}
+
 /**
  * The company's overhead project (owner 20/10): `companies.overhead_project_id` and that project's name, in one small
  * read of two rows, never the Projects list's heavy `projects_cash_month`. `project` is undefined while the first read
@@ -43,16 +56,7 @@ function overheadFromRow(row: OverheadRow | null): OverheadProject | null {
 export function useOverheadProject(enabled: boolean): OverheadRead {
   const preview = useHomePreview();
   const live = enabled && preview === "off";
-  const read = useQuery({
-    queryKey: ["company-overhead", preview],
-    enabled: live,
-    queryFn: async () => {
-      const supabase = await readyClient();
-      const { data, error } = await supabase.from("companies").select(OVERHEAD_SELECT).maybeSingle();
-      if (error) throw error;
-      return overheadFromRow(data);
-    },
-  });
+  const read = useQuery({ ...overheadProjectOptions(preview), enabled: live });
   if (!live) return { project: null, failed: false, refetch: () => undefined };
   const refetch = () => { void read.refetch(); };
   if (read.data === undefined) return { project: undefined, failed: read.isError, refetch };
