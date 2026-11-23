@@ -839,6 +839,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1278"></a>[FLOW-1278](tasks/FLOW-1278.md) | Perf: Profit's repeat visit does not fall back to skeletons while kept figures refresh | SMALL (perf) |
 | <a id="flow-1290"></a>[FLOW-1290](tasks/FLOW-1290.md) | Perf: `get_breakdown_lines` takes no currency, so Profit's date and amount lines start at mount | SMALL (perf, database) |
 | <a id="flow-1291"></a>[FLOW-1291](tasks/FLOW-1291.md) | Perf: Profit's next-month card shows kept data on a repeat visit | SMALL (perf) |
+| <a id="flow-1292"></a>[FLOW-1292](tasks/FLOW-1292.md) | Perf: kept data covers each screen's whole first view | MEDIUM (perf) |
+| <a id="flow-1293"></a>[FLOW-1293](tasks/FLOW-1293.md) | Perf: kept reads that name a day are found on the next day | SMALL (perf) |
+| <a id="flow-1294"></a>[FLOW-1294](tasks/FLOW-1294.md) | Perf: why Profit's next-month card still waits on a repeat visit | SMALL (perf) |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |
