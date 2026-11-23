@@ -90,7 +90,7 @@ describe("the project page's first view in one wave (FLOW-1270)", () => {
       ]) expect(names()).toContain(name);
       expect(server.rpcCalls.filter((call) => call.name === "project_cash_month_lines").map((call) => call.args.p_side).sort()).toEqual(["in_profit", "not_in_profit"]);
     });
-    // The forecast card's reads stay after the page's figures (FLOW-1019, FLOW-1080): none started before get_project answered.
+    // The forecast card's reads stay after the page's figures (decision 0271): none started before get_project answered.
     for (const name of ["expected_months", "project_category_months", "project_forecast_edits_for", "list_categories"]) expect(names()).not.toContain(name);
     expect(server.tables).not.toContain("companies");
     // The month's lines are for the current month, in the company's books currency, which the server fills in.

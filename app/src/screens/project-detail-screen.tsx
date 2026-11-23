@@ -182,9 +182,9 @@ export function ProjectDetailScreen({
   // FLOW-1230: the two reads are the same function, so whichever lands first starts the forecast's reads (and gives
   // the overhead hint); the page still draws from its own read. Starting them at mount instead delayed the page's
   // first data (nine more requests beside its own), so they wait for one of the two.
-  // FLOW-1270: kept gated (owner's FLOW-1019 and FLOW-1080: a forecast card loads after the page's figures). The
-  // measurement of 2026-11-23 (phone profile, stub backend) showed no later first figure without the gate, but could
-  // not rule one out; the touch prefetch (prefetch.tsx) starts these reads under the same keys instead.
+  // FLOW-1270: kept gated (decision 0271: the figures first, as the owner chose for Home and Profit in FLOW-1019 and
+  // FLOW-1080). The measurement of 2026-11-23 (phone profile, stub backend) showed no later first figure without the
+  // gate, but could not rule one out; the touch prefetch (prefetch.tsx) starts these reads under the same keys instead.
   const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
   const landed = detail.data ?? lifetime.data;
   const forecastReads = sample == null && landed != null;
