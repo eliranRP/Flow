@@ -840,6 +840,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1290"></a>[FLOW-1290](tasks/FLOW-1290.md) | Perf: `get_breakdown_lines` takes no currency, so Profit's date and amount lines start at mount | SMALL (perf, database) |
 | <a id="flow-1291"></a>[FLOW-1291](tasks/FLOW-1291.md) | Perf: Profit's next-month card shows kept data on a repeat visit | SMALL (perf) |
 | <a id="flow-1292"></a>[FLOW-1292](tasks/FLOW-1292.md) | Perf: kept data covers each screen's whole first view | MEDIUM (perf) |
+| <a id="flow-1293"></a>[FLOW-1293](tasks/FLOW-1293.md) | Perf: kept first-view keys without today's date | MEDIUM (perf) |
+| <a id="flow-1294"></a>[FLOW-1294](tasks/FLOW-1294.md) | Perf: why Profit's next-month card still waits on a repeat visit | SMALL (perf) |
 | <a id="flow-1267"></a>[FLOW-1267](tasks/FLOW-1267.md) | Perf: keep the main screens' reads on the device and draw them at once | MEDIUM (perf) |
 | <a id="flow-1268"></a>[FLOW-1268](tasks/FLOW-1268.md) | UI: a small hint while a screen shows kept figures and fresh ones load | SMALL UI |
 | <a id="flow-1269"></a>[FLOW-1269](tasks/FLOW-1269.md) | Perf: read the main screens in the background once Home has settled | MEDIUM (perf) |
