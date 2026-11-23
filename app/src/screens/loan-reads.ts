@@ -4,7 +4,7 @@ import { assertNoError } from "../use-write";
 
 /** The company's loan balances, by loan id. A loan with no row yet has none here. */
 export async function readLoanBalances(supabase: SupabaseClient<Database>, companyId: string) {
-  const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency, last_paid_on").eq("company_id", companyId);
+  const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, last_paid_on").eq("company_id", companyId);
   assertNoError(balances);
   return new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
 }

@@ -158,8 +158,8 @@ describe("Home's cold load (FLOW-1019)", () => {
     };
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "list_unpaid")).toBe(true); });
-    // Home's figures are not drawn yet: nothing of the forecast's has gone out.
-    for (const name of ["expected_months", "forecast_overrides_for", "company_forecast_edits_for", "cash_month_lines"]) {
+    // Home's figures are not drawn yet: nothing of the forecast's has gone out (its overrides read is the late bills', at mount: FLOW-1259).
+    for (const name of ["expected_months", "company_forecast_edits_for", "cash_month_lines"]) {
       expect(rpc.calls.some((c) => c.name === name)).toBe(false);
     }
     releaseCash();
@@ -243,6 +243,32 @@ describe("Home's late bills by month (FLOW-1252)", () => {
     await screen.findByText("תזרים · עד היום");
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "missing_bills")).toBe(true); });
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
+  });
+});
+
+// FLOW-1259: on the current month the late bills and this month's overrides start at mount, while Home's figures are still held.
+describe("Home's late reads at mount (FLOW-1259)", () => {
+  it("starts missing_bills and forecast_overrides_for before the figures draw, and the forecast's overrides go out once", async () => {
+    let releaseCash: () => void = () => undefined;
+    const cashHeld = new Promise<void>((resolve) => { releaseCash = resolve; });
+    rpc.impl = (name) => {
+      if (name === "cash_months") return cashHeld.then(() => ({ data: cash, error: null }));
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
+      if (name === "list_unpaid" || name === "missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
+    expect(rpc.calls.some((c) => c.name === "missing_bills")).toBe(true);
+    // Home's figures are not drawn yet, and the month forecast has not started.
+    expect(screen.queryByText("תזרים · עד היום")).toBeNull();
+    expect(rpc.calls.some((c) => c.name === "company_forecast_edits_for")).toBe(false);
+    releaseCash();
+    await screen.findByText("תזרים · עד היום");
+    // The month forecast reads the same overrides under the same key: no second request.
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_forecast_edits_for")).toBe(true); });
+    expect(rpc.calls.filter((c) => c.name === "forecast_overrides_for")).toHaveLength(1);
+    expect(rpc.calls.filter((c) => c.name === "missing_bills")).toHaveLength(1);
   });
 });
 
