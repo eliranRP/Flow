@@ -9,7 +9,7 @@ import { createRoot } from "react-dom/client";
 let started = false;
 
 export function shouldPlaySplash(nav: Pick<Navigator, "webdriver">): boolean {
-  return nav.webdriver !== true;
+  return !nav.webdriver;
 }
 
 /**
@@ -34,10 +34,14 @@ export function startSplash(): boolean {
         host.remove();
       };
       // Committed at once, so the cover leaves in the same frame the splash arrives.
-      flushSync(() => root.render(createElement(Splash, { onDone: done })));
+      flushSync(() => {
+        root.render(createElement(Splash, { onDone: done }));
+      });
       cover.remove();
     },
-    () => cover.remove(),
+    () => {
+      cover.remove();
+    },
   );
   return true;
 }

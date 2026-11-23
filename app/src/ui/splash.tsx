@@ -33,7 +33,7 @@ export function SplashMark({ at }: { at?: number }) {
   const clip = `${id}-tile`;
   const mask = `${id}-liquid`;
   const frozen = at != null;
-  const style = frozen ? ({ "--splash-at": `${at}ms` } as CSSProperties) : undefined;
+  const style = frozen ? ({ "--splash-at": `${String(at)}ms` } as CSSProperties) : undefined;
   return (
     <div className="ui-splash-stage" data-frozen={frozen || undefined} style={style}>
       <svg className="ui-splash-icon" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
@@ -72,7 +72,9 @@ export function SplashMark({ at }: { at?: number }) {
  */
 export function Splash({ onDone }: { onDone: () => void }) {
   const [leaving, setLeaving] = useState(false);
-  const leave = useCallback(() => setLeaving(true), []);
+  const leave = useCallback(() => {
+    setLeaving(true);
+  }, []);
   useEffect(() => {
     const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(leave, reduced ? SPLASH_REDUCED_HOLD_MS : SPLASH_END_MS);
@@ -85,7 +87,9 @@ export function Splash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (!leaving) return;
     const timer = window.setTimeout(onDone, SPLASH_FADE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [leaving, onDone]);
   return (
     <div className="ui-splash" data-leaving={leaving || undefined} aria-hidden="true" onPointerDown={leave}>

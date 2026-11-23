@@ -12,9 +12,9 @@ function token(name: string): string {
 
 describe("the splash timing constants", () => {
   it("match the motion tokens", () => {
-    expect(token("--motion-splash-word-delay")).toBe(`${SPLASH_WORD_DELAY_MS}ms`);
-    expect(token("--motion-splash-word")).toBe(`${SPLASH_END_MS - SPLASH_WORD_DELAY_MS}ms`);
-    expect(token("--motion-toast-out")).toBe(`${SPLASH_FADE_MS}ms`);
+    expect(token("--motion-splash-word-delay")).toBe(`${String(SPLASH_WORD_DELAY_MS)}ms`);
+    expect(token("--motion-splash-word")).toBe(`${String(SPLASH_END_MS - SPLASH_WORD_DELAY_MS)}ms`);
+    expect(token("--motion-toast-out")).toBe(`${String(SPLASH_FADE_MS)}ms`);
   });
 
   it("run the liquid for 2.4s, the wave 4 times in step with it, and the whole splash about 2.9s", () => {

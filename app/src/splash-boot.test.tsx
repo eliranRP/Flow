@@ -41,7 +41,9 @@ describe("startSplash", () => {
     const cover = document.body.querySelector<HTMLElement>("div[aria-hidden]");
     expect(cover?.style.background).toBe("var(--color-bg)");
     expect(document.querySelector(".ui-splash")).toBeNull();
-    await waitFor(() => expect(document.querySelectorAll(".ui-splash")).toHaveLength(1));
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ui-splash")).toHaveLength(1);
+    });
     expect(cover?.isConnected).toBe(false);
   });
 
@@ -49,11 +51,15 @@ describe("startSplash", () => {
     webdriver(false);
     const { startSplash } = await load();
     startSplash();
-    await waitFor(() => expect(document.querySelectorAll(".ui-splash")).toHaveLength(1));
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ui-splash")).toHaveLength(1);
+    });
     expect(startSplash()).toBe(false);
     expect(document.querySelectorAll(".ui-splash")).toHaveLength(1);
     fireEvent.pointerDown(document.querySelector(".ui-splash") as HTMLElement);
-    await waitFor(() => expect(document.body.children).toHaveLength(0));
+    await waitFor(() => {
+      expect(document.body.children).toHaveLength(0);
+    });
     expect(startSplash()).toBe(false);
     expect(document.body.children).toHaveLength(0);
   });
