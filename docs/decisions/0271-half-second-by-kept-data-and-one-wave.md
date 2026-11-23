@@ -6,7 +6,7 @@
 
 ## Context
 
-[0230](0230-screens-data-in-half-a-second.md) asks every screen to show its data within 0.5 s on the FLOW-804 phone (CPU 4× slower, 4G). After a month of trims no screen meets it. The perf steward's split of an in-app visit on 2026-11-23, production `36cb136`, is below; the runs, the method and why its times are later than the same day's [daily report](../qa/perf/2026-11-23.md) are in [2026-11-23-split.md](../qa/perf/2026-11-23-split.md). It gives the median of 3 visits each. "Settled" is no skeleton and the page stopped changing, the stricter end of 0230's "screen ready"; the daily report's earlier times are the first figures drawn. "Main thread" is the CPU work in the visit window, an upper bound. "Network busy" is the union of the visit's request times.
+[0230](0230-screens-data-in-half-a-second.md) asks every screen to show its data within 0.5 s on the FLOW-804 phone (CPU 4× slower, 4G). After a month of trims no screen meets it. The perf steward's split of an in-app visit on 2026-11-23, production `36cb136`, is below; the runs, the method and how its times compare with the same day's [daily report](../qa/perf/2026-11-23.md) are in [2026-11-23-split.md](../qa/perf/2026-11-23-split.md). It gives the median of 3 visits each. "Settled" is no skeleton and the page stopped changing, the stricter end of 0230's "screen ready"; the daily report's earlier times are the first figures drawn. "Main thread" is the CPU work in the visit window, an upper bound. "Network busy" is the union of the visit's request times.
 
 | Screen | Settled | Main thread | Network busy | Request waves | Requests |
 | --- | ---: | ---: | ---: | ---: | ---: |
