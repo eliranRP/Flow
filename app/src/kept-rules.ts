@@ -19,6 +19,11 @@ export type KeptRule = {
   keep?: (data: unknown) => boolean;
   /** Kept when the page writes it by hand too (Review's list state beside its rows). */
   manual?: boolean;
+  /**
+   * A hand-written copy is kept only while the read at this key is under way, begun for the owner who writes it:
+   * the page writes it from inside that read, and a company switch does not stop the read.
+   */
+  pair?: (key: readonly unknown[]) => readonly unknown[];
   /** What a restored copy becomes: a load that was under way when it was kept is not under way now. */
   restore?: (data: unknown) => unknown;
 };
@@ -57,9 +62,10 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("company profit", (k) => k[0] === "dashboard" && (k[1] === "company-profit" || k[1] === "company-profit-ytd") && off(k, 2), bySchema((s) => s.dashboardSchema)),
   rule("profit breakdown", (k) => k[0] === "breakdown" && (k[1] === "company-profit" || k[1] === "company-year") && off(k, 2), bySchema((s) => s.breakdownSchema)),
   // Review's first page, with the list's state beside it.
-  rule("review", (k) => k.length === 2 && k[0] === "review" && off(k, 1), (_s, json) => isRows(json, "id"), { keep: (data) => Array.isArray(data) && data.length <= KEPT_REVIEW_ROWS }),
+  rule("review", (k) => k.length === 2 && k[0] === "review" && off(k, 1), bySchema((s) => s.reviewRowSchema.array()), { keep: (data) => Array.isArray(data) && data.length <= KEPT_REVIEW_ROWS }),
   rule("review state", (k) => k[0] === "review-meta" && off(k, 1) && k[2] === "", (_s, json) => isRecord(json) && typeof json.total === "number" && typeof json.loaded === "number", {
     manual: true,
+    pair: (k) => (k[2] === "" ? ["review", k[1]] : ["review", k[1], "project", k[2]]),
     restore: (data) => (isRecord(data) ? { ...data, failed: false, loading: false } : data),
     keep: (data) => isRecord(data) && typeof data.loaded === "number" && data.loaded <= KEPT_REVIEW_ROWS,
   }),

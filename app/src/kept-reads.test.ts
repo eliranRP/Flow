@@ -1,3 +1,4 @@
+import { reviewRowSchema } from "@flow/shared";
 import { hashKey, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { renderHook, act } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
@@ -29,6 +30,22 @@ const UNPAID = ["unpaid", "off"] as const;
 const DASHBOARD = ["dashboard", "off", { from: null, to: null }] as const;
 
 let store: KeptStore;
+
+/** Review rows as the read parses them. */
+function reviewRows(count: number) {
+  return Array.from({ length: count }, (_, index) => reviewRowSchema.parse({
+    id: `t${String(index)}`,
+    transaction_id: `x${String(index)}`,
+    description: "קניה",
+    doc_date: "2026-11-01",
+    amount_net: 1000 + index,
+    direction: "expense",
+    reason: null,
+    project_id: null,
+    category_id: null,
+    supplier_name: null,
+  }));
+}
 
 function newClient(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -269,23 +286,121 @@ describe("kept reads (FLOW-1267)", () => {
     expect(await store.all()).toEqual([]);
   });
 
-  it("keeps only Review's first page", async () => {
+  it("keeps only Review's first page, with the list's state read beside it", async () => {
     const client = newClient();
     keepReadsOf(client);
-    const rows = (count: number) => Array.from({ length: count }, (_, index) => ({ id: `t${String(index)}` }));
-    await read(client, ["review", "off"], rows(50));
+    const meta = { total: 80, loaded: 50, next: null, failed: false, loading: true };
+    // The page writes the state from inside the list's read, as use-review.ts does.
+    const list = (count: number) => client.query({
+      queryKey: ["review", "off"],
+      queryFn: () => {
+        client.setQueryData(["review-meta", "off", ""], meta);
+        return Promise.resolve(reviewRows(count));
+      },
+      staleTime: 0,
+    });
+    await list(50);
     await flushKeptReads();
-    expect(await kept()).toEqual(new Set([JSON.stringify(["review", "off"])]));
+    expect(await kept()).toEqual(new Set([JSON.stringify(["review", "off"]), JSON.stringify(["review-meta", "off", ""])]));
     // More pages loaded: the first page's copy stays as it was.
-    await read(client, ["review", "off"], rows(100));
+    await list(100);
     await flushKeptReads();
-    expect(((await store.all())[0]?.data as unknown[]).length).toBe(50);
+    const saved = (await store.all()).find((item) => item.key.startsWith('["review",'));
+    expect((saved?.data as unknown[]).length).toBe(50);
     // The list's state beside it comes back idle.
-    client.setQueryData(["review-meta", "off", ""], { total: 80, loaded: 50, next: null, failed: false, loading: true });
-    await flushKeptReads();
     const next = newClient();
     await restoreKeptReads(next);
-    expect(next.getQueryData(["review-meta", "off", ""])).toEqual({ total: 80, loaded: 50, next: null, failed: false, loading: false });
+    expect(next.getQueryData(["review-meta", "off", ""])).toEqual({ ...meta, loading: false });
+    expect((next.getQueryData(["review", "off"]) as unknown[]).length).toBe(50);
+  });
+
+  it("does not keep a read that began before a forget, when it lands after it", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    let land: (value: unknown) => void = () => undefined;
+    const slow = client.query({ queryKey: UNPAID, queryFn: () => new Promise((resolve) => { land = resolve; }) });
+    await forgetKeptReads();
+    land(demoUnpaid());
+    await slow;
+    await flushKeptReads();
+    expect(await store.all()).toEqual([]);
+  });
+
+  it("does not keep Review's list or its state for the company shown when the read lands, if it began for another", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    let land: (value: unknown) => void = () => undefined;
+    const slow = client.query({
+      queryKey: ["review", "off"],
+      queryFn: () => new Promise((resolve) => { land = resolve; }).then((rows) => {
+        // A company switch does not stop the read, which writes its state when it ends.
+        client.setQueryData(["review-meta", "off", ""], { total: 3, loaded: 3, next: null, failed: false, loading: false });
+        return rows;
+      }),
+    });
+    setShownCompany(USER_A, COMPANY_B);
+    land(reviewRows(3));
+    await slow;
+    await flushKeptReads();
+    expect(await store.all()).toEqual([]);
+    // A hand-written state with no read under way is not kept either.
+    client.setQueryData(["review-meta", "off", ""], { total: 1, loaded: 1, next: null, failed: false, loading: false });
+    await flushKeptReads();
+    expect(await store.all()).toEqual([]);
+  });
+
+  it("drops a Review row that no longer fits its schema", async () => {
+    const good = newClient();
+    keepReadsOf(good);
+    await read(good, ["review", "off"], reviewRows(2));
+    await flushKeptReads();
+    const [saved] = await store.all();
+    if (saved == null) throw new Error("nothing kept");
+    const broken = (saved.data as Array<Record<string, unknown>>).map(({ direction: _direction, ...rest }) => rest);
+    await store.put([{ ...saved, data: broken }]);
+    const client = newClient();
+    await restoreKeptReads(client);
+    expect(client.getQueryData(["review", "off"])).toBeUndefined();
+    expect(await store.all()).toEqual([]);
+    // The sound rows are put back.
+    await store.put([saved]);
+    await restoreKeptReads(client);
+    expect(client.getQueryData(["review", "off"])).toEqual(reviewRows(2));
+  });
+
+  it("reads again a mounted query whose own read failed before the kept read came back, and leaves one in flight alone", async () => {
+    const first = newClient();
+    keepReadsOf(first);
+    await read(first, UNPAID, demoUnpaid());
+    await flushKeptReads();
+    const client = newClient();
+    const queryFn = vi.fn(() => Promise.reject<unknown>(new Error("offline")));
+    const observer = new QueryObserver(client, { queryKey: UNPAID, queryFn, retry: false });
+    const stop = observer.subscribe(() => undefined);
+    await vi.waitFor(() => { expect(client.getQueryState(UNPAID)?.status).toBe("error"); });
+    await restoreKeptReads(client);
+    await vi.waitFor(() => { expect(queryFn).toHaveBeenCalledTimes(2); });
+    stop();
+    // A read still in flight is not cancelled by the put-back.
+    const busy = newClient();
+    let calls = 0;
+    const slow = new QueryObserver(busy, { queryKey: UNPAID, queryFn: () => { calls += 1; return new Promise(() => undefined); } });
+    const stopSlow = slow.subscribe(() => undefined);
+    await restoreKeptReads(busy);
+    expect(calls).toBe(1);
+    stopSlow();
+  });
+
+  it("counts a row's size in bytes (Hebrew is two a letter), and counts rows it did not put back", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    await read(client, ["company-currency", "off"], "USD");
+    await read(client, ["month-forecast", "off", "2026-11"], { month: "2026-11", base: "ILS", build: {}, overrides: [], note: "א".repeat(100) });
+    await flushKeptReads();
+    const saved = await store.all();
+    const forecast = saved.find((item) => item.key.includes("month-forecast"));
+    expect(forecast?.size).toBe(new TextEncoder().encode(JSON.stringify(forecast?.data)).length);
+    expect(forecast?.size).toBeGreaterThan(200);
   });
 
   it("says a read is kept while its fresh read is in flight, and not after", async () => {

@@ -52,8 +52,9 @@ function toJson(value: unknown): unknown {
   return value;
 }
 
+/** The bytes the row's data takes as text (Hebrew is two bytes a letter), the cap's measure. */
 function sizeOf(data: unknown): number {
-  return JSON.stringify(toJson(data)).length;
+  return new TextEncoder().encode(JSON.stringify(toJson(data))).length;
 }
 
 function enqueue(work: () => Promise<unknown>): Promise<unknown> {
@@ -119,11 +120,12 @@ export async function restoreKeptReads(client: QueryClient, now = Date.now()): P
     }
   }
   for (const { row, key, rule } of fits) {
-    // The user or company changed while the rows were read: not these rows'.
-    if (ownerNow() !== owner) break;
+    // The user or company changed while the rows were read: not these rows'. They stay in the store, and count in the cap.
+    if (ownerNow() !== owner) { index.set(row.id, { at: row.at, size: row.size }); continue; }
+    index.set(row.id, { at: row.at, size: row.size });
     if (!rule.valid(schemas, toJson(row.data))) {
       // A schema that cannot load keeps the row for next time.
-      if (schemas != null) drop.push(row.id);
+      if (schemas != null) { drop.push(row.id); index.delete(row.id); }
       continue;
     }
     const query = client.getQueryCache().find({ queryKey: key, exact: true });
@@ -139,7 +141,12 @@ export async function restoreKeptReads(client: QueryClient, now = Date.now()): P
       hydrating = false;
     }
     restoredFor = owner;
-    index.set(row.id, { at: row.at, size: row.size });
+    // A mounted query whose own read already failed (error, no data) is idle: nothing else reads it until focus or a
+    // remount. One that is fetching is left alone.
+    const hydrated = client.getQueryCache().find({ queryKey: key, exact: true });
+    if (hydrated?.isActive() === true && hydrated.state.fetchStatus !== "fetching") {
+      void client.refetchQueries({ queryKey: key, exact: true, type: "active" });
+    }
   }
   if (drop.length > 0) await store.remove(drop);
 }
@@ -173,8 +180,9 @@ export function keepReadsOf(client: QueryClient): () => void {
     if (manual && rule.manual !== true) return;
     const owner = ownerNow();
     // A read that began for another company, or before one was shown, is not this one's.
-    const readFor = manual ? owner : (startedFor.get(hash) ?? null);
-    startedFor.delete(hash);
+    // A hand-written copy (Review's list state) is kept only beside the read it belongs to, begun for the same owner.
+    const readFor = manual ? (rule.pair == null ? owner : (startedFor.get(hashKey(rule.pair(key))) ?? null)) : (startedFor.get(hash) ?? null);
+    if (!manual) startedFor.delete(hash);
     const data: unknown = query.state.data;
     const { dataUpdatedAt } = query.state;
     if (owner == null || readFor !== owner || data == null || dataUpdatedAt === 0) return;
@@ -200,6 +208,8 @@ function forgetPending(): void {
   generation += 1;
   pending.clear();
   index.clear();
+  // A read that began before this and lands after it is not kept.
+  startedFor.clear();
   if (timer != null) clearTimeout(timer);
   timer = null;
 }
@@ -253,7 +263,10 @@ export function useKeptState(key: QueryKey): { kept: boolean; refreshing: boolea
   return { kept: state > 0, refreshing: state === 2 };
 }
 
-/** Tests: a fresh store, and no state left from the last test. */
+/**
+ * Tests: a fresh store, and no state left from the last test.
+ * @forTests
+ */
 export function resetKeptReadsForTests(next: KeptStore = idbKeptStore()): void {
   store = next;
   forgetPending();
