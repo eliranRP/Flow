@@ -2,7 +2,7 @@ import type { ReadSchemas } from "./load-read-schemas";
 
 /**
  * FLOW-1267: which reads are kept on the device, named in one place. Only the first views of Home,
- * Projects, the project page, Loans, Recurring, Profit (month, year and any dates), Review's first page
+ * Projects, the project page, Loans, Recurring, Profit (month, year and any dates, with the overhead project), Review's first page
  * and the forecast. No search, no sheet's read, no write result. A key names its read by shape; a
  * preview's key (anything but "off") is never kept.
  */
@@ -60,6 +60,8 @@ export const KEPT_RULES: readonly KeptRule[] = [
   // Profit: a month, a year, any dates.
   rule("profit months", (k) => k[0] === "profit-months" && off(k, 1), bySchema((s) => s.profitMonthsSchema)),
   rule("company profit", (k) => k[0] === "dashboard" && (k[1] === "company-profit" || k[1] === "company-profit-ytd") && off(k, 2), bySchema((s) => s.dashboardSchema)),
+  // FLOW-1278: Profit's month by project waits for the overhead project (the company's row): kept, so the kept figures draw at once. Only a set project is kept (a null answer is never).
+  rule("company overhead", (k) => k[0] === "company-overhead" && off(k, 1), (_s, json) => isRecord(json) && typeof json.id === "string" && typeof json.name === "string"),
   rule("profit breakdown", (k) => k[0] === "breakdown" && (k[1] === "company-profit" || k[1] === "company-year") && off(k, 2), bySchema((s) => s.breakdownSchema)),
   // Review's first page, with the list's state beside it.
   rule("review", (k) => k.length === 2 && k[0] === "review" && off(k, 1), bySchema((s) => s.reviewRowSchema.array()), { keep: (data) => Array.isArray(data) && data.length <= KEPT_REVIEW_ROWS }),

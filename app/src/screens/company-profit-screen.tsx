@@ -166,7 +166,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // Data already cached (from Home, or an earlier visit) shows at once; only a read not yet started waits.
   const nextWaiting = next.pending || (wantsForecast && !afterPaint && next.input == null);
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
-  const yearProjects = useCompanyYearProjects(viewYear, today, yearByProject, sample?.years);
+  // FLOW-1271: the year's project reads start at mount for the year the address asks for, without waiting for the years' read to say
+  // it exists (a year with no data shows this year, and its reads then follow).
+  const yearProjects = useCompanyYearProjects(forecastYear, today, yearByProject, sample?.years);
   const failed = live.failed || (monthByProject && overheadRead.failed) || (long && years.failed);
   // The year views draw from the years' read, with the figures' skeleton inside them (below).
   const waiting = !long && model == null;

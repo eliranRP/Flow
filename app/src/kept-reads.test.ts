@@ -403,6 +403,27 @@ describe("kept reads (FLOW-1267)", () => {
     expect(forecast?.size).toBeGreaterThan(200);
   });
 
+  it("keeps Profit's overhead project only as a project with an id and a name, and never an unset one (FLOW-1278)", async () => {
+    const key = ["company-overhead", "off"];
+    const first = newClient();
+    keepReadsOf(first);
+    await read(first, key, { id: "p1", name: "כללי" });
+    await flushKeptReads();
+    const client = newClient();
+    await restoreKeptReads(client);
+    expect(client.getQueryData(key)).toEqual({ id: "p1", name: "כללי" });
+    // No overhead project set (null) is never kept; a row of another shape is dropped.
+    const none = newClient();
+    keepReadsOf(none);
+    await read(none, key, null);
+    await flushKeptReads();
+    await store.put([row({ key: JSON.stringify(key), data: { id: 5 } })]);
+    const next = newClient();
+    await restoreKeptReads(next);
+    expect(next.getQueryData(key)).toBeUndefined();
+    expect(await kept()).not.toContain(JSON.stringify(key));
+  });
+
   it("says a read is kept while its fresh read is in flight, and not after", async () => {
     const first = newClient();
     keepReadsOf(first);
