@@ -1,7 +1,7 @@
 # Half a second by kept data, background reads and one wave per screen
 
 **Date:** 2026-11-23
-**Status:** Accepted (owner, 2026-11-23: "Yes, with a small hint" to showing a screen's last data at once, and "Yes, main screens" to reading the main screens in the background after Home). Items 1 and 2 of the decision are the owner's choices; items 3 and 4 are the perf steward's plan for meeting 0230, inside 0230's own rule that speed work never changes what a screen shows.
+**Status:** Accepted (owner, 2026-11-23: "Yes, with a small hint" to showing a screen's last data at once, and "Yes, main screens" to reading the main screens in the background after Home). Items 1 and 2 are the owner's choices (their mechanics, such as IndexedDB, the 7 days, the allowlist and the save-data skip, are the steward's design); items 3 and 4 are the perf steward's plan for meeting 0230, inside 0230's own rule that speed work never changes what a screen shows.
 **Amends:** [0230](0230-screens-data-in-half-a-second.md)
 
 ## Context
@@ -20,9 +20,9 @@
 | Review | 1.65 s | 0.68 s | 1.42 s | 3 | 27 |
 | Forecast | 0.85 s | 0.86 s | 0.54 s | 1 | 4 |
 
-Cold Home shows its data at 3.2 s, and its first read leaves about 0.8 s after navigation start, before any network wait.
+Cold Home shows its data at a median of 3.25 s (5 loads on `36cb136`; 3.49 s in the daily report on `dc189b8`), and its first read leaves about 0.8 s after navigation start, before any network wait.
 
-The database is not the limit: each read answers in 155 to 382 ms (median, 10 calls), and the slowest function takes about 140 ms in the database.
+The database is not the limit: each read's round trip from the measuring machine has a median of 155 to 382 ms (`pnpm latency`, 10 calls each), and the slowest function takes about 140 ms in the database itself.
 
 The time goes to three things:
 1. **Round trips in waves.** A later read waits for an earlier one's answer through `enabled`, for first paint (`useAfterFirstPaint`), or for a component that mounts after data.
@@ -60,7 +60,20 @@ The last two are reported beside the gate every day, with the same regression ru
 
 - Figures can change about a second after a screen opens, under the hint. A kept entry is at most 7 days old, and only for the same user and company.
 - Financial figures are stored on the device, as the project reads in localStorage already are (FLOW-804, `project-cache.ts`; FLOW-1267 replaces that cache). They are cleared on sign-out.
-- **Cost:** about 20 more reads per session: the first-view reads of the six screens that Home's own reads do not already hold (the Requests column counts every request of a visit, waves and repeats included). The database answers each in about 140 ms or less, and the plan's monthly price does not change, so [0034](0034-cost-and-load-limits.md)'s $5 cap holds.
+- **Cost:** the background reads add about 17 reads per session. That counts each screen's distinct first-view reads that Home has not already made; the Requests column above counts every request of a visit, waves and repeats included.
+
+  | Screen | Added reads |
+  | --- | ---: |
+  | Projects | 1: `projects_cash_month` |
+  | Loans | 5: `loans`, `loan_balances`, `projects`, `loan_unsplit_payments`, the loan currency |
+  | Recurring | none: all its reads are Home's |
+  | Profit, month | about 7: `companies`, `get_dashboard` ×2, `get_breakdown` ×2, `get_profit_months` and the lines |
+  | Review's first page | 3: `list_review_page`, `list_jev_bookings`, `companies` |
+  | Forecast | 1: `cash_months` for 6 months |
+
+  - **Transfer:** about 150 KB more per session, from the split's KB column.
+  - **Database time:** each read takes at most about 140 ms in the database.
+  - **Price:** Supabase bills database size and transfer (egress), not the number of reads. The added transfer is small against the plan's egress quota, so [0034](0034-cost-and-load-limits.md)'s $5 cap is not at risk. The perf steward reports the project's egress if it ever comes near the quota.
 - **Tasks:**
   - the sweep script that reports the three times (FLOW-1276);
   - kept data (FLOW-1267) and the updating hint (FLOW-1268, a UI task with a design session);
