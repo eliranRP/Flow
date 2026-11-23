@@ -240,7 +240,7 @@ select k, gen_random_uuid(),
     else pg_temp.id('target')
   end
 from unnest(array[
-  'supplier_category', 'recurring_match', 'recurring_handover', 'line_pace', 'line_recurring', 'line_amount', 'category_cash', 'line_cash',
+  'supplier_category', 'recurring_match', 'recurring_handover', 'line_pace', 'line_recurring', 'line_amount', 'line_end', 'category_cash', 'line_cash',
   'cash_basis', 'invite', 'member_role', 'member_remove', 'review', 'reassign', 'project',
   'category', 'category_hidden', 'category_pnl', 'loan', 'loan_update', 'loan_split',
   'overhead_project', 'company', 'line_split', 'line_pnl', 'loan_rate', 'invoice_paid',
@@ -293,7 +293,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  83,
+  84,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -301,7 +301,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  83,
+  84,
   'the swept writes keep the company they were stored with'
 );
 select is(

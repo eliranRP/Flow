@@ -130,7 +130,7 @@ export type {
   RecurringChange,
   RecurringPace,
 } from "./forecast.ts";
-export { dueInMonth, monthIndex, paceMonths } from "./recurring-due.ts";
+export { dueDate, dueInMonth, monthIndex, paceMonths, type ChargeEnd } from "./recurring-due.ts";
 export { FORECAST_HORIZON_MONTHS, forecastLastMonth, forecastMonths, inForecastHorizon } from "./forecast-horizon.ts";
 export {
   SMALL_CHARGE_MINOR,

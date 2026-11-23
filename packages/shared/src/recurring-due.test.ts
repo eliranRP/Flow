@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueInMonth, monthIndex, paceMonths } from "./recurring-due";
+import { dueDate, dueInMonth, monthIndex, paceMonths } from "./recurring-due";
 
 describe("dueInMonth (the pace filter)", () => {
   it("counts a monthly charge every month from its due month", () => {
@@ -60,5 +60,28 @@ describe("paceMonths and monthIndex", () => {
   it("subtracts two keys to the months between them, across a year end", () => {
     expect(monthIndex("2027-01") - monthIndex("2026-11")).toBe(2);
     expect(monthIndex("2027-01-15")).toBe(monthIndex("2027-01"));
+  });
+});
+
+describe("dueInMonth with an end date (FLOW-1266)", () => {
+  it("stops after the month whose due day is on or before the end date", () => {
+    const end = { endsOn: "2026-12-12", typicalDay: 12 };
+    expect(dueInMonth("2026-10", "month", "2026-12", "2026-10", end)).toBe(true);
+    expect(dueInMonth("2026-10", "month", "2027-01", "2026-10", end)).toBe(false);
+  });
+
+  it("leaves out a month whose due day is after the end date", () => {
+    expect(dueInMonth("2026-10", "month", "2026-12", "2026-10", { endsOn: "2026-12-11", typicalDay: 12 })).toBe(false);
+  });
+
+  it("caps the due day at the month's end, as the server does", () => {
+    expect(dueDate("2027-02", 31)).toBe("2027-02-28");
+    expect(dueDate("2028-02", 31)).toBe("2028-02-29");
+    expect(dueDate("2026-10", null)).toBe("2026-10-01");
+    expect(dueInMonth("2027-02", "month", "2027-02", "2027-02", { endsOn: "2027-02-28", typicalDay: 31 })).toBe(true);
+  });
+
+  it("is unchanged with no end date", () => {
+    expect(dueInMonth("2026-10", "month", "2030-01", "2026-10", { endsOn: null, typicalDay: 5 })).toBe(true);
   });
 });

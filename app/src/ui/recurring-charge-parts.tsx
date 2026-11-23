@@ -1,5 +1,5 @@
 import { ChevronIcon, ProjectsIcon, RepeatIcon } from "./icons";
-import { PencilIcon, TagIcon } from "./icons-later";
+import { FlagIcon, PencilIcon, TagIcon } from "./icons-later";
 import { IconRow } from "./icon-row";
 import { cx } from "./cx";
 import { PACE_LABEL } from "./pace";
@@ -153,6 +153,42 @@ export function UsualAmountRow({
         <span className="ui-charge-rec-sub">{owner ? "קבעת" : "לפי החודשים האחרונים"}</span>
       </span>
       <span className="ui-charge-rec-tag" dir="ltr">{amount}</span>
+      <span className="ui-charge-rec-end" aria-hidden="true">
+        <ChevronIcon size={18} />
+      </span>
+    </button>
+  );
+}
+
+/**
+ * FLOW-1266: the charge's end date row, under the usual amount: "תאריך סיום", and the date (or "ללא") on the
+ * end, as the usual amount's figure. Opens the end-date sheet.
+ */
+export function EndDateRow({
+  text,
+  set,
+  onOpen,
+  disabled,
+  buttonRef,
+}: {
+  /** "ללא", or the date as DD/MM/YYYY. */
+  text: string;
+  /** The owner set an end date. */
+  set: boolean;
+  onOpen: () => void;
+  disabled: boolean;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}) {
+  return (
+    <button ref={buttonRef} type="button" className="ui-charge-rec ui-hit m-press" onClick={onOpen} disabled={disabled}>
+      <span className="ui-charge-rec-icon" aria-hidden="true">
+        <FlagIcon />
+      </span>
+      <span className="ui-charge-rec-text">
+        <span className="ui-charge-rec-title">תאריך סיום</span>
+        <span className="ui-charge-rec-sub">{set ? "אחריו לא נצפה לחיוב" : "ממשיך עד שתסמנו"}</span>
+      </span>
+      <span className={cx("ui-charge-rec-tag", !set && "ui-charge-rec-tag-off")} dir="ltr">{text}</span>
       <span className="ui-charge-rec-end" aria-hidden="true">
         <ChevronIcon size={18} />
       </span>

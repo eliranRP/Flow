@@ -55,6 +55,7 @@ import {
   reassignRecurringChargeSchema,
   setLineRecurringSchema,
   setLineUsualAmountSchema,
+  setLineEndDateSchema,
   setLinesCashSchema,
   setLinePnlSchema,
   setLinesPnlSchema,
@@ -541,6 +542,16 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_amount_minor: minor == null ? null : Number(minor),
+      ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
+    };
+  } else if (name === "set_line_end_date") {
+    const parsed = setLineEndDateSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_line_end_date";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_ends_on: parsed.data.ends_on,
       ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
     };
   } else if (name === "answer_recurring_match") {

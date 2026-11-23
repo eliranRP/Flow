@@ -1199,13 +1199,13 @@ isOneToOne: false
                   ]
                 },"recurring_overrides": {
                   Row: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"id": string,"pace": string | null,"party_id": string,"project_id": string | null,"recurring": boolean | null,"set_at": string,"set_by": string | null,"typical_amount_minor": number | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"ends_on": string | null,"id": string,"pace": string | null,"party_id": string,"project_id": string | null,"recurring": boolean | null,"set_at": string,"set_by": string | null,"typical_amount_minor": number | null
                   }
                   Insert: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"id"?: string,"pace"?: string | null,"party_id": string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"ends_on"?: string | null,"id"?: string,"pace"?: string | null,"party_id": string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
                   }
                   Update: {
-                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"id"?: string,"pace"?: string | null,"party_id"?: string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"ends_on"?: string | null,"id"?: string,"pace"?: string | null,"party_id"?: string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
                   }
                   Relationships: [
                     {
@@ -2321,6 +2321,9 @@ isOneToOne: false
 "mcp_set_line_cash":
 { Args: { "p_idempotency_key": string,"p_in_cash": boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_line_end_date":
+{ Args: { "p_ends_on": string,"p_idempotency_key": string,"p_project_id"?: string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_set_line_pace":
 { Args: { "p_idempotency_key": string,"p_pace": string,"p_project_id"?: string,"p_transaction_id": string }; Returns: Json
                            },
@@ -2691,6 +2694,9 @@ isOneToOne: false
                            },
 "set_payment_amount":
 { Args: { "p_amount_minor": number,"p_id": string,"p_project_id"?: string }; Returns: Json
+                           },
+"set_payment_end":
+{ Args: { "p_ends_on": string,"p_id": string,"p_project_id"?: string }; Returns: Json
                            },
 "set_payment_pace":
 { Args: { "p_id": string,"p_pace": string,"p_project_id"?: string }; Returns: Json

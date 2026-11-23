@@ -219,6 +219,11 @@
   white-space: nowrap;
 }
 
+/* FLOW-1266: the end date row with no end ("ללא") reads quiet, as a charge row's "לא קבוע" tag. */
+.ui-charge-rec-tag-off {
+  color: var(--color-text-secondary);
+}
+
 /* The match box: a tint, 14px corners, the suggested party and the two answers. */
 .ui-recurring-match {
   display: grid;

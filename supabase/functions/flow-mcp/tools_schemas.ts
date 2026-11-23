@@ -117,6 +117,7 @@ export const WRITE_TOOL_NAMES = [
   "set_line_recurring",
   "set_line_pace",
   "set_line_usual_amount",
+  "set_line_end_date",
   "answer_recurring_match", "answer_recurring_handover", ...UTILITY_WRITES, ...HELD_WRITES,
   "reassign_recurring_charge",
   "undo_jev_prefill",
@@ -224,6 +225,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_line_recurring: new Set(["idempotency_key", "transaction_id", "recurring", "project_id"]),
   set_line_pace: new Set(["idempotency_key", "transaction_id", "pace", "project_id"]),
   set_line_usual_amount: new Set(["idempotency_key", "transaction_id", "amount", "project_id"]),
+  set_line_end_date: new Set(["idempotency_key", "transaction_id", "ends_on", "project_id"]),
   answer_recurring_match: new Set(["idempotency_key", "direction", "party_id", "match_party_id", "same"]),
   reassign_recurring_charge: new Set(["idempotency_key", "direction", "party_id", "currency", "charge_project_id", "project_id", "category_id"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
@@ -281,7 +283,7 @@ export const categorySchema = z.object({
   category_id: UUID_TEXT,
 }).strict();
 /** FLOW-858: every undo kind the server accepts; the undo tool's spec advertises this same list. */
-export const UNDO_KINDS = ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", "prepaid_create", "prepaid_update", "prepaid_refund", "prepaid_end", "prepaid_delete", "books_closed", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS, ...HELD_UNDO_KINDS] as const;
+export const UNDO_KINDS = ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "tax_bracket", "land_account", "loan_closing_paid", "member_report", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "line_end", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "journal_entry_update", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", "prepaid_create", "prepaid_update", "prepaid_refund", "prepaid_end", "prepaid_delete", "books_closed", ...THREAD_UNDO_KINDS, ...HANDOVER_UNDO_KINDS, ...UTILITY_UNDO_KINDS, ...HELD_UNDO_KINDS] as const;
 
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -695,6 +697,13 @@ export const setLineUsualAmountSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   amount: z.union([z.number(), z.string()]).nullable(),
+  project_id: UUID_TEXT.optional(),
+}).strict();
+// FLOW-1266: the end date of a line's recurring charge, YYYY-MM-DD (null: no end).
+export const setLineEndDateSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  ends_on: z.string().regex(DATE).nullable(),
   project_id: UUID_TEXT.optional(),
 }).strict();
 // FLOW-430: the user's answer to a suggested match for a late recurring bill.

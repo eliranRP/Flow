@@ -28,6 +28,7 @@ import { useMachine } from "../use-machine";
 import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { ChargeSkipMonth } from "./recurring-skip-month";
+import { ChargeEndDate } from "./recurring-end-date";
 import { BackButton } from "../ui/back";
 import { CompactBar } from "../ui/compact-bar";
 import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
@@ -59,7 +60,7 @@ type PaceChange = PaceWrite & { undo: boolean; close?: () => void; /** The toast
  * FLOW-447c: the charge page (קבועים › one party), opened from a row of the list. Its own writes are
  * the list's (ignore, restore) and the match answer, plus the pace sheet; a dev sample keeps them local.
  */
-export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all" | "amount"; now?: Date } = {}) {
+export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all" | "amount" | "end"; now?: Date } = {}) {
   const params = useParams();
   const [query] = useSearchParams();
   const direction = sample == null ? params.direction : sample.row.direction;
@@ -162,7 +163,7 @@ function ChargeBody({
   data: Extract<ChargePageData, { status: "ready" }>;
   live: boolean;
   today: string;
-  openSheet?: "pace" | "all" | "amount";
+  openSheet?: "pace" | "all" | "amount" | "end";
 }) {
   const { row, lineId, charges, recurring } = data;
   const search = usePreviewSearch();
@@ -423,6 +424,15 @@ function ChargeBody({
             disabled={(lineId == null && live) || holdWrites}
             blocked={() => blocked()}
             openSheet={openSheet === "amount"}
+          />
+          <ChargeEndDate
+            row={row}
+            lineId={lineId}
+            live={live}
+            today={today}
+            disabled={(lineId == null && live) || holdWrites}
+            blocked={() => blocked()}
+            openSheet={openSheet === "end"}
           />
           <ChargeSkipMonth row={row} split={data.split} live={live} today={today} disabled={holdWrites} blocked={() => blocked()} />
           {charges != null ? (

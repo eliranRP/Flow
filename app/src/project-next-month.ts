@@ -224,7 +224,7 @@ export function nextMonthForecast(input: {
     ...loans.flatMap((row) => (row.categoryId == null ? [] : [row.categoryId])),
   ]);
   const recurring = charges
-    .filter((party) => party.currency === input.currency && dueInMonth(party.next_due_month, party.pace, month, thisMonth))
+    .filter((party) => party.currency === input.currency && dueInMonth(party.next_due_month, party.pace, month, thisMonth, { endsOn: party.ends_on, typicalDay: party.typical_day }))
     .map((party): NextMonthRow => ({
       key: `rec:${party.direction}:${party.party_id}`,
       kind: "recurring",
