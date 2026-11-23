@@ -7,6 +7,7 @@ import { followConnection } from "./connection";
 import { startHomeReads } from "./home-early-reads";
 import { startKeptReads } from "./kept-reads";
 import { createQueryClient } from "./query-client";
+import { startSplash } from "./splash-boot";
 import { applyThemeChoice, readThemeChoice } from "./theme-store";
 import "./styles/app.css";
 
@@ -46,3 +47,6 @@ createRoot(root).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+// FLOW-1277: the splash goes over the app, which is already mounted and loading under it.
+startSplash();

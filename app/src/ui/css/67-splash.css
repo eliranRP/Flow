@@ -1,0 +1,96 @@
+/* FLOW-1277: the splash (ui/splash.tsx). Only transform and opacity animate; the SVG mask and wave move by
+   transform. The durations are the --motion-splash-* tokens (splash.tsx holds the same numbers for its timer,
+   and its test checks they match). The tile and the liquid are the icon's violet in both themes; the F inside
+   takes the icon's white where the liquid covers it. Reduced motion needs no block of its own: the tokens are
+   0ms there, so the finished icon and wordmark show at once. */
+
+.ui-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  opacity: 1;
+  transition: opacity var(--motion-toast-out) var(--ease-exit);
+}
+
+.ui-splash[data-leaving] {
+  opacity: 0;
+}
+
+.ui-splash-stage {
+  --splash-at: 0ms;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.ui-splash-icon {
+  inline-size: var(--size-splash-icon);
+  block-size: var(--size-splash-icon);
+}
+
+.ui-splash-liquid {
+  fill: var(--color-band);
+}
+
+.ui-splash-edge {
+  fill: none;
+  stroke: var(--color-band);
+}
+
+.ui-splash-f {
+  fill: var(--color-band);
+}
+
+.ui-splash-f-lit {
+  fill: var(--color-on-band);
+}
+
+@keyframes ui-splash-rise {
+  from {
+    transform: translateY(104px);
+  }
+  to {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes ui-splash-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50px);
+  }
+}
+
+@keyframes ui-splash-word {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise-page));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ui-splash-rise {
+  animation: ui-splash-rise var(--motion-splash-fill) var(--ease-splash-fill) calc(-1 * var(--splash-at)) both;
+}
+
+.ui-splash-wave {
+  animation: ui-splash-wave var(--motion-splash-wave) var(--ease-linear) calc(-1 * var(--splash-at)) 4;
+}
+
+.ui-splash-word {
+  animation: ui-splash-word var(--motion-splash-word) var(--ease-enter) calc(var(--motion-splash-word-delay) - var(--splash-at)) both;
+}
+
+.ui-splash-stage[data-frozen] * {
+  animation-play-state: paused;
+}
