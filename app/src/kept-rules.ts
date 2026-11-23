@@ -2,7 +2,7 @@ import type { ReadSchemas } from "./load-read-schemas";
 
 /**
  * FLOW-1267: which reads are kept on the device, named in one place. Only the first views of Home,
- * Projects, the project page, Loans, Recurring, Profit (month, year and any dates), Review's first page
+ * Projects, the project page, Loans, Recurring, Profit (month, year and any dates, with the overhead project), Review's first page
  * and the forecast. No search, no sheet's read, no write result. A key names its read by shape; a
  * preview's key (anything but "off") is never kept.
  *
@@ -109,6 +109,8 @@ export const KEPT_RULES: readonly KeptRule[] = [
   // Profit: a month, a year, any dates.
   rule("profit months", (k) => k[0] === "profit-months" && off(k, 1), bySchema((s) => s.profitMonthsSchema)),
   rule("company profit", (k) => k[0] === "dashboard" && (k[1] === "company-profit" || k[1] === "company-profit-ytd") && off(k, 2), bySchema((s) => s.dashboardSchema)),
+  // FLOW-1278: Profit's month by project waits for the overhead project (the company's row): kept, so the kept figures draw at once. Only a set project is kept (a null answer is never).
+  rule("company overhead", (k) => k[0] === "company-overhead" && off(k, 1), (_s, json) => isRecord(json) && typeof json.id === "string" && typeof json.name === "string"),
   rule("profit breakdown", (k) => k[0] === "breakdown" && (k[1] === "company-profit" || k[1] === "company-year") && off(k, 2), bySchema((s) => s.breakdownSchema)),
   // Profit's next-month card (FLOW-1291). The year views' full answer (p_rest) is not kept: it is far bigger and the card does not read it.
   rule("company next month inputs", (k) => k.length === 5 && k[0] === "project-forecast-edits" && off(k, 1) && k[2] === "company" && typeof k[3] === "string" && k[4] === false, (_s, json) => isRecord(json) && typeof json.month === "string" && Array.isArray(json.projects) && Array.isArray(json.general) && Array.isArray(json.edits)),

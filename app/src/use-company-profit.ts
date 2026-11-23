@@ -338,6 +338,16 @@ export type CompanyProfitRead = {
  */
 export const linesIdOfRow = (rowKey: string) => (rowKey.startsWith("kept:") ? rowKey.slice(0, rowKey.indexOf(":", 5)) : rowKey);
 
+/** One of the month's breakdowns, kept and drawn again from the last answer while the month changes. */
+function useBreakdownRead(preview: string, month: PeriodChoice, group: "project" | "category", direction: BreakdownDirection, enabled: boolean) {
+  return useQuery({
+    queryKey: ["breakdown", "company-profit", preview, `${month.from ?? ""}..${month.to ?? ""}`, group, direction],
+    enabled,
+    placeholderData: keepPreviousData,
+    queryFn: () => fetchBreakdown(month, direction, group),
+  });
+}
+
 /**
  * The page's reads, live. Preview mode reads nothing (the screen takes its sample). Query keys start
  * with "dashboard", "breakdown" or "breakdown-lines", so the basis sheet's write refreshes them.
@@ -362,8 +372,8 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     placeholderData: keepPreviousData,
     queryFn: () => fetchDashboard(ytd),
   });
-  const categoryIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "income"], enabled: live && categoriesOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "category") });
-  const categoryExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "category", "expense"], enabled: live && categoriesOn, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "category") });
+  const categoryIncome = useBreakdownRead(preview, month, "category", "income", live && categoriesOn);
+  const categoryExpense = useBreakdownRead(preview, month, "category", "expense", live && categoriesOn);
   // A category read the order does not draw is not waited for (FLOW-1171).
   const categoriesReady = !categoriesOn || (categoryIncome.data !== undefined && categoryExpense.data !== undefined);
   // FLOW-1210: the project breakdowns are drawn by לפי פרויקט alone. In the other orders they start once the figures have
@@ -371,8 +381,8 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
   const figuresIn = projectsOn && dashboard.data != null && categoriesReady;
   const painted = useAfterFirstPaint(figuresIn);
   const projectReads = live && projectsOn && (projectsDrawn || painted);
-  const projectIncome = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "income"], enabled: projectReads, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "income", "project") });
-  const projectExpense = useQuery({ queryKey: ["breakdown", "company-profit", preview, monthRange, "project", "expense"], enabled: projectReads, placeholderData: keepPreviousData, queryFn: () => fetchBreakdown(month, "expense", "project") });
+  const projectIncome = useBreakdownRead(preview, month, "project", "income", projectReads);
+  const projectExpense = useBreakdownRead(preview, month, "project", "expense", projectReads);
   const categoryGroups = [
     ...groupsIn(categoryIncome.data ?? null, currency).map((group) => ({ direction: "income" as const, group })),
     ...groupsIn(categoryExpense.data ?? null, currency).map((group) => ({ direction: "expense" as const, group })),

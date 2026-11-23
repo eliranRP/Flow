@@ -182,6 +182,12 @@
   --motion-pull-return: 400ms;   /* pull to refresh: the glide to the rest and back to the top (FLOW-1050) */
   --motion-peek: 900ms;          /* the swipe row's first-view peek */
   --motion-peek-delay: 400ms;
+  --motion-splash-fill: 2400ms;  /* the splash: the liquid rises (FLOW-1277, the owner's pick 2026-11-23, slowed down) */
+  --motion-splash-wave: 600ms;   /* the splash: one cycle of the surface wave; four play, in step with the rise */
+  --motion-splash-word: 400ms;   /* the splash: the wordmark's fade and rise */
+  --motion-splash-word-delay: 2300ms; /* the splash: the wordmark starts just before the liquid is full */
+  --ease-splash-fill: cubic-bezier(0.45, 0.05, 0.35, 1); /* the splash: the liquid's rise */
+  --size-splash-icon: 128px;     /* the splash: the tile (viewBox 100) */
   --dur-reduced: 1ms;             /* a user who asks for less motion: an animation still ends and fires animationend */
   --rise-page: 8px;
   --rise-push: 24px;
@@ -488,6 +494,10 @@
     --motion-pull-return: 0ms;
     --motion-peek: 0ms;
     --motion-peek-delay: 0ms;
+    --motion-splash-fill: 0ms;
+    --motion-splash-wave: 0ms;
+    --motion-splash-word: 0ms;
+    --motion-splash-word-delay: 0ms;
     --rise-page: 0px;
     --rise-push: 0px;
     --rise-toast: 0px;
