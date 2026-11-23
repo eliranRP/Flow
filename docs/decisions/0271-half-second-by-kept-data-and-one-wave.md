@@ -29,7 +29,7 @@ The time goes to three things:
 2. **Many reads per screen.** They share the 4G pipe.
 3. **Browser work.** Parsing, the forecast and loan-schedule math (for example the 127 KB `company_next_month_inputs`), and drawing, all on a CPU 4× slower.
 
-A wave of reads on this profile keeps the network busy about 0.4 to 0.6 s before anything is drawn: Recurring's one wave 0.42 s, and Projects' one wave of two reads 0.63 s (the split's network-busy column). So a screen that must fetch before it draws cannot reach 0.5 s, however fast its queries are.
+A wave of reads on this profile keeps the network busy about 0.4 to 0.65 s before anything is drawn: Recurring's one wave 0.42 s, and Projects' one wave of two reads 0.63 s (the split's network-busy column). So a screen that must fetch before it draws cannot reach 0.5 s, however fast its queries are.
 
 ## Decision
 
@@ -60,9 +60,9 @@ The last two are reported beside the gate every day, with the same regression ru
 
 - Figures can change about a second after a screen opens, under the hint. A kept entry is at most 7 days old, and only for the same user and company.
 - Financial figures are stored on the device, as the project reads in localStorage already are (FLOW-804, `project-cache.ts`; FLOW-1267 replaces that cache). They are cleared on sign-out.
-- **Cost:** the background reads are the six screens' first-view reads, less those Home already holds. An upper bound from the split is the six screens' whole visits: at most 65 requests and about 111 KB per session (Projects 2, Loans 10, Recurring 2, Profit month 20, Review 27, Forecast 4 requests; 2 + 12 + 1 + 41 + 52 + 3 KB). Those visits include waves, repeats, reads Home already made, and below-the-fold reads, so the real cost is lower. FLOW-1269 measures the exact count and size when it ships.
+- **Cost:** the background reads are the first-view reads of six screens (Projects, Loans, Recurring, Profit in its default month view, Review's first page and Forecast; not Profit's year or by-date views), less those Home already holds. An estimate from the split, one run per screen of each whole visit after Home: about 65 requests and 111 KB per session, that is per app open (Projects 2, Loans 10, Recurring 2, Profit month 20, Review 27, Forecast 4 requests; 2 + 12 + 1 + 41 + 52 + 3 KB on the wire). Those visits also hold repeats and below-the-fold reads that the background reads skip, so the background reads are likely fewer. FLOW-1269 measures the exact count and size when it ships.
   - **Database time:** each read takes at most about 140 ms in the database.
-  - **Price:** the pilot runs on Supabase Free ([0037](0037-supabase-pilot.md)), with an egress limit of 3 GB a month. 111 KB a session uses that limit up at roughly 27,000 sessions a month (decimal units), before today's own traffic. Crossing it means the move to Pro at $25 a month, which is over [0034](0034-cost-and-load-limits.md)'s $5 cap. The perf steward reports the project's monthly egress in the daily report once the background reads ship, and says so if it passes half the limit.
+  - **Price:** the pilot runs on Supabase Free ([0037](0037-supabase-pilot.md)), with an egress limit of 3 GB a month. 111 KB a session uses that limit up at roughly 27,000 sessions a month (decimal units), before today's own traffic. Crossing it means the move to Pro, $25 a month (about $27 once usage grows, 0037), which is over [0034](0034-cost-and-load-limits.md)'s $5 cap. The perf steward reports the project's monthly egress in the daily report once the background reads ship, and says so if it passes half the limit.
 - **Tasks:**
   - the sweep script that reports the three times (FLOW-1276);
   - kept data (FLOW-1267) and the updating hint (FLOW-1268, a UI task with a design session);
