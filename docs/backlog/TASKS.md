@@ -826,6 +826,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1251"></a>[FLOW-1251](tasks/FLOW-1251.md) | Home: a late charge taken out of the month does not show and then drop on a cold load | SMALL (owner decision: Home's attention box) |
 | <a id="flow-1252"></a>[FLOW-1252](tasks/FLOW-1252.md) | Perf: Home on another month does not read this month's late bills | SMALL (perf) |
 | <a id="flow-1253"></a>[FLOW-1253](tasks/FLOW-1253.md) | Perf: a cold Home reads the company's loan currency once, not twice | SMALL (perf) |
+| <a id="flow-1259"></a>[FLOW-1259](tasks/FLOW-1259.md) | Perf: Home's late row does not wait for browser idle time | SMALL (perf) |
+| <a id="flow-1260"></a>[FLOW-1260](tasks/FLOW-1260.md) | Perf: the Loans list builds each loan's schedule once | SMALL (perf) |
+| <a id="flow-1261"></a>[FLOW-1261](tasks/FLOW-1261.md) | Perf: the Loans list's balances read does not send the currency twice | SMALL (perf) |
+| <a id="flow-1262"></a>[FLOW-1262](tasks/FLOW-1262.md) | CI: the get_project speed test does not fail on a slow runner, and names the state when it is slow | SMALL (CI test) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
