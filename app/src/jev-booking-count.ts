@@ -3,22 +3,35 @@ import { useHomePreview } from "./preview";
 import { readyClient } from "./ready-client";
 
 /**
- * FLOW-955 (owner, 2026-10-22). How many of Jev's bookings wait in לאישור, for Home's count. The same read
- * as the queue (`list_jev_bookings`) under its own key, so Home parses nothing it doesn't show; every
- * write that refreshes "jev-bookings" refreshes this too. Zero in preview, and when the read fails.
+ * FLOW-955 (owner, 2026-10-22), FLOW-1272. Jev's bookings waiting in לאישור, for Home's count and for the
+ * queue (`list_jev_bookings`): one read under one key, so Home's read serves Review. It holds the rows as
+ * the server sent them; the queue parses them with `select` (jev-bookings.ts) and Home only counts them,
+ * so Home parses nothing it doesn't show. Every write that refreshes "jev-bookings" refreshes this.
  */
-export function useJevBookingCountQuery(enabled = true) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["jev-bookings", preview, "count"],
+export function jevBookingsKey(preview: string) {
+  return ["jev-bookings", preview] as const;
+}
+
+export function jevBookingsQueryOptions(preview: string, enabled: boolean) {
+  return {
+    queryKey: jevBookingsKey(preview),
     enabled: enabled && preview === "off",
-    retry: 1,
-    queryFn: async (): Promise<number> => {
+    queryFn: async (): Promise<unknown> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("list_jev_bookings");
       if (error) throw error;
-      return Array.isArray(data) ? data.length : 0;
+      return data;
     },
+  };
+}
+
+/** Zero in preview, and when the read fails. */
+export function useJevBookingCountQuery(enabled = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    ...jevBookingsQueryOptions(preview, enabled),
+    retry: 1,
+    select: (data) => (Array.isArray(data) ? data.length : 0),
   });
 }
 
