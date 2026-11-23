@@ -14,30 +14,34 @@
  * has, for a test user. The script never mints a session and calls no admin endpoint. It only puts
  * the file's text into the page's localStorage under the app's auth key (sb-<project ref>-auth-token,
  * the ref from VITE_SUPABASE_URL in app/.env.production, or FLOW_SWEEP_SUPABASE_URL), and never
- * prints, logs or writes it. It refuses an expired access token and warns under 15 minutes left, so
- * no run refreshes (and so spends) the refresh token.
+ * prints, logs or writes it. Every context seeds the same token, so a run that outlived it
+ * would refresh with one refresh token from many contexts and could sign later runs out. The script
+ * estimates its duration (screens x runs x RUN_SECONDS_PER_SCREEN, plus a margin) and exits 2 unless
+ * the access token has at least that long left.
  *
  * Each state of each screen runs in its own fresh browser; every run's values are kept:
  * - first visit: a fresh context, the screen's URL loaded directly as the first page load, timed from
- *   navigation start. Nothing was read, kept or cached before it (the run's count of REST reads that
- *   started before navigation is printed and kept as "Reads before"; it must be 0).
+ *   navigation start. The fresh context is what guarantees an empty store and no cached reads.
  * - data shown: a context that has visited the screen (same path and query) and is then reopened, so
  *   its kept data is on the device; Home settles, then the in-app visit (history.pushState and
- *   popstate, as a tap does). "Reads before" there is Home's reads before the tap.
+ *   popstate, as a tap does). "Reads before" there is Home's REST reads started before the
+ *   tap (printed, and kept in the JSON); a first visit has none, so it has no such value.
  * - fresh data shown: the same visit, until every read the visit started in its first 6 s has
  *   answered, and the page has drawn the answers and gone quiet: the first DOM change after the last
  *   response, then on through changes less than 100 ms apart. Taken from the requests, not the hint.
- *   A visit that starts no read has no fresh time (null, printed as a dash). A chart animation that
+ *   It does not depend on data shown. It is null only when the visit starts no
+ *   read, or a read has not answered within the window (printed as a dash). A chart animation that
  *   changes the DOM can extend it.
  * Data shown is the first frame where all three hold: the location is the target (path and query),
- * the screen's own marker of drawn first-view figures is in the DOM (MARKERS below, listed in
+ * the screen's own marker of drawn first-view figures is in the DOM (SCREENS[].marker below, listed in
  * docs/qa/perf/README.md), and none of .ui-skeleton-bar, .ui-skel-row, .ui-skel-leaving,
- * [aria-busy=true] and .ui-chart-skel is. No skeleton alone is not enough: a screen's code can load
+ * [aria-busy=true] and .ui-chart-skel is. It is the first such frame, kept: a skeleton that appears
+ * later (a refetch) does not move it; fresh data shown captures later changes. No skeleton alone is not enough: a screen's code can load
  * with the old screen still up (ScreenSuspense shows nothing), and a skeleton shows only after 300 ms.
  * Any busy element in the first view delays data shown, so an updating hint marked aria-busy would
  * make it equal fresh data shown. Cold Home is timed from navigation start with Home's marker.
  * navigator.connection.saveData is set on in first-visit runs: a future switch for the background
- * reads (0271; FLOW-1269 is not built, so the app ignores it today). Check "Reads before" instead.
+ * reads (0271; FLOW-1269 is not built, so the app ignores it today). The fresh context is what keeps a first visit empty.
  *
  * The split is of the same visit's 6 s window: main thread (CDP Performance TaskDuration delta, an
  * upper bound as it includes work after the page settles), network busy (the union of the Supabase
@@ -53,6 +57,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WINDOW_MS = 6000;
 const QUIET_MS = 100;
 const WAVE_GAP_MS = 250;
+/** A generous estimate of one screen's run (both states, with their waits and browser launches), and a margin, for the token check. */
+const RUN_SECONDS_PER_SCREEN = 60;
+const MARGIN_SECONDS = 300;
 const SKELETON = ".ui-skeleton-bar, .ui-skel-row, .ui-skel-leaving, [aria-busy=true], .ui-chart-skel";
 const REST = /\/rest\/v1\//;
 
@@ -83,7 +90,7 @@ function parseArgs(argv) {
     if (arg === "--json") out.json = true;
     else if (arg === "--runs") out.runs = Number(argv[++i]);
     else if (arg === "--project") out.project = argv[++i];
-    else if (arg === "--only") out.only = (argv[++i] ?? "").split(",");
+    else if (arg === "--only") out.only = (argv[++i] ?? "").split(",").map((key) => key.trim());
     else if (arg.startsWith("--")) fail(`Unknown option ${arg}.\n${USAGE}`);
     else out.positional.push(arg);
   }
@@ -91,6 +98,7 @@ function parseArgs(argv) {
   out.sessionFile = out.positional[1] ?? process.env.FLOW_SWEEP_SESSION;
   if (!out.base || !out.sessionFile) fail(USAGE);
   if (!Number.isInteger(out.runs) || out.runs < 1) fail(`--runs takes a whole number, 1 or more.\n${USAGE}`);
+  if (out.only?.some((key) => key === "")) fail(`--only takes a comma-separated list of keys, none empty.\n${USAGE}`);
   const unknown = (out.only ?? []).filter((key) => !SCREENS.some((screen) => screen.key === key));
   if (unknown.length > 0) fail(`Unknown --only key: ${unknown.join(", ")}.\n${USAGE}`);
   return out;
@@ -115,7 +123,7 @@ function authKey() {
 }
 
 /** Reads the session file; returns its text for localStorage. Complains without echoing any of it. */
-function readSession(file) {
+function readSession(file, requiredMs) {
   let text;
   try {
     text = readFileSync(file, "utf8");
@@ -134,7 +142,7 @@ function readSession(file) {
   if (typeof exp === "number") {
     const left = exp * 1000 - Date.now();
     if (left <= 0) fail("The session's access token has expired; sign in again and save a new session file.");
-    if (left < 15 * 60_000) progress("Warning: the session's access token has under 15 minutes left; a run may refresh it.");
+    if (left < requiredMs) fail(`The session's access token has ${String(Math.floor(left / 60_000))} minutes left; this sweep needs about ${String(Math.ceil(requiredMs / 60_000))}. Use a fresher session, or fewer screens or runs.`);
     if (typeof session.expires_at !== "number") session.expires_at = exp;
   }
   return JSON.stringify(session);
@@ -161,8 +169,7 @@ function recorder({ target, marker, sel, saveData }) {
     const route = location.pathname + location.search;
     const drawn = s.marker !== null && document.querySelector(s.marker) !== null;
     const ready = route === s.target && drawn && document.querySelector(sel) === null;
-    if (!ready) s.shown = null;
-    else if (s.shown === null) {
+    if (ready && s.shown === null) {
       s.shown = epoch();
       s.at = { route, marker: true };
     }
@@ -224,12 +231,11 @@ async function settleHome(phone, base) {
 /** Loads `to` as a page load, timed from navigation start, watched for the 6 s window. */
 async function loadTimed(phone, base, to) {
   const before = await phone.taskMs();
-  const readsBefore = phone.reads.size;
   await phone.page.goto(`${base}${to}`, { waitUntil: "commit" });
   await phone.page.waitForFunction(() => document.body !== null, undefined, { timeout: 30_000 });
   const now = await phone.page.evaluate(() => performance.now());
   await phone.page.waitForTimeout(Math.max(0, WINDOW_MS - now));
-  return collect(phone, before, readsBefore);
+  return collect(phone, before, null);
 }
 
 /** An in-app visit from Home, watched for the 6 s window. */
@@ -253,7 +259,7 @@ async function collect(phone, taskBefore, readsBefore) {
   const reads = [...phone.reads.values()].filter((r) => r.start >= s.t0 && r.start <= end).sort((a, b) => a.start - b.start);
   const shown = s.shown === null ? null : s.shown - s.t0;
   let fresh = null;
-  if (shown !== null && reads.length > 0 && reads.every((r) => r.end !== null)) {
+  if (reads.length > 0 && reads.every((r) => r.end !== null)) {
     // The last response, the first DOM change after it (the answer drawn, however late), then on
     // through changes less than QUIET_MS apart.
     const last = Math.max(...reads.map((r) => r.end)) - s.t0;
@@ -263,7 +269,7 @@ async function collect(phone, taskBefore, readsBefore) {
       if (m <= at + QUIET_MS) at = m;
       else break;
     }
-    fresh = Math.max(at, shown);
+    fresh = at;
   }
   let busy = 0;
   let open = null;
@@ -278,7 +284,7 @@ async function collect(phone, taskBefore, readsBefore) {
   const waves = reads.filter((r, i) => i === 0 || r.start - reads[i - 1].start > WAVE_GAP_MS).length;
   const kb = reads.reduce((sum, r) => sum + r.bytes, 0) / 1024;
   const route = await phone.page.evaluate(() => location.pathname + location.search);
-  return { shown, fresh, task, busy, waves, requests: reads.length, kb, readsBefore, route: s.at?.route ?? route, marker: s.at !== null };
+  return { shown, fresh, task, busy, waves, requests: reads.length, kb, readsBefore, route: s.at?.route ?? route, marker: shown !== null };
 }
 
 /** First visit: a fresh context, the screen's URL loaded directly, nothing read or kept before it. */
@@ -338,7 +344,7 @@ function printTables(result) {
   for (const s of result.screens) {
     lines.push(`| ${s.name} | ${cell(s.repeat.shown)} | ${cell(s.repeat.fresh)} | ${cell(s.first.shown)} |`);
   }
-  lines.push("", "Where the time goes (the 6 s window of the visit; KB is encoded bytes; reads before: REST reads started before the tap, or before navigation):", "",
+  lines.push("", "Where the time goes (the 6 s window of the visit; KB is encoded bytes; reads before: REST reads started before the tap; none for a first visit):", "",
     "| Screen | Visit | Main thread ms | Network busy ms | Waves | Requests | KB | Reads before |", "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |");
   for (const s of result.screens) {
     for (const [label, state] of [["repeat", s.repeat], ["first", s.first]]) {
@@ -349,14 +355,16 @@ function printTables(result) {
 }
 
 /** One line per run on stderr: the evidence that data shown was taken on the right route and marker. */
-function logRun(screen, label, row) {
+function logRun(label, row) {
   const f = (x) => (x === null ? "—" : String(Math.round(x)));
-  progress(`  ${label}: shown ${f(row.shown)} ms, fresh ${f(row.fresh)} ms, route ${row.route}, marker ${row.marker ? "matched" : "NOT matched"}, reads before ${String(row.readsBefore)}`);
+  progress(`  ${label}: shown ${f(row.shown)} ms, fresh ${f(row.fresh)} ms, route ${row.route}, marker ${row.marker ? "matched" : "NOT matched"}, reads before ${row.readsBefore === null ? "—" : String(row.readsBefore)}`);
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const ctx = { base: args.base, auth: { key: authKey(), session: readSession(args.sessionFile) } };
+  const planned = SCREENS.filter((screen) => (!args.only || args.only.includes(screen.key)) && (args.project || !screen.path.includes("{id}")));
+  const requiredMs = (planned.length * args.runs * RUN_SECONDS_PER_SCREEN + MARGIN_SECONDS) * 1000;
+  const ctx = { base: args.base, auth: { key: authKey(), session: readSession(args.sessionFile, requiredMs) } };
   const require = createRequire(path.join(root, "app/package.json"));
   const { chromium } = require("playwright");
   const screens = [];
@@ -372,9 +380,9 @@ async function main() {
     for (let run = 1; run <= args.runs; run += 1) {
       progress(`${screen.name}: run ${String(run)}/${String(args.runs)}`);
       first.push(await firstVisit(chromium, ctx, screen, to));
-      logRun(screen, "first visit", first[first.length - 1]);
+      logRun("first visit", first[first.length - 1]);
       repeat.push(await repeatVisit(chromium, ctx, screen, to));
-      logRun(screen, "repeat visit", repeat[repeat.length - 1]);
+      logRun("repeat visit", repeat[repeat.length - 1]);
     }
     const stats = (rows) => Object.fromEntries(MEASURES.map((k) => [k, summarise(rows, k)]));
     screens.push({ name: screen.name, key: screen.key, path: to, marker: screen.marker, first: stats(first), repeat: stats(repeat) });
