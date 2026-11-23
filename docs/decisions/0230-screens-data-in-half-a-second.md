@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-28
 **Status:** Accepted
+**Amended by:** [0271](0271-half-second-by-kept-data-and-one-wave.md) (each screen and cold Home report three times, data shown, fresh data shown and first visit, each held to 0.5 s; and how the target is met)
 
 ## Context
 
