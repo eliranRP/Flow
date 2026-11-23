@@ -8,8 +8,7 @@ import { Wordmark } from "./wordmark";
  * is read out. The owner's pick, 2026-11-23: concept N3, slowed down.
  */
 
-// The same numbers as the --motion-splash-* tokens (the test checks them); the timer below needs them in JS.
-export const SPLASH_FILL_MS = 2400;
+// The same numbers as the --motion-splash-word* tokens (the test checks them); the timer below needs them in JS.
 export const SPLASH_WORD_DELAY_MS = 2300;
 export const SPLASH_WORD_MS = 400;
 /** When the fade out starts: the wordmark has arrived. */
