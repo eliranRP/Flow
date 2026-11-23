@@ -14,7 +14,7 @@ import { keptRuleOf, type KeptRule } from "./kept-rules";
  * - Whose: every row names the user and the shown company it was read for. A row of another user or
  *   company is never put back (and is deleted); sign-out and a basis change drop every row; rows older
  *   than a week go; the store holds about 5 MB and drops the oldest rows first.
- * - A put-back read is stale (dataUpdatedAt 0): the screen draws it and its query reads again at once.
+ * - A put-back read keeps its real time as dataUpdatedAt (the offline line needs it) and is invalidated, so it is stale: the screen draws it and its query reads again at once.
  *   `useKeptState` says so while it is drawn.
  * - A row is checked against its read's schema (or shape) first, and dropped when it fails. Bump
  *   KEPT_VERSION when a read's shape changes on purpose: rows of another version are dropped.
@@ -27,6 +27,7 @@ const FLUSH_MS = 400;
 
 let store: KeptStore = idbKeptStore();
 let generation = 0;
+let hydrating = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 /** The user and company the cache's kept reads were put back for, if any. */
@@ -128,7 +129,15 @@ export async function restoreKeptReads(client: QueryClient, now = Date.now()): P
     const query = client.getQueryCache().find({ queryKey: key, exact: true });
     if (query?.state.data !== undefined) continue;
     showing.add(row.id);
-    client.setQueryData(key, rule.restore == null ? row.data : rule.restore(row.data), { updatedAt: 0 });
+    // The read keeps the time it came in (the offline line says how old the figures are), and is marked invalid, so
+    // it counts as stale: the next observer, and client.query, read it again. Our own write is not kept again.
+    hydrating = true;
+    try {
+      client.setQueryData(key, rule.restore == null ? row.data : rule.restore(row.data), { updatedAt: row.at });
+      void client.invalidateQueries({ queryKey: key, exact: true, refetchType: "none" });
+    } finally {
+      hydrating = false;
+    }
     restoredFor = owner;
     index.set(row.id, { at: row.at, size: row.size });
   }
@@ -147,7 +156,7 @@ function parseKey(json: string): QueryKey | null {
 /** Starts keeping each allowed read as it succeeds. Returns the stop. */
 export function keepReadsOf(client: QueryClient): () => void {
   return client.getQueryCache().subscribe((event) => {
-    if (event.type !== "updated") return;
+    if (event.type !== "updated" || hydrating) return;
     const { query, action } = event;
     const key = query.queryKey as readonly unknown[];
     const rule = keptRuleOf(key);
@@ -168,7 +177,6 @@ export function keepReadsOf(client: QueryClient): () => void {
     startedFor.delete(hash);
     const data: unknown = query.state.data;
     const { dataUpdatedAt } = query.state;
-    // dataUpdatedAt 0 is a put-back read: kept already.
     if (owner == null || readFor !== owner || data == null || dataUpdatedAt === 0) return;
     if (rule.keep != null && !rule.keep(data)) return;
     pending.set(hash, { id: hash, owner, at: dataUpdatedAt, key: JSON.stringify(key), data });
@@ -204,7 +212,7 @@ export function forgetKeptReads(): Promise<unknown> {
 
 /** A kept read in the cache that no fresh read has replaced yet. */
 function isKept(query: Query): boolean {
-  return showing.has(query.queryHash) && query.state.dataUpdatedAt === 0 && query.state.data !== undefined;
+  return showing.has(query.queryHash) && query.state.isInvalidated && query.state.data !== undefined;
 }
 
 /**
@@ -251,6 +259,7 @@ export function resetKeptReadsForTests(next: KeptStore = idbKeptStore()): void {
   forgetPending();
   queue = Promise.resolve();
   restoredFor = null;
+  hydrating = false;
   checkedFor = undefined;
   showing.clear();
   startedFor.clear();

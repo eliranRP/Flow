@@ -69,6 +69,7 @@ describe("kept reads (FLOW-1267)", () => {
     keepReadsOf(first);
     const unpaid = demoUnpaid();
     await read(first, UNPAID, unpaid);
+    const readAt = first.getQueryState(UNPAID)?.dataUpdatedAt;
     await read(first, DASHBOARD, demoDashboard(null, null, "invoiced"));
     await flushKeptReads();
     expect([...(await kept())]).toHaveLength(2);
@@ -81,6 +82,9 @@ describe("kept reads (FLOW-1267)", () => {
     const observer = new QueryObserver(next, { queryKey: UNPAID, queryFn, staleTime: 30 * 60_000 });
     expect(observer.getCurrentResult().data).toEqual(unpaid);
     expect(observer.getCurrentResult().isStale).toBe(true);
+    // It keeps the time it was read, which the offline line shows; it is stale by being invalidated.
+    expect(next.getQueryState(UNPAID)?.dataUpdatedAt).toBe(readAt);
+    expect(next.getQueryState(UNPAID)?.isInvalidated).toBe(true);
     const stop = observer.subscribe(() => undefined);
     await vi.waitFor(() => { expect(queryFn).toHaveBeenCalledTimes(1); });
     stop();
@@ -101,6 +105,7 @@ describe("kept reads (FLOW-1267)", () => {
     expect(observer.getCurrentResult().data).toEqual(project);
     expect(typeof observer.getCurrentResult().data?.income_agorot).toBe("bigint");
     expect(observer.getCurrentResult().isStale).toBe(true);
+    expect(next.getQueryState(options.queryKey)?.dataUpdatedAt).toBeGreaterThan(0);
   });
 
   it("restores nothing for another company or another user, and drops those rows", async () => {
@@ -298,5 +303,29 @@ describe("kept reads (FLOW-1267)", () => {
     await vi.waitFor(() => { expect(state.result.current).toEqual({ kept: true, refreshing: true }); });
     await act(async () => { land(demoUnpaid()); await fetching; });
     expect(state.result.current).toEqual({ kept: false, refreshing: false });
+  });
+
+  it("starts client.query from a kept read with a fresh read, and keeps the saved time offline (the profit page's readAt)", async () => {
+    const { yearsRange } = await import("./company-years");
+    const { useCompanyYears } = await import("./company-years-query");
+    const { MemoryRouter } = await import("react-router-dom");
+    const today = "2026-11-23";
+    const { from, to } = yearsRange(today);
+    const key = ["profit-months", "off", "company", from, to];
+    const months = { basis: "invoiced", from: null, to: null, months: [], by_currency: [] };
+    const savedAt = Date.now() - 3_600_000;
+    await store.put([row({ key: JSON.stringify(key), data: months, at: savedAt })]);
+    const client = newClient();
+    await restoreKeptReads(client);
+    expect(client.getQueryState(key)?.dataUpdatedAt).toBe(savedAt);
+    // client.query (startHomeReads) treats it as stale and reads again.
+    const queryFn = vi.fn(() => Promise.reject(new Error("offline")));
+    await client.query({ queryKey: key, queryFn }).catch(() => undefined);
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    // The page's reader, offline: the refresh on mount fails, and it still says when the figures were read.
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, createElement(MemoryRouter, null, children));
+    const page = renderHook(() => useCompanyYears(today, true), { wrapper });
+    await vi.waitFor(() => { expect(page.result.current.failed).toBe(true); });
+    expect(page.result.current.readAt).toBe(savedAt);
   });
 });
