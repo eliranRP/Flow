@@ -18,6 +18,13 @@
         }, 0);
       })();
     </script>
+    <style>
+      /* FLOW-1277: the page colour before any CSS or script has loaded, so a dark phone never flashes white.
+         The same values as --color-bg in design/system/implementation-tokens.css; the saved choice (the script above) wins. */
+      html { background: #F6F4FA; }
+      html[data-theme="dark"] { background: #15111E; }
+      @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #15111E; } }
+    </style>
     <meta name="theme-color" content="#7B3FE4" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

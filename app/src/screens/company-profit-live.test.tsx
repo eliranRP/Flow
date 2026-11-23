@@ -8,8 +8,8 @@ import { CompanyProfitScreen } from "./company-profit-screen";
 // `held` (FLOW-1080) holds get_dashboard's answer until the test lets it go. `keys` is each read's answer key, in the
 // order the reads went out (FLOW-1171: a get_breakdown reads as its grouping and direction); `args` each read's
 // arguments by name.
-type Calls = { names: string[]; keys: string[]; args: Record<string, unknown[]>; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null };
-const calls = vi.hoisted((): Calls => ({ names: [], keys: [], args: {}, answer: {}, company: { data: null, error: null }, held: null }));
+type Calls = { names: string[]; keys: string[]; args: Record<string, unknown[]>; answer: Record<string, unknown>; company: { data: unknown; error: unknown }; held: Promise<void> | null; heldMonths: Promise<void> | null };
+const calls = vi.hoisted((): Calls => ({ names: [], keys: [], args: {}, answer: {}, company: { data: null, error: null }, held: null, heldMonths: null }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-20" }));
 vi.mock("../lib/supabase", () => ({
@@ -19,7 +19,7 @@ vi.mock("../lib/supabase", () => ({
       (calls.args[name] ??= []).push(args);
       const key = name === "get_breakdown" ? `${name}:${String(args?.p_group_by)}:${String(args?.p_direction)}` : name;
       calls.keys.push(key);
-      const held = name === "get_dashboard" && calls.held != null ? calls.held : Promise.resolve();
+      const held = (name === "get_dashboard" ? calls.held : name === "get_profit_months" ? calls.heldMonths : null) ?? Promise.resolve();
       return held.then(() => (key in calls.answer ? { data: calls.answer[key], error: null } : { data: null, error: new Error(`unmocked ${key}`) }));
     },
     from: (table: string) => ({
@@ -58,6 +58,7 @@ beforeEach(() => {
   calls.args = {};
   calls.keys.length = 0;
   calls.held = null;
+  calls.heldMonths = null;
   calls.answer = {
     mcp_company_loan_currency: "USD",
     get_dashboard: dashboard,
@@ -245,5 +246,44 @@ describe("CompanyProfitScreen live, the year and since-the-start views (FLOW-119
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year", client });
     expect(await screen.findByText(/נספר לפי/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
+  });
+});
+
+describe("CompanyProfitScreen live, each view's first reads start at mount, the next month's after the figures (FLOW-1271)", () => {
+  /** The reads the page has sent while the figures' own read is held: the first wave. Nothing of the next month's is among them. */
+  async function firstWave(route: string, held: "dashboard" | "months") {
+    answerBreakdowns();
+    answerProfitMonths();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    if (held === "dashboard") calls.held = gate;
+    else calls.heldMonths = gate;
+    renderWithProviders(<CompanyProfitScreen />, { route });
+    await waitFor(() => { expect(calls.names).toContain(held === "dashboard" ? "get_dashboard" : "get_profit_months"); });
+    // Let every read that goes out at mount go out.
+    await waitFor(() => { expect(calls.names.length).toBeGreaterThanOrEqual(5); });
+    const wave = [...calls.keys, ...calls.names.filter((name) => name.startsWith("from:"))];
+    for (const name of ["company_next_month_inputs", "expected_months", "loans", "list_categories"]) expect(wave).not.toContain(name);
+    release();
+    return wave;
+  }
+  const sorted = (list: string[]) => [...new Set(list)].sort();
+
+  it("the month by project: the figures, the project breakdowns and the company's row start together", async () => {
+    const wave = await firstWave("/profit", "dashboard");
+    expect(sorted(wave)).toEqual(sorted(["from:companies", "mcp_company_loan_currency", "get_dashboard", "get_breakdown:project:income", "get_breakdown:project:expense", "get_profit_months"]));
+  });
+
+  it("the month by date: the figures, the category breakdowns and every line start together; the project breakdowns, not drawn, wait", async () => {
+    const wave = await firstWave("/profit?by=date", "dashboard");
+    expect(sorted(wave)).toEqual(sorted(["from:companies", "mcp_company_loan_currency", "get_dashboard", ...CATEGORY_KEYS, "get_breakdown_lines", "get_profit_months"]));
+    expect(wave.filter((key) => key === "get_breakdown_lines")).toHaveLength(2);
+    expect(wave).not.toContain("get_breakdown:project:income");
+  });
+
+  it("a past year by project: its project breakdowns are asked for that year at mount, not for this year first", async () => {
+    await firstWave("/profit?period=year&year=2025&list=project", "months");
+    const years = (calls.args.get_breakdown ?? []).map((args) => (args as { p_from?: string }).p_from);
+    expect(years).toEqual(["2025-01-01", "2025-01-01"]);
   });
 });
