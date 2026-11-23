@@ -1,5 +1,5 @@
 import { cashLinesSchema, cashToDaySchema, categoryRowSchema, projectCategoryMonthsSchema, weeklySummarySchema } from "@flow/shared";
-import { hashKey, QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { flushKeptReads, keepReadsOf, resetKeptReadsForTests, restoreKeptReads } from "./kept-reads";
@@ -102,7 +102,6 @@ describe("the first views' kept reads (FLOW-1292)", () => {
     await read(client, preview, good);
     await flushKeptReads();
     expect(await store.all()).toEqual([]);
-    expect(hashKey(preview)).not.toBe("");
   });
 
   it("keeps Home's first page of lines only, and not the 200-line read", async () => {
@@ -117,7 +116,7 @@ describe("the first views' kept reads (FLOW-1292)", () => {
     expect(await store.all()).toEqual([]);
   });
 
-  it("keeps the project page's month lines when they are few, and not a big month", async () => {
+  it("does not keep a project month of more than KEPT_PROJECT_LINES lines", async () => {
     const client = newClient();
     keepReadsOf(client);
     const many = Array.from({ length: KEPT_PROJECT_LINES + 1 }, () => projectLines.counted[0]);

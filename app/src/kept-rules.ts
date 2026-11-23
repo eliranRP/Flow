@@ -89,6 +89,8 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("utility refund count", (k) => k[0] === "utility-refund-count" && off(k, 1), (_s, json) => isRecord(json) && typeof json.notRefunded === "number" && Number.isInteger(json.notRefunded) && json.notRefunded >= 0 && Array.isArray(json.totals) && json.totals.every((row) => isRecord(row) && typeof row.currency === "string" && isMinorString(row.minor))),
   rule("cash to day", (k) => k.length === 5 && k[0] === "dashboard" && k[1] === "cash-to-day" && off(k, 2), bySchema((s) => s.cashToDaySchema)),
   // The weekly card's key has no preview part: Home draws the card out of preview only, and the read is the user's own.
+  // The key has no preview segment: a preview never reads it (Home passes no week while previewing, and the sheet reads
+  // only the signed-in company's weeks), so every row here is a real answer.
   rule("weekly summary", (k) => k.length === 3 && k[0] === "dashboard" && k[1] === "weekly-summary" && typeof k[2] === "string", bySchema((s) => s.weeklySummarySchema)),
   rule("home cash lines", (k) => k.length === 8 && k[0] === "breakdown-lines" && k[1] === "cash" && off(k, 2) && (k[4] === "in" || k[4] === "out") && k[6] === null && k[7] === 20, (s, json) => s != null && onePage(json) && isRecord((json as { pages: unknown[] }).pages[0]) && s.cashLinesSchema.safeParse((json as { pages: unknown[] }).pages[0]).success, { keep: onePage }),
   rule("company currency", (k) => k[0] === "company-currency" && off(k, 1), (_s, json) => typeof json === "string" && /^[A-Z]{3}$/.test(json)),
