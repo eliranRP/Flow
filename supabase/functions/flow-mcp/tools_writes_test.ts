@@ -121,7 +121,6 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_line_recurring",
     "set_line_pace",
     "set_line_usual_amount",
-    "set_line_end_date",
     "answer_recurring_match",
     "reassign_recurring_charge",
     "undo_jev_prefill",
@@ -131,7 +130,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
-    "answer_recurring_handover",
+    "set_line_end_date", "answer_recurring_handover",
     "set_utility_payer", "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund", "leave_held_change",
     "get_sync_status",
   ]);
@@ -288,7 +287,6 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_line_recurring",
     "set_line_pace",
     "set_line_usual_amount",
-    "set_line_end_date",
     "answer_recurring_match",
     "reassign_recurring_charge",
     "undo_jev_prefill",
@@ -298,7 +296,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
-    "answer_recurring_handover",
+    "set_line_end_date", "answer_recurring_handover",
     "set_utility_payer", "answer_utility_refund", "mark_utility_refunds_seen", "refile_utility_refund", "leave_held_change",
   ]);
   assertEquals(toolsFor([]), []);

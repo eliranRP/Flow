@@ -7,15 +7,11 @@ import { THREAD_READ_SPECS, THREAD_WRITE_SPECS } from "./tools_thread.ts";
 import { MEMBER_SHARE_READ_SPECS, MEMBER_SHARE_WRITE_SPECS } from "./tools_member_share.ts";
 import { PROPERTY_READ_SPECS, PROPERTY_WRITE_SPECS } from "./tools_property.ts";
 import { HANDOVER_WRITE_SPECS } from "./tools_handover.ts";
+import { END_DATE_WRITE_SPECS } from "./tools_end_date.ts";
 import { UTILITY_READ_SPECS, UTILITY_WRITE_SPECS } from "./tools_utility_refunds.ts";
 import { HELD_REVIEW_NOTE, HELD_WRITE_SPECS } from "./tools_held.ts";
 
-function toolSpec(
-  name: string,
-  description: string,
-  properties: Record<string, unknown>,
-  write = false,
-) {
+function toolSpec(name: string, description: string, properties: Record<string, unknown>, write = false) {
   return {
     name,
     description,
@@ -758,12 +754,6 @@ function writeTools() {
       amount: { type: ["number", "string", "null"] },
       project_id: { type: "string" },
     }, true),
-    toolSpec("set_line_end_date", "Set the end date of a line's recurring charge (that supplier or customer in that line's currency, for the line's project; FLOW-1266), YYYY-MM-DD from today on; null removes it. The charge is not expected on a due day (its usual day, capped at the month's last day) after the end date: get_expected_months, the forecast and get_missing_bills stop there, and get_recurring_schedule and get_expected_months say ends_on. Once the date has passed, or when the charge has not come this month and its next due day is after the date, the charge is not recurring (it leaves get_recurring_schedule); marking it recurring again (set_line_recurring) clears an end date that has passed. A line with no supplier or customer is refused. Returns transaction_id, party, project_id, ends_on, recurring (whether the charge still recurs), id and undo_kind; undo is kind line_end with the transaction id, a conflict once the date was changed again. Optional project_id names another project's charge the line feeds, as set_line_usual_amount.", {
-      idempotency_key: { type: "string" },
-      transaction_id: { type: "string" },
-      ends_on: { type: ["string", "null"] },
-      project_id: { type: "string" },
-    }, true),
     toolSpec("answer_recurring_match", "Answer a late bill's suggestion (get_missing_bills suggestion): is match_party_id the same supplier (or customer) as the recurring party_id under another name? true counts every line of match_party_id as party_id's in get_missing_bills, get_recurring_this_month, get_recurring_changes, get_expected_months and get_line_recurring, so its bill arrives; false stops suggesting the pair; null takes the answer back. Never answer without the user's word: a different name is never merged by itself. A party is the same as one recurring party at most, and a matched party takes no matches of its own (refused: already matched). Returns direction, party_id, match_party_id, same, id and undo_kind; undo is kind recurring_match with match_party_id, a conflict once the answer changed again.", {
       idempotency_key: { type: "string" },
       direction: { type: "string", enum: ["expense", "income"] },
@@ -793,7 +783,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
-    ...THREAD_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS, ...HELD_WRITE_SPECS,
+    ...THREAD_WRITE_SPECS, ...END_DATE_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS, ...HELD_WRITE_SPECS,
   ];
 }
 
