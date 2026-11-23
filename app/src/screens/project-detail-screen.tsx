@@ -182,6 +182,9 @@ export function ProjectDetailScreen({
   // FLOW-1230: the two reads are the same function, so whichever lands first starts the forecast's reads (and gives
   // the overhead hint); the page still draws from its own read. Starting them at mount instead delayed the page's
   // first data (nine more requests beside its own), so they wait for one of the two.
+  // FLOW-1270: kept gated (owner's FLOW-1019 and FLOW-1080: a forecast card loads after the page's figures). The
+  // measurement of 2026-11-23 (phone profile, stub backend) showed no later first figure without the gate, but could
+  // not rule one out; the touch prefetch (prefetch.tsx) starts these reads under the same keys instead.
   const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
   const landed = detail.data ?? lifetime.data;
   const forecastReads = sample == null && landed != null;
@@ -199,15 +202,18 @@ export function ProjectDetailScreen({
   const skipMonth = HEBREW_MONTHS[Number(thisMonth.slice(5, 7)) - 1] ?? thisMonth;
   const overrides = useForecastOverrides(thisMonth, sample == null && preview === "off");
   const forecastSkip = useForecastSkip(thisMonth, skipMonth, overrides.data ?? null);
-  const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? "";
-  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? "", sample == null && linesMonth !== "");
+  // FLOW-1270: the lines read starts at mount. Its month is the cash read's current month (Israel's today, as the
+  // server counts it) and its currency the company's books currency, which the server fills in (null), the same
+  // `base_currency` project_cash_months returns. So it need not wait for that read.
+  const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? thisMonth;
+  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, null, sample == null);
   // The schedule and the month's lines are read only for a live page (not a sample or a preview).
   const linesLive = sample == null && preview === "off";
   // FLOW-1135: the property's utilities (who pays each), and, once one is the tenant's, its bills not refunded.
   // A sample page (a story) reads them only through a story's stand-in client.
   const utilityStub = useUtilityStub();
   const utilityProject = sample?.id ?? projectId;
-  const payers = useUtilityPayersQuery(utilityProject, sample == null ? detail.data != null : utilityStub);
+  const payers = useUtilityPayersQuery(utilityProject, sample == null || utilityStub);
   const utilities = payers.data ?? [];
   const refunds = useUtilityRefundsQuery(utilityProject, (sample == null || utilityStub) && utilities.some((item) => item.payer === "tenant"));
   const refundBills = refunds.data?.bills ?? [];
@@ -380,7 +386,7 @@ export function ProjectDetailScreen({
       lines={sampleLines ?? (monthLines.data != null
         ? [...monthLines.data.counted, ...monthLines.data.kept]
         // FLOW-1138: null while the month's lines are still to come; a month with none to read has none.
-        : linesLive && !(cash.data != null && (linesMonth === "" || cash.data.base_currency === "")) ? null : [])}
+        : linesLive ? null : [])}
       linesRetry={schedule.isError || monthLines.isError ? () => { void schedule.refetch(); void monthLines.refetch(); } : undefined}
       attention={projectAttentionRows({
         projectId: project.id,
