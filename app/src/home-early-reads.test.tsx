@@ -33,6 +33,7 @@ vi.mock("./lib/supabase", () => ({
 vi.mock("./wait-for-session", () => ({ waitForAccessToken: () => Promise.resolve() }));
 
 vi.mock("./load-read-schemas", () => ({
+  preloadReadSchemas: () => undefined,
   loadReadSchemas: () => Promise.resolve({
     dashboardSchema: { parse: (data: unknown) => data },
     cashMonthsSchema: { parse: (data: unknown) => data },
