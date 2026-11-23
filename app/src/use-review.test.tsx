@@ -4,7 +4,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jevQueueQueryKey, resetJevScopeMemory } from "./screens/jev-connector-scope";
+import { jevQueueQueryKey, noteJevAuthUser, resetJevScopeMemory } from "./screens/jev-connector-scope";
 import { prefetchReviewList, reviewCacheUpdates, reviewListKey, useReviewDeepLink, useReviewPaging, useReviewQuery } from "./use-review";
 
 type Args = { p_limit: number; p_after_id?: string; p_project?: string; p_item?: string };
@@ -15,6 +15,10 @@ const server = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: Record<string, unknown> }>,
   failNext: false,
   gone: new Set<string>(),
+  /** While set, list_review_page answers only once it is released. */
+  hold: null as Promise<void> | null,
+  /** While set, the company's read answers only once it is released. */
+  holdCompany: null as Promise<void> | null,
 }));
 
 function rowOf(n: number) {
@@ -57,7 +61,7 @@ const supabase = {
     const builder = {
       select: () => builder,
       limit: () => builder,
-      maybeSingle: () => Promise.resolve({ data: { id: "co-1" }, error: null }),
+      maybeSingle: () => (server.holdCompany ?? Promise.resolve()).then(() => ({ data: { id: "co-1" }, error: null })),
     };
     return builder;
   },
@@ -74,7 +78,8 @@ const supabase = {
           answer = { data: page(args as Args), error: null };
         }
       }
-      return Promise.resolve(answer).then(onFulfilled, onRejected);
+      const held = name === "list_review_page" ? server.hold : null;
+      return (held == null ? Promise.resolve(answer) : held.then(() => answer)).then(onFulfilled, onRejected);
     },
   }),
 };
@@ -82,10 +87,13 @@ const supabase = {
 vi.mock("./lib/supabase", () => ({ getSupabase: () => supabase }));
 vi.mock("./wait-for-session", () => ({ waitForAccessToken: () => Promise.resolve() }));
 
-const jev = vi.hoisted(() => ({ loaded: [] as string[][] }));
+const jev = vi.hoisted(() => ({ loaded: [] as string[][], connectorReads: 0 }));
 vi.mock("./screens/jev-review", () => ({
   JEV_QUEUE_STALLED: "stalled",
-  fetchJevConnector: () => Promise.resolve(true),
+  fetchJevConnector: () => {
+    jev.connectorReads += 1;
+    return Promise.resolve(true);
+  },
   loadJevSuggestions: (ids: string[]) => {
     jev.loaded.push(ids);
     return Promise.resolve({ connectorOn: true, byId: {} });
@@ -114,6 +122,9 @@ beforeEach(() => {
   server.failNext = false;
   server.gone = new Set();
   jev.loaded = [];
+  jev.connectorReads = 0;
+  server.hold = null;
+  server.holdCompany = null;
   resetJevScopeMemory();
 });
 
@@ -210,6 +221,53 @@ describe("FLOW-984: the review queue in pages", () => {
     const second = view.result.current.rows.slice(50).map((row) => row.transaction_id);
     await waitFor(() => { expect(client.getQueryData(jevQueueQueryKey(second))).toBeDefined(); });
     expect(jev.loaded.map((ids) => ids.length)).toEqual([50, 50]);
+  });
+});
+
+describe("FLOW-1272: the first card's reads start with the list", () => {
+  afterEach(() => {
+    window.history.pushState({}, "", "/");
+  });
+
+  async function openWhileListIsOut(path: string, dashboard: boolean) {
+    window.history.pushState({}, "", path);
+    noteJevAuthUser("u-1");
+    let release = () => {};
+    server.hold = new Promise<void>((resolve) => { release = resolve; });
+    // With Home's dashboard cached the company is known; the read that would name it is still out.
+    if (dashboard) server.holdCompany = new Promise<void>(() => undefined);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+    if (dashboard) client.setQueryData(["dashboard", "off", "month"], { company_id: "co-1" });
+    const inFlight = prefetchReviewList(client, "off", null);
+    // The list has gone out and not answered: what starts now starts beside it.
+    await waitFor(() => { expect(reads()).toHaveLength(1); });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    return { client, finish: async () => { release(); await inFlight; } };
+  }
+
+  it("starts the Jev connector and the categories before the list or the company's read answers, and the suggestions when the list does", async () => {
+    const { finish } = await openWhileListIsOut("/review", true);
+    expect(jev.connectorReads).toBe(1);
+    expect(server.calls.filter((call) => call.name === "list_categories")).toHaveLength(1);
+    expect(jev.loaded).toEqual([]);
+    await finish();
+    await waitFor(() => { expect(jev.loaded).toHaveLength(1); });
+    expect(jev.loaded[0]).toHaveLength(50);
+    expect(jev.connectorReads).toBe(1);
+  });
+
+  it("reads the connector once the company is read when no dashboard names it yet", async () => {
+    const { finish } = await openWhileListIsOut("/review", false);
+    expect(jev.connectorReads).toBe(1);
+    await finish();
+    await waitFor(() => { expect(jev.loaded).toHaveLength(1); });
+    expect(jev.connectorReads).toBe(1);
+  });
+
+  it("the list view reads no categories: its rows show none", async () => {
+    const { finish } = await openWhileListIsOut("/review/all", true);
+    await finish();
+    expect(server.calls.filter((call) => call.name === "list_categories")).toHaveLength(0);
   });
 });
 

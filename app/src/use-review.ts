@@ -5,6 +5,7 @@ import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas, preloadReadSchemas } from "./load-read-schemas";
 import { waitForAccessToken } from "./wait-for-session";
 import { useHomePreview } from "./preview";
+import { categoriesQueryOptions } from "./use-books";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,
@@ -16,6 +17,9 @@ import {
   jevQueueQueryKey,
   seedJevConnectorFromLive,
   jevScopeFollowsLive,
+  bindJevConnectorScope,
+  notedJevAuthUser,
+  type JevConnectorScope,
   type JevScopeLookup,
 } from "./screens/jev-connector-scope";
 import { withJevDeadline } from "./screens/jev-deadline";
@@ -90,7 +94,11 @@ function readCompanyId(supabase: ScopeClient): PromiseLike<string | null> {
   return supabase.from("companies").select("id").limit(1).maybeSingle().then(companyIdFromRow, () => null);
 }
 
-/** Session and company share one deadline. A row that arrives later may still bind. */
+/**
+ * Session and company share one deadline. A row that arrives later may still bind.
+ * FLOW-1272: the connector's read needs the scope, not the list, so it starts with the list (the company is Home's
+ * cached dashboard's) or as soon as the company is read; the queue read follows with the list's ids.
+ */
 async function settleReviewJevScope(
   supabase: ScopeClient,
   listed: PromiseLike<{ data: unknown; error: unknown }>,
@@ -104,20 +112,23 @@ async function settleReviewJevScope(
   const companyTask = Promise.resolve(readCompanyId(supabase)).then((id) => {
     found.companyId = id;
   });
-  await withJevDeadline(undefined, async () => {
-    await Promise.all([userTask, companyTask]);
-    return true;
-  }, false);
   let payloadCompany: string | null = null;
   let ids: string[] = [];
-  try {
-    const result = await listed;
-    if (result.error == null) {
-      payloadCompany = companyIdFromReviewPayload(result.data);
-      ids = (await loadReadSchemas()).reviewRowSchema.array().parse(result.data).map((row) => row.transaction_id);
-    }
-  } catch {
-    payloadCompany = null;
+  // The Jev queue code loads with the review screens, not with Home: it starts now, beside the list.
+  void import("./screens/jev-review").then((code) => code.fetchJevConnector, () => undefined);
+  const readConnector = (scope: JevConnectorScope) => client.query({
+    queryKey: jevConnectorQueryKey(scope),
+    retry: false,
+    staleTime: JEV_CONNECTOR_STALE_MS,
+    queryFn: ({ signal }) => import("./screens/jev-review").then((code) => code.fetchJevConnector(signal)),
+  });
+  // Home's dashboard already names the company: the connector starts now, beside the list, not after the company's read.
+  const cached = companyIdFromReviewPayload(client.getQueriesData({ queryKey: ["dashboard", "off"] }).map(([, data]) => data));
+  const noted = notedJevAuthUser();
+  if (cached != null && typeof noted === "string") {
+    const scope = { userId: noted, companyId: cached };
+    bindJevConnectorScope(scope);
+    void readConnector(scope).catch(() => undefined);
   }
   const publish = () => {
     const resolvedCompany = payloadCompany ?? found.companyId;
@@ -125,27 +136,35 @@ async function settleReviewJevScope(
       ? { userId: found.userId, companyId: resolvedCompany }
       : null;
     if (!completeJevScopeLookup(lookup, scope) || scope == null || jevScopeFollowsLive()) return;
-    if (jevQueueKey(ids) === "" || typeof supabase.from !== "function") return;
+    if (typeof supabase.from !== "function") return;
     seedJevConnectorFromLive(client, scope);
-    void client.query({
-      queryKey: jevConnectorQueryKey(scope),
+    const queue = () => client.query({
+      queryKey: jevQueueQueryKey(ids),
       retry: false,
-      staleTime: JEV_CONNECTOR_STALE_MS,
-      // The Jev queue code loads with the review screens, not with Home.
-      queryFn: ({ signal }) => import("./screens/jev-review").then((jev) => jev.fetchJevConnector(signal)),
-    }).then((on) => {
-      if (!on) return undefined;
-      return client.query({
-        queryKey: jevQueueQueryKey(ids),
-        retry: false,
-        queryFn: ({ signal }) => import("./screens/jev-review").then((jev) => withJevDeadline(
-          signal,
-          (linked) => jev.loadJevSuggestions(ids, linked),
-          jev.JEV_QUEUE_STALLED,
-        )),
-      });
-    }).catch(() => undefined);
+      queryFn: ({ signal }) => import("./screens/jev-review").then((code) => withJevDeadline(
+        signal,
+        (linked) => code.loadJevSuggestions(ids, linked),
+        code.JEV_QUEUE_STALLED,
+      )),
+    });
+    const connector = readConnector(scope);
+    void connector.then((on) => (on && jevQueueKey(ids) !== "" ? queue() : undefined)).catch(() => undefined);
   };
+  await withJevDeadline(undefined, async () => {
+    await Promise.all([userTask, companyTask]);
+    return true;
+  }, false);
+  publish();
+  try {
+    const result = await listed;
+    if (result.error == null) {
+      payloadCompany = companyIdFromReviewPayload(result.data);
+      // The ids need no schema: the list's own read parses the page, and waiting for the schemas held the Jev reads back.
+      ids = Array.isArray(result.data) ? result.data.flatMap((row: { transaction_id?: unknown }) => (typeof row.transaction_id === "string" ? [row.transaction_id] : [])) : [];
+    }
+  } catch {
+    payloadCompany = null;
+  }
   publish();
   void Promise.all([userTask, companyTask]).then(publish);
 }
@@ -213,6 +232,8 @@ function reviewQueryOptions(preview: string, project: string | null) {
       if (!supabase) throw new Error("supabase");
       // FLOW-1273: the schemas this answer is parsed with load beside the read, not after it.
       preloadReadSchemas();
+      // FLOW-1272: the card's categories start beside the list (the list view shows none).
+      if (window.location.pathname === "/review") void client.query(categoriesQueryOptions(preview)).catch(() => undefined);
       await waitForAccessToken(supabase);
       dropLegacyJevConnectorKey();
       // After an invalidation the list is read again up to the rows it held (the approved ones are gone from

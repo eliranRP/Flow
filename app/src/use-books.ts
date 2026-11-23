@@ -126,18 +126,21 @@ export function useFiledTodayQuery(active = true) {
   });
 }
 
-export function useCategoriesQuery(active = true) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["categories", preview],
-    enabled: active && preview === "off",
+export function categoriesQueryOptions(preview: string) {
+  return {
+    queryKey: ["categories", preview] as const,
     queryFn: async (): Promise<CategoryRow[]> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("list_categories");
       if (error) throw error;
       return (await loadReadSchemas()).categoryRowSchema.array().parse(data);
     },
-  });
+  };
+}
+
+export function useCategoriesQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({ ...categoriesQueryOptions(preview), enabled: active && preview === "off" });
 }
 
 // syncing is the server claim of a running refresh: poll every 3s until it clears. A failing

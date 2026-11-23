@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { jevBookingsQueryOptions } from "./jev-booking-count";
 import { getSupabase } from "./lib/supabase";
 import { parseLineJournal } from "./line-journal";
 import { useHomePreview } from "./preview";
 import { isTransientWriteError, type WriteFailure } from "./use-write";
-import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * FLOW-955 (board LedgerReviewCard). Jev's bookings waiting in לאישור: an MCP book_line or split_line
@@ -34,26 +34,12 @@ export function parseJevBookings(data: unknown): JevBooking[] {
   return z.array(bookingSchema).parse(data);
 }
 
-export function jevBookingsKey(preview: string) {
-  return ["jev-bookings", preview] as const;
-}
-
 /** Jev's bookings to review. A viewer reads them too. No read in preview or sample. */
 export function useJevBookingsQuery(enabled = true) {
   const preview = useHomePreview();
   return useQuery({
-    queryKey: jevBookingsKey(preview),
-    enabled: enabled && preview === "off",
-    // לאישור waits for this read before its first draw, so a failure ends the wait at once.
-    retry: false,
-    queryFn: async (): Promise<JevBooking[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("list_jev_bookings");
-      if (error) throw error;
-      return parseJevBookings(data);
-    },
+    ...jevBookingsQueryOptions(preview, enabled),
+    select: parseJevBookings,
   });
 }
 
