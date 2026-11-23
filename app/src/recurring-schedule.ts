@@ -25,6 +25,8 @@ export type ScheduleRow = {
   project_name: string | null;
   category_id: string | null;
   category_name: string | null;
+  /** FLOW-1266: the owner's end date, yyyy-mm-dd; null or omitted when none. */
+  ends_on?: string | null;
 };
 
 /**

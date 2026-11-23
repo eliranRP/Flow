@@ -186,7 +186,7 @@ export function buildMonthForecast(input: {
     if (party.seen_this_month || party.currency !== input.base) continue;
     // FLOW-1037: its payment came this month under another party (a likely handover): counted once, in today's cash.
     if (party.handover != null) continue;
-    if (!dueInMonth(party.next_due_month, party.pace, thisMonth, thisMonth)) continue;
+    if (!dueInMonth(party.next_due_month, party.pace, thisMonth, thisMonth, { endsOn: party.ends_on, typicalDay: party.typical_day })) continue;
     const owner = party.project_id ?? overhead;
     const at = owner == null ? null : `${owner}|rec:${party.direction}:${party.party_id}`;
     if (at != null && removed.has(at)) continue;

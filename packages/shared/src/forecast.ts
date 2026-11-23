@@ -159,6 +159,8 @@ const expectedPartySchema = z.object({
   pace: paceSchema.nullable().optional(),
   /** yyyy-mm, the month the next payment is due. */
   next_due_month: z.string().nullable().optional(),
+  /** FLOW-1266: the owner's end date, yyyy-mm-dd; omitted when none. */
+  ends_on: z.string().nullable().optional(),
   /** True when the charge pays a loan (its lines have loan parts): its amount is the whole payment, principal included. */
   pays_loan: z.boolean().optional(),
   /**

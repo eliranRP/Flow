@@ -269,7 +269,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "edit_transaction_note",
     "remove_transaction_note",
     "remove_transaction_file",
-    "answer_recurring_handover",
+    "set_line_end_date", "answer_recurring_handover",
     "set_utility_payer",
     "answer_utility_refund",
     "mark_utility_refunds_seen",

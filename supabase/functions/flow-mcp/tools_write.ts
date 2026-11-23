@@ -91,6 +91,7 @@ import { THREAD_WRITES, threadWrite } from "./tools_thread.ts";
 import { memberShareWrite } from "./tools_member_share.ts";
 import { PROPERTY_WRITES, propertyWrite } from "./tools_property.ts";
 import { HANDOVER_WRITES, handoverWrite } from "./tools_handover.ts";
+import { END_DATE_WRITES, endDateWrite } from "./tools_end_date.ts";
 import { UTILITY_WRITES, utilityWrite } from "./tools_utility_refunds.ts";
 import { HELD_WRITES, heldWrite } from "./tools_held.ts";
 
@@ -118,6 +119,7 @@ export async function callWrite(
   if ((PROPERTY_WRITES as readonly string[]).includes(name)) return propertyWrite(name as typeof PROPERTY_WRITES[number], args, rpc);
   if (name === "set_member_report" || name === "refresh_treasury_yields") return memberShareWrite(args, rpc, name);
   if ((HANDOVER_WRITES as readonly string[]).includes(name)) return handoverWrite(name as typeof HANDOVER_WRITES[number], args, rpc);
+  if ((END_DATE_WRITES as readonly string[]).includes(name)) return endDateWrite(args, rpc);
   if ((UTILITY_WRITES as readonly string[]).includes(name)) return utilityWrite(name as typeof UTILITY_WRITES[number], args, rpc);
   if ((HELD_WRITES as readonly string[]).includes(name)) return heldWrite(name as typeof HELD_WRITES[number], args, rpc);
   if (name === "sync_bank") {

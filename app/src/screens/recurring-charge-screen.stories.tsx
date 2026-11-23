@@ -9,7 +9,7 @@ import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-c
 /** FLOW-447c: the charge page on the board's two parties, as the page's states. Invented names only. */
 const NOW = new Date("2026-10-11T12:00:00Z");
 
-function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" | "pick" | "long" | "loading" | "history" }) {
+function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" | "pick" | "long" | "loading" | "history" | "end" | "ended" }) {
   const entry = state === "late" || state === "ignored" ? "/recurring/expense/power" : state === "loading" ? "/recurring/expense/water?preview=loading" : "/recurring/expense/water";
   return (
     <StoryRoute entry={entry}>
@@ -40,6 +40,10 @@ function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount
           sample={{ ...RECURRING_CHARGES_FIXTURE_WATER, row: { ...RECURRING_CHARGES_FIXTURE_WATER.row, typical_amount_minor: -17000, typical_amount_source: "owner" } }}
           openSheet="amount"
         />
+      ) : null}
+      {state === "end" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} openSheet="end" /> : null}
+      {state === "ended" ? (
+        <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_WATER, row: { ...RECURRING_CHARGES_FIXTURE_WATER.row, ends_on: "2027-03-31" } }} />
       ) : null}
       {state === "late" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_POWER} /> : null}
       {state === "long" ? <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_POWER, row: { ...RECURRING_CHARGES_FIXTURE_POWER.row, party_name: `Brightline Power ${longHebrew}` } }} /> : null}
@@ -108,6 +112,25 @@ export const UsualAmountOwner: Story = {
   args: { state: "owner" },
   play: async ({ canvasElement }) => {
     await within(canvasElement.ownerDocument.body).findByRole("button", { name: "חזרה לחישוב" });
+  },
+};
+
+/** FLOW-1266: the end date sheet open over the item page: the presets with their dates, ללא and תאריך אחר. */
+export const EndDateSheetOpen: Story = {
+  args: { state: "end" },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await body.findByRole("radio", { name: /בסוף השנה/ });
+    await expect(body.getByRole("button", { name: "תאריך אחר" })).toBeTruthy();
+  },
+};
+
+/** FLOW-1266: a charge with an end date: the date on its row. */
+export const WithEndDate: Story = {
+  args: { state: "ended" },
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByRole("button", { name: /תאריך סיום/ });
+    await expect(within(row).getByText("31/03/2027")).toBeTruthy();
   },
 };
 

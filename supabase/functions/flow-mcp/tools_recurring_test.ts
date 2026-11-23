@@ -286,6 +286,37 @@ Deno.test("set_line_usual_amount takes major units, validates the amount, and un
   ]);
 });
 
+Deno.test("set_line_end_date passes the date or null, validates it, and undo takes line_end", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_end" } } }));
+  for (
+    const [name, args] of [
+      ["set_line_end_date", { idempotency_key: "e-1", transaction_id: TXN, ends_on: "2027-03-31" }],
+      ["set_line_end_date", { idempotency_key: "e-2", transaction_id: TXN, ends_on: null, project_id: PROJECT }],
+      ["undo", { idempotency_key: "u-5", kind: "line_end", id: TXN }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", transaction_id: TXN, ends_on: "31/03/2027" },
+      { idempotency_key: "k", transaction_id: TXN, ends_on: "2027-03" },
+      { idempotency_key: "k", transaction_id: TXN },
+      { idempotency_key: "k", transaction_id: "not-a-uuid", ends_on: "2027-03-31" },
+      { idempotency_key: "k", transaction_id: TXN, ends_on: "2027-03-31", end: "2027-03-31" },
+    ]
+  ) {
+    const result = await callTool("set_line_end_date", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true, JSON.stringify(input));
+  }
+  assertEquals(calls, [
+    { name: "mcp_set_line_end_date", body: { p_idempotency_key: "e-1", p_transaction_id: TXN, p_ends_on: "2027-03-31" } },
+    { name: "mcp_set_line_end_date", body: { p_idempotency_key: "e-2", p_transaction_id: TXN, p_ends_on: null, p_project_id: PROJECT } },
+    { name: "mcp_undo", body: { p_idempotency_key: "u-5", p_kind: "line_end", p_id: TXN } },
+  ]);
+});
+
 Deno.test("answer_recurring_match calls its writer, validates the pair, and undo takes recurring_match", async () => {
   const OTHER = "22222222-2222-4222-8222-222222222222";
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: OTHER, undo_kind: "recurring_match" } } }));

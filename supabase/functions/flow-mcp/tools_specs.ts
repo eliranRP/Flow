@@ -7,15 +7,11 @@ import { THREAD_READ_SPECS, THREAD_WRITE_SPECS } from "./tools_thread.ts";
 import { MEMBER_SHARE_READ_SPECS, MEMBER_SHARE_WRITE_SPECS } from "./tools_member_share.ts";
 import { PROPERTY_READ_SPECS, PROPERTY_WRITE_SPECS } from "./tools_property.ts";
 import { HANDOVER_WRITE_SPECS } from "./tools_handover.ts";
+import { END_DATE_WRITE_SPECS } from "./tools_end_date.ts";
 import { UTILITY_READ_SPECS, UTILITY_WRITE_SPECS } from "./tools_utility_refunds.ts";
 import { HELD_REVIEW_NOTE, HELD_WRITE_SPECS } from "./tools_held.ts";
 
-function toolSpec(
-  name: string,
-  description: string,
-  properties: Record<string, unknown>,
-  write = false,
-) {
+function toolSpec(name: string, description: string, properties: Record<string, unknown>, write = false) {
   return {
     name,
     description,
@@ -787,7 +783,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
-    ...THREAD_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS, ...HELD_WRITE_SPECS,
+    ...THREAD_WRITE_SPECS, ...END_DATE_WRITE_SPECS, ...HANDOVER_WRITE_SPECS, ...UTILITY_WRITE_SPECS, ...HELD_WRITE_SPECS,
   ];
 }
 
