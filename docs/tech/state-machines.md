@@ -78,6 +78,7 @@ Held in booleans, refs, nullable timestamps or scattered `WHERE` clauses. "Open 
 | Change sheet | `ui/change-sheet.tsx` | View `summary`, `project`, `category`, `new`, derived from 12 state values, 14 refs and `?pick=`; `new` has its own browser entry (`newEntry`) | None open: the browser's Back and the sheet's back both leave `new` for the picker. Still not a table |
 | Sheet history entry | `ui/back.tsx`, `ui/route-sheet.tsx` | The history layer's unpushed, pushing, pushed, popped; `RouteSheet`'s `leaving`. The sheet's own close is `sheetClose` (see Explicit machines) | None open |
 | New version reload | `sw-reload.ts` | current, behind, reload now or on the next move, reloaded; closure flags and two session keys | None open |
+| Splash (FLOW-1277) | `splash-boot.ts`, `ui/splash.tsx` | Per page load: not started, covered (a page-colour cover while the splash's chunk loads), playing, leaving (the fade out), gone. Plays at most once (a module flag), never under `navigator.webdriver`; leaves by its timer (2.7s, 400ms under reduced motion), a tap or a key. Held as a module flag and one `leaving` flag, not a table: two moves, no save | None open |
 | Touch gestures | `ui/swipe-row.tsx`, `ui/card-swipe.tsx`, `ui/period-swipe.tsx`, `ui/edge-back.tsx`, `ui/code-field.tsx` | idle, tracking, axis locked, commit or settle; a `track` ref each | None open |
 | List order hold | `list-hold.tsx` | held is the OR of `press`, `focus`, `sheet`, `scrolling` | None open |
 | Online state | `connection.ts` | online, offline, offline and checking | None open |
