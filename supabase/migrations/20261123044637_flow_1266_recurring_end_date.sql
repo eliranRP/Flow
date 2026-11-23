@@ -1,7 +1,7 @@
 -- FLOW-1266: a recurring charge can have an end date (the owner's request, 2026-11-23).
--- - recurring_overrides.ends_on: the owner's last date for the charge. As pace, the charge's own row wins,
---   else the party-wide row's (decision 0188). It is one more field of the owner's word, so a row may hold
---   only it.
+-- - recurring_overrides.ends_on: the owner's last date for the charge. As the usual amount (decision 0189), it
+--   is only the charge's own: a charge with no project reads it from the row with no project. It is one more
+--   field of the owner's word, so a row may hold only it.
 -- - private.recurring_due_date(month, day): the day a charge is due in a month, its usual day capped at the
 --   month's last day.
 -- - recurring_parties returns ends_on (appended last; the return type changes, so the function is dropped and
@@ -74,21 +74,21 @@ begin
   end loop;
   def := replace(def, anchors[1], E'this_month_line_count integer, ends_on date)');
   def := replace(def, anchors[2], E'o.recurring, o.pace, o.typical_amount_minor, o.ends_on\n');
-  def := replace(def, anchors[3], anchors[3] || E'      coalesce(own.ends_on, pw.ends_on) as ends_on,\n');
+  def := replace(def, anchors[3], anchors[3] || E'      coalesce(own.ends_on, case when s.stream_project is null then pw.ends_on end) as ends_on,\n');
   def := replace(def, anchors[4], E'      w.recurring, w.pace as pace_override, w.amount as owner_amount, w.ends_on,\n');
   def := replace(def, anchors[5], E'      case when w.amount is null then ''computed'' else ''owner'' end as amount_source,\n      w.ends_on\n');
   def := replace(def, anchors[6], E'      case when p.owner_amount is null then ''computed'' else ''owner'' end as amount_source,\n      p.ends_on\n');
   def := replace(def, anchors[7], E'      f.months_seen, f.typical_day, f.typical_amount_minor, ''user'', f.amount_source, f.ends_on\n');
   def := replace(def, anchors[8], E'    p.this_month_line_count,\n    p.ends_on\n');
   -- FLOW-1266: a charge that is over leaves: its end date has passed, or it has not come this month and its
-  -- next due day (the rule of the next_due_month column above) is after its end date.
+  -- next due day is after its end date. A late charge is due from this month on, as expected_months counts it.
   def := replace(def, anchors[9], anchors[9] || $n$  where p.ends_on is null
     or (p.ends_on >= p_today
       and (p.last_seen_month = b.this_month
-        or private.recurring_due_date(case
+        or private.recurring_due_date(greatest(b.this_month, case
             when p.pace = 'month' then b.this_month
             else (p.last_seen_month + make_interval(months => private.pace_months(p.pace)))::date
-          end, p.typical_day) <= p.ends_on))
+          end), p.typical_day) <= p.ends_on))
 $n$);
   execute 'drop function private.recurring_parties(uuid, date, boolean)';
   execute def;
@@ -291,6 +291,8 @@ begin
     or char_length(p_idempotency_key) < 1
     or char_length(p_idempotency_key) > 128
     or p_transaction_id is null
+    -- From today (the app's date sheet starts there) to 50 years on, as set_payment_end allows.
+    or (p_ends_on is not null and (p_ends_on < private.flow_today() or p_ends_on > private.flow_today() + interval '50 years'))
   then
     return private.mcp_error('validation', 'validation');
   end if;

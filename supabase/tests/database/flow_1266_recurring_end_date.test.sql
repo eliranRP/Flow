@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(20);
+select plan(23);
 
 do $users$
 begin
@@ -25,7 +25,7 @@ as $$ select id from pg_temp.ed where label = p_label; $$;
 grant execute on function pg_temp.id(text) to authenticated, service_role;
 
 insert into public.suppliers (company_id, name)
-select pg_temp.id('co'), n from unnest(array['Example Rent', 'Example Water']) n;
+select pg_temp.id('co'), n from unnest(array['Example Rent', 'Example Water', 'Example Survey']) n;
 insert into ed (label, id)
 select lower(replace(s.name, 'Example ', '')), s.id from public.suppliers s where s.company_id = pg_temp.id('co');
 
@@ -35,6 +35,11 @@ select p.party || ':' || to_char(d, 'YYMM'), tests.fixture_line(
   pg_temp.id('co'), 'ed:' || p.party || to_char(d, 'YYMM'), p.amount, 'expense', null, null, d::date + p.day - 1)
 from (values ('rent', 50000::bigint, 12), ('water', 8000::bigint, 25)) p(party, amount, day)
 cross join generate_series('2026-04-01'::date, '2026-09-01'::date, interval '1 month') d;
+-- Survey: 300.00 on the 25th every two months, last in July 2026, so late in October (due in September).
+insert into ed (label, id)
+select 'survey:' || to_char(d, 'YYMM'), tests.fixture_line(
+  pg_temp.id('co'), 'ed:survey' || to_char(d, 'YYMM'), 30000, 'expense', null, null, d::date + 24)
+from generate_series('2026-01-01'::date, '2026-07-01'::date, interval '2 months') d;
 update public.transactions t
 set supplier_id = pg_temp.id(split_part(e.label, ':', 1))
 from pg_temp.ed e
@@ -77,6 +82,13 @@ select ok(not pg_temp.listed('water'), 'a charge not come this month whose next 
 select pg_temp.ends('water', '2026-10-31');
 select ok(pg_temp.listed('water'), 'a charge due on or before its end date still recurs');
 
+-- A late two-monthly charge is due from this month on: an end date before this month's due day ends it.
+select ok(pg_temp.listed('survey'), 'a late two-monthly charge recurs');
+insert into public.recurring_overrides (company_id, direction, party_id, currency, ends_on)
+values (pg_temp.id('co'), 'expense', pg_temp.id('survey'), 'ILS', '2026-10-22');
+select ok(not pg_temp.listed('survey'), 'a late charge whose due day this month is after its end date is over');
+delete from public.recurring_overrides where party_id = pg_temp.id('survey');
+
 -- 7-9. The forecast stops at the end date.
 delete from public.recurring_overrides where party_id = pg_temp.id('water');
 select pg_temp.ends('rent', '2026-12-12');
@@ -91,7 +103,7 @@ as $$
 $$;
 grant execute on function pg_temp.expense_in(int) to authenticated, service_role;
 select tests.authenticate_as('ed_owner');
-select is(pg_temp.expense_in(2), -58000::bigint, 'December has rent and water: its due day is the end date');
+select is(pg_temp.expense_in(2), -88000::bigint, 'December has rent, water and survey: rent''s due day is its end date');
 select is(pg_temp.expense_in(3), -8000::bigint, 'January has water only: rent ended in December');
 select is(
   (select r ->> 'ends_on' from jsonb_array_elements(public.expected_months(0, null, '2026-10-20') -> 'recurring') r
@@ -102,7 +114,7 @@ select is(
 reset role;
 select pg_temp.ends('rent', '2026-12-11');
 select tests.authenticate_as('ed_owner');
-select is(pg_temp.expense_in(2), -8000::bigint, 'an end date a day before December''s due day leaves rent out of December');
+select is(pg_temp.expense_in(2), -38000::bigint, 'an end date a day before December''s due day leaves rent out of December');
 reset role;
 
 -- 11. The schedule says it.
@@ -185,6 +197,11 @@ select is(
   'the same key replays'
 );
 select is(public.mcp_undo('ed-undo-1', 'line_end', pg_temp.id('rent:2609')) ->> 'ok', 'true', 'undo line_end');
+select is(
+  public.mcp_set_line_end_date('ed-past', pg_temp.id('rent:2609'), '2020-01-31') -> 'error' ->> 'code',
+  'validation',
+  'a date before today is refused as validation'
+);
 select public.mcp_set_line_end_date('ed-2', pg_temp.id('rent:2609'), '2027-02-28');
 select tests.authenticate_as('ed_owner');
 select public.set_payment_end(pg_temp.id('rent:2609'), '2027-05-31');

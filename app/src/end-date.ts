@@ -1,4 +1,4 @@
-import { dueDate, monthIndex, paceMonths } from "@flow/shared";
+import { dueDate, monthIndex } from "@flow/shared";
 import type { RpcClient } from "./recurring-actions";
 import type { ScheduleRow } from "./recurring-schedule";
 import { formatDisplay } from "./ui/date-math";
@@ -43,24 +43,16 @@ export function shiftDate(today: string, months: number): string {
 
 /**
  * The month the charge next comes in: its next due month, or this month while it is still due here (a late
- * charge's due month may be earlier). The month after the next one for a charge that already came this month is
- * its next due month, which the server gives.
+ * charge counts from this month, as dueInMonth and expected_months count it).
  */
-export function nextChargeMonth(row: Pick<ScheduleRow, "next_due_month" | "pace">, today: string): string {
+export function nextChargeMonth(row: Pick<ScheduleRow, "next_due_month">, today: string): string {
   const thisMonth = today.slice(0, 7);
   const due = row.next_due_month.slice(0, 7);
-  if (due === "" || due < thisMonth) {
-    // A late charge counts from this month; step on to its cycle when its due month was earlier.
-    const step = paceMonths(row.pace);
-    if (due === "") return thisMonth;
-    const behind = monthIndex(thisMonth) - monthIndex(due);
-    return addMonths(due, Math.ceil(behind / step) * step);
-  }
-  return due;
+  return due === "" || due < thisMonth ? thisMonth : due;
 }
 
 /** The presets' dates, from today and the charge's next month. "after the next charge" ends with that month. */
-export function endPresets(row: Pick<ScheduleRow, "next_due_month" | "pace">, today: string): Record<"next" | "3m" | "6m" | "year", string> {
+export function endPresets(row: Pick<ScheduleRow, "next_due_month">, today: string): Record<"next" | "3m" | "6m" | "year", string> {
   return {
     next: monthEnd(nextChargeMonth(row, today)),
     "3m": shiftDate(today, 3),

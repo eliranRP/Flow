@@ -16,10 +16,11 @@ describe("the end date presets", () => {
     expect(shiftDate("2026-11-30", 3)).toBe("2027-02-28");
   });
 
-  it("takes this month for a charge still due here, and steps a late yearly charge onto its cycle", () => {
-    expect(nextChargeMonth({ next_due_month: "2026-10", pace: "month" }, "2026-10-11")).toBe("2026-10");
-    expect(nextChargeMonth({ next_due_month: "2026-08", pace: "quarter" }, "2026-10-11")).toBe("2026-11");
-    expect(nextChargeMonth({ next_due_month: "", pace: "month" }, "2026-10-11")).toBe("2026-10");
+  it("takes this month for a charge still due here, a late one included", () => {
+    expect(nextChargeMonth({ next_due_month: "2026-10" }, "2026-10-11")).toBe("2026-10");
+    expect(nextChargeMonth({ next_due_month: "2026-08" }, "2026-10-11")).toBe("2026-10");
+    expect(nextChargeMonth({ next_due_month: "" }, "2026-10-11")).toBe("2026-10");
+    expect(nextChargeMonth({ next_due_month: "2026-12" }, "2026-10-11")).toBe("2026-12");
   });
 
   it("names a date by its preset, else custom, and none when there is no date", () => {
