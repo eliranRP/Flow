@@ -137,21 +137,28 @@ function addDays(iso: string, days: number): string {
 }
 
 /**
- * FLOW-1258: the due date of the latest scheduled payment past its grace (LATE_GRACE_DAYS) with no payment recorded
- * for it: none on or after EARLY_PAY_DAYS before its due date. `lastPaidOn` is the loan's latest posted payment, a
- * payment waiting for review included (null with none). Null for a loan that is on time, a demand loan, a closed
- * one, or one with no schedule. Only the latest past date is checked, and a loan with no payment in the books at all
- * is late only for its first payment: the books may start after the loan did, so a loan whose history predates them
- * is not called late on its first day. One payment pays one date: a late payment made within EARLY_PAY_DAYS of the
- * next date covers that date too, so a missed month right after a late one shows a month later.
+ * What the late check knows of a loan's payments. `lastPaidOn`: its latest posted payment, one waiting for review or
+ * not yet split to it included (null with none). `addedOn`: the day the loan was added to the app, yyyy-mm-dd in
+ * Israel time (null unknown).
  */
-export function latePayment(loan: OutlookLoan, lastPaidOn: string | null, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): string | null {
+export type LoanPaidFacts = { lastPaidOn: string | null; addedOn: string | null };
+
+/**
+ * FLOW-1258: the due date of the latest scheduled payment past its grace (LATE_GRACE_DAYS) with no payment recorded
+ * for it: none on or after EARLY_PAY_DAYS before its due date. Null for a loan that is on time, a demand loan, a
+ * closed one, or one with no schedule. Only the latest past date is checked. FLOW-1263: a loan with no payment in
+ * the books at all is late when that date is on or after the day it was added to the app; a date before it is not,
+ * since the loan's history may predate the books, and with the day unknown nothing is. One payment pays one date: a
+ * late payment made within EARLY_PAY_DAYS of the next date covers that date too, so a missed month right after a late
+ * one shows a month later.
+ */
+export function latePayment(loan: OutlookLoan, paid: LoanPaidFacts, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): string | null {
   if (loan.status !== "open" || loan.balanceMinor <= 0n || rows == null) return null;
   const cutoff = addDays(today, -LATE_GRACE_DAYS);
   const due = rows.filter((row) => row.dueDate < cutoff).at(-1);
   if (due == null) return null;
-  if (lastPaidOn == null) return due === rows[0] ? due.dueDate : null;
-  if (lastPaidOn >= addDays(due.dueDate, -EARLY_PAY_DAYS)) return null;
+  if (paid.lastPaidOn == null) return paid.addedOn != null && due.dueDate >= paid.addedOn ? due.dueDate : null;
+  if (paid.lastPaidOn >= addDays(due.dueDate, -EARLY_PAY_DAYS)) return null;
   return due.dueDate;
 }
 

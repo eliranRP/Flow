@@ -652,6 +652,12 @@ isOneToOne: false
       foreignKeyName: "legs_company_id_loan_id_fkey"
       columns: ["company_id","loan_id"]
 isOneToOne: false
+      referencedRelation: "loan_unsplit_payments"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "legs_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
       referencedRelation: "loans"
       referencedColumns: ["company_id","id"]
     },{
@@ -701,6 +707,12 @@ isOneToOne: false
       foreignKeyName: "loan_category_switches_loan_fkey"
       columns: ["company_id","loan_id"]
 isOneToOne: false
+      referencedRelation: "loan_unsplit_payments"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_category_switches_loan_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
       referencedRelation: "loans"
       referencedColumns: ["company_id","id"]
     }
@@ -727,6 +739,12 @@ isOneToOne: false
       columns: ["company_id","loan_id"]
 isOneToOne: false
       referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_rates_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_unsplit_payments"
       referencedColumns: ["company_id","loan_id"]
     },{
       foreignKeyName: "loan_rates_company_id_loan_id_fkey"
@@ -788,6 +806,12 @@ isOneToOne: false
       columns: ["company_id","refinanced_into_id"]
 isOneToOne: false
       referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loans_refinanced_into_fkey"
+      columns: ["company_id","refinanced_into_id"]
+isOneToOne: false
+      referencedRelation: "loan_unsplit_payments"
       referencedColumns: ["company_id","loan_id"]
     },{
       foreignKeyName: "loans_refinanced_into_fkey"
@@ -1628,6 +1652,19 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "projects"
       referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"loan_unsplit_payments": {
+                  Row: {
+                    "company_id": string | null,"last_on": string | null,"loan_id": string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loans_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
     }
                   ]
                 },"sumit_connection_status": {

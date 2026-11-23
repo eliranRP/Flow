@@ -645,6 +645,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1256"></a>[FLOW-1256](tasks/FLOW-1256.md) | The group picker's Back and Escape wait for a move to save | SMALL UI |
 | <a id="flow-1257"></a>[FLOW-1257](tasks/FLOW-1257.md) | The קבוצה skeleton ends when the project's read fails | SMALL UI |
 | <a id="flow-1258"></a>[FLOW-1258](tasks/FLOW-1258.md) | Loans: a late payment, not a payment due soon, needs attention | SMALL UI |
+| <a id="flow-1263"></a>[FLOW-1263](tasks/FLOW-1263.md) | Loans: a loan never paid in the books stays late | BUG |
+| <a id="flow-1264"></a>[FLOW-1264](tasks/FLOW-1264.md) | Loans: a payment not yet split to its loan is not called late | BUG |
+| <a id="flow-1265"></a>[FLOW-1265](tasks/FLOW-1265.md) | A row's one-line hint shows a sliver of its hidden second line | SMALL UI |
 
 ## Onboarding, Settings and connectors
 

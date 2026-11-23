@@ -635,6 +635,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1256
 - FLOW-1257
 - FLOW-1258
+- FLOW-1263
+- FLOW-1264
+- FLOW-1265
 
 ## Onboarding, Settings and connectors
 
