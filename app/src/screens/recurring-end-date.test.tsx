@@ -8,7 +8,7 @@ import { RecurringChargeScreen } from "./recurring-charge-screen";
 
 // FLOW-1266: the charge page's end date, its row, its sheets and its write.
 const state = vi.hoisted(() => ({
-  data: null as unknown as { status: string },
+  data: null as unknown as { status: string } & Record<string, unknown>,
   client: { rpc: null as unknown as (name: string, args: Record<string, unknown>) => Promise<{ error: null | { message: string }; data?: unknown }> },
 }));
 

@@ -33,7 +33,7 @@ export function dueDate(month: string, day: number | null | undefined): string {
 }
 
 /** FLOW-1266: a charge's end date and usual day; a charge is not expected on a due day after the end date. */
-export type ChargeEnd = { endsOn?: string | null; typicalDay?: number | null };
+type ChargeEnd = { endsOn?: string | null; typicalDay?: number | null };
 
 /**
  * Whether a charge comes in `month` (yyyy-mm): from its due month, every pace months. A charge that is late

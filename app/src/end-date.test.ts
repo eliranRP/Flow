@@ -4,7 +4,7 @@ import { endChoiceOf, endPresets, endText, endToast, nextChargeMonth, priorEnd, 
 // FLOW-1266: the end date's presets and words.
 describe("the end date presets", () => {
   it("ends with the next charge's month, in 3 and 6 months, and at the year's end", () => {
-    expect(endPresets({ next_due_month: "2026-11", pace: "month" }, "2026-10-11")).toEqual({
+    expect(endPresets({ next_due_month: "2026-11" }, "2026-10-11")).toEqual({
       next: "2026-11-30",
       "3m": "2027-01-11",
       "6m": "2027-04-11",
@@ -24,7 +24,7 @@ describe("the end date presets", () => {
   });
 
   it("names a date by its preset, else custom, and none when there is no date", () => {
-    const presets = endPresets({ next_due_month: "2026-11", pace: "month" }, "2026-10-11");
+    const presets = endPresets({ next_due_month: "2026-11" }, "2026-10-11");
     expect(endChoiceOf("2026-12-31", presets)).toBe("year");
     expect(endChoiceOf("2027-05-05", presets)).toBe("custom");
     expect(endChoiceOf(null, presets)).toBe("none");
