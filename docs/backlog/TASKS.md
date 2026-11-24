@@ -851,6 +851,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1300"></a>[FLOW-1300](tasks/FLOW-1300.md) | Perf: the recurring reads average 0.64 s in production against 0.1 to 0.14 s warm | MEDIUM (perf, investigate first) |
 | <a id="flow-1301"></a>[FLOW-1301](tasks/FLOW-1301.md) | Perf: restore the open screen's kept reads first, and keep them past an hour | SMALL (perf) |
 | <a id="flow-1302"></a>[FLOW-1302](tasks/FLOW-1302.md) | Perf: two small response and kept-size trims | SMALL (perf) |
+| <a id="flow-1303"></a>[FLOW-1303](tasks/FLOW-1303.md) | The splash ends when Home's figures are drawn | SMALL UI |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |
