@@ -3,7 +3,6 @@ import { restIncomeNote, type RestOfYear } from "./company-year-forecast";
 import { futureForecastKey } from "./forecast-future-keys";
 import type { IncomeFacts, RentCategory } from "./next-month-chart";
 import type { ForecastPace, NextMonthForecast, NextMonthRow } from "./project-next-month";
-import type { LoanCash } from "./project-next-loans";
 
 /**
  * FLOW-1308 (plan FLOW-1275, slice 7): public.company_forecast's answer (FLOW-1307) turned back into what the screens
@@ -105,7 +104,6 @@ function rowOf(value: unknown): NextMonthRow {
   const key = textOf(value, "key");
   const { kind, direction, pace } = value;
   if (key == null || typeof kind !== "string" || (direction !== "income" && direction !== "expense")) throw shapeError();
-  if (pace != null && typeof pace !== "string") throw shapeError();
   return {
     key,
     kind: kind as NextMonthRow["kind"],
@@ -140,23 +138,15 @@ function byDay(a: NextMonthRow, b: NextMonthRow): number {
 /**
  * A part's list in the builder's order: the recurring rows by day, the loan rows, the averages (each by amount as Flow
  * had it, before a change, and name in Hebrew order), then the lines the user added in the order given (the edits').
- * Every list of a part (rows, removed, arrived, skipped) is built from one list in this order, so each is.
+ * The rows and the rows taken out (skipped) are built from one list in this order, so each is.
  */
 export function orderRows(rows: readonly NextMonthRow[]): NextMonthRow[] {
   const of = (kind: NextMonthRow["kind"]) => rows.filter((row) => row.kind === kind);
   return [...of("recurring").sort(byDay), ...of("loan").sort(byAmount), ...of("average").sort(byAmount), ...of("added")];
 }
 
-function loanCashOf(value: unknown): LoanCash[] {
-  if (!Array.isArray(value)) throw shapeError();
-  return value.map((loan): LoanCash => {
-    if (!isRow(loan) || typeof loan.loan_id !== "string" || !Array.isArray(loan.row_category_ids) || !loan.row_category_ids.every((id) => typeof id === "string")) throw shapeError();
-    return { loanId: loan.loan_id, rowCategoryIds: loan.row_category_ids, minor: minorOf(loan.minor) };
-  });
-}
-
 /** A part's forecast from its rows: the totals are the rows' (withTotals), as the builder counts them. */
-function partForecast(month: string, parts: { rows: NextMonthRow[]; removed: NextMonthRow[]; arrived: NextMonthRow[]; skipped: NextMonthRow[]; averageMonths: number; loanCash: LoanCash[]; cashOnlyMinor: bigint }): NextMonthForecast {
+function partForecast(month: string, parts: { rows: NextMonthRow[]; skipped: NextMonthRow[]; averageMonths: number; cashOnlyMinor: bigint }): NextMonthForecast {
   const { rows } = parts;
   const incomeMinor = rows.reduce((sum, row) => (row.minor > 0n ? sum + row.minor : sum), 0n);
   const expenseMinor = rows.reduce((sum, row) => (row.minor < 0n ? sum - row.minor : sum), 0n);
@@ -166,13 +156,13 @@ function partForecast(month: string, parts: { rows: NextMonthRow[]; removed: Nex
     incomeMinor,
     expenseMinor,
     netMinor: incomeMinor - expenseMinor,
-    loanCount: rows.filter((row) => row.kind === "loan").length,
+    loanCount: 0,
     averageMonths: parts.averageMonths,
-    loanCash: parts.loanCash,
+    loanCash: [],
     cashOnlyMinor: parts.cashOnlyMinor,
-    removed: parts.removed,
+    removed: [],
     skipped: parts.skipped,
-    arrived: parts.arrived,
+    arrived: [],
   };
 }
 
@@ -184,7 +174,7 @@ function partOf(forecast: NextMonthForecast, projectId: string | null): CompanyF
 
 /** A part with nothing expected: where a row only a skip took out is listed (or comes back to). */
 function emptyPart(month: string, projectId: string | null, skipped: NextMonthRow[]): CompanyForecastPart {
-  return partOf(partForecast(month, { rows: [], removed: [], arrived: [], skipped, averageMonths: 1, loanCash: [], cashOnlyMinor: 0n }), projectId);
+  return partOf(partForecast(month, { rows: [], skipped, averageMonths: 1, cashOnlyMinor: 0n }), projectId);
 }
 
 /** The projects by id, the general costs last (the builder's order). */
@@ -220,17 +210,17 @@ export function forecastRowsOf(answer: unknown): CompanyForecastRows {
     skipped.delete(projectId);
     return partOf(partForecast(month.month, {
       rows: orderRows(rowsIn(item.rows)),
-      removed: orderRows(rowsIn(item.removed)),
-      arrived: orderRows(rowsIn(item.arrived)),
       skipped: orderRows(own),
       averageMonths: average,
-      loanCash: loanCashOf(item.loan_cash),
       cashOnlyMinor: minorOf(item.cash_only_minor),
     }), projectId);
   });
   // A project with nothing expected still lists what a skip took out of it (the builder lists every project's).
   for (const [projectId, rows] of skipped) parts.push(emptyPart(month.month, projectId, orderRows(rows)));
-  return { ...totals, forecast: sumCompanyParts(month.month, inPartOrder(parts), new Set(raw.split_keys)) };
+  const forecast = sumCompanyParts(month.month, inPartOrder(parts), new Set(raw.split_keys));
+  // The parts' rows must add up to the database's month: a row of a kind the app does not know would drop out of a total.
+  if (forecast.incomeMinor !== month.incomeMinor || forecast.expenseMinor !== month.expenseMinor || forecast.netMinor !== month.netMinor) throw shapeError();
+  return { ...totals, forecast };
 }
 
 /**
@@ -258,11 +248,8 @@ export function withSkips(forecast: CompanyNextMonth, skips: ReadonlySet<string>
     if (taking.length === 0 && back.length === 0) return part;
     return partOf(partForecast(own.month, {
       rows: orderRows([...own.rows.filter((row) => !taking.includes(row)), ...back]),
-      removed: own.removed,
-      arrived: own.arrived,
       skipped: orderRows([...(own.skipped ?? []).filter((row) => !back.includes(row)), ...taking]),
       averageMonths: own.averageMonths,
-      loanCash: own.loanCash,
       cashOnlyMinor: own.cashOnlyMinor,
     }), part.projectId);
   });

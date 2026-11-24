@@ -1,12 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
 import type { ExpectedParty, LoanKind, LoanStatus } from "@flow/shared";
 import { cardOfForecast, cardOfTotals, forecastRowsOf, forecastTotalsOf, orderRows, restOfForecast, restOfTotals, withSkips } from "./company-forecast-map";
 import { companyCashForecast, companyForecastCaption, companyGeneralForecast, companyIncomeNoteOfFacts, companyNextMonthForecast, splitPartyKeys, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import { companyMonthInput, companyRestOfYear, restIncomeNote, restOfYearMonths } from "./company-year-forecast";
 import { futureForecastKey } from "./forecast-future-keys";
+import "./company-forecast-query";
 import { isRent, type RentCategory } from "./next-month-chart";
 import { type ForecastCategory, type ForecastLoan, newPaymentsLeftMemo } from "./project-next-loans";
 import type { NextMonthRow } from "./project-next-month";
@@ -19,6 +21,13 @@ import type { NextMonthRow } from "./project-next-month";
  * Profit, Home's future months and the company forecast pages read the same figures from either. The builders live in
  * the app, so the test does too (packages/shared cannot import them).
  */
+/** company-forecast-query.ts registers how a skip moves the cached forecast; the tests below call it as forecast-month.ts does. */
+const patch = vi.hoisted(() => ({ run: null as null | ((client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]) => () => void) }));
+vi.mock("./forecast-month", async (original) => ({
+  ...(await original<typeof import("./forecast-month")>()),
+  setCompanyForecastPatch: (run: NonNullable<typeof patch.run>) => { patch.run = run; },
+}));
+
 const dir = join(dirname(fileURLToPath(import.meta.url)), "../../packages/shared/fixtures/vectors/company-forecast");
 
 type JsonLoan = {
@@ -246,7 +255,8 @@ describe("the app's reading of the answer equals the builders' (FLOW-1308)", () 
 
   /**
    * The amounts and lists as the screens read them: no undefined skipped, the loans' cash by loan. `drawn` leaves out what no
-   * company screen draws and a part with no row cannot hold again (its average months, its rows removed or arrived).
+   * company screen draws and a part with no row cannot hold again (its average months). The rows removed or arrived and the loans' cash
+   * are not read from the answer: no company screen draws them (the overhead project's page builds its own).
    */
   function plain(forecast: CompanyNextMonth, drawn = false) {
     return {
@@ -255,7 +265,7 @@ describe("the app's reading of the answer equals the builders' (FLOW-1308)", () 
       parts: forecast.parts.map((part) => ({
         ...part,
         skipped: part.skipped ?? [],
-        forecast: { ...part.forecast, ...(drawn ? { averageMonths: 0, removed: [], arrived: [] } : {}), skipped: part.forecast.skipped ?? [], loanCash: [...part.forecast.loanCash].sort((a, b) => compare(a.loanId, b.loanId)) },
+        forecast: { ...part.forecast, ...(drawn ? { averageMonths: 0 } : {}), removed: [], arrived: [], loanCash: [], loanCount: 0, skipped: part.forecast.skipped ?? [] },
       })),
     };
   }
@@ -315,6 +325,49 @@ describe("the app's reading of the answer equals the builders' (FLOW-1308)", () 
         const mappedBare = forecastRowsOf({ ...rowsAnswer(vector, index), months: [bareAnswer.months[index]] }).forecast;
         expect(plain(withSkips(mappedWith, new Set(), vector.input.currency), true)).toEqual(plain(without.forecasts[index] as CompanyNextMonth, true));
         expect(plain(withSkips(mappedBare, keys, vector.input.currency), true)).toEqual(plain(built, true));
+      });
+    },
+  );
+
+  it("refuses an answer whose parts do not add up to its month: a row of a kind the app does not know would drop out of a total", () => {
+    const vector = vectors.find((item) => item.name === "company-projects-and-general");
+    if (vector == null) throw new Error("no vector");
+    const answer = rowsAnswer(vector, 0);
+    expect(() => forecastRowsOf(answer)).not.toThrow();
+    const month = JSON.parse(JSON.stringify(answer.months[0])) as { expense_minor: number; net_minor: number; parts: Array<{ rows: unknown[] }> };
+    // The database counts the row: 50 more expense.
+    month.expense_minor += 50;
+    month.net_minor -= 50;
+    month.parts[0]?.rows.push({ key: "x:transfer", kind: "transfer", direction: "expense", name: "Transfer", minor: -50 });
+    expect(() => forecastRowsOf({ ...answer, months: [month] })).toThrow(/company_forecast/u);
+  });
+
+  it.each(vectors.filter((vector) => Object.values(vector.input.inputs.skips ?? {}).some((keys) => keys.length > 0)).map((vector) => [vector.name, vector] as const))(
+    "%s: the patch a skip's tap runs on the cached month, its totals and its income note, is the month the database gives with that skip",
+    (_name, vector) => {
+      const bare = { ...vector.input, inputs: { ...vector.input.inputs, skips: undefined } };
+      const bareAnswer = companyForecastAnswer(bare) as Expected;
+      const run = patch.run;
+      if (run == null) throw new Error("no patch registered");
+      builtMonths(vector.input).forecasts.forEach((built, index) => {
+        const keyOf = futureForecastKey(built, vector.input.currency);
+        const keys = built.skipped.flatMap(({ row, projectId }) => keyOf(row.key, projectId) ?? []);
+        const server = forecastRowsOf(rowsAnswer(vector, index));
+        const client = new QueryClient();
+        const rows = ["month-forecast", "off", "company", "rows", vector.input.today, built.month];
+        const card = ["month-forecast", "off", "company", "totals", vector.input.today, built.month];
+        client.setQueryData(rows, forecastRowsOf({ ...rowsAnswer(vector, index), months: [bareAnswer.months[index]] }));
+        client.setQueryData(card, forecastTotalsOf({ ...rowsAnswer(vector, index), months: [bareAnswer.months[index]] }));
+        client.setQueryData(["categories", "off"], vector.input.categories);
+        const undo = run(client, built.month, () => keys);
+        const patched = client.getQueryData<ReturnType<typeof forecastRowsOf>>(rows);
+        if (patched == null) throw new Error("no rows");
+        // Rows and totals as the server gives them (a part with no row is not told apart on average months and removed rows).
+        expect(plain(patched.forecast, true)).toEqual(plain(server.forecast, true));
+        expect(patched.months[0]).toEqual(server.months[0]);
+        expect(client.getQueryData<ReturnType<typeof forecastTotalsOf>>(card)?.months[0]).toEqual(server.months[0]);
+        undo();
+        expect(client.getQueryData<ReturnType<typeof forecastRowsOf>>(rows)?.months[0]?.netMinor).not.toBe(undefined);
       });
     },
   );
