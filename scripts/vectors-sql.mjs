@@ -1,8 +1,7 @@
 /**
  * FLOW-1305: writes supabase/tests/database/vectors_<builder>.test.sql, one pgTAP file per builder
  * whose SQL core exists, from the shared vectors in packages/shared/fixtures/vectors/<builder>/.
- * A core "exists" when a migration creates `function private.<core>`: month-forecast's does (FLOW-1313),
- * loan-schedule's lands with FLOW-1306. A builder with no core yet gets no file.
+ * A core "exists" when a migration creates `function private.<core>`.
  *
  *   node scripts/vectors-sql.mjs           write the files
  *   node scripts/vectors-sql.mjs --check   exit 1 when a file is missing, stale, or left for a core that is gone
@@ -66,6 +65,24 @@ function quote(text) {
 }
 
 /**
+ * One vector's pgTAP line: the core's answer equals the vector's expected. A loan-schedule refusal
+ * (`{ error: code }`) is compared by its code instead: private.loan_schedule raises SQLSTATE 22023
+ * with the LoanScheduleError code as the message (FLOW-1306).
+ *
+ * @param {string} builder
+ * @param {string} core
+ * @param {{ name: string, input: unknown, expected: unknown }} vector
+ */
+function assertionFor(builder, core, vector) {
+  const call = `private.${core}(${quote(JSON.stringify(vector.input))}::jsonb)`;
+  const expected = /** @type {{ error?: unknown } | null} */ (vector.expected);
+  if (builder === "loan-schedule" && typeof expected?.error === "string") {
+    return `select throws_ok(${quote(`select ${call}`)}, '22023', ${quote(expected.error)}, ${quote(vector.name)});`;
+  }
+  return `select is(${call}, ${quote(JSON.stringify(vector.expected))}::jsonb, ${quote(vector.name)});`;
+}
+
+/**
  * @param {string} builder
  * @param {string} core
  * @param {{ name: string, input: unknown, expected: unknown }[]} vectors
@@ -80,11 +97,7 @@ export function renderSql(builder, core, vectors) {
     `select plan(${String(vectors.length)});`,
     "",
   ];
-  for (const vector of vectors) {
-    const input = quote(JSON.stringify(vector.input));
-    const expected = quote(JSON.stringify(vector.expected));
-    lines.push(`select is(private.${core}(${input}::jsonb), ${expected}::jsonb, ${quote(vector.name)});`);
-  }
+  for (const vector of vectors) lines.push(assertionFor(builder, core, vector));
   lines.push("", "select * from finish();", "rollback;", "");
   return lines.join("\n");
 }
@@ -132,5 +145,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   if (check) console.log("vectors-sql: every generated vectors test file is up to date");
-  else console.log(written.length === 0 ? "vectors-sql: nothing to write (every generated file is current)" : `vectors-sql: wrote ${written.join(", ")}`);
+  else console.log(written.length === 0 ? "vectors-sql: nothing to write (no SQL core exists yet)" : `vectors-sql: wrote ${written.join(", ")}`);
 }

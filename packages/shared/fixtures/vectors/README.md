@@ -50,9 +50,9 @@ One vector per file, and the file is named `<name>.json`.
 ## Where they run
 
 - `packages/shared/src/vectors.test.ts` (vitest) runs every vector through the TypeScript builder.
-- `scripts/vectors-sql.mjs` writes `supabase/tests/database/vectors_<builder>.test.sql` for each builder whose SQL core is in a migration: it calls `private.<core>(input::jsonb)` and expects `expected::jsonb`. The cores are `private.month_forecast_build(p_input jsonb)` and `private.loan_schedule(p_terms jsonb)`, as the FLOW-1275 plan names them. The month-forecast core exists (FLOW-1313); loan-schedule's has no migration yet, so no file is written for it. `node scripts/vectors-sql.mjs --check` is in the gate: it fails when a generated file is stale (or one is left for a core that is gone). After a vector changes, run `node scripts/vectors-sql.mjs` and commit the result.
+- `scripts/vectors-sql.mjs` writes `supabase/tests/database/vectors_<builder>.test.sql` for each builder whose SQL core is in a migration: it calls `private.<core>(input::jsonb)` and expects `expected::jsonb`. The cores are `private.month_forecast_build(p_input jsonb)` and `private.loan_schedule(p_terms jsonb)`, as the FLOW-1275 plan names them. `private.loan_schedule` exists (FLOW-1306): a refused vector (`{ error }`) is checked with `throws_ok`, SQLSTATE `22023` and the code as the message. `node scripts/vectors-sql.mjs --check` is in the gate: it fails when a generated file is stale (or one is left for a core that is gone). After a vector changes, run `node scripts/vectors-sql.mjs` and commit the result.
 
-The generated SQL is a starting point. A database slice may compare rows as sets plus totals and map `expected` to the core's own output shape, by adjusting the generator; the vectors stay the one source. FLOW-1313's core gives the vector's `expected` as it is (items, the four key lists, totals, changed), so month-forecast's file is one exact `is` per vector.
+The generated SQL is a starting point. The database slices (FLOW-1313, FLOW-1306) compare rows as sets plus totals and may map `expected` to the core's own output shape; they adjust the generator, and the vectors stay the one source.
 
 ## Adding a vector
 

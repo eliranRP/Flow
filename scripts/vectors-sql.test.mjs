@@ -28,14 +28,15 @@ function fixture({ core = false } = {}) {
 
 const cli = (root, ...args) => spawnSync("node", [script, "--root", root, ...args], { encoding: "utf8" });
 
-test("the repo's vectors are readable, and a generated file exists exactly for each builder whose SQL core is in a migration", () => {
+test("the repo's vectors are readable and each builder has a generated file exactly when its core exists", () => {
   const { written, problems } = run(repo, { check: true });
   assert.deepEqual(problems, []);
   assert.deepEqual(written, []);
+  assert.equal(coreExists(repo, "loan_schedule"), true);
+  assert.equal(coreExists(repo, "month_forecast_build"), true);
   for (const [builder, core] of Object.entries(BUILDERS)) {
     assert.equal(existsSync(path.join(repo, sqlPathFor(builder))), coreExists(repo, core), builder);
   }
-  assert.equal(coreExists(repo, "month_forecast_build"), true, "FLOW-1313's core is in a migration");
   assert.equal(spawnSync("node", [script, "--check"], { encoding: "utf8" }).status, 0);
 });
 
@@ -139,6 +140,16 @@ test("renderSql numbers the plan and closes the transaction", () => {
     { name: "b", input: { x: 3 }, expected: { error: "rate" } },
   ]);
   assert.match(sql, /select plan\(2\);/);
-  assert.equal(sql.match(/select is\(/g)?.length, 2);
+  assert.equal(sql.match(/select is\(/g)?.length, 1);
   assert.match(sql, /select \* from finish\(\);\nrollback;\n$/);
+});
+
+test("a loan-schedule refusal is compared by its error code, and only for that builder", () => {
+  const refused = { name: "b", input: { x: 3 }, expected: { error: "rate" } };
+  const sql = renderSql("loan-schedule", "loan_schedule", [refused]);
+  // The call is quoted once more inside throws_ok, so its tag grows past the input's.
+  assert.match(sql, /select throws_ok\(\$vv\$select private\.loan_schedule\(\$v\$\{"x":3\}\$v\$::jsonb\)\$vv\$, '22023', \$v\$rate\$v\$, \$v\$b\$v\$\);/);
+  const other = renderSql("month-forecast", "month_forecast_build", [refused]);
+  assert.equal(other.match(/select is\(/g)?.length, 1);
+  assert.doesNotMatch(other, /throws_ok/);
 });
