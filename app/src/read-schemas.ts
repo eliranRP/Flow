@@ -12,7 +12,6 @@ export {
   cashYearsSchema,
   categoryRowSchema,
   dashboardSchema,
-  expectedMonthsSchema,
   filedTodaySchema,
   homeSummarySchema,
   mercuryStatusSchema,

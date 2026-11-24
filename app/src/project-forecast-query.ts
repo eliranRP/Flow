@@ -76,7 +76,7 @@ function patchSkips(client: QueryClient, month: string, change: (keys: readonly 
 }
 
 // The project forecast's own patch joins the month forecast's writes when this module is loaded (with a project page; Home's
-// entry carries only the registry). A forecast held before the page loaded is dropped by the write (forecast-month.ts).
+// entry carries only the setter). A project forecast held before it loaded (a kept one) is dropped by the skip (forecast-month.ts), so it is read fresh.
 setProjectForecastPatch(patchSkips);
 
 /**

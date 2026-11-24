@@ -84,6 +84,8 @@ function withSkip(keys: readonly string[], key: string, out: boolean | undefined
 function changeSkips(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
   watchForecastWrites(client);
   const undoForecast = patchCompanyForecast(client, month, change);
+  // Without the project page's patch loaded (nothing has opened a project this session) a project forecast can only be a kept one, which the skip would leave ahead of the books: it is dropped, so the page reads it fresh.
+  if (projectForecastPatch == null) client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: isProjectForecast });
   const undoProject = projectForecastPatch?.(client, month, change);
   return () => {
     undoForecast();
