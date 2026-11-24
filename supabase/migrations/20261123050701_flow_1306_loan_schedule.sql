@@ -439,7 +439,7 @@ end;
 $$;
 
 comment on function private.loan_schedule(jsonb) is
-  'FLOW-1306. buildLoanSchedule (packages/shared/src/loan-schedule.ts) on LoanTerms as JSON, amounts in minor units: { rows, balloon, finalAdjustment }. Refused terms raise 22023 with the LoanScheduleError code as the message. The shared vectors (packages/shared/fixtures/vectors/loan-schedule) run through both.';
+  'FLOW-1306. buildLoanSchedule (packages/shared/src/loan-schedule.ts) on LoanTerms as JSON, amounts in minor units: { rows, balloon, finalAdjustment }. Refused terms raise 22023 with the LoanScheduleError code as the message. The shared vectors (packages/shared/fixtures/vectors/loan-schedule) run through both. One difference: an amount (principalMinor, paymentMinor, escrowMinor) above 2^53 - 1 is refused here (principal, payment, escrow), where the TypeScript bigint would build; no read sends one (agorotSchema refuses it too).';
 
 revoke all on function private.loan_schedule_days_in_month(integer, integer) from public, anon, authenticated;
 revoke all on function private.loan_schedule_parse_date(text) from public, anon, authenticated;
@@ -494,7 +494,7 @@ create table public.loan_schedule_meta (
 );
 
 comment on table public.loan_schedule_meta is
-  'FLOW-1306. One row per loan: state built (rows in loan_schedule_rows), refused (error is the LoanScheduleError code, no rows) or none (a demand loan or one that is not open: no schedule, as scheduleRowsOf). balloon_* and final_adjustment_minor as buildLoanSchedule gives them; terms_hash is md5 of the terms passed to private.loan_schedule. Written only by the triggers.';
+  'FLOW-1306. One row per loan: state built (rows in loan_schedule_rows), refused (error is the LoanScheduleError code, no rows) or none (a demand loan or one that is not open: no schedule, as scheduleRowsOf). balloon_* and final_adjustment_minor as buildLoanSchedule gives them; a balloon with a null balloon_ratio means a zero regular payment (Infinity in TypeScript). A read that prints balloon_ratio as JSON needs extra_float_digits >= 1 to give the TypeScript double exactly. terms_hash is md5 of the terms passed to private.loan_schedule. Written only by the triggers.';
 
 create index loan_schedule_meta_company_loan_idx on public.loan_schedule_meta (company_id, loan_id);
 
@@ -533,7 +533,10 @@ declare
   failure text;
   state text := 'built';
 begin
-  select * into loan from public.loans where id = p_loan_id;
+  -- The loan's row lock orders two writes to one loan: the second rebuild waits for the first to commit, then reads
+  -- its rows and rates (no duplicate row, no stale meta). No key update does not conflict with the key share lock a
+  -- loan_rates write takes on its loan.
+  select * into loan from public.loans where id = p_loan_id for no key update;
   if not found then
     return;
   end if;
