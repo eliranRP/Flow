@@ -79,6 +79,15 @@ describe("shared vectors: month-forecast", () => {
 
   const wire = (item: ForecastItem) => ({ ...item, usual: Number(item.usual), minor: Number(item.minor) });
 
+  // FLOW-1312: flow-mcp's tests import the vectors by name (tools_forecast_vectors.ts; its Deno tests cannot read a folder), so a
+  // vector added here fails until it is imported there, or listed below with its reason.
+  it("flow-mcp's forecast test imports every vector but the documented exceptions", () => {
+    const exceptions = new Map([["payment-terms-mark-late-items", "month_forecast sets no payment terms (sample data only), so the tool has nothing to match"]]);
+    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../supabase/functions/flow-mcp/tools_forecast_vectors.ts"), "utf8");
+    const imported = [...source.matchAll(/vectors\/month-forecast\/([^"]+)\.json"/g)].map((match) => match[1]).sort();
+    expect([...imported, ...exceptions.keys()].sort()).toEqual(vectors.map((vector) => vector.name).sort());
+  });
+
   it("has the cases the task names", () => {
     const names = vectors.map((vector) => vector.name);
     for (const part of ["split-party", "handover", "ended-charge", "quarter-charge-in", "quarter-charge-next", "edit-add", "edit-change", "edit-remove", "2-pow-53"]) {

@@ -214,8 +214,8 @@ Deno.test("get_forecast refuses an answer with no usable currency or a malformed
 // for each, read back by the tool, is the builder's own build (the app's FLOW-1314 mapper does the same), and the tool's
 // answer is the one the builder gave.
 Deno.test("get_forecast equals the builder's forecast for every shared month-forecast vector", async () => {
-  // The folder holds 37 vectors, the payment-terms one left out (month_forecast sets no terms): a new vector fails here until it is added.
-  assertEquals(MONTH_FORECAST_VECTORS.length, 36);
+  // packages/shared/src/vectors.test.ts checks that tools_forecast_vectors.ts imports every vector in the folder but the documented
+  // exception (payment terms), so a new vector fails there until it is added.
   for (const vector of MONTH_FORECAST_VECTORS) {
     const { name } = vector;
     const { input } = vector;
