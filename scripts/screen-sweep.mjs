@@ -48,6 +48,11 @@
  * upper bound as it includes work after the page settles), network busy (the union of the Supabase
  * REST request intervals, started in the window), waves (request starts more than 250 ms apart),
  * requests and KB (encoded bytes received). Results: medians with every run, as a table, or as JSON.
+ *
+ * A run whose data shown is not reached within the window says why on its stderr line: whether the
+ * marker was drawn, which skeleton selectors were still up, and how many of the window's reads had not
+ * answered, with the slowest by its REST path (no query, no headers). A slow backend answer that pushes
+ * the last wave past the window reads differently from a marker or selector that never matches.
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -211,7 +216,7 @@ async function openPhone(context, { target = "/", marker = null, saveData = fals
   const reads = new Map();
   cdp.on("Network.requestWillBeSent", (e) => {
     if (reads.has(e.requestId) || !REST.test(e.request.url) || e.request.method === "OPTIONS") return;
-    reads.set(e.requestId, { start: e.wallTime * 1000, stamp: e.timestamp, end: null, bytes: 0 });
+    reads.set(e.requestId, { start: e.wallTime * 1000, stamp: e.timestamp, end: null, bytes: 0, name: new URL(e.request.url).pathname.replace(/^.*\/rest\/v1\//, "") });
   });
   const done = (e, bytes) => {
     const read = reads.get(e.requestId);
@@ -289,8 +294,35 @@ async function collect(phone, taskBefore, readsBefore) {
   if (open !== null) busy += open[1] - open[0];
   const waves = reads.filter((r, i) => i === 0 || r.start - reads[i - 1].start > WAVE_GAP_MS).length;
   const kb = reads.reduce((sum, r) => sum + r.bytes, 0) / 1024;
-  const route = await phone.page.evaluate(() => location.pathname + location.search);
-  return { shown, fresh, task, busy, waves, requests: reads.length, kb, readsBefore, route: s.at?.route ?? route, marker: shown !== null };
+  const page = await phone.page.evaluate(([marker, sel]) => ({
+    route: location.pathname + location.search,
+    drawn: marker !== null && document.querySelector(marker) !== null,
+    skeletons: sel.split(",").map((x) => x.trim()).filter((x) => document.querySelector(x) !== null),
+  }), [s.marker, SKELETON]);
+  const stuck = shown === null ? notReached(page, reads, s.t0 + WINDOW_MS) : null;
+  return { shown, fresh, task, busy, waves, requests: reads.length, kb, readsBefore, route: s.at?.route ?? page.route, marker: shown !== null, stuck };
+}
+
+/**
+ * Why data shown was not reached, from the page at the window's end and the window's reads: whether the
+ * marker was drawn, the skeleton selectors still matching, and the reads not answered by `end` (epoch
+ * ms) with the slowest one's REST path and time (answered or not, measured up to `end`).
+ */
+export function notReached({ drawn, skeletons }, reads, end) {
+  const open = reads.filter((r) => r.end === null || r.end > end).length;
+  let slowest = null;
+  for (const r of reads) {
+    const ms = Math.min(r.end ?? end, end) - r.start;
+    if (slowest === null || ms > slowest.ms) slowest = { name: r.name, ms };
+  }
+  return { drawn, skeletons, open, slowest };
+}
+
+/** The reason as words for the run's line. */
+export function describeStuck({ drawn, skeletons, open, slowest }) {
+  const parts = [drawn ? "marker drawn" : "marker not drawn", skeletons.length > 0 ? `skeleton up (${skeletons.join(", ")})` : "no skeleton", `${String(open)} reads unanswered at the window's end`];
+  if (slowest !== null) parts.push(`slowest ${slowest.name} ${Math.round(slowest.ms).toLocaleString("en-US")} ms`);
+  return parts.join(", ");
 }
 
 /** First visit: a fresh context, the screen's URL loaded directly, nothing read or kept before it. */
@@ -363,7 +395,7 @@ function printTables(result) {
 /** One line per run on stderr: the evidence that data shown was taken on the right route and marker. */
 function logRun(label, row) {
   const f = (x) => (x === null ? "—" : String(Math.round(x)));
-  progress(`  ${label}: shown ${f(row.shown)} ms, fresh ${f(row.fresh)} ms, route ${row.route}, data shown ${row.marker ? "reached (route and marker matched)" : "not reached"}, reads before ${row.readsBefore === null ? "—" : String(row.readsBefore)}`);
+  progress(`  ${label}: shown ${f(row.shown)} ms, fresh ${f(row.fresh)} ms, route ${row.route}, data shown ${row.marker ? "reached (route and marker matched)" : `not reached within ${String(WINDOW_MS)} ms: ${describeStuck(row.stuck)}`}, reads before ${row.readsBefore === null ? "—" : String(row.readsBefore)}`);
 }
 
 async function main() {
@@ -398,8 +430,10 @@ async function main() {
   else printTables(result);
 }
 
-main().catch((error) => {
-  // The message only: nothing here holds the session text.
-  process.stderr.write(`Sweep failed: ${error instanceof Error ? error.message.split("\n")[0] : "unknown error"}\n`);
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    // The message only: nothing here holds the session text.
+    process.stderr.write(`Sweep failed: ${error instanceof Error ? error.message.split("\n")[0] : "unknown error"}\n`);
+    process.exit(1);
+  });
+}
