@@ -19,16 +19,16 @@ export function prefetchForecastReads(client: QueryClient, preview: string, proj
   const month = nextMonthKey(today);
   const quiet = { staleTime, retry: false };
   // FLOW-1297: the page builds the overhead project from the company's general costs, not from the project's own reads
-  // (next-month-for-project.ts), so a touch of the overhead project's row starts the three project reads below not at all.
-  // The check is the page's: the overhead answer names this project. A failed or empty answer starts them, as the page does.
-  const ownReads = () => {
+  // (next-month-for-project.ts), so a touch of the overhead project's row needs none of the three project reads below.
+  // The check is the page's (the overhead answer names this project), and it is used only when that answer is already
+  // in the cache: waiting for it would start every other row's reads one round trip late, and most rows are not the
+  // overhead project. Without a cached answer the reads start at once, as before.
+  const overhead = client.getQueryData<{ id: string } | null>(overheadProjectOptions(preview).queryKey);
+  client.query({ ...overheadProjectOptions(preview), ...quiet }).catch(() => undefined);
+  if (overhead?.id !== projectId) {
     client.query({ ...projectExpectedOptions(preview, projectId), ...quiet }).catch(() => undefined);
     client.query({ ...projectCategoryMonthsOptions(preview, projectId, day), ...quiet }).catch(() => undefined);
     client.query({ ...forecastEditsOptions(preview, projectId, month), ...quiet }).catch(() => undefined);
-  };
-  void client.query({ ...overheadProjectOptions(preview), ...quiet }).then(
-    (overhead) => { if (overhead?.id !== projectId) ownReads(); },
-    () => { ownReads(); },
-  );
+  }
   client.query({ ...overridesQuery(month, preview, true), ...quiet }).catch(() => undefined);
 }
