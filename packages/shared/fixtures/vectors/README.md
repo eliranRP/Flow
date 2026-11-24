@@ -50,7 +50,9 @@ One vector per file, and the file is named `<name>.json`.
 ## Where they run
 
 - `packages/shared/src/vectors.test.ts` (vitest) runs every vector through the TypeScript builder.
-- `scripts/vectors-sql.mjs` writes `supabase/tests/database/vectors_<builder>.test.sql` for each builder whose SQL core is in a migration: it calls `public.<core>(input::jsonb)` and expects `expected::jsonb`. The cores are `public.month_forecast_core(jsonb)` and `public.loan_schedule_core(jsonb)`, each returning the `expected` shape; the slice that adds one changes the name in the script if it differs. No core exists yet, so nothing is written. `node scripts/vectors-sql.mjs --check` is in the gate: it fails when a generated file is stale (or one is left for a core that is gone). After a vector changes, run `node scripts/vectors-sql.mjs` and commit the result.
+- `scripts/vectors-sql.mjs` writes `supabase/tests/database/vectors_<builder>.test.sql` for each builder whose SQL core is in a migration: it calls `private.<core>(input::jsonb)` and expects `expected::jsonb`. The cores are `private.month_forecast_build(p_input jsonb)` and `private.loan_schedule(p_terms jsonb)`, as the FLOW-1275 plan names them. No core exists yet, so nothing is written. `node scripts/vectors-sql.mjs --check` is in the gate: it fails when a generated file is stale (or one is left for a core that is gone). After a vector changes, run `node scripts/vectors-sql.mjs` and commit the result.
+
+The generated SQL is a starting point. The database slices (FLOW-1313, FLOW-1306) compare rows as sets plus totals and may map `expected` to the core's own output shape; they adjust the generator, and the vectors stay the one source.
 
 ## Adding a vector
 

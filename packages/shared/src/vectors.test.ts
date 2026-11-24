@@ -16,13 +16,24 @@ const vectorsDir = join(dirname(fileURLToPath(import.meta.url)), "../fixtures/ve
 
 type Vector = { name: string; description?: string; input: Record<string, unknown>; expected: Record<string, unknown> };
 
+/** JSON.parse rounds a literal past 2^53 - 1 without a word, so the raw text is read too. */
+function expectSafeLiterals(text: string, name: string): void {
+  const max = BigInt(Number.MAX_SAFE_INTEGER);
+  for (const literal of text.match(/-?\d{16,}/g) ?? []) {
+    const value = BigInt(literal);
+    expect(value <= max && value >= -max, `${name}: ${literal} is inside 2^53 - 1`).toBe(true);
+  }
+}
+
 function load(builder: string): Vector[] {
   const dir = join(vectorsDir, builder);
   return readdirSync(dir)
     .filter((file) => file.endsWith(".json"))
     .sort()
     .map((file) => {
-      const vector = JSON.parse(readFileSync(join(dir, file), "utf8")) as Vector;
+      const text = readFileSync(join(dir, file), "utf8");
+      expectSafeLiterals(text, file);
+      const vector = JSON.parse(text) as Vector;
       expect(file, "the file is named after the vector").toBe(`${vector.name}.json`);
       return vector;
     });
@@ -78,6 +89,10 @@ describe("shared vectors: month-forecast", () => {
   it.each(vectors.map((vector) => [vector.name, vector] as const))("%s", (_name, vector) => {
     expectSafeAmounts(vector, vector.name);
     const build = buildMonthForecast(buildInput(vector.input));
+    const max = BigInt(Number.MAX_SAFE_INTEGER);
+    for (const amount of [...build.items.flatMap((item) => [item.usual, item.minor]), build.incomeTotal, build.expenseTotal]) {
+      expect(amount >= -max && amount <= max, `${vector.name}: ${String(amount)} is a safe integer`).toBe(true);
+    }
     const keys = (list: readonly ForecastItem[]) => list.map((item) => item.key);
     expect({
       items: build.items.map(wire),
