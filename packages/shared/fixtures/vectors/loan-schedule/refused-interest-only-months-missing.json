@@ -1,0 +1,6 @@
+{
+  "name": "refused-interest-only-months-missing",
+  "description": "An interest-only loan with null months is refused.",
+  "input": {"principalMinor":12000000,"annualRatePpm":60000,"termMonths":24,"startDate":"2026-01-01","paymentMinor":100000,"escrowMinor":10000,"kind":"interest_only","interestOnlyMonths":null},
+  "expected": {"error":"interest_only_months"}
+}

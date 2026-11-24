@@ -1,0 +1,6 @@
+{
+  "name": "refused-term-over-600",
+  "description": "A term over LOAN_TERM_MONTHS_MAX (600) is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":601,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"term"}
+}

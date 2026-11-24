@@ -95,6 +95,8 @@ jobs:
         run: node scripts/check-file-size.mjs
       - name: Backlog index is up to date
         run: node scripts/backlog-index.mjs --check
+      - name: Shared vectors tests are up to date
+        run: node scripts/vectors-sql.mjs --check
       - name: Locate the pnpm store
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"

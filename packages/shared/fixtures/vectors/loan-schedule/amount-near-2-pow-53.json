@@ -1,0 +1,14 @@
+{
+  "name": "amount-near-2-pow-53",
+  "description": "A principal of 90,071,992,547,409.00 at zero rate over 3 months stays exact.",
+  "input": {"principalMinor":9007199254740990,"annualRatePpm":0,"termMonths":3,"startDate":"2026-01-01","paymentMinor":3002399751580330,"escrowMinor":0},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-01","interestMinor":0,"escrowMinor":0,"principalMinor":3002399751580330,"paymentMinor":3002399751580330,"balanceMinor":6004799503160660},
+      {"period":2,"dueDate":"2026-02-01","interestMinor":0,"escrowMinor":0,"principalMinor":3002399751580330,"paymentMinor":3002399751580330,"balanceMinor":3002399751580330},
+      {"period":3,"dueDate":"2026-03-01","interestMinor":0,"escrowMinor":0,"principalMinor":3002399751580330,"paymentMinor":3002399751580330,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

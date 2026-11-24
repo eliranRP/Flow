@@ -1,0 +1,6 @@
+{
+  "name": "refused-rate-over-100-percent",
+  "description": "A rate over 1,000,000 ppm is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":1000001,"termMonths":360,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"rate"}
+}

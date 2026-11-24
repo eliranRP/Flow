@@ -1,0 +1,23 @@
+{
+  "name": "payment-equal-to-interest",
+  "description": "A payment equal to the interest on 10,000,000.00 at 6 percent: no principal paid, the balloon is the whole balance plus interest.",
+  "input": {"principalMinor":1000000000,"annualRatePpm":60000,"termMonths":12,"startDate":"2026-02-01","paymentMinor":5000000,"escrowMinor":0},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-02-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":2,"dueDate":"2026-03-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":3,"dueDate":"2026-04-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":4,"dueDate":"2026-05-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":5,"dueDate":"2026-06-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":6,"dueDate":"2026-07-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":7,"dueDate":"2026-08-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":8,"dueDate":"2026-09-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":9,"dueDate":"2026-10-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":10,"dueDate":"2026-11-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":11,"dueDate":"2026-12-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":0,"paymentMinor":5000000,"balanceMinor":1000000000},
+      {"period":12,"dueDate":"2027-01-01","interestMinor":5000000,"escrowMinor":0,"principalMinor":1000000000,"paymentMinor":1005000000,"balanceMinor":0}
+    ],
+    "balloon": {"amountMinor":1005000000,"ratioToPayment":201},
+    "finalAdjustment": null
+  }
+}

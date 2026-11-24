@@ -1,0 +1,14 @@
+{
+  "name": "one-cent-below-annuity-is-quiet",
+  "description": "Principal 3.03 over 3 months at 1.00: the last payment is 1.03, one cent over; no balloon.",
+  "input": {"annualRatePpm":0,"startDate":"2026-01-01","escrowMinor":0,"principalMinor":303,"termMonths":3,"paymentMinor":100},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-01","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":203},
+      {"period":2,"dueDate":"2026-02-01","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":103},
+      {"period":3,"dueDate":"2026-03-01","interestMinor":0,"escrowMinor":0,"principalMinor":103,"paymentMinor":103,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": {"amountMinor":103}
+  }
+}

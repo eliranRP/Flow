@@ -1,0 +1,6 @@
+{
+  "name": "refused-fractional-term",
+  "description": "A term that is not whole months is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":1.5,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"term"}
+}

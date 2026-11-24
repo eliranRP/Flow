@@ -1,0 +1,6 @@
+{
+  "name": "refused-zero-term",
+  "description": "A term of zero is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":0,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"term"}
+}

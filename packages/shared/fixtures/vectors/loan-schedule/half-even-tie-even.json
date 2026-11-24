@@ -1,0 +1,13 @@
+{
+  "name": "half-even-tie-even",
+  "description": "A monthly interest of 2.5 minor units rounds to 2 (half to even).",
+  "input": {"principalMinor":30000000,"annualRatePpm":1,"termMonths":2,"startDate":"2026-01-15","paymentMinor":20000000,"escrowMinor":0},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-15","interestMinor":2,"escrowMinor":0,"principalMinor":19999998,"paymentMinor":20000000,"balanceMinor":10000002},
+      {"period":2,"dueDate":"2026-02-15","interestMinor":1,"escrowMinor":0,"principalMinor":10000002,"paymentMinor":10000003,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

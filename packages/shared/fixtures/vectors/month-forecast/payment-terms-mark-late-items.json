@@ -1,0 +1,180 @@
+{
+  "name": "payment-terms-mark-late-items",
+  "description": "With paymentTermsDays set (sample data) the expected date and late days are filled.",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": [
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-rent",
+          "name": "Rent Co",
+          "typical_amount_minor": -500000
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 5,
+          "party_id": "p-tea",
+          "name": "Tea Shop",
+          "typical_amount_minor": -3000
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": true,
+          "typical_day": 2,
+          "party_id": "p-seen",
+          "name": "Already Paid",
+          "typical_amount_minor": -90000
+        },
+        {
+          "direction": "income",
+          "currency": "ILS",
+          "months_seen": 4,
+          "seen_this_month": false,
+          "typical_day": 10,
+          "party_id": "p-retainer",
+          "name": "Retainer",
+          "typical_amount_minor": 800000
+        }
+      ]
+    },
+    "unpaid": [
+      {
+        "id": "inv-1",
+        "description": "Invoice 1",
+        "doc_date": "2026-10-02",
+        "project_name": null,
+        "customer_name": "Client A",
+        "open_gross_agorot": 250000,
+        "open_net_agorot": 250000,
+        "currency": "ILS"
+      },
+      {
+        "id": "inv-2",
+        "description": "Invoice 2",
+        "doc_date": "2026-10-03",
+        "project_name": null,
+        "customer_name": null,
+        "open_gross_agorot": 0,
+        "open_net_agorot": 0,
+        "currency": "ILS"
+      }
+    ],
+    "overrides": [],
+    "paymentTermsDays": 30
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "party:expense:p-rent:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Rent Co",
+        "currency": "ILS",
+        "usual": 500000,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": "2026-10-01",
+        "late_days": 15,
+        "minor": 500000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:expense:p-tea:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Tea Shop",
+        "currency": "ILS",
+        "usual": 3000,
+        "day": 5,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": "2026-10-05",
+        "late_days": 11,
+        "minor": 3000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:income:p-retainer:ILS",
+        "direction": "income",
+        "kind": "recurring",
+        "name": "Retainer",
+        "currency": "ILS",
+        "usual": 800000,
+        "day": 10,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": "2026-10-10",
+        "late_days": 6,
+        "minor": 800000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "invoice:inv-1",
+        "direction": "income",
+        "kind": "invoice",
+        "name": "Client A",
+        "currency": "ILS",
+        "usual": 250000,
+        "day": null,
+        "description": "Invoice 1",
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": null,
+        "line_start": null,
+        "expected_on": "2026-11-01",
+        "late_days": 0,
+        "minor": 250000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      }
+    ],
+    "income": [
+      "party:income:p-retainer:ILS",
+      "invoice:inv-1"
+    ],
+    "expense": [
+      "party:expense:p-rent:ILS"
+    ],
+    "moved": [],
+    "small": [
+      "party:expense:p-tea:ILS"
+    ],
+    "incomeTotal": 1050000,
+    "expenseTotal": 503000,
+    "changed": 0
+  }
+}

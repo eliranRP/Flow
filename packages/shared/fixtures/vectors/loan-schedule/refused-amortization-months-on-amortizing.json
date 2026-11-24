@@ -1,0 +1,6 @@
+{
+  "name": "refused-amortization-months-on-amortizing",
+  "description": "Amortization months on an amortizing loan are refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":360,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0,"amortizationMonths":400},
+  "expected": {"error":"amortization_months"}
+}

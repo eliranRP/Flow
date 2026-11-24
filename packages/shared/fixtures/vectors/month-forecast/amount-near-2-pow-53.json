@@ -1,0 +1,133 @@
+{
+  "name": "amount-near-2-pow-53",
+  "description": "Amounts up to 2^53 - 1 are exact; the totals stay inside it.",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": [
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-big",
+          "name": "Big Charge",
+          "typical_amount_minor": -9007199254740000
+        },
+        {
+          "direction": "income",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-inc",
+          "name": "Big Income",
+          "typical_amount_minor": 9007199254740000
+        }
+      ]
+    },
+    "unpaid": [
+      {
+        "id": "inv-1",
+        "description": "Invoice 1",
+        "doc_date": "2026-10-02",
+        "project_name": null,
+        "customer_name": "Client A",
+        "open_gross_agorot": 250000,
+        "open_net_agorot": 250000,
+        "currency": "ILS"
+      }
+    ],
+    "overrides": [
+      {
+        "item_key": "invoice:inv-1",
+        "amount_minor": 991,
+        "due_on": null,
+        "moved_out": false
+      }
+    ]
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "party:expense:p-big:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Big Charge",
+        "currency": "ILS",
+        "usual": 9007199254740000,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 9007199254740000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:income:p-inc:ILS",
+        "direction": "income",
+        "kind": "recurring",
+        "name": "Big Income",
+        "currency": "ILS",
+        "usual": 9007199254740000,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 9007199254740000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "invoice:inv-1",
+        "direction": "income",
+        "kind": "invoice",
+        "name": "Client A",
+        "currency": "ILS",
+        "usual": 250000,
+        "day": null,
+        "description": "Invoice 1",
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": null,
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 991,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": true
+      }
+    ],
+    "income": [
+      "party:income:p-inc:ILS",
+      "invoice:inv-1"
+    ],
+    "expense": [
+      "party:expense:p-big:ILS"
+    ],
+    "moved": [],
+    "small": [],
+    "incomeTotal": 9007199254740991,
+    "expenseTotal": 9007199254740000,
+    "changed": 1
+  }
+}

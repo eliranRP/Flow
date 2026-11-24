@@ -1,0 +1,62 @@
+{
+  "name": "yearly-charge-due-this-month",
+  "description": "A yearly charge due this month counts with its yearly amount.",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": [
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 2,
+          "seen_this_month": false,
+          "typical_day": 12,
+          "party_id": "p-0",
+          "name": "Yearly Plan",
+          "typical_amount_minor": -44000,
+          "pace": "year",
+          "next_due_month": "2026-10"
+        }
+      ]
+    },
+    "unpaid": [],
+    "overrides": []
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "party:expense:p-0:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Yearly Plan",
+        "currency": "ILS",
+        "usual": 44000,
+        "day": 12,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "year",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 44000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      }
+    ],
+    "income": [],
+    "expense": [
+      "party:expense:p-0:ILS"
+    ],
+    "moved": [],
+    "small": [],
+    "incomeTotal": 0,
+    "expenseTotal": 44000,
+    "changed": 0
+  }
+}

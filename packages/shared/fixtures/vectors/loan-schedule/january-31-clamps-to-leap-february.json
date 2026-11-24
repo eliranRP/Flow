@@ -1,0 +1,13 @@
+{
+  "name": "january-31-clamps-to-leap-february",
+  "description": "A January 31 start lands on February 29 in a leap year.",
+  "input": {"principalMinor":200,"annualRatePpm":0,"termMonths":2,"startDate":"2024-01-31","paymentMinor":100,"escrowMinor":0},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2024-01-31","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":100},
+      {"period":2,"dueDate":"2024-02-29","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

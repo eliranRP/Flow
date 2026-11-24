@@ -1,0 +1,6 @@
+{
+  "name": "refused-negative-escrow",
+  "description": "A negative escrow is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":360,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":-1},
+  "expected": {"error":"escrow"}
+}

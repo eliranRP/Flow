@@ -1,0 +1,62 @@
+{
+  "name": "yearly-charge-late-counts",
+  "description": "A yearly charge whose due month passed counts this month.",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": [
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 2,
+          "seen_this_month": false,
+          "typical_day": 12,
+          "party_id": "p-0",
+          "name": "Late Yearly",
+          "typical_amount_minor": -40000,
+          "pace": "year",
+          "next_due_month": "2026-08"
+        }
+      ]
+    },
+    "unpaid": [],
+    "overrides": []
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "party:expense:p-0:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Late Yearly",
+        "currency": "ILS",
+        "usual": 40000,
+        "day": 12,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "year",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 40000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      }
+    ],
+    "income": [],
+    "expense": [
+      "party:expense:p-0:ILS"
+    ],
+    "moved": [],
+    "small": [],
+    "incomeTotal": 0,
+    "expenseTotal": 40000,
+    "changed": 0
+  }
+}

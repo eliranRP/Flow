@@ -1,0 +1,14 @@
+{
+  "name": "two-cents-below-annuity-is-flagged",
+  "description": "Principal 3.04: the last payment is 1.04, a balloon.",
+  "input": {"annualRatePpm":0,"startDate":"2026-01-01","escrowMinor":0,"principalMinor":304,"termMonths":3,"paymentMinor":100},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-01","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":204},
+      {"period":2,"dueDate":"2026-02-01","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":104},
+      {"period":3,"dueDate":"2026-03-01","interestMinor":0,"escrowMinor":0,"principalMinor":104,"paymentMinor":104,"balanceMinor":0}
+    ],
+    "balloon": {"amountMinor":104,"ratioToPayment":1.04},
+    "finalAdjustment": null
+  }
+}

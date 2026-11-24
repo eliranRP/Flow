@@ -1,0 +1,14 @@
+{
+  "name": "zero-rate-last-remainder",
+  "description": "A zero-rate loan pays down to a larger last payment; month ends clamp (31, 30, 31).",
+  "input": {"principalMinor":1000,"annualRatePpm":0,"termMonths":3,"startDate":"2026-03-31","paymentMinor":400,"escrowMinor":100},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-03-31","interestMinor":0,"escrowMinor":100,"principalMinor":300,"paymentMinor":400,"balanceMinor":700},
+      {"period":2,"dueDate":"2026-04-30","interestMinor":0,"escrowMinor":100,"principalMinor":300,"paymentMinor":400,"balanceMinor":400},
+      {"period":3,"dueDate":"2026-05-31","interestMinor":0,"escrowMinor":100,"principalMinor":400,"paymentMinor":500,"balanceMinor":0}
+    ],
+    "balloon": {"amountMinor":500,"ratioToPayment":1.3333333333333333},
+    "finalAdjustment": null
+  }
+}

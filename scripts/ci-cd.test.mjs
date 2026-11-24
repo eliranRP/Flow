@@ -679,6 +679,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     "node scripts/check-migration-transaction.mjs",
     "node scripts/check-file-size.mjs",
     "node scripts/backlog-index.mjs --check",
+    "node scripts/vectors-sql.mjs --check",
     "deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp",
     "pnpm typecheck",
     "node scripts/check-unused-app-code.mjs",
