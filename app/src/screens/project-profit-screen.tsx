@@ -350,7 +350,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 kind="profit"
                 takeaway
                 cardHref={`/projects/${id}/profit/next${search}`}
-                categories={nextMonth.categories}
+                income={nextMonth.income}
                 today={nextMonth.today}
               />
             </div>

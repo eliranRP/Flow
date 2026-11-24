@@ -73,6 +73,18 @@ function skipSet(patch: ForecastPatch): boolean | undefined {
   return patch.moved_out;
 }
 
+/**
+ * FLOW-1315: the project page's forecast (project_forecast) follows a skip at the tap too. Its patch lives with the page's code
+ * (project-forecast-query.ts) and joins here when that is loaded, so Home's entry carries only this list. Each patcher takes
+ * the month and the change of its keys and returns its undo.
+ */
+type SkipPatcher = (client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]) => () => void;
+const skipPatchers = new Set<SkipPatcher>();
+
+export function patchSkipsWith(patcher: SkipPatcher): void {
+  skipPatchers.add(patcher);
+}
+
 function withSkip(keys: readonly string[], key: string, out: boolean | undefined): readonly string[] {
   if (out == null) return keys;
   if (!out) return keys.filter((item) => item !== key);
@@ -99,6 +111,7 @@ function changeSkips(client: QueryClient, month: string, change: (keys: readonly
     client.setQueryData(query.queryKey, { ...data, skips: { ...data.skips, [month]: [...after] } });
     touched.push({ key: query.queryKey, added, removed });
   }
+  const undoOthers = [...skipPatchers].map((patch) => patch(client, month, change));
   return () => {
     for (const { key, added, removed } of touched) {
       const data = client.getQueryData<CompanySkips>(key);
@@ -107,6 +120,7 @@ function changeSkips(client: QueryClient, month: string, change: (keys: readonly
       const restored = [...now.filter((item) => !added.includes(item)), ...removed.filter((item) => !now.includes(item))];
       client.setQueryData(key, { ...data, skips: { ...data.skips, [month]: restored } });
     }
+    for (const undo of undoOthers) undo();
   };
 }
 
@@ -114,9 +128,12 @@ function changeSkips(client: QueryClient, month: string, change: (keys: readonly
  * FLOW-1201, FLOW-1202, FLOW-1214: a skip, reset or undo patches the skips above and reads no company inputs. The inputs
  * no screen holds (Company profit's year views) are dropped, so they load fresh and never show pre-write figures
  * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
+ * FLOW-1315: so are the project forecasts no screen holds (key `["month-forecast", preview, "project", ...]`, the project page's);
+ * the one on screen is patched at the tap and read again after the write.
  */
 function dropInactiveCompanyInputs(client: QueryClient) {
   client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
+  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => query.queryKey[2] === "project" });
 }
 
 const watchedClients = new WeakSet<QueryClient>();
@@ -143,6 +160,7 @@ function watchForecastWrites(client: QueryClient) {
     failedScopes.delete(scope);
     dropInactiveCompanyInputs(client);
     void client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: (query) => query.queryKey[2] === "company" });
+    void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: (query) => query.queryKey[2] === "project" });
   });
 }
 

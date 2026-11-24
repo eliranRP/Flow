@@ -116,7 +116,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const project = sample?.project ?? detail.data ?? null;
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
   // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
-  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth);
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth, true);
   const currency = next.currency;
   // FLOW-1006: a line added from the תזרים צפוי screen is for this month; every other write is for the page's
   // forecast month. A month that has ended is not forecast.
@@ -148,14 +148,14 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const row = add || forecast == null ? null : forecast.rows.find((item) => item.key === rowKey) ?? forecast.removed.find((item) => item.key === rowKey) ?? null;
   const choices = useMemo(() => categoryChoices({
     categories,
-    categoryMonths: next.categoryMonths,
-    recurring: next.recurring,
+    categoryMonths: next.history,
+    recurring: next.charges,
     projectId,
     currency,
     divisor: forecast?.averageMonths ?? 6,
     inForecast: forecast == null ? new Map<string, bigint>() : forecastCategoryAmounts(forecast),
     query,
-  }), [categories, next.categoryMonths, next.recurring, projectId, currency, forecast, query]);
+  }), [categories, next.history, next.charges, projectId, currency, forecast, query]);
   // The dev route's and a story's chosen category, from the same lists the sheet shows.
   const preset = sample?.categoryId == null
     ? null
@@ -183,7 +183,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const projectName = project?.name ?? "";
   const shownCategory = add ? chosen?.name ?? null : row == null ? "" : categoryName(row, categories);
   const historyCategory = add ? chosen?.id ?? null : row?.categoryId ?? null;
-  const bars = add && chosen == null ? null : historyBars(next.categoryMonths, historyCategory, currency);
+  const bars = add && chosen == null ? null : historyBars(next.history, historyCategory, currency);
   const diff = bars == null ? null : historyDiff(amount == null ? null : BigInt(amount), bars.usual, currency, month);
   // FLOW-1010: an added line starts at its own pace, so a save in its first month (which edits the line) keeps it
   // repeating unless the owner picks another; any other row starts at once, as before.
@@ -355,7 +355,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
           setSheet(null);
           setQuery("");
           // A new line starts at the category's usual month in the project, when it has one.
-          const usual = historyBars(next.categoryMonths, choice.id, currency)?.usual;
+          const usual = historyBars(next.history, choice.id, currency)?.usual;
           if (draftText == null && usual != null) setDraftText(draftOf(usual));
         }}
         onCreate={(newName) => {

@@ -3,7 +3,7 @@ import { CHART_MONTHS, type MonthFigures } from "./month-figures";
 import { shortMonth } from "./party-charges";
 import { shiftMonthKey } from "./period";
 import { monthWord } from "./project-next-edit";
-import type { NextMonthForecast } from "./project-next-month";
+import type { NextMonthForecast, NextMonthRow } from "./project-next-month";
 import { forecastWords, type ForecastKind } from "./ui/forecast-words";
 import type { ChartMonth } from "./ui/month-chart-scale";
 
@@ -145,14 +145,34 @@ export function isRent(categoryId: string | null, categories: readonly RentCateg
  * הכנסות קבועות" for other recurring income, a single other line by its name, else the count.
  */
 export function incomeNote(forecast: Pick<NextMonthForecast, "rows">, categories: readonly RentCategory[]): string {
-  const rows = forecast.rows.filter((row) => row.minor > 0n);
-  const count = rows.length;
+  return incomeNoteOfFacts(incomeFactsOf(forecast.rows, categories));
+}
+
+/**
+ * What the income notes read of a forecast's rows (FLOW-1308: company_forecast gives them as counts, so the notes need no
+ * rows or categories): the income rows, how many are recurring, how many of those are rent, and the row's name when it is the only one.
+ */
+export type IncomeFacts = { rows: number; recurring: number; rent: number; name: string | null };
+
+export function incomeFactsOf(rows: readonly Pick<NextMonthRow, "minor" | "kind" | "categoryId" | "name">[], categories: readonly RentCategory[]): IncomeFacts {
+  const income = rows.filter((row) => row.minor > 0n);
+  const recurring = income.filter((row) => row.kind === "recurring");
+  return {
+    rows: income.length,
+    recurring: recurring.length,
+    rent: recurring.filter((row) => isRent(row.categoryId, categories)).length,
+    name: income.length === 1 ? income[0]?.name ?? null : null,
+  };
+}
+
+/** incomeNote from the counts. */
+export function incomeNoteOfFacts({ rows: count, recurring, rent, name }: IncomeFacts): string {
   if (count === 0) return "אין הכנסה צפויה";
-  if (rows.every((row) => row.kind === "recurring")) {
-    if (rows.every((row) => isRent(row.categoryId, categories))) return count === 1 ? "שכירות קבועה אחת" : `${String(count)} שכירויות קבועות`;
+  if (recurring === count) {
+    if (rent === count) return count === 1 ? "שכירות קבועה אחת" : `${String(count)} שכירויות קבועות`;
     return count === 1 ? "הכנסה קבועה אחת" : `${String(count)} הכנסות קבועות`;
   }
-  if (count === 1) return rows[0]?.name ?? "";
+  if (count === 1) return name ?? "";
   return `${String(count)} הכנסות צפויות`;
 }
 

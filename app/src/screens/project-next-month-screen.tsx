@@ -95,7 +95,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const monthSearch = forecastMonthSearch(search, forMonth, today);
   const holdRole = useHoldWrites();
   const hold = sample == null && holdRole;
-  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth, !hold);
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth);
   const currency = next.currency;
   const writes = useProjectForecastWrites(projectId, next.month);
   // FLOW-1081: a recurring row swipes out of this month only (the month forecast's item), as on Home.
@@ -255,7 +255,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                 })}
               />
               {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
-              {next.edits.some((edit) => edit.start_month === forecast.month) ? (
+              {next.edited ? (
                 <Button
                   variant="link"
                   className="ui-pn-reset"

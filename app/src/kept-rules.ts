@@ -7,14 +7,15 @@ import type { ReadSchemas } from "./load-read-schemas";
  * preview's key (anything but "off") is never kept.
  *
  * Who reads a kept key, where that is not plain from its name:
- * - "expected-months" (the company's, and each project's): Profit's next month (company) and the project page's
- *   forecast card (project). FLOW-1314: Home's forecast and the forecast screen read month_forecast instead.
- * - "categories" (list_categories): Home, the project page's forecast card, Profit's next month and the pickers.
+ * - "expected-months" (the company's): Profit's next month. FLOW-1314: Home's forecast and the forecast screen read month_forecast
+ *   instead; FLOW-1315: the project page's forecast card, צפי page and edit page read project_forecast instead.
+ * - "categories" (list_categories): Home, Profit's next month, the project's edit page and the pickers.
  * - the overhead project ("company-overhead"): Profit, Recurring, Forecast and next month.
- * - "month-forecast" overrides: Home's נותר לשלם, the recurring screen, Profit's next month and the project page's forecast card.
+ * - "month-forecast" overrides: Home's נותר לשלם, the recurring screen and Profit's next month.
  * - "month-forecast" "answer" (FLOW-1314, month_forecast): Home's forecast row and the forecast screen, one read.
- * - "project-forecast-edits": the project page's forecast card (one project, one month) and Profit's next month
- *   (the whole company, slim answer only).
+ * - "month-forecast" "project" (FLOW-1315, project_forecast): the project page's forecast card, its צפי page and its edit page (one
+ *   project, one month, the day and the currency in the key), one read, so the card draws at once on a repeat visit.
+ * - "project-forecast-edits": Profit's next month (the whole company, slim answer only).
  * - "loans" "company-forecast": Profit's next month (with company_next_month_inputs and the categories).
  * - "loans" companyId "list" and "outlooks": the Loans list and its band (the list rows and each loan's detail; the next payments, late marks and 12-month figure). The list is also the loan page's loan choices and the summary page's loans.
  * - "breakdown-lines" "cash": Home's first 20 lines of a side; "project-cash-month": the project page's month lines.
@@ -121,9 +122,9 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("project", (k) => k[0] === "project" && off(k, 1) && typeof k[2] === "string", bySchema((s) => s.projectDetailSchema), { keep: (data) => data != null }),
   rule("project month lines", (k) => k.length === 6 && k[0] === "breakdown-lines" && k[1] === "project-cash-month" && off(k, 2) && typeof k[3] === "string", projectLinesValid, { keep: projectLinesFit }),
   rule("utility payers", (k) => k[0] === "utility-payers" && off(k, 1) && typeof k[2] === "string", payersValid),
-  // The project page's forecast card (expected_months and the month's overrides are kept under the forecast, below).
+  // The project's category page (its usual-month marks) and the project page's forecast card (FLOW-1315: project_forecast, one read).
   rule("project category months", (k) => k.length === 5 && k[0] === "project" && k[1] === "category-months" && off(k, 2) && typeof k[3] === "string", bySchema((s) => s.projectCategoryMonthsSchema)),
-  rule("project forecast edits", (k) => k.length === 4 && k[0] === "project-forecast-edits" && off(k, 1) && typeof k[2] === "string" && k[2] !== "company" && typeof k[3] === "string", (_s, json) => isRows(json, "id") && (json as Array<Record<string, unknown>>).every((row) => typeof row.kind === "string" && typeof row.pace === "string")),
+  rule("project forecast", (k) => k.length === 7 && k[0] === "month-forecast" && off(k, 1) && k[2] === "project" && k.slice(3).every((part) => typeof part === "string"), bySchema((s) => s.projectForecastKeptSchema), { keep: (data) => data != null }),
   rule("categories", (k) => k.length === 2 && k[0] === "categories" && off(k, 1), bySchema((s) => s.categoryRowSchema.array())),
   // Loans.
   rule("loan list", (k) => k[0] === "loans" && typeof k[1] === "string" && k[2] === "list", (_s, json) => isRecord(json) && isLoanListRows(json.rows) && Array.isArray(json.loans)),

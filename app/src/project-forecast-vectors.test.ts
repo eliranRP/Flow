@@ -2,11 +2,14 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { ExpectedParty, ForecastOverrideRow, LoanKind, LoanStatus } from "@flow/shared";
+import type { CategoryRow, ExpectedParty, ForecastOverrideRow, LoanKind, LoanStatus } from "@flow/shared";
 import { companyGeneralForecast, skipEdits, type CategoryMonthsRow } from "./company-next-month";
 import { skippedKeys } from "./forecast-skip";
-import { isRent, type RentCategory } from "./next-month-chart";
+import { incomeFactsOf, isRent, type RentCategory } from "./next-month-chart";
 import { shiftMonthKey } from "./period";
+import { projectForecastOf, type ProjectForecastRead } from "./project-forecast-map";
+import { withRowRemoved, withSkipsChanged } from "./project-forecast-patch";
+import { categoryChoices, type CategoryHistory, type ChargeHint, forecastCategoryAmounts, historyBars } from "./project-next-edit";
 import { type ForecastCategory, type ForecastLoan } from "./project-next-loans";
 import { applyForecastEdits, cashForecast, nextMonthForecast, type NextMonthForecast, type NextMonthRow, type ProjectForecastEdit } from "./project-next-month";
 
@@ -168,14 +171,19 @@ function forecastOf(input: ProjectForecastVectorInput, recurring: readonly Expec
   );
 }
 
-/** What private.project_forecast_build answers for the vector's input, from the app's builders. */
-function projectForecastAnswer(input: ProjectForecastVectorInput): unknown {
+/** What the page builds for the vector's input: the project's charges and loans (the general costs' for the overhead project) and the forecast from them. */
+function built(input: ProjectForecastVectorInput) {
   const general = input.general === true;
   const all: ExpectedParty[] = input.recurring.map((party) => ({ ...party, typical_amount_minor: BigInt(party.typical_amount_minor) }));
   // useProjectNextMonth: the general costs' charges are those of no project or of the overhead project, built as the project's.
   const recurring = general ? all.filter((party) => party.project_id == null || party.project_id === input.projectId).map((party) => ({ ...party, project_id: input.projectId })) : all;
   const loans = input.loans.map(toLoan).filter((loan) => (general ? loan.projectId == null || loan.projectId === input.projectId : loan.projectId === input.projectId));
-  const forecast = forecastOf(input, recurring, loans);
+  return { general, recurring, forecast: forecastOf(input, recurring, loans) };
+}
+
+/** What private.project_forecast_build answers for the vector's input, from the app's builders. */
+function projectForecastAnswer(input: ProjectForecastVectorInput): unknown {
+  const { general, recurring, forecast } = built(input);
   const cash = cashForecast(forecast);
   return {
     today: input.today,
@@ -220,5 +228,150 @@ describe("shared vectors: project-forecast", () => {
 
   it.each(vectors.map((vector) => [vector.name, vector] as const))("%s", (_name, vector) => {
     expect(projectForecastAnswer(vector.input)).toEqual(vector.expected);
+  });
+});
+
+/**
+ * FLOW-1315: project_forecast's answer, mapped by projectForecastOf, is what the pages drew from the builders: the same forecast
+ * (whole structures, rows in order, bigint amounts), the card's income note facts, the edit page's history bars and category
+ * hints. The vectors' `expected` is the database's answer for the same input (vectors_project_forecast.test.sql).
+ */
+describe("project_forecast mapped for the pages equals the builders (FLOW-1315)", () => {
+  const vectors = load();
+  const keyed = (rows: ProjectForecastVectorInput["overrides"]) => rows.map((row) => ({ item_key: row.item_key, amount_minor: row.amount_minor ?? null, due_on: row.due_on ?? null, moved_out: row.moved_out }));
+
+  it.each(vectors.map((vector) => [vector.name, vector] as const))("%s", (_name, vector) => {
+    const { input } = vector;
+    const read = projectForecastOf(vector.expected, input.projectId);
+    const { general, recurring, forecast } = built(input);
+    expect(read).not.toBeNull();
+    if (read == null) return;
+    expect(read.today).toBe(input.today);
+    expect(read.month).toBe(input.month);
+    expect(read.currency).toBe(input.currency);
+    expect(read.general).toBe(general);
+    // The whole forecast, in the builders' order. The loans' cash by loan and the arrived lines are in no row and no screen reads them.
+    expect(read.forecast).toEqual({ ...forecast, loanCash: [], arrived: [], skipped: forecast.skipped ?? [] });
+    // The project page's card and the צפי page lead with the cash forecast.
+    const cash = cashForecast(forecast);
+    expect(cashForecast(read.forecast)).toEqual({ ...cash, loanCash: [], arrived: [], skipped: cash.skipped ?? [] });
+    expect(read.income).toEqual(incomeFactsOf(forecast.rows, input.categories));
+    expect(read.edited).toBe(input.edits.some((edit) => edit.start_month === forecast.month));
+    expect(read.overrides).toEqual(keyed(input.overrides));
+    // The edit page: its history bars and its category sheet's hints, from the page's own history and charges.
+    const months = Array.from({ length: 6 }, (_, index) => `${shiftMonthKey(input.today.slice(0, 7), index - 6)}-01`);
+    const pageHistory = { months, categories: input.categoryMonths };
+    expect(read.history.months).toEqual(months);
+    const categoryIds = [null, ...input.categories.map((category) => category.id), ...input.categoryMonths.map((row) => row.id)];
+    for (const id of new Set(categoryIds)) expect(historyBars(read.history, id, input.currency), `bars of ${String(id)}`).toEqual(historyBars(pageHistory, id, input.currency));
+    const sheet = (charges: readonly ChargeHint[], history: CategoryHistory) => categoryChoices({
+      categories: input.categories.map((category) => ({ kind: "expense", hidden: false, ...category }) as CategoryRow),
+      categoryMonths: history,
+      recurring: charges,
+      projectId: input.projectId,
+      currency: input.currency,
+      divisor: forecast.averageMonths,
+      inForecast: forecastCategoryAmounts(forecast),
+      query: "",
+    });
+    expect(sheet(read.charges, read.history)).toEqual(sheet(recurring, pageHistory));
+  });
+
+  it("maps the uncategorized history row to a null id, so its bars still show (the answer leaves the id out)", () => {
+    const vector = vectors.find((item) => item.name === "project-uncategorized-average-other-p-1-2026-11");
+    const read = projectForecastOf(vector?.expected, "p-1");
+    expect(read?.history.categories.some((category) => category.id === null)).toBe(true);
+    expect(historyBars(read?.history, null, "USD")).not.toBeNull();
+  });
+
+  it("keeps the rows in the builders' order when the answer lists them in another Hebrew order", () => {
+    const vector = vectors.find((item) => item.name === "project-row-order-ties-by-name-p-1-2026-11");
+    const answer = vector?.expected as { rows: Array<{ kind: string }> };
+    // The lines the user added keep the edits' order; every other row is put in the reverse of the builders'.
+    const shuffled = { ...answer, rows: [...answer.rows.filter((row) => row.kind !== "added").reverse(), ...answer.rows.filter((row) => row.kind === "added")] };
+    expect(projectForecastOf(shuffled, "p-1")?.forecast.rows.map((row) => row.key)).toEqual(projectForecastOf(answer, "p-1")?.forecast.rows.map((row) => row.key));
+  });
+
+  it("refuses an amount outside 2^53 - 1 and an answer of the wrong shape", () => {
+    const vector = vectors.find((item) => item.name === "near-2-to-the-53-p1-2026-11");
+    const answer = vector?.expected as { income_minor: number; rows: Array<{ minor: number }> };
+    expect(() => projectForecastOf({ ...answer, income_minor: 2 ** 53 }, "p1")).toThrow("not a safe whole amount");
+    expect(() => projectForecastOf({ ...answer, rows: [{ ...answer.rows[0], minor: 1.5 }] }, "p1")).toThrow("not a safe whole amount");
+    expect(() => projectForecastOf({ ...answer, rows: "none" }, "p1")).toThrow("not a list");
+    expect(() => projectForecastOf([], "p1")).toThrow("not an object");
+    expect(projectForecastOf(null, "p1")).toBeNull();
+  });
+});
+
+/**
+ * FLOW-1315: a tap's patch of the forecast the page holds (project-forecast-patch.ts) is the forecast rebuilt with the tap's edit:
+ * for every row of every vector, the skip of its party and its lifting, and the project page's removal of the row, give the figures
+ * the builders give with the skip in the overrides or the removal among the edits (whole structures, rows in order). A loan row's removal
+ * leaves the loans' cash as it was until the read after the write, which no row holds; an added line takes its place among the lines
+ * the user added from the list's order, so those lists are compared by key.
+ */
+describe("a tap's patch equals the rebuilt forecast (FLOW-1315)", () => {
+  const vectors = load();
+  const readOf = (input: ProjectForecastVectorInput): ProjectForecastRead => {
+    const read = projectForecastOf(projectForecastAnswer(input), input.projectId);
+    if (read == null) throw new Error("no read");
+    return read;
+  };
+  const byKey = (rows: readonly NextMonthRow[]) => [...rows].map((row) => row.key).sort();
+  const overridesByKey = (read: ProjectForecastRead) => [...read.overrides].sort((a, b) => a.item_key.localeCompare(b.item_key));
+
+  it.each(vectors.map((vector) => [vector.name, vector] as const))("%s: skipping each recurring row and lifting it again", (_name, vector) => {
+    const { input } = vector;
+    const base = readOf(input);
+    const recurring = base.forecast.rows.filter((row) => row.kind === "recurring");
+    for (const row of recurring) {
+      const [, direction, party] = row.key.split(":");
+      const key = `party:${direction ?? ""}:${party ?? ""}:${input.currency}`;
+      if (input.overrides.some((item) => item.item_key === key)) continue;
+      const patched = withSkipsChanged(base, input.projectId, { added: [key], removed: [] }, input.categories);
+      const skipped = readOf({ ...input, overrides: [...input.overrides, { item_key: key, amount_minor: null, due_on: null, moved_out: true }] });
+      expect(patched.forecast, `skip ${row.key}`).toEqual(skipped.forecast);
+      expect(patched.income).toEqual(skipped.income);
+      expect(overridesByKey(patched)).toEqual(overridesByKey(skipped));
+      // Lifting it again puts the row back in its place, and the figures as they were. Rows that sort equal (the same day and name)
+      // have no place of their own to come back to: the read after the write lists them as the database does.
+      const lifted = withSkipsChanged(patched, input.projectId, { added: [], removed: [key] }, input.categories);
+      expect({ ...lifted.forecast, rows: lifted.forecast.rows.map((item) => item.key).sort() }, `lift ${row.key}`).toEqual({ ...base.forecast, rows: base.forecast.rows.map((item) => item.key).sort() });
+      const tied = (rows: readonly NextMonthRow[], at: number) => rows.filter((item) => item.kind === row.kind && item.date === row.date && item.name === row.name).length > at;
+      if (!tied(base.forecast.rows, 1)) expect(lifted.forecast.rows).toEqual(base.forecast.rows);
+      expect(lifted.income).toEqual(base.income);
+    }
+  });
+
+  it.each(vectors.map((vector) => [vector.name, vector] as const))("%s: the project page's removal of each row", (_name, vector) => {
+    const { input } = vector;
+    const base = readOf(input);
+    for (const row of base.forecast.rows) {
+      const patched = withRowRemoved(base, row.key, input.categories);
+      const edit: ProjectForecastEdit = { id: `optimistic-remove:${row.key}`, kind: "remove", row_key: row.key, category_id: null, direction: null, amount_minor: null, pace: "month", start_month: input.month };
+      const removed = readOf({ ...input, edits: [...input.edits, edit] });
+      expect(patched.income, `remove ${row.key}`).toEqual(removed.income);
+      if (row.kind === "added") {
+        expect(byKey(patched.forecast.removed)).toEqual(byKey(removed.forecast.removed));
+        expect({ ...patched.forecast, removed: [] }).toEqual({ ...removed.forecast, removed: [] });
+      } else if (row.kind === "loan") {
+        // The loans' cash follows with the read after the write.
+        expect({ ...patched.forecast, cashOnlyMinor: 0n }).toEqual({ ...removed.forecast, cashOnlyMinor: 0n });
+      } else {
+        expect(patched.forecast).toEqual(removed.forecast);
+      }
+    }
+  });
+
+  it("a skip of a row the project page already removed moves nothing, and lifting it moves nothing back", () => {
+    const vector = vectors.find((item) => item.name === "edits-removed-row-listed-apart-juniper-ct-2026-11");
+    if (vector == null) throw new Error("no vector");
+    const base = readOf(vector.input);
+    const [, direction, party] = (base.forecast.removed[0]?.key ?? "").split(":");
+    const key = `party:${direction ?? ""}:${party ?? ""}:USD`;
+    const skipped = withSkipsChanged(base, vector.input.projectId, { added: [key], removed: [] });
+    expect(skipped.forecast.rows).toEqual(base.forecast.rows);
+    expect(skipped.forecast.removed).toEqual(base.forecast.removed);
+    expect(withSkipsChanged(skipped, vector.input.projectId, { added: [], removed: [key] }).forecast).toEqual(base.forecast);
   });
 });

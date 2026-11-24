@@ -4,6 +4,8 @@ import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { flushKeptReads, keepReadsOf, resetKeptReadsForTests, restoreKeptReads } from "./kept-reads";
 import { KEPT_PROJECT_LINES } from "./kept-rules";
+import { projectForecastOf } from "./project-forecast-map";
+import { sampleProjectForecastAnswer } from "./project-forecast-sample";
 import { idbKeptStore, type KeptStore } from "./kept-store";
 import { resetShownCompanyForTests, setShownCompany } from "./lib/company-header";
 import { utilityPayersSchema } from "./utility-refund-schema";
@@ -34,7 +36,9 @@ const payers = utilityPayersSchema.parse({
   utilities: [{ supplier_id: "s1", supplier_name: "חברת חשמל", currency: "ILS", payer: "tenant", added: true, found: true, usual_minor: 4500, bill_count: 2, last_bill_date: "2026-10-30", category_id: null, category_name: null }],
 });
 const categories = categoryRowSchema.array().parse([{ id: "c1", name: "חשמל", kind: "expense", hidden: false, is_default: true }]);
-const edits = [{ id: "e1", kind: "change", row_key: "k", category_id: null, direction: "expense", amount_minor: 100, pace: "month", start_month: "2026-12" }];
+// FLOW-1315: the project page's forecast, as the page holds it (bigint amounts), and the same with its rows of the wrong shape.
+const projectForecast = projectForecastOf(sampleProjectForecastAnswer(), "p1");
+const projectForecastKey = ["month-forecast", "off", "project", "p1", "2026-11", "2026-10-20", "company"];
 const inputs = { month: "2026-12", overhead_project_id: null, projects: [], general: [], edits: [] };
 const loans = [{ id: "l1", currency: "ILS", balanceMinor: 900n, principalMinor: 1000n, rates: [], categoryIds: {} }];
 const forecastItem = { key: "party:expense:s1:ILS", direction: "expense", kind: "recurring", name: "חשמל", currency: "ILS", usual: 20000n, minor: 20000n, day: 5, description: null, due_on: null, moved_out: false, overridden: false, expected_on: null, late_days: 0, category_id: null, project_id: null, project_name: null, pace: "month", line_start: null };
@@ -56,7 +60,7 @@ const CASES: Case[] = [
   { name: "project month lines", key: ["breakdown-lines", "project-cash-month", "off", "p1", "2026-11", ""], good: projectLines, bad: { ...projectLines, counted: [{ transaction_id: "t1" }] }, preview: ["breakdown-lines", "project-cash-month", "empty", "p1", "2026-11", ""] },
   { name: "utility payers", key: ["utility-payers", "off", "p1"], good: payers, bad: [{ supplier_id: "s1", payer: "nobody", currency: "ILS", bill_count: 1, usual_minor: null }], preview: ["utility-payers", "empty", "p1"] },
   { name: "project category months", key: ["project", "category-months", "off", "p1", "2026-11-23"], good: categoryMonths, bad: { ...categoryMonths, categories: "none" }, preview: ["project", "category-months", "empty", "p1", "2026-11-23"] },
-  { name: "project forecast edits", key: ["project-forecast-edits", "off", "p1", "2026-12"], good: edits, bad: [{ id: "e1" }], preview: ["project-forecast-edits", "empty", "p1", "2026-12"] },
+  { name: "project forecast (FLOW-1315)", key: projectForecastKey, good: projectForecast, bad: { ...projectForecast, forecast: { ...projectForecast?.forecast, rows: "none" } }, preview: ["month-forecast", "empty", "project", "p1", "2026-11", "2026-10-20", "company"] },
   { name: "categories", key: ["categories", "off"], good: categories, bad: [{ id: "c1", name: "חשמל", kind: "other" }], preview: ["categories", "empty"] },
   { name: "company next month inputs", key: ["project-forecast-edits", "off", "company", "2026-11-23", false], good: inputs, bad: { month: "2026-12" }, preview: ["project-forecast-edits", "empty", "company", "2026-11-23", false] },
   // FLOW-1316: the Loans list's rows (no next payment, late date or rate: a list kept before that has them and is not used) and its outlooks.
@@ -133,6 +137,30 @@ describe("the first views' kept reads (FLOW-1292)", () => {
     keepReadsOf(client);
     const many = Array.from({ length: KEPT_PROJECT_LINES + 1 }, () => projectLines.counted[0]);
     await read(client, ["breakdown-lines", "project-cash-month", "off", "p1", "2026-11", ""], { ...projectLines, counted: many });
+    await flushKeptReads();
+    expect(await store.all()).toEqual([]);
+  });
+
+  it("a project forecast kept before its amounts were whole numbers, or with an unknown pace, is not put back (FLOW-1315)", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    await read(client, projectForecastKey, projectForecast);
+    await flushKeptReads();
+    const [saved] = await store.all();
+    if (saved == null) throw new Error("nothing kept");
+    const kept = saved.data as { forecast: { incomeMinor: string }; charges: Array<{ pace: string }> };
+    for (const data of [{ ...kept, forecast: { ...kept.forecast, incomeMinor: "41500.5" } }, { ...kept, charges: [{ ...kept.charges[0], pace: "once" }] }]) {
+      await store.put([{ ...saved, data }]);
+      const broken = newClient();
+      await restoreKeptReads(broken);
+      expect(broken.getQueryData(projectForecastKey)).toBeUndefined();
+    }
+  });
+
+  it("does not keep a project's null forecast (no company, or another company's project: FLOW-1315)", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    await read(client, projectForecastKey, null);
     await flushKeptReads();
     expect(await store.all()).toEqual([]);
   });

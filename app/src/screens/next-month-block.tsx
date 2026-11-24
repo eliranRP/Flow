@@ -1,4 +1,4 @@
-import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, profitTakeaway, type RentCategory } from "../next-month-chart";
+import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, type IncomeFacts, incomeNoteOfFacts, profitTakeaway } from "../next-month-chart";
 import { cashMonthName } from "../cash";
 import type { MonthFigures } from "../month-figures";
 import type { NextMonthForecast } from "../project-next-month";
@@ -25,7 +25,7 @@ export function NextMonthBlock({
   currency,
   kind,
   cardHref,
-  categories,
+  income,
   today,
   takeaway = false,
 }: {
@@ -41,8 +41,8 @@ export function NextMonthBlock({
   /** "profit" on the profit page (רווח צפוי), "cash" on the project page (צפוי להיכנס, צפוי לצאת, תזרים צפוי). */
   kind: ForecastKind;
   cardHref: string;
-  /** The company's categories, to name recurring rent in the income caption. */
-  categories: readonly RentCategory[];
+  /** What the income caption reads of the forecast's income rows (it names recurring rent); null while the forecast is out. */
+  income: IncomeFacts | null;
   /** yyyy-mm-dd, the forecast's today: the month's name carries a year only when it is not today's. */
   today: string;
   /** FLOW-961: the project page titles its chart with the month's takeaway; FLOW-969: the profit page with the months'. */
@@ -62,7 +62,7 @@ export function NextMonthBlock({
           currency={currency}
           incomeMinor={forecast.incomeMinor}
           expenseMinor={forecast.expenseMinor}
-          incomeNote={incomeNote(forecast, categories)}
+          incomeNote={incomeNoteOfFacts(income ?? { rows: 0, recurring: 0, rent: 0, name: null })}
           expenseNote={expenseNote(forecast, history ?? { months: [], fromStart: false }, currency)}
           href={cardHref}
         />

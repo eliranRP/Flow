@@ -72,7 +72,9 @@ function renderLive() {
   );
 }
 
-const FORECAST_RPCS = ["expected_months", "project_category_months", "project_forecast_edits_for", "forecast_overrides_for"];
+// FLOW-1315: the card's forecast is one read. None of the six reads it made before is sent.
+const FORECAST_RPCS = ["project_forecast"];
+const OLD_FORECAST_RPCS = ["expected_months", "project_category_months", "project_forecast_edits_for", "company_next_month_inputs"];
 afterEach(() => {
   server.rpcCalls.length = 0;
   server.tables.length = 0;
@@ -94,8 +96,8 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     await vi.waitFor(() => {
       for (const name of FORECAST_RPCS) expect(names()).toContain(name);
     });
-    // The company read went out beside them, and has not answered.
-    expect(server.tables).toContain("companies");
+    for (const name of OLD_FORECAST_RPCS) expect(names()).not.toContain(name);
+    expect(names().filter((name) => name === "project_forecast")).toHaveLength(1);
     // While the lifetime read is pending the row shows its loading bar and no figure.
     const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
     expect(row.querySelector(".ui-skeleton-w-sm")).not.toBeNull();
@@ -115,16 +117,14 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     expect(loanTablesRead()).toEqual([]);
   });
 
-  it("the overhead project starts the company's forecast reads, not its own, while /companies and the lifetime read are out", async () => {
+  it("the overhead project starts the same one read: the database builds its general costs, so no company read is waited for", async () => {
     server.project.is_overhead = true;
     server.holdCompanies = true;
     renderLive();
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
-    await vi.waitFor(() => { expect(names()).toContain("company_next_month_inputs"); });
-    expect(server.tables).toContain("companies");
-    // The company's expected_months has no project; the project's own has p_project_id.
-    expect(server.rpcCalls.some((call) => call.name === "expected_months" && call.args.p_project_id != null)).toBe(false);
-    expect(names()).not.toContain("project_category_months");
+    await vi.waitFor(() => { expect(names()).toContain("project_forecast"); });
+    for (const name of OLD_FORECAST_RPCS) expect(names()).not.toContain(name);
+    expect(server.rpcCalls.find((call) => call.name === "project_forecast")?.args).toMatchObject({ p_project: "a" });
     // Still loading: nothing is drawn from the hint.
     const row = screen.getByRole("link", { name: /^צפוי לחודש הבא/ });
     expect(row.querySelector(".ui-project-row-figure")).toBeNull();
@@ -144,14 +144,13 @@ describe("the project page's forecast reads (FLOW-1229)", () => {
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
   });
 
-  it("the overhead project, lifetime read first: the company's reads start, not its own (FLOW-1230)", async () => {
+  it("the overhead project, lifetime read first: the same one read starts (FLOW-1230, FLOW-1315)", async () => {
     server.project.is_overhead = true;
     server.holdPeriod = true;
     server.holdCompanies = true;
     renderLive();
-    await vi.waitFor(() => { expect(names()).toContain("company_next_month_inputs"); });
-    expect(server.rpcCalls.some((call) => call.name === "expected_months" && call.args.p_project_id != null)).toBe(false);
-    expect(names()).not.toContain("project_category_months");
+    await vi.waitFor(() => { expect(names()).toContain("project_forecast"); });
+    for (const name of OLD_FORECAST_RPCS) expect(names()).not.toContain(name);
     await act(async () => { server.releaseCompanies(); server.releasePeriod(); await Promise.resolve(); });
   });
 });

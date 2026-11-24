@@ -92,8 +92,8 @@ describe("the project page's first view in one wave (FLOW-1270)", () => {
       ]) expect(names()).toContain(name);
       expect(server.rpcCalls.filter((call) => call.name === "project_cash_month_lines").map((call) => call.args.p_side).sort()).toEqual(["in_profit", "not_in_profit"]);
     });
-    // The forecast card's reads stay after the page's figures (decision 0271): none started before get_project answered.
-    for (const name of ["expected_months", "project_category_months", "project_forecast_edits_for", "list_categories"]) expect(names()).not.toContain(name);
+    // The forecast card's read stays after the page's figures (decision 0271): none started before get_project answered.
+    for (const name of ["project_forecast", "expected_months", "project_category_months", "project_forecast_edits_for", "list_categories"]) expect(names()).not.toContain(name);
     expect(server.tables).not.toContain("companies");
     // The month's lines are for the current month, in the company's books currency, which the server fills in.
     for (const call of server.rpcCalls.filter((item) => item.name === "project_cash_month_lines")) {
@@ -113,8 +113,10 @@ describe("the project page's first view in one wave (FLOW-1270)", () => {
     expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
     // A money figure: the project's profit (10,000,000 agorot) in the band and the cash overview.
     expect((await screen.findAllByText("₪100,000")).length).toBeGreaterThan(0);
-    // The forecast's reads start once the project's own read has landed.
-    await vi.waitFor(() => { for (const name of ["expected_months", "project_category_months", "project_forecast_edits_for", "list_categories"]) expect(names()).toContain(name); });
+    // FLOW-1315: the forecast is one read, started once the project's own read has landed, and none of the six it replaces is sent.
+    await vi.waitFor(() => { expect(names()).toContain("project_forecast"); });
+    expect(names().filter((name) => name === "project_forecast")).toHaveLength(1);
+    for (const name of ["expected_months", "project_category_months", "project_forecast_edits_for"]) expect(names()).not.toContain(name);
     expect(await screen.findByText("קבלן א")).toBeInTheDocument();
     // The lines were read once for the cash read's own month: the answer's month matches the one asked for at mount.
     // FLOW-1299: the read is keyed on the books currency (null, which the server fills in), so a cold open with no

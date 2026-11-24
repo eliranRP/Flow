@@ -7,11 +7,11 @@ import { JUNIPER_NEXT } from "../dev/project-next-month-sample";
 import { ProjectProfitScreen } from "./project-profit-screen";
 
 // FLOW-1002: the overhead project's next month is the company's general costs, in the company's currency.
-vi.mock("../next-month-for-project", async () => {
-  const query = await import("../project-next-month-query");
+vi.mock("../next-month-for-project", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../next-month-for-project")>();
   return {
-    useProjectNextMonth: (id: string, currency: string, sample: Parameters<typeof query.useNextMonthForecast>[2], enabled?: boolean) =>
-      ({ ...query.useNextMonthForecast(id, currency, sample, enabled), currency: "ILS" }),
+    ...actual,
+    useProjectNextMonth: (...args: Parameters<typeof actual.useProjectNextMonth>) => ({ ...actual.useProjectNextMonth(...args), currency: "ILS" }),
   };
 });
 

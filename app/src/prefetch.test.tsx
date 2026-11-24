@@ -2,11 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { monthPeriod } from "./period";
 import { PrefetchProjects, projectLink } from "./prefetch";
-import { markDay } from "./project-category-months";
 import { nextMonthKey } from "./project-next-month";
-import { FORECAST_EDITS_KEY } from "./project-next-month-query";
 import { israelToday } from "./ui/date-math";
 import { BooksProvider } from "./use-books";
 
@@ -46,7 +43,7 @@ describe("PrefetchProjects (FLOW-804)", () => {
     // The project and its cash (FLOW-419: the page opens on the cash), then FLOW-1270's: the project over every
     // period and the forecast's reads. The ⋯ menu's figures are not read here: the menu primes its own read on its
     // button (FLOW-1212).
-    // The forecast's five come after its module loads.
+    // The forecast's one comes after its module loads.
     expect(query).toHaveBeenCalledTimes(3);
     const options = query.mock.calls[0]?.[0] as { queryKey: unknown[]; staleTime: number };
     expect(options.queryKey.slice(0, 3)).toEqual(["project", "off", "p7"]);
@@ -59,48 +56,30 @@ describe("PrefetchProjects (FLOW-804)", () => {
     expect(query.mock.calls.some((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey).includes("projects-cash"))).toBe(false);
   });
 
-  it("reads the all-time project and the forecast's reads under the keys the page reads (FLOW-1270)", async () => {
+  it("reads the all-time project and the forecast under the keys the page reads (FLOW-1270, FLOW-1315)", async () => {
     const { query, view } = setup("/");
     fireEvent.pointerDown(view.getByText("פרויקט"));
-    await vi.waitFor(() => { expect(query).toHaveBeenCalledTimes(8); });
+    // The project, its cash, the project over every period, and the one forecast read (project_forecast).
+    await vi.waitFor(() => { expect(query).toHaveBeenCalledTimes(4); });
     const keys = query.mock.calls.map((call) => (call[0] as { queryKey: unknown[] }).queryKey);
     const today = israelToday();
-    const month = nextMonthKey(today);
     expect(keys).toContainEqual(["project", "off", "p7", null, null]);
-    expect(keys).toContainEqual(["company-overhead", "off"]);
-    expect(keys).toContainEqual(["expected-months", "off", "project", "p7", 0]);
-    expect(keys).toContainEqual(["project", "category-months", "off", "p7", markDay(monthPeriod(today.slice(0, 7)))]);
-    expect(keys).toContainEqual([FORECAST_EDITS_KEY, "off", "p7", month]);
-    expect(keys).toContainEqual(["month-forecast", "off", "overrides", month]);
+    // Next month's, the day in the key, in the company's currency ("company": the page asks for another only for a project in one).
+    expect(keys).toContainEqual(["month-forecast", "off", "project", "p7", nextMonthKey(today), today, "company"]);
+    // None of the six reads the card made before.
+    const text = JSON.stringify(keys);
+    for (const old of ["expected-months", "category-months", "project-forecast-edits", "overrides", "company-overhead"]) expect(text).not.toContain(old);
     // With the page's staleTime and no retries.
     for (const call of query.mock.calls) expect(call[0]).toMatchObject({ retry: false, staleTime: expect.any(Number) as number });
   });
 
-  it("starts none of the project's own forecast reads on the company's overhead project, when its answer is cached (FLOW-1297)", async () => {
+  it("starts the same one read on the company's overhead project: the database builds that page too (FLOW-1315)", async () => {
     const { client, query, view } = setup("/");
     client.setQueryData(["company-overhead", "off"], { id: "p7", name: "הוצאות כלליות" });
     fireEvent.pointerDown(view.getByText("פרויקט"));
-    await vi.waitFor(() => {
-      expect(query.mock.calls.some((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey) === JSON.stringify(["company-overhead", "off"]))).toBe(true);
-    });
     const today = israelToday();
-    const month = nextMonthKey(today);
-    const keys = query.mock.calls.map((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey));
-    expect(keys).not.toContain(JSON.stringify(["expected-months", "off", "project", "p7", 0]));
-    expect(keys).not.toContain(JSON.stringify(["project", "category-months", "off", "p7", markDay(monthPeriod(today.slice(0, 7)))]));
-    expect(keys).not.toContain(JSON.stringify([FORECAST_EDITS_KEY, "off", "p7", month]));
-    // The month's overrides are month-wide, not the project's own read, so the touch still starts them.
-    expect(keys).toContain(JSON.stringify(["month-forecast", "off", "overrides", month]));
-  });
-
-  it("starts another project's forecast reads at once, without waiting for the overhead answer (FLOW-1297)", () => {
-    const { query, view } = setup("/");
-    // The overhead read never answers: the project's own reads must not wait for it.
-    query.mockImplementation(() => new Promise(() => undefined));
-    fireEvent.pointerDown(view.getByText("פרויקט"));
-    return vi.waitFor(() => {
-      const keys = query.mock.calls.map((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey));
-      expect(keys).toContain(JSON.stringify(["expected-months", "off", "project", "p7", 0]));
+    await vi.waitFor(() => {
+      expect(query.mock.calls.map((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey))).toContain(JSON.stringify(["month-forecast", "off", "project", "p7", nextMonthKey(today), today, "company"]));
     });
   });
 
