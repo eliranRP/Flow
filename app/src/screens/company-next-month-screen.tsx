@@ -7,7 +7,9 @@ import { SwipeRow } from "../ui/swipe-row";
 import { Link } from "react-router-dom";
 import { cashMonthName, NOT_IN_PROFIT_LABEL } from "../cash";
 import { lineInitials } from "../cash-lines-groups";
-import { companyCashForecast, companyForecastCaption, companyNextMonthForecast, type CompanyForecastPart } from "../company-next-month";
+import { withSkips } from "../company-forecast-map";
+import { sampleCashNextMonth } from "../company-forecast-sample";
+import { companyCashForecast, companyForecastCaption, type CompanyForecastPart } from "../company-next-month";
 import type { CompanyNextMonthSample } from "../company-next-month-query";
 import { useCompanyCurrency } from "../company-currency";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -24,7 +26,7 @@ import { ChevronIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
-import { useCompanyCashNextMonth } from "./company-cash-next-month";
+import { useCompanyCashNextMonth, type CompanyCashNextMonth } from "./company-cash-next-month";
 import { forecastMonthSearch, useForecastMonth } from "../forecast-page-month";
 import { monthWord } from "../project-next-edit";
 import { SummaryRow } from "./profit-summary";
@@ -94,19 +96,22 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   // FLOW-1066: any month of the forecast (?month=), next month by default.
   const month = useForecastMonth(today);
   const monthSearch = forecastMonthSearch(search, month, today);
-  const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample, month, !hold);
+  const read = useCompanyCashNextMonth(today, sample == null && list.data != null, month, !hold);
+  // A sample (a story, a test) is built by the TypeScript builders; the live page reads company_forecast.
+  const sampled = useMemo(() => (sample == null ? null : sampleCashNextMonth(sample, currency, today, month)), [sample, currency, today, month]);
+  const next: CompanyCashNextMonth = sampled ?? read;
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   // FLOW-1081: a recurring row swipes out of this month only and back, as on Home; what was taken out is listed last.
   const monthLabel = monthWord(month);
   const skip = useForecastSkip(month, monthLabel, next.overrides);
   const canSkip = !hold && sample == null && next.overrides != null;
-  // FLOW-1096: built again with the page's own answers, so a row taken out or put back moves (and the sums with it)
+  // FLOW-1096: drawn again with the page's own answers, so a row taken out or put back moves (and the sums with it)
   // at once, not on the read after the write.
   const skipList = [...skip.skipped].sort().join("\n");
-  const input = next.input;
+  const profitMonth = next.profit;
   const forecast = useMemo(
-    () => (canSkip && input != null ? companyCashForecast(companyNextMonthForecast({ ...input, skips: skipList === "" ? [] : skipList.split("\n") })) : next.forecast),
-    [canSkip, input, skipList, next.forecast],
+    () => (canSkip && profitMonth != null ? companyCashForecast(withSkips(profitMonth, new Set(skipList === "" ? [] : skipList.split("\n")), currency)) : next.forecast),
+    [canSkip, profitMonth, skipList, currency, next.forecast],
   );
   // The list (names, order, currency) first, then the forecast's reads; a paused read is offline, not a skeleton.
   const phase = sample != null

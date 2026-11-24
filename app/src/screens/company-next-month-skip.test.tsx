@@ -6,8 +6,9 @@ import { renderWithProviders } from "../test-render";
 import { CompanyNextMonthScreen } from "./company-next-month-screen";
 
 /**
- * FLOW-1096: פירוט ועריכה builds the month again with its own answers, so a row taken out or put back moves at
- * once (and the sums with it), not on the read after the write. Invented figures, USD cents.
+ * FLOW-1096: פירוט ועריכה draws the month again with its own answers, so a row taken out or put back moves at
+ * once (and the sums with it), not on the read after the write. FLOW-1308: from company_forecast's month (withSkips), not by
+ * building it again. Invented figures, USD cents.
  */
 
 function charge(partyId: string, projectId: string | null, minor: bigint): ExpectedParty {
@@ -38,6 +39,8 @@ const INPUT: CompanyForecastInput = {
   inputs: { month: "2026-12", overhead_project_id: null, projects: [{ project_id: "p1", categories: [] }], general: [], edits: [] },
 };
 const POWER = "party:expense:Brightline Power:USD";
+/** The month as company_forecast gives it with the charge already skipped: the row is listed among those taken out. */
+const PROFIT = companyNextMonthForecast({ ...INPUT, skips: [POWER] });
 const OVERRIDES: ForecastOverrideRow[] = [{ item_key: POWER, amount_minor: null, due_on: null, moved_out: true }];
 
 const writes = vi.hoisted(() => ({ calls: [] as unknown[] }));
@@ -48,14 +51,14 @@ vi.mock("../forecast-month", async (original) => ({
 vi.mock("./company-cash-next-month", async (original) => ({
   ...(await original<typeof import("./company-cash-next-month")>()),
   useCompanyCashNextMonth: () => ({
-    forecast: companyCashForecast(companyNextMonthForecast({ ...INPUT, skips: [POWER] })),
-    input: INPUT,
+    forecast: companyCashForecast(PROFIT),
+    profit: PROFIT,
+    incomeFacts: null,
     overrides: OVERRIDES,
     loading: false,
     failed: false,
     paused: false,
     refetch: () => Promise.resolve(),
-    categories: [],
     profitMinor: 0n,
   }),
 }));

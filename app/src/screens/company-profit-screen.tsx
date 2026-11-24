@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { formatAmountText, type SearchRow } from "@flow/shared";
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { lineDayTitle, lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
@@ -28,7 +28,12 @@ import { FailureLine, SearchEmptyState } from "../ui/empty-state";
 import { Button } from "../ui/button";
 import { byDateThenSize, bySizeOnly, companyCategoryGroups, companyKeptOutCategories, companySummaryRows } from "../company-profit-rows";
 import { useAfterFirstPaint } from "../after-paint";
-import { useCompanyNextMonth, useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
+import { cardOfTotals, restOfTotals, type NextMonthCard, type RestOfYearTotals } from "../company-forecast-map";
+import { useCompanyForecastTotals } from "../company-forecast-query";
+import { sampleCard, sampleRest } from "../company-forecast-sample";
+import { useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
+import { restOfYearMonths } from "../company-year-forecast";
+import { nextMonthKey } from "../project-next-month";
 import { companyYears } from "../company-years";
 import { useCompanyYearProjects, useCompanyYears, type CompanyYearsSample } from "../company-years-query";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -162,9 +167,27 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // FLOW-1080 (as Home, FLOW-1019): the next-month reads start once the figures are drawn, so they do not share
   // the link with the figures' own reads; a return with the figures cached reads them at once.
   const afterPaint = useAfterFirstPaint(long ? yearsData != null : model != null);
-  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast && afterPaint, sample?.next, undefined, long);
-  // Data already cached (from Home, or an earlier visit) shows at once; only a read not yet started waits.
-  const nextWaiting = next.pending || (wantsForecast && !afterPaint && next.input == null);
+  // FLOW-1308: one read of company_forecast ('totals'): next month for the card, every month left in the year for the year views.
+  const nextMonth = nextMonthKey(today);
+  const restMonths = useMemo(() => restOfYearMonths(today), [today]);
+  const fromSample = sample?.next != null;
+  const askNow = wantsForecast && afterPaint && !fromSample;
+  const cardRead = useCompanyForecastTotals(today, [nextMonth], askNow && !long);
+  const restRead = useCompanyForecastTotals(today, restMonths, askNow && long);
+  const nextRead = long ? restRead : cardRead;
+  const sampleCurrency = sample?.currency ?? companyCurrency;
+  const sampled = sample?.next;
+  const card: NextMonthCard | null = useMemo(() => {
+    if (sampled != null) return sampleCard(sampled, sampleCurrency, today);
+    const month = cardRead.data?.months[0];
+    return month == null ? null : cardOfTotals(month);
+  }, [sampled, sampleCurrency, today, cardRead.data]);
+  const rest: RestOfYearTotals | null = useMemo(() => {
+    if (sampled != null) return long ? sampleRest(sampled, sampleCurrency, today) : null;
+    return restRead.data == null ? null : restOfTotals(today, restRead.data.months, restRead.data.income);
+  }, [sampled, long, sampleCurrency, today, restRead.data]);
+  // Data already cached (from Home, or an earlier visit, or kept on the device) shows at once; only a read not yet started waits.
+  const nextWaiting = !fromSample && ((askNow && nextRead.isPending && !nextRead.isPaused) || (wantsForecast && !afterPaint && nextRead.data == null));
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   // FLOW-1271: the year's project reads start at mount for the year the address asks for, without waiting for the years' read to say
   // it exists (a year with no data shows this year, and its reads then follow).
@@ -234,10 +257,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     year: viewYear,
     today,
     currency,
-    rest: next.rest,
+    rest,
     restLoading: nextWaiting,
-    restFailed: next.failed,
-    categories: next.categories,
+    restFailed: askNow && nextRead.isError,
     list: yearList,
     projects: {
       breakdowns: yearProjects.breakdowns,
@@ -309,14 +331,13 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // Next month and the chart belong to the current month: an earlier month's page shows its own figures only.
   const nextBlock = !onCurrent ? null : (
     <CompanyNextMonthBlock
-      forecast={next.forecast}
+      forecast={card}
       loading={nextWaiting}
       months={chartMonths.months}
       monthsLoading={chartMonths.loading}
       current={currentKey}
       thisMonthExpense={model.expense}
       currency={currency}
-      categories={next.categories}
       today={today}
     />
   );

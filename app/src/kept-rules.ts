@@ -7,15 +7,19 @@ import type { ReadSchemas } from "./load-read-schemas";
  * preview's key (anything but "off") is never kept.
  *
  * Who reads a kept key, where that is not plain from its name:
- * - "expected-months" (the company's, and each project's): Profit's next month (company) and the project page's
- *   forecast card (project). FLOW-1314: Home's forecast and the forecast screen read month_forecast instead.
- * - "categories" (list_categories): Home, the project page's forecast card, Profit's next month and the pickers.
+ * - "expected-months" (the company's, and each project's): the overhead project's page (company) and the project page's
+ *   forecast card (project). FLOW-1314: Home's forecast and the forecast screen read month_forecast instead; FLOW-1308: Profit's
+ *   next month and year view, Home's months to come and the company's forecast pages read company_forecast instead.
+ * - "categories" (list_categories): Home, the project page's forecast card, the overhead project's page and the pickers.
  * - the overhead project ("company-overhead"): Profit, Recurring, Forecast and next month.
- * - "month-forecast" overrides: Home's נותר לשלם, the recurring screen, Profit's next month and the project page's forecast card.
+ * - "month-forecast" overrides: Home's נותר לשלם, the recurring screen and the project page's forecast card.
  * - "month-forecast" "answer" (FLOW-1314, month_forecast): Home's forecast row and the forecast screen, one read.
- * - "project-forecast-edits": the project page's forecast card (one project, one month) and Profit's next month
+ * - "month-forecast" "company" "totals" (FLOW-1308, company_forecast with 'totals'): Profit's next-month card (one month) and
+ *   its year view (every month left), one read each, so the card draws at once on a repeat visit. The 'rows' read (a month's
+ *   page, over 100 KB) is not kept.
+ * - "project-forecast-edits": the project page's forecast card (one project, one month) and the overhead project's page
  *   (the whole company, slim answer only).
- * - "loans" "company-forecast": Profit's next month (with company_next_month_inputs and the categories).
+ * - "loans" "company-forecast": the overhead project's page (with company_next_month_inputs and the categories).
  * - "loans" companyId "list" and "outlooks": the Loans list and its band (the list rows and each loan's detail; the next payments, late marks and 12-month figure). The list is also the loan page's loan choices and the summary page's loans.
  * - "breakdown-lines" "cash": Home's first 20 lines of a side; "project-cash-month": the project page's month lines.
  * - "dashboard" "cash-to-day" and "weekly-summary": Home's change pills and its weekly card.
@@ -93,6 +97,16 @@ const onePage = (data: unknown): boolean => isRecord(data) && Array.isArray(data
 const isLoanListRows = (rows: unknown): boolean =>
   isRows(rows, "id") && (rows as Array<Record<string, unknown>>).every((row) => !("next" in row) && !("lateOn" in row) && !("ratePpm" in row));
 
+/** What the company forecast's income notes count (FLOW-1308): the income rows, how many are recurring, how many of those are rent, and the name of a single one. */
+const isFacts = (value: unknown): boolean => isRecord(value) && ["rows", "recurring", "rent"].every((field) => typeof value[field] === "number" && Number.isInteger(value[field])) && (value.name === null || typeof value.name === "string");
+
+/** company_forecast's 'totals' as the page holds it: the day and currency, each month's totals (bigints, digit strings in the JSON form), its counts and income facts, and the income over the months. */
+function companyTotalsValid(_schemas: ReadSchemas | null, json: unknown): boolean {
+  if (!isRecord(json) || typeof json.today !== "string" || typeof json.currency !== "string" || !Array.isArray(json.months) || !isFacts(json.income)) return false;
+  const month = (row: unknown): boolean => isRecord(row) && typeof row.month === "string" && ["incomeMinor", "expenseMinor", "netMinor", "cashOnlyMinor"].every((field) => isMinorString(row[field])) && typeof row.projects === "number" && typeof row.general === "boolean" && isFacts(row.income);
+  return json.months.every(month);
+}
+
 /** The month forecast as the page holds it: month, currency, the build's items and four lists, its two totals (bigints, digit strings in the JSON form) and the overrides. */
 function monthForecastValid(_schemas: ReadSchemas | null, json: unknown): boolean {
   if (!isRecord(json) || typeof json.month !== "string" || typeof json.base !== "string" || !Array.isArray(json.overrides) || !isRecord(json.build)) return false;
@@ -138,8 +152,10 @@ export const KEPT_RULES: readonly KeptRule[] = [
   // FLOW-1278: Profit's month by project waits for the overhead project (the company's row): kept, so the kept figures draw at once. Only a set project is kept (a null answer is never).
   rule("company overhead", (k) => k[0] === "company-overhead" && off(k, 1), (_s, json) => isRecord(json) && typeof json.id === "string" && typeof json.name === "string"),
   rule("profit breakdown", (k) => k[0] === "breakdown" && (k[1] === "company-profit" || k[1] === "company-year") && off(k, 2), bySchema((s) => s.breakdownSchema)),
-  // Profit's next-month card (FLOW-1291). The year views' full answer (p_rest) is not kept: it is far bigger and the card does not read it.
+  // The overhead project's page (FLOW-1291 kept it for Profit's next-month card, which reads company_forecast now). The full answer (p_rest) is not kept: it is far bigger.
   rule("company next month inputs", (k) => k.length === 5 && k[0] === "project-forecast-edits" && off(k, 1) && k[2] === "company" && typeof k[3] === "string" && k[4] === false, (_s, json) => isRecord(json) && typeof json.month === "string" && Array.isArray(json.projects) && Array.isArray(json.general) && Array.isArray(json.edits)),
+  // FLOW-1308: Profit's next-month card and year view, one read each. The day and the months asked are in the key.
+  rule("company forecast totals", (k) => k.length === 6 && k[0] === "month-forecast" && off(k, 1) && k[2] === "company" && k[3] === "totals" && typeof k[4] === "string" && typeof k[5] === "string", companyTotalsValid),
   rule("company forecast loans", (k) => k.length === 3 && k[0] === "loans" && k[1] === "company-forecast" && off(k, 2), (_s, json) => Array.isArray(json) && json.every((loan) => isRecord(loan) && typeof loan.id === "string" && (loan.currency === "ILS" || loan.currency === "USD") && isMinorString(loan.balanceMinor) && Array.isArray(loan.rates))),
   // Review's first page, with the list's state beside it.
   rule("review", (k) => k.length === 2 && k[0] === "review" && off(k, 1), bySchema((s) => s.reviewRowSchema.array()), { keep: (data) => Array.isArray(data) && data.length <= KEPT_REVIEW_ROWS }),

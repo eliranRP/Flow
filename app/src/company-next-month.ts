@@ -1,5 +1,5 @@
 import { formatAmountText, type CategoryRow, type ExpectedParty, type ProjectCategoryMonths } from "@flow/shared";
-import { incomeNote, isRent, type RentCategory } from "./next-month-chart";
+import { incomeFactsOf, incomeNoteOfFacts, type IncomeFacts, type RentCategory } from "./next-month-chart";
 import { monthWord } from "./project-next-edit";
 import { type ForecastLoan, newPaymentsLeftMemo, type PaymentsLeftMemo } from "./project-next-loans";
 import { applyForecastEdits, cashForecast, nextMonthForecast, nextMonthKey, type NextMonthForecast, type NextMonthRow, type ProjectForecastEdit } from "./project-next-month";
@@ -181,6 +181,15 @@ export function companyNextMonthForecast(read: CompanyForecastInput): CompanyNex
     });
   const general = companyGeneralForecast(input, month);
   parts.push({ projectId: null, forecast: general, skipped: skippedRows(general) });
+  return sumCompanyParts(month, parts, splitPartyKeys(input.recurring));
+}
+
+/**
+ * The company's month from its parts, every part listed (a project with nothing expected too, the general costs last): the
+ * parts with at least one row, summed. FLOW-1308: the company forecast read gives the parts and the app sums them here, as
+ * companyNextMonthForecast does, so a month read from the database and one built from the reads are one value.
+ */
+export function sumCompanyParts(month: string, parts: readonly CompanyForecastPart[], splitKeys: ReadonlySet<string>): CompanyNextMonth {
   const kept = parts.filter((part) => part.forecast.rows.length > 0);
   const incomeMinor = kept.reduce((sum, part) => sum + part.forecast.incomeMinor, 0n);
   const expenseMinor = kept.reduce((sum, part) => sum + part.forecast.expenseMinor, 0n);
@@ -192,7 +201,7 @@ export function companyNextMonthForecast(read: CompanyForecastInput): CompanyNex
     rows: kept.flatMap((part) => part.forecast.rows.map((row) => ({ ...row, projectId: part.projectId }))),
     parts: kept,
     skipped: parts.flatMap((part) => (part.forecast.skipped ?? []).map((row) => ({ projectId: part.projectId, row }))),
-    splitKeys: splitPartyKeys(input.recurring),
+    splitKeys,
   };
 }
 
@@ -247,8 +256,11 @@ export function companyGeneralForecast(input: CompanyForecastInput, month = inpu
 
 /** The card's grey corner caption: "7 פרויקטים וכללי", what the sum is made of. */
 export function companyForecastCaption(forecast: Pick<CompanyNextMonth, "parts">): string {
-  const projects = forecast.parts.filter((part) => part.projectId != null).length;
-  const general = forecast.parts.some((part) => part.projectId == null);
+  return captionOfCounts(forecast.parts.filter((part) => part.projectId != null).length, forecast.parts.some((part) => part.projectId == null));
+}
+
+/** The caption from the counts company_forecast gives (`projects` with a row, and whether the general costs have one). */
+export function captionOfCounts(projects: number, general: boolean): string {
   const named = projects === 0 ? "" : projects === 1 ? "פרויקט אחד" : `${String(projects)} פרויקטים`;
   if (named === "") return general ? "כללי" : "";
   return general ? `${named} וכללי` : named;
@@ -259,10 +271,14 @@ export function companyForecastCaption(forecast: Pick<CompanyNextMonth, "parts">
  * otherwise the project card's caption (incomeNote: "6 שכירויות קבועות", "2 הכנסות קבועות", a name, a count).
  */
 export function companyIncomeNote(forecast: Pick<CompanyNextMonth, "rows">, categories: readonly RentCategory[]): string {
-  const income = forecast.rows.filter((row) => row.minor > 0n);
-  const rent = income.filter((row) => row.kind === "recurring" && isRent(row.categoryId, categories)).length;
-  const other = income.length - rent;
-  if (rent === 0 || other === 0) return incomeNote(forecast, categories);
+  return companyIncomeNoteOfFacts(incomeFactsOf(forecast.rows, categories));
+}
+
+/** companyIncomeNote from the counts company_forecast gives (FLOW-1308). */
+export function companyIncomeNoteOfFacts(facts: IncomeFacts): string {
+  const { rent } = facts;
+  const other = facts.rows - rent;
+  if (rent === 0 || other === 0) return incomeNoteOfFacts(facts);
   const rentWords = rent === 1 ? "שכירות אחת" : `${String(rent)} שכירויות`;
   // "ו־" before a figure, "ו" joined to a word.
   return other === 1 ? `${rentWords} והכנסה אחת` : `${rentWords} ו־${String(other)} הכנסות`;

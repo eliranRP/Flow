@@ -46,6 +46,11 @@ const loanOutlooks = loanOutlooksSchema.parse([
 ]);
 const loanRows = { rows: [{ id: "l1", name: "הלוואה", currency: "ILS", balanceMinor: 900n, flaggedParts: 0, projectId: null, projectName: null }], loans: [] };
 
+// FLOW-1308: company_forecast's 'totals' as Profit's card holds it (bigint amounts, counts, the income facts).
+const facts = { rows: 2, recurring: 2, rent: 1, name: null };
+const forecastMonth = { month: "2026-12", incomeMinor: 300000n, expenseMinor: 120000n, netMinor: 180000n, cashOnlyMinor: 0n, projects: 2, general: true, income: facts };
+const companyTotals = { today: "2026-11-24", currency: "ILS", months: [forecastMonth], income: facts };
+
 type Case = { name: string; key: unknown[]; good: unknown; bad: unknown; preview: unknown[] };
 const CASES: Case[] = [
   { name: "transfer match count", key: ["transfer-match-count", "off"], good: 3, bad: -1, preview: ["transfer-match-count", "empty"] },
@@ -63,6 +68,8 @@ const CASES: Case[] = [
   { name: "loan list", key: ["loans", COMPANY, "list"], good: loanRows, bad: { ...loanRows, rows: [{ ...loanRows.rows[0], ratePpm: 50000 }] }, preview: ["loans", COMPANY] },
   { name: "loan outlooks", key: ["loans", COMPANY, "outlooks", "2026-11-24"], good: loanOutlooks, bad: [{ loan_id: "l1", next: { due_date: "2026-12-01" } }], preview: ["loans", COMPANY, "outlooks"] },
   { name: "company forecast loans", key: ["loans", "company-forecast", "off"], good: loans, bad: [{ id: "l1", currency: "EUR", balanceMinor: 1n, rates: [] }], preview: ["loans", "company-forecast", "empty"] },
+  { name: "company forecast totals, the card's month (FLOW-1308)", key: ["month-forecast", "off", "company", "totals", "2026-11-24", "2026-12"], good: companyTotals, bad: { ...companyTotals, months: [{ ...forecastMonth, incomeMinor: 300000.5 }] }, preview: ["month-forecast", "empty", "company", "totals", "2026-11-24", "2026-12"] },
+  { name: "company forecast totals, the year view's months (FLOW-1308)", key: ["month-forecast", "off", "company", "totals", "2026-11-24", "2026-12,2027-01"], good: { ...companyTotals, months: [forecastMonth, { ...forecastMonth, month: "2027-01" }] }, bad: { ...companyTotals, income: { rows: 2 } }, preview: ["month-forecast", "empty", "company", "totals", "2026-11-24", "2026-12,2027-01"] },
   { name: "month forecast (FLOW-1314)", key: ["month-forecast", "off", "answer", "2026-11"], good: forecast, bad: { ...forecast, build: { ...forecast.build, expenseTotal: 20000.5 } }, preview: ["month-forecast", "empty", "answer", "2026-11"] },
 ];
 
@@ -141,6 +148,14 @@ describe("the first views' kept reads (FLOW-1292)", () => {
     const client = newClient();
     keepReadsOf(client);
     await read(client, ["project-forecast-edits", "off", "company", "2026-11-23", true], inputs);
+    await flushKeptReads();
+    expect(await store.all()).toEqual([]);
+  });
+
+  it("does not keep a month's company forecast rows (FLOW-1308): over 100 KB, and not a first view", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    await read(client, ["month-forecast", "off", "company", "rows", "2026-11-24", "2026-12"], { ...companyTotals, forecast: {} });
     await flushKeptReads();
     expect(await store.all()).toEqual([]);
   });

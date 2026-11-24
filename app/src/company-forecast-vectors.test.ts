@@ -3,8 +3,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { ExpectedParty, LoanKind, LoanStatus } from "@flow/shared";
-import { companyGeneralForecast, companyNextMonthForecast, splitPartyKeys, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
-import { companyMonthInput } from "./company-year-forecast";
+import { cardOfForecast, cardOfTotals, forecastRowsOf, forecastTotalsOf, orderRows, restOfForecast, restOfTotals, withSkips } from "./company-forecast-map";
+import { companyCashForecast, companyForecastCaption, companyGeneralForecast, companyIncomeNoteOfFacts, companyNextMonthForecast, splitPartyKeys, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
+import { companyMonthInput, companyRestOfYear, restIncomeNote, restOfYearMonths } from "./company-year-forecast";
+import { futureForecastKey } from "./forecast-future-keys";
 import { isRent, type RentCategory } from "./next-month-chart";
 import { type ForecastCategory, type ForecastLoan, newPaymentsLeftMemo } from "./project-next-loans";
 import type { NextMonthRow } from "./project-next-month";
@@ -185,13 +187,18 @@ function monthJson(forecast: CompanyNextMonth, input: CompanyForecastInput, cate
   };
 }
 
-/** What private.company_forecast_build answers for the vector's input, from the app's builders. */
-function companyForecastAnswer(input: CompanyForecastVectorInput): unknown {
+/** The app's builders' months for the vector's input: one payments-left memo for the read (FLOW-1304), each month's edits and skips. */
+function builtMonths(input: CompanyForecastVectorInput) {
   const recurring: ExpectedParty[] = input.recurring.map((party) => ({ ...party, typical_amount_minor: BigInt(party.typical_amount_minor) }));
   const read = { currency: input.currency, today: input.today, recurring, loans: input.loans.map(toLoan), categories: input.categories, inputs: input.inputs };
   const payments = newPaymentsLeftMemo();
   const monthInputs = input.months.map((month): CompanyForecastInput => ({ ...companyMonthInput(read, month), skips: input.inputs.skips?.[month] ?? [], payments }));
-  const forecasts = monthInputs.map((monthInput) => companyNextMonthForecast(monthInput));
+  return { recurring, read, monthInputs, forecasts: monthInputs.map((monthInput) => companyNextMonthForecast(monthInput)) };
+}
+
+/** What private.company_forecast_build answers for the vector's input, from the app's builders. */
+function companyForecastAnswer(input: CompanyForecastVectorInput): unknown {
+  const { recurring, monthInputs, forecasts } = builtMonths(input);
   // restIncomeNote: each stream once, however many months it comes in.
   const streams = new Map<string, CompanyRow>();
   for (const forecast of forecasts) {
@@ -219,5 +226,193 @@ describe("shared vectors: company-forecast", () => {
 
   it.each(vectors.map((vector) => [vector.name, vector] as const))("%s", (_name, vector) => {
     expect(companyForecastAnswer(vector.input)).toEqual(vector.expected);
+  });
+});
+
+/**
+ * FLOW-1308: the app reads company_forecast's answer back into what the screens drew from the builders. Each vector's
+ * expected answer (what the database gives) goes through the app's mapping and must equal the builders' own value for the
+ * same input, and so must the notes the cards read.
+ */
+describe("the app's reading of the answer equals the builders' (FLOW-1308)", () => {
+  const vectors = load();
+  type Expected = { months: Record<string, unknown>[]; income: unknown; split_keys: unknown };
+
+  /** The answer of one month of the vector's expected answer, as company_forecast gives it for 'rows'. */
+  function rowsAnswer(vector: Vector, index: number) {
+    const expected = vector.expected as Expected;
+    return { today: vector.input.today, currency: vector.input.currency, months: [expected.months[index]], income: expected.income, split_keys: expected.split_keys };
+  }
+
+  /**
+   * The amounts and lists as the screens read them: no undefined skipped, the loans' cash by loan. `drawn` leaves out what no
+   * company screen draws and a part with no row cannot hold again (its average months, its rows removed or arrived).
+   */
+  function plain(forecast: CompanyNextMonth, drawn = false) {
+    return {
+      ...forecast,
+      splitKeys: [...forecast.splitKeys].sort(),
+      parts: forecast.parts.map((part) => ({
+        ...part,
+        skipped: part.skipped ?? [],
+        forecast: { ...part.forecast, ...(drawn ? { averageMonths: 0, removed: [], arrived: [] } : {}), skipped: part.forecast.skipped ?? [], loanCash: [...part.forecast.loanCash].sort((a, b) => compare(a.loanId, b.loanId)) },
+      })),
+    };
+  }
+
+  it.each(vectors.map((vector) => [vector.name, vector] as const))("%s: each month as 'rows' is the builders' month, with its rows in their order, in profit and in cash terms", (_name, vector) => {
+    const { forecasts } = builtMonths(vector.input);
+    forecasts.forEach((built, index) => {
+      const mapped = forecastRowsOf(rowsAnswer(vector, index));
+      expect(plain(mapped.forecast)).toEqual(plain(built));
+      expect(plain(companyCashForecast(mapped.forecast))).toEqual(plain(companyCashForecast(built)));
+      expect(mapped.months[0]?.netMinor).toBe(built.netMinor);
+    });
+  });
+
+  it.each(vectors.map((vector) => [vector.name, vector] as const))("%s: each month's 'totals' give the card and the notes the builders give", (_name, vector) => {
+    const { forecasts, read } = builtMonths(vector.input);
+    const totals = forecastTotalsOf({ today: vector.input.today, currency: vector.input.currency, ...(vector.expected as Expected) });
+    expect(totals.months).toHaveLength(forecasts.length);
+    forecasts.forEach((built, index) => {
+      const month = totals.months[index];
+      if (month == null) throw new Error("no month");
+      expect(cardOfTotals(month)).toEqual(cardOfForecast(built, vector.input.categories));
+      expect(month.incomeMinor).toBe(built.incomeMinor);
+      expect(month.expenseMinor).toBe(built.expenseMinor);
+      // The cash view's expense: the loans' cash no row holds, over the parts with a row.
+      expect(month.expenseMinor + month.cashOnlyMinor).toBe(companyCashForecast(built).expenseMinor);
+    });
+    // The income over the months, each stream once.
+    expect(companyIncomeNoteOfFacts(totals.income)).toBe(restIncomeNote({ forecasts }, vector.input.categories));
+    // The year view's card, where the months asked are the months left in the year: the sums of the builders' months.
+    if (JSON.stringify(vector.input.months) === JSON.stringify(restOfYearMonths(vector.input.today))) {
+      const incomeMinor = forecasts.reduce((sum, forecast) => sum + forecast.incomeMinor, 0n);
+      const expenseMinor = forecasts.reduce((sum, forecast) => sum + forecast.expenseMinor, 0n);
+      const rest = { year: vector.input.today.slice(0, 4), months: forecasts.map((forecast) => ({ month: forecast.month, incomeMinor: forecast.incomeMinor, expenseMinor: forecast.expenseMinor })), incomeMinor, expenseMinor, netMinor: incomeMinor - expenseMinor, forecasts };
+      expect(restOfTotals(vector.input.today, totals.months, totals.income)).toEqual(restOfForecast(rest, vector.input.categories));
+      // companyRestOfYear builds every month from the read's later edits (next month's too), companyMonthInput next month from `edits`: the same unless a payload gives them apart.
+      const built = companyRestOfYear({ ...read, skipsByMonth: vector.input.inputs.skips });
+      if (vector.input.inputs.rest_edits == null) expect(built == null ? null : restOfForecast(built, vector.input.categories)).toEqual(restOfForecast(rest, vector.input.categories));
+    }
+  });
+
+  it("covers the year view's card with more than one vector", () => {
+    expect(vectors.filter((vector) => JSON.stringify(vector.input.months) === JSON.stringify(restOfYearMonths(vector.input.today))).length).toBeGreaterThan(1);
+  });
+
+  it.each(vectors.filter((vector) => Object.values(vector.input.inputs.skips ?? {}).some((keys) => keys.length > 0)).map((vector) => [vector.name, vector] as const))(
+    "%s: a skip drawn at once is the month the builders give with that skip, and its undo the month without",
+    (_name, vector) => {
+      const withSkip = builtMonths(vector.input).forecasts;
+      const bare = { ...vector.input, inputs: { ...vector.input.inputs, skips: undefined } };
+      const without = builtMonths(bare);
+      const bareAnswer = companyForecastAnswer(bare) as Expected;
+      withSkip.forEach((built, index) => {
+        const keyOf = futureForecastKey(built, vector.input.currency);
+        const keys = new Set(built.skipped.flatMap(({ row, projectId }) => keyOf(row.key, projectId) ?? []));
+        const mappedWith = forecastRowsOf(rowsAnswer(vector, index)).forecast;
+        const mappedBare = forecastRowsOf({ ...rowsAnswer(vector, index), months: [bareAnswer.months[index]] }).forecast;
+        expect(plain(withSkips(mappedWith, new Set(), vector.input.currency), true)).toEqual(plain(without.forecasts[index] as CompanyNextMonth, true));
+        expect(plain(withSkips(mappedBare, keys, vector.input.currency), true)).toEqual(plain(built, true));
+      });
+    },
+  );
+
+  it("drops the general part when it has no row: it adds no row, no caption, and no cash of its own", () => {
+    const part = (extra: Record<string, unknown>) => ({ average_months: 3, removed: [], arrived: [], loan_cash: [], ...extra });
+    const answer = {
+      today: "2026-11-24",
+      currency: "USD",
+      months: [{
+        month: "2026-12", income_minor: 0, expense_minor: 20_000, net_minor: -20_000, cash_only_minor: 0, projects: 1, general: false, income: { rows: 0, recurring: 0, rent: 0 },
+        parts: [
+          part({ project_id: "p1", income_minor: 0, expense_minor: 20_000, cash_only_minor: 0, rows: [{ key: "avg:c1", kind: "average", direction: "expense", name: "Repairs", minor: -20_000, category_id: "c1" }] }),
+          // The general costs: no row, and the cash of a loan of theirs (its principal).
+          part({ income_minor: 0, expense_minor: 0, cash_only_minor: 90_000, rows: [], loan_cash: [{ loan_id: "l1", row_category_ids: [], minor: 90_000 }] }),
+        ],
+        skipped: [],
+      }],
+      income: { rows: 0, recurring: 0, rent: 0 },
+      split_keys: [],
+    };
+    const { forecast, months } = forecastRowsOf(answer);
+    expect(forecast.parts.map((part) => part.projectId)).toEqual(["p1"]);
+    expect(companyForecastCaption(forecast)).toBe("פרויקט אחד");
+    expect(forecast.expenseMinor).toBe(20_000n);
+    // companyCashForecast adds each kept part's cash: the dropped general part's 90,000 is in no total.
+    expect(companyCashForecast(forecast).expenseMinor).toBe(20_000n);
+    expect(months[0]?.cashOnlyMinor).toBe(0n);
+  });
+
+  it("lists the rows taken out as the builders do: by project in id order, the general costs last, each part's rows in its own order", () => {
+    const row = (key: string, name: string, minor: number, extra: Record<string, unknown> = {}) => ({ key, kind: "recurring", direction: minor > 0 ? "income" : "expense", name, date: "2026-12-05", minor, ...extra });
+    const part = (extra: Record<string, unknown>) => ({ income_minor: 0, expense_minor: 0, cash_only_minor: 0, average_months: 3, rows: [], removed: [], arrived: [], loan_cash: [], ...extra });
+    const answer = {
+      today: "2026-11-24",
+      currency: "USD",
+      months: [{
+        month: "2026-12", income_minor: 0, expense_minor: 0, net_minor: 0, cash_only_minor: 0, projects: 0, general: false, income: { rows: 0, recurring: 0, rent: 0 },
+        parts: [part({})],
+        // The database lists the general costs first, then the projects by id, each by key.
+        skipped: [
+          row("rec:expense:b", "בית", -100),
+          row("rec:expense:a", "אור", -200),
+          { project_id: "p2", ...row("rec:expense:z", "Z", -300) },
+          { project_id: "p1", ...row("rec:expense:y", "Y", -400) },
+          { project_id: "p1", ...row("add:e1", "קטגוריה", -500, { kind: "added", date: undefined, pace: "month" }) },
+          { project_id: "p1", ...row("rec:expense:x", "X", -600, { date: "2026-12-01" }) },
+        ],
+      }],
+      income: { rows: 0, recurring: 0, rent: 0 },
+      split_keys: [],
+    };
+    const { forecast } = forecastRowsOf(answer);
+    // The builder: projects by id (`p1`, `p2`), then the general costs; in each, the rows by day then name, the added line last.
+    expect(forecast.skipped.map(({ projectId, row }) => [projectId, row.key])).toEqual([
+      ["p1", "rec:expense:x"],
+      ["p1", "rec:expense:y"],
+      ["p1", "add:e1"],
+      ["p2", "rec:expense:z"],
+      [null, "rec:expense:a"],
+      [null, "rec:expense:b"],
+    ]);
+  });
+
+  it("sorts the Hebrew names as the builder does, and a changed row where Flow had it", () => {
+    const names = ["שמש", "אור", "בית", "אבא", "גן", "דבורה"];
+    const parties = names.map((name, index): ExpectedParty => ({
+      direction: "expense", party_id: `s${String(index)}`, name, currency: "USD", typical_amount_minor: -1000n, typical_day: 5, months_seen: 6, seen_this_month: true,
+      project_id: "p1", category_id: null, pace: "month", next_due_month: "2026-12", pays_loan: false,
+    }));
+    const built = companyNextMonthForecast({
+      currency: "USD", today: "2026-11-24", recurring: parties, loans: [], categories: [],
+      inputs: { month: "2026-12", overhead_project_id: null, projects: [{ project_id: "p1", categories: [] }], general: [], edits: [] },
+    });
+    const wanted = built.rows.map((row) => row.name);
+    expect(wanted).toEqual([...names].sort((a, b) => a.localeCompare(b, "he")));
+    // The database lists them by key (s0, s1, ...): the names in the order given above, not Hebrew order.
+    const byKey = [...built.rows].sort((a, b) => compare(a.key, b.key));
+    expect(orderRows(byKey).map((row) => row.name)).toEqual(wanted);
+    // Averages of equal amounts tie on the name; a changed one sorts by the amount Flow had, as the builder's sort ran before the change.
+    const average = (key: string, name: string, minor: bigint, wasMinor: bigint | null): NextMonthRow => ({ key, kind: "average", direction: "expense", name, date: null, minor, categoryId: key, wasMinor, pace: null });
+    const rows = [average("avg:a", "תיקונים", -500n, -100n), average("avg:b", "אחזקה", -200n, null), average("avg:c", "ביטוח", -200n, null)];
+    expect(orderRows(rows).map((row) => row.key)).toEqual(["avg:b", "avg:c", "avg:a"]);
+  });
+
+  it("keeps the lines the user added in the order given, whatever their names or keys", () => {
+    const added = (key: string, name: string): NextMonthRow => ({ key, kind: "added", direction: "expense", name, date: null, minor: -100n, categoryId: null, wasMinor: null, pace: "month" });
+    const rows = [added("add:z", "אור"), added("add:a", "תיקונים"), added("add:m", "בית")];
+    expect(orderRows(rows).map((row) => row.key)).toEqual(["add:z", "add:a", "add:m"]);
+  });
+
+  it("refuses an amount that is not a safe integer, and a month that is not one", () => {
+    const answer = (extra: Record<string, unknown>) => ({ today: "2026-11-24", currency: "USD", income: { rows: 0, recurring: 0, rent: 0 }, months: [{ month: "2026-12", income_minor: 1, expense_minor: 0, net_minor: 1, cash_only_minor: 0, projects: 0, general: false, income: { rows: 0, recurring: 0, rent: 0 }, ...extra }] });
+    expect(forecastTotalsOf(answer({})).months[0]?.incomeMinor).toBe(1n);
+    for (const bad of [2 ** 60, 9_007_199_254_740_992, 1.5, "12.5", null]) expect(() => forecastTotalsOf(answer({ income_minor: bad })), String(bad)).toThrow(/company_forecast/u);
+    expect(() => forecastTotalsOf({ ...answer({}), months: [{}] })).toThrow(/company_forecast/u);
+    expect(() => forecastTotalsOf({ today: "2026-11-24" })).toThrow(/company_forecast/u);
+    // 'rows' is of one month.
+    expect(() => forecastRowsOf({ ...answer({}), months: [] })).toThrow(/company_forecast/u);
   });
 });

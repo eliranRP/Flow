@@ -1,19 +1,23 @@
-import type { ForecastOverrideRow } from "@flow/shared";
-import type { CashMonths } from "@flow/shared";
+import type { CashMonths, ForecastOverrideRow } from "@flow/shared";
 import { useMemo } from "react";
 import { cashMonthKey } from "../cash";
-import { companyCashForecast, type CompanyForecastInput, type CompanyNextMonth } from "../company-next-month";
-import { useCompanyNextMonth, type CompanyNextMonthSample } from "../company-next-month-query";
-import type { RentCategory } from "../next-month-chart";
+import { useCompanyMonthRows } from "../company-forecast-query";
+import { companyCashForecast, type CompanyNextMonth } from "../company-next-month";
+import type { CompanyNextMonthSample } from "../company-next-month-query";
+import type { IncomeFacts } from "../next-month-chart";
+import { nextMonthKey } from "../project-next-month";
 
 /**
  * FLOW-990 (board "Next month's forecast on Home and Projects", owner's pick 2026-10-30): the company's next
- * month in cash terms. The one forecast the company profit page builds (useCompanyNextMonth), with each part's
- * loans' principal added (decision 0196). FLOW-1056: Home on next month and the company צפי page read it.
+ * month in cash terms: each part's loans' principal added (decision 0196). FLOW-1056: Home on next month and the
+ * company צפי page read it. FLOW-1308: from one read, `company_forecast` with 'rows' (useCompanyMonthRows), which the
+ * database builds; company-forecast-map.ts gives it the shape the TypeScript builders gave.
  */
 export type CompanyCashNextMonth = {
-  /** Null while the reads are out, when one failed, or in a preview. */
+  /** Null while the read is out, when it failed, or in a preview. */
   forecast: CompanyNextMonth | null;
+  /** The same month in profit terms (the parts' rows and totals before the loans' cash), which a page draws its skips on. */
+  profit: CompanyNextMonth | null;
   loading: boolean;
   /** FLOW-1000: a read failed (the company צפי page and Home say so). */
   failed: boolean;
@@ -21,11 +25,10 @@ export type CompanyCashNextMonth = {
   paused: boolean;
   /** FLOW-1000: reads the forecast again. */
   refetch: () => Promise<unknown>;
-  categories: readonly RentCategory[];
+  /** What the income note counts (companyIncomeNoteOfFacts); null with the forecast. */
+  incomeFacts: IncomeFacts | null;
   /** FLOW-1079: the month's forecast overrides (null without a month, or while read), for a skip's undo. */
   overrides: readonly ForecastOverrideRow[] | null;
-  /** FLOW-1096: what the forecast is built from, so a page can build it again with its own skips at once. */
-  input: CompanyForecastInput | null;
   /**
    * FLOW-1066 (owner, 2026-11-06: "Expected profit"): the month's expected profit, the profit-basis net (income
    * less expenses, no loan principal); null with the forecast.
@@ -37,10 +40,11 @@ export type CompanyCashNextMonth = {
 export type HomeNextMonthSample = { next: CompanyNextMonthSample; cash: NonNullable<CashMonths> };
 
 /** FLOW-1066: `month` is a month of the forecast (next month by default). FLOW-1202: `withOverrides` reads the month's override rows, for a page that can skip its rows. */
-export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample, month?: string, withOverrides = false): CompanyCashNextMonth {
-  const next = useCompanyNextMonth(currency, today, enabled, sample, month, false, withOverrides);
-  const forecast = useMemo(() => (next.forecast == null ? null : companyCashForecast(next.forecast)), [next.forecast]);
-  return { forecast, loading: next.pending, failed: next.failed, paused: next.paused, refetch: next.refetch, categories: next.categories, profitMinor: next.forecast?.netMinor ?? null, overrides: next.overrides, input: next.input };
+export function useCompanyCashNextMonth(today: string, enabled: boolean, month?: string, withOverrides = false): CompanyCashNextMonth {
+  const read = useCompanyMonthRows(today, month ?? nextMonthKey(today), enabled, withOverrides);
+  const profit = read.answer?.forecast ?? null;
+  const forecast = useMemo(() => (profit == null ? null : companyCashForecast(profit)), [profit]);
+  return { forecast, profit, loading: read.pending, failed: read.failed, paused: read.paused, refetch: read.refetch, incomeFacts: read.answer?.months[0]?.income ?? null, profitMinor: profit?.netMinor ?? null, overrides: read.overrides };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { companyNextMonthForecast } from "./company-next-month";
 import { useCompanyNextMonth } from "./company-next-month-query";
 import { priorPatch, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "./forecast-month";
 import { QUERY_STALE_MS } from "./query-client";
@@ -66,7 +67,7 @@ function Harness() {
   const restore = useRestoreForecast(NEXT);
   return (
     <>
-      <p data-testid="total">{month.forecast == null ? "loading" : String(month.forecast.expenseMinor)}</p>
+      <p data-testid="total">{month.input == null ? "loading" : String(companyNextMonthForecast(month.input).expenseMinor)}</p>
       <button type="button" onClick={() => { set.mutate({ key: POWER, patch: { moved_out: true }, undo: false, prior: null }); }}>skip</button>
       <button type="button" onClick={() => { set.mutate({ key: POWER, patch: priorPatch(null), undo: true, prior: null }); }}>undo</button>
       <button type="button" onClick={() => { reset.mutate(undefined); }}>reset</button>
@@ -219,7 +220,7 @@ function RestoreTwo() {
   const restore = useRestoreForecast(NEXT);
   return (
     <>
-      <p data-testid="total">{month.forecast == null ? "loading" : String(month.forecast.expenseMinor)}</p>
+      <p data-testid="total">{month.input == null ? "loading" : String(companyNextMonthForecast(month.input).expenseMinor)}</p>
       <button type="button" onClick={() => { restore.mutate([row(POWER), row(HOA)]); }}>restore</button>
     </>
   );

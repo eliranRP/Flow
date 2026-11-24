@@ -1,4 +1,4 @@
-import { companyCashForecast } from "../company-next-month";
+import { companyCashForecast, companyIncomeNote } from "../company-next-month";
 import { companyMonthForecast } from "../company-year-forecast";
 import type { HomeFuture } from "../screens/home-activity";
 import { homeFutureView } from "../screens/home-future-month";
@@ -27,7 +27,7 @@ export function sampleHomeFuture(search: string, { phase = "ready", empty = fals
   return homeFutureView({
     forecast,
     profitMinor: empty ? 0n : profit.netMinor,
-    categories: reads.categories,
+    incomeNote: companyIncomeNote(forecast, reads.categories),
     projects: NEXT_MONTH_PROJECTS.projects,
     cash: HOME_NEXT_MONTH_SAMPLE.cash,
     today: NEXT_MONTH_TODAY,
