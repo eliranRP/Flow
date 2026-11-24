@@ -754,6 +754,68 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"loan_schedule_meta": {
+                  Row: {
+                    "balloon_minor": number | null,"balloon_ratio": number | null,"built_at": string,"company_id": string,"error": string | null,"final_adjustment_minor": number | null,"loan_id": string,"state": string,"terms_hash": string
+                  }
+                  Insert: {
+                    "balloon_minor"?: number | null,"balloon_ratio"?: number | null,"built_at"?: string,"company_id": string,"error"?: string | null,"final_adjustment_minor"?: number | null,"loan_id": string,"state": string,"terms_hash": string
+                  }
+                  Update: {
+                    "balloon_minor"?: number | null,"balloon_ratio"?: number | null,"built_at"?: string,"company_id"?: string,"error"?: string | null,"final_adjustment_minor"?: number | null,"loan_id"?: string,"state"?: string,"terms_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loan_schedule_meta_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_schedule_meta_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_unsplit_payments"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_schedule_meta_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loans"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"loan_schedule_rows": {
+                  Row: {
+                    "balance_minor": number,"company_id": string,"due_date": string,"escrow_minor": number,"interest_minor": number,"loan_id": string,"payment_minor": number,"period": number,"principal_minor": number
+                  }
+                  Insert: {
+                    "balance_minor": number,"company_id": string,"due_date": string,"escrow_minor": number,"interest_minor": number,"loan_id": string,"payment_minor": number,"period": number,"principal_minor": number
+                  }
+                  Update: {
+                    "balance_minor"?: number,"company_id"?: string,"due_date"?: string,"escrow_minor"?: number,"interest_minor"?: number,"loan_id"?: string,"payment_minor"?: number,"period"?: number,"principal_minor"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loan_schedule_rows_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_schedule_rows_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_unsplit_payments"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_schedule_rows_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loans"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"loans": {
                   Row: {
                     "amortization_months": number | null,"annual_rate_ppm": number,"closed_on": string | null,"closing_paid_minor": number | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"fees_category_id": string | null,"id": string,"interest_category_id": string | null,"interest_only_months": number | null,"kind": Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor": number | null,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"rate_index": string | null,"rate_margin_ppm": number | null,"refinanced_into_id": string | null,"sort_order": number | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number | null,"updated_at": string
