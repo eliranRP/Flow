@@ -1,6 +1,5 @@
 import type { LoanDetail } from "./loan-detail-data";
 import type { LoanCurrency } from "./loan-form";
-import type { LoanOutlook } from "./loan-outlook";
 
 /**
  * FLOW-139 (the Loans tab). The figures the list's summary card shows, from each open loan's
@@ -8,7 +7,10 @@ import type { LoanOutlook } from "./loan-outlook";
  * because amounts in two currencies do not add.
  */
 
-export type LoanListEntry = { loan: LoanDetail; outlook: LoanOutlook | null };
+/** FLOW-1316: a loan's outlook as the band reads it: the next payment's parts and the next 12 payments' total (`loan_outlooks`, `ahead_minor`). */
+export type LoanListOutlook = { next: { dueDate: string; principalMinor: bigint; interestMinor: bigint; escrowMinor: bigint }; aheadMinor: bigint };
+
+export type LoanListEntry = { loan: LoanDetail; outlook: LoanListOutlook | null };
 
 export type LoanListSummary = {
   /** Open loans in the currency. */
@@ -43,7 +45,7 @@ export function loanListSummary(entries: readonly LoanListEntry[], currency: Loa
     monthlyParts.principal += outlook.next.principalMinor;
     monthlyParts.interest += outlook.next.interestMinor;
     monthlyParts.escrow += outlook.next.escrowMinor;
-    twelveMonthsMinor += outlook.ahead.totalMinor;
+    twelveMonthsMinor += outlook.aheadMinor;
     const amountMinor = outlook.next.principalMinor + outlook.next.interestMinor + outlook.next.escrowMinor;
     if (next == null || outlook.next.dueDate < next.dueDate) {
       next = { lenderName: loan.name, dueDate: outlook.next.dueDate, amountMinor };

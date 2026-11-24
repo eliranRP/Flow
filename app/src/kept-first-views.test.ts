@@ -1,4 +1,4 @@
-import { cashLinesSchema, cashToDaySchema, categoryRowSchema, projectCategoryMonthsSchema, weeklySummarySchema } from "@flow/shared";
+import { cashLinesSchema, cashToDaySchema, categoryRowSchema, loanOutlooksSchema, projectCategoryMonthsSchema, weeklySummarySchema } from "@flow/shared";
 import { QueryClient } from "@tanstack/react-query";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -40,6 +40,12 @@ const loans = [{ id: "l1", currency: "ILS", balanceMinor: 900n, principalMinor: 
 const forecastItem = { key: "party:expense:s1:ILS", direction: "expense", kind: "recurring", name: "חשמל", currency: "ILS", usual: 20000n, minor: 20000n, day: 5, description: null, due_on: null, moved_out: false, overridden: false, expected_on: null, late_days: 0, category_id: null, project_id: null, project_name: null, pace: "month", line_start: null };
 const forecast = { month: "2026-11", base: "ILS", overrides: [], build: { items: [forecastItem], income: [], expense: [forecastItem], moved: [], small: [], incomeTotal: 0n, expenseTotal: 20000n, changed: 0 } };
 
+const loanOutlooks = loanOutlooksSchema.parse([
+  { loan_id: "l1", next: { due_date: "2026-12-01", interest_minor: 16000, escrow_minor: 0, principal_minor: 44000, amount_minor: 60000 }, ahead_minor: 720000, to_end_minor: 5000000, end_date: "2034-11-01", late_on: "2026-11-01" },
+  { loan_id: "l2", late_on: "2026-11-01" },
+]);
+const loanRows = { rows: [{ id: "l1", name: "הלוואה", currency: "ILS", balanceMinor: 900n, flaggedParts: 0, projectId: null, projectName: null }], loans: [] };
+
 type Case = { name: string; key: unknown[]; good: unknown; bad: unknown; preview: unknown[] };
 const CASES: Case[] = [
   { name: "transfer match count", key: ["transfer-match-count", "off"], good: 3, bad: -1, preview: ["transfer-match-count", "empty"] },
@@ -53,6 +59,9 @@ const CASES: Case[] = [
   { name: "project forecast edits", key: ["project-forecast-edits", "off", "p1", "2026-12"], good: edits, bad: [{ id: "e1" }], preview: ["project-forecast-edits", "empty", "p1", "2026-12"] },
   { name: "categories", key: ["categories", "off"], good: categories, bad: [{ id: "c1", name: "חשמל", kind: "other" }], preview: ["categories", "empty"] },
   { name: "company next month inputs", key: ["project-forecast-edits", "off", "company", "2026-11-23", false], good: inputs, bad: { month: "2026-12" }, preview: ["project-forecast-edits", "empty", "company", "2026-11-23", false] },
+  // FLOW-1316: the Loans list's rows (no next payment, late date or rate: a list kept before that has them and is not used) and its outlooks.
+  { name: "loan list", key: ["loans", COMPANY, "list"], good: loanRows, bad: { ...loanRows, rows: [{ ...loanRows.rows[0], ratePpm: 50000 }] }, preview: ["loans", COMPANY] },
+  { name: "loan outlooks", key: ["loans", COMPANY, "outlooks", "2026-11-24"], good: loanOutlooks, bad: [{ loan_id: "l1", next: { due_date: "2026-12-01" } }], preview: ["loans", COMPANY, "outlooks"] },
   { name: "company forecast loans", key: ["loans", "company-forecast", "off"], good: loans, bad: [{ id: "l1", currency: "EUR", balanceMinor: 1n, rates: [] }], preview: ["loans", "company-forecast", "empty"] },
   { name: "month forecast (FLOW-1314)", key: ["month-forecast", "off", "answer", "2026-11"], good: forecast, bad: { ...forecast, build: { ...forecast.build, expenseTotal: 20000.5 } }, preview: ["month-forecast", "empty", "answer", "2026-11"] },
 ];

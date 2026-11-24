@@ -16,7 +16,9 @@ const TODAY = "2026-10-16";
 const USD = "USD";
 
 function entry(loan: typeof SAMPLE_AMORTIZING, today = TODAY): LoanListEntry {
-  return { loan, outlook: loanOutlook(loan, today) };
+  const outlook = loanOutlook(loan, today);
+  // The band reads the outlook as `loan_outlooks` gives it: the next payment's parts and the next 12 payments' total.
+  return { loan, outlook: outlook == null ? null : { next: outlook.next, aheadMinor: outlook.ahead.totalMinor } };
 }
 
 describe("loanListSummary", () => {
