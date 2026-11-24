@@ -851,6 +851,15 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1300"></a>[FLOW-1300](tasks/FLOW-1300.md) | Perf: the recurring reads average 0.64 s in production against 0.1 to 0.14 s warm | MEDIUM (perf, investigate first) |
 | <a id="flow-1301"></a>[FLOW-1301](tasks/FLOW-1301.md) | Perf: restore the open screen's kept reads first, and keep them past an hour | SMALL (perf) |
 | <a id="flow-1302"></a>[FLOW-1302](tasks/FLOW-1302.md) | Perf: two small response and kept-size trims | SMALL (perf) |
+| <a id="flow-1304"></a>[FLOW-1304](tasks/FLOW-1304.md) | Perf: the forecast builds each loan's schedule once per read | SMALL (perf) |
+| <a id="flow-1305"></a>[FLOW-1305](tasks/FLOW-1305.md) | Perf: shared test vectors, and the month forecast in one read | LARGE (perf) |
+| <a id="flow-1306"></a>[FLOW-1306](tasks/FLOW-1306.md) | Perf: the loan schedule in the database, kept current on every loan write | LARGE (perf) |
+| <a id="flow-1307"></a>[FLOW-1307](tasks/FLOW-1307.md) | Perf: the company forecast in one read | LARGE (perf) |
+| <a id="flow-1308"></a>[FLOW-1308](tasks/FLOW-1308.md) | Perf: Profit, Home's future months and the company forecast pages read the company forecast | MEDIUM (perf) |
+| <a id="flow-1309"></a>[FLOW-1309](tasks/FLOW-1309.md) | Perf: the project page's forecast in one read | MEDIUM (perf) |
+| <a id="flow-1310"></a>[FLOW-1310](tasks/FLOW-1310.md) | Perf: the Loans list reads its outlooks from the database | MEDIUM (perf) |
+| <a id="flow-1311"></a>[FLOW-1311](tasks/FLOW-1311.md) | Perf: category months kept current on write (only if the forecast read needs it) | LARGE (perf) |
+| <a id="flow-1312"></a>[FLOW-1312](tasks/FLOW-1312.md) | MCP: flow-mcp reads the forecasts from the database | MCP |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |
