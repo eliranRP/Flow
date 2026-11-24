@@ -1,0 +1,202 @@
+{
+  "name": "split-party-keys-by-project",
+  "description": "A party with two charges is one item per project, keyed with the project id.",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": [
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-rent",
+          "name": "Rent Co",
+          "typical_amount_minor": -500000
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 5,
+          "party_id": "p-tea",
+          "name": "Tea Shop",
+          "typical_amount_minor": -3000
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": true,
+          "typical_day": 2,
+          "party_id": "p-seen",
+          "name": "Already Paid",
+          "typical_amount_minor": -90000
+        },
+        {
+          "direction": "income",
+          "currency": "ILS",
+          "months_seen": 4,
+          "seen_this_month": false,
+          "typical_day": 10,
+          "party_id": "p-retainer",
+          "name": "Retainer",
+          "typical_amount_minor": 800000
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-servicer",
+          "name": "Example Servicing",
+          "typical_amount_minor": -400000,
+          "project_id": "a"
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 2,
+          "party_id": "p-servicer",
+          "name": "Example Servicing",
+          "typical_amount_minor": -250000,
+          "project_id": "b"
+        }
+      ]
+    },
+    "unpaid": [],
+    "overrides": []
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "party:expense:p-rent:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Rent Co",
+        "currency": "ILS",
+        "usual": 500000,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 500000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:expense:p-tea:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Tea Shop",
+        "currency": "ILS",
+        "usual": 3000,
+        "day": 5,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 3000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:income:p-retainer:ILS",
+        "direction": "income",
+        "kind": "recurring",
+        "name": "Retainer",
+        "currency": "ILS",
+        "usual": 800000,
+        "day": 10,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 800000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:expense:p-servicer:ILS:a",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Example Servicing",
+        "currency": "ILS",
+        "usual": 400000,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": "a",
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 400000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:expense:p-servicer:ILS:b",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Example Servicing",
+        "currency": "ILS",
+        "usual": 250000,
+        "day": 2,
+        "description": null,
+        "category_id": null,
+        "project_id": "b",
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 250000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      }
+    ],
+    "income": [
+      "party:income:p-retainer:ILS"
+    ],
+    "expense": [
+      "party:expense:p-rent:ILS",
+      "party:expense:p-servicer:ILS:a",
+      "party:expense:p-servicer:ILS:b"
+    ],
+    "moved": [],
+    "small": [
+      "party:expense:p-tea:ILS"
+    ],
+    "incomeTotal": 800000,
+    "expenseTotal": 1153000,
+    "changed": 0
+  }
+}

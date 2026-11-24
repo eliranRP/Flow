@@ -1,0 +1,6 @@
+{
+  "name": "refused-start-date-not-a-day",
+  "description": "February 29 of a common year is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":360,"startDate":"2025-02-29","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"start_date"}
+}

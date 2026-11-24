@@ -1,0 +1,12 @@
+{
+  "name": "early-payment-clears-the-balance",
+  "description": "A payment above the balance ends the schedule in one row, with no balloon and no adjustment.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":360,"startDate":"2026-02-01","paymentMinor":20000000,"escrowMinor":0},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-02-01","interestMinor":50000,"escrowMinor":0,"principalMinor":10000000,"paymentMinor":10050000,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

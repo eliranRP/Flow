@@ -1,0 +1,14 @@
+{
+  "name": "year-before-1000-clamp",
+  "description": "Four-digit dates before the year 1000: 0099-12-31 clamps to 0100-02-28.",
+  "input": {"annualRatePpm":0,"startDate":"0099-12-31","escrowMinor":0,"principalMinor":300,"termMonths":3,"paymentMinor":100},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"0099-12-31","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":200},
+      {"period":2,"dueDate":"0100-01-31","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":100},
+      {"period":3,"dueDate":"0100-02-28","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

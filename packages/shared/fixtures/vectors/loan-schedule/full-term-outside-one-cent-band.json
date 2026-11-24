@@ -1,0 +1,15 @@
+{
+  "name": "full-term-outside-one-cent-band",
+  "description": "A full term with a last payment far below the regular one is neither a balloon nor an adjustment.",
+  "input": {"annualRatePpm":0,"startDate":"2026-01-01","escrowMinor":0,"principalMinor":100,"termMonths":4,"paymentMinor":30},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-01","interestMinor":0,"escrowMinor":0,"principalMinor":30,"paymentMinor":30,"balanceMinor":70},
+      {"period":2,"dueDate":"2026-02-01","interestMinor":0,"escrowMinor":0,"principalMinor":30,"paymentMinor":30,"balanceMinor":40},
+      {"period":3,"dueDate":"2026-03-01","interestMinor":0,"escrowMinor":0,"principalMinor":30,"paymentMinor":30,"balanceMinor":10},
+      {"period":4,"dueDate":"2026-04-01","interestMinor":0,"escrowMinor":0,"principalMinor":10,"paymentMinor":10,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "name": "small-charge-threshold",
+  "description": "9,999 is small, 10,000 is not (SMALL_CHARGE_MINOR).",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": [
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-a",
+          "name": "Just Under",
+          "typical_amount_minor": -9999
+        },
+        {
+          "direction": "expense",
+          "currency": "ILS",
+          "months_seen": 6,
+          "seen_this_month": false,
+          "typical_day": 1,
+          "party_id": "p-b",
+          "name": "Exactly At",
+          "typical_amount_minor": -10000
+        }
+      ]
+    },
+    "unpaid": [],
+    "overrides": []
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "party:expense:p-a:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Just Under",
+        "currency": "ILS",
+        "usual": 9999,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 9999,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "party:expense:p-b:ILS",
+        "direction": "expense",
+        "kind": "recurring",
+        "name": "Exactly At",
+        "currency": "ILS",
+        "usual": 10000,
+        "day": 1,
+        "description": null,
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": "month",
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 10000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      }
+    ],
+    "income": [],
+    "expense": [
+      "party:expense:p-b:ILS"
+    ],
+    "moved": [],
+    "small": [
+      "party:expense:p-a:ILS"
+    ],
+    "incomeTotal": 0,
+    "expenseTotal": 19999,
+    "changed": 0
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "year-0000-is-a-leap-year",
+  "description": "Year 0000 is a leap year (divisible by 400).",
+  "input": {"annualRatePpm":0,"startDate":"0000-01-31","escrowMinor":0,"principalMinor":200,"termMonths":2,"paymentMinor":100},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"0000-01-31","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":100},
+      {"period":2,"dueDate":"0000-02-29","interestMinor":0,"escrowMinor":0,"principalMinor":100,"paymentMinor":100,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

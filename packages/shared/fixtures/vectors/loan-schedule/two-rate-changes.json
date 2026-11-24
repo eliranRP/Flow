@@ -1,0 +1,35 @@
+{
+  "name": "two-rate-changes",
+  "description": "Two rate rows: the rate in force on each due date is the latest on or before it.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":24,"startDate":"2026-02-01","paymentMinor":443206,"escrowMinor":0,"rates":[{"effectiveDate":"2026-03-01","annualRatePpm":70000},{"effectiveDate":"2026-05-01","annualRatePpm":80000}]},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-02-01","interestMinor":50000,"escrowMinor":0,"principalMinor":393206,"paymentMinor":443206,"balanceMinor":9606794},
+      {"period":2,"dueDate":"2026-03-01","interestMinor":56040,"escrowMinor":0,"principalMinor":391508,"paymentMinor":447548,"balanceMinor":9215286},
+      {"period":3,"dueDate":"2026-04-01","interestMinor":53756,"escrowMinor":0,"principalMinor":393792,"paymentMinor":447548,"balanceMinor":8821494},
+      {"period":4,"dueDate":"2026-05-01","interestMinor":58810,"escrowMinor":0,"principalMinor":392748,"paymentMinor":451558,"balanceMinor":8428746},
+      {"period":5,"dueDate":"2026-06-01","interestMinor":56192,"escrowMinor":0,"principalMinor":395366,"paymentMinor":451558,"balanceMinor":8033380},
+      {"period":6,"dueDate":"2026-07-01","interestMinor":53556,"escrowMinor":0,"principalMinor":398002,"paymentMinor":451558,"balanceMinor":7635378},
+      {"period":7,"dueDate":"2026-08-01","interestMinor":50903,"escrowMinor":0,"principalMinor":400655,"paymentMinor":451558,"balanceMinor":7234723},
+      {"period":8,"dueDate":"2026-09-01","interestMinor":48231,"escrowMinor":0,"principalMinor":403327,"paymentMinor":451558,"balanceMinor":6831396},
+      {"period":9,"dueDate":"2026-10-01","interestMinor":45543,"escrowMinor":0,"principalMinor":406015,"paymentMinor":451558,"balanceMinor":6425381},
+      {"period":10,"dueDate":"2026-11-01","interestMinor":42836,"escrowMinor":0,"principalMinor":408722,"paymentMinor":451558,"balanceMinor":6016659},
+      {"period":11,"dueDate":"2026-12-01","interestMinor":40111,"escrowMinor":0,"principalMinor":411447,"paymentMinor":451558,"balanceMinor":5605212},
+      {"period":12,"dueDate":"2027-01-01","interestMinor":37368,"escrowMinor":0,"principalMinor":414190,"paymentMinor":451558,"balanceMinor":5191022},
+      {"period":13,"dueDate":"2027-02-01","interestMinor":34607,"escrowMinor":0,"principalMinor":416951,"paymentMinor":451558,"balanceMinor":4774071},
+      {"period":14,"dueDate":"2027-03-01","interestMinor":31827,"escrowMinor":0,"principalMinor":419731,"paymentMinor":451558,"balanceMinor":4354340},
+      {"period":15,"dueDate":"2027-04-01","interestMinor":29029,"escrowMinor":0,"principalMinor":422529,"paymentMinor":451558,"balanceMinor":3931811},
+      {"period":16,"dueDate":"2027-05-01","interestMinor":26212,"escrowMinor":0,"principalMinor":425346,"paymentMinor":451558,"balanceMinor":3506465},
+      {"period":17,"dueDate":"2027-06-01","interestMinor":23376,"escrowMinor":0,"principalMinor":428182,"paymentMinor":451558,"balanceMinor":3078283},
+      {"period":18,"dueDate":"2027-07-01","interestMinor":20522,"escrowMinor":0,"principalMinor":431036,"paymentMinor":451558,"balanceMinor":2647247},
+      {"period":19,"dueDate":"2027-08-01","interestMinor":17648,"escrowMinor":0,"principalMinor":433910,"paymentMinor":451558,"balanceMinor":2213337},
+      {"period":20,"dueDate":"2027-09-01","interestMinor":14756,"escrowMinor":0,"principalMinor":436802,"paymentMinor":451558,"balanceMinor":1776535},
+      {"period":21,"dueDate":"2027-10-01","interestMinor":11844,"escrowMinor":0,"principalMinor":439714,"paymentMinor":451558,"balanceMinor":1336821},
+      {"period":22,"dueDate":"2027-11-01","interestMinor":8912,"escrowMinor":0,"principalMinor":442646,"paymentMinor":451558,"balanceMinor":894175},
+      {"period":23,"dueDate":"2027-12-01","interestMinor":5961,"escrowMinor":0,"principalMinor":445597,"paymentMinor":451558,"balanceMinor":448578},
+      {"period":24,"dueDate":"2028-01-01","interestMinor":2991,"escrowMinor":0,"principalMinor":448578,"paymentMinor":451569,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

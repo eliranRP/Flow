@@ -1,0 +1,6 @@
+{
+  "name": "refused-payment-below-interest",
+  "description": "A payment below the first month's interest is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":60000,"termMonths":360,"startDate":"2026-02-01","paymentMinor":40000,"escrowMinor":0},
+  "expected": {"error":"payment_below_interest"}
+}

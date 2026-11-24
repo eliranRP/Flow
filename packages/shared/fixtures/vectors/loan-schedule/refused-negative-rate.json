@@ -1,0 +1,6 @@
+{
+  "name": "refused-negative-rate",
+  "description": "A negative rate is refused.",
+  "input": {"principalMinor":10000000,"annualRatePpm":-1,"termMonths":360,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"rate"}
+}

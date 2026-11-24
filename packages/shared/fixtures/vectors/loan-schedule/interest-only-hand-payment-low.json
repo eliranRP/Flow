@@ -1,0 +1,35 @@
+{
+  "name": "interest-only-hand-payment-low",
+  "description": "A payment entered below the annuity on an interest-only loan leaves a balloon (FLOW-136).",
+  "input": {"principalMinor":12000000,"annualRatePpm":60000,"termMonths":24,"startDate":"2026-01-01","paymentMinor":992797,"escrowMinor":10000,"kind":"interest_only","interestOnlyMonths":12},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":2,"dueDate":"2026-02-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":3,"dueDate":"2026-03-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":4,"dueDate":"2026-04-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":5,"dueDate":"2026-05-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":6,"dueDate":"2026-06-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":7,"dueDate":"2026-07-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":8,"dueDate":"2026-08-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":9,"dueDate":"2026-09-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":10,"dueDate":"2026-10-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":11,"dueDate":"2026-11-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":12,"dueDate":"2026-12-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":13,"dueDate":"2027-01-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":922797,"paymentMinor":992797,"balanceMinor":11077203},
+      {"period":14,"dueDate":"2027-02-01","interestMinor":55386,"escrowMinor":10000,"principalMinor":927411,"paymentMinor":992797,"balanceMinor":10149792},
+      {"period":15,"dueDate":"2027-03-01","interestMinor":50749,"escrowMinor":10000,"principalMinor":932048,"paymentMinor":992797,"balanceMinor":9217744},
+      {"period":16,"dueDate":"2027-04-01","interestMinor":46089,"escrowMinor":10000,"principalMinor":936708,"paymentMinor":992797,"balanceMinor":8281036},
+      {"period":17,"dueDate":"2027-05-01","interestMinor":41405,"escrowMinor":10000,"principalMinor":941392,"paymentMinor":992797,"balanceMinor":7339644},
+      {"period":18,"dueDate":"2027-06-01","interestMinor":36698,"escrowMinor":10000,"principalMinor":946099,"paymentMinor":992797,"balanceMinor":6393545},
+      {"period":19,"dueDate":"2027-07-01","interestMinor":31968,"escrowMinor":10000,"principalMinor":950829,"paymentMinor":992797,"balanceMinor":5442716},
+      {"period":20,"dueDate":"2027-08-01","interestMinor":27214,"escrowMinor":10000,"principalMinor":955583,"paymentMinor":992797,"balanceMinor":4487133},
+      {"period":21,"dueDate":"2027-09-01","interestMinor":22436,"escrowMinor":10000,"principalMinor":960361,"paymentMinor":992797,"balanceMinor":3526772},
+      {"period":22,"dueDate":"2027-10-01","interestMinor":17634,"escrowMinor":10000,"principalMinor":965163,"paymentMinor":992797,"balanceMinor":2561609},
+      {"period":23,"dueDate":"2027-11-01","interestMinor":12808,"escrowMinor":10000,"principalMinor":969989,"paymentMinor":992797,"balanceMinor":1591620},
+      {"period":24,"dueDate":"2027-12-01","interestMinor":7958,"escrowMinor":10000,"principalMinor":1591620,"paymentMinor":1609578,"balanceMinor":0}
+    ],
+    "balloon": {"amountMinor":1609578,"ratioToPayment":1.6275772107566466},
+    "finalAdjustment": null
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "refused-negative-principal",
+  "description": "A negative principal is refused.",
+  "input": {"principalMinor":-1,"annualRatePpm":60000,"termMonths":360,"startDate":"2026-02-01","paymentMinor":59955,"escrowMinor":0},
+  "expected": {"error":"principal"}
+}

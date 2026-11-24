@@ -1,0 +1,35 @@
+{
+  "name": "interest-only-12-of-24",
+  "description": "Interest and escrow for 12 months, then the annuity over the 12 left.",
+  "input": {"principalMinor":12000000,"annualRatePpm":60000,"termMonths":24,"startDate":"2026-01-01","paymentMinor":1042797,"escrowMinor":10000,"kind":"interest_only","interestOnlyMonths":12},
+  "expected": {
+    "rows": [
+      {"period":1,"dueDate":"2026-01-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":2,"dueDate":"2026-02-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":3,"dueDate":"2026-03-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":4,"dueDate":"2026-04-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":5,"dueDate":"2026-05-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":6,"dueDate":"2026-06-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":7,"dueDate":"2026-07-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":8,"dueDate":"2026-08-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":9,"dueDate":"2026-09-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":10,"dueDate":"2026-10-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":11,"dueDate":"2026-11-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":12,"dueDate":"2026-12-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":0,"paymentMinor":70000,"balanceMinor":12000000},
+      {"period":13,"dueDate":"2027-01-01","interestMinor":60000,"escrowMinor":10000,"principalMinor":972797,"paymentMinor":1042797,"balanceMinor":11027203},
+      {"period":14,"dueDate":"2027-02-01","interestMinor":55136,"escrowMinor":10000,"principalMinor":977661,"paymentMinor":1042797,"balanceMinor":10049542},
+      {"period":15,"dueDate":"2027-03-01","interestMinor":50248,"escrowMinor":10000,"principalMinor":982549,"paymentMinor":1042797,"balanceMinor":9066993},
+      {"period":16,"dueDate":"2027-04-01","interestMinor":45335,"escrowMinor":10000,"principalMinor":987462,"paymentMinor":1042797,"balanceMinor":8079531},
+      {"period":17,"dueDate":"2027-05-01","interestMinor":40398,"escrowMinor":10000,"principalMinor":992399,"paymentMinor":1042797,"balanceMinor":7087132},
+      {"period":18,"dueDate":"2027-06-01","interestMinor":35436,"escrowMinor":10000,"principalMinor":997361,"paymentMinor":1042797,"balanceMinor":6089771},
+      {"period":19,"dueDate":"2027-07-01","interestMinor":30449,"escrowMinor":10000,"principalMinor":1002348,"paymentMinor":1042797,"balanceMinor":5087423},
+      {"period":20,"dueDate":"2027-08-01","interestMinor":25437,"escrowMinor":10000,"principalMinor":1007360,"paymentMinor":1042797,"balanceMinor":4080063},
+      {"period":21,"dueDate":"2027-09-01","interestMinor":20400,"escrowMinor":10000,"principalMinor":1012397,"paymentMinor":1042797,"balanceMinor":3067666},
+      {"period":22,"dueDate":"2027-10-01","interestMinor":15338,"escrowMinor":10000,"principalMinor":1017459,"paymentMinor":1042797,"balanceMinor":2050207},
+      {"period":23,"dueDate":"2027-11-01","interestMinor":10251,"escrowMinor":10000,"principalMinor":1022546,"paymentMinor":1042797,"balanceMinor":1027661},
+      {"period":24,"dueDate":"2027-12-01","interestMinor":5138,"escrowMinor":10000,"principalMinor":1027661,"paymentMinor":1042799,"balanceMinor":0}
+    ],
+    "balloon": null,
+    "finalAdjustment": null
+  }
+}

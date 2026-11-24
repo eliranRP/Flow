@@ -49,6 +49,7 @@ static_checks() {
   node scripts/check-migration-transaction.mjs
   node scripts/check-file-size.mjs
   node scripts/backlog-index.mjs --check
+  node scripts/vectors-sql.mjs --check
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
 }
 

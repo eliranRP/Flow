@@ -1,0 +1,94 @@
+{
+  "name": "supplier-invoice-is-expense",
+  "description": "A supplier invoice is expense, a customer invoice income.",
+  "input": {
+    "base": "ILS",
+    "expected": {
+      "today": "2026-10-16",
+      "project_id": null,
+      "months": [],
+      "recurring": []
+    },
+    "unpaid": [
+      {
+        "id": "inv-1",
+        "description": "Invoice 1",
+        "doc_date": "2026-10-02",
+        "project_name": null,
+        "customer_name": "Client A",
+        "open_gross_agorot": 250000,
+        "open_net_agorot": 250000,
+        "currency": "ILS"
+      },
+      {
+        "id": "bill-1",
+        "description": "Bill 1",
+        "doc_date": "2026-10-04",
+        "project_name": null,
+        "customer_name": "Supplier B",
+        "open_gross_agorot": -420000,
+        "open_net_agorot": -420000,
+        "currency": "ILS",
+        "direction": "expense"
+      }
+    ],
+    "overrides": []
+  },
+  "expected": {
+    "items": [
+      {
+        "key": "invoice:inv-1",
+        "direction": "income",
+        "kind": "invoice",
+        "name": "Client A",
+        "currency": "ILS",
+        "usual": 250000,
+        "day": null,
+        "description": "Invoice 1",
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": null,
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 250000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      },
+      {
+        "key": "invoice:bill-1",
+        "direction": "expense",
+        "kind": "invoice",
+        "name": "Supplier B",
+        "currency": "ILS",
+        "usual": 420000,
+        "day": null,
+        "description": "Bill 1",
+        "category_id": null,
+        "project_id": null,
+        "project_name": null,
+        "pace": null,
+        "line_start": null,
+        "expected_on": null,
+        "late_days": 0,
+        "minor": 420000,
+        "due_on": null,
+        "moved_out": false,
+        "overridden": false
+      }
+    ],
+    "income": [
+      "invoice:inv-1"
+    ],
+    "expense": [
+      "invoice:bill-1"
+    ],
+    "moved": [],
+    "small": [],
+    "incomeTotal": 250000,
+    "expenseTotal": 420000,
+    "changed": 0
+  }
+}
