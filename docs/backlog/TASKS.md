@@ -723,6 +723,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | --- | --- | --- |
 | <a id="flow-838"></a>[FLOW-838](tasks/FLOW-838.md) | txn-step e2e: prev and next walk the list is flaky on CI | BUG (e2e) |
 | <a id="flow-1317"></a>[FLOW-1317](tasks/FLOW-1317.md) | review-fit e2e: wait for the webfont before measuring the counter and the layout | BUG (e2e) |
+| <a id="flow-1319"></a>[FLOW-1319](tasks/FLOW-1319.md) | CI: stop the runner stalls on "Wait for local Supabase" and on apt | CI/infra |
 | <a id="flow-839"></a>[FLOW-839](tasks/FLOW-839.md) | A daily and weekly security scan agent | SMALL CYCLE (docs) |
 | <a id="flow-840"></a>[FLOW-840](tasks/FLOW-840.md) | The edge functions use zod 4.6.7, as the app does | SMALL CYCLE |
 | <a id="flow-841"></a>[FLOW-841](tasks/FLOW-841.md) | The Content-Security-Policy is enforced | SMALL CYCLE |
