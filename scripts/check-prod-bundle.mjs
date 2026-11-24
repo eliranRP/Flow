@@ -121,10 +121,30 @@ export function violations(input) {
   return found;
 }
 
-/** Edge Function sources. Fixed Flow Test data must not ship in the runtime. */
+/**
+ * A Deno test file (`*_test.ts`). `supabase functions deploy` bundles the import graph of a function's index.ts, and the
+ * shipping code never imports one (sourceViolations fails if it does), so a test file cannot reach the runtime and may
+ * read the shared fixtures. A name outside this pattern is scanned like any other source.
+ * @param {string} name
+ */
+export function isDenoTestFile(name) {
+  return /_test\.(?:ts|tsx|js|mjs)$/.test(name);
+}
+
+/** An import, re-export or dynamic import whose specifier names a `*_test.*` file. */
+const importsTestFile = /\b(?:from|import)\s*\(?\s*["'`][^"'`]*_test\.(?:ts|tsx|js|mjs)["'`]/;
+
+/**
+ * Edge Function sources. Fixed Flow Test data must not ship in the runtime, so every file but a Deno test file is scanned for
+ * the markers, and no file but a Deno test file may import one (that would pull its fixtures into the bundle).
+ * @param {{ name: string, body: string }[]} files
+ * @returns {string[]}
+ */
 export function sourceViolations(files) {
   const found = [];
   for (const file of files) {
+    if (isDenoTestFile(file.name)) continue;
+    if (importsTestFile.test(file.body)) found.push(`${file.name} imports a *_test file, which is exempt from the marker scan`);
     for (const [name, hit] of sourceMarkers) {
       if (hit(file.body)) found.push(`${file.name} contains ${name}`);
     }
@@ -345,6 +365,11 @@ export function checkReviewerBundle() {
   return reviewerNameViolations(scanDist(dist));
 }
 
+/** The Edge Function source scan. It reads sources only, so the pr workflow runs it without a build (--sources-only). */
+export function checkSources() {
+  return sourceViolations(scanTree(path.join(root, "supabase/functions"), /\.(ts|tsx|js|mjs)$/));
+}
+
 export function checkProductionBundle() {
   const dist = path.join(root, "app/dist");
   const graphPath = path.join(root, "app/bundle-graph.json");
@@ -366,7 +391,7 @@ export function checkProductionBundle() {
   return [
     ...problems,
     ...violations({ modules, files: distFiles }),
-    ...sourceViolations(scanTree(path.join(root, "supabase/functions"), /\.(ts|tsx|js|mjs)$/)),
+    ...checkSources(),
     ...presence,
     ...(existsSync(dist) ? precacheViolations(swBody(dist)) : []),
   ];
@@ -381,12 +406,15 @@ function swBody(dist) {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const reviewer = process.argv.includes("--reviewer");
-  const bad = reviewer ? checkReviewerBundle() : checkProductionBundle();
+  const sourcesOnly = process.argv.includes("--sources-only");
+  const bad = sourcesOnly ? checkSources() : reviewer ? checkReviewerBundle() : checkProductionBundle();
   if (bad.length > 0) {
     console.error(bad.join("\n"));
     process.exit(1);
   }
-  console.log(reviewer
+  console.log(sourcesOnly
+    ? "Edge Function sources have no fixtures or golden values"
+    : reviewer
     ? "reviewer dist has no Flow Test 2 names, golden ids, or the hosted client"
     : "production graph and dist have no fixtures or golden values, and the hosted client is present");
 }
