@@ -16,6 +16,7 @@ import { keptRuleOf, type KeptRule } from "./kept-rules";
  *   than a week go; the store holds about 5 MB and drops the oldest rows first.
  * - A put-back read keeps its real time as dataUpdatedAt (the offline line needs it) and is invalidated, so it is stale: the screen draws it and its query reads again at once.
  *   `useKeptState` says so while it is drawn.
+ * - A rule may trim what it keeps (`save`, FLOW-1296): the trimmed data is what is stored and counted.
  * - A row is checked against its read's schema (or shape) first, and dropped when it fails. Bump
  *   KEPT_VERSION when a read's shape changes on purpose: rows of another version are dropped.
  */
@@ -192,7 +193,7 @@ export function keepReadsOf(client: QueryClient): () => void {
     const { dataUpdatedAt } = query.state;
     if (owner == null || readFor !== owner || data == null || dataUpdatedAt === 0) return;
     if (rule.keep != null && !rule.keep(data)) return;
-    pending.set(hash, { id: hash, owner, at: dataUpdatedAt, key: JSON.stringify(key), data });
+    pending.set(hash, { id: hash, owner, at: dataUpdatedAt, key: JSON.stringify(key), data: rule.save == null ? data : rule.save(data) });
     schedule();
   });
 }
