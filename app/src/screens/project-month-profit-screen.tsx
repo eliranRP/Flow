@@ -53,7 +53,10 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const project = sample?.project ?? detail.data ?? null;
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
   const currency = figures?.currency ?? companyCurrency;
-  const linesRead = useProjectCashMonthLinesQuery(sample ? "" : projectId, month, currency, !sample && figures != null);
+  // FLOW-1299: in the company's own currency the lines are read with no currency (the server fills in the books
+  // currency), under the project page's key, so a visit from the project page reads them from its cache.
+  const linesCurrency = figures != null && project?.base_currency != null && figures.currency === project.base_currency ? null : currency;
+  const linesRead = useProjectCashMonthLinesQuery(sample ? "" : projectId, month, linesCurrency, !sample && figures != null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   // The share and its weights are the requested month's (get_project reads the range); same rule as the project page.
   const share = project?.overhead_weighted === true && (project.base_currency ?? "ILS") === currency

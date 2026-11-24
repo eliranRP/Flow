@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { israelToday } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ProjectDetailScreen } from "./flow-screens";
+import { ProjectMonthProfitScreen } from "./project-month-profit-screen";
 
 type Reply = { data: unknown; error: { message: string } | null };
 
@@ -136,5 +137,30 @@ describe("the project page's first view in one wave (FLOW-1270)", () => {
       expect(call.args).not.toHaveProperty("p_currency");
     }
     expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(2);
+  });
+
+  it("the month profit page reads the project page's lines from its cache, in the company's own currency (FLOW-1299)", async () => {
+    server.answer = true;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+    // The project page's read of this month's lines, as it caches it: under the books currency (no currency named).
+    client.setQueryData(["breakdown-lines", "project-cash-month", "off", "a", month, ""], { counted: [], kept: [] });
+    const project = server.project;
+    server.project = { ...project, base_currency: "ILS" } as typeof project;
+    try {
+      render(
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <MemoryRouter initialEntries={[`/projects/a/profit/${month}`]}>
+              <Routes><Route path="/projects/:projectId/profit/:month" element={<ProjectMonthProfitScreen />} /></Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </QueryClientProvider>,
+      );
+      await vi.waitFor(() => { expect(names()).toContain("get_project"); });
+      await new Promise((resolve) => { setTimeout(resolve, 50); });
+      expect(names()).not.toContain("project_cash_month_lines");
+    } finally {
+      server.project = project;
+    }
   });
 });
