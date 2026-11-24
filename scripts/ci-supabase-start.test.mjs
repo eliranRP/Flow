@@ -60,6 +60,7 @@ function setup(modes, env = {}, extraBin = {}) {
       FLOW_SUPABASE_STOP_TIMEOUT: "5",
       FLOW_SUPABASE_START_ATTEMPTS: "2",
       FLOW_BOUNDED_GRACE: "1",
+      FLOW_SUPABASE_RESERVE_PORTS: "",
       ...env,
     },
   });
@@ -109,6 +110,32 @@ test("a start that exits non-zero is retried and its output is kept", () => {
     assert.equal(result.status, 1);
     assert.equal(result.stdout.match(/boom/g).length, 2);
     assert.match(result.stdout, /exited with 3/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the Supabase ports are kept out of the runner's source-port range before the first start", () => {
+  const sysctl = '#!/usr/bin/env bash\necho "sysctl $*" >> "$SHIM_CALLS"\n';
+  const { dir, result, calls } = setup(
+    "ok",
+    { FLOW_SUPABASE_RESERVE_PORTS: "54320-54329", FLOW_SUPABASE_SUDO: "" },
+    { sysctl },
+  );
+  try {
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(calls, ["sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329", "start -x a,b"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the failure log lists the sockets on the Supabase ports", () => {
+  const ss = '#!/usr/bin/env bash\necho "ESTAB 0 0 10.1.0.4:54322 140.82.1.1:443 users:((curl,pid=1))"\n';
+  const { dir, result } = setup("fail,fail", {}, { ss });
+  try {
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /sockets on the Supabase ports:\nESTAB 0 0 10\.1\.0\.4:54322/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -198,6 +225,11 @@ test("workflows call the script and every wait step has its own limit", () => {
   for (const text of [ci, pr]) assert.doesNotMatch(text, /supabase start/);
   assert.equal(ci.match(/scripts\/ci-supabase-start\.sh/g).length, 1);
   assert.equal(pr.match(/scripts\/ci-supabase-start\.sh/g).length, 2);
+  // The step shell runs with -e: without set +e a failed start ends the subshell before it writes the exit
+  // file, and the wait step waits its full limit for a file that never comes (FLOW-1319).
+  for (const text of [ci, pr]) {
+    assert.match(text, /\(set \+e; bash scripts\/ci-supabase-start\.sh -x [^\n]*; echo "\$\?" > "\$RUNNER_TEMP\/supabase-start\.exit\.tmp"/);
+  }
   // The wait script gives up after 420 s and prints what the start was doing; the step limit is the backstop.
   assert.match(ci, /Wait for local Supabase\n {8}timeout-minutes: 8\n {8}run: bash scripts\/ci-supabase-wait\.sh\n/);
   assert.match(pr, /Wait for local Supabase\n {8}timeout-minutes: 8\n {8}run: bash scripts\/ci-supabase-wait\.sh\n/);

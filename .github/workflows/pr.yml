@@ -198,7 +198,7 @@ jobs:
       # Supabase pulls and starts its containers while node, pnpm, and Playwright install.
       - name: Start local Supabase in the background
         run: |
-          (bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
+          (set +e; bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10.33.3

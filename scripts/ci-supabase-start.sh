@@ -59,6 +59,11 @@ diagnostics() {
     echo "ci-supabase-start: disk and memory:"
     bounded "$diag_timeout" df -h / 2>&1
     bounded "$diag_timeout" free -m 2>&1
+    echo "ci-supabase-start: sockets on the Supabase ports:"
+    ss_out="$(mktemp "${TMPDIR:-/tmp}/ci-ss.XXXXXX")"
+    bounded "$diag_timeout" ss -tanp > "$ss_out" 2>&1
+    grep -E ':543(2[0-9])[[:space:]]' "$ss_out"
+    rm -f "$ss_out"
     echo "ci-supabase-start: supabase and docker processes:"
     # A file, not a pipe: a ps that had to be abandoned must not hold the pipe open.
     ps_out="$(mktemp "${TMPDIR:-/tmp}/ci-ps.XXXXXX")"
@@ -69,6 +74,16 @@ diagnostics() {
   return 0
 }
 
+# Supabase binds 54320 to 54324. The runner hands the same numbers out as source ports of outgoing connections
+# (its range is 32768 to 60999), and a pull or download that holds 54322 makes the database fail with
+# "failed to bind host port 0.0.0.0:54322/tcp: address already in use" (FLOW-1319). Reserving them keeps new
+# connections off. Best effort: it needs sysctl and root, which a runner has and a laptop may not.
+reserve_ports() {
+  [ -n "${FLOW_SUPABASE_RESERVE_PORTS-54320-54329}" ] || return 0
+  bounded 10 ${FLOW_SUPABASE_SUDO-sudo} sysctl -w "net.ipv4.ip_local_reserved_ports=${FLOW_SUPABASE_RESERVE_PORTS-54320-54329}" >> "$log" 2>&1 || true
+}
+
+reserve_ports
 began=$SECONDS
 for ((attempt = 1; attempt <= max_attempts; attempt++)); do
   limit="$start_timeout"

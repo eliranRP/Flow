@@ -517,7 +517,7 @@ jobs:
           # The exit file appears only once it holds the full status (written, then renamed).
           # The script times a start out at 2 minutes (healthy starts take 61 to 96 s), stops, retries inside a
           # 330 s budget, and logs docker ps -a on failure. ci-supabase-wait.sh reads its exit file.
-          (bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
+          (set +e; bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10.33.3
