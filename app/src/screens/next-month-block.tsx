@@ -11,7 +11,7 @@ import { DelayedSkeleton } from "../ui/skeleton";
 /**
  * A project's next month (canvas note spec-fcwide), as its profit page (לפי חודש) and its project page show
  * it: the dashed forecast card, then the chart of the page's own months with the forecast as its last pair.
- * The forecast is the one the צפי page shows (useNextMonthForecast): on the profit page as it is, on the project
+ * The forecast is the one the צפי page shows (useProjectNextMonth): on the profit page as it is, on the project
  * page in cash terms (cashForecast: the loans' principal added, decision 0196); the history is the page's
  * (profit months or cash months). The card hides when nothing is expected next month; while the reads are out,
  * skeletons of the card and the chart hold their places.

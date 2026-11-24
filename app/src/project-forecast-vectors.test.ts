@@ -292,6 +292,13 @@ describe("project_forecast mapped for the pages equals the builders (FLOW-1315)"
     expect(projectForecastOf(shuffled, "p-1")?.forecast.rows.map((row) => row.key)).toEqual(projectForecastOf(answer, "p-1")?.forecast.rows.map((row) => row.key));
   });
 
+  it("refuses an answer whose rows do not add up to its totals", () => {
+    const vector = vectors.find((item) => item.name === "project-board-november-juniper-ct-2026-11");
+    const answer = vector?.expected as { income_minor: number; expense_minor: number };
+    expect(() => projectForecastOf({ ...answer, income_minor: answer.income_minor + 1 }, "p1")).toThrow("do not add up");
+    expect(() => projectForecastOf({ ...answer, expense_minor: answer.expense_minor - 1 }, "p1")).toThrow("do not add up");
+  });
+
   it("refuses an amount outside 2^53 - 1 and an answer of the wrong shape", () => {
     const vector = vectors.find((item) => item.name === "near-2-to-the-53-p1-2026-11");
     const answer = vector?.expected as { income_minor: number; rows: Array<{ minor: number }> };
@@ -351,11 +358,16 @@ describe("a tap's patch equals the rebuilt forecast (FLOW-1315)", () => {
       const edit: ProjectForecastEdit = { id: `optimistic-remove:${row.key}`, kind: "remove", row_key: row.key, category_id: null, direction: null, amount_minor: null, pace: "month", start_month: input.month };
       const removed = readOf({ ...input, edits: [...input.edits, edit] });
       expect(patched.income, `remove ${row.key}`).toEqual(removed.income);
+      // The edit the write makes starts in the month: the reset button shows at the tap, as it did.
+      expect(patched.edited).toBe(removed.edited);
+      expect(patched.edited).toBe(true);
+      expect(patched.cashPending, `cash pending after ${row.key}`).toBe(row.kind === "loan");
+      expect(removed.cashPending).toBe(false);
       if (row.kind === "added") {
         expect(byKey(patched.forecast.removed)).toEqual(byKey(removed.forecast.removed));
         expect({ ...patched.forecast, removed: [] }).toEqual({ ...removed.forecast, removed: [] });
       } else if (row.kind === "loan") {
-        // The loans' cash follows with the read after the write.
+        // Everything but the loans' cash, which is pending (never drawn) until the read after the write brings it.
         expect({ ...patched.forecast, cashOnlyMinor: 0n }).toEqual({ ...removed.forecast, cashOnlyMinor: 0n });
       } else {
         expect(patched.forecast).toEqual(removed.forecast);

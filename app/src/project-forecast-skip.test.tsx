@@ -62,7 +62,9 @@ function Harness() {
       <button type="button" onClick={() => { set.mutate({ key: KIM, patch: { moved_out: true }, undo: false, prior: null }); }}>skip kim</button>
       <button type="button" onClick={() => { set.mutate({ key: "party:expense:other:USD", patch: { moved_out: true }, undo: false, prior: null }); }}>skip other</button>
       <button type="button" onClick={() => { reset.mutate(undefined); }}>reset</button>
+      <p data-testid="cash">{`${String(next.cashPending)} ${String(forecast?.cashOnlyMinor)} ${String(next.edited)}`}</p>
       <button type="button" onClick={() => { writes.mutate({ fn: "remove_project_forecast_row", rowKey: "rec:expense:power", message: "הוסר" }); }}>remove power</button>
+      <button type="button" onClick={() => { writes.mutate({ fn: "remove_project_forecast_row", rowKey: "avg:loan-interest", message: "הוסר" }); }}>remove loan</button>
     </>
   );
 }
@@ -206,6 +208,35 @@ describe("a skip changes the project's figures on the tap (FLOW-1315)", () => {
     await waitFor(() => { expect(text("figures")).toBe(FIGURES); });
     fireEvent.click(screen.getByRole("button", { name: "skip power" }));
     await waitFor(() => { expect(client.getQueryData<ProjectForecastRead>(other)?.forecast.expenseMinor).toBe(34_000n); });
+  });
+});
+
+/** The sample with a loan: its interest row, and 400.00 of principal the profit leaves out (cash only). */
+function loanAnswer() {
+  const answer = sampleProjectForecastAnswer() as { rows: unknown[] };
+  const row = { key: "avg:loan-interest", kind: "loan", direction: "expense", name: "ריבית", minor: -12_000, category_id: "loan-interest" };
+  return { ...answer, rows: [...answer.rows, row], expense_minor: 55_500, net_minor: 359_500, cash_only_minor: 40_000, cash_expense_minor: 95_500, cash_net_minor: 319_500, loan_count: 1 };
+}
+
+describe("the removal of a loan's row (FLOW-1315)", () => {
+  it("the figures that need the loan's cash wait for the read after the write, never show the old value; the reset button shows at the tap", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    server.write = () => new Promise<Answer>((resolve) => { answer = resolve; });
+    server.forecast = loanAnswer();
+    const client = pageClient();
+    renderWithProviders(<Harness />, { route: "/", client });
+    await waitFor(() => { expect(text("figures")).toBe("415000 55500 359500"); });
+    expect(text("cash")).toBe("false 40000 false");
+    fireEvent.click(screen.getByRole("button", { name: "remove loan" }));
+    // At the tap the profit figures and the reset button follow; the cash is pending, not the old 40000.
+    await waitFor(() => { expect(text("figures")).toBe("415000 43500 371500"); });
+    expect(text("cash")).toBe("true 40000 true");
+    // The read after the write brings the cash: the loan's every row is out, so none of its principal is expected.
+    const base = sampleProjectForecastAnswer() as { rows: unknown[] };
+    server.forecast = { ...base, edited: true, removed: [{ key: "avg:loan-interest", kind: "loan", direction: "expense", name: "ריבית", minor: -12_000, category_id: "loan-interest" }] };
+    answer({ data: null, error: null });
+    await waitFor(() => { expect(reads()).toHaveLength(2); });
+    await waitFor(() => { expect(text("cash")).toBe("false 0 true"); });
   });
 });
 

@@ -27,7 +27,7 @@ const loadedMonths = {
 } as unknown as NonNullable<ProfitMonths>;
 
 const ready = { data: project, isPending: false, isLoading: false, isError: false, isPaused: false, fetchStatus: "idle", status: "success", refetch: vi.fn() };
-const forecastBase = { forecast: null, income: null, overrides: null, failed: false, month: "2026-11", today: "2026-10-20", currency: "USD", general: false, edited: false, history: null, charges: [], categories: [], refetch: vi.fn() };
+const forecastBase = { forecast: null, income: null, overrides: null, failed: false, month: "2026-11", today: "2026-10-20", currency: "USD", general: false, edited: false, cashPending: false, history: null, charges: [], categories: [], refetch: vi.fn() };
 
 // Each case sets what the months read and the forecast reads return.
 const state = vi.hoisted((): { months: object; forecast: object } => ({ months: {}, forecast: {} }));

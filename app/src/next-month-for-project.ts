@@ -30,6 +30,8 @@ export type ProjectNextMonth = {
   general: boolean;
   /** An edit of the project starts in this month: the צפי page's reset button. */
   edited: boolean;
+  /** The loans' cash is not known until the read after a removal of a loan's row: the cash figures show as pending, never the old value. */
+  cashPending: boolean;
   /** The edit page's history bars: the six months before this one, and the project's expenses by category. */
   history: CategoryHistory | null;
   /** The edit page's category hints: the project's charges that file to a category. */
@@ -77,12 +79,16 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   const live = sample == null && enabled;
   // The database answers in the company's currency unless asked for another, so the read names only a project's own different one
   // (and, while the company's is unknown, none): a project in the company's currency has one key, however early the page starts it.
-  const companyCurrency = useCompanyCurrencyQuery(live).data;
+  const companyRead = useCompanyCurrencyQuery(live);
+  const companyCurrency = companyRead.data;
   const asked = companyCurrency != null && currency !== companyCurrency ? currency : null;
   const read = useProjectForecast(projectId, month, today, asked, live);
   const categoryRead = useCategoriesQuery(live && withCategories);
   const built = useMemo(() => (sample == null ? null : sampleForecast(sample, projectId, currency, month)), [sample, projectId, currency, month]);
-  const answer = read.data ?? null;
+  // An answer in another currency than the page's (the company's, came first while the company's was unknown) is not drawn: the
+  // read waits for the right one, which the company's currency landing asks for. A failed currency read leaves the answer as it is.
+  const wrongCurrency = read.data != null && !read.data.general && read.data.currency !== currency && !companyRead.isError;
+  const answer = wrongCurrency ? null : read.data ?? null;
   const reads = withCategories ? [read, categoryRead] : [read];
   const refetch = () => {
     for (const item of reads) void item.refetch();
@@ -97,6 +103,7 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
       currency,
       general: false,
       edited: built?.edited ?? false,
+      cashPending: false,
       history: sample.categoryMonths,
       charges: sample.expected.recurring,
       categories: sample.categories ?? NONE,
@@ -115,10 +122,11 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     currency: answer?.currency ?? currency,
     general: answer?.general ?? false,
     edited: answer?.edited ?? false,
+    cashPending: answer?.cashPending ?? false,
     history: answer?.history ?? null,
     charges: answer?.charges ?? NONE,
     categories: categoryRead.data ?? NONE,
-    pending: reads.some((item) => item.isPending),
+    pending: wrongCurrency || reads.some((item) => item.isPending),
     failed: reads.some((item) => item.isError),
     paused: reads.some((item) => item.isPaused),
     refetch,

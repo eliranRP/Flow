@@ -42,6 +42,7 @@ export const projectForecastKeptSchema = z.object({
   }),
   income: z.object({ rows: count, recurring: count, rent: count, name: z.string().nullable() }),
   edited: z.boolean(),
+  cashPending: z.boolean(),
   overrides: z.array(z.object({ item_key: z.string(), amount_minor: z.number().int().nullable(), due_on: z.string().nullable(), moved_out: z.boolean() })),
   history: z.object({
     months: z.array(z.string()),

@@ -1,5 +1,5 @@
 import type { ForecastOverrideRow } from "@flow/shared";
-import { isRent, type IncomeFacts, type RentCategory } from "./next-month-chart";
+import { incomeFactsOf, type IncomeFacts, type RentCategory } from "./next-month-chart";
 import { orderRows, type ProjectForecastRead } from "./project-forecast-map";
 import type { NextMonthRow } from "./project-next-month";
 
@@ -29,16 +29,15 @@ function withoutRow(rows: readonly NextMonthRow[], key: string): { rest: NextMon
   return { rest: rows.filter((row) => row.key !== key), row: rows.find((row) => row.key === key) };
 }
 
-/** What the card's income note reads, for the rows now counted. Rent is counted from the company's categories when known, else it stays as it was (never above the recurring rows). */
+/**
+ * What the card's income note reads, for the rows now counted: from the company's categories when held. Without them, rent is
+ * known only when the rows were all rent or none were (then so are the rows that moved), else it stays as it was, never above the recurring rows.
+ */
 function factsOf(rows: readonly NextMonthRow[], before: IncomeFacts, categories: readonly RentCategory[] | undefined): IncomeFacts {
-  const income = rows.filter((row) => row.minor > 0n);
-  const recurring = income.filter((row) => row.kind === "recurring");
-  return {
-    rows: income.length,
-    recurring: recurring.length,
-    rent: categories == null ? Math.min(before.rent, recurring.length) : recurring.filter((row) => isRent(row.categoryId, categories)).length,
-    name: income.length === 1 ? income[0]?.name ?? null : null,
-  };
+  const facts = incomeFactsOf(rows, categories ?? []);
+  if (categories != null) return facts;
+  const rent = before.rent === before.recurring ? facts.recurring : before.rent === 0 ? 0 : Math.min(before.rent, facts.recurring);
+  return { ...facts, rent };
 }
 
 /** The forecast with `rows` counted: the totals follow them, the loans' cash (no row holds it) stays. */
@@ -61,11 +60,15 @@ function counted(read: ProjectForecastRead, rows: NextMonthRow[], apart: { remov
   };
 }
 
-/** The project page takes a row out of the month (remove_project_forecast_row): it leaves the rows for the removed ones. */
+/**
+ * The project page takes a row out of the month (remove_project_forecast_row): it leaves the rows for the removed ones, and the
+ * edit it writes starts in this month, so the reset button shows. A loan's row takes its cash out too when it was the loan's
+ * last, which the answer cannot say (it holds no cash by loan): the cash figures are pending until the read after the write.
+ */
 export function withRowRemoved(read: ProjectForecastRead, rowKey: string, categories?: readonly RentCategory[]): ProjectForecastRead {
   const { rest, row } = withoutRow(read.forecast.rows, rowKey);
   if (row == null) return read;
-  return counted(read, rest, { removed: orderRows([...read.forecast.removed, row]) }, categories);
+  return { ...counted(read, rest, { removed: orderRows([...read.forecast.removed, row]) }, categories), edited: true, cashPending: read.cashPending || row.kind === "loan" };
 }
 
 /**

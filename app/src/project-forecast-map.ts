@@ -26,6 +26,11 @@ export type ProjectForecastRead = {
   income: IncomeFacts;
   /** An edit of the project starts in this month: the צפי page's reset button. */
   edited: boolean;
+  /**
+   * The loans' cash (`forecast.cashOnlyMinor`) is not known after a tap: removing a loan's row can take its principal out, and
+   * the answer holds no cash by loan. The cash figures wait for the read after the write. Always false in an answer.
+   */
+  cashPending: boolean;
   /** forecast_overrides_for the month: what the skip (לא החודש) and its restore read. */
   overrides: ForecastOverrideRow[];
   /** The six months before this one and the project's expense months by category, for the edit page's history bars. */
@@ -208,6 +213,11 @@ export function projectForecastOf(answer: unknown, projectId: string): ProjectFo
   // The cash figures the card and the page lead with are cashForecast of these (the expense plus the loans' cash, the net less
   // it), so cash_expense_minor and cash_net_minor are not read; the vectors hold them equal.
   const cashOnlyMinor = minorOf(answer.cash_only_minor, "the cash only");
+  const incomeMinor = minorOf(answer.income_minor, "the income");
+  const expenseMinor = minorOf(answer.expense_minor, "the expense");
+  // The totals are the rows' (a tap's patch counts them again from the rows): an answer whose rows do not add up is no answer.
+  const sum = (side: 1n | -1n) => rows.reduce((total, row) => (row.minor * side > 0n ? total + row.minor * side : total), 0n);
+  if (sum(1n) !== incomeMinor || sum(-1n) !== expenseMinor) throw shapeError("the rows do not add up to the totals");
   return {
     today: neededText(answer, "today", "the answer"),
     month,
@@ -216,8 +226,8 @@ export function projectForecastOf(answer: unknown, projectId: string): ProjectFo
     forecast: {
       month,
       rows,
-      incomeMinor: minorOf(answer.income_minor, "the income"),
-      expenseMinor: minorOf(answer.expense_minor, "the expense"),
+      incomeMinor,
+      expenseMinor,
       netMinor: minorOf(answer.net_minor, "the net"),
       loanCount: countOf(answer.loan_count, "the loan count"),
       averageMonths: countOf(answer.average_months, "the average months"),
@@ -230,6 +240,7 @@ export function projectForecastOf(answer: unknown, projectId: string): ProjectFo
     },
     income: factsOf(answer.income),
     edited: answer.edited === true,
+    cashPending: false,
     overrides: listOf(answer.overrides, "the overrides").map(overrideOf),
     history: historyOf(answer.history),
     charges: chargesOf(answer.charges, projectId, currency),

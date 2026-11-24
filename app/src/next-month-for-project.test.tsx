@@ -82,6 +82,7 @@ describe("the project page's forecast is one read (FLOW-1315)", () => {
   });
 
   it("asks for a project's own currency when its figures are not in the company's, and only then", async () => {
+    server.answers.project_forecast = { ...sampleProjectForecastAnswer(), currency: "ILS" };
     renderWithProviders(<Probe currency="ILS" />, { route: "/", client: pageClient("USD") });
     await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
     expect(calls("project_forecast")[0]?.args).toEqual({ p_project: PROJECT, p_month: month, p_today: today, p_currency: "ILS" });
@@ -91,6 +92,16 @@ describe("the project page's forecast is one read (FLOW-1315)", () => {
     renderWithProviders(<Probe currency="ILS" />, { route: "/", client: pageClient(null) });
     await waitFor(() => { expect(calls("project_forecast")).toHaveLength(1); });
     expect(calls("project_forecast")[0]?.args).toEqual({ p_project: PROJECT, p_month: month, p_today: today });
+  });
+
+  it("does not draw an answer in another currency than the page's, which came while the company's was unknown: it stays pending", async () => {
+    server.answers.mcp_company_loan_currency = "USD";
+    renderWithProviders(<Probe currency="ILS" />, { route: "/", client: pageClient(null) });
+    await waitFor(() => { expect(calls("project_forecast").length).toBeGreaterThan(0); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+    // The answer is in dollars (the company's), the page's figures are shekels: nothing is drawn.
+    expect(latest?.forecast).toBeNull();
+    expect(latest?.pending).toBe(true);
   });
 
   it("reads a month of the forecast when asked (?month=), and nothing while it is not enabled", async () => {
