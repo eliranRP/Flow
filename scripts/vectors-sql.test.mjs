@@ -35,6 +35,7 @@ test("the repo's vectors are readable and each builder has a generated file exac
   assert.equal(coreExists(repo, "loan_schedule"), true);
   assert.equal(coreExists(repo, "loan_outlook_build"), true);
   assert.equal(coreExists(repo, "month_forecast_build"), true);
+  assert.equal(coreExists(repo, "company_forecast_build"), true);
   for (const [builder, core] of Object.entries(BUILDERS)) {
     assert.equal(existsSync(path.join(repo, sqlPathFor(builder))), coreExists(repo, core), builder);
   }
@@ -160,4 +161,12 @@ test("a loan-outlook vector is compared whole, with one is() against the core, a
   assert.match(sql, /select is\(private\.loan_outlook_build\(\$v\$\{"today":"2026-10-09"\}\$v\$::jsonb\), \$v\$\{\}\$v\$::jsonb, \$v\$none\$v\$\);/);
   assert.doesNotMatch(sql, /throws_ok/);
   assert.equal(sqlPathFor("loan-outlook"), "supabase/tests/database/vectors_loan_outlook.test.sql");
+});
+
+test("a company-forecast vector is compared whole, with one is() against private.company_forecast_build (FLOW-1307)", () => {
+  assert.equal(BUILDERS["company-forecast"], "company_forecast_build");
+  const sql = renderSql("company-forecast", "company_forecast_build", [{ name: "empty", input: { months: ["2026-11"] }, expected: { months: [] } }]);
+  assert.match(sql, /select is\(private\.company_forecast_build\(\$v\$\{"months":\["2026-11"\]\}\$v\$::jsonb\), \$v\$\{"months":\[\]\}\$v\$::jsonb, \$v\$empty\$v\$\);/);
+  assert.doesNotMatch(sql, /throws_ok/);
+  assert.equal(sqlPathFor("company-forecast"), "supabase/tests/database/vectors_company_forecast.test.sql");
 });

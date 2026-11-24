@@ -11,6 +11,8 @@ vectors/
   month-forecast/<name>.json   buildMonthForecast (packages/shared/src/month-forecast.ts)
   loan-schedule/<name>.json    buildLoanSchedule (packages/shared/src/loan-schedule.ts)
   loan-outlook/<name>.json     loanOutlook and latePayment (app/src/screens/loan-outlook.ts)
+  company-forecast/<name>.json companyNextMonthForecast for each month asked (app/src/company-next-month.ts and
+                               company-year-forecast.ts, with project-next-month.ts and project-next-loans.ts)
 ```
 
 One vector per file, and the file is named `<name>.json`.
@@ -62,10 +64,39 @@ One vector per file, and the file is named `<name>.json`.
 
 The vectors run through the app's own builders in `app/src/screens/loan-outlook-vectors.test.ts` (they live in `app/`, where `packages/shared` cannot import them), not in `vectors.test.ts`.
 
+### company-forecast
+
+`input` is what the app's company forecast is built from, for the months asked (FLOW-1307):
+
+```
+{ currency, today,                    the company currency; yyyy-mm-dd
+  months: [yyyy-mm],                  the months to build, in the order asked
+  recurring: ExpectedParty[],         expected_months' recurring[] (typical_amount_minor a number)
+  loans: [{ id, currency, projectId, status, balanceMinor, categoryIds: { interest, escrow },
+            principalMinor, annualRatePpm, termMonths, startDate, paymentMinor, escrowMinor, kind,
+            interestOnlyMonths, amortizationMonths, rates }],   rates oldest first, as in loan-schedule
+  categories: [{ id, name, loan_part, excluded_from_pnl, parent_id }],   list_categories' order
+  inputs: CompanyNextMonthInputs }    company_next_month_inputs (rest_edits and skips optional)
+```
+
+The database core also takes an optional `dueDates` on a loan (its stored schedule's due dates) and `detail: "totals"`; a vector has neither. `expected` is, leaving out what is null (absent = null):
+
+```
+{ months: [{ month, income_minor, expense_minor, net_minor, cash_only_minor, projects, general,
+             income: { rows, recurring, rent, name },
+             parts: [{ project_id, income_minor, expense_minor, cash_only_minor, average_months,
+                       rows, removed, arrived, loan_cash: [{ loan_id, row_category_ids, minor }] }],
+             skipped: [{ project_id, ...row }] }],
+  income: { rows, recurring, rent, name },     each income stream once over the months (restIncomeNote)
+  split_keys: [...] }
+```
+
+A row is `{ key, kind, direction, name, date, minor, category_id, was_minor, pace }`. Rows are listed by key (then amount, day and name), not in the app's order: the database returns them so and the app sorts them. The parts are the projects by id, then the general costs (no `project_id`). The vectors run through the app's builders in `app/src/company-forecast-vectors.test.ts`.
+
 ## Where they run
 
-- `packages/shared/src/vectors.test.ts` (vitest) runs every month-forecast and loan-schedule vector through the TypeScript builder; `app/src/screens/loan-outlook-vectors.test.ts` runs the loan-outlook vectors.
-- `scripts/vectors-sql.mjs` writes `supabase/tests/database/vectors_<builder>.test.sql` for each builder whose SQL core is in a migration: it calls `private.<core>(input::jsonb)` and expects `expected::jsonb`, one `is` per vector. All three cores exist: `private.month_forecast_build(p_input jsonb)` (FLOW-1313), `private.loan_schedule(p_terms jsonb)` (FLOW-1306) and `private.loan_outlook_build(p_input jsonb)` (FLOW-1310), as the FLOW-1275 plan names them. A refused loan-schedule vector (`{ error }`) is checked with `throws_ok`, SQLSTATE `22023` and the code as the message. `node scripts/vectors-sql.mjs --check` is in the gate: it fails when a generated file is stale (or one is left for a core that is gone). After a vector changes, run `node scripts/vectors-sql.mjs` and commit the result.
+- `packages/shared/src/vectors.test.ts` (vitest) runs every month-forecast and loan-schedule vector through the TypeScript builder; `app/src/screens/loan-outlook-vectors.test.ts` runs the loan-outlook vectors and `app/src/company-forecast-vectors.test.ts` the company-forecast ones.
+- `scripts/vectors-sql.mjs` writes `supabase/tests/database/vectors_<builder>.test.sql` for each builder whose SQL core is in a migration: it calls `private.<core>(input::jsonb)` and expects `expected::jsonb`, one `is` per vector. All four cores exist: `private.month_forecast_build(p_input jsonb)` (FLOW-1313), `private.loan_schedule(p_terms jsonb)` (FLOW-1306), `private.loan_outlook_build(p_input jsonb)` (FLOW-1310) and `private.company_forecast_build(p_input jsonb)` (FLOW-1307), as the FLOW-1275 plan names them. A refused loan-schedule vector (`{ error }`) is checked with `throws_ok`, SQLSTATE `22023` and the code as the message. `node scripts/vectors-sql.mjs --check` is in the gate: it fails when a generated file is stale (or one is left for a core that is gone). After a vector changes, run `node scripts/vectors-sql.mjs` and commit the result.
 
 Each core gives the vector's `expected` exactly, as one jsonb value (no row sets, no totals compared apart). A core's answer has the vectors' own shape, so no mapping sits between the files and the database.
 
