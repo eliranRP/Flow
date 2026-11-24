@@ -76,6 +76,22 @@ describe("PrefetchProjects (FLOW-804)", () => {
     for (const call of query.mock.calls) expect(call[0]).toMatchObject({ retry: false, staleTime: expect.any(Number) as number });
   });
 
+  it("starts none of the project's own forecast reads on the company's overhead project (FLOW-1297)", async () => {
+    const { query, view } = setup("/");
+    query.mockImplementation((options: { queryKey: readonly unknown[] }) => Promise.resolve(
+      JSON.stringify(options.queryKey).includes("company-overhead") ? { id: "p7", name: "הוצאות כלליות" } : undefined,
+    ));
+    fireEvent.pointerDown(view.getByText("פרויקט"));
+    await vi.waitFor(() => {
+      expect(query.mock.calls.some((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey).includes("company-overhead"))).toBe(true);
+    });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    const keys = query.mock.calls.map((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey));
+    expect(keys.some((key) => key.includes("expected-months") || key.includes("category-months") || key.includes(FORECAST_EDITS_KEY))).toBe(false);
+    // The month's overrides are month-wide, not the project's own read, so the touch still starts them.
+    expect(keys.some((key) => key.includes("overrides"))).toBe(true);
+  });
+
   it("reads nothing in preview", () => {
     const { query, view } = setup("/?preview=1");
     fireEvent.pointerDown(view.getByText("פרויקט"));

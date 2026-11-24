@@ -98,18 +98,22 @@ function readCompanyId(supabase: ScopeClient): PromiseLike<string | null> {
  * Session and company share one deadline. A row that arrives later may still bind.
  * FLOW-1272: the connector's read needs the scope, not the list, so it starts with the list (the company is Home's
  * cached dashboard's) or as soon as the company is read; the queue read follows with the list's ids.
+ * FLOW-1297: Home's cached dashboard names the company, so the company is not read again. The list does not name it
+ * (list_review omits company_id), so that is the only source that skips the read.
  */
 async function settleReviewJevScope(
   supabase: ScopeClient,
+  preview: string,
   listed: PromiseLike<{ data: unknown; error: unknown }>,
   lookup: JevScopeLookup,
   client: QueryClient,
 ): Promise<void> {
   const found: { userId: string | null; companyId: string | null } = { userId: null, companyId: null };
+  const cached = companyIdFromReviewPayload(client.getQueriesData({ queryKey: ["dashboard", "off"] }).map(([, data]) => data));
   const userTask = Promise.resolve(readSessionUserId(supabase)).then((id) => {
     found.userId = id;
   });
-  const companyTask = Promise.resolve(readCompanyId(supabase)).then((id) => {
+  const companyTask = Promise.resolve(cached ?? readCompanyId(supabase)).then((id) => {
     found.companyId = id;
   });
   let payloadCompany: string | null = null;
@@ -123,7 +127,6 @@ async function settleReviewJevScope(
     queryFn: ({ signal }) => import("./screens/jev-review").then((code) => code.fetchJevConnector(signal)),
   });
   // Home's dashboard already names the company: the connector starts now, beside the list, not after the company's read.
-  const cached = companyIdFromReviewPayload(client.getQueriesData({ queryKey: ["dashboard", "off"] }).map(([, data]) => data));
   const noted = notedJevAuthUser();
   if (cached != null && typeof noted === "string") {
     const scope = { userId: noted, companyId: cached };
@@ -138,12 +141,13 @@ async function settleReviewJevScope(
     if (!completeJevScopeLookup(lookup, scope) || scope == null || jevScopeFollowsLive()) return;
     if (typeof supabase.from !== "function") return;
     seedJevConnectorFromLive(client, scope);
+    // FLOW-1297: the names come from the categories query the list starts (the same key the card reads), not a read of their own.
     const queue = () => client.query({
       queryKey: jevQueueQueryKey(ids),
       retry: false,
       queryFn: ({ signal }) => import("./screens/jev-review").then((code) => withJevDeadline(
         signal,
-        (linked) => code.loadJevSuggestions(ids, linked),
+        async (linked) => code.loadJevSuggestions(ids, linked, await client.query(categoriesQueryOptions(preview))),
         code.JEV_QUEUE_STALLED,
       )),
     });
@@ -185,22 +189,29 @@ type ReviewArgs = {
 async function readReviewPage(
   client: QueryClient,
   supabase: ScopeClient,
+  preview: string,
   args: ReviewArgs,
 ) {
   // The query builder sends its request each time it is awaited: wrap it once, so the Jev prefetch and this
   // read share one request (they sent two, each a full page).
   const listed = Promise.resolve(supabase.rpc("list_review_page", args));
-  if (typeof supabase.from === "function") {
+  // FLOW-1297: the early starts (the scope, the connector, the queue) are Review's own, never a preview's.
+  if (preview === "off" && typeof supabase.from === "function") {
     const lookup = beginJevScopeLookup();
     const items = Promise.resolve(listed).then((result) => ({
       data: result.error == null ? (result.data as { items?: unknown } | null)?.items : null,
       error: result.error,
     }));
-    void settleReviewJevScope(supabase, items, lookup, client);
+    void settleReviewJevScope(supabase, preview, items, lookup, client);
   }
   const { data, error } = await listed;
   if (error) throw error;
   return (await loadReadSchemas()).reviewPageSchema.parse(data);
+}
+
+/** The card view's route, with or without a trailing slash (FLOW-1297). The list view (`/review/all`) is not it. */
+function onReviewCards(): boolean {
+  return /^\/review\/?$/.test(window.location.pathname);
 }
 
 function cursorArgs(after: ReviewCursor | null): Pick<ReviewArgs, "p_after_date" | "p_after_created" | "p_after_id"> {
@@ -232,8 +243,9 @@ function reviewQueryOptions(preview: string, project: string | null) {
       if (!supabase) throw new Error("supabase");
       // FLOW-1273: the schemas this answer is parsed with load beside the read, not after it.
       preloadReadSchemas();
-      // FLOW-1272: the card's categories start beside the list (the list view shows none).
-      if (window.location.pathname === "/review") void client.query(categoriesQueryOptions(preview)).catch(() => undefined);
+      // FLOW-1272: the card's categories start beside the list (the list view shows none). FLOW-1297: a preview starts
+      // none, and the route is matched with or without its trailing slash.
+      if (preview === "off" && onReviewCards()) void client.query(categoriesQueryOptions(preview)).catch(() => undefined);
       await waitForAccessToken(supabase);
       dropLegacyJevConnectorKey();
       // After an invalidation the list is read again up to the rows it held (the approved ones are gone from
@@ -243,7 +255,7 @@ function reviewQueryOptions(preview: string, project: string | null) {
       let next: ReviewCursor | null = null;
       let total: number;
       do {
-        const page: Awaited<ReturnType<typeof readReviewPage>> = await readReviewPage(client, supabase, {
+        const page: Awaited<ReturnType<typeof readReviewPage>> = await readReviewPage(client, supabase, preview, {
           p_limit: Math.min(REVIEW_READ_MAX, Math.max(REVIEW_PAGE_SIZE, want - rows.length)),
           ...cursorArgs(next),
           ...(project == null ? {} : { p_project: project }),
@@ -282,7 +294,7 @@ async function loadMoreReview(client: QueryClient, preview: string, project: str
   const startedAt = client.getQueryState(key)?.dataUpdatedAt;
   putMeta(client, preview, project, { ...meta, loading: true, failed: false });
   try {
-    const page = await readReviewPage(client, supabase, {
+    const page = await readReviewPage(client, supabase, preview, {
       p_limit: REVIEW_PAGE_SIZE,
       ...cursorArgs(meta.next),
       ...(project == null ? {} : { p_project: project }),
@@ -383,7 +395,7 @@ export function useReviewDeepLink(item: string | null, rows: readonly ReviewRow[
       setAnswered(item);
       return;
     }
-    void readReviewPage(client, supabase, { p_limit: 1, p_item: item }).then((page) => {
+    void readReviewPage(client, supabase, preview, { p_limit: 1, p_item: item }).then((page) => {
       const row = page.items[0];
       if (row == null) return;
       const listKey = reviewListKey(preview, project);
