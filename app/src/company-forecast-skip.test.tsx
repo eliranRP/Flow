@@ -124,6 +124,25 @@ describe("a skip and the company forecast (FLOW-1308)", () => {
     expect(String((client.getQueryData(card) as { months: Array<{ expenseMinor: bigint }> }).months[0]?.expenseMinor)).toBe("18600");
   });
 
+  it("keeps the card's patched totals after the write succeeds: Profit opens and draws the post-skip figure at once, with no read before it", async () => {
+    const client = newClient();
+    const card = ["month-forecast", "off", "company", "totals", TODAY, MONTH];
+    const month = { month: MONTH, incomeMinor: 100_000n, expenseMinor: 18_600n, netMinor: 81_400n, cashOnlyMinor: 0n, projects: 1, general: false, income: FACTS };
+    client.setQueryData(card, { today: TODAY, currency: "USD", months: [month], income: FACTS });
+    renderWithProviders(<Band />, { route: "/", client });
+    await waitFor(() => { expect(band()).toBe("81400 18600 81400"); });
+    fireEvent.click(screen.getByRole("button", { name: "skip" }));
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    expect(calls("set_forecast_item")).toHaveLength(1);
+    // The write has succeeded: the card's answer is still there, patched.
+    expect(client.getQueryData(card)).toBeDefined();
+    const before = calls("company_forecast").filter((call) => (call.args as { p_detail: string }).p_detail === "totals").length;
+    renderWithProviders(<Card enabled />, { route: "/", client });
+    // Drawn in the render that mounted it, from the cache, with no totals read sent before it.
+    expect(screen.getByTestId("card").textContent).toBe("0");
+    expect(calls("company_forecast").filter((call) => (call.args as { p_detail: string }).p_detail === "totals")).toHaveLength(before);
+  });
+
   it("moves the income note's counts on the tap, with the categories Home holds, and back when the write fails", async () => {
     let refuse: () => void = () => undefined;
     rpc.write = () => new Promise<Answer>((resolve) => { refuse = () => { resolve({ data: null, error: { message: "refused" } }); }; });

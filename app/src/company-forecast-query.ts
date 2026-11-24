@@ -93,7 +93,7 @@ function patchRows(client: QueryClient, month: string, change: (keys: readonly s
       months.set(`${String(query.queryKey[1])}|${String(query.queryKey[4])}`, first);
       continue;
     }
-    // The income note counts follow the income rows, with the categories Home holds (none cached: they stay as they were).
+    // The income note counts follow the income rows, with the categories the app has cached (the pickers' and the project page's read; none cached: they stay as they were).
     const categories = client.getQueryData<RentCategory[]>(["categories", query.queryKey[1]]);
     const income = categories == null ? first.income : incomeFactsOf(forecast.rows, categories);
     const month0: ForecastMonthTotals = { ...first, income, incomeMinor: forecast.incomeMinor, expenseMinor: forecast.expenseMinor, netMinor: forecast.netMinor, cashOnlyMinor: forecast.parts.reduce((sum, part) => sum + part.forecast.cashOnlyMinor, 0n), projects: forecast.parts.filter((part) => part.projectId != null).length, general: forecast.parts.some((part) => part.projectId == null) };

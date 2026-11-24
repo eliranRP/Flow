@@ -10,7 +10,7 @@ import type { ReadSchemas } from "./load-read-schemas";
  * - "expected-months" (the company's, and each project's): the overhead project's page (company) and the project page's
  *   forecast card (project). FLOW-1314: Home's forecast and the forecast screen read month_forecast instead; FLOW-1308: Profit's
  *   next month and year view, Home's months to come and the company's forecast pages read company_forecast instead.
- * - "categories" (list_categories): Home, the project page's forecast card, the overhead project's page and the pickers.
+ * - "categories" (list_categories): the project page's forecast card, the overhead project's page and the pickers.
  * - the overhead project ("company-overhead"): Profit, Recurring, Forecast and next month.
  * - "month-forecast" overrides: Home's נותר לשלם, the recurring screen and the project page's forecast card.
  * - "month-forecast" "answer" (FLOW-1314, month_forecast): Home's forecast row and the forecast screen, one read.

@@ -137,9 +137,11 @@ function patchCompanyForecast(client: QueryClient, month: string, change: (keys:
  * FLOW-1201, FLOW-1202, FLOW-1214: a skip, reset or undo patches the skips above and reads no company inputs. The inputs
  * no screen holds (Company profit's year views) are dropped, so they load fresh and never show pre-write figures
  * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
+ * FLOW-1308: the company forecast's cached answers are not dropped here: the patch at the tap already moved or dropped them, and a
+ * success must keep the card's patched totals.
  */
 function dropInactiveCompanyInputs(client: QueryClient) {
-  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: isCompanyForecast });
+  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && (query.queryKey[5] as string).includes(",") });
   client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
 }
 
