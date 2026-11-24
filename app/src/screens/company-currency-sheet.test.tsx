@@ -79,7 +79,7 @@ describe("CompanyCurrencySheet (FLOW-504)", () => {
       expect(sheetStack(router.state.location.state)).toEqual([]);
     });
     const keys = invalidate.mock.calls.map(([filters]) => filters?.queryKey?.[0]);
-    expect(keys).toEqual(expect.arrayContaining(["company-currency", "loan-currency", "dashboard", "project", "profit-months"]));
+    expect(keys).toEqual(expect.arrayContaining(["company-currency", "dashboard", "project", "profit-months"]));
   });
 
   it("writes the previous currency back on ביטול, and holds a new pick until the undo lands", async () => {

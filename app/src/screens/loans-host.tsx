@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useId, useRef, useState, type Ref, type ReactNode } from "react";
 import type { LoanKind } from "@flow/shared";
@@ -14,10 +13,11 @@ import { assertNoError, useWrite } from "../use-write";
 import { useOpenFromQuery } from "../open-from-query";
 import { useHoldWrites } from "../use-is-viewer";
 import {
-  readCompanyLoanCurrency,
+  companyLoanCurrency,
   type LoanCurrency,
   type LoanInsert,
 } from "./loan-form";
+import { useCompanyCurrencyQuery } from "../company-currency";
 import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
 import { useOnline } from "../ui/band-states";
 import { useLoanSummary } from "./loan-summary-entries";
@@ -154,15 +154,11 @@ export function LoansHost({
   const holdWrites = useHoldWrites();
   const online = useOnline();
   const emptyButton = useRef<HTMLButtonElement>(null);
-  const query = useQuery({
-    queryKey: ["loan-currency", companyId],
-    enabled: companyCurrency == null && companyId != null,
-    retry: false,
-    queryFn: readCompanyLoanCurrency,
-  });
+  // FLOW-1298: the company currency is Home's read (one key), so a visit after Home sends no request for it.
+  const homeCurrency = useCompanyCurrencyQuery(companyCurrency == null && companyId != null);
   const currency: LoanCurrency | null = companyCurrency
-    ?? query.data
-    ?? (query.isFetched || companyId == null ? "ILS" : null);
+    ?? (homeCurrency.data == null ? null : companyLoanCurrency(homeCurrency.data))
+    ?? (homeCurrency.isFetched || companyId == null ? "ILS" : null);
   // FLOW-139: the summary card reads each loan's outlook, the same figures the loan page shows.
   const liveSummary = useLoanSummary(sample == null ? companyId : null, currency);
   const summary = sampleSummary ?? liveSummary;

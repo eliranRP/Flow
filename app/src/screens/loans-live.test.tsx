@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { companyCurrencyQueryOptions } from "../company-currency";
 import { MY_COMPANIES_KEY } from "../company-role-cache";
 import { renderWithProviders } from "../test-render";
 import { myCompaniesFor, TEST_COMPANY_ID } from "../team-test-support";
@@ -15,6 +16,8 @@ type Pending = { table: string; resolve: (value: { data: unknown; error: null })
 const db = vi.hoisted(() => ({
   pending: [] as Pending[],
   rpc: [] as string[],
+  // The company's currency, when a test answers the currency read (null: it never answers).
+  currency: null as string | null,
   hold: false,
   selects: [] as Array<{ table: string; columns: string }>,
   // FLOW-1260: how many times the schedule builder ran.
@@ -59,6 +62,7 @@ const supabase = vi.hoisted(() => ({
   // get_dashboard never answers: the list must not wait for it.
   rpc: (name: string) => {
     db.rpc.push(name);
+    if (name === "mcp_company_loan_currency" && db.currency != null) return Promise.resolve({ data: db.currency, error: null });
     return new Promise(() => undefined);
   },
 }));
@@ -92,6 +96,7 @@ const loanRow = (id: string, name: string, projectId: string | null) => ({
 beforeEach(() => {
   db.pending = [];
   db.rpc = [];
+  db.currency = null;
   db.hold = false;
   db.selects = [];
   db.scheduleRuns = 0;
@@ -170,6 +175,16 @@ describe("live Loans tab", () => {
     expect(list.rows.map((row) => [row.name, row.currency])).toEqual([["הלוואת גשר", "USD"], ["הלוואת ציוד", "ILS"]]);
     const balances = db.selects.find((select) => select.table === "loan_balances");
     expect(balances?.columns).not.toContain("currency");
+  });
+
+  it("reads the company currency once for Home and Loans: a visit after Home sends no currency request (FLOW-1298)", async () => {
+    db.currency = "USD";
+    const client = withCompanies("u1");
+    // Home's read, under its own key.
+    await client.query(companyCurrencyQueryOptions("off"));
+    renderWithProviders(<LoansScreen />, { route: "/loans", client });
+    expect(await screen.findByRole("button", { name: /^הלוואת גשר, / })).toBeInTheDocument();
+    expect(db.rpc.filter((name) => name === "mcp_company_loan_currency")).toHaveLength(1);
   });
 
   it("lists the loans with the company the app holds, without waiting for get_dashboard", async () => {

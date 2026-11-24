@@ -55,7 +55,6 @@ export const LEDGER_KEYS = [
   "party-charges",
   "party-line",
   "loans",
-  "loan-currency",
   "company-currency",
   "company-overhead",
   // FLOW-1166: the closed date, which the assistant sets (set_books_closed_through).

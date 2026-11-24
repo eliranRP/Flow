@@ -4,13 +4,8 @@ import { type HomePreview, useHomePreview } from "./preview";
 
 /**
  * The stored company currency, `companies.base_currency` (0147), through the same RPC the MCP
- * loan default reads. A failed or odd read stays ILS.
+ * loan default reads. Failing loudly, so Settings and the forecast can tell a failure from a shekel company.
  */
-export async function readCompanyCurrency(): Promise<string> {
-  return readStoredCurrency().catch(() => "ILS");
-}
-
-/** The same read, failing loudly, so Settings and the forecast can tell a failure from a shekel company. */
 export async function readStoredCurrency(): Promise<string> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");

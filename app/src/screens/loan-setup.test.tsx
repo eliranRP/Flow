@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
-import { readCompanyCurrency } from "../company-currency";
-import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "./loan-form";
+import { readStoredCurrency } from "../company-currency";
+import { companyLoanCurrency, firstOfNextMonth } from "./loan-form";
 import { LoanSetupForm } from "./loan-setup";
 
 const db = vi.hoisted(() => ({
@@ -98,23 +98,22 @@ describe("company currency", () => {
     expect(firstOfNextMonth(new Date("2026-12-15T12:00:00Z"))).toBe("2027-01-01");
   });
 
-  it("reads the stored company currency and stays on shekels when the read fails", async () => {
+  it("reads the stored company currency, and a loan defaults to dollars only for a dollar company", async () => {
     db.offline = true;
-    expect(await readCompanyLoanCurrency()).toBe("ILS");
+    await expect(readStoredCurrency()).rejects.toThrow("supabase");
     db.offline = false;
-    expect(await readCompanyLoanCurrency()).toBe("ILS");
     db.baseCurrency = "USD";
-    expect(await readCompanyLoanCurrency()).toBe("USD");
+    expect(companyLoanCurrency(await readStoredCurrency())).toBe("USD");
     db.baseCurrency = null;
-    expect(await readCompanyLoanCurrency()).toBe("ILS");
+    await expect(readStoredCurrency()).rejects.toThrow("validation");
     db.baseCurrency = "EUR";
-    expect(await readCompanyCurrency()).toBe("EUR");
+    expect(companyLoanCurrency(await readStoredCurrency())).toBe("ILS");
     db.baseCurrency = "usd";
-    expect(await readCompanyCurrency()).toBe("ILS");
+    await expect(readStoredCurrency()).rejects.toThrow("validation");
     db.baseCurrency = "USD";
     db.currencyError = { message: "down" };
-    expect(await readCompanyLoanCurrency()).toBe("ILS");
-    expect(db.selects).toBe(6);
+    await expect(readStoredCurrency()).rejects.toThrow("down");
+    expect(db.selects).toBe(5);
   });
 });
 
