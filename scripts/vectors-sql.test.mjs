@@ -28,11 +28,14 @@ function fixture({ core = false } = {}) {
 
 const cli = (root, ...args) => spawnSync("node", [script, "--root", root, ...args], { encoding: "utf8" });
 
-test("the repo's vectors are readable and no SQL core exists yet, so nothing is generated", () => {
+test("the repo's vectors are readable, and a generated file exists exactly for each builder whose SQL core is in a migration", () => {
   const { written, problems } = run(repo, { check: true });
   assert.deepEqual(problems, []);
   assert.deepEqual(written, []);
-  for (const builder of Object.keys(BUILDERS)) assert.equal(existsSync(path.join(repo, sqlPathFor(builder))), false);
+  for (const [builder, core] of Object.entries(BUILDERS)) {
+    assert.equal(existsSync(path.join(repo, sqlPathFor(builder))), coreExists(repo, core), builder);
+  }
+  assert.equal(coreExists(repo, "month_forecast_build"), true, "FLOW-1313's core is in a migration");
   assert.equal(spawnSync("node", [script, "--check"], { encoding: "utf8" }).status, 0);
 });
 

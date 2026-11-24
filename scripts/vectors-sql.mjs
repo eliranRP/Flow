@@ -1,8 +1,8 @@
 /**
  * FLOW-1305: writes supabase/tests/database/vectors_<builder>.test.sql, one pgTAP file per builder
  * whose SQL core exists, from the shared vectors in packages/shared/fixtures/vectors/<builder>/.
- * A core "exists" when a migration creates `function private.<core>`. None does yet, so a run
- * writes nothing today.
+ * A core "exists" when a migration creates `function private.<core>`: month-forecast's does (FLOW-1313),
+ * loan-schedule's lands with FLOW-1306. A builder with no core yet gets no file.
  *
  *   node scripts/vectors-sql.mjs           write the files
  *   node scripts/vectors-sql.mjs --check   exit 1 when a file is missing, stale, or left for a core that is gone
@@ -132,5 +132,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   if (check) console.log("vectors-sql: every generated vectors test file is up to date");
-  else console.log(written.length === 0 ? "vectors-sql: nothing to write (no SQL core exists yet)" : `vectors-sql: wrote ${written.join(", ")}`);
+  else console.log(written.length === 0 ? "vectors-sql: nothing to write (every generated file is current)" : `vectors-sql: wrote ${written.join(", ")}`);
 }
