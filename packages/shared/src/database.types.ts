@@ -2576,6 +2576,9 @@ isOneToOne: false
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
                            },
+"project_forecast":
+{ Args: { "p_currency"?: string,"p_month": string,"p_project": string,"p_today"?: string }; Returns: Json
+                           },
 "project_forecast_edits_for":
 { Args: { "p_month": string,"p_project_id": string }; Returns: Json
                            },

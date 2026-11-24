@@ -36,6 +36,7 @@ test("the repo's vectors are readable and each builder has a generated file exac
   assert.equal(coreExists(repo, "loan_outlook_build"), true);
   assert.equal(coreExists(repo, "month_forecast_build"), true);
   assert.equal(coreExists(repo, "company_forecast_build"), true);
+  assert.equal(coreExists(repo, "project_forecast_build"), true);
   for (const [builder, core] of Object.entries(BUILDERS)) {
     assert.equal(existsSync(path.join(repo, sqlPathFor(builder))), coreExists(repo, core), builder);
   }
