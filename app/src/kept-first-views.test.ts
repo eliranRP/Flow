@@ -37,6 +37,8 @@ const categories = categoryRowSchema.array().parse([{ id: "c1", name: "חשמל"
 const edits = [{ id: "e1", kind: "change", row_key: "k", category_id: null, direction: "expense", amount_minor: 100, pace: "month", start_month: "2026-12" }];
 const inputs = { month: "2026-12", overhead_project_id: null, projects: [], general: [], edits: [] };
 const loans = [{ id: "l1", currency: "ILS", balanceMinor: 900n, principalMinor: 1000n, rates: [], categoryIds: {} }];
+const forecastItem = { key: "party:expense:s1:ILS", direction: "expense", kind: "recurring", name: "חשמל", currency: "ILS", usual: 20000n, minor: 20000n, day: 5, description: null, due_on: null, moved_out: false, overridden: false, expected_on: null, late_days: 0, category_id: null, project_id: null, project_name: null, pace: "month", line_start: null };
+const forecast = { month: "2026-11", base: "ILS", overrides: [], build: { items: [forecastItem], income: [], expense: [forecastItem], moved: [], small: [], incomeTotal: 0n, expenseTotal: 20000n, changed: 0 } };
 
 const loanOutlooks = loanOutlooksSchema.parse([
   { loan_id: "l1", next: { due_date: "2026-12-01", interest_minor: 16000, escrow_minor: 0, principal_minor: 44000, amount_minor: 60000 }, ahead_minor: 720000, to_end_minor: 5000000, end_date: "2034-11-01", late_on: "2026-11-01" },
@@ -61,6 +63,7 @@ const CASES: Case[] = [
   { name: "loan list", key: ["loans", COMPANY, "list"], good: loanRows, bad: { ...loanRows, rows: [{ ...loanRows.rows[0], ratePpm: 50000 }] }, preview: ["loans", COMPANY] },
   { name: "loan outlooks", key: ["loans", COMPANY, "outlooks", "2026-11-24"], good: loanOutlooks, bad: [{ loan_id: "l1", next: { due_date: "2026-12-01" } }], preview: ["loans", COMPANY, "outlooks"] },
   { name: "company forecast loans", key: ["loans", "company-forecast", "off"], good: loans, bad: [{ id: "l1", currency: "EUR", balanceMinor: 1n, rates: [] }], preview: ["loans", "company-forecast", "empty"] },
+  { name: "month forecast (FLOW-1314)", key: ["month-forecast", "off", "answer", "2026-11"], good: forecast, bad: { ...forecast, build: { ...forecast.build, expenseTotal: 20000.5 } }, preview: ["month-forecast", "empty", "answer", "2026-11"] },
 ];
 
 function newClient(): QueryClient {

@@ -20,6 +20,12 @@ vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({ rpc }),
 }));
 
+/** month_forecast's answer for one $250 expense of Example Utility (a dollar company), as the database sends it: no currency, expected_on, late_days or null field. */
+function utilityForecast(month: string, day: number) {
+  const item = { key: "party:expense:p-1:USD", direction: "expense", kind: "recurring", name: "Example Utility", usual: 25000, minor: 25000, day, pace: "month", moved_out: false, overridden: false };
+  return { month, base: "USD", overrides: [], build: { items: [item], income: [], expense: [item.key], moved: [], small: [], incomeTotal: 0, expenseTotal: 25000, changed: 0 } };
+}
+
 describe("ForecastScreen", () => {
   it("switches to לפי קטגוריה: each side's categories, their sums, and an open category's items", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
@@ -132,17 +138,7 @@ describe("ForecastScreen", () => {
   });
 
   it("live, counts a dollar company's items in dollars (the company currency, not shekels)", async () => {
-    const reads: Record<string, unknown> = {
-      mcp_company_loan_currency: "USD",
-      expected_months: {
-        today: "2026-10-11",
-        project_id: null,
-        months: [{ month: "2026-10", open: true, by_currency: [] }],
-        recurring: [{ direction: "expense", party_id: "p-1", name: "Example Utility", currency: "USD", typical_amount_minor: -25000, typical_day: 20, months_seen: 6, seen_this_month: false }],
-      },
-      list_unpaid: [],
-      forecast_overrides_for: [],
-    };
+    const reads: Record<string, unknown> = { month_forecast: utilityForecast(israelToday().slice(0, 7), 20) };
     rpc.mockImplementation((name: string) => Promise.resolve({ data: (reads[name] ?? null) as null, error: null }));
     try {
       renderWithProviders(<ForecastScreen />, { route: "/forecast" });
@@ -165,14 +161,7 @@ describe("ForecastScreen", () => {
     const reads: Record<string, unknown> = {
       mcp_company_loan_currency: "USD",
       cash_months: cashMonths,
-      expected_months: {
-        today: `${month}-01`,
-        project_id: null,
-        months: [{ month, open: true, by_currency: [] }],
-        recurring: [{ direction: "expense", party_id: "p-1", name: "Example Utility", currency: "USD", typical_amount_minor: -25000, typical_day: 28, months_seen: 6, seen_this_month: false }],
-      },
-      list_unpaid: [],
-      forecast_overrides_for: [],
+      month_forecast: utilityForecast(month, 28),
     };
     rpc.mockClear();
     rpc.mockImplementation((name: string) => Promise.resolve({ data: (reads[name] ?? null) as null, error: null }));
@@ -196,17 +185,7 @@ describe("ForecastScreen", () => {
 
   it("live, shows no start, end or compact figure when today's cash cannot be read, and says so", async () => {
     const month = israelToday().slice(0, 7);
-    const reads: Record<string, unknown> = {
-      mcp_company_loan_currency: "USD",
-      expected_months: {
-        today: `${month}-01`,
-        project_id: null,
-        months: [{ month, open: true, by_currency: [] }],
-        recurring: [{ direction: "expense", party_id: "p-1", name: "Example Utility", currency: "USD", typical_amount_minor: -25000, typical_day: 28, months_seen: 6, seen_this_month: false }],
-      },
-      list_unpaid: [],
-      forecast_overrides_for: [],
-    };
+    const reads: Record<string, unknown> = { mcp_company_loan_currency: "USD", month_forecast: utilityForecast(month, 28) };
     rpc.mockImplementation((name: string) =>
       name === "cash_months"
         ? Promise.resolve({ data: null, error: { message: "offline" } as unknown as null })
