@@ -99,7 +99,9 @@ function changeSkips(client: QueryClient, month: string, change: (keys: readonly
     client.setQueryData(query.queryKey, { ...data, skips: { ...data.skips, [month]: [...after] } });
     touched.push({ key: query.queryKey, added, removed });
   }
+  const undoForecast = patchCompanyForecast(client, month, change);
   return () => {
+    undoForecast();
     for (const { key, added, removed } of touched) {
       const data = client.getQueryData<CompanySkips>(key);
       if (data?.skips == null) continue;
@@ -110,12 +112,36 @@ function changeSkips(client: QueryClient, month: string, change: (keys: readonly
   };
 }
 
+/** The company forecast's answers (FLOW-1308), under "month-forecast": ["month-forecast", preview, "company", "rows" | "totals", day, month(s)]. */
+const isCompanyForecast = (query: { queryKey: readonly unknown[] }): boolean => query.queryKey[2] === "company";
+
+type CompanyForecastPatch = (client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]) => () => void;
+let companyForecastPatch: CompanyForecastPatch | null = null;
+
+/** company-forecast-query.ts (loaded with the screens that read the company forecast) says how a skip moves a month's rows. */
+export function setCompanyForecastPatch(patch: CompanyForecastPatch): void {
+  companyForecastPatch = patch;
+}
+
+/**
+ * FLOW-1308: a skip, reset or undo moves the cached company forecast of its month at once (rows, totals and the income note
+ * follow the tap, and the cached totals of that month with them); the patch drops the totals it cannot move. Without the patch
+ * loaded (no screen has read the forecast this session) only a kept 'totals' can be cached, and it is dropped. Returns the undo.
+ */
+function patchCompanyForecast(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
+  if (companyForecastPatch == null) client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: isCompanyForecast });
+  return companyForecastPatch?.(client, month, change) ?? (() => undefined);
+}
+
 /**
  * FLOW-1201, FLOW-1202, FLOW-1214: a skip, reset or undo patches the skips above and reads no company inputs. The inputs
  * no screen holds (Company profit's year views) are dropped, so they load fresh and never show pre-write figures
  * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
+ * FLOW-1308: after a success only the company forecast's multi-month answers are dropped (the patch at the tap moved the rest, and
+ * the card's patched totals must stay); after a failure (`all`) every inactive one is, since an undone patch may leave them ahead of the server.
  */
-function dropInactiveCompanyInputs(client: QueryClient) {
+function dropInactiveCompanyInputs(client: QueryClient, all = false) {
+  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && (all || String(query.queryKey[5]).includes(",")) });
   client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
 }
 
@@ -141,8 +167,9 @@ function watchForecastWrites(client: QueryClient) {
     const unsettled = client.getMutationCache().findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
     if (unsettled.length > 0) return;
     failedScopes.delete(scope);
-    dropInactiveCompanyInputs(client);
+    dropInactiveCompanyInputs(client, true);
     void client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: (query) => query.queryKey[2] === "company" });
+    void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: isCompanyForecast });
   });
 }
 

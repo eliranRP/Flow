@@ -56,7 +56,7 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
   const currencyRead = useCompanyCurrencyQuery(startCompany);
   const companyCurrency = currencyRead.data ?? currency;
-  const company = useCompanyNextMonth(companyCurrency, today, startCompany && currencyRead.data != null, undefined, forMonth, false, withOverrides);
+  const company = useCompanyNextMonth(companyCurrency, today, startCompany && currencyRead.data != null, forMonth, withOverrides);
   const currencyFailed = currencyRead.data == null && currencyRead.isError;
   const input = company.input;
   const general = useMemo(() => {

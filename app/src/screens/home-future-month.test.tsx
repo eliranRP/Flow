@@ -1,6 +1,6 @@
 // FLOW-1056: Home on next month: the forecast's rows grouped by project, and its band figures. Invented sample.
 import { describe, expect, it } from "vitest";
-import { companyCashForecast, companyNextMonthForecast } from "../company-next-month";
+import { companyCashForecast, companyIncomeNote, companyNextMonthForecast } from "../company-next-month";
 import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
 import { nothingExpected, thisMonthCashOut } from "./company-cash-next-month";
 import { orderParts } from "./company-next-month-screen";
@@ -17,7 +17,7 @@ function view(over: Partial<Parameters<typeof homeFutureView>[0]> = {}) {
   return homeFutureView({
     forecast: FORECAST,
     profitMinor: PROFIT.netMinor,
-    categories: [],
+    incomeNote: companyIncomeNote(FORECAST, []),
     projects: PROJECTS,
     cash: HOME_NEXT_MONTH_SAMPLE.cash,
     today: NEXT_MONTH_TODAY,

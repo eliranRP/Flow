@@ -80,8 +80,9 @@ function dashboard(reviewCount: number) {
   };
 }
 
-function wrap(reviewCount = 0, path = "/") {
+function wrap(reviewCount = 0, path = "/", answers: Record<string, unknown> = {}) {
   rpc.impl = (name) => {
+    if (name in answers) return Promise.resolve({ data: answers[name], error: null });
     if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard(reviewCount), error: null });
     if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
@@ -184,9 +185,9 @@ describe("Home on next month (FLOW-1056)", () => {
     wrap(3, `/?month=${next}`);
     expect(await screen.findByText(`תזרים צפוי · ${homeMonthLabel(next).split(" ")[0] ?? ""}`)).toBeInTheDocument();
     expect(within(bandOf()).getByText(homeMonthLabel(next))).toBeInTheDocument();
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
-    // FLOW-1171: next month is built from `edits`, so its read leaves rest_edits out.
-    expect(rpc.calls.filter((c) => c.name === "company_next_month_inputs").map((c) => c.args)).toEqual([{ p_today: israelToday(), p_rest: false }]);
+    // FLOW-1308: next month is one company_forecast read of its rows, with the Israel day.
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_forecast")).toBe(true); });
+    expect(rpc.calls.filter((c) => c.name === "company_forecast").map((c) => c.args)).toEqual([{ p_months: [next], p_detail: "rows", p_today: israelToday() }]);
     // This sample's reads come back empty: the list says the forecast did not load, with its retry; the band stays.
     expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "דורש טיפול" })).toBeNull();
@@ -196,10 +197,39 @@ describe("Home on next month (FLOW-1056)", () => {
     expect(await screen.findByText("תזרים · עד היום")).toBeInTheDocument();
   });
 
-  it("a month after next month asks for every later month's edits (FLOW-1171)", async () => {
-    wrap(3, `/?month=${shiftMonthKey(current, 2)}`);
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(true); });
-    expect(rpc.calls.filter((c) => c.name === "company_next_month_inputs").map((c) => c.args)).toEqual([{ p_today: israelToday(), p_rest: true }]);
+  it("a month after next month is one company_forecast read of that month (FLOW-1308)", async () => {
+    const later = shiftMonthKey(current, 2);
+    wrap(3, `/?month=${later}`);
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_forecast")).toBe(true); });
+    expect(rpc.calls.filter((c) => c.name === "company_forecast").map((c) => c.args)).toEqual([{ p_months: [later], p_detail: "rows", p_today: israelToday() }]);
+  });
+
+  it("draws next month's band, income note and rows from the one read, with none of the four it replaced (FLOW-1308)", async () => {
+    const next = shiftMonthKey(current, 1);
+    const row = (key: string, name: string, minor: number, extra: Record<string, unknown> = {}) => ({ key, kind: "recurring", direction: minor > 0 ? "income" : "expense", name, date: `${next}-05`, minor, ...extra });
+    const part = (extra: Record<string, unknown>) => ({ cash_only_minor: 0, average_months: 3, removed: [], arrived: [], loan_cash: [], ...extra });
+    const facts = { rows: 1, recurring: 1, rent: 1, name: "Example Tenant" };
+    const answer = {
+      today: israelToday(),
+      currency: "ILS",
+      months: [{
+        month: next, income_minor: 500_000, expense_minor: 300_000, net_minor: 200_000, cash_only_minor: 0, projects: 1, general: true, income: facts,
+        parts: [
+          part({ project_id: "pj-1", income_minor: 500_000, expense_minor: 0, rows: [row("rec:income:s-rent", "Example Tenant", 500_000, { category_id: "c-rent" })] }),
+          part({ income_minor: 0, expense_minor: 300_000, rows: [row("rec:expense:s-power", "Example Power", -300_000)] }),
+        ],
+        skipped: [],
+      }],
+      income: facts,
+      split_keys: [],
+    };
+    wrap(0, `/?month=${next}`, { company_forecast: answer });
+    expect(await screen.findByText("Example Tenant")).toBeInTheDocument();
+    expect(screen.getByText("Example Power")).toBeInTheDocument();
+    // companyIncomeNote's "one rent": the band's line under the income, from the counts the database gave.
+    expect(within(bandOf()).getByText("שכירות קבועה אחת")).toBeInTheDocument();
+    expect(rpc.calls.filter((c) => c.name === "company_forecast")).toHaveLength(1);
+    for (const name of ["company_next_month_inputs", "expected_months"]) expect(rpc.calls.some((c) => c.name === name)).toBe(false);
   });
 
   it("reads a past month's own lines for its activity, and not the schedule's month", async () => {

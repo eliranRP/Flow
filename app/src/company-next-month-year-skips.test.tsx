@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { companyNextMonthForecast } from "./company-next-month";
 import { useCompanyNextMonth } from "./company-next-month-query";
 import { QUERY_STALE_MS } from "./query-client";
 import { renderWithProviders } from "./test-render";
@@ -47,19 +48,19 @@ const inputs = { month: "2026-02", overhead_project_id: null, projects: [], gene
 
 let seen: ReturnType<typeof useCompanyNextMonth> | undefined;
 
-function Year() {
-  seen = useCompanyNextMonth("ILS", today, true, undefined, undefined, true);
-  return null;
-}
-
 function Next() {
   seen = useCompanyNextMonth("ILS", today, true);
   return null;
 }
 
 function Month({ month, withOverrides = false }: { month: string; withOverrides?: boolean }) {
-  seen = useCompanyNextMonth("ILS", today, true, undefined, month, false, withOverrides);
+  seen = useCompanyNextMonth("ILS", today, true, month, withOverrides);
   return null;
+}
+
+/** What the overhead project's page builds from the answer (the company's forecast is read from company_forecast: FLOW-1308). */
+function forecastOf() {
+  return seen?.input == null ? null : companyNextMonthForecast(seen.input);
 }
 
 function calls(name: string) {
@@ -78,29 +79,13 @@ beforeEach(() => {
   };
 });
 
-describe("the year view reads the skips once, with the answer (FLOW-1195)", () => {
-  it("sends one company_next_month_inputs and no forecast_overrides_for, and counts each month's skips", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
-    renderWithProviders(<Year />, { route: "/", client });
-    await waitFor(() => { expect(seen?.rest).not.toBeNull(); });
-    expect(calls("forecast_overrides_for")).toHaveLength(0);
-    expect(calls("company_next_month_inputs")).toHaveLength(1);
-    expect(calls("company_next_month_inputs")[0]?.args).toEqual({ p_today: today, p_rest: true });
-    // February counts the charge; March (a skip in its list) does not; April counts it again.
-    expect(seen?.rest?.months.slice(0, 3).map((month) => [month.month, month.expenseMinor])).toEqual([
-      ["2026-02", 18_600n],
-      ["2026-03", 0n],
-      ["2026-04", 18_600n],
-    ]);
-    expect(seen?.input?.skips).toEqual([]);
-  });
-
+describe("the skips come with the answer (FLOW-1195, FLOW-1202)", () => {
   it("next month's own card sends no forecast_overrides_for and counts the skip from its first answer (FLOW-1202)", async () => {
     rpc.answers.company_next_month_inputs = { ...inputs, skips: { "2026-02": [POWER] } };
     renderWithProviders(<Next />, { route: "/", client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
-    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
+    await waitFor(() => { expect(forecastOf()).not.toBeNull(); });
     // The first figure it draws is the final one: it never counted the charge before the skips arrived.
-    expect(seen?.forecast?.expenseMinor).toBe(0n);
+    expect(forecastOf()?.expenseMinor).toBe(0n);
     expect(seen?.input?.skips).toEqual([POWER]);
     expect(calls("forecast_overrides_for")).toHaveLength(0);
     expect(calls("company_next_month_inputs")).toHaveLength(1);
@@ -110,8 +95,8 @@ describe("the year view reads the skips once, with the answer (FLOW-1195)", () =
   it("next month's card with no skip in its answer counts the charge", async () => {
     rpc.answers.company_next_month_inputs = { ...inputs, skips: {} };
     renderWithProviders(<Next />, { route: "/", client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
-    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
-    expect(seen?.forecast?.expenseMinor).toBe(18_600n);
+    await waitFor(() => { expect(forecastOf()).not.toBeNull(); });
+    expect(forecastOf()?.expenseMinor).toBe(18_600n);
     expect(calls("forecast_overrides_for")).toHaveLength(0);
   });
 
@@ -119,9 +104,9 @@ describe("the year view reads the skips once, with the answer (FLOW-1195)", () =
     rpc.answers.company_next_month_inputs = { ...inputs, rest_edits: [], skips: { "2026-03": [POWER] } };
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderWithProviders(<Month month="2026-03" />, { route: "/", client });
-    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
-    expect(seen?.forecast?.month).toBe("2026-03");
-    expect(seen?.forecast?.expenseMinor).toBe(0n);
+    await waitFor(() => { expect(forecastOf()).not.toBeNull(); });
+    expect(forecastOf()?.month).toBe("2026-03");
+    expect(forecastOf()?.expenseMinor).toBe(0n);
     expect(calls("forecast_overrides_for")).toHaveLength(0);
     expect(calls("company_next_month_inputs")[0]?.args).toEqual({ p_today: today, p_rest: true });
   });
@@ -131,15 +116,15 @@ describe("the year view reads the skips once, with the answer (FLOW-1195)", () =
     renderWithProviders(<Month month="2026-03" withOverrides />, { route: "/", client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) });
     await waitFor(() => { expect(seen?.overrides).not.toBeNull(); });
     expect(calls("forecast_overrides_for").map((call) => call.args)).toEqual([{ p_month: "2026-03" }]);
-    expect(seen?.forecast?.expenseMinor).toBe(0n);
+    expect(forecastOf()?.expenseMinor).toBe(0n);
   });
 
   it("the slim read seeded from a cached full answer uses its skips, with no request", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
     client.setQueryData(["project-forecast-edits", "off", "company", today, true], { ...inputs, rest_edits: [], skips: { "2026-02": [POWER], "2026-03": [] } });
     renderWithProviders(<Next />, { route: "/", client });
-    await waitFor(() => { expect(seen?.forecast).not.toBeNull(); });
-    expect(seen?.forecast?.expenseMinor).toBe(0n);
+    await waitFor(() => { expect(forecastOf()).not.toBeNull(); });
+    expect(forecastOf()?.expenseMinor).toBe(0n);
     expect(calls("company_next_month_inputs")).toHaveLength(0);
     expect(calls("forecast_overrides_for")).toHaveLength(0);
   });

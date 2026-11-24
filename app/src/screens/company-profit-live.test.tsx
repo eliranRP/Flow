@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { forecastTotalsOf } from "../company-forecast-map";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
@@ -20,7 +21,8 @@ vi.mock("../lib/supabase", () => ({
       const key = name === "get_breakdown" ? `${name}:${String(args?.p_group_by)}:${String(args?.p_direction)}` : name;
       calls.keys.push(key);
       const held = (name === "get_dashboard" ? calls.held : name === "get_profit_months" ? calls.heldMonths : null) ?? Promise.resolve();
-      return held.then(() => (key in calls.answer ? { data: calls.answer[key], error: null } : { data: null, error: new Error(`unmocked ${key}`) }));
+      const answer = calls.answer[key];
+      return held.then(() => (key in calls.answer ? { data: typeof answer === "function" ? (answer as (args?: Record<string, unknown>) => unknown)(args) : answer, error: null } : { data: null, error: new Error(`unmocked ${key}`) }));
     },
     from: (table: string) => ({
       select: () => ({
@@ -46,6 +48,13 @@ function breakdown(direction: "income" | "expense", groups: Array<{ key: string;
   };
 }
 
+/** company_forecast's 'totals' for the months asked (FLOW-1307's shape): two projects and the general costs, two rents. */
+function forecastTotals(args?: Record<string, unknown>) {
+  const facts = { rows: 2, recurring: 2, rent: 2 };
+  const months = (args?.p_months as string[]).map((month) => ({ month, income_minor: 300000, expense_minor: 120000, net_minor: 180000, cash_only_minor: 0, projects: 2, general: true, income: facts }));
+  return { today: "2026-10-20", currency: "USD", months, income: facts };
+}
+
 const dashboard = {
   company_id: null, name: null, vat_registered: false, basis: "cash", from: "2026-07-01", to: "2026-07-31",
   income_agorot: 0, direct_agorot: 0, shared_agorot: 0, overhead_agorot: 0, expense_agorot: 0, net_profit_agorot: 0,
@@ -62,6 +71,7 @@ beforeEach(() => {
   calls.answer = {
     mcp_company_loan_currency: "USD",
     get_dashboard: dashboard,
+    company_forecast: forecastTotals,
   };
   calls.company = { data: { overhead_project_id: OVERHEAD, overhead: { id: OVERHEAD, name: "כללי" } }, error: null };
 });
@@ -190,37 +200,102 @@ describe("CompanyProfitScreen live, the current month's next-month reads (FLOW-1
     calls.held = new Promise<void>((resolve) => { release = resolve; });
     renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
     await waitFor(() => { expect(calls.names).toContain("get_dashboard"); });
-    // The figures are not drawn yet: none of the next month's reads has gone out.
-    for (const name of ["company_next_month_inputs", "expected_months"]) expect(calls.names).not.toContain(name);
+    // The figures are not drawn yet: the next month's read has not gone out.
+    expect(calls.names).not.toContain("company_forecast");
     release();
     await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
-    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
-    expect(calls.names).toContain("expected_months");
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
   });
 });
 
-describe("CompanyProfitScreen live, the next-month read's size (FLOW-1171)", () => {
-  it("the month view reads next month without every later month's edits, and sends no overrides read: the skips come with the answer (FLOW-1202)", async () => {
+/** The reads the screen used to make for the company's forecast; none of them goes out now (FLOW-1308). */
+const OLD_FORECAST_READS = ["company_next_month_inputs", "expected_months", "list_categories", "loan_balances", "forecast_overrides_for", "from:loans"];
+
+describe("CompanyProfitScreen live, the company forecast is one read (FLOW-1308)", () => {
+  it("the month view reads next month's totals in one company_forecast, with the Israel day, and none of the four reads it replaced", async () => {
     answerBreakdowns();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderWithProviders(<CompanyProfitScreen />, { client, route: "/profit" });
-    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
-    await waitFor(() => { expect(calls.names).toContain("expected_months"); });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
     await waitFor(() => { expect(client.isFetching()).toBe(0); });
-    expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: false }]);
-    expect(calls.names).not.toContain("forecast_overrides_for");
+    expect(calls.args.company_forecast).toEqual([{ p_months: ["2026-11"], p_detail: "totals", p_today: "2026-10-20" }]);
+    for (const name of OLD_FORECAST_READS) expect(calls.names).not.toContain(name);
   });
 
-  it("the year view asks for every later month's edits and skips in one read, and sends no overrides read (FLOW-1195)", async () => {
+  it("draws the card from the answer: the month, its caption and its income note", async () => {
+    answerBreakdowns();
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    expect(await screen.findByText("2 פרויקטים וכללי")).toBeInTheDocument();
+    expect(screen.getByText("2 שכירויות קבועות")).toBeInTheDocument();
+  });
+
+  it("draws no card when nothing is expected (no part has a row)", async () => {
+    answerBreakdowns();
+    calls.answer.company_forecast = (args?: Record<string, unknown>) => ({ ...forecastTotals(args), months: (args?.p_months as string[]).map((month) => ({ month, income_minor: 0, expense_minor: 0, net_minor: 0, cash_only_minor: 0, projects: 0, general: false, income: { rows: 0, recurring: 0, rent: 0 } })) });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    // The card would say "אין הכנסה צפויה" under its income; it is left out.
+    expect(screen.queryByText("אין הכנסה צפויה")).toBeNull();
+  });
+
+  it("a failed read leaves the card out and the page drawn", async () => {
+    answerBreakdowns();
+    delete calls.answer.company_forecast;
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    expect(screen.queryByText("2 פרויקטים וכללי")).toBeNull();
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
+  });
+
+  it("an answer with an unsafe amount is refused, as a failed read", async () => {
+    answerBreakdowns();
+    calls.answer.company_forecast = (args?: Record<string, unknown>) => {
+      const answer = forecastTotals(args);
+      return { ...answer, months: answer.months.map((month) => ({ ...month, income_minor: 2 ** 60 })) };
+    };
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    expect(screen.queryByText("2 פרויקטים וכללי")).toBeNull();
+  });
+
+  it("the year view reads every month left in the year in one company_forecast, and draws the card from it (FLOW-1195)", async () => {
     answerBreakdowns();
     answerProfitMonths();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderWithProviders(<CompanyProfitScreen />, { client, route: "/profit?period=year" });
-    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
     await waitFor(() => { expect(calls.names).toContain("get_profit_months"); });
     await waitFor(() => { expect(client.isFetching()).toBe(0); });
-    expect(calls.args.company_next_month_inputs).toEqual([{ p_today: "2026-10-20", p_rest: true }]);
-    expect(calls.names).not.toContain("forecast_overrides_for");
+    // The 20th of October: November and December are left.
+    expect(calls.args.company_forecast).toEqual([{ p_months: ["2026-11", "2026-12"], p_detail: "totals", p_today: "2026-10-20" }]);
+    for (const name of OLD_FORECAST_READS) expect(calls.names).not.toContain(name);
+    expect(await screen.findByText("סוף 2026")).toBeInTheDocument();
+    expect(screen.getByText("נובמבר ודצמבר")).toBeInTheDocument();
+    expect(screen.getByText("2 שכירויות קבועות")).toBeInTheDocument();
+  });
+
+  it("draws the card at once from the totals kept on the device, with no skeleton, as the figures draw (FLOW-1294)", async () => {
+    answerBreakdowns();
+    // A repeat visit: the kept row put back in the cache (bigint amounts), and the read to refresh it not answered.
+    delete calls.answer.company_forecast;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(["month-forecast", "off", "company", "totals", "2026-10-20", "2026-11"], forecastTotalsOf(forecastTotals({ p_months: ["2026-11"] })));
+    renderWithProviders(<CompanyProfitScreen />, { client, route: "/profit" });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    // Synchronously, in the render that drew the figures: the card is there, and no card skeleton stands in its place.
+    expect(screen.getByText("2 פרויקטים וכללי")).toBeInTheDocument();
+    expect(screen.getByText("2 שכירויות קבועות")).toBeInTheDocument();
+  });
+
+  it("the year view shows its failed line when the read fails", async () => {
+    answerBreakdowns();
+    answerProfitMonths();
+    delete calls.answer.company_forecast;
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?period=year" });
+    expect(await screen.findByText("לא הצלחנו לטעון את הצפי לסוף השנה.")).toBeInTheDocument();
   });
 });
 
@@ -230,7 +305,7 @@ describe("CompanyProfitScreen live, the year and since-the-start views (FLOW-119
     answerProfitMonths();
     renderWithProviders(<CompanyProfitScreen />, { route: `/profit?period=${period}` });
     expect(await screen.findByText(/נספר לפי/)).toBeInTheDocument();
-    await waitFor(() => { expect(calls.names).toContain("company_next_month_inputs"); });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
     expect(calls.names).toContain("get_profit_months");
     expect(calls.names).not.toContain("get_dashboard");
     expect(calls.names).not.toContain("get_breakdown");
@@ -263,7 +338,7 @@ describe("CompanyProfitScreen live, each view's first reads start at mount, the 
     // Let every read that goes out at mount go out.
     await waitFor(() => { expect(calls.names.length).toBeGreaterThanOrEqual(5); });
     const wave = [...calls.keys, ...calls.names.filter((name) => name.startsWith("from:"))];
-    for (const name of ["company_next_month_inputs", "expected_months", "loans", "list_categories"]) expect(wave).not.toContain(name);
+    for (const name of ["company_forecast", ...OLD_FORECAST_READS]) expect(wave).not.toContain(name);
     release();
     return wave;
   }

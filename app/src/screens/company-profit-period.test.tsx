@@ -144,7 +144,6 @@ describe("the year's forecast card", () => {
       rest: null,
       restLoading: false,
       restFailed: true,
-      categories: [],
       list: "month",
       projects: { breakdowns: { income: null, expense: null }, statuses: [], overhead: null, pending: false, failed: false, onRetry: () => undefined },
       onList: () => undefined,
