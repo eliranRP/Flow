@@ -137,11 +137,11 @@ function patchCompanyForecast(client: QueryClient, month: string, change: (keys:
  * FLOW-1201, FLOW-1202, FLOW-1214: a skip, reset or undo patches the skips above and reads no company inputs. The inputs
  * no screen holds (Company profit's year views) are dropped, so they load fresh and never show pre-write figures
  * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
- * FLOW-1308: the company forecast's cached answers are not dropped here: the patch at the tap already moved or dropped them, and a
- * success must keep the card's patched totals.
+ * FLOW-1308: after a success only the company forecast's multi-month answers are dropped (the patch at the tap moved the rest, and
+ * the card's patched totals must stay); after a failure (`all`) every inactive one is, since an undone patch may leave them ahead of the server.
  */
-function dropInactiveCompanyInputs(client: QueryClient) {
-  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && (query.queryKey[5] as string).includes(",") });
+function dropInactiveCompanyInputs(client: QueryClient, all = false) {
+  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && (all || String(query.queryKey[5]).includes(",")) });
   client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
 }
 
@@ -167,7 +167,7 @@ function watchForecastWrites(client: QueryClient) {
     const unsettled = client.getMutationCache().findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
     if (unsettled.length > 0) return;
     failedScopes.delete(scope);
-    dropInactiveCompanyInputs(client);
+    dropInactiveCompanyInputs(client, true);
     void client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: (query) => query.queryKey[2] === "company" });
     void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: isCompanyForecast });
   });

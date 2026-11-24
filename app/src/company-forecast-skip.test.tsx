@@ -143,6 +143,69 @@ describe("a skip and the company forecast (FLOW-1308)", () => {
     expect(calls("company_forecast").filter((call) => (call.args as { p_detail: string }).p_detail === "totals")).toHaveLength(before);
   });
 
+  it("after two refused writes in one scope, drops the card's totals that are not on screen: none is left ahead of the server", async () => {
+    const resolvers: Array<() => void> = [];
+    rpc.write = () => new Promise<Answer>((resolve) => { resolvers.push(() => { resolve({ data: null, error: { message: "refused" } }); }); });
+    const HOA = "party:expense:hoa:USD";
+    rpc.rows = { ...ROWS, months: [{ ...ROWS.months[0], expense_minor: 38_600, net_minor: 61_400, parts: [part({ project_id: "p1", income_minor: 100_000, expense_minor: 38_600, rows: [row("rec:income:t1", "Example Tenant", 100_000, { category_id: "c-rent" }), row("rec:expense:power", "Power", -18_600), row("rec:expense:hoa", "HOA", -20_000)] })] }] };
+    function Two() {
+      const read = useCompanyMonthRows(TODAY, MONTH, true, false);
+      const set = useSetForecastItem(MONTH);
+      return (
+        <>
+          <p data-testid="two">{read.answer == null ? "loading" : String(read.answer.forecast.expenseMinor)}</p>
+          <button type="button" onClick={() => { set.mutate({ key: POWER, patch: { moved_out: true }, undo: false, prior: null }); set.mutate({ key: HOA, patch: { moved_out: true }, undo: false, prior: null }); }}>skip both</button>
+        </>
+      );
+    }
+    const client = newClient();
+    const card = ["month-forecast", "off", "company", "totals", TODAY, MONTH];
+    const month = { month: MONTH, incomeMinor: 100_000n, expenseMinor: 38_600n, netMinor: 61_400n, cashOnlyMinor: 0n, projects: 1, general: false, income: FACTS };
+    client.setQueryData(card, { today: TODAY, currency: "USD", months: [month], income: FACTS });
+    renderWithProviders(<Two />, { route: "/", client });
+    await waitFor(() => { expect(screen.getByTestId("two").textContent).toBe("38600"); });
+    fireEvent.click(screen.getByRole("button", { name: "skip both" }));
+    await waitFor(() => { expect(screen.getByTestId("two").textContent).toBe("0"); });
+    // The writes go one at a time in the month's scope: refuse each as it is sent.
+    await waitFor(() => { expect(resolvers).toHaveLength(1); });
+    resolvers[0]?.();
+    await waitFor(() => { expect(resolvers).toHaveLength(2); });
+    resolvers[1]?.();
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    await waitFor(() => { expect(client.getQueryData(card)).toBeUndefined(); });
+  });
+
+  it("moves the year view's note with the card's when the one month left is its only month (November)", async () => {
+    // The write is held: the figures are the tap's, not a read's after it.
+    rpc.write = () => new Promise<Answer>(() => undefined);
+    const facts = { rows: 2, recurring: 2, rent: 2, name: null };
+    const rent = (id: string) => row(`rec:income:${id}`, id, 50_000, { category_id: "c-rent" });
+    rpc.rows = { ...ROWS, income: facts, months: [{ ...ROWS.months[0], income_minor: 100_000, expense_minor: 0, net_minor: 100_000, income: facts, parts: [part({ project_id: "p1", income_minor: 100_000, expense_minor: 0, rows: [rent("t1"), rent("t2")] })] }] };
+    const client = newClient();
+    client.setQueryData(["categories", "off"], [{ id: "c-rent", name: "שכירות", parent_id: null }]);
+    const key = ["month-forecast", "off", "company", "totals", TODAY, MONTH];
+    const month = { month: MONTH, incomeMinor: 100_000n, expenseMinor: 0n, netMinor: 100_000n, cashOnlyMinor: 0n, projects: 1, general: false, income: facts };
+    client.setQueryData(key, { today: TODAY, currency: "USD", months: [month], income: facts });
+    function Rent() {
+      const read = useCompanyMonthRows(TODAY, MONTH, true, false);
+      const set = useSetForecastItem(MONTH);
+      return (
+        <>
+          <p data-testid="r">{read.answer == null ? "loading" : String(read.answer.months[0]?.income.rows)}</p>
+          <button type="button" onClick={() => { set.mutate({ key: "party:income:t1:USD", patch: { moved_out: true }, undo: false, prior: null }); }}>skip rent</button>
+        </>
+      );
+    }
+    renderWithProviders(<Rent />, { route: "/", client });
+    await waitFor(() => { expect(screen.getByTestId("r").textContent).toBe("2"); });
+    fireEvent.click(screen.getByRole("button", { name: "skip rent" }));
+    await waitFor(() => { expect(screen.getByTestId("r").textContent).toBe("1"); });
+    const cached = client.getQueryData<{ income: { rows: number; rent: number }; months: Array<{ income: { rows: number } }> }>(key);
+    // The top-level income (what the year view's note reads) moved with the month's.
+    expect(cached?.income).toMatchObject({ rows: 1, rent: 1 });
+    expect(cached?.months[0]?.income.rows).toBe(1);
+  });
+
   it("moves the income note's counts on the tap, with the categories Home holds, and back when the write fails", async () => {
     let refuse: () => void = () => undefined;
     rpc.write = () => new Promise<Answer>((resolve) => { refuse = () => { resolve({ data: null, error: { message: "refused" } }); }; });

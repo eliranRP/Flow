@@ -103,7 +103,7 @@ function patchRows(client: QueryClient, month: string, change: (keys: readonly s
   for (const query of companyQueries("totals")) {
     const before = query.state.data as CompanyForecastTotals | undefined;
     const month0 = months.get(`${String(query.queryKey[1])}|${String(query.queryKey[4])}`);
-    if (before != null && month0 != null && query.queryKey[5] === month && before.months.length === 1) set(query.queryKey, before, { ...before, months: [month0] });
+    if (before != null && month0 != null && query.queryKey[5] === month && before.months.length === 1) set(query.queryKey, before, { ...before, months: [month0], income: month0.income });
     else if (String(query.queryKey[5]).split(",").includes(month)) client.removeQueries({ queryKey: query.queryKey, type: "inactive" });
   }
   return () => {
