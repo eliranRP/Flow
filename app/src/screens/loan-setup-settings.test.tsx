@@ -42,6 +42,8 @@ vi.mock("../lib/supabase", () => ({
           if (db.hold) return db.hold.then(() => finish());
           return Promise.resolve(finish());
         }
+        // FLOW-1316: no loan has a next payment or a late mark.
+        if (name === "loan_outlooks") return Promise.resolve({ data: [], error: null });
         if (name !== "mcp_company_loan_currency") throw new Error(name);
         db.selects += 1;
         const finish = () => ({ data: db.currencyError ? null : db.baseCurrency, error: db.currencyError });
