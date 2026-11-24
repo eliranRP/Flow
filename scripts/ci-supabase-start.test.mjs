@@ -30,8 +30,10 @@ echo "CONTAINER fake-db Up"
  * Runs the script with fake `supabase` and `docker` commands. `modes` gives the outcome of each
  * `supabase start` in turn: ok, fail (exit 3) or hang (sleeps past the limit).
  * @param {string} modes
+ * @param {Record<string, string>} [env] more settings for the script
+ * @param {Record<string, string>} [extraBin] more fake commands, by name
  */
-function setup(modes) {
+function setup(modes, env = {}, extraBin = {}) {
   const dir = mkdtempSync(join(tmpdir(), "ci-supabase-start-"));
   const bin = join(dir, "bin");
   mkdirSync(bin);
@@ -39,6 +41,10 @@ function setup(modes) {
   writeFileSync(join(bin, "docker"), dockerShim);
   chmodSync(join(bin, "supabase"), 0o755);
   chmodSync(join(bin, "docker"), 0o755);
+  for (const [name, body] of Object.entries(extraBin)) {
+    writeFileSync(join(bin, name), body);
+    chmodSync(join(bin, name), 0o755);
+  }
   const calls = join(dir, "calls");
   writeFileSync(calls, "");
   const started = Date.now();
@@ -52,6 +58,10 @@ function setup(modes) {
       FLOW_SUPABASE_START_LOG: join(dir, "start.log"),
       FLOW_SUPABASE_START_TIMEOUT: "1",
       FLOW_SUPABASE_STOP_TIMEOUT: "5",
+      FLOW_SUPABASE_START_ATTEMPTS: "2",
+      FLOW_BOUNDED_GRACE: "1",
+      FLOW_SUPABASE_RESERVE_PORTS: "",
+      ...env,
     },
   });
   const calledWith = readFileSync(calls, "utf8").trim().split("\n");
@@ -105,18 +115,133 @@ test("a start that exits non-zero is retried and its output is kept", () => {
   }
 });
 
+test("the Supabase ports are kept out of the runner's source-port range before the first start", () => {
+  const sysctl = '#!/usr/bin/env bash\necho "sysctl $*" >> "$SHIM_CALLS"\n';
+  const { dir, result, calls } = setup(
+    "ok",
+    { FLOW_SUPABASE_RESERVE_PORTS: "54320-54329", FLOW_SUPABASE_SUDO: "" },
+    { sysctl },
+  );
+  try {
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(calls, ["sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329", "start -x a,b"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the failure log lists the sockets on the Supabase ports", () => {
+  const ss = '#!/usr/bin/env bash\necho "ESTAB 0 0 10.1.0.4:54322 140.82.1.1:443 users:((curl,pid=1))"\n';
+  const { dir, result } = setup("fail,fail", {}, { ss });
+  try {
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /sockets on the Supabase ports:\nESTAB 0 0 10\.1\.0\.4:54322/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a third attempt runs when the budget has room and the first two fail", () => {
+  const { dir, result, calls } = setup("fail,fail,ok", { FLOW_SUPABASE_START_ATTEMPTS: "3" });
+  try {
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(calls, ["start -x a,b", "stop --no-backup", "start -x a,b", "stop --no-backup", "start -x a,b"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("no attempt starts that the budget cannot finish", () => {
+  const { dir, result, calls, elapsed } = setup("hang,ok", {
+    FLOW_SUPABASE_START_TIMEOUT: "2",
+    FLOW_SUPABASE_STOP_TIMEOUT: "1",
+    FLOW_SUPABASE_START_BUDGET: "9",
+  });
+  try {
+    assert.equal(result.status, 1);
+    assert.deepEqual(calls, ["start -x a,b"]);
+    assert.match(result.stdout, /gave up after/);
+    assert.ok(elapsed < 20_000, `took ${elapsed} ms`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a start the kernel will not release is abandoned, and docker ps that hangs does not hold the job", () => {
+  // The fake timeout never returns, the way it waits on a process stuck in the kernel.
+  const stuck = "#!/usr/bin/env bash\nsleep 60\n";
+  const { dir, result, elapsed } = setup("hang,hang", { FLOW_SUPABASE_START_ATTEMPTS: "1", FLOW_BOUNDED_KILL: "1", FLOW_SUPABASE_DIAG_TIMEOUT: "1" }, { timeout: stuck, docker: stuck });
+  try {
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /attempt 1 timed out/);
+    assert.match(result.stdout, /gave up after/);
+    // Each call is given up on after its limit 1 + kill 1 + grace 1 = 3 s: the start and four diagnostics.
+    assert.ok(elapsed < 30_000, `took ${elapsed} ms`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the failure log names the machine's state", () => {
+  const { dir, result } = setup("fail,fail");
+  try {
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /docker ps -a:/);
+    assert.match(result.stdout, /disk and memory:/);
+    assert.match(result.stdout, /supabase and docker processes:/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the wait script reports a stalled start with its log and fails before the step limit", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ci-supabase-wait-"));
+  try {
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "docker"), dockerShim);
+    chmodSync(join(bin, "docker"), 0o755);
+    writeFileSync(join(dir, "supabase-start.log"), "ci-supabase-start: attempt 1, limit 120s\nPulling\n");
+    const wait = new URL("./ci-supabase-wait.sh", import.meta.url).pathname;
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: dir, FLOW_SUPABASE_WAIT: "2" };
+    let result = spawnSync("bash", [wait], { encoding: "utf8", env });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /did not finish within 2s/);
+    assert.match(result.stdout, /attempt 1, limit 120s/);
+    assert.match(result.stdout, /CONTAINER fake-db Up/);
+    writeFileSync(join(dir, "supabase-start.exit"), "1");
+    result = spawnSync("bash", [wait], { encoding: "utf8", env });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /attempt 1, limit 120s/);
+    writeFileSync(join(dir, "supabase-start.exit"), "0");
+    result = spawnSync("bash", [wait], { encoding: "utf8", env });
+    assert.equal(result.status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("workflows call the script and every wait step has its own limit", () => {
   for (const text of [ci, pr]) assert.doesNotMatch(text, /supabase start/);
   assert.equal(ci.match(/scripts\/ci-supabase-start\.sh/g).length, 1);
   assert.equal(pr.match(/scripts\/ci-supabase-start\.sh/g).length, 2);
-  assert.match(ci, /Wait for local Supabase\n {8}timeout-minutes: 8\n/);
-  assert.match(pr, /Wait for local Supabase\n {8}timeout-minutes: 8\n/);
+  // The step shell runs with -e: without set +e a failed start ends the subshell before it writes the exit
+  // file, and the wait step waits its full limit for a file that never comes (FLOW-1319).
+  for (const text of [ci, pr]) {
+    assert.match(text, /\(set \+e; bash scripts\/ci-supabase-start\.sh -x [^\n]*; echo "\$\?" > "\$RUNNER_TEMP\/supabase-start\.exit\.tmp"/);
+  }
+  // The wait script gives up after 420 s and prints what the start was doing; the step limit is the backstop.
+  assert.match(ci, /Wait for local Supabase\n {8}timeout-minutes: 8\n {8}run: bash scripts\/ci-supabase-wait\.sh\n/);
+  assert.match(pr, /Wait for local Supabase\n {8}timeout-minutes: 8\n {8}run: bash scripts\/ci-supabase-wait\.sh\n/);
+  assert.match(readFileSync(new URL("./ci-supabase-wait.sh", import.meta.url), "utf8"), /FLOW_SUPABASE_WAIT:-420/);
   assert.match(
     pr,
     /Start local Supabase \(database[^\n]*\n {8}timeout-minutes: 8\n {8}run: bash scripts\/ci-supabase-start\.sh -x [^\n]*storage-api\n/,
   );
   const source = readFileSync(script, "utf8");
-  assert.match(source, /FLOW_SUPABASE_START_TIMEOUT:-180/);
+  assert.match(source, /FLOW_SUPABASE_START_TIMEOUT:-120/);
+  assert.match(source, /FLOW_SUPABASE_START_ATTEMPTS:-3/);
+  assert.match(source, /FLOW_SUPABASE_START_BUDGET:-330/);
   assert.match(source, /supabase stop --no-backup/);
   assert.match(source, /docker ps -a/);
 });
