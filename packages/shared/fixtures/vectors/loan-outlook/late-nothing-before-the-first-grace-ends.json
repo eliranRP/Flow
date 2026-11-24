@@ -1,0 +1,6 @@
+{
+  "name": "late-nothing-before-the-first-grace-ends",
+  "description": "The first payment is due on the start date, 11-15, still in its grace on 11-22.",
+  "input": {"today":"2026-11-22","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2026-11-15","paymentMinor":524000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":24000000},"paid":{"lastPaidOn":null,"addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2026-12-15","amount_minor":524000,"escrow_minor":36300,"interest_minor":125000,"principal_minor":362700},"end_date":"2031-09-15","ahead_minor":6288000,"to_end_minor":29906169}
+}

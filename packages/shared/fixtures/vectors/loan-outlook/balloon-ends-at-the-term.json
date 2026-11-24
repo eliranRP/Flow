@@ -1,0 +1,6 @@
+{
+  "name": "balloon-ends-at-the-term",
+  "description": "A balloon over 360 months due at 60: the end date is the term's last month, the principal to the end is the balance.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":10000000,"annualRatePpm":65000,"termMonths":60,"startDate":"2026-07-01","paymentMinor":63207,"escrowMinor":0,"kind":"balloon","interestOnlyMonths":null,"amortizationMonths":360,"rates":[],"status":"open","balanceMinor":9612040},"paid":{"lastPaidOn":"2026-10-01","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2026-11-01","amount_minor":63207,"escrow_minor":0,"interest_minor":52065,"principal_minor":11142},"end_date":"2031-06-01","ahead_minor":758484,"to_end_minor":12425002}
+}

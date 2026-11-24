@@ -1,0 +1,6 @@
+{
+  "name": "late-waits-out-the-grace-day-10",
+  "description": "Due 12-01, nothing since 11-05: on 12-11 the 10 days are not over.",
+  "input": {"today":"2026-12-11","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2025-01-01","paymentMinor":524000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":17650000},"paid":{"lastPaidOn":"2026-11-05","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2027-01-01","amount_minor":524000,"escrow_minor":36300,"interest_minor":91927,"principal_minor":395773},"end_date":"2030-05-01","ahead_minor":6288000,"to_end_minor":21096698}
+}

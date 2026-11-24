@@ -1,0 +1,6 @@
+{
+  "name": "late-and-next-together",
+  "description": "A loan can be late for a past date and have its next payment: both are given.",
+  "input": {"today":"2026-12-12","loan":{"principalMinor":10000000,"annualRatePpm":65000,"termMonths":60,"startDate":"2026-07-01","paymentMinor":63207,"escrowMinor":0,"kind":"balloon","interestOnlyMonths":null,"amortizationMonths":360,"rates":[],"status":"open","balanceMinor":9612040},"paid":{"lastPaidOn":"2026-07-01","addedOn":"2026-06-20"}},
+  "expected": {"next":{"due_date":"2027-01-01","amount_minor":63207,"escrow_minor":0,"interest_minor":52065,"principal_minor":11142},"late_on":"2026-12-01","end_date":"2031-06-01","ahead_minor":758484,"to_end_minor":12328500}
+}

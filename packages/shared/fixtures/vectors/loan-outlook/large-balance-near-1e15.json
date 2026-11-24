@@ -1,0 +1,6 @@
+{
+  "name": "large-balance-near-1e15",
+  "description": "A balance of 10^13 agorot, interest only for six months: the totals stay exact.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":1000000000000000,"annualRatePpm":60000,"termMonths":6,"startDate":"2026-07-01","paymentMinor":5000000000000,"escrowMinor":0,"kind":"interest_only","interestOnlyMonths":6,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":1000000000000000},"paid":{"lastPaidOn":"2026-10-01","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2026-11-01","amount_minor":5000000000000,"escrow_minor":0,"interest_minor":5000000000000,"principal_minor":0},"end_date":"2026-12-01","ahead_minor":1010000000000000,"to_end_minor":1010000000000000}
+}

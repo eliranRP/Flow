@@ -1,0 +1,6 @@
+{
+  "name": "interest-only-months-ahead-kept",
+  "description": "12 months of interest only from 2026-03-01: November to February pay no principal.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":21000000,"annualRatePpm":105000,"termMonths":24,"startDate":"2026-03-01","paymentMinor":2115566,"escrowMinor":0,"kind":"interest_only","interestOnlyMonths":12,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":23000000},"paid":{"lastPaidOn":"2026-10-01","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2026-11-01","amount_minor":201250,"escrow_minor":0,"interest_minor":201250,"principal_minor":0},"end_date":"2028-02-01","ahead_minor":17729528,"to_end_minor":25081594}
+}

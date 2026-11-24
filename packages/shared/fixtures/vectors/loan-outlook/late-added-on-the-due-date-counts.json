@@ -1,0 +1,6 @@
+{
+  "name": "late-added-on-the-due-date-counts",
+  "description": "Added on the due date itself: that date counts.",
+  "input": {"today":"2026-11-22","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2026-10-01","paymentMinor":524000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":24000000},"paid":{"lastPaidOn":null,"addedOn":"2026-11-01"}},
+  "expected": {"next":{"due_date":"2026-12-01","amount_minor":524000,"escrow_minor":36300,"interest_minor":125000,"principal_minor":362700},"late_on":"2026-11-01","end_date":"2031-09-01","ahead_minor":6288000,"to_end_minor":29906169}
+}

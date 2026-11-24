@@ -1,0 +1,6 @@
+{
+  "name": "demand-loan-has-none",
+  "description": "A demand loan has no schedule: no outlook, never late.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":4000000,"annualRatePpm":60000,"termMonths":null,"startDate":"2025-11-01","paymentMinor":null,"escrowMinor":0,"kind":"demand","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":3878904},"paid":{"lastPaidOn":null,"addedOn":"2025-01-01"}},
+  "expected": {}
+}
