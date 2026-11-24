@@ -6,7 +6,7 @@ import { z } from "zod";
 import { unpaidRowSchema } from "../../../packages/shared/src/dashboard.ts";
 import { expectedMonthsSchema } from "../../../packages/shared/src/forecast.ts";
 import { forecastLastMonth, forecastMonths } from "../../../packages/shared/src/forecast-horizon.ts";
-import { buildMonthForecast, type ForecastBuild, type ForecastItem, parseMonthEdits } from "../../../packages/shared/src/month-forecast.ts";
+import { buildMonthForecast, type ForecastBuild, type ForecastItem } from "../../../packages/shared/src/month-forecast.ts";
 import { callTool, toolsFor } from "./tools.ts";
 import { buildOfAnswer } from "./tools_forecast_read.ts";
 import { MONTH_FORECAST_VECTORS } from "./tools_forecast_vectors.ts";
@@ -67,7 +67,8 @@ function forecastOf(f: Fixture, month: string) {
     expected: expectedMonthsSchema.parse(f.expected),
     unpaid: z.array(unpaidRowSchema).parse(f.unpaid),
     overrides: f.overrides as never,
-    ...parseMonthEdits(f.edits),
+    edits: (f.edits as { edits: never[] }).edits,
+    overheadProjectId: (f.edits as { overhead_project_id: string | null }).overhead_project_id,
   });
   return answerOf(month, f.base, build, f.overrides);
 }
@@ -213,7 +214,8 @@ Deno.test("get_forecast refuses an answer with no usable currency or a malformed
 // for each, read back by the tool, is the builder's own build (the app's FLOW-1314 mapper does the same), and the tool's
 // answer is the one the builder gave.
 Deno.test("get_forecast equals the builder's forecast for every shared month-forecast vector", async () => {
-  assertEquals(MONTH_FORECAST_VECTORS.length >= 36, true);
+  // The folder holds 37 vectors, the payment-terms one left out (month_forecast sets no terms): a new vector fails here until it is added.
+  assertEquals(MONTH_FORECAST_VECTORS.length, 36);
   for (const vector of MONTH_FORECAST_VECTORS) {
     const { name } = vector;
     const { input } = vector;

@@ -443,7 +443,7 @@ export async function callTool(
     return ok({ ...report, previous_to_day: { month: previous, day: toDay, by_currency: same.json } } as Review);
   }
 
-  // FLOW-517 the weekly summary, FLOW-957 a line's thread, FLOW-450 a property's returns.
+  // FLOW-1312 the forecasts (get_forecast, get_company_forecast), FLOW-517 the weekly summary, FLOW-957 a line's thread, FLOW-450 a property's returns.
   const more = moreRead(name, args, rpc);
   if (more) return more;
 

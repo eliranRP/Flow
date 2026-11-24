@@ -281,45 +281,6 @@ export function buildMonthForecast(input: {
   };
 }
 
-function text(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-/**
- * company_forecast_edits_for's answer, checked by hand (no zod: Home reads this forecast before it paints, and the MCP builds it too).
- * An edit that does not have the shape is left out, and a body with no edits list reads as none, so the month's
- * own items always show; a failed read still fails the forecast.
- */
-export function parseMonthEdits(data: unknown): { overheadProjectId: string | null; edits: MonthForecastEdit[] } {
-  const body = data as { overhead_project_id?: unknown; edits?: unknown } | null;
-  if (body == null || typeof body !== "object" || !Array.isArray(body.edits)) return { overheadProjectId: null, edits: [] };
-  const edits = (body.edits as unknown[]).flatMap((value): MonthForecastEdit[] => {
-    const row = value as Record<string, unknown> | null;
-    if (row == null || typeof row !== "object") return [];
-    const id = text(row.id);
-    const project = text(row.project_id);
-    const kind = row.kind;
-    const start = text(row.start_month);
-    const direction = row.direction === "income" || row.direction === "expense" ? row.direction : null;
-    const amount = typeof row.amount_minor === "number" && Number.isSafeInteger(row.amount_minor) ? row.amount_minor : null;
-    if (id == null || project == null || start == null || (kind !== "change" && kind !== "remove" && kind !== "add")) return [];
-    return [{
-      id,
-      project_id: project,
-      kind,
-      row_key: text(row.row_key),
-      category_id: text(row.category_id),
-      category_name: text(row.category_name),
-      direction,
-      amount_minor: amount,
-      pace: text(row.pace),
-      start_month: start,
-      matched_transaction_id: text(row.matched_transaction_id),
-    }];
-  });
-  return { overheadProjectId: text(body.overhead_project_id), edits };
-}
-
 /** Home's number: the cash net today, plus the income still to come, minus the charges still to go. */
 export function forecastTotal(netMinor: bigint, build: Pick<ForecastBuild, "incomeTotal" | "expenseTotal">): bigint {
   return netMinor + build.incomeTotal - build.expenseTotal;
