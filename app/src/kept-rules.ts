@@ -39,6 +39,12 @@ export type KeptRule = {
    * the page writes it from inside that read, and a company switch does not stop the read.
    */
   pair?: (key: readonly unknown[]) => readonly unknown[];
+  /**
+   * FLOW-1296: what of the data is kept, applied when the read is written and before its size is counted. Drops what a
+   * screen can rebuild from the rest, so the row is smaller in the store and on the main thread. It must leave data that
+   * `valid` still accepts.
+   */
+  save?: (data: unknown) => unknown;
   /** What a restored copy becomes: a load that was under way when it was kept is not under way now. */
   restore?: (data: unknown) => unknown;
 };
@@ -78,6 +84,23 @@ function payersValid(_schemas: ReadSchemas | null, json: unknown): boolean {
 /** Home's lines of a side: the one page of 20 the first view draws (the infinite read's data, a page and its param). */
 const onePage = (data: unknown): boolean => isRecord(data) && Array.isArray(data.pages) && data.pages.length === 1 && Array.isArray(data.pageParams);
 
+/**
+ * FLOW-1296: the loan list without each loan's schedule (about 160 bytes a month of every open loan's term, most of the row).
+ * The Loans screen reads `rows`, which carry each loan's next payment and late date. The summary builds a loan's outlook
+ * from `loans[].schedule`, and builds the schedule itself when the field is missing (a fresh read keeps `null` for a
+ * loan with none). `rows` stay whole: their late date needs the loan's payments, which `loans` does not hold.
+ */
+function loanListSaved(data: unknown): unknown {
+  if (!isRecord(data) || !Array.isArray(data.loans)) return data;
+  const trimmed = (loan: unknown): unknown => {
+    if (!isRecord(loan)) return loan;
+    const rest: Record<string, unknown> = { ...loan };
+    delete rest.schedule;
+    return rest;
+  };
+  return { ...data, loans: data.loans.map(trimmed) };
+}
+
 export const KEPT_RULES: readonly KeptRule[] = [
   // Home and Projects. FLOW-1292: the rest of Home's first view (the attention counts, the change pills, the weekly card, the first lines).
   rule("dashboard", (k) => k[0] === "dashboard" && off(k, 1), bySchema((s) => s.dashboardSchema)),
@@ -103,7 +126,7 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("project forecast edits", (k) => k.length === 4 && k[0] === "project-forecast-edits" && off(k, 1) && typeof k[2] === "string" && k[2] !== "company" && typeof k[3] === "string", (_s, json) => isRows(json, "id") && (json as Array<Record<string, unknown>>).every((row) => typeof row.kind === "string" && typeof row.pace === "string")),
   rule("categories", (k) => k.length === 2 && k[0] === "categories" && off(k, 1), bySchema((s) => s.categoryRowSchema.array())),
   // Loans.
-  rule("loan list", (k) => k[0] === "loans" && typeof k[1] === "string" && k[2] === "list", (_s, json) => isRecord(json) && isRows(json.rows, "id") && Array.isArray(json.loans)),
+  rule("loan list", (k) => k[0] === "loans" && typeof k[1] === "string" && k[2] === "list", (_s, json) => isRecord(json) && isRows(json.rows, "id") && Array.isArray(json.loans), { save: loanListSaved }),
   rule("loan currency", (k) => k[0] === "loan-currency" && typeof k[1] === "string", (_s, json) => json === "ILS" || json === "USD"),
   // Recurring.
   rule("recurring schedule", (k) => k.length === 1 && k[0] === "recurring-schedule", (_s, json) => isRows(json, "party_id")),
