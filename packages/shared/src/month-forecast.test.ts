@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UnpaidRow } from "./dashboard";
 import type { ExpectedMonths } from "./forecast";
-import { buildMonthForecast, forecastTotal, type MonthForecastEdit, parseMonthEdits, SMALL_CHARGE_MINOR } from "./month-forecast";
+import { buildMonthForecast, forecastTotal, type MonthForecastEdit, SMALL_CHARGE_MINOR } from "./month-forecast";
 
 const expected: ExpectedMonths = {
   today: "2026-10-16",
@@ -275,25 +275,5 @@ describe("buildMonthForecast: only the charges due this month (decision 0199)", 
       const build = buildMonthForecast({ base: "ILS", expected: onProject, unpaid, overrides: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 400000, due_on: null, moved_out: false }], edits: [change] });
       expect(build.expense.find((item) => item.name === "Rent Co")?.minor).toBe(400000n);
     });
-  });
-});
-
-describe("parseMonthEdits (FLOW-1005)", () => {
-  it("reads the edits and the overhead project, leaving out a row without the shape", () => {
-    const parsed = parseMonthEdits({
-      overhead_project_id: "office",
-      edits: [
-        { id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c", category_name: "Refund", direction: "income", amount_minor: 100, start_month: "2026-11", matched_transaction_id: null },
-        { id: "e-2", project_id: "pj-1", kind: "weird", start_month: "2026-11" },
-        "not a row",
-      ],
-    });
-    expect(parsed.overheadProjectId).toBe("office");
-    expect(parsed.edits.map((edit) => edit.id)).toEqual(["e-1"]);
-  });
-
-  it("reads a body with no edits list as none, so the month's own items still show", () => {
-    expect(parseMonthEdits(null)).toEqual({ overheadProjectId: null, edits: [] });
-    expect(parseMonthEdits([])).toEqual({ overheadProjectId: null, edits: [] });
   });
 });

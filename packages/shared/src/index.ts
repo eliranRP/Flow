@@ -136,7 +136,6 @@ export {
   SMALL_CHARGE_MINOR,
   buildMonthForecast,
   forecastTotal,
-  parseMonthEdits,
 } from "./month-forecast.ts";
 export type {
   ForecastBuild,

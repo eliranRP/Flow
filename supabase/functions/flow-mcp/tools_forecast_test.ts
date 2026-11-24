@@ -1,10 +1,17 @@
-// Flow MCP tools tests: the month-end forecast (FLOW-141). get_forecast builds the items and the
-// totals from its reads (the company currency among them); set_forecast_item and reset_forecast forward to their RPCs.
+// Flow MCP tools tests: the month-end forecast (FLOW-141, FLOW-1312). get_forecast reads month_forecast (the database
+// builds the forecast) and the month's cash net, and answers what it answered when it built the forecast from four reads;
+// get_company_forecast reads company_forecast; set_forecast_item and reset_forecast forward to their RPCs.
 import { assertEquals } from "jsr:@std/assert@1";
+import { z } from "zod";
+import { unpaidRowSchema } from "../../../packages/shared/src/dashboard.ts";
+import { expectedMonthsSchema } from "../../../packages/shared/src/forecast.ts";
 import { forecastLastMonth, forecastMonths } from "../../../packages/shared/src/forecast-horizon.ts";
-import { callTool } from "./tools.ts";
+import { buildMonthForecast, type ForecastBuild, type ForecastItem } from "../../../packages/shared/src/month-forecast.ts";
+import { callTool, toolsFor } from "./tools.ts";
+import { buildOfAnswer } from "./tools_forecast_read.ts";
+import { MONTH_FORECAST_VECTORS } from "./tools_forecast_vectors.ts";
+import { forecastReportOf, israelMonthKey } from "./tools_reports.ts";
 import { rpcOf } from "./tools_test_support.ts";
-import { israelMonthKey } from "./tools_reports.ts";
 
 const KEY = "11111111-2222-4333-8444-555555555555";
 
@@ -19,34 +26,82 @@ const expected = {
 const unpaid = [
   { id: "inv-1", description: "Invoice 1", doc_date: "2026-10-02", project_name: null, customer_name: "Client A", open_gross_agorot: 250000, open_net_agorot: 250000, currency: "ILS" },
 ];
+const overrides = [{ item_key: "party:expense:p-rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }];
+const noEdits = { month: "2026-10", overhead_project_id: null, edits: [] };
 
-function reads(name: string) {
-  if (name === "expected_months") return { status: 200, json: expected };
-  if (name === "list_unpaid") return { status: 200, json: unpaid };
-  if (name === "cash_months") {
-    return { status: 200, json: { basis: "cash", base_currency: "ILS", months: [{ month: "2026-10-01", by_currency: [{ currency: "ILS", net_minor: 120000 }] }] } };
-  }
-  if (name === "forecast_overrides_for") {
-    return { status: 200, json: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }] };
-  }
-  if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
-  if (name === "company_forecast_edits_for") return { status: 200, json: { month: "2026-10", overhead_project_id: null, edits: [] } };
-  return { status: 500, json: null };
+type Fixture = { expected: unknown; unpaid: unknown; overrides: unknown[]; edits: unknown; base: string };
+const fixture: Fixture = { expected, unpaid, overrides, edits: noEdits, base: "ILS" };
+
+/** An item as month_forecast leaves it: no currency (the base), expected_on, late_days, and no null field (absent = null). */
+function stripped(item: ForecastItem): Record<string, unknown> {
+  const wire: Record<string, unknown> = { ...item, usual: Number(item.usual), minor: Number(item.minor) };
+  delete wire.currency;
+  delete wire.expected_on;
+  delete wire.late_days;
+  return Object.fromEntries(Object.entries(wire).filter(([, value]) => value !== null));
 }
 
-Deno.test("get_forecast reads its RPCs and builds the items, totals and changed count", async () => {
+/** What month_forecast answers for a build: the lists as item keys, in the reverse of the builder's order (the tool sorts them itself). */
+function answerOf(month: string, base: string, build: ForecastBuild, overridesRows: unknown[]) {
+  const keys = (list: ForecastItem[]) => list.map((item) => item.key).reverse();
+  return {
+    month,
+    base,
+    overrides: overridesRows,
+    build: {
+      items: build.items.map(stripped),
+      income: keys(build.income),
+      expense: keys(build.expense),
+      moved: keys(build.moved),
+      small: keys(build.small),
+      incomeTotal: Number(build.incomeTotal),
+      expenseTotal: Number(build.expenseTotal),
+      changed: build.changed,
+    },
+  };
+}
+
+function forecastOf(f: Fixture, month: string) {
+  const build = buildMonthForecast({
+    base: f.base,
+    expected: expectedMonthsSchema.parse(f.expected),
+    unpaid: z.array(unpaidRowSchema).parse(f.unpaid),
+    overrides: f.overrides as never,
+    edits: (f.edits as { edits: never[] }).edits,
+    overheadProjectId: (f.edits as { overhead_project_id: string | null }).overhead_project_id,
+  });
+  return answerOf(month, f.base, build, f.overrides);
+}
+
+const cash = { status: 200, json: { basis: "cash", base_currency: "ILS", months: [{ month: "2026-10-01", by_currency: [{ currency: "ILS", net_minor: 120000 }] }] } };
+
+function readsOf(f: Fixture) {
+  return (name: string, body: Record<string, unknown>) => {
+    if (name === "month_forecast") return { status: 200, json: forecastOf(f, String(body.p_month)) };
+    if (name === "cash_months") return cash;
+    return { status: 500, json: null };
+  };
+}
+const reads = readsOf(fixture);
+
+type Data = Record<string, unknown> & {
+  month: string;
+  income_total_minor: number;
+  expense_total_minor: number;
+  changed: number;
+  cash_net_minor: number | null;
+  big_number_minor: number | null;
+  income: { key: string; kind: string; minor: number }[];
+  expense: { minor: number; usual_minor: number; category_id: string | null }[];
+  small: { count: number };
+};
+const dataOf = (result: { structuredContent: { ok: boolean; data?: unknown } }) => (result.structuredContent.ok ? result.structuredContent.data : null) as Data | null;
+
+Deno.test("get_forecast reads month_forecast and the cash net, and answers the items, totals and changed count", async () => {
   const { calls, rpc } = rpcOf(reads);
   const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
   assertEquals(result.isError, false);
-  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as {
-    month: string;
-    income_total_minor: number;
-    expense_total_minor: number;
-    changed: number;
-    cash_net_minor: number | null;
-    big_number_minor: number | null;
-    expense: { minor: number; usual_minor: number; category_id: string | null }[];
-  } | null;
+  const data = dataOf(result);
   assertEquals(data?.month, "2026-10");
   assertEquals(data?.income_total_minor, 250000);
   assertEquals(data?.expense_total_minor, 480000);
@@ -55,11 +110,25 @@ Deno.test("get_forecast reads its RPCs and builds the items, totals and changed 
   assertEquals(data?.expense[0]?.usual_minor, 500000);
   // לפי קטגוריה groups the items by their category.
   assertEquals(data?.expense[0]?.category_id, "c-rent");
-  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "company_forecast_edits_for", "expected_months", "forecast_overrides_for", "list_unpaid", "mcp_company_loan_currency"]);
+  // Four reads became one; the cash net is still the cash read's.
+  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "month_forecast"]);
   // Home's number: the cash net + the income still to come - the charges still to go (small ones included).
   assertEquals(data?.cash_net_minor, 120000);
   assertEquals(data?.big_number_minor, 120000 + 250000 - 480000);
-  assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: "2026-10" });
+  assertEquals(calls.find((call) => call.name === "month_forecast")?.body, { p_month: "2026-10", p_today: null });
+});
+
+Deno.test("get_forecast passes its today as p_today, and a month left out is today's month", async () => {
+  const { calls, rpc } = rpcOf(reads);
+  await callTool("get_forecast", { month: "2026-10", today: "2026-10-16" }, ["read"], rpc);
+  assertEquals(calls.find((call) => call.name === "month_forecast")?.body, { p_month: "2026-10", p_today: "2026-10-16" });
+  const alone = rpcOf(reads);
+  await callTool("get_forecast", { today: "2026-10-16" }, ["read"], alone.rpc);
+  assertEquals(alone.calls.find((call) => call.name === "month_forecast")?.body, { p_month: "2026-10", p_today: "2026-10-16" });
+  const bad = rpcOf(reads);
+  const refused = await callTool("get_forecast", { month: "2026-10", today: "2026-02-30" }, ["read"], bad.rpc);
+  assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+  assertEquals(bad.calls.length, 0);
 });
 
 Deno.test("get_forecast counts the projects' forecast edits of the month (FLOW-1005)", async () => {
@@ -71,42 +140,31 @@ Deno.test("get_forecast counts the projects' forecast edits of the month (FLOW-1
       { id: "e-2", project_id: "office", kind: "remove", row_key: "rec:expense:p-rent", category_id: null, category_name: null, direction: null, amount_minor: null, pace: "month", start_month: "2026-10" },
     ],
   };
-  const { calls, rpc } = rpcOf((name) => name === "company_forecast_edits_for" ? { status: 200, json: edits } : reads(name));
-  const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
-  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as {
-    income: { key: string; kind: string; minor: number }[];
-    income_total_minor: number;
-    expense_total_minor: number;
-  } | null;
+  const { rpc } = rpcOf(readsOf({ ...fixture, edits }));
+  const data = dataOf(await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc));
   assertEquals(data?.income.find((item) => item.key === "added:e-1")?.kind, "added");
   assertEquals(data?.income_total_minor, 250000 + 17176);
   // Rent Co has no project: the overhead project's removal takes it out.
   assertEquals(data?.expense_total_minor, 0);
-  assertEquals(calls.find((call) => call.name === "company_forecast_edits_for")?.body, { p_month: "2026-10" });
 });
 
 Deno.test("get_forecast counts a dollar company's items and cash in dollars", async () => {
   const usd = (value: unknown) => JSON.parse(JSON.stringify(value).replaceAll('"ILS"', '"USD"').replaceAll(":ILS", ":USD"));
-  const { rpc } = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 200, json: "USD" } : { ...reads(name), json: usd(reads(name).json) });
-  const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
-  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as {
-    base_currency: string;
-    income_total_minor: number;
-    expense_total_minor: number;
-    cash_net_minor: number | null;
-  } | null;
+  const dollars: Fixture = { ...fixture, base: "USD", expected: usd(expected), unpaid: usd(unpaid), overrides: usd(overrides) };
+  const { rpc } = rpcOf((name, body) => name === "cash_months" ? { status: 200, json: usd(cash.json) } : readsOf(dollars)(name, body));
+  const data = dataOf(await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc));
   assertEquals(data?.base_currency, "USD");
   assertEquals(data?.income_total_minor, 250000);
   assertEquals(data?.expense_total_minor, 480000);
   assertEquals(data?.cash_net_minor, 120000);
+  assertEquals((data?.expense as unknown as { currency: string }[])[0]?.currency, "USD");
 });
 
 Deno.test("get_forecast lists a yearly charge only in its due month (decision 0199)", async () => {
   const yearly = (due: string) => ({ direction: "expense", party_id: "p-plan", name: "Plan Co", currency: "ILS", typical_amount_minor: -44000, typical_day: 12, months_seen: 2, seen_this_month: false, pace: "year", next_due_month: due });
   const read = async (due: string) => {
-    const { rpc } = rpcOf((name) => name === "expected_months" ? { status: 200, json: { ...expected, recurring: [...expected.recurring, yearly(due)] } } : reads(name));
-    const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
-    return (result.structuredContent.ok ? result.structuredContent.data : null) as { expense_total_minor: number; small: { count: number } } | null;
+    const { rpc } = rpcOf(readsOf({ ...fixture, expected: { ...expected, recurring: [...expected.recurring, yearly(due)] } }));
+    return dataOf(await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc));
   };
   const later = await read("2027-07");
   assertEquals([later?.expense_total_minor, later?.small.count], [480000, 0]);
@@ -121,7 +179,7 @@ Deno.test("get_forecast defaults to this month in Israel time and refuses a bad 
   assertEquals(calls.length, 0);
   assertEquals(/^\d{4}-\d{2}$/.test(israelMonthKey()), true);
   await callTool("get_forecast", {}, ["read"], rpc);
-  assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: israelMonthKey() });
+  assertEquals(calls.find((call) => call.name === "month_forecast")?.body, { p_month: israelMonthKey(), p_today: null });
 });
 
 Deno.test("get_forecast takes a month up to the forecast's last, and refuses a later one before any read (FLOW-1066)", async () => {
@@ -129,7 +187,7 @@ Deno.test("get_forecast takes a month up to the forecast's last, and refuses a l
   const last = forecastLastMonth(israelMonthKey());
   const ok = await callTool("get_forecast", { month: last }, ["read"], rpc);
   assertEquals(ok.isError, false);
-  assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: last });
+  assertEquals(calls.find((call) => call.name === "month_forecast")?.body, { p_month: last, p_today: null });
   const count = calls.length;
   const refused = await callTool("get_forecast", { month: forecastMonths(last)[0] }, ["read"], rpc);
   assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
@@ -137,16 +195,115 @@ Deno.test("get_forecast takes a month up to the forecast's last, and refuses a l
 });
 
 Deno.test("get_forecast refuses when a read fails", async () => {
-  const { rpc } = rpcOf((name) => name === "list_unpaid" ? { status: 500, json: null } : reads(name));
-  const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
-  assertEquals(result.isError, true);
+  for (const failing of ["month_forecast", "cash_months"]) {
+    const { rpc } = rpcOf((name, body) => name === failing ? { status: 500, json: null } : reads(name, body));
+    const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
+    assertEquals(result.structuredContent, { ok: false, error: { code: "refused", message: "The read was refused." } });
+  }
 });
 
-Deno.test("get_forecast refuses when the company currency cannot be read, never counting in shekels", async () => {
-  const { rpc } = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 500, json: null } : reads(name));
-  assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc)).isError, true);
-  const odd = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 200, json: "dollars" } : reads(name));
-  assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], odd.rpc)).isError, true);
+Deno.test("get_forecast refuses an answer with no usable currency or a malformed build, never counting in shekels", async () => {
+  const whole = forecastOf(fixture, "2026-10");
+  for (const spoil of [{ base: "dollars" }, { base: undefined }, { build: null }, { build: { ...whole.build, items: "none" } }, { build: { ...whole.build, expense: [1] } }]) {
+    const { rpc } = rpcOf((name, body) => name === "month_forecast" ? { status: 200, json: { ...whole, ...spoil } } : reads(name, body));
+    assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc)).isError, true);
+  }
+});
+
+// The shared vectors (packages/shared/fixtures/vectors/month-forecast, tools_forecast_vectors.ts): what month_forecast answers
+// for each, read back by the tool, is the builder's own build (the app's FLOW-1314 mapper does the same), and the tool's
+// answer is the one the builder gave.
+Deno.test("get_forecast equals the builder's forecast for every shared month-forecast vector", async () => {
+  // packages/shared/src/vectors.test.ts checks that tools_forecast_vectors.ts imports every vector in the folder but the documented
+  // exception (payment terms), so a new vector fails there until it is added.
+  for (const vector of MONTH_FORECAST_VECTORS) {
+    const { name } = vector;
+    const { input } = vector;
+    const month = input.expected.today.slice(0, 7);
+    const build = buildMonthForecast({
+      ...input,
+      // As the tool read them before: the database's JSON through the schemas.
+      expected: expectedMonthsSchema.parse(input.expected),
+      unpaid: z.array(unpaidRowSchema).parse(input.unpaid),
+      overrides: input.overrides as never,
+    } as never);
+    // The vector's expected IS the database build's figures: its items stripped as month_forecast strips them, its lists reversed.
+    const stripItem = (item: Record<string, unknown>) => Object.fromEntries(Object.entries(item).filter(([key, value]) => value !== null && key !== "currency" && key !== "expected_on" && key !== "late_days"));
+    const reversed = (keys: string[]) => [...keys].reverse();
+    const answer = {
+      month,
+      base: input.base,
+      overrides: input.overrides,
+      build: { ...vector.expected, items: vector.expected.items.map(stripItem), income: reversed(vector.expected.income), expense: reversed(vector.expected.expense), moved: reversed(vector.expected.moved), small: reversed(vector.expected.small) },
+    };
+    assertEquals(buildOfAnswer(answer)?.build, build, `${name}: the build read back`);
+    const { rpc } = rpcOf((rpcName) => rpcName === "month_forecast" ? { status: 200, json: answer } : cash);
+    const result = await callTool("get_forecast", { month, today: input.expected.today }, ["read"], rpc);
+    assertEquals(dataOf(result), JSON.parse(JSON.stringify(forecastReportOf(month, build, input.base, cash.json))), `${name}: the tool's answer`);
+  }
+});
+
+const COMPANY_MONTHS = forecastMonths(israelMonthKey());
+
+Deno.test("get_company_forecast is in the tool list, for a read scope only, with its months and detail documented", () => {
+  const spec = toolsFor(["read"]).find((tool) => tool.name === "get_company_forecast");
+  assertEquals(spec?.annotations.readOnlyHint, true);
+  const schema = spec?.inputSchema as unknown as { properties: Record<string, { enum?: string[] }>; required: string[] };
+  assertEquals(Object.keys(schema.properties), ["months", "detail", "today"]);
+  assertEquals(schema.required, ["months"]);
+  assertEquals(schema.properties.detail?.enum, ["totals", "rows"]);
+  assertEquals(/ONE month only/.test(spec?.description ?? ""), true);
+  assertEquals(toolsFor(["write"]).some((tool) => tool.name === "get_company_forecast"), false);
+  // get_forecast takes today now.
+  const forecast = toolsFor(["read"]).find((tool) => tool.name === "get_forecast");
+  assertEquals(Object.keys((forecast?.inputSchema as unknown as { properties: object }).properties), ["month", "today"]);
+});
+
+Deno.test("get_company_forecast reads company_forecast and answers it as it is, totals by default", async () => {
+  const vector = (await import("../../../packages/shared/fixtures/vectors/company-forecast/company-round-numbers.json", { with: { type: "json" } })).default as { expected: { months: unknown[] } };
+  const answer = { today: "2026-10-11", currency: "USD", ...vector.expected };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: answer }));
+  const result = await callTool("get_company_forecast", { months: [COMPANY_MONTHS[0], COMPANY_MONTHS[3]] }, ["read"], rpc);
+  assertEquals(result.structuredContent, { ok: true, data: answer });
+  assertEquals(calls.map((call) => [call.name, call.body]), [["company_forecast", { p_months: [COMPANY_MONTHS[0], COMPANY_MONTHS[3]], p_detail: "totals", p_today: null }]]);
+  const rows = rpcOf(() => ({ status: 200, json: answer }));
+  await callTool("get_company_forecast", { months: [COMPANY_MONTHS[1]], detail: "rows", today: "2026-10-11" }, ["read"], rows.rpc);
+  assertEquals(rows.calls[0]?.body, { p_months: [COMPANY_MONTHS[1]], p_detail: "rows", p_today: "2026-10-11" });
+});
+
+Deno.test("get_company_forecast refuses a bad month, a repeat, rows for several months or an odd field before any read", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { months: [] } }));
+  const bad = [
+    {},
+    { months: [] },
+    { months: "2026-12" },
+    { months: ["2026-13"] },
+    { months: [israelMonthKey()] },
+    { months: [forecastMonths(forecastLastMonth(israelMonthKey()))[0]] },
+    { months: [COMPANY_MONTHS[0], COMPANY_MONTHS[0]] },
+    { months: [COMPANY_MONTHS[0], COMPANY_MONTHS[1]], detail: "rows" },
+    { months: [COMPANY_MONTHS[0]], detail: "everything" },
+    { months: [COMPANY_MONTHS[0]], today: "2026-02-30" },
+    { months: [COMPANY_MONTHS[0]], colour: "red" },
+  ];
+  for (const input of bad) {
+    const result = await callTool("get_company_forecast", input, ["read"], rpc);
+    assertEquals([result.isError, result.structuredContent.ok ? null : result.structuredContent.error.code], [true, "validation"], JSON.stringify(input));
+  }
+  assertEquals(calls.length, 0);
+  assertEquals((await callTool("get_company_forecast", { months: [COMPANY_MONTHS[11]] }, ["read"], rpc)).isError, false);
+  // The horizon counts from today when it is given: a month that is next month then.
+  assertEquals((await callTool("get_company_forecast", { months: ["2027-02"], today: "2027-01-05" }, ["read"], rpc)).isError, false);
+  assertEquals((await callTool("get_company_forecast", { months: ["2027-01"], today: "2027-01-05" }, ["read"], rpc)).isError, true);
+});
+
+Deno.test("get_company_forecast maps the database's refusals: 22023 validation, 42501 forbidden, anything else refused", async () => {
+  const refuse = async (status: number, json: unknown) => (await callTool("get_company_forecast", { months: [COMPANY_MONTHS[0]] }, ["read"], rpcOf(() => ({ status, json })).rpc)).structuredContent;
+  assertEquals(await refuse(400, { code: "22023", message: "validation" }), { ok: false, error: { code: "validation", message: "validation" } });
+  assertEquals(await refuse(403, { code: "42501", message: "no company" }), { ok: false, error: { code: "forbidden", message: "forbidden" } });
+  assertEquals(await refuse(500, null), { ok: false, error: { code: "refused", message: "The read was refused." } });
+  assertEquals(await refuse(200, { months: "none" }), { ok: false, error: { code: "refused", message: "The read was refused." } });
+  assertEquals(await refuse(200, null), { ok: false, error: { code: "refused", message: "The read was refused." } });
 });
 
 Deno.test("set_forecast_item forwards the patch and refuses a reset with other fields", async () => {
