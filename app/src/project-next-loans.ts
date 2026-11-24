@@ -68,9 +68,29 @@ export type ForecastCategory = Pick<CategoryRow, "id" | "name" | "loan_part" | "
 /** One category's expected loan cost in the month: positive, in minor units. */
 export type LoanPart = { categoryId: string; name: string; minor: bigint };
 
+/**
+ * FLOW-1304: each loan's payments left, kept for one build (one call of companyNextMonthForecast, companyRestOfYear or
+ * companyMonthForecast), so the two schedules paymentsLeft builds are made once per loan and read, not once per
+ * project and month. Keyed by the loan's id, its balance and today, not by the loan object: companyGeneralForecast
+ * copies the general and overhead loans on each build. A null (a demand loan, refused terms, a zero balance, no
+ * payment left) is stored too and found with Map.has, so such a loan is not rebuilt.
+ */
+export type PaymentsLeftMemo = Map<string, readonly LoanScheduleRow[] | null>;
+
+export function newPaymentsLeftMemo(): PaymentsLeftMemo {
+  return new Map();
+}
+
+/** The loan's payments left from today, from the memo when the build has them already. */
+function paymentsLeftOf(loan: ForecastLoan, today: string, memo: PaymentsLeftMemo): readonly LoanScheduleRow[] | null {
+  const key = `${loan.id}|${String(loan.balanceMinor)}|${today}`;
+  if (!memo.has(key)) memo.set(key, paymentsLeft(loan, today));
+  return memo.get(key) ?? null;
+}
+
 /** The loan's payment due in `month` (yyyy-mm), as the loan page shows it; null when none is due then. */
-function scheduleRow(loan: ForecastLoan, month: string, today: string): LoanScheduleRow | null {
-  return paymentsLeft(loan, today)?.find((row) => row.dueDate.slice(0, 7) === month) ?? null;
+function scheduleRow(loan: ForecastLoan, month: string, today: string, memo: PaymentsLeftMemo): LoanScheduleRow | null {
+  return paymentsLeftOf(loan, today, memo)?.find((row) => row.dueDate.slice(0, 7) === month) ?? null;
 }
 
 /**
@@ -93,6 +113,8 @@ type LoanMonth = {
   /** yyyy-mm-dd: the payments left start from the one due today or later. */
   today: string;
   loans: readonly ForecastLoan[];
+  /** FLOW-1304: the build's payments-left memo, shared by the parts of one project and month; a fresh one when absent. */
+  payments?: PaymentsLeftMemo;
 };
 
 /**
@@ -100,9 +122,10 @@ type LoanMonth = {
  * closed or paid-off loan, a demand loan, or a month with no payment left gives none.
  */
 function dueRows(input: LoanMonth): { loan: ForecastLoan; row: LoanScheduleRow }[] {
+  const memo = input.payments ?? newPaymentsLeftMemo();
   return input.loans.flatMap((loan) => {
     if (loan.projectId !== input.projectId || loan.status !== "open" || loan.currency !== input.currency) return [];
-    const row = scheduleRow(loan, input.month, input.today);
+    const row = scheduleRow(loan, input.month, input.today, memo);
     return row == null ? [] : [{ loan, row }];
   });
 }

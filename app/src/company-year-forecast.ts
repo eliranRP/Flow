@@ -1,6 +1,7 @@
 import { forecastMonths } from "@flow/shared";
 import { companyIncomeNote, companyNextMonthForecast, type CompanyForecastEdit, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import type { RentCategory } from "./next-month-chart";
+import { newPaymentsLeftMemo } from "./project-next-loans";
 import { HEBREW_MONTHS } from "./ui/date-math";
 
 /**
@@ -81,8 +82,11 @@ export function companyRestOfYear(input: RestOfYearInput): RestOfYear | null {
   const months = restOfYearMonths(input.today);
   if (months.length === 0) return null;
   const { skipsByMonth, ...reads } = input;
+  // FLOW-1304: the months share one payments-left memo: the loans' payments left depend on today, not on the month.
+  const payments = reads.payments ?? newPaymentsLeftMemo();
   const forecasts = months.map((month) => companyNextMonthForecast({
     ...reads,
+    payments,
     inputs: { ...reads.inputs, edits: monthEdits(reads.inputs, month) },
     month,
     skips: skipsByMonth?.[month],
