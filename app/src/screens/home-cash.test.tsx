@@ -114,27 +114,27 @@ describe("Home's forecast row (FLOW-1008)", () => {
         list_missing_bills: [],
         recurring_schedule: [],
         mcp_company_loan_currency: "ILS",
-        expected_months: {
-          today: israelToday(),
-          project_id: null,
-          months: [{ month: current, open: true, by_currency: [{ currency: "ILS", income_minor: 0, expense_minor: -999_999 }] }],
-          recurring: [
-            { direction: "expense", party_id: "p-power", name: "Example Power", currency: "ILS", typical_amount_minor: -25_000, typical_day: 28, months_seen: 6, seen_this_month: false, project_id: "pj-1" },
-            { direction: "expense", party_id: "p-water", name: "Example Water", currency: "ILS", typical_amount_minor: -40_000, typical_day: 28, months_seen: 6, seen_this_month: false, project_id: "pj-1" },
-          ],
-        },
-        list_unpaid: [
-          { id: "inv-1", description: "Invoice 1", doc_date: `${current}-01`, project_name: null, customer_name: "Example Client", open_gross_agorot: 50_000, open_net_agorot: 50_000, currency: "ILS", direction: "income" },
-          { id: "bill-1", description: "Bill 1", doc_date: `${current}-01`, project_name: null, customer_name: "Example Supplier", open_gross_agorot: 20_000, open_net_agorot: 20_000, currency: "ILS", direction: "expense" },
-        ],
-        forecast_overrides_for: [],
-        company_forecast_edits_for: {
+        // FLOW-1314: one read, as the database sends it (no currency, expected_on, late_days or null field). Still to come: a ₪500
+        // invoice and the owner's ₪100 added line in; the ₪250 power charge and a ₪200 supplier bill out (the water bill is removed).
+        month_forecast: {
           month: current,
-          overhead_project_id: null,
-          edits: [
-            { id: "e-1", project_id: "pj-1", kind: "add", row_key: null, category_id: "c-refund", category_name: "Utility refund", direction: "income", amount_minor: 10_000, pace: "month", start_month: current, matched_transaction_id: null },
-            { id: "e-2", project_id: "pj-1", kind: "remove", row_key: "rec:expense:p-water", category_id: null, category_name: null, direction: null, amount_minor: null, pace: "month", start_month: current },
-          ],
+          base: "ILS",
+          overrides: [],
+          build: {
+            items: [
+              { key: "party:expense:p-power:ILS", direction: "expense", kind: "recurring", name: "Example Power", usual: 25_000, minor: 25_000, day: 28, project_id: "pj-1", pace: "month", moved_out: false, overridden: false },
+              { key: "invoice:inv-1", direction: "income", kind: "invoice", name: "Example Client", usual: 50_000, minor: 50_000, description: "Invoice 1", moved_out: false, overridden: false },
+              { key: "invoice:bill-1", direction: "expense", kind: "invoice", name: "Example Supplier", usual: 20_000, minor: 20_000, description: "Bill 1", moved_out: false, overridden: false },
+              { key: "added:e-1", direction: "income", kind: "added", name: "Utility refund", usual: 10_000, minor: 10_000, category_id: "c-refund", project_id: "pj-1", pace: "month", line_start: current, moved_out: false, overridden: false },
+            ],
+            income: ["invoice:inv-1", "added:e-1"],
+            expense: ["party:expense:p-power:ILS", "invoice:bill-1"],
+            moved: [],
+            small: [],
+            incomeTotal: 60_000,
+            expenseTotal: 45_000,
+            changed: 0,
+          },
         },
       };
       return Promise.resolve({ data: data[name] ?? null, error: null });
@@ -159,12 +159,16 @@ describe("Home's cold load (FLOW-1019)", () => {
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "list_unpaid")).toBe(true); });
     // Home's figures are not drawn yet: nothing of the forecast's has gone out (its overrides read is the late bills', at mount: FLOW-1259).
-    for (const name of ["expected_months", "company_forecast_edits_for", "cash_month_lines"]) {
+    for (const name of ["month_forecast", "cash_month_lines"]) {
       expect(rpc.calls.some((c) => c.name === name)).toBe(false);
     }
     releaseCash();
     await screen.findByText("תזרים · עד היום");
     await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
+    // FLOW-1314: the forecast is one request, with the month and today's date.
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "month_forecast")).toBe(true); });
+    expect(rpc.calls.filter((c) => c.name === "month_forecast").map((c) => c.args)).toEqual([{ p_month: current, p_today: israelToday() }]);
+    for (const name of ["expected_months", "company_forecast_edits_for"]) expect(rpc.calls.some((c) => c.name === name)).toBe(false);
     // FLOW-1036: the one-off group's lines, both sides of this month in the base currency.
     await waitFor(() => { expect(rpc.calls.filter((c) => c.name === "cash_month_lines")).toHaveLength(2); });
     expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_month: `${current}-01`, p_currency: "ILS" });
@@ -223,7 +227,7 @@ describe("Home on next month (FLOW-1056)", () => {
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/", client });
     // The figures are cached, so the forecast is read from the first render, with no idle wait.
     expect(screen.getByText("תזרים · עד היום")).toBeInTheDocument();
-    expect(client.getQueryCache().find({ queryKey: ["month-forecast", "off", current] })?.isDisabled()).toBe(false);
+    expect(client.getQueryCache().find({ queryKey: ["month-forecast", "off", "answer", current] })?.isDisabled()).toBe(false);
   });
 });
 
@@ -248,7 +252,7 @@ describe("Home's late bills by month (FLOW-1252)", () => {
 
 // FLOW-1259: on the current month the late bills and this month's overrides start at mount, while Home's figures are still held.
 describe("Home's late reads at mount (FLOW-1259)", () => {
-  it("starts missing_bills and forecast_overrides_for before the figures draw, and the forecast's overrides go out once", async () => {
+  it("starts missing_bills and forecast_overrides_for before the figures draw, and the forecast reads none of its own", async () => {
     let releaseCash: () => void = () => undefined;
     const cashHeld = new Promise<void>((resolve) => { releaseCash = resolve; });
     rpc.impl = (name) => {
@@ -262,19 +266,19 @@ describe("Home's late reads at mount (FLOW-1259)", () => {
     expect(rpc.calls.some((c) => c.name === "missing_bills")).toBe(true);
     // Home's figures are not drawn yet, and the month forecast has not started.
     expect(screen.queryByText("תזרים · עד היום")).toBeNull();
-    expect(rpc.calls.some((c) => c.name === "company_forecast_edits_for")).toBe(false);
+    expect(rpc.calls.some((c) => c.name === "month_forecast")).toBe(false);
     releaseCash();
     await screen.findByText("תזרים · עד היום");
-    // The month forecast reads the same overrides under the same key: no second request.
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_forecast_edits_for")).toBe(true); });
+    // FLOW-1314: the month forecast carries its overrides in its own answer, so it asks for none: the late bills' read is the only one.
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "month_forecast")).toBe(true); });
     expect(rpc.calls.filter((c) => c.name === "forecast_overrides_for")).toHaveLength(1);
     expect(rpc.calls.filter((c) => c.name === "missing_bills")).toHaveLength(1);
   });
 });
 
-// FLOW-1253: the late bills (their currency read is keyed) and the month forecast (which reads it too) share one request.
+// FLOW-1253: the late bills' currency read is keyed. FLOW-1314: the month forecast gets the currency inside month_forecast, so a cold Home still sends it once.
 describe("Home's company currency read (FLOW-1253)", () => {
-  it("a cold Home sends mcp_company_loan_currency once, for the late bills and the month forecast together", async () => {
+  it("a cold Home sends mcp_company_loan_currency once, beside the month forecast's one read", async () => {
     rpc.impl = (name) => {
       if (name === "mcp_company_loan_currency") return Promise.resolve({ data: "ILS", error: null });
       if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
@@ -283,8 +287,8 @@ describe("Home's company currency read (FLOW-1253)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
-    // The forecast's own reads go out together, after first paint: once its edits read is out, its currency read has gone out too.
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "company_forecast_edits_for")).toBe(true); });
+    // The forecast's read goes out after first paint.
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "month_forecast")).toBe(true); });
     expect(rpc.calls.filter((c) => c.name === "mcp_company_loan_currency")).toHaveLength(1);
   });
 });
@@ -297,7 +301,7 @@ describe("Home's forecast row while it loads (FLOW-1031)", () => {
       if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
       if (name === "list_unpaid" || name === "list_missing_bills" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
-      if (name === "expected_months") return held.then(() => ({ data: null, error: { message: "boom" } }));
+      if (name === "month_forecast") return held.then(() => ({ data: null, error: { message: "boom" } }));
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
