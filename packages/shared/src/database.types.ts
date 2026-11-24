@@ -1871,6 +1871,9 @@ isOneToOne: false
 "collapse_split":
 { Args: { "p_id": string,"p_project_id": string }; Returns: string
                            },
+"company_forecast":
+{ Args: { "p_detail": string,"p_months": (string)[],"p_today"?: string }; Returns: Json
+                           },
 "company_forecast_edits_for":
 { Args: { "p_month": string }; Returns: Json
                            },

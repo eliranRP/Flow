@@ -17,6 +17,7 @@ export const BUILDERS = {
   "month-forecast": "month_forecast_build",
   "loan-schedule": "loan_schedule",
   "loan-outlook": "loan_outlook_build",
+  "company-forecast": "company_forecast_build",
 };
 
 export const vectorsDir = "packages/shared/fixtures/vectors";
