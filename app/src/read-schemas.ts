@@ -36,6 +36,7 @@ export {
   loanOutlooksSchema,
   weeklySummarySchema,
 } from "@flow/shared";
+export { companyForecastTotalsSchema, monthForecastKeptSchema } from "./company-forecast-schema";
 export { parseTxnMetaList } from "./txn-meta-parse";
 export { transferMatchesSchema } from "./transfer-match-schema";
 export { utilityIncomeSchema, utilityPayersSchema, utilityRefundsSchema } from "./utility-refund-schema";

@@ -97,24 +97,6 @@ const onePage = (data: unknown): boolean => isRecord(data) && Array.isArray(data
 const isLoanListRows = (rows: unknown): boolean =>
   isRows(rows, "id") && (rows as Array<Record<string, unknown>>).every((row) => !("next" in row) && !("lateOn" in row) && !("ratePpm" in row));
 
-/** What the company forecast's income notes count (FLOW-1308): the income rows, how many are recurring, how many of those are rent, and the name of a single one. */
-const isFacts = (value: unknown): boolean => isRecord(value) && ["rows", "recurring", "rent"].every((field) => typeof value[field] === "number" && Number.isInteger(value[field])) && (value.name === null || typeof value.name === "string");
-
-/** company_forecast's 'totals' as the page holds it: the day and currency, each month's totals (bigints, digit strings in the JSON form), its counts and income facts, and the income over the months. */
-function companyTotalsValid(_schemas: ReadSchemas | null, json: unknown): boolean {
-  if (!isRecord(json) || typeof json.today !== "string" || typeof json.currency !== "string" || !Array.isArray(json.months) || !isFacts(json.income)) return false;
-  const month = (row: unknown): boolean => isRecord(row) && typeof row.month === "string" && ["incomeMinor", "expenseMinor", "netMinor", "cashOnlyMinor"].every((field) => isMinorString(row[field])) && typeof row.projects === "number" && typeof row.general === "boolean" && isFacts(row.income);
-  return json.months.every(month);
-}
-
-/** The month forecast as the page holds it: month, currency, the build's items and four lists, its two totals (bigints, digit strings in the JSON form) and the overrides. */
-function monthForecastValid(_schemas: ReadSchemas | null, json: unknown): boolean {
-  if (!isRecord(json) || typeof json.month !== "string" || typeof json.base !== "string" || !Array.isArray(json.overrides) || !isRecord(json.build)) return false;
-  const { build } = json;
-  const item = (row: unknown): boolean => isRecord(row) && typeof row.key === "string" && typeof row.name === "string" && isMinorString(row.usual) && isMinorString(row.minor);
-  return ["items", "income", "expense", "moved", "small"].every((list) => Array.isArray(build[list]) && (build[list] as unknown[]).every(item)) && isMinorString(build.incomeTotal) && isMinorString(build.expenseTotal) && typeof build.changed === "number";
-}
-
 export const KEPT_RULES: readonly KeptRule[] = [
   // Home and Projects. FLOW-1292: the rest of Home's first view (the attention counts, the change pills, the weekly card, the first lines).
   rule("dashboard", (k) => k[0] === "dashboard" && off(k, 1), bySchema((s) => s.dashboardSchema)),
@@ -155,7 +137,7 @@ export const KEPT_RULES: readonly KeptRule[] = [
   // The overhead project's page (FLOW-1291 kept it for Profit's next-month card, which reads company_forecast now). The full answer (p_rest) is not kept: it is far bigger.
   rule("company next month inputs", (k) => k.length === 5 && k[0] === "project-forecast-edits" && off(k, 1) && k[2] === "company" && typeof k[3] === "string" && k[4] === false, (_s, json) => isRecord(json) && typeof json.month === "string" && Array.isArray(json.projects) && Array.isArray(json.general) && Array.isArray(json.edits)),
   // FLOW-1308: Profit's next-month card and year view, one read each. The day and the months asked are in the key.
-  rule("company forecast totals", (k) => k.length === 6 && k[0] === "month-forecast" && off(k, 1) && k[2] === "company" && k[3] === "totals" && typeof k[4] === "string" && typeof k[5] === "string", companyTotalsValid),
+  rule("company forecast totals", (k) => k.length === 6 && k[0] === "month-forecast" && off(k, 1) && k[2] === "company" && k[3] === "totals", bySchema((s) => s.companyForecastTotalsSchema)),
   rule("company forecast loans", (k) => k.length === 3 && k[0] === "loans" && k[1] === "company-forecast" && off(k, 2), (_s, json) => Array.isArray(json) && json.every((loan) => isRecord(loan) && typeof loan.id === "string" && (loan.currency === "ILS" || loan.currency === "USD") && isMinorString(loan.balanceMinor) && Array.isArray(loan.rates))),
   // Review's first page, with the list's state beside it.
   rule("review", (k) => k.length === 2 && k[0] === "review" && off(k, 1), bySchema((s) => s.reviewRowSchema.array()), { keep: (data) => Array.isArray(data) && data.length <= KEPT_REVIEW_ROWS }),
@@ -169,7 +151,7 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("expected months", (k) => k[0] === "expected-months" && off(k, 1), bySchema((s) => s.expectedMonthsSchema)),
   rule("missing bills", (k) => k[0] === "missing-bills" && off(k, 1), bySchema((s) => s.missingBillsSchema)),
   // FLOW-1314: the month_forecast read, as the page holds it (its build is buildMonthForecast's, with bigint amounts).
-  rule("month forecast", (k) => k.length === 4 && k[0] === "month-forecast" && off(k, 1) && k[2] === "answer" && typeof k[3] === "string", monthForecastValid),
+  rule("month forecast", (k) => k.length === 4 && k[0] === "month-forecast" && off(k, 1) && k[2] === "answer" && typeof k[3] === "string", bySchema((s) => s.monthForecastKeptSchema)),
   rule("forecast overrides", (k) => k[0] === "month-forecast" && off(k, 1) && k[2] === "overrides", (_s, json) => Array.isArray(json)),
 ];
 
