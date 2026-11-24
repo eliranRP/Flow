@@ -23,7 +23,7 @@ describe("a sync that settles in another tab", () => {
     rerender({ syncing: false });
     await waitFor(() => { expect(invalidate).toHaveBeenCalledWith({ queryKey: ["dashboard"] }); });
     for (const key of LEDGER_KEYS) expect(invalidate).toHaveBeenCalledWith({ queryKey: [key] });
-    for (const key of ["projects-cash", "recurring-schedule", "recurring-changes", "missing-bills", "expected-months", "categories", "company-currency", "loans", "project-forecast-edits"]) {
+    for (const key of ["projects-cash", "recurring-schedule", "recurring-changes", "missing-bills", "month-forecast", "categories", "company-currency", "loans"]) {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: [key] });
     }
   });

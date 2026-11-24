@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { restExpenseNote, restIncomeNote, restMonthsCaption, type RestOfYear } from "../company-year-forecast";
+import type { RestOfYearTotals } from "../company-forecast-map";
+import { restExpenseNote, restMonthsCaption } from "../company-year-forecast";
 import type { OverheadProject } from "../overhead-project";
 import { allTimeYearRows, yearMonthRows, yearProjectRows, yearRowMeta, type ProjectStatus, type YearRow } from "../company-year-rows";
 import { allTimeChart, allTimeSub, allTimeSummaryRows, allTimeTotals, yearChart, yearSub, yearSummaryRows, type CompanyYears, type YearFigures } from "../company-years";
 import type { Breakdown } from "@flow/shared";
-import { profitTakeaway, type RentCategory } from "../next-month-chart";
+import { profitTakeaway } from "../next-month-chart";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { List } from "../ui/list-row";
@@ -36,11 +37,10 @@ export type PeriodViewInput = {
   today: string;
   currency: string;
   /** The rest of this year; null in December or while it is unread. */
-  rest: RestOfYear | null;
+  rest: RestOfYearTotals | null;
   restLoading: boolean;
   /** The forecast's reads failed: a quiet line stands where the card would be. */
   restFailed: boolean;
-  categories: readonly RentCategory[];
   list: YearList;
   /** The year's projects; `overhead` is the company's overhead project (its row takes the general costs). */
   projects: { breakdowns: { income: Breakdown | null; expense: Breakdown | null }; statuses: readonly ProjectStatus[]; overhead: OverheadProject | null; pending: boolean; failed: boolean; onRetry: () => void };
@@ -105,7 +105,7 @@ function YearForecast({ year, input }: { year: YearFigures; input: PeriodViewInp
   if (input.restLoading) return <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>;
   if (input.restFailed) return <p className="ui-cp-fc-failed t-caption t-muted" role="status">לא הצלחנו לטעון את הצפי לסוף השנה.</p>;
   const rest = input.rest;
-  if (rest == null || rest.forecasts.every((forecast) => forecast.rows.length === 0)) return null;
+  if (rest == null || rest.empty) return null;
   return (
     <ForecastCard
       title={`סוף ${year.year}`}
@@ -114,7 +114,7 @@ function YearForecast({ year, input }: { year: YearFigures; input: PeriodViewInp
       start={{ label: "רווח עד היום", minor: year.profitMinor }}
       incomeMinor={rest.incomeMinor}
       expenseMinor={rest.expenseMinor}
-      incomeNote={restIncomeNote(rest, input.categories)}
+      incomeNote={rest.incomeNote}
       expenseNote={restExpenseNote(rest)}
       netLabel={`רווח צפוי ל־${year.year}`}
       strong

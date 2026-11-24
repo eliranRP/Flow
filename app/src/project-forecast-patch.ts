@@ -1,6 +1,7 @@
 import type { ForecastOverrideRow } from "@flow/shared";
 import { incomeFactsOf, type IncomeFacts, type RentCategory } from "./next-month-chart";
-import { orderRows, type ProjectForecastRead } from "./project-forecast-map";
+import { orderRows } from "./company-forecast-map";
+import type { ProjectForecastRead } from "./project-forecast-map";
 import type { NextMonthRow } from "./project-next-month";
 
 /**

@@ -295,17 +295,17 @@ describe("project_forecast mapped for the pages equals the builders (FLOW-1315)"
   it("refuses an answer whose rows do not add up to its totals", () => {
     const vector = vectors.find((item) => item.name === "project-board-november-juniper-ct-2026-11");
     const answer = vector?.expected as { income_minor: number; expense_minor: number };
-    expect(() => projectForecastOf({ ...answer, income_minor: answer.income_minor + 1 }, "p1")).toThrow("do not add up");
-    expect(() => projectForecastOf({ ...answer, expense_minor: answer.expense_minor - 1 }, "p1")).toThrow("do not add up");
+    expect(() => projectForecastOf({ ...answer, income_minor: answer.income_minor + 1 }, "p1")).toThrow("unexpected answer");
+    expect(() => projectForecastOf({ ...answer, expense_minor: answer.expense_minor - 1 }, "p1")).toThrow("unexpected answer");
   });
 
   it("refuses an amount outside 2^53 - 1 and an answer of the wrong shape", () => {
     const vector = vectors.find((item) => item.name === "near-2-to-the-53-p1-2026-11");
     const answer = vector?.expected as { income_minor: number; rows: Array<{ minor: number }> };
-    expect(() => projectForecastOf({ ...answer, income_minor: 2 ** 53 }, "p1")).toThrow("not a safe whole amount");
-    expect(() => projectForecastOf({ ...answer, rows: [{ ...answer.rows[0], minor: 1.5 }] }, "p1")).toThrow("not a safe whole amount");
-    expect(() => projectForecastOf({ ...answer, rows: "none" }, "p1")).toThrow("not a list");
-    expect(() => projectForecastOf([], "p1")).toThrow("not an object");
+    expect(() => projectForecastOf({ ...answer, income_minor: 2 ** 53 }, "p1")).toThrow("unexpected answer");
+    expect(() => projectForecastOf({ ...answer, rows: [{ ...answer.rows[0], minor: 1.5 }] }, "p1")).toThrow("unexpected answer");
+    expect(() => projectForecastOf({ ...answer, rows: "none" }, "p1")).toThrow("unexpected answer");
+    expect(() => projectForecastOf([], "p1")).toThrow("unexpected answer");
     expect(projectForecastOf(null, "p1")).toBeNull();
   });
 });

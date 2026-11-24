@@ -341,6 +341,12 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const psql = "run: bash scripts/ci-apt-cache.sh psql";
   assert.ok(e2e.includes(psql) && e2e.indexOf(psql) < e2e.indexOf("check-sumit-cron.sh"));
   assert.ok(job("deploy").includes(psql));
+  // FLOW-1319: the live smoke installs Playwright's system packages from the apt cache, not only from the mirror.
+  const deployJob = job("deploy");
+  const smokeAt = deployJob.indexOf("name: Read-only smoke of the live app");
+  const aptRestoreAt = deployJob.indexOf(APT_RESTORE);
+  assert.ok(aptRestoreAt > 0 && aptRestoreAt < smokeAt, "deploy restores the apt packages before the smoke");
+  assert.ok(deployJob.includes(`uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0\n        with:\n          path: ~/.cache/flow-apt\n          ${PLAYWRIGHT_APT_READ_KEY}`));
   // Every apt-get that reaches the mirror goes through scripts/ci-apt-cache.sh, with its time limit.
   assert.equal(/apt-get (update|install)/.test(ci), false);
   assert.equal(ci.includes("exec playwright install-deps"), false);

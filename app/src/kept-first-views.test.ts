@@ -39,8 +39,6 @@ const categories = categoryRowSchema.array().parse([{ id: "c1", name: "חשמל"
 // FLOW-1315: the project page's forecast, as the page holds it (bigint amounts), and the same with its rows of the wrong shape.
 const projectForecast = projectForecastOf(sampleProjectForecastAnswer(), "p1");
 const projectForecastKey = ["month-forecast", "off", "project", "p1", "2026-11", "2026-10-20", "company"];
-const inputs = { month: "2026-12", overhead_project_id: null, projects: [], general: [], edits: [] };
-const loans = [{ id: "l1", currency: "ILS", balanceMinor: 900n, principalMinor: 1000n, rates: [], categoryIds: {} }];
 const forecastItem = { key: "party:expense:s1:ILS", direction: "expense", kind: "recurring", name: "חשמל", currency: "ILS", usual: 20000n, minor: 20000n, day: 5, description: null, due_on: null, moved_out: false, overridden: false, expected_on: null, late_days: 0, category_id: null, project_id: null, project_name: null, pace: "month", line_start: null };
 const forecast = { month: "2026-11", base: "ILS", overrides: [], build: { items: [forecastItem], income: [], expense: [forecastItem], moved: [], small: [], incomeTotal: 0n, expenseTotal: 20000n, changed: 0 } };
 
@@ -49,6 +47,11 @@ const loanOutlooks = loanOutlooksSchema.parse([
   { loan_id: "l2", late_on: "2026-11-01" },
 ]);
 const loanRows = { rows: [{ id: "l1", name: "הלוואה", currency: "ILS", balanceMinor: 900n, flaggedParts: 0, projectId: null, projectName: null }], loans: [] };
+
+// FLOW-1308: company_forecast's 'totals' as Profit's card holds it (bigint amounts, counts, the income facts).
+const facts = { rows: 2, recurring: 2, rent: 1, name: null };
+const forecastMonth = { month: "2026-12", incomeMinor: 300000n, expenseMinor: 120000n, netMinor: 180000n, cashOnlyMinor: 0n, projects: 2, general: true, income: facts };
+const companyTotals = { today: "2026-11-24", currency: "ILS", months: [forecastMonth], income: facts };
 
 type Case = { name: string; key: unknown[]; good: unknown; bad: unknown; preview: unknown[] };
 const CASES: Case[] = [
@@ -62,11 +65,11 @@ const CASES: Case[] = [
   { name: "project category months", key: ["project", "category-months", "off", "p1", "2026-11-23"], good: categoryMonths, bad: { ...categoryMonths, categories: "none" }, preview: ["project", "category-months", "empty", "p1", "2026-11-23"] },
   { name: "project forecast (FLOW-1315)", key: projectForecastKey, good: projectForecast, bad: { ...projectForecast, forecast: { ...projectForecast?.forecast, rows: "none" } }, preview: ["month-forecast", "empty", "project", "p1", "2026-11", "2026-10-20", "company"] },
   { name: "categories", key: ["categories", "off"], good: categories, bad: [{ id: "c1", name: "חשמל", kind: "other" }], preview: ["categories", "empty"] },
-  { name: "company next month inputs", key: ["project-forecast-edits", "off", "company", "2026-11-23", false], good: inputs, bad: { month: "2026-12" }, preview: ["project-forecast-edits", "empty", "company", "2026-11-23", false] },
   // FLOW-1316: the Loans list's rows (no next payment, late date or rate: a list kept before that has them and is not used) and its outlooks.
   { name: "loan list", key: ["loans", COMPANY, "list"], good: loanRows, bad: { ...loanRows, rows: [{ ...loanRows.rows[0], ratePpm: 50000 }] }, preview: ["loans", COMPANY] },
   { name: "loan outlooks", key: ["loans", COMPANY, "outlooks", "2026-11-24"], good: loanOutlooks, bad: [{ loan_id: "l1", next: { due_date: "2026-12-01" } }], preview: ["loans", COMPANY, "outlooks"] },
-  { name: "company forecast loans", key: ["loans", "company-forecast", "off"], good: loans, bad: [{ id: "l1", currency: "EUR", balanceMinor: 1n, rates: [] }], preview: ["loans", "company-forecast", "empty"] },
+  { name: "company forecast totals, the card's month (FLOW-1308)", key: ["month-forecast", "off", "company", "totals", "2026-11-24", "2026-12"], good: companyTotals, bad: { ...companyTotals, months: [{ ...forecastMonth, incomeMinor: 300000.5 }] }, preview: ["month-forecast", "empty", "company", "totals", "2026-11-24", "2026-12"] },
+  { name: "company forecast totals, the year view's months (FLOW-1308)", key: ["month-forecast", "off", "company", "totals", "2026-11-24", "2026-12,2027-01"], good: { ...companyTotals, months: [forecastMonth, { ...forecastMonth, month: "2027-01" }] }, bad: { ...companyTotals, income: { rows: 2 } }, preview: ["month-forecast", "empty", "company", "totals", "2026-11-24", "2026-12,2027-01"] },
   { name: "month forecast (FLOW-1314)", key: ["month-forecast", "off", "answer", "2026-11"], good: forecast, bad: { ...forecast, build: { ...forecast.build, expenseTotal: 20000.5 } }, preview: ["month-forecast", "empty", "answer", "2026-11"] },
 ];
 
@@ -165,10 +168,10 @@ describe("the first views' kept reads (FLOW-1292)", () => {
     expect(await store.all()).toEqual([]);
   });
 
-  it("keeps Profit's slim next-month answer, not the full one with the rest of the year", async () => {
+  it("does not keep a month's company forecast rows (FLOW-1308): over 100 KB, and not a first view", async () => {
     const client = newClient();
     keepReadsOf(client);
-    await read(client, ["project-forecast-edits", "off", "company", "2026-11-23", true], inputs);
+    await read(client, ["month-forecast", "off", "company", "rows", "2026-11-24", "2026-12"], { ...companyTotals, forecast: {} });
     await flushKeptReads();
     expect(await store.all()).toEqual([]);
   });
@@ -179,16 +182,6 @@ describe("the first views' kept reads (FLOW-1292)", () => {
     await client.query({ queryKey: ["project", "category-months", "off", "p1", "2026-11-23"], queryFn: () => Promise.resolve(null) });
     await flushKeptReads();
     expect(await store.all()).toEqual([]);
-  });
-
-  it("keeps a company's loan list of two loans by their shape, with no schema (the rule checks the shape alone)", async () => {
-    const first = newClient();
-    keepReadsOf(first);
-    await read(first, ["loans", "company-forecast", "off"], [...loans, { ...loans[0], id: "l2" }]);
-    await flushKeptReads();
-    const next = newClient();
-    await restoreKeptReads(next);
-    expect(next.getQueryData(["loans", "company-forecast", "off"])).toHaveLength(2);
   });
 });
 

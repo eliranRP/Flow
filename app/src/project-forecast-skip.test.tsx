@@ -184,7 +184,7 @@ describe("a skip changes the project's figures on the tap (FLOW-1315)", () => {
     expect(text("skipped")).toBe("");
   });
 
-  it("drops the forecasts no screen holds when the write is done (another project's, another month's) and keeps the one on screen", async () => {
+  it("keeps the forecasts no screen holds after a write that succeeds (patched at the tap, or of another month), and drops them all when a write fails", async () => {
     const client = pageClient();
     const other = projectForecastKey("off", "other-project", SAMPLE_MONTH, SAMPLE_TODAY, null);
     const later = projectForecastKey("off", PROJECT, "2026-12", SAMPLE_TODAY, null);
@@ -194,6 +194,11 @@ describe("a skip changes the project's figures on the tap (FLOW-1315)", () => {
     await waitFor(() => { expect(text("figures")).toBe(FIGURES); });
     fireEvent.click(screen.getByRole("button", { name: "skip power" }));
     await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    // A skip is for one month: the other project's forecast of it was patched, the other month's was not touched.
+    expect(client.getQueryData<ProjectForecastRead>(other)?.forecast.expenseMinor).toBe(34_000n);
+    expect(client.getQueryData<ProjectForecastRead>(later)?.forecast.expenseMinor).toBe(43_500n);
+    server.write = () => Promise.resolve({ data: null, error: { message: "refused" } });
+    fireEvent.click(screen.getByRole("button", { name: "skip kim" }));
     await waitFor(() => { expect(client.getQueryData(other)).toBeUndefined(); });
     expect(client.getQueryData(later)).toBeUndefined();
     expect(client.getQueryData(projectForecastKey("off", PROJECT, SAMPLE_MONTH, israelToday(), null))).toBeDefined();

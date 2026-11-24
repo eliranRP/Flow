@@ -7,8 +7,8 @@ import { CompanyNextMonthScreen } from "./company-next-month-screen";
 // FLOW-1000 r2: a failed forecast read and its נסו שוב, with the reads stubbed.
 const reads = vi.hoisted(() => ({ forecastRefetch: vi.fn(() => Promise.resolve()), listRefetch: vi.fn(() => Promise.resolve()) }));
 
-vi.mock("../company-next-month-query", () => ({
-  useCompanyNextMonth: () => ({ forecast: null, rest: null, categories: [], pending: false, failed: true, paused: false, refetch: reads.forecastRefetch }),
+vi.mock("../company-forecast-query", () => ({
+  useCompanyMonthRows: () => ({ answer: null, overrides: null, pending: false, failed: true, paused: false, refetch: reads.forecastRefetch }),
 }));
 
 vi.mock("../project-cash", () => ({

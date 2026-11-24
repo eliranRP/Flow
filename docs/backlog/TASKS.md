@@ -723,6 +723,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | --- | --- | --- |
 | <a id="flow-838"></a>[FLOW-838](tasks/FLOW-838.md) | txn-step e2e: prev and next walk the list is flaky on CI | BUG (e2e) |
 | <a id="flow-1317"></a>[FLOW-1317](tasks/FLOW-1317.md) | review-fit e2e: wait for the webfont before measuring the counter and the layout | BUG (e2e) |
+| <a id="flow-1319"></a>[FLOW-1319](tasks/FLOW-1319.md) | CI: stop the runner stalls on "Wait for local Supabase" and on apt | CI/infra |
 | <a id="flow-839"></a>[FLOW-839](tasks/FLOW-839.md) | A daily and weekly security scan agent | SMALL CYCLE (docs) |
 | <a id="flow-840"></a>[FLOW-840](tasks/FLOW-840.md) | The edge functions use zod 4.6.7, as the app does | SMALL CYCLE |
 | <a id="flow-841"></a>[FLOW-841](tasks/FLOW-841.md) | The Content-Security-Policy is enforced | SMALL CYCLE |
@@ -866,6 +867,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1314"></a>[FLOW-1314](tasks/FLOW-1314.md) | Perf: Home's forecast row and the Forecast screen read the month forecast | SMALL (perf) |
 | <a id="flow-1315"></a>[FLOW-1315](tasks/FLOW-1315.md) | Perf: the project page reads the project forecast | MEDIUM (perf) |
 | <a id="flow-1316"></a>[FLOW-1316](tasks/FLOW-1316.md) | Perf: the Loans list reads its outlooks | MEDIUM (perf) |
+| <a id="flow-1318"></a>[FLOW-1318](tasks/FLOW-1318.md) | Perf: company_forecast builds each loan's payments for the months asked only, and gathers only the first due date | SMALL/MEDIUM (perf) |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |

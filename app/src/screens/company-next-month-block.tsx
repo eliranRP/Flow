@@ -1,8 +1,9 @@
 import type { ProfitMonths } from "@flow/shared";
 import { cashMonthName } from "../cash";
-import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type CompanyNextMonth } from "../company-next-month";
+import type { NextMonthCard } from "../company-forecast-map";
+import { companyExpenseNote } from "../company-next-month";
 import { CHART_MONTHS } from "../month-figures";
-import { chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures, profitTakeaway, type RentCategory } from "../next-month-chart";
+import { chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures, profitTakeaway } from "../next-month-chart";
 import { shiftMonthKey } from "../period";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { ChartSkeleton } from "../ui/chart-skeleton";
@@ -24,10 +25,10 @@ export function CompanyNextMonthBlock({
   current,
   thisMonthExpense,
   currency,
-  categories,
   today,
 }: {
-  forecast: CompanyNextMonth | null;
+  /** The month's totals and notes (company_forecast 'totals', or a sample's builders); null while unread or failed. */
+  forecast: NextMonthCard | null;
   /** The forecast's reads are still out: the card's skeleton holds its place. */
   loading: boolean;
   /** get_profit_months for the company; null while unread or failed. */
@@ -39,7 +40,6 @@ export function CompanyNextMonthBlock({
   /** This month's counted expenses so far: the expense caption compares with it. */
   thisMonthExpense: bigint;
   currency: string;
-  categories: readonly RentCategory[];
   /** yyyy-mm-dd: the month's name carries a year only when it is not today's. */
   today: string;
 }) {
@@ -50,16 +50,16 @@ export function CompanyNextMonthBlock({
     <div className="ui-fc-block">
       {loading ? (
         <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
-      ) : forecast == null || forecast.rows.length === 0 ? null : (
+      ) : forecast == null || forecast.empty ? null : (
         <ForecastCard
           title={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
           kind="profit"
           currency={currency}
           incomeMinor={forecast.incomeMinor}
           expenseMinor={forecast.expenseMinor}
-          incomeNote={companyIncomeNote(forecast, categories)}
+          incomeNote={forecast.incomeNote}
           expenseNote={companyExpenseNote(forecast, current, thisMonthExpense, currency)}
-          caption={companyForecastCaption(forecast)}
+          caption={forecast.caption}
         />
       )}
       {history == null ? (monthsLoading ? <DelayedSkeleton><ChartSkeleton /></DelayedSkeleton> : null) : (

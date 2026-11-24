@@ -87,7 +87,7 @@ describe("ledger focus refresh", () => {
   it("refreshes the reads that stay fresh for 30 minutes, not only the review ones", () => {
     const client = { invalidateQueries: vi.fn(() => Promise.resolve()) };
     expect(refreshLedger(client)).toBe(true);
-    for (const key of ["projects-cash", "recurring-schedule", "recurring-changes", "missing-bills", "expected-months", "categories", "company-currency", "loans", "project-forecast-edits"]) {
+    for (const key of ["projects-cash", "recurring-schedule", "recurring-changes", "missing-bills", "month-forecast", "categories", "company-currency", "loans"]) {
       expect(client.invalidateQueries).toHaveBeenCalledWith({ queryKey: [key] });
     }
   });

@@ -1,6 +1,6 @@
 import type { CategoryRow } from "@flow/shared";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
-import { patchSkipsWith } from "./forecast-month";
+import { setProjectForecastPatch } from "./forecast-month";
 import { useHomePreview } from "./preview";
 import { projectForecastOf, type ProjectForecastRead } from "./project-forecast-map";
 import { skippedKeysOf, withRowRemoved, withSkipsChanged } from "./project-forecast-patch";
@@ -77,7 +77,7 @@ function patchSkips(client: QueryClient, month: string, change: (keys: readonly 
 
 // The project forecast's own patch joins the month forecast's writes when this module is loaded (with a project page; Home's
 // entry carries only the registry). A forecast held before the page loaded is dropped by the write (forecast-month.ts).
-patchSkipsWith(patchSkips);
+setProjectForecastPatch(patchSkips);
 
 /**
  * The project page takes a row out of the month (remove_project_forecast_row): each forecast held for that project and month

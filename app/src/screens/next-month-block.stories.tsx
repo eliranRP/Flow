@@ -40,7 +40,7 @@ export const CompanyLoading: Story = {
   name: "Company next month · loading",
   render: () => (
     <div className="ui-page-pad">
-      <CompanyNextMonthBlock forecast={null} loading months={null} monthsLoading current="2026-10" thisMonthExpense={0n} currency="USD" categories={[]} today="2026-10-11" />
+      <CompanyNextMonthBlock forecast={null} loading months={null} monthsLoading current="2026-10" thisMonthExpense={0n} currency="USD" today="2026-10-11" />
     </div>
   ),
   play: async ({ canvasElement }) => {

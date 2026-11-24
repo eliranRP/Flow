@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, profitTakeaway } from "./next-month-chart";
+import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeFactsOf, incomeNoteOfFacts, profitTakeaway } from "./next-month-chart";
 import type { MonthFigures } from "./month-figures";
 import type { NextMonthRow } from "./project-next-month";
+
+/** The income note of a forecast's rows and the company's categories, as the card reads it (from the counts the database gives). */
+const incomeNoteOf = (forecast: { rows: NextMonthRow[] }, categories: Parameters<typeof incomeFactsOf>[1]) => incomeNoteOfFacts(incomeFactsOf(forecast.rows, categories));
 
 function figures(entries: [string, number, number][]): Map<string, MonthFigures> {
   return new Map(entries.map(([key, income, expense]) => [key, { incomeMinor: BigInt(income), expenseMinor: BigInt(expense) }]));
@@ -87,19 +90,19 @@ describe("the chart's history", () => {
 
 describe("the card's captions", () => {
   it("names recurring rent, other recurring income, a single line, or the count", () => {
-    expect(incomeNote({ rows: [row("recurring", 185_000n, "rent", "א"), row("recurring", 230_000n, "rent", "ב"), row("average", -31_000n)] }, CATEGORIES)).toBe("2 שכירויות קבועות");
-    expect(incomeNote({ rows: [row("recurring", 185_000n, "rent")] }, CATEGORIES)).toBe("שכירות קבועה אחת");
-    expect(incomeNote({ rows: [row("recurring", 185_000n, "rent", "א"), row("recurring", 9_000n, "other", "ב")] }, CATEGORIES)).toBe("2 הכנסות קבועות");
-    expect(incomeNote({ rows: [row("recurring", 9_000n, null)] }, CATEGORIES)).toBe("הכנסה קבועה אחת");
-    expect(incomeNote({ rows: [row("added", 1_250_000n, "other", "תשלום מהלקוח")] }, CATEGORIES)).toBe("תשלום מהלקוח");
-    expect(incomeNote({ rows: [row("added", 1_250_000n, "other", "א"), row("recurring", 9_000n, "rent", "ב")] }, CATEGORIES)).toBe("2 הכנסות צפויות");
+    expect(incomeNoteOf({ rows: [row("recurring", 185_000n, "rent", "א"), row("recurring", 230_000n, "rent", "ב"), row("average", -31_000n)] }, CATEGORIES)).toBe("2 שכירויות קבועות");
+    expect(incomeNoteOf({ rows: [row("recurring", 185_000n, "rent")] }, CATEGORIES)).toBe("שכירות קבועה אחת");
+    expect(incomeNoteOf({ rows: [row("recurring", 185_000n, "rent", "א"), row("recurring", 9_000n, "other", "ב")] }, CATEGORIES)).toBe("2 הכנסות קבועות");
+    expect(incomeNoteOf({ rows: [row("recurring", 9_000n, null)] }, CATEGORIES)).toBe("הכנסה קבועה אחת");
+    expect(incomeNoteOf({ rows: [row("added", 1_250_000n, "other", "תשלום מהלקוח")] }, CATEGORIES)).toBe("תשלום מהלקוח");
+    expect(incomeNoteOf({ rows: [row("added", 1_250_000n, "other", "א"), row("recurring", 9_000n, "rent", "ב")] }, CATEGORIES)).toBe("2 הכנסות צפויות");
     // A sub-category of שכירות is rent too, whatever its own name.
     const units = [...CATEGORIES, { id: "unit-a", name: "דירה א", parent_id: "rent" }];
-    expect(incomeNote({ rows: [row("recurring", 185_000n, "unit-a", "א"), row("recurring", 230_000n, "rent", "ב")] }, units)).toBe("2 שכירויות קבועות");
+    expect(incomeNoteOf({ rows: [row("recurring", 185_000n, "unit-a", "א"), row("recurring", 230_000n, "rent", "ב")] }, units)).toBe("2 שכירויות קבועות");
   });
 
   it("says when no income is expected (a flip before its sale)", () => {
-    expect(incomeNote({ rows: [row("average", -1_200_000n)] }, CATEGORIES)).toBe("אין הכנסה צפויה");
+    expect(incomeNoteOf({ rows: [row("average", -1_200_000n)] }, CATEGORIES)).toBe("אין הכנסה צפויה");
   });
 
   it("sets next month's expenses against the last full month's on the page's own history", () => {

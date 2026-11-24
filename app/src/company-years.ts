@@ -139,7 +139,7 @@ export function allTimeSummaryRows(data: CompanyYears): SummaryLine[] {
 export type YearChart = { history: ChartMonth[]; forecast: ChartMonth[]; sub: string; label: string };
 
 /** The chart under the year's head: "הכנסות והוצאות לפי חודש", January to this month, then the months left. */
-export function yearChart(year: YearFigures, rest: RestOfYear | null, restCaption: string): YearChart {
+export function yearChart(year: YearFigures, rest: Pick<RestOfYear, "months" | "incomeMinor" | "expenseMinor"> | null, restCaption: string): YearChart {
   const ahead = year.current && rest != null ? rest.months : [];
   return {
     history: year.months.map((month) => ({ ...month, label: shortMonth(month.key) })),
@@ -153,7 +153,7 @@ export function yearChart(year: YearFigures, rest: RestOfYear | null, restCaptio
  * Since the start's chart, "הכנסות והוצאות לפי שנה": a pair per year, this year solid to date with a dashed cap
  * for the rest of the year (the תזרים צפוי form).
  */
-export function allTimeChart(data: CompanyYears, rest: RestOfYear | null, currency: string): { months: ChartMonth[]; sub: string; label: string } {
+export function allTimeChart(data: CompanyYears, rest: Pick<RestOfYear, "months" | "incomeMinor" | "expenseMinor"> | null, currency: string): { months: ChartMonth[]; sub: string; label: string } {
   const cap = rest != null && (rest.incomeMinor > 0n || rest.expenseMinor > 0n) ? { incomeMinor: rest.incomeMinor, expenseMinor: rest.expenseMinor } : null;
   const months = data.years.map((year): ChartMonth => {
     const ahead = year.current ? cap : null;

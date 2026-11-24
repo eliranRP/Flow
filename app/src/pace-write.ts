@@ -8,7 +8,7 @@ import type { PaceChoice } from "./ui/pace";
  * bills and changes, the party's history and Home's rows. Shared by the list, the charge page and
  * the transaction page.
  */
-export const RECURRING_KEYS = ["recurring-schedule", "payment-recurring", "missing-bills", "recurring-changes", "expected-months", "party-charges", "home"];
+export const RECURRING_KEYS = ["recurring-schedule", "payment-recurring", "missing-bills", "recurring-changes", "party-charges", "home"];
 
 /** A pick on the pace sheet: the payment, the choice, and the state before it (the undo writes it back). */
 export type PaceWrite = {

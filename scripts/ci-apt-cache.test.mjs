@@ -83,6 +83,11 @@ function runFake({ mode = "install", missing, failing = [], stalling = [], env =
   writeFileSync(state, missing);
   writeFileSync(log, "");
   writeFileSync(sources, "URIs: http://azure.archive.ubuntu.com/ubuntu/\n");
+  // Ubuntu 26.04 runners: ubuntu.sources says `mirror+file:` and this list holds the real mirror.
+  const mirrors = join(dir, "apt-mirrors.txt");
+  writeFileSync(mirrors, "http://us-east-2.ec2.archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://archive.ubuntu.com/ubuntu/\tpriority:2\n");
+  const confDir = join(dir, "apt.conf.d");
+  mkdirSync(confDir);
   const playwright = join(dir, "playwright");
   writeFileSync(
     playwright,
@@ -116,13 +121,17 @@ echo "All system dependencies are installed."
       FLOW_APT_GET: aptGet,
       FLOW_APT_SUDO: "",
       FLOW_APT_SOURCES: sources,
+      FLOW_APT_MIRRORS: mirrors,
+      FLOW_APT_CONF_DIR: confDir,
       ...env,
     },
   });
   const calls = readFileSync(log, "utf8").trim().split("\n").filter(Boolean);
   const mirror = readFileSync(sources, "utf8");
+  const mirrorList = readFileSync(mirrors, "utf8");
+  const conf = readdirSync(confDir).map((name) => readFileSync(join(confDir, name), "utf8")).join("");
   rmSync(dir, { recursive: true, force: true });
-  return { result, calls, mirror };
+  return { result, calls, mirror, mirrorList, conf };
 }
 
 test("install does nothing when every package is already there", () => {
@@ -155,12 +164,50 @@ test("install downloads what the cache does not cover", () => {
   assert.match(mirror, /azure\.archive/);
 });
 
-test("a failed apt-get update switches to archive.ubuntu.com and tries once more", () => {
-  const { result, calls, mirror } = runFake({ missing: "fonts-liberation", failing: [/--no-download/, /^update$/] });
+test("a failed apt-get update switches to archive.ubuntu.com and tries twice more", () => {
+  const { result, calls, mirror, mirrorList } = runFake({ missing: "fonts-liberation", failing: [/--no-download/, /^update$/] });
   assert.notEqual(result.status, 0);
-  assert.deepEqual(calls.slice(2), ["apt-get update", "apt-get update"]);
+  assert.deepEqual(calls.slice(2), ["apt-get update", "apt-get update", "apt-get update"]);
   assert.match(result.stdout, /switching to archive\.ubuntu\.com/);
+  assert.match(result.stdout, /one more try/);
   assert.equal(mirror, "URIs: http://archive.ubuntu.com/ubuntu/\n");
+  // The mirror list of the runner image is rewritten too: that is where a 26.04 runner reads its mirror.
+  assert.equal(mirrorList, "http://archive.ubuntu.com/ubuntu/\tpriority:1\n");
+});
+
+test("the fallback matches a mirror host with digits and hyphens", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ci-apt-sed-"));
+  try {
+    const sources = join(dir, "ubuntu.sources");
+    writeFileSync(sources, "URIs: http://us-east-2.ec2.archive.ubuntu.com/ubuntu/\nURIs: http://security.ubuntu.com/ubuntu/\n");
+    const run = spawnSync("bash", [script, "psql"], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        FLOW_APT_SUDO: "",
+        FLOW_APT_SOURCES: sources,
+        FLOW_APT_MIRRORS: join(dir, "none"),
+        FLOW_APT_CONF_DIR: "",
+        FLOW_PSQL: "no-such-psql",
+        FLOW_APT_GET: "false",
+        FLOW_APT_TIMEOUT: "1",
+        FLOW_APT_RETRY_TIMEOUT: "1",
+      },
+    });
+    assert.notEqual(run.status, 0);
+    assert.equal(readFileSync(sources, "utf8"), "URIs: http://archive.ubuntu.com/ubuntu/\nURIs: http://security.ubuntu.com/ubuntu/\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("install and psql write the apt timeout and retry settings, not only restore", () => {
+  for (const mode of ["install", "psql"]) {
+    const { result, conf } = runFake({ mode, missing: "", env: { FLOW_PSQL: "bash" } });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(conf, /Acquire::http::Timeout "30";/);
+    assert.match(conf, /Acquire::Retries "5";/);
+  }
 });
 
 test("a stalled apt-get is cut off by the time limit", () => {
@@ -168,11 +215,11 @@ test("a stalled apt-get is cut off by the time limit", () => {
     missing: "fonts-liberation",
     failing: [/--no-download/],
     stalling: [/^update$/],
-    env: { FLOW_APT_TIMEOUT: "1" },
+    env: { FLOW_APT_TIMEOUT: "1", FLOW_APT_RETRY_TIMEOUT: "1" },
   });
   assert.notEqual(result.status, 0);
   assert.match(result.stdout, /switching to archive\.ubuntu\.com/);
-  assert.deepEqual(calls.slice(2), ["apt-get update", "apt-get update"]);
+  assert.deepEqual(calls.slice(2), ["apt-get update", "apt-get update", "apt-get update"]);
 });
 
 test("psql is left alone when the runner has it, and installed when it does not", () => {
