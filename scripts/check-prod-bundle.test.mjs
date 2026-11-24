@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { goldenValues, hostedClientMarkers, hostedPresenceViolations, parseHostedClient, precacheViolations, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
+import { checkSources, goldenValues, isDenoTestFile, hostedClientMarkers, hostedPresenceViolations, parseHostedClient, precacheViolations, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "./hosted-env.mjs";
 
 test("flags a fixture module, a story, and a golden value", () => {
@@ -264,6 +265,39 @@ test("flags each fixed-data marker in an Edge Function source", () => {
   }
 });
 
+test("the Edge Function scan skips Deno test files, still flags a shipping file, and flags an import of a test file", () => {
+  const fixtureImport = 'import v from "../../../packages/shared/fixtures/vectors/month-forecast/a.json" with { type: "json" };';
+  assert.ok(isDenoTestFile("supabase/functions/flow-mcp/tools_forecast_test.ts"));
+  assert.ok(!isDenoTestFile("supabase/functions/flow-mcp/tools_forecast_vectors.ts"));
+  assert.ok(!isDenoTestFile("supabase/functions/flow-mcp/tools_test_support.ts"));
+  // A test file may read the shared fixtures and any other marker.
+  assert.deepEqual(sourceViolations([{ name: "supabase/functions/flow-mcp/tools_forecast_test.ts", body: `${fixtureImport}\nconst id = 2389917160` }]), []);
+  // A file that can ship is still flagged, whatever its name.
+  for (const name of ["tools_forecast_vectors.ts", "tools_forecast_vectors_test_data.ts", "tools_test_support.ts", "tools_test.d.ts"]) {
+    assert.deepEqual(sourceViolations([{ name, body: fixtureImport }]), [`${name} contains fixtures/`]);
+  }
+  assert.deepEqual(sourceViolations([{ name: "tools.ts", body: 'const p = "packages\\shared\\fixtures\\x.json"' }]), ["tools.ts contains fixtures/"]);
+  // A non-test file may not import a test file, in any import form.
+  for (const body of [
+    'import { x } from "./tools_forecast_test.ts";',
+    'export * from "./tools_forecast_test.ts";',
+    'import "./tools_forecast_test.ts";',
+    'const m = await import("./tools_forecast_test.ts");',
+    "import{x}from'./a/b_test.js'",
+  ]) {
+    const found = sourceViolations([{ name: "tools.ts", body }]);
+    assert.equal(found.length, 1, body);
+    assert.match(found[0] ?? "", /^tools\.ts imports a \*_test file/);
+  }
+  // A test file importing a test file is fine, and so is a name that only looks like one.
+  assert.deepEqual(sourceViolations([{ name: "a_test.ts", body: 'import "./b_test.ts";' }]), []);
+  assert.deepEqual(sourceViolations([{ name: "tools.ts", body: 'import { rpcOf } from "./tools_test_support.ts";' }]), []);
+});
+
+test("the Edge Function sources in this repo pass the scan", () => {
+  assert.deepEqual(checkSources(), []);
+});
+
 test("flags the company id and the open-receivables total once they are inlined", () => {
   const found = violations({
     modules: ["/repo/app/src/main.tsx"],
@@ -299,4 +333,16 @@ test("FLOW-520: the service worker precaches the legal pages' chunk", () => {
   assert.deepEqual(precacheViolations('[{"url":"assets/LegalScreen-a_b-1.js","revision":null}]'), []);
   assert.match(precacheViolations('[{url:"assets/HelpScreen-x1.js",revision:null}]')[0] ?? "", /does not precache the legal pages/);
   assert.match(precacheViolations(null)[0] ?? "", /sw\.js is missing/);
+});
+
+test("FLOW-1321: pr (static) runs the Edge Function source scan, with no build", () => {
+  const read = (file) => readFileSync(new URL(file, import.meta.url), "utf8");
+  const parts = read("./local-ci-parts.sh");
+  const start = parts.indexOf("static_checks() {");
+  assert.ok(parts.slice(start, parts.indexOf("\n}\n", start)).includes("  node scripts/check-prod-bundle.mjs --sources-only\n"));
+  // The static slice runs static_checks, and the pr (static) job runs the static slice.
+  assert.match(parts, /slice_static\(\) \{\n {2}static_checks\n/);
+  assert.ok(read("../.github/workflows/pr.yml").includes("run: bash scripts/local-ci.sh --part static"));
+  // The mode reads sources only: it never needs app/dist.
+  assert.match(read("./check-prod-bundle.mjs"), /sourcesOnly \? checkSources\(\)/);
 });

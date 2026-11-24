@@ -50,6 +50,8 @@ static_checks() {
   node scripts/check-file-size.mjs
   node scripts/backlog-index.mjs --check
   node scripts/vectors-sql.mjs --check
+  # FLOW-1321: the Edge Function source scan of check:bundle reads sources only, so the PR runs it here without a build.
+  node scripts/check-prod-bundle.mjs --sources-only
   deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
 }
 
