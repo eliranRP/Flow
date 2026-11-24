@@ -2522,6 +2522,9 @@ isOneToOne: false
 "missing_bills":
 { Args: { "p_today"?: string }; Returns: Json
                            },
+"month_forecast":
+{ Args: { "p_month": string,"p_today"?: string }; Returns: Json
+                           },
 "move_category_lines":
 { Args: { "p_from": string,"p_into": string }; Returns: Json
                            },
