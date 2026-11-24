@@ -47,7 +47,7 @@ export type ForecastWrite = { key: string; patch: ForecastPatch; undo: boolean; 
 export function useSetForecastItem(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastWrite>({
-    onSuccess: () => { dropInactiveCompanyInputs(client); },
+    onSuccess: () => { dropInactiveForecasts(client); },
     apply: ({ key, patch, prior, undo }) => changeSkips(client, month, (keys) => withSkip(keys, key, skipSet(undo ? priorPatch(prior) : patch))),
     run: async ({ key, patch, prior, undo }) => {
       const supabase = getSupabase();
@@ -64,9 +64,6 @@ export function useSetForecastItem(month: string) {
   });
 }
 
-/** The company inputs' answers carry `skips` (FLOW-1195, FLOW-1202); the same shape as company-next-month-query's. */
-type CompanySkips = { skips?: Record<string, string[]> };
-
 /** The skip a write sets: true takes the item out of the month, false puts it back, undefined leaves the skip alone (an amount or a day). */
 function skipSet(patch: ForecastPatch): boolean | undefined {
   if (patch.reset === true) return false;
@@ -80,35 +77,19 @@ function withSkip(keys: readonly string[], key: string, out: boolean | undefined
 }
 
 /**
- * FLOW-1214: moves one month's skip keys in every cached company inputs answer that carries `skips` (the full answer and
- * the slim one), with setQueryData and no read: the month's total follows the tap. Returns the undo, which takes out the
- * keys this change added and puts back the ones it took out, so a failed write leaves the answers as the other writes left them.
+ * FLOW-1214, FLOW-1308, FLOW-1315: a skip, reset or undo moves the skips of the forecasts held for its month (the company's and the
+ * project page's), with setQueryData and no read: the month's figures follow the tap. Returns the undo, which takes out the keys this
+ * change added and puts back the ones it took out, so a failed write leaves them as the other writes left them.
  */
 function changeSkips(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
   watchForecastWrites(client);
-  const touched: Array<{ key: readonly unknown[]; added: string[]; removed: string[] }> = [];
-  const queries = client.getQueryCache().findAll({ queryKey: ["project-forecast-edits"], predicate: (query) => query.queryKey[2] === "company" });
-  for (const query of queries) {
-    const data = client.getQueryData<CompanySkips>(query.queryKey);
-    if (data?.skips == null) continue;
-    const before = data.skips[month] ?? [];
-    const after = change(before);
-    const added = after.filter((key) => !before.includes(key));
-    const removed = before.filter((key) => !after.includes(key));
-    if (added.length === 0 && removed.length === 0) continue;
-    client.setQueryData(query.queryKey, { ...data, skips: { ...data.skips, [month]: [...after] } });
-    touched.push({ key: query.queryKey, added, removed });
-  }
   const undoForecast = patchCompanyForecast(client, month, change);
+  // Without the project page's patch loaded (nothing has opened a project this session) a project forecast can only be a kept one, which the skip would leave ahead of the books: it is dropped, so the page reads it fresh.
+  if (projectForecastPatch == null) client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: isProjectForecast });
+  const undoProject = projectForecastPatch?.(client, month, change);
   return () => {
     undoForecast();
-    for (const { key, added, removed } of touched) {
-      const data = client.getQueryData<CompanySkips>(key);
-      if (data?.skips == null) continue;
-      const now = data.skips[month] ?? [];
-      const restored = [...now.filter((item) => !added.includes(item)), ...removed.filter((item) => !now.includes(item))];
-      client.setQueryData(key, { ...data, skips: { ...data.skips, [month]: restored } });
-    }
+    undoProject?.();
   };
 }
 
@@ -123,6 +104,13 @@ export function setCompanyForecastPatch(patch: CompanyForecastPatch): void {
   companyForecastPatch = patch;
 }
 
+/** FLOW-1315: the same for the project page's forecast (project-forecast-query.ts, ["month-forecast", preview, "project", ...]); none held before it loads. */
+let projectForecastPatch: CompanyForecastPatch | null = null;
+export function setProjectForecastPatch(patch: CompanyForecastPatch): void {
+  projectForecastPatch = patch;
+}
+const isProjectForecast = (query: { queryKey: readonly unknown[] }): boolean => query.queryKey[2] === "project";
+
 /**
  * FLOW-1308: a skip, reset or undo moves the cached company forecast of its month at once (rows, totals and the income note
  * follow the tap, and the cached totals of that month with them); the patch drops the totals it cannot move. Without the patch
@@ -134,15 +122,12 @@ function patchCompanyForecast(client: QueryClient, month: string, change: (keys:
 }
 
 /**
- * FLOW-1201, FLOW-1202, FLOW-1214: a skip, reset or undo patches the skips above and reads no company inputs. The inputs
- * no screen holds (Company profit's year views) are dropped, so they load fresh and never show pre-write figures
- * ("project-forecast-edits" is FORECAST_EDITS_KEY, named as text to keep project-next-month-query out of Home's entry).
  * FLOW-1308: after a success only the company forecast's multi-month answers are dropped (the patch at the tap moved the rest, and
- * the card's patched totals must stay); after a failure (`all`) every inactive one is, since an undone patch may leave them ahead of the server.
+ * the card's patched totals must stay); after a failure (`all`) every inactive one is (the project forecasts too), since an undone patch may leave them ahead of the server.
  */
-function dropInactiveCompanyInputs(client: QueryClient, all = false) {
+function dropInactiveForecasts(client: QueryClient, all = false) {
   client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && (all || String(query.queryKey[5]).includes(",")) });
-  client.removeQueries({ queryKey: ["project-forecast-edits"], type: "inactive", predicate: (query) => query.queryKey[2] === "company" });
+  if (all) client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: isProjectForecast });
 }
 
 const watchedClients = new WeakSet<QueryClient>();
@@ -151,7 +136,7 @@ const watchedClients = new WeakSet<QueryClient>();
  * FLOW-1214 (review): a write that fails can leave the cache ahead of the server. An overlapping write's delta is recorded
  * at its tap, so a later undo can remove or restore a key the server never changed, and a restore that fails partway
  * leaves the rows before it on the server. So once every write of a month's scope has settled and one of them failed,
- * the inputs no screen holds are dropped and the active ones are read again: the cache ends at the server's answer.
+ * the forecasts no screen holds are dropped and the active ones are read again: the cache ends at the server's answer.
  */
 function watchForecastWrites(client: QueryClient) {
   if (watchedClients.has(client)) return;
@@ -167,9 +152,9 @@ function watchForecastWrites(client: QueryClient) {
     const unsettled = client.getMutationCache().findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
     if (unsettled.length > 0) return;
     failedScopes.delete(scope);
-    dropInactiveCompanyInputs(client, true);
-    void client.invalidateQueries({ queryKey: ["project-forecast-edits"], type: "active", predicate: (query) => query.queryKey[2] === "company" });
+    dropInactiveForecasts(client, true);
     void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: isCompanyForecast });
+    void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: isProjectForecast });
   });
 }
 
@@ -182,7 +167,7 @@ export function priorPatch(prior: ForecastOverrideRow | null): ForecastPatch {
 export function useResetForecastMonth(month: string) {
   const client = useQueryClient();
   return useWrite({
-    onSuccess: () => { dropInactiveCompanyInputs(client); },
+    onSuccess: () => { dropInactiveForecasts(client); },
     apply: () => changeSkips(client, month, () => []),
     run: async () => {
       const supabase = getSupabase();
@@ -200,7 +185,7 @@ export function useResetForecastMonth(month: string) {
 export function useRestoreForecast(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastOverrideRow[]>({
-    onSuccess: () => { dropInactiveCompanyInputs(client); },
+    onSuccess: () => { dropInactiveForecasts(client); },
     apply: (rows) => changeSkips(client, month, (keys) => rows.reduce((next, row) => withSkip(next, row.item_key, row.moved_out), keys)),
     run: async (rows) => {
       const supabase = getSupabase();

@@ -339,7 +339,7 @@ describe("the app's reading of the answer equals the builders' (FLOW-1308)", () 
     month.expense_minor += 50;
     month.net_minor -= 50;
     month.parts[0]?.rows.push({ key: "x:transfer", kind: "transfer", direction: "expense", name: "Transfer", minor: -50 });
-    expect(() => forecastRowsOf({ ...answer, months: [month] })).toThrow(/company_forecast/u);
+    expect(() => forecastRowsOf({ ...answer, months: [month] })).toThrow(/unexpected answer/u);
   });
 
   it.each(vectors.filter((vector) => Object.values(vector.input.inputs.skips ?? {}).some((keys) => keys.length > 0)).map((vector) => [vector.name, vector] as const))(
@@ -462,10 +462,10 @@ describe("the app's reading of the answer equals the builders' (FLOW-1308)", () 
   it("refuses an amount that is not a safe integer, and a month that is not one", () => {
     const answer = (extra: Record<string, unknown>) => ({ today: "2026-11-24", currency: "USD", income: { rows: 0, recurring: 0, rent: 0 }, months: [{ month: "2026-12", income_minor: 1, expense_minor: 0, net_minor: 1, cash_only_minor: 0, projects: 0, general: false, income: { rows: 0, recurring: 0, rent: 0 }, ...extra }] });
     expect(forecastTotalsOf(answer({})).months[0]?.incomeMinor).toBe(1n);
-    for (const bad of [2 ** 60, 9_007_199_254_740_992, 1.5, "12.5", null]) expect(() => forecastTotalsOf(answer({ income_minor: bad })), String(bad)).toThrow(/company_forecast/u);
-    expect(() => forecastTotalsOf({ ...answer({}), months: [{}] })).toThrow(/company_forecast/u);
-    expect(() => forecastTotalsOf({ today: "2026-11-24" })).toThrow(/company_forecast/u);
+    for (const bad of [2 ** 60, 9_007_199_254_740_992, 1.5, "12.5", null]) expect(() => forecastTotalsOf(answer({ income_minor: bad })), String(bad)).toThrow(/unexpected answer/u);
+    expect(() => forecastTotalsOf({ ...answer({}), months: [{}] })).toThrow(/unexpected answer/u);
+    expect(() => forecastTotalsOf({ today: "2026-11-24" })).toThrow(/unexpected answer/u);
     // 'rows' is of one month.
-    expect(() => forecastRowsOf({ ...answer({}), months: [] })).toThrow(/company_forecast/u);
+    expect(() => forecastRowsOf({ ...answer({}), months: [] })).toThrow(/unexpected answer/u);
   });
 });

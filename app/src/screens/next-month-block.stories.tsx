@@ -26,7 +26,7 @@ export const ProjectLoading: Story = {
   name: "Project next month · loading",
   render: () => (
     <div className="ui-page-pad">
-      <NextMonthBlock forecast={null} loading current={null} figures={new Map()} firstMonth={null} currency="USD" kind="profit" cardHref="/projects/p1/profit/next" categories={[]} today="2026-10-11" />
+      <NextMonthBlock forecast={null} loading current={null} figures={new Map()} firstMonth={null} currency="USD" kind="profit" cardHref="/projects/p1/profit/next" income={null} today="2026-10-11" />
     </div>
   ),
   play: async ({ canvasElement }) => {

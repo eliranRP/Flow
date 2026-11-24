@@ -1,102 +1,134 @@
-import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
+import type { CategoryRow, ForecastOverrideRow } from "@flow/shared";
 import { useMemo } from "react";
-import { companyGeneralForecast } from "./company-next-month";
 import { useCompanyCurrencyQuery } from "./company-currency";
-import { useCompanyNextMonth } from "./company-next-month-query";
-import { useOverheadProject } from "./overhead-project";
-import { nextMonthKey, type ProjectForecastEdit } from "./project-next-month";
-import { type NextMonthSample, useNextMonthForecast } from "./project-next-month-query";
-import { shiftMonthKey } from "./period";
+import { incomeFactsOf, type IncomeFacts } from "./next-month-chart";
+import { useProjectForecast } from "./project-forecast-query";
+import type { CategoryHistory, ChargeHint } from "./project-next-edit";
+import { applyForecastEdits, nextMonthForecast, nextMonthKey, type NextMonthForecast } from "./project-next-month";
+import type { NextMonthSample } from "./project-next-month-query";
 import { israelToday } from "./ui/date-math";
+import { useCategoriesQuery } from "./use-books";
 
-/** One stable empty list for the rows returned while the overhead answer is out. */
+/** One stable empty list for the charges and categories while the read is out. */
 const NONE: never[] = [];
 
+/** What the project page's card, its צפי page, its edit page and its profit page read of one project's month. */
+export type ProjectNextMonth = {
+  /** The month's forecast in profit terms (cashForecast adds the loans' cash); null until the read is in. */
+  forecast: NextMonthForecast | null;
+  /** What the card's income note reads of the rows. */
+  income: IncomeFacts | null;
+  /** FLOW-1079: the month's forecast overrides, what a skipped row's החזרה writes back; null while the read is out. */
+  overrides: readonly ForecastOverrideRow[] | null;
+  /** yyyy-mm */
+  month: string;
+  /** yyyy-mm-dd: the day the forecast is from (the sample's, else Israel's today). */
+  today: string;
+  /** The currency of the figures: the company's for the general costs (0147), else the project's. */
+  currency: string;
+  /** FLOW-1079: the general costs' page (the overhead project's): a charge with no project is its own. */
+  general: boolean;
+  /** An edit of the project starts in this month: the צפי page's reset button. */
+  edited: boolean;
+  /** The loans' cash is not known until the read after a removal of a loan's row: the cash figures show as pending, never the old value. */
+  cashPending: boolean;
+  /** The edit page's history bars: the six months before this one, and the project's expenses by category. */
+  history: CategoryHistory | null;
+  /** The edit page's category hints: the project's charges that file to a category. */
+  charges: readonly ChargeHint[];
+  /** The company's categories (the edit page's category sheet); read only with `withCategories`. */
+  categories: readonly CategoryRow[];
+  pending: boolean;
+  failed: boolean;
+  paused: boolean;
+  refetch: () => void;
+};
+
+/** The forecast a story, a test or the dev fixture describes: the TypeScript builders on the sample's reads (the reference the database's read is held equal to). */
+function sampleForecast(sample: NextMonthSample, projectId: string, currency: string, month: string): { forecast: NextMonthForecast; income: IncomeFacts; edited: boolean } {
+  const base = nextMonthForecast({
+    projectId,
+    currency,
+    today: sample.today,
+    recurring: sample.expected.recurring,
+    categoryMonths: sample.categoryMonths,
+    loans: sample.loans ?? [],
+    categories: sample.categories ?? [],
+    month,
+  });
+  const edits = sample.edits ?? [];
+  const forecast = applyForecastEdits(base, edits);
+  return { forecast, income: incomeFactsOf(forecast.rows, sample.categories ?? []), edited: edits.some((edit) => edit.start_month === forecast.month) };
+}
+
 /**
- * FLOW-1002 (owner, 2026-10-31: "the row should behave the same as a regular project"): a project's next month,
- * as its צפי page, its edit page, its profit page and its card read it. For the company's overhead project it is
- * the general costs (decision 0237): what carries no project and what the overhead project carries, with the
- * overhead project's edits, the same part the company's צפי page shows under כללי. So a general row opens the
- * overhead project's edit page, and its writes (the overhead project's edits) reach both pages.
+ * FLOW-1002 (owner, 2026-10-31: "the row should behave the same as a regular project"): a project's forecast for one month, as its
+ * צפי page, its edit page, its profit page and its card read it. FLOW-1315: one read, `project_forecast`, whatever the project:
+ * the database builds the company's overhead project's page as the general costs (decision 0237: what carries no project and what the
+ * overhead project carries, with its edits, the part the company's צפי page shows under כללי) and says so (`general`), in the
+ * company's currency; a project of another currency gets its own (`currency` is the one its figures are in). The read waits for
+ * `enabled` only, so the card needs one request after get_project. A sample (a story, a test, the dev fixture) is built here from its reads.
+ * `withCategories` (the edit page) also reads the company's categories, for its category sheet.
  *
- * FLOW-1229: `overheadKnown` is the page's own guess at "is this the overhead project" (get_project's `is_overhead`,
- * the same `companies.overhead_project_id` test, possibly from a cached read). It only STARTS reads early, never
- * decides what is shown: while the company read is out, a false hint starts the project's own reads and a true one
- * the company's, and the row stays in its loading state as before. What is shown is the company read's answer, or,
- * if that read failed, the FLOW-1002 fallback to the project's own forecast (whose reads then start, if the hint
- * was true). A stale hint starts the wrong set of reads; the right set starts when the answer lands. That costs
- * extra reads, never a wrong figure.
- *
- * While the answer is out, `failed`, `paused` and the data fields (overrides, edits, recurring, categoryMonths,
- * categories) are masked, so the row reads as loading. Two return values differ from before this change, and only
- * while `pending`: (1) a shared read (the overrides, the company's categories) that already holds a cached error or
- * pause shows it when the overhead answer lands (a few hundred ms), not at once; (2) the data fields are empty here,
- * where before a disabled read could still hand back its cached data. (1) moves only when an error appears, and the
- * final state is the same; (2) changes nothing drawn, since no consumer renders the data fields while `pending`
- * (screen-state.tsx:99-102 draws the skeleton until the phase is ready, and next-month-block.tsx:55-58 draws its
- * skeleton while `loading`).
+ * While the read is out `forecast` and the data fields are empty and `pending` is true; a failed read is `failed`, its retry `refetch`.
  */
-export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, month?: string, withOverrides = false, overheadKnown?: boolean) {
+export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true, forMonth?: string, withCategories = false): ProjectNextMonth {
+  const today = sample?.today ?? israelToday();
+  // FLOW-1066: any month of the forecast (?month=), next month by default.
+  const month = forMonth ?? nextMonthKey(today);
   const live = sample == null && enabled;
-  const overhead = useOverheadProject(live && projectId !== "");
-  // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
-  // read fails, every project (the overhead one too) falls back to its own forecast, as before FLOW-1002, rather
-  // than every project page failing over one small read.
-  const deciding = live && overhead.project === undefined && !overhead.failed;
-  const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
-  // The reads that may start before the answer: the hint's set only; what shows is decided above.
-  const startOwn = enabled && (deciding ? overheadKnown === false : !isOverhead);
-  const startCompany = isOverhead || (deciding && overheadKnown === true);
-  const own = useNextMonthForecast(projectId, currency, sample, startOwn, month);
-  const today = israelToday();
-  // FLOW-1066: a month of the forecast (?month=), next month by default.
-  const forMonth = month ?? nextMonthKey(today);
-  // The general costs are the company's, in its books currency (0147), as the company's צפי page reads them,
-  // whatever currency the overhead project's own figures are in. The pages show them in the currency returned.
-  // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
-  const currencyRead = useCompanyCurrencyQuery(startCompany);
-  const companyCurrency = currencyRead.data ?? currency;
-  const company = useCompanyNextMonth(companyCurrency, today, startCompany && currencyRead.data != null, forMonth, withOverrides);
-  const currencyFailed = currencyRead.data == null && currencyRead.isError;
-  const input = company.input;
-  const general = useMemo(() => {
-    if (!isOverhead || input == null) return null;
-    const general = (id: string | null | undefined) => id == null || id === projectId;
-    const recurring: ExpectedParty[] = input.recurring.filter((party) => general(party.project_id)).map((party) => ({ ...party, project_id: projectId }));
-    const categoryMonths: ProjectCategoryMonths = {
-      project_id: projectId,
-      today: input.today,
-      this_month: `${input.today.slice(0, 7)}-01`,
-      // The six months before this one, as company_next_month_inputs reads them: the edit page's history labels.
-      months: Array.from({ length: 6 }, (_, index) => `${shiftMonthKey(input.today.slice(0, 7), index - 6)}-01`),
-      categories: input.inputs.general.map((row) => ({ ...row, group_name: null, this_month_minor: 0, months_seen: 0, expected_minor: null, typical_day: null, flag: null })),
+  // The database answers in the company's currency unless asked for another, so the read names only a project's own different one
+  // (and, while the company's is unknown, none): a project in the company's currency has one key, however early the page starts it.
+  const companyRead = useCompanyCurrencyQuery(live);
+  const companyCurrency = companyRead.data;
+  const asked = companyCurrency != null && currency !== companyCurrency ? currency : null;
+  const read = useProjectForecast(projectId, month, today, asked, live);
+  const categoryRead = useCategoriesQuery(live && withCategories);
+  const built = useMemo(() => (sample == null ? null : sampleForecast(sample, projectId, currency, month)), [sample, projectId, currency, month]);
+  // An answer in another currency than the page's (the company's, came first while the company's was unknown) is not drawn: the
+  // read waits for the right one, which the company's currency landing asks for. A failed currency read leaves the answer as it is.
+  const wrongCurrency = read.data != null && !read.data.general && read.data.currency !== currency && !companyRead.isError;
+  const answer = wrongCurrency ? null : read.data ?? null;
+  const reads = withCategories ? [read, categoryRead] : [read];
+  const refetch = () => {
+    for (const item of reads) void item.refetch();
+  };
+  if (sample != null) {
+    return {
+      forecast: built?.forecast ?? null,
+      income: built?.income ?? null,
+      overrides: NONE,
+      month,
+      today,
+      currency,
+      general: false,
+      edited: built?.edited ?? false,
+      cashPending: false,
+      history: sample.categoryMonths,
+      charges: sample.expected.recurring,
+      categories: sample.categories ?? NONE,
+      pending: false,
+      failed: false,
+      paused: false,
+      refetch,
     };
-    const edits: ProjectForecastEdit[] = input.inputs.edits.filter((edit) => edit.project_id === projectId);
-    return { forecast: companyGeneralForecast(input), recurring, categoryMonths, edits };
-  }, [isOverhead, input, projectId]);
-  // While the answer is out the row is loading, whatever the early reads (a false hint's) hold: no forecast, no data,
-  // no failure and no pause of theirs, as when the own reads were off.
-  if (!isOverhead) {
-    return deciding
-      ? { ...own, forecast: null, overrides: null, edits: NONE, recurring: NONE, categoryMonths: null, categories: NONE, pending: true, failed: false, paused: false, currency, general: false }
-      : { ...own, currency, general: false };
   }
   return {
-    currency: companyCurrency,
-    /** FLOW-1079: the general costs' page (the overhead project's): a charge with no project is its own. */
-    general: true,
-    forecast: general?.forecast ?? null,
-    month: forMonth,
+    forecast: answer?.forecast ?? null,
+    income: answer?.income ?? null,
+    overrides: answer?.overrides ?? null,
+    month,
     today,
-    edits: general?.edits ?? [],
-    recurring: general?.recurring ?? [],
-    categoryMonths: general?.categoryMonths ?? null,
-    categories: company.categories,
-    /** FLOW-1079: the month's forecast overrides, what a skipped row's החזרה writes back. */
-    overrides: company.overrides,
-    pending: !currencyFailed && (currencyRead.data == null || company.pending),
-    failed: currencyFailed || company.failed,
-    paused: company.paused,
-    refetch: () => { void currencyRead.refetch(); void company.refetch(); },
+    currency: answer?.currency ?? currency,
+    general: answer?.general ?? false,
+    edited: answer?.edited ?? false,
+    cashPending: answer?.cashPending ?? false,
+    history: answer?.history ?? null,
+    charges: answer?.charges ?? NONE,
+    categories: categoryRead.data ?? NONE,
+    pending: wrongCurrency || reads.some((item) => item.isPending),
+    failed: reads.some((item) => item.isError),
+    paused: reads.some((item) => item.isPaused),
+    refetch,
   };
 }

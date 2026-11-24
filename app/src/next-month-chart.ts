@@ -141,14 +141,6 @@ export function isRent(categoryId: string | null, categories: readonly RentCateg
 }
 
 /**
- * Under הכנסות צפויות, what the expected income is made of: "2 שכירויות קבועות" for recurring rent, "2
- * הכנסות קבועות" for other recurring income, a single other line by its name, else the count.
- */
-export function incomeNote(forecast: Pick<NextMonthForecast, "rows">, categories: readonly RentCategory[]): string {
-  return incomeNoteOfFacts(incomeFactsOf(forecast.rows, categories));
-}
-
-/**
  * What the income notes read of a forecast's rows (FLOW-1308: company_forecast gives them as counts, so the notes need no
  * rows or categories): the income rows, how many are recurring, how many of those are rent, and the row's name when it is the only one.
  */

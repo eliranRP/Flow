@@ -1,5 +1,5 @@
-import type { CategoryRow, LoanScheduleRow, ProjectDetail } from "@flow/shared";
-import { type LoanDetail, type LoanDetailDbRow, readLoanRow } from "./screens/loan-detail-data";
+import type { CategoryRow, LoanScheduleRow } from "@flow/shared";
+import type { LoanDetail } from "./screens/loan-detail-data";
 import { type OutlookLoan, paymentsLeft } from "./screens/loan-outlook";
 
 /**
@@ -12,55 +12,6 @@ import { type OutlookLoan, paymentsLeft } from "./screens/loan-outlook";
 
 /** A loan as the forecast reads it: its terms, where it sits, and the categories its parts file to. */
 export type ForecastLoan = OutlookLoan & Pick<LoanDetail, "id" | "currency" | "projectId" | "categoryIds">;
-
-/** The loans block of get_project's answer. */
-type ProjectLoan = NonNullable<NonNullable<ProjectDetail>["loans"]>[number];
-
-/**
- * The forecast's loans from the project's own get_project answer (FLOW-1240), the same loans the loans and
- * loan_balances reads gave (readLoanRow, so the rates, the balance and the categories are read the same way). A
- * project with no loans, or no project at all, gives none. Undefined (not read yet) when a loan lacks the category id
- * keys (undefined, not null): an answer saved on the phone before FLOW-1240 would file a loan's interest and escrow to
- * the company's keyed category instead of the loan's own, so the forecast waits for the fresh read.
- */
-export function forecastLoansOf(project: ProjectDetail): ForecastLoan[] | undefined {
-  if (project == null) return [];
-  if (project.loans?.some((loan) => loan.interest_category_id === undefined) === true) return undefined;
-  // The `??` fallbacks in loanDbRow only fill fields an old answer lacks. The four category id keys (interest, escrow,
-  // principal, fees) arrive together, so the check above, on interest_category_id, covers all four.
-  return (project.loans ?? []).map((loan) => {
-    const { id, currency, projectId, categoryIds, status, balanceMinor, kind, termMonths, paymentMinor, rates, principalMinor, annualRatePpm, startDate, escrowMinor, interestOnlyMonths, amortizationMonths } =
-      readLoanRow(loanDbRow(loan, project.id), { balanceMinor: loan.balance_minor, flaggedParts: 0 });
-    return { id, currency, projectId, categoryIds, status, balanceMinor, kind, termMonths, paymentMinor, rates, principalMinor, annualRatePpm, startDate, escrowMinor, interestOnlyMonths, amortizationMonths };
-  });
-}
-
-/** One get_project loan as the loans read's row. The "" company_id and rate ids are placeholders: the forecast reads neither. */
-function loanDbRow(loan: ProjectLoan, projectId: string): LoanDetailDbRow {
-  return {
-    id: loan.id,
-    company_id: "",
-    name: loan.name,
-    currency: loan.currency,
-    principal_minor: loan.principal_minor ?? 0,
-    annual_rate_ppm: loan.annual_rate_ppm ?? 0,
-    term_months: loan.term_months ?? null,
-    start_date: loan.start_date ?? "",
-    payment_minor: loan.payment_minor ?? null,
-    escrow_minor: loan.escrow_minor ?? 0,
-    kind: (loan.kind ?? "amortizing") as LoanDetailDbRow["kind"],
-    interest_only_months: loan.interest_only_months ?? null,
-    amortization_months: loan.amortization_months ?? null,
-    status: (loan.status ?? "open") as LoanDetailDbRow["status"],
-    closed_on: loan.closed_on ?? null,
-    project_id: projectId,
-    interest_category_id: loan.interest_category_id ?? null,
-    escrow_category_id: loan.escrow_category_id ?? null,
-    principal_category_id: loan.principal_category_id ?? null,
-    fees_category_id: loan.fees_category_id ?? null,
-    loan_rates: (loan.rates ?? []).map((rate) => ({ id: "", effective_date: rate.effective_date, annual_rate_ppm: rate.annual_rate_ppm })),
-  };
-}
 
 /** A company category as the forecast reads it (list_categories). */
 export type ForecastCategory = Pick<CategoryRow, "id" | "name" | "loan_part" | "excluded_from_pnl">;

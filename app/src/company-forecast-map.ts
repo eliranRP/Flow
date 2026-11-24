@@ -40,14 +40,15 @@ export type CompanyForecastRows = CompanyForecastTotals & { forecast: CompanyNex
 
 type Row = Record<string, unknown>;
 
-const isRow = (value: unknown): value is Row => typeof value === "object" && value !== null && !Array.isArray(value);
+export const isRow = (value: unknown): value is Row => typeof value === "object" && value !== null && !Array.isArray(value);
 
-function shapeError(): Error {
-  return new Error("company_forecast: unexpected answer");
+/** A forecast read (company_forecast, project_forecast) answered in a shape the app does not draw: the read fails. */
+export function shapeError(): Error {
+  return new Error("forecast: unexpected answer");
 }
 
 /** An amount as a JSON number in minor units (a digit string too), refused when it is not a safe integer; to the app's bigint. */
-function minorOf(value: unknown): bigint {
+export function minorOf(value: unknown): bigint {
   if (typeof value === "number" && Number.isSafeInteger(value)) return BigInt(value);
   if (typeof value === "string" && /^-?\d+$/.test(value)) {
     const amount = BigInt(value);
@@ -56,17 +57,17 @@ function minorOf(value: unknown): bigint {
   throw shapeError();
 }
 
-function countOf(value: unknown): number {
+export function countOf(value: unknown): number {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
   throw shapeError();
 }
 
-function textOf(row: Row, field: string): string | null {
+export function textOf(row: Row, field: string): string | null {
   const value = row[field];
   return typeof value === "string" ? value : null;
 }
 
-function factsOf(value: unknown): IncomeFacts {
+export function factsOf(value: unknown): IncomeFacts {
   if (!isRow(value)) throw shapeError();
   return { rows: countOf(value.rows), recurring: countOf(value.recurring), rent: countOf(value.rent), name: textOf(value, "name") };
 }
@@ -99,11 +100,16 @@ export function forecastTotalsOf(answer: unknown): CompanyForecastTotals {
   return totalsOf(answer).totals;
 }
 
-function rowOf(value: unknown): NextMonthRow {
+const KINDS = new Set(["recurring", "loan", "average", "added"]);
+const PACES = new Set(["once", "month", "2months", "quarter", "year"]);
+
+/** A row: a kind outside the four or a pace that is not one fails the read (a row of a kind the app does not know would drop out of the totals). */
+export function rowOf(value: unknown): NextMonthRow {
   if (!isRow(value)) throw shapeError();
   const key = textOf(value, "key");
   const { kind, direction, pace } = value;
-  if (key == null || typeof kind !== "string" || (direction !== "income" && direction !== "expense")) throw shapeError();
+  if (key == null || typeof kind !== "string" || !KINDS.has(kind) || (direction !== "income" && direction !== "expense")) throw shapeError();
+  if (pace != null && (typeof pace !== "string" || !PACES.has(pace))) throw shapeError();
   return {
     key,
     kind: kind as NextMonthRow["kind"],
@@ -117,7 +123,7 @@ function rowOf(value: unknown): NextMonthRow {
   };
 }
 
-function rowsIn(value: unknown): NextMonthRow[] {
+export function rowsIn(value: unknown): NextMonthRow[] {
   if (!Array.isArray(value)) throw shapeError();
   return value.map(rowOf);
 }

@@ -1,4 +1,4 @@
-import { type CategoryRow, type ExpectedParty, formatAmountText, monthIndex, type ProjectCategoryMonths } from "@flow/shared";
+import { type CategoryRow, type ExpectedParty, formatAmountText, monthIndex } from "@flow/shared";
 import { shortMonth } from "./party-charges";
 import type { ForecastPace, NextMonthForecast } from "./project-next-month";
 import { HEBREW_MONTHS } from "./ui/date-math";
@@ -96,6 +96,19 @@ export function currencyMark(currency: string): string {
   return formatAmountText(100n, currency).replace(/[\d.,\s]/g, "");
 }
 
+/**
+ * The history the edit page reads of a project: the months (yyyy-mm-dd, oldest first) and, by category and currency, the
+ * expenses of each (a null id is the uncategorized row). project_category_months has this shape and more; project_forecast
+ * (FLOW-1315) gives exactly this.
+ */
+export type CategoryHistory = {
+  months: readonly string[];
+  categories: ReadonlyArray<{ id: string | null; currency: string; months_minor: readonly number[] }>;
+};
+
+/** What the category sheet's hint reads of a project's recurring charge. */
+export type ChargeHint = Pick<ExpectedParty, "project_id" | "pays_loan" | "currency" | "category_id" | "typical_amount_minor" | "pace">;
+
 export type HistoryBars = {
   /** The five latest complete months, oldest first. */
   months: Array<{ month: string; label: string; minor: bigint }>;
@@ -107,7 +120,7 @@ export type HistoryBars = {
  * A category's last five complete months in the project (project_category_months, expenses), or null when
  * it has none there. The forecast month's bar is the page's own.
  */
-export function historyBars(months: ProjectCategoryMonths | null | undefined, categoryId: string | null, currency: string): HistoryBars | null {
+export function historyBars(months: CategoryHistory | null | undefined, categoryId: string | null, currency: string): HistoryBars | null {
   const category = months?.categories.find((row) => row.id === categoryId && row.currency === currency);
   if (category == null || months == null) return null;
   const values = category.months_minor.slice(-5);
@@ -157,8 +170,8 @@ export function forecastCategoryAmounts(forecast: NextMonthForecast): Map<string
  */
 export function categoryChoices(input: {
   categories: readonly CategoryRow[];
-  categoryMonths: ProjectCategoryMonths | null | undefined;
-  recurring: readonly ExpectedParty[];
+  categoryMonths: CategoryHistory | null | undefined;
+  recurring: readonly ChargeHint[];
   projectId: string;
   currency: string;
   divisor: number;
@@ -186,8 +199,8 @@ export function categoryChoices(input: {
 /** "כל רבעון · $65" for a charge's category, "פעם אחת · $1,240 באפריל", or "ממוצע 6 חודשים בפרויקט: $305". */
 function suggestionHint(
   categoryId: string,
-  charges: readonly ExpectedParty[],
-  months: ProjectCategoryMonths | null | undefined,
+  charges: readonly ChargeHint[],
+  months: CategoryHistory | null | undefined,
   currency: string,
   divisor: number,
 ): string | null {

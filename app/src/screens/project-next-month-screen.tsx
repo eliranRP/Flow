@@ -28,6 +28,7 @@ import { forecastMonthSearch, useForecastMonth } from "../forecast-page-month";
 import { PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
+import { Skeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import type { ProjectProfitSample } from "./project-profit-screen";
 import { SummaryRow } from "./profit-summary";
@@ -95,7 +96,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const monthSearch = forecastMonthSearch(search, forMonth, today);
   const holdRole = useHoldWrites();
   const hold = sample == null && holdRole;
-  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth, !hold);
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null, forMonth);
   const currency = next.currency;
   const writes = useProjectForecastWrites(projectId, next.month);
   // FLOW-1081: a recurring row swipes out of this month only (the month forecast's item), as on Home.
@@ -124,6 +125,8 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const net = forecast?.netMinor ?? 0n;
   const cashNet = cash?.netMinor ?? 0n;
   const keptOut = forecast?.cashOnlyMinor ?? 0n;
+  // The loans' cash follows a removal of a loan's row with the read after it: its figures wait, never the old value.
+  const pendingCash = next.cashPending;
   const after = monthShare == null ? null : net - monthShare;
   const title = forecast == null ? "צפי" : `צפי ${cashMonthName(forecast.month)}`;
   // A row just swiped out leaves the list at once; the forecast read after the write draws it under לא צפוי.
@@ -163,14 +166,14 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
         <div className="ui-pm-month">
           <p className="ui-pn-figure-label ui-page-pad t-caption t-muted">{CASH.net}</p>
           <p ref={setFigure} className="ui-pp-figure ui-page-pad">
-            <Amount agorot={cashNet} currency={currency} size="display" loss={cashNet < 0n} direction={cashNet > 0n ? "income" : undefined} />
+            {pendingCash ? <Skeleton hero /> : <Amount agorot={cashNet} currency={currency} size="display" loss={cashNet < 0n} direction={cashNet > 0n ? "income" : undefined} />}
           </p>
           <Card className="ui-pp-card">
             <SummaryRow label={CASH.income} value={<Amount agorot={forecast.incomeMinor} currency={currency} income />} />
-            <SummaryRow label={CASH.expense} value={<Amount agorot={cash?.expenseMinor ?? 0n} currency={currency} />} />
+            <SummaryRow label={CASH.expense} value={pendingCash ? <Skeleton width="sm" /> : <Amount agorot={cash?.expenseMinor ?? 0n} currency={currency} />} />
             {/* The bridge from the cash to the profit, on the card: the part of צפוי לצאת the profit leaves out. */}
-            {keptOut === 0n ? null : <SummaryRow label={`מזה ${NOT_IN_PROFIT_LABEL}`} value={<Amount agorot={keptOut} currency={currency} />} />}
-            {keptOut === 0n ? null : (
+            {keptOut === 0n && !pendingCash ? null : <SummaryRow label={`מזה ${NOT_IN_PROFIT_LABEL}`} value={pendingCash ? <Skeleton width="sm" /> : <Amount agorot={keptOut} currency={currency} />} />}
+            {keptOut === 0n && !pendingCash ? null : (
               <SummaryRow label={PROFIT.net} value={<Amount agorot={net} currency={currency} loss={net < 0n} direction={net > 0n ? "income" : undefined} />} />
             )}
             {monthShare == null ? null : <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={monthShare} currency={currency} />} />}
@@ -179,7 +182,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
             )}
           </Card>
           <p className="ui-pp-note t-caption t-muted">{forecast.loanCount > 0 ? LOAN_NOTE : NOTE}</p>
-          {forecast.rows.length === 0 && keptOut === 0n ? <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הזה.</p> : (
+          {forecast.rows.length === 0 && keptOut === 0n && !pendingCash ? <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הזה.</p> : (
             <List layout="flat" className="ui-pn-rows">
               {forecast.rows.filter((row) => !isOutNow(row.key)).map((row) => swipeRow(row.key, row.name, (
                 <ListRow
@@ -196,7 +199,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   href={hold ? undefined : `${editPath(projectId, row.key)}${monthSearch}`}
                 />
               )))}
-              {keptOut === 0n ? null : (
+              {keptOut === 0n || pendingCash ? null : (
                 <ListRow
                   layout="flat"
                   variant="transaction"
@@ -255,7 +258,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                 })}
               />
               {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
-              {next.edits.some((edit) => edit.start_month === forecast.month) ? (
+              {next.edited ? (
                 <Button
                   variant="link"
                   className="ui-pn-reset"

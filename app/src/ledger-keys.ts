@@ -21,7 +21,6 @@ export const LEDGER_KEYS = [
   "project-waiting",
   "projects-cash",
   "profit-months",
-  "project-forecast-edits",
   "txn",
   // FLOW-957: a Mercury sync brings notes and attachments into the thread.
   "txn-thread",
@@ -40,7 +39,6 @@ export const LEDGER_KEYS = [
   "member-projection",
   "month-forecast",
   "missing-bills",
-  "expected-months",
   "recurring-changes",
   "transfer-matches",
   "transfer-match-count",

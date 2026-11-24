@@ -17,12 +17,12 @@ vi.mock("../lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
 
 // Lets one test stand for a project whose forecast has nothing to read; the others read the sample.
 const noForecast = vi.hoisted(() => ({ on: false }));
-vi.mock("../project-next-month-query", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../project-next-month-query")>();
+vi.mock("../next-month-for-project", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../next-month-for-project")>();
   return {
     ...actual,
-    useNextMonthForecast: (...args: Parameters<typeof actual.useNextMonthForecast>) => {
-      const result = actual.useNextMonthForecast(...args);
+    useProjectNextMonth: (...args: Parameters<typeof actual.useProjectNextMonth>) => {
+      const result = actual.useProjectNextMonth(...args);
       return noForecast.on ? { ...result, forecast: null } : result;
     },
   };

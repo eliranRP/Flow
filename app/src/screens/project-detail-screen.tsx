@@ -189,11 +189,12 @@ export function ProjectDetailScreen({
   const landed = detail.data ?? lifetime.data;
   const forecastReads = sample == null && landed != null;
   const forecastLive = forecastReads && lifetime.data != null;
-  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastReads, undefined, false, landed?.is_overhead);
+  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastReads);
   // Decision 0196: the page is about cash, so its card and chart take the forecast in cash terms (the loans'
   // principal due next month included), derived from the one forecast the צפי page shows.
   const nextForecast = next.forecast == null || (sample == null && !forecastLive) ? null : cashForecast(next.forecast);
-  const nextLoading = currencyPending || (forecastLive && next.pending && !next.paused && !next.failed);
+  // A removal of a loan's row on the צפי page leaves the cash figure pending until the read after it (next.cashPending).
+  const nextLoading = currencyPending || next.cashPending || (forecastLive && next.pending && !next.paused && !next.failed);
   // FLOW-1044: the month's lines in groups: the project's recurring charges (Home's schedule read, usually
   // cached) and the month's lines, for the one-off group once they say which are recurring (FLOW-1035).
   const schedule = useRecurringScheduleQuery(sample == null && preview === "off");

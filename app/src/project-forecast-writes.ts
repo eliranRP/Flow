@@ -3,8 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { getSupabase } from "./lib/supabase";
 import type { RemovalPace } from "./project-next-edit";
-import type { ProjectForecastEdit } from "./project-next-month";
-import { FORECAST_EDITS_KEY } from "./project-next-month-query";
+import { dropInactiveForecasts, removalUpdates } from "./project-forecast-query";
 import { assertNoError, useWrite } from "./use-write";
 import { useToast } from "./ui/toast";
 import { topToast } from "./ui/top-toast";
@@ -38,11 +37,6 @@ function undoOf(data: unknown): ForecastUndo | null {
   return { drop: undo.drop.filter((id): id is string => typeof id === "string"), put: undo.put as Json[] };
 }
 
-/** The edit a removal will write, drawn at once (decision 0219: the row leaves at once, ביטול 5s); its month only, or from it on (0268). */
-function removalEdit(rowKey: string, month: string, pace: RemovalPace): ProjectForecastEdit {
-  return { id: `optimistic-remove:${rowKey}`, kind: "remove", row_key: rowKey, category_id: null, direction: null, amount_minor: null, pace, start_month: month };
-}
-
 export function useProjectForecastWrites(projectId: string, month: string) {
   const toast = useToast();
   const client = useQueryClient();
@@ -57,8 +51,9 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("undo_project_forecast", { p_project_id: projectId, p_undo: body }));
     },
-    // FLOW-1005: the month-end forecast counts the edits too.
-    keys: [FORECAST_EDITS_KEY, "month-forecast"],
+    // FLOW-1005: the month-end forecast counts the edits too. FLOW-1315: the project's own forecast is under "month-forecast".
+    keys: ["month-forecast"],
+    onSuccess: () => { dropInactiveForecasts(client, projectId); },
     failure: "לא הצלחנו לבטל את השינוי בצפי",
   });
   const write = useWrite<Call>({
@@ -79,17 +74,13 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       assertNoError(result);
       lastUndo.current = undoOf(result.data);
     },
-    // FLOW-1005: the month-end forecast counts the edits too.
-    keys: [FORECAST_EDITS_KEY, "month-forecast"],
-    // A removal leaves the list at once; a failure puts the row back (useWrite's rollback) and says so.
-    optimistic: (call) => {
-      if (call.fn !== "remove_project_forecast_row") return [];
-      return client.getQueriesData<ProjectForecastEdit[]>({ queryKey: [FORECAST_EDITS_KEY] })
-        .filter(([key]) => key[2] === projectId && key[3] === month)
-        .map(([key]) => ({ key, update: (old: unknown) => [...((old as ProjectForecastEdit[] | undefined) ?? []), removalEdit(call.rowKey, month, call.pace ?? "month")] }));
-    },
+    // FLOW-1005: the month-end forecast counts the edits too. FLOW-1315: the project's own forecast is under "month-forecast".
+    keys: ["month-forecast"],
+    // A removal leaves the list at once (decision 0219); a failure puts the row back (useWrite's rollback) and says so.
+    optimistic: (call) => (call.fn === "remove_project_forecast_row" ? removalUpdates(client, projectId, month, call.rowKey) : []),
     failure: "לא הצלחנו לעדכן את הצפי",
     onSuccess: (call) => {
+      dropInactiveForecasts(client, projectId);
       const back = lastUndo.current;
       if ("handOff" in call) {
         call.handOff(back);

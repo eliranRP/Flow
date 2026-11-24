@@ -1,215 +1,177 @@
-import { renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { companyGeneralForecast, companyNextMonthForecast, type CompanyForecastInput } from "./company-next-month";
-import { COMPANY_NEXT_READS } from "./dev/company-next-month-sample";
-import { NEXT_MONTH_TODAY } from "./dev/home-next-month-sample";
+import { QueryClient } from "@tanstack/react-query";
+import { act, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { JUNIPER_NEXT } from "./dev/project-next-month-sample";
 import { useProjectNextMonth } from "./next-month-for-project";
+import { projectForecastOf } from "./project-forecast-map";
+import { sampleProjectForecastAnswer } from "./project-forecast-sample";
+import { nextMonthKey } from "./project-next-month";
+import { QUERY_STALE_MS } from "./query-client";
+import { renderWithProviders } from "./test-render";
+import { israelToday } from "./ui/date-math";
 
-const OVERHEAD = "p0";
-const INPUT: CompanyForecastInput = { currency: "USD", today: NEXT_MONTH_TODAY, recurring: COMPANY_NEXT_READS.recurring, loans: COMPANY_NEXT_READS.loans, categories: COMPANY_NEXT_READS.categories, inputs: { ...COMPANY_NEXT_READS.inputs, overhead_project_id: OVERHEAD } };
-
-type OverheadRead = { project: { id: string; name: string } | null | undefined; failed: boolean };
-
-const reads = vi.hoisted(() => {
-  const currency: { data: string | undefined; isError: boolean } = { data: "USD", isError: false };
-  const overhead: OverheadRead = { project: { id: "p0", name: "משרד" }, failed: false };
-  return { ownEnabled: [] as boolean[], companyEnabled: [] as boolean[], own: { failed: false, paused: false }, companyCurrency: [] as string[], currency, overhead, company: { pending: false, failed: false, paused: false } };
-});
-
-vi.mock("./overhead-project", () => ({
-  useOverheadProject: () => ({ ...reads.overhead, refetch: () => undefined }),
+// FLOW-1315: the project page's forecast is one read, project_forecast. The fake client logs every request. Invented answers only.
+type Reply = { data: unknown; error: unknown };
+const server = vi.hoisted((): { calls: Array<{ name: string; args: unknown }>; tables: string[]; answers: Record<string, unknown>; reply: ((name: string) => Reply | null) | null } => ({
+  calls: [],
+  tables: [],
+  answers: {},
+  reply: null,
 }));
 
-vi.mock("./company-currency", () => ({
-  useCompanyCurrencyQuery: () => ({ ...reads.currency, refetch: () => Promise.resolve() }),
-}));
-
-vi.mock("./company-next-month-query", () => ({
-  useCompanyNextMonth: (currency: string, _today: string, enabled: boolean) => (reads.companyCurrency.push(currency), reads.companyEnabled.push(enabled), {
-    forecast: null, input: enabled && !reads.company.pending ? INPUT : null, rest: null, categories: [], ...reads.company, refetch: () => Promise.resolve(),
+vi.mock("./lib/supabase", () => ({
+  getSupabase: () => ({
+    rpc: (name: string, args?: unknown) => {
+      server.calls.push({ name, args });
+      return Promise.resolve(server.reply?.(name) ?? { data: server.answers[name] ?? null, error: null });
+    },
+    from: (table: string) => {
+      server.tables.push(table);
+      return { select: () => Promise.resolve({ data: [], error: null }) };
+    },
   }),
 }));
+vi.mock("./wait-for-session", () => ({ waitForAccessToken: () => Promise.resolve() }));
 
-vi.mock("./project-next-month-query", () => ({
-  useNextMonthForecast: (_id: string, _currency: string, _sample: unknown, enabled: boolean) => {
-    reads.ownEnabled.push(enabled);
-    return { forecast: "own", month: "2026-11", today: NEXT_MONTH_TODAY, edits: [], recurring: [], categoryMonths: null, categories: [], pending: false, ...reads.own, refetch: () => undefined };
-  },
-}));
+const today = israelToday();
+const month = nextMonthKey(today);
+const PROJECT = "project-1";
 
-describe("useProjectNextMonth (FLOW-1002)", () => {
-  it("gives the overhead project the general costs, the same part the company's צפי page shows under כללי", () => {
-    reads.ownEnabled.length = 0;
-    const { result } = renderHook(() => useProjectNextMonth(OVERHEAD, "USD"));
-    const general = companyGeneralForecast(INPUT);
-    expect(general.rows.length > 0).toBe(true);
-    // The general part is the company's כללי: the same rows the company forecast lists with no project.
-    expect(general.rows.map((row) => row.key)).toEqual(companyNextMonthForecast(INPUT).rows.filter((row) => row.projectId == null).map((row) => row.key));
-    expect(result.current.forecast).toEqual(general);
-    // Its own project read stays off: the general costs come from the company's reads.
-    expect(reads.ownEnabled.every((enabled) => !enabled)).toBe(true);
-    // The edit page's category sheet sees the general charges as the overhead project's.
-    expect(result.current.recurring.length > 0 && result.current.recurring.every((party) => party.project_id === OVERHEAD)).toBe(true);
+let latest: ReturnType<typeof useProjectNextMonth> | null = null;
+
+function Probe({ currency = "USD", enabled = true, withCategories = false, forMonth, id = PROJECT }: { currency?: string; enabled?: boolean; withCategories?: boolean; forMonth?: string; id?: string }) {
+  latest = useProjectNextMonth(id, currency, undefined, enabled, forMonth, withCategories);
+  return null;
+}
+
+function calls(name: string) {
+  return server.calls.filter((call) => call.name === name);
+}
+
+/** A client as the page has it: the company's currency already read (the page reads it before the forecast), the app's freshness. */
+function pageClient(company: string | null = "USD") {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
+  if (company != null) client.setQueryData(["company-currency", "off"], company);
+  return client;
+}
+
+beforeEach(() => {
+  server.calls.length = 0;
+  server.tables.length = 0;
+  server.reply = null;
+  server.answers = { project_forecast: sampleProjectForecastAnswer(), list_categories: [] };
+  latest = null;
+});
+
+describe("the project page's forecast is one read (FLOW-1315)", () => {
+  it("sends project_forecast once, with the day and no currency for a project in the company's, and no other forecast read", async () => {
+    renderWithProviders(<Probe />, { route: "/", client: pageClient() });
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(server.calls.map((call) => call.name)).toEqual(["project_forecast"]);
+    expect(calls("project_forecast")[0]?.args).toEqual({ p_project: PROJECT, p_month: month, p_today: today });
+    // None of the six reads the page made before: the charges, the category months, the edits, the overrides, the loans and the categories.
+    expect(server.tables).toEqual([]);
+    const expected = projectForecastOf(sampleProjectForecastAnswer(), PROJECT);
+    expect(latest?.forecast).toEqual(expected?.forecast);
+    expect(latest?.income).toEqual(expected?.income);
+    expect(latest?.overrides).toEqual([]);
+    expect(latest?.pending).toBe(false);
+    expect(latest?.failed).toBe(false);
+    expect(latest?.general).toBe(false);
+    expect(latest?.currency).toBe("USD");
   });
 
-  it("gives the edit page's history the six months before this one", () => {
-    const { result } = renderHook(() => useProjectNextMonth(OVERHEAD, "USD"));
-    expect(result.current.categoryMonths?.months).toEqual(["2026-04-01", "2026-05-01", "2026-06-01", "2026-07-01", "2026-08-01", "2026-09-01"]);
+  it("asks for a project's own currency when its figures are not in the company's, and only then", async () => {
+    server.answers.project_forecast = { ...sampleProjectForecastAnswer(), currency: "ILS" };
+    renderWithProviders(<Probe currency="ILS" />, { route: "/", client: pageClient("USD") });
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(calls("project_forecast")[0]?.args).toEqual({ p_project: PROJECT, p_month: month, p_today: today, p_currency: "ILS" });
   });
 
-  it("waits while the overhead project is unknown, and passes the company reads' states through", () => {
-    reads.overhead = { project: undefined, failed: false };
-    const waiting = renderHook(() => useProjectNextMonth(OVERHEAD, "USD"));
-    expect(waiting.result.current.pending).toBe(true);
-    expect(waiting.result.current.forecast).toBeNull();
-    reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
-    reads.company = { pending: true, failed: false, paused: false };
-    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD")).result.current.pending).toBe(true);
-    reads.company = { pending: false, failed: true, paused: false };
-    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD")).result.current.failed).toBe(true);
-    reads.company = { pending: false, failed: false, paused: true };
-    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD")).result.current.paused).toBe(true);
-    reads.company = { pending: false, failed: false, paused: false };
+  it("names no currency while the company's is unknown, so the card's read is never for a guessed one", async () => {
+    renderWithProviders(<Probe currency="ILS" />, { route: "/", client: pageClient(null) });
+    await waitFor(() => { expect(calls("project_forecast")).toHaveLength(1); });
+    expect(calls("project_forecast")[0]?.args).toEqual({ p_project: PROJECT, p_month: month, p_today: today });
   });
 
-  it("falls back to each project's own forecast when the overhead read fails, or the company has none", () => {
-    reads.overhead = { project: undefined, failed: true };
-    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD")).result.current.forecast).toBe("own");
-    reads.overhead = { project: null, failed: false };
-    expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD")).result.current.forecast).toBe("own");
-    reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
+  it("does not draw an answer in another currency than the page's, which came while the company's was unknown: it stays pending", async () => {
+    server.answers.mcp_company_loan_currency = "USD";
+    renderWithProviders(<Probe currency="ILS" />, { route: "/", client: pageClient(null) });
+    await waitFor(() => { expect(calls("project_forecast").length).toBeGreaterThan(0); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+    // The answer is in dollars (the company's), the page's figures are shekels: nothing is drawn.
+    expect(latest?.forecast).toBeNull();
+    expect(latest?.pending).toBe(true);
   });
 
-  it("reads the general costs in the company's currency, whatever the overhead project's own currency", () => {
-    reads.companyCurrency.length = 0;
-    const { result } = renderHook(() => useProjectNextMonth(OVERHEAD, "ILS"));
-    expect(reads.companyCurrency.every((currency) => currency === "USD")).toBe(true);
-    expect(result.current.currency).toBe("USD");
-    expect(result.current.forecast).toEqual(companyGeneralForecast(INPUT));
-    // Any other project keeps its own currency.
-    expect(renderHook(() => useProjectNextMonth("p1", "ILS")).result.current.currency).toBe("ILS");
+  it("reads a month of the forecast when asked (?month=), and nothing while it is not enabled", async () => {
+    const later = nextMonthKey(`${month}-15`);
+    const view = renderWithProviders(<Probe enabled={false} />, { route: "/", client: pageClient() });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+    expect(server.calls).toEqual([]);
+    expect(latest?.forecast).toBeNull();
+    view.rerender(<Probe forMonth={later} />);
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(calls("project_forecast")[0]?.args).toMatchObject({ p_month: later });
+    expect(latest?.month).toBe(later);
   });
 
-  it("waits for the company's currency, and fails rather than guess it", () => {
-    reads.currency = { data: undefined, isError: false };
-    const waiting = renderHook(() => useProjectNextMonth(OVERHEAD, "ILS")).result.current;
-    expect(waiting.pending).toBe(true);
-    expect(waiting.forecast).toBeNull();
-    reads.currency = { data: undefined, isError: true };
-    const failed = renderHook(() => useProjectNextMonth(OVERHEAD, "ILS")).result.current;
-    expect(failed.failed).toBe(true);
-    expect(failed.pending).toBe(false);
-    reads.currency = { data: "USD", isError: false };
+  it("the overhead project's page is the same read: its answer says general, in the company's currency", async () => {
+    server.answers.project_forecast = { ...sampleProjectForecastAnswer(), general: true, currency: "ILS" };
+    renderWithProviders(<Probe currency="USD" />, { route: "/", client: pageClient("ILS") });
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(latest?.general).toBe(true);
+    expect(latest?.currency).toBe("ILS");
+    expect(server.calls.map((call) => call.name)).toEqual(["project_forecast"]);
   });
 
-  describe("FLOW-1229: the page's overhead hint starts reads early and decides nothing shown", () => {
-    const pending = { project: undefined, failed: false } as const;
-    const isOverhead = { project: { id: "p0", name: "משרד" }, failed: false } as const;
-    const startsFor = (id: string, hint?: boolean) => {
-      reads.ownEnabled.length = 0;
-      reads.companyEnabled.length = 0;
-      const { result } = renderHook(() => useProjectNextMonth(id, "USD", undefined, true, undefined, false, hint));
-      return { result, own: reads.ownEnabled.at(-1), company: reads.companyEnabled.at(-1) };
-    };
-
-    it("a false hint starts the project's own reads while the company read is out, and the row stays loading", () => {
-      reads.overhead = pending;
-      const started = startsFor("p1", false);
-      expect(started.own).toBe(true);
-      expect(started.company).toBe(false);
-      expect(started.result.current.forecast).toBeNull();
-      expect(started.result.current.pending).toBe(true);
-    });
-
-    it("a true hint starts the company's reads while the company read is out, and the row stays loading", () => {
-      reads.overhead = pending;
-      const started = startsFor(OVERHEAD, true);
-      expect(started.own).toBe(false);
-      expect(started.company).toBe(true);
-      expect(started.result.current.forecast).toBeNull();
-      expect(started.result.current.pending).toBe(true);
-    });
-
-    it("no hint starts nothing until the company read answers, as before", () => {
-      reads.overhead = pending;
-      const started = startsFor("p1");
-      expect(started.own).toBe(false);
-      expect(started.company).toBe(false);
-    });
-
-    it("a stale not-overhead hint shows the company forecast once the answer says overhead, never the project's own figure before", () => {
-      reads.overhead = pending;
-      const { result, rerender } = renderHook(() => useProjectNextMonth(OVERHEAD, "USD", undefined, true, undefined, false, false));
-      expect(result.current.forecast).toBeNull();
-      expect(result.current.pending).toBe(true);
-      reads.overhead = isOverhead;
-      rerender();
-      expect(result.current.forecast).toEqual(companyGeneralForecast(INPUT));
-      expect(result.current.forecast).not.toBe("own");
-      // The own reads the stale hint started are off again, and the company's are on.
-      expect(reads.ownEnabled.at(-1)).toBe(false);
-      expect(reads.companyEnabled.at(-1)).toBe(true);
-    });
-
-    it("while the answer is out, the early own reads' failure and pause are not reported: the row stays loading", () => {
-      reads.overhead = pending;
-      for (const state of [{ failed: true, paused: false }, { failed: false, paused: true }]) {
-        reads.own = state;
-        const { result } = startsFor("p1", false);
-        expect(result.current.pending).toBe(true);
-        expect(result.current.failed).toBe(false);
-        expect(result.current.paused).toBe(false);
-        expect(result.current.forecast).toBeNull();
-      }
-      reads.own = { failed: false, paused: false };
-    });
-
-    it("while the answer is out, the data fields are empty even when the own read holds cached data (no consumer draws them while pending)", () => {
-      reads.overhead = pending;
-      // The own read hands back cached data, as a disabled or early read with a warm cache would.
-      Object.assign(reads.own, { overrides: { "2026-11": [] }, edits: [{ id: "e1" }], recurring: [{ id: "r1" }], categoryMonths: { months: ["2026-10-01"] }, categories: [{ id: "c1" }] });
-      const { result } = startsFor("p1", false);
-      reads.own = { failed: false, paused: false };
-      expect(result.current.pending).toBe(true);
-      expect(result.current.overrides).toBeNull();
-      expect(result.current.edits).toEqual([]);
-      expect(result.current.recurring).toEqual([]);
-      expect(result.current.categoryMonths).toBeNull();
-      expect(result.current.categories).toEqual([]);
-    });
-
-    it("a shared read already in a cached error shows it when the overhead answer lands, not while it is out", () => {
-      // The mocked own forecast stands for the reads it shares (the overrides, the company's categories).
-      reads.own = { failed: true, paused: false };
-      reads.overhead = pending;
-      const { result, rerender } = renderHook(() => useProjectNextMonth("p1", "USD", undefined, true, undefined, false, false));
-      expect(result.current.pending).toBe(true);
-      expect(result.current.failed).toBe(false);
-      reads.overhead = { project: null, failed: false };
-      rerender();
-      expect(result.current.failed).toBe(true);
-      expect(result.current.pending).toBe(false);
-      reads.own = { failed: false, paused: false };
-    });
-
-    it("a failed company read falls back to the project's own forecast whatever the hint, starting its reads then", () => {
-      reads.overhead = { project: undefined, failed: true };
-      expect(startsFor(OVERHEAD, true).result.current.forecast).toBe("own");
-      expect(reads.ownEnabled.at(-1)).toBe(true);
-      expect(startsFor(OVERHEAD, false).result.current.forecast).toBe("own");
-    });
-
-    it("the company read's answer decides, whatever the hint", () => {
-      reads.overhead = { project: null, failed: false };
-      expect(startsFor("p1", true).result.current.forecast).toBe("own");
-      reads.overhead = isOverhead;
-    });
+  it("gives the edit page its history with the uncategorized row's id as null, its charges and, when asked, the company's categories", async () => {
+    server.answers.list_categories = [{ id: "power", name: "חשמל", kind: "expense", hidden: false, is_default: true, loan_part: null, excluded_from_pnl: false }];
+    renderWithProviders(<Probe withCategories />, { route: "/", client: pageClient() });
+    await waitFor(() => { expect(latest?.pending).toBe(false); });
+    expect(latest?.history?.categories.map((category) => category.id)).toEqual(["repairs", "power", null]);
+    expect(latest?.charges.map((charge) => [charge.category_id, charge.typical_amount_minor, charge.pace])).toEqual([["power", 9_500n, "month"]]);
+    expect(latest?.categories.map((category) => category.id)).toEqual(["power"]);
+    expect(server.calls.map((call) => call.name).sort()).toEqual(["list_categories", "project_forecast"]);
   });
 
-  it("gives any other project its own forecast", () => {
-    reads.ownEnabled.length = 0;
-    const { result } = renderHook(() => useProjectNextMonth("p1", "USD"));
-    expect(result.current.forecast).toBe("own");
-    expect(reads.ownEnabled.at(-1)).toBe(true);
+  it("a read with no forecast (no company, another company's project) is no forecast, not a failure", async () => {
+    server.answers.project_forecast = null;
+    renderWithProviders(<Probe />, { route: "/", client: pageClient() });
+    await waitFor(() => { expect(latest?.pending).toBe(false); });
+    expect(latest?.forecast).toBeNull();
+    expect(latest?.failed).toBe(false);
+  });
+
+  it("shows the usual failed state when the read fails, and its retry reads again", async () => {
+    server.reply = () => ({ data: null, error: { message: "boom" } });
+    renderWithProviders(<Probe />, { route: "/", client: pageClient() });
+    await waitFor(() => { expect(latest?.failed).toBe(true); });
+    expect(latest?.forecast).toBeNull();
+    expect(latest?.pending).toBe(false);
+    server.reply = null;
+    act(() => { latest?.refetch(); });
+    await waitFor(() => { expect(latest?.forecast).not.toBeNull(); });
+    expect(latest?.failed).toBe(false);
+    expect(calls("project_forecast")).toHaveLength(2);
+  });
+
+  it("an answer with an amount outside 2^53 - 1 fails the read instead of drawing a rounded figure", async () => {
+    server.answers.project_forecast = { ...sampleProjectForecastAnswer(), income_minor: 2 ** 53 };
+    renderWithProviders(<Probe />, { route: "/", client: pageClient() });
+    await waitFor(() => { expect(latest?.failed).toBe(true); });
+    expect(latest?.forecast).toBeNull();
+  });
+
+  it("a sample (a story, the dev fixture) is built from its reads with the builders, and sends no request", () => {
+    function Sampled() {
+      latest = useProjectNextMonth("juniper-ct", "USD", JUNIPER_NEXT);
+      return null;
+    }
+    renderWithProviders(<Sampled />, { route: "/", client: pageClient() });
+    expect(latest?.forecast?.rows.length).toBeGreaterThan(0);
+    expect(latest?.income).not.toBeNull();
+    expect(latest?.pending).toBe(false);
+    expect(server.calls).toEqual([]);
   });
 });
