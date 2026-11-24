@@ -1,0 +1,6 @@
+{
+  "name": "late-payment-15-days-before-counts",
+  "description": "A payment on 11-16 is 15 days before 12-01 and pays it.",
+  "input": {"today":"2026-12-12","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2025-01-01","paymentMinor":524000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":17650000},"paid":{"lastPaidOn":"2026-11-16","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2027-01-01","amount_minor":524000,"escrow_minor":36300,"interest_minor":91927,"principal_minor":395773},"end_date":"2030-05-01","ahead_minor":6288000,"to_end_minor":21096698}
+}

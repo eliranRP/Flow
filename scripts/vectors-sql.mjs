@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 export const BUILDERS = {
   "month-forecast": "month_forecast_build",
   "loan-schedule": "loan_schedule",
+  "loan-outlook": "loan_outlook_build",
 };
 
 export const vectorsDir = "packages/shared/fixtures/vectors";

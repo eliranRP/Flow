@@ -1,0 +1,6 @@
+{
+  "name": "terms-the-schedule-refuses-have-none",
+  "description": "A payment below the first month's interest is refused: nothing to show.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2025-01-01","paymentMinor":100000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":17650000},"paid":{"lastPaidOn":"2026-10-07","addedOn":"2025-01-01"}},
+  "expected": {}
+}

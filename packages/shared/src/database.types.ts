@@ -2140,6 +2140,9 @@ isOneToOne: false
 "list_utility_refunds":
 { Args: { "p_all"?: boolean,"p_project_id"?: string,"p_today"?: string }; Returns: Json
                            },
+"loan_outlooks":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "lookup_mcp_credential":
 { Args: { "p_pepper_kid": string,"p_token_hash": string }; Returns: Json
                            },

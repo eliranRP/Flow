@@ -1,0 +1,6 @@
+{
+  "name": "ended-schedule-with-balance-has-no-next",
+  "description": "Every scheduled date is past and a balance remains: no next payment, no end date; the latest date is late with nothing paid since.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":5000000,"annualRatePpm":70000,"termMonths":36,"startDate":"2023-07-01","paymentMinor":154385,"escrowMinor":0,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":124000},"paid":{"lastPaidOn":"2025-06-01","addedOn":"2025-01-01"}},
+  "expected": {"late_on":"2026-06-01"}
+}

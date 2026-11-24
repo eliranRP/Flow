@@ -1,0 +1,6 @@
+{
+  "name": "rate-row-before-today-sets-the-rate",
+  "description": "A rate row already in force: the rest of the schedule runs at it.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2025-01-01","paymentMinor":524000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[{"effectiveDate":"2026-06-01","annualRatePpm":70000}],"status":"open","balanceMinor":17650000},"paid":{"lastPaidOn":"2026-10-07","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2026-11-01","amount_minor":156022,"escrow_minor":36300,"interest_minor":102958,"principal_minor":16764},"end_date":"2054-12-01","ahead_minor":1872264,"to_end_minor":52735824}
+}

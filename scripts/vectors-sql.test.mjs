@@ -33,6 +33,7 @@ test("the repo's vectors are readable and each builder has a generated file exac
   assert.deepEqual(problems, []);
   assert.deepEqual(written, []);
   assert.equal(coreExists(repo, "loan_schedule"), true);
+  assert.equal(coreExists(repo, "loan_outlook_build"), true);
   for (const [builder, core] of Object.entries(BUILDERS)) {
     assert.equal(existsSync(path.join(repo, sqlPathFor(builder))), coreExists(repo, core), builder);
   }
@@ -151,4 +152,11 @@ test("a loan-schedule refusal is compared by its error code, and only for that b
   const other = renderSql("month-forecast", "month_forecast_build", [refused]);
   assert.equal(other.match(/select is\(/g)?.length, 1);
   assert.doesNotMatch(other, /throws_ok/);
+});
+
+test("a loan-outlook vector is compared whole, with one is() against the core, and {} is a vector", () => {
+  const sql = renderSql("loan-outlook", "loan_outlook_build", [{ name: "none", input: { today: "2026-10-09" }, expected: {} }]);
+  assert.match(sql, /select is\(private\.loan_outlook_build\(\$v\$\{"today":"2026-10-09"\}\$v\$::jsonb\), \$v\$\{\}\$v\$::jsonb, \$v\$none\$v\$\);/);
+  assert.doesNotMatch(sql, /throws_ok/);
+  assert.equal(sqlPathFor("loan-outlook"), "supabase/tests/database/vectors_loan_outlook.test.sql");
 });

@@ -1,0 +1,6 @@
+{
+  "name": "last-payments-fewer-than-12",
+  "description": "Five payments left: the next 12 are all of them.",
+  "input": {"today":"2025-09-20","loan":{"principalMinor":5000000,"annualRatePpm":70000,"termMonths":14,"startDate":"2025-01-01","paymentMinor":380000,"escrowMinor":0,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":1700000},"paid":{"lastPaidOn":"2025-09-01","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2025-10-01","amount_minor":380000,"escrow_minor":0,"interest_minor":9917,"principal_minor":370083},"end_date":"2026-02-01","ahead_minor":1727869,"to_end_minor":1727869}
+}

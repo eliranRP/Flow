@@ -1,0 +1,6 @@
+{
+  "name": "amortizing-balance-below-schedule-ends-sooner",
+  "description": "A balance far below the schedule's pays off in fewer payments.",
+  "input": {"today":"2026-10-09","loan":{"principalMinor":24000000,"annualRatePpm":62500,"termMonths":360,"startDate":"2025-01-01","paymentMinor":524000,"escrowMinor":36300,"kind":"amortizing","interestOnlyMonths":null,"amortizationMonths":null,"rates":[],"status":"open","balanceMinor":1200000},"paid":{"lastPaidOn":"2026-10-07","addedOn":"2025-01-01"}},
+  "expected": {"next":{"due_date":"2026-11-01","amount_minor":524000,"escrow_minor":36300,"interest_minor":6250,"principal_minor":481450},"end_date":"2027-01-01","ahead_minor":1320114,"to_end_minor":1320114}
+}
