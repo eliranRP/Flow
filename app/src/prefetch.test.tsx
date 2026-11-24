@@ -76,6 +76,34 @@ describe("PrefetchProjects (FLOW-804)", () => {
     for (const call of query.mock.calls) expect(call[0]).toMatchObject({ retry: false, staleTime: expect.any(Number) as number });
   });
 
+  it("starts none of the project's own forecast reads on the company's overhead project, when its answer is cached (FLOW-1297)", async () => {
+    const { client, query, view } = setup("/");
+    client.setQueryData(["company-overhead", "off"], { id: "p7", name: "הוצאות כלליות" });
+    fireEvent.pointerDown(view.getByText("פרויקט"));
+    await vi.waitFor(() => {
+      expect(query.mock.calls.some((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey) === JSON.stringify(["company-overhead", "off"]))).toBe(true);
+    });
+    const today = israelToday();
+    const month = nextMonthKey(today);
+    const keys = query.mock.calls.map((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey));
+    expect(keys).not.toContain(JSON.stringify(["expected-months", "off", "project", "p7", 0]));
+    expect(keys).not.toContain(JSON.stringify(["project", "category-months", "off", "p7", markDay(monthPeriod(today.slice(0, 7)))]));
+    expect(keys).not.toContain(JSON.stringify([FORECAST_EDITS_KEY, "off", "p7", month]));
+    // The month's overrides are month-wide, not the project's own read, so the touch still starts them.
+    expect(keys).toContain(JSON.stringify(["month-forecast", "off", "overrides", month]));
+  });
+
+  it("starts another project's forecast reads at once, without waiting for the overhead answer (FLOW-1297)", () => {
+    const { query, view } = setup("/");
+    // The overhead read never answers: the project's own reads must not wait for it.
+    query.mockImplementation(() => new Promise(() => undefined));
+    fireEvent.pointerDown(view.getByText("פרויקט"));
+    return vi.waitFor(() => {
+      const keys = query.mock.calls.map((call) => JSON.stringify((call[0] as { queryKey: unknown[] }).queryKey));
+      expect(keys).toContain(JSON.stringify(["expected-months", "off", "project", "p7", 0]));
+    });
+  });
+
   it("reads nothing in preview", () => {
     const { query, view } = setup("/?preview=1");
     fireEvent.pointerDown(view.getByText("פרויקט"));

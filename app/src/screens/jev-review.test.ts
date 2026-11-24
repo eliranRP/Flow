@@ -479,6 +479,22 @@ describe("loadJevSuggestions", () => {
   });
 });
 
+describe("loadJevSuggestions with the list's categories (FLOW-1297)", () => {
+  it("names the cards from the categories it is given, and reads no categories table", async () => {
+    connectorDb.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c9", confidence: 0.95 } } }];
+    connectorDb.sent = [];
+    const queue = await loadJevSuggestions(["t1"], undefined, [{ id: "c9", name: "ציוד", hidden: false }]);
+    expect(connectorDb.sent).not.toContain("categories");
+    expect(queue.byId.t1?.category?.name).toBe("ציוד");
+  });
+
+  it("leaves a hidden category out of the names, as the table read does", async () => {
+    connectorDb.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c9", confidence: 0.95 } } }];
+    const queue = await loadJevSuggestions(["t1"], undefined, [{ id: "c9", name: "ישן", hidden: true }]);
+    expect(queue.byId.t1?.category?.name).toBeUndefined();
+  });
+});
+
 describe("Jev auto fills (FLOW-702)", () => {
   const filledRow = {
     transaction_id: "t1",

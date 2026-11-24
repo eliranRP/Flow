@@ -824,6 +824,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1294
 - FLOW-1295
 - FLOW-1279
+- FLOW-1296
+- FLOW-1297
 - FLOW-1298
 - FLOW-1299
 - FLOW-1300

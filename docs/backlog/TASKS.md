@@ -844,6 +844,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1294"></a>[FLOW-1294](tasks/FLOW-1294.md) | Perf: why Profit's next-month card still waits on a repeat visit | SMALL (perf) |
 | <a id="flow-1295"></a>[FLOW-1295](tasks/FLOW-1295.md) | Perf: Review's early connector start, its preview guard and a company switch | SMALL (perf) |
 | <a id="flow-1279"></a>[FLOW-1279](tasks/FLOW-1279.md) | Perf: the project page's forecast gate and the row-touch prefetch, measured on production | MEDIUM (perf) |
+| <a id="flow-1296"></a>[FLOW-1296](tasks/FLOW-1296.md) | Perf: keep the Loans list without its payment schedules | SMALL (perf) |
+| <a id="flow-1297"></a>[FLOW-1297](tasks/FLOW-1297.md) | Perf: Review's reads on load (the company id, the categories read twice, the overhead project's prefetch) | SMALL (perf) |
 | <a id="flow-1298"></a>[FLOW-1298](tasks/FLOW-1298.md) | Perf: Loans reads the company currency from Home's key, and its list in fewer requests | SMALL (perf), then MEDIUM |
 | <a id="flow-1299"></a>[FLOW-1299](tasks/FLOW-1299.md) | Perf: the project page's month lines are read twice on a cold open | SMALL (perf) |
 | <a id="flow-1300"></a>[FLOW-1300](tasks/FLOW-1300.md) | Perf: the recurring reads average 0.64 s in production against 0.1 to 0.14 s warm | MEDIUM (perf, investigate first) |

@@ -102,8 +102,8 @@ export function nextPaymentOf(loan: OutlookLoan, today: string, rows: readonly L
 /** The loans of a company: the list's rows (alphabetical) and each loan's full detail for the band's figures. */
 export type LoanListData = {
   rows: LoanListRow[];
-  /** Each loan's row, its balance (mapped to a LoanDetail by the band's summary) and its schedule (FLOW-1260). */
-  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null; schedule: readonly LoanScheduleRow[] | null }>;
+  /** Each loan's row, its balance (mapped to a LoanDetail by the band's summary) and its schedule (FLOW-1260). A kept list has no schedule (FLOW-1296): left out, the outlook builds it. */
+  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null; schedule?: readonly LoanScheduleRow[] | null }>;
 };
 
 /** The list's loan columns: the detail's, and the day the loan was added (FLOW-1263, the late check). */

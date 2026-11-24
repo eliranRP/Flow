@@ -144,15 +144,20 @@ export function resetJevScopeMemory(): void {
   setScope({ phase: "off" });
 }
 
+function sameScope(a: JevConnectorScope | null, b: JevConnectorScope | null): boolean {
+  return a === b || (a != null && b != null && a.userId === b.userId && a.companyId === b.companyId);
+}
+
 /**
  * A screen that knows the company binds it: `ready`, from `off` or a miss. While a lookup runs
- * the bind waits beside it, and the lookup's finish decides. Null unbinds. Only the move that
- * changes what the card reads (leaving a miss) tells the listeners, so a caller binds after commit
+ * the bind waits beside it, and the lookup's finish decides. Null unbinds. A bind that changes what
+ * the card reads tells the listeners: leaving a miss, and a pending lookup's scope changing (the
+ * card reads that scope on its next render, so it must hear of it). A caller binds after commit
  * (a layout effect, as Settings, Connections and the card do), never while it draws.
  */
 export function bindJevConnectorScope(scope: JevConnectorScope | null): void {
   if (scopeState.phase === "pending") {
-    scopeState = { phase: "pending", scope };
+    if (!sameScope(scopeState.scope, scope)) setScope({ phase: "pending", scope });
   } else if (scope == null) {
     if (scopeState.phase === "ready") scopeState = { phase: "off" };
   } else if (scopeState.phase === "miss") {
