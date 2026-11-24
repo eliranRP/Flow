@@ -1,11 +1,8 @@
 // MCP tools: the Unpaid report and the review dashboard reads.
 // Split out of tools.ts (FLOW-807). Decision 0080.
 
-import { z } from "zod";
-import { expectedMonthsSchema } from "../../../packages/shared/src/forecast.ts";
 import { FORECAST_HORIZON_MONTHS, forecastLastMonth } from "../../../packages/shared/src/forecast-horizon.ts";
-import { unpaidRowSchema } from "../../../packages/shared/src/dashboard.ts";
-import { buildMonthForecast, forecastTotal, type ForecastItem, type ForecastOverrideRow, parseMonthEdits } from "../../../packages/shared/src/month-forecast.ts";
+import { type ForecastBuild, forecastTotal, type ForecastItem } from "../../../packages/shared/src/month-forecast.ts";
 import { fail, READ_REFUSED, type ToolResult, type ToolRpc } from "./tools_args.ts";
 
 /**
@@ -209,21 +206,10 @@ function cashNetMinor(cash: unknown, month: string, base: string): bigint | null
 }
 
 /**
- * FLOW-141 get_forecast: the items, the sections and their totals for one month, built by the
- * same arithmetic as the app (packages/shared/src/month-forecast.ts). Null when a read is malformed.
+ * FLOW-141 get_forecast: the items, the sections and their totals for one month, from the build (FLOW-1312: the
+ * database builds it, month_forecast; buildOfAnswer in tools_forecast_read.ts turns its answer back into a build).
  */
-export function forecastReport(month: string, expected: unknown, unpaid: unknown, overrides: unknown, cash: unknown, base: string, edits: unknown = null): Review | null {
-  const parsedExpected = expectedMonthsSchema.safeParse(expected);
-  const parsedUnpaid = z.array(unpaidRowSchema).safeParse(unpaid);
-  if (!parsedExpected.success || !parsedUnpaid.success || !Array.isArray(overrides)) return null;
-  const build = buildMonthForecast({
-    base,
-    expected: parsedExpected.data,
-    unpaid: parsedUnpaid.data,
-    overrides: overrides as ForecastOverrideRow[],
-    // FLOW-1005: the projects' forecast edits of the month (company_forecast_edits_for).
-    ...parseMonthEdits(edits),
-  });
+export function forecastReportOf(month: string, build: ForecastBuild, base: string, cash: unknown): Review {
   const smallTotal = build.small.reduce((total, item) => total + item.minor, 0n);
   const net = cashNetMinor(cash, month, base);
   return {

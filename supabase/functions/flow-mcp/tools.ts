@@ -45,7 +45,7 @@ import { companyNextMonthInputsRead, projectForecastRead } from "./tools_project
 import { bankRead } from "./tools_bank.ts";
 import { moreRead } from "./tools_reads_more.ts";
 import { LEDGER_READS, ledgerRead } from "./tools_ledger.ts";
-import { dashboard, EXPECTED_MONTHS_MAX, filterReviews, forecastReadMonth, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
+import { dashboard, EXPECTED_MONTHS_MAX, filterReviews, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
 import { callWrite } from "./tools_write.ts";
 
@@ -247,29 +247,6 @@ export async function callTool(
       return fail("refused", READ_REFUSED);
     }
     return ok(unpaidReport(rows, overview.json as Record<string, unknown>));
-  }
-
-  // FLOW-141: the month-end forecast, its reads (FLOW-1005: the projects' edits too), one builder; writes in tools_write.ts.
-  if (name === "get_forecast") {
-    const month = args.month ?? israelMonthKey();
-    if (!forecastReadMonth(month)) return fail("validation", "validation"); // FLOW-1066: up to the forecast's last month.
-    const [expected, unpaid, overrides, edits, cash, currency] = await Promise.all([
-      rpc("expected_months", { p_months: 1, p_project_id: null }),
-      rpc("list_unpaid", {}),
-      rpc("forecast_overrides_for", { p_month: month }),
-      rpc("company_forecast_edits_for", { p_month: month }),
-      rpc("cash_months", { p_months: 1 }),
-      rpc("mcp_company_loan_currency", {}),
-    ]);
-    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400 || edits.status >= 400 || cash.status >= 400 || currency.status >= 400) {
-      return fail("refused", READ_REFUSED);
-    }
-    // The company's currency (0147). Counting a dollar company in shekels would list nothing, so an odd read refuses.
-    const base = currency.json;
-    if (typeof base !== "string" || !/^[A-Z]{3}$/.test(base)) return fail("refused", READ_REFUSED);
-    const report = forecastReport(month, expected.json, unpaid.json, overrides.json, cash.json, base, edits.json);
-    if (report == null) return fail("refused", READ_REFUSED);
-    return ok(report);
   }
 
   if (name === "get_expected_months") {

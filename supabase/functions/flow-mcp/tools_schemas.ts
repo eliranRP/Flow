@@ -4,6 +4,7 @@ import { z } from "zod";
 import { LOAN_TERM_MONTHS_MAX, type LoanKind } from "../../../packages/shared/src/loan-schedule.ts";
 import { DATE, fail, shownKey, type ToolResult, UUID } from "./tools_args.ts";
 import { FORECAST_ALLOWED } from "./tools_forecast_schemas.ts";
+import { FORECAST_READ_ALLOWED, FORECAST_READS } from "./tools_forecast_read.ts";
 import { PROJECT_FORECAST_ALLOWED } from "./tools_project_forecast.ts";
 import { BANK_ALLOWED } from "./tools_bank.ts";
 import { LEDGER_ALLOWED } from "./tools_ledger.ts";
@@ -54,7 +55,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_months",
   "get_cash_years",
   "get_cash_lines",
-  "get_started", "match_lines", "get_forecast", "get_project_forecast_edits", "get_company_next_month_inputs", "list_bank_connections", "list_transfer_matches",
+  "get_started", "match_lines", "get_forecast", ...FORECAST_READS, "get_project_forecast_edits", "get_company_next_month_inputs", "list_bank_connections", "list_transfer_matches",
   "list_accounts", "get_line_legs", "get_journal_entry_history", "get_account_balances", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report", "list_prepaid_schedules", "get_prepaid_schedule", "get_weekly_summary", "get_transaction_thread",
 ] as const;
 
@@ -166,7 +167,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
-  ...FORECAST_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED, ...LEDGER_ALLOWED, ...THREAD_ALLOWED, ...PROPERTY_ALLOWED, ...MEMBER_SHARE_ALLOWED, ...END_DATE_ALLOWED, ...HANDOVER_ALLOWED, ...UTILITY_ALLOWED, ...HELD_ALLOWED,
+  ...FORECAST_ALLOWED, ...FORECAST_READ_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED, ...LEDGER_ALLOWED, ...THREAD_ALLOWED, ...PROPERTY_ALLOWED, ...MEMBER_SHARE_ALLOWED, ...END_DATE_ALLOWED, ...HANDOVER_ALLOWED, ...UTILITY_ALLOWED, ...HELD_ALLOWED,
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember", "unshare"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
