@@ -127,7 +127,6 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("categories", (k) => k.length === 2 && k[0] === "categories" && off(k, 1), bySchema((s) => s.categoryRowSchema.array())),
   // Loans.
   rule("loan list", (k) => k[0] === "loans" && typeof k[1] === "string" && k[2] === "list", (_s, json) => isRecord(json) && isRows(json.rows, "id") && Array.isArray(json.loans), { save: loanListSaved }),
-  rule("loan currency", (k) => k[0] === "loan-currency" && typeof k[1] === "string", (_s, json) => json === "ILS" || json === "USD"),
   // Recurring.
   rule("recurring schedule", (k) => k.length === 1 && k[0] === "recurring-schedule", (_s, json) => isRows(json, "party_id")),
   rule("recurring changes", (k) => k[0] === "recurring-changes" && off(k, 1), bySchema((s) => s.recurringChangesSchema)),

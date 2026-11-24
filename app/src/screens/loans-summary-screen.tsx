@@ -19,7 +19,8 @@ import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { readLoanPayments, readLoanRow, type LoanPayment } from "./loan-detail-data";
 import { useMemoryLoanStore, type MemoryLoanStore } from "./loan-detail-store";
 import { LOAN_PART_BOARD_LABEL, wholeMoney } from "./loan-detail-view-data";
-import { readCompanyLoanCurrency, type LoanCurrency } from "./loan-form";
+import { companyLoanCurrency, type LoanCurrency } from "./loan-form";
+import { useCompanyCurrencyQuery } from "../company-currency";
 import { readLoanList } from "./loan-list";
 import { loanMonthRange, loansMonth, loansPaid, PAID_PARTS, type LoanPaidEntry, type PaidPeriod } from "./loans-paid";
 import { shiftMonthKey } from "../period";
@@ -55,12 +56,9 @@ type SummaryRead =
 
 /** The company's loans with each open loan's payments, read through the list's and the loan page's own queries (so each is read once). */
 function useLiveEntries(companyId: string | null, active: boolean): SummaryRead {
-  const currency = useQuery({
-    queryKey: ["loan-currency", companyId],
-    enabled: active && companyId != null,
-    retry: false,
-    queryFn: readCompanyLoanCurrency,
-  });
+  // FLOW-1298: Home's company-currency read (one key). A failed read stays shekels, as the loans' default always has.
+  const home = useCompanyCurrencyQuery(active && companyId != null);
+  const currency: LoanCurrency | null = home.data != null ? companyLoanCurrency(home.data) : home.isError ? "ILS" : null;
   const list = useQuery({
     queryKey: ["loans", companyId, "list"],
     enabled: active && companyId != null,
@@ -68,7 +66,7 @@ function useLiveEntries(companyId: string | null, active: boolean): SummaryRead 
     queryFn: () => readLoanList(companyId),
   });
   const loans = (list.data?.loans ?? []).map(({ row, balance }) => readLoanRow(row, balance));
-  const open = loans.filter((loan) => loan.status === "open" && loan.currency === currency.data);
+  const open = loans.filter((loan) => loan.status === "open" && loan.currency === currency);
   const payments = useQueries({
     queries: open.map((loan) => ({
       queryKey: ["loans", "payments", loan.id],
@@ -83,23 +81,23 @@ function useLiveEntries(companyId: string | null, active: boolean): SummaryRead 
       },
     })),
   });
-  const failed = currency.isError || list.isError || payments.some((query) => query.isError);
+  const failed = list.isError || payments.some((query) => query.isError);
   if (failed) {
     return {
       phase: "error",
-      retrying: currency.isFetching || list.isFetching || payments.some((query) => query.isFetching),
+      retrying: home.isFetching || list.isFetching || payments.some((query) => query.isFetching),
       retry: () => {
-        void currency.refetch();
+        void home.refetch();
         void list.refetch();
         for (const query of payments) void query.refetch();
       },
     };
   }
-  if (currency.data == null || list.data == null || payments.some((query) => query.data == null)) return { phase: "loading" };
+  if (currency == null || list.data == null || payments.some((query) => query.data == null)) return { phase: "loading" };
   const byLoan = new Map(open.map((loan, index) => [loan.id, payments[index]?.data ?? []]));
   return {
     phase: "ready",
-    currency: currency.data,
+    currency,
     entries: loans.map((loan) => ({ loan, payments: byLoan.get(loan.id) ?? [] })),
   };
 }

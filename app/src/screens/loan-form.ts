@@ -11,7 +11,6 @@ import {
   type LoanSchedule,
 } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
-import { readCompanyCurrency } from "../company-currency";
 
 export type LoanCurrency = "ILS" | "USD";
 
@@ -421,8 +420,3 @@ const TOO_LARGE = "כתבו סכום קטן יותר.";
 const RATE_RANGE = "כתבו ריבית עד 100%.";
 const TERM_RANGE = "כתבו בין 1 ל־600 חודשים.";
 const BELOW_INTEREST = "התשלום צריך להיות גבוה מהריבית החודשית.";
-
-/** The loan form's default: the stored company currency. A failure stays shekels. */
-export async function readCompanyLoanCurrency(): Promise<LoanCurrency> {
-  return companyLoanCurrency(await readCompanyCurrency());
-}

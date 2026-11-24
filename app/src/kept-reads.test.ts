@@ -170,7 +170,6 @@ describe("kept reads (FLOW-1267)", () => {
   it("drops a row older than a week, of another version, or that does not fit its read", async () => {
     const now = Date.now();
     const currency = JSON.stringify(["company-currency", "off"]);
-    const loans = JSON.stringify(["loan-currency", COMPANY_A]);
     const client = newClient();
     // Each row is sound but for one thing.
     await store.put([row({ at: now - KEPT_MAX_AGE_MS - 1 })]);
@@ -179,7 +178,7 @@ describe("kept reads (FLOW-1267)", () => {
     await store.put([row({ key: currency, data: "USD", version: KEPT_VERSION + 1 })]);
     await restoreKeptReads(client, now);
     expect(await store.all()).toEqual([]);
-    await store.put([row({ key: loans, data: "USD", id: "not the key's hash" })]);
+    await store.put([row({ key: currency, data: "USD", id: "not the key's hash" })]);
     await restoreKeptReads(client, now);
     expect(await store.all()).toEqual([]);
     await store.put([row({ key: "not json", id: "j" }), row({ key: JSON.stringify(["search", "off", "x"]), data: [] })]);
@@ -190,6 +189,20 @@ describe("kept reads (FLOW-1267)", () => {
     await store.put([row({ key: currency, data: "USD" })]);
     await restoreKeptReads(client, now);
     expect(client.getQueryData(["company-currency", "off"])).toBe("USD");
+  });
+
+  it("keeps the company currency under its one key, and no longer keeps a loan currency read (FLOW-1298)", async () => {
+    const now = Date.now();
+    await store.put([row({ key: JSON.stringify(["loan-currency", COMPANY_A]), data: "USD" })]);
+    const old = newClient();
+    await restoreKeptReads(old, now);
+    expect(old.getQueryData(["loan-currency", COMPANY_A])).toBeUndefined();
+    expect(await store.all()).toEqual([]);
+    const first = newClient();
+    keepReadsOf(first);
+    await read(first, ["company-currency", "off"], "USD");
+    await flushKeptReads();
+    expect(await kept()).toEqual(new Set([JSON.stringify(["company-currency", "off"])]));
   });
 
   it("keeps a row just inside the week", async () => {
