@@ -143,6 +143,22 @@ function renderSettings(client: QueryClient, screenElement = <SettingsScreen />)
   );
 }
 
+describe("FLOW-1295: a bind while a lookup is pending", () => {
+  it("tells the listeners when the scope changes, and not when it does not", () => {
+    resetJevScopeMemory();
+    noteJevAuthUser("u-1");
+    beginJevScopeLookup();
+    const listener = vi.fn();
+    const unsubscribe = subscribeJevScope(listener);
+    bindJevConnectorScope({ userId: "u-1", companyId: "co-1" });
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(boundJevConnectorScope()).toEqual({ userId: "u-1", companyId: "co-1" });
+    bindJevConnectorScope({ userId: "u-1", companyId: "co-1" });
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+});
+
 describe("Jev connector scope", () => {
   afterEach(() => {
     bindJevConnectorScope(null);

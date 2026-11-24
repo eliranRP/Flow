@@ -324,7 +324,11 @@ export async function fetchJevConnector(signal?: AbortSignal): Promise<boolean> 
  */
 export const JEV_SUGGESTION_CHUNK = 100;
 
-export async function loadJevSuggestions(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
+/**
+ * `categories` are the company's category rows when the caller has them (the list's `list_categories` read, FLOW-1297);
+ * without them the names are read from the table here.
+ */
+export async function loadJevSuggestions(transactionIds: readonly string[], signal?: AbortSignal, categories?: readonly NameRow[]): Promise<JevQueueData> {
   const supabase = getSupabase();
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
   if (!supabase || typeof supabase.from !== "function" || ids.length === 0) return { connectorOn: true, byId: {} };
@@ -336,13 +340,13 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
     chunks.push(ids.slice(start, start + JEV_SUGGESTION_CHUNK));
   }
   // FLOW-1023: the names and the fills need only the ids, so they go out with the suggestions, not after them.
-  const [reads, projects, categories, reasons, fills] = await Promise.all([
+  const [reads, projects, categoryRead, reasons, fills] = await Promise.all([
     Promise.all(chunks.map((chunk) => signalled(
       supabase.from("tag_suggestions").select("id,transaction_id,answers").in("transaction_id", chunk).order("created_at", { ascending: false }),
       signal,
     ))),
     signalled(supabase.from("projects").select("id,name,status"), signal),
-    signalled(supabase.from("categories").select("id,name,hidden"), signal),
+    categories == null ? signalled(supabase.from("categories").select("id,name,hidden"), signal) : null,
     reasonsRead,
     loadJevFills(ids, signal),
   ]);
@@ -355,9 +359,9 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
     }
   }
   if (projects.error) throw new Error(projects.error.message);
-  if (categories.error) throw new Error(categories.error.message);
+  if (categoryRead?.error) throw new Error(categoryRead.error.message);
   const projectNames = nameMap(projects.data, "project");
-  const categoryNames = nameMap(categories.data, "category");
+  const categoryNames = nameMap(categoryRead != null ? categoryRead.data : categories ?? null, "category");
   const byId: Record<string, JevPrefill | null> = {};
   for (const id of ids) {
     const row = newest.get(id);

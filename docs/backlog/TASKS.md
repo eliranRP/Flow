@@ -844,6 +844,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1294"></a>[FLOW-1294](tasks/FLOW-1294.md) | Perf: why Profit's next-month card still waits on a repeat visit | SMALL (perf) |
 | <a id="flow-1295"></a>[FLOW-1295](tasks/FLOW-1295.md) | Perf: Review's early connector start, its preview guard and a company switch | SMALL (perf) |
 | <a id="flow-1296"></a>[FLOW-1296](tasks/FLOW-1296.md) | Perf: keep the Loans list without its payment schedules | SMALL (perf) |
+| <a id="flow-1297"></a>[FLOW-1297](tasks/FLOW-1297.md) | Perf: Review's reads on load (the company id, the categories read twice, the overhead project's prefetch) | SMALL (perf) |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |

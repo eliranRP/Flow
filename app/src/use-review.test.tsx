@@ -4,7 +4,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jevQueueQueryKey, noteJevAuthUser, resetJevScopeMemory } from "./screens/jev-connector-scope";
+import { boundJevConnectorScope, jevQueueQueryKey, noteJevAuthUser, resetJevScopeMemory } from "./screens/jev-connector-scope";
 import { prefetchReviewList, reviewCacheUpdates, reviewListKey, useReviewDeepLink, useReviewPaging, useReviewQuery } from "./use-review";
 
 type Args = { p_limit: number; p_after_id?: string; p_project?: string; p_item?: string };
@@ -19,6 +19,9 @@ const server = vi.hoisted(() => ({
   hold: null as Promise<void> | null,
   /** While set, the company's read answers only once it is released. */
   holdCompany: null as Promise<void> | null,
+  /** The company reads sent (`companies`), and the categories the list's read answers with. */
+  companyReads: 0,
+  categories: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false }] as unknown[],
 }));
 
 function rowOf(n: number) {
@@ -26,7 +29,6 @@ function rowOf(n: number) {
   return {
     id,
     transaction_id: `t-${id}`,
-    company_id: "co-1",
     description: `ספק ${id}`,
     doc_date: "2026-09-01",
     amount_net: -10_000,
@@ -57,7 +59,8 @@ function page(args: Args) {
 
 const supabase = {
   auth: { getSession: () => Promise.resolve({ data: { session: { user: { id: "u-1" } } } }) },
-  from: () => {
+  from: (name: string) => {
+    if (name === "companies") server.companyReads += 1;
     const builder = {
       select: () => builder,
       limit: () => builder,
@@ -78,6 +81,7 @@ const supabase = {
           answer = { data: page(args as Args), error: null };
         }
       }
+      if (name === "list_categories") answer = { data: server.categories, error: null };
       const held = name === "list_review_page" ? server.hold : null;
       return (held == null ? Promise.resolve(answer) : held.then(() => answer)).then(onFulfilled, onRejected);
     },
@@ -87,21 +91,21 @@ const supabase = {
 vi.mock("./lib/supabase", () => ({ getSupabase: () => supabase }));
 vi.mock("./wait-for-session", () => ({ waitForAccessToken: () => Promise.resolve() }));
 
-const jev = vi.hoisted(() => ({ loaded: [] as string[][], connectorReads: 0 }));
+const jev = vi.hoisted(() => ({ loaded: [] as string[][], connectorReads: 0, categories: [] as unknown[] }));
 vi.mock("./screens/jev-review", () => ({
   JEV_QUEUE_STALLED: "stalled",
   fetchJevConnector: () => {
     jev.connectorReads += 1;
     return Promise.resolve(true);
   },
-  loadJevSuggestions: (ids: string[]) => {
+  loadJevSuggestions: (ids: string[], _signal?: unknown, categories?: unknown) => {
     jev.loaded.push(ids);
+    jev.categories.push(categories ?? null);
     return Promise.resolve({ connectorOn: true, byId: {} });
   },
 }));
 
-function setup(project: string | null = null) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function setup(project: string | null = null, client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>{children}</MemoryRouter>
@@ -123,6 +127,8 @@ beforeEach(() => {
   server.gone = new Set();
   jev.loaded = [];
   jev.connectorReads = 0;
+  jev.categories = [];
+  server.companyReads = 0;
   server.hold = null;
   server.holdCompany = null;
   resetJevScopeMemory();
@@ -224,26 +230,30 @@ describe("FLOW-984: the review queue in pages", () => {
   });
 });
 
+/**
+ * The list is read on `path` and held, with the connector and categories starts that go with it. `dashboard`: Home's
+ * dashboard already names the company.
+ */
+async function openWhileListIsOut(path: string, dashboard: boolean) {
+  window.history.pushState({}, "", path);
+  noteJevAuthUser("u-1");
+  let release = () => {};
+  server.hold = new Promise<void>((resolve) => { release = resolve; });
+  // With Home's dashboard cached the company is known; the read that would name it is still out.
+  if (dashboard) server.holdCompany = new Promise<void>(() => undefined);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+  if (dashboard) client.setQueryData(["dashboard", "off", "month"], { company_id: "co-1" });
+  const inFlight = prefetchReviewList(client, "off", null);
+  // The list has gone out and not answered: what starts now starts beside it.
+  await waitFor(() => { expect(reads()).toHaveLength(1); });
+  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  return { client, finish: async () => { release(); await inFlight; } };
+}
+
 describe("FLOW-1272: the first card's reads start with the list", () => {
   afterEach(() => {
     window.history.pushState({}, "", "/");
   });
-
-  async function openWhileListIsOut(path: string, dashboard: boolean) {
-    window.history.pushState({}, "", path);
-    noteJevAuthUser("u-1");
-    let release = () => {};
-    server.hold = new Promise<void>((resolve) => { release = resolve; });
-    // With Home's dashboard cached the company is known; the read that would name it is still out.
-    if (dashboard) server.holdCompany = new Promise<void>(() => undefined);
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
-    if (dashboard) client.setQueryData(["dashboard", "off", "month"], { company_id: "co-1" });
-    const inFlight = prefetchReviewList(client, "off", null);
-    // The list has gone out and not answered: what starts now starts beside it.
-    await waitFor(() => { expect(reads()).toHaveLength(1); });
-    await new Promise((resolve) => { setTimeout(resolve, 20); });
-    return { client, finish: async () => { release(); await inFlight; } };
-  }
 
   it("starts the Jev connector and the categories before the list or the company's read answers, and the suggestions when the list does", async () => {
     const { finish } = await openWhileListIsOut("/review", true);
@@ -264,10 +274,13 @@ describe("FLOW-1272: the first card's reads start with the list", () => {
     expect(jev.connectorReads).toBe(1);
   });
 
-  it("the list view reads no categories: its rows show none", async () => {
+  it("the list view starts no categories beside the list: its rows show none", async () => {
     const { finish } = await openWhileListIsOut("/review/all", true);
-    await finish();
     expect(server.calls.filter((call) => call.name === "list_categories")).toHaveLength(0);
+    await finish();
+    // The queue still names its cards once they are read, from the same one read.
+    await waitFor(() => { expect(jev.loaded).toHaveLength(1); });
+    expect(server.calls.filter((call) => call.name === "list_categories")).toHaveLength(1);
   });
 });
 
@@ -343,5 +356,88 @@ describe("FLOW-984: a link to a card the pages have not reached", () => {
     const { view } = linked("r099");
     await waitFor(() => { expect(view.result.current.rows).toHaveLength(30); });
     expect(reads().every((call) => call.args.p_item == null)).toBe(true);
+  });
+});
+
+describe("FLOW-1297 and FLOW-1295: the reads Review starts on load", () => {
+  afterEach(() => {
+    window.history.pushState({}, "", "/");
+  });
+
+  const categoryCalls = () => server.calls.filter((call) => call.name === "list_categories");
+
+  it("a visit with Home's dashboard cached reads no company, and the connector starts on the company it names", async () => {
+    const { finish } = await openWhileListIsOut("/review", true);
+    expect(server.companyReads).toBe(0);
+    expect(jev.connectorReads).toBe(1);
+    await finish();
+    await waitFor(() => { expect(jev.loaded).toHaveLength(1); });
+    expect(server.companyReads).toBe(0);
+  });
+
+  it("a direct visit, with no dashboard cached, still reads the company once", async () => {
+    const { finish } = await openWhileListIsOut("/review", false);
+    expect(server.companyReads).toBe(1);
+    await finish();
+    await waitFor(() => { expect(jev.loaded).toHaveLength(1); });
+    expect(server.companyReads).toBe(1);
+  });
+
+  it("a later page reads no company while Home's dashboard names it", async () => {
+    window.history.pushState({}, "", "/");
+    noteJevAuthUser("u-1");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(["dashboard", "off", "month"], { company_id: "co-1" });
+    const { view } = setup(null, client);
+    await waitFor(() => { expect(view.result.current.rows).toHaveLength(50); });
+    act(() => { view.result.current.paging.loadMore(); });
+    await waitFor(() => { expect(view.result.current.rows).toHaveLength(100); });
+    expect(reads()).toHaveLength(2);
+    expect(server.companyReads).toBe(0);
+  });
+
+  it("the queue names its cards from the categories the list read, not from a read of its own", async () => {
+    const { finish } = await openWhileListIsOut("/review", true);
+    await finish();
+    await waitFor(() => { expect(jev.loaded).toHaveLength(1); });
+    expect(categoryCalls()).toHaveLength(1);
+    expect(jev.categories[0]).toEqual(server.categories);
+  });
+
+  it("a card route with a trailing slash starts the categories beside the list", async () => {
+    const { finish } = await openWhileListIsOut("/review/", true);
+    expect(categoryCalls()).toHaveLength(1);
+    await finish();
+  });
+
+  it("a preview starts none of the early reads: no company, connector or categories", async () => {
+    window.history.pushState({}, "", "/review");
+    let release = () => {};
+    server.hold = new Promise<void>((resolve) => { release = resolve; });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+    const inFlight = prefetchReviewList(client, "empty", null);
+    await waitFor(() => { expect(reads()).toHaveLength(1); });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    expect(categoryCalls()).toHaveLength(0);
+    expect(server.companyReads).toBe(0);
+    expect(jev.connectorReads).toBe(0);
+    release();
+    await inFlight;
+  });
+
+  it("a company switch mid-visit: the connector is read for the company shown now, never the one before", async () => {
+    window.history.pushState({}, "", "/review");
+    noteJevAuthUser("u-1");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30 * 60_000 } } });
+    client.setQueryData(["dashboard", "off", "month"], { company_id: "co-1" });
+    await prefetchReviewList(client, "off", null);
+    await waitFor(() => { expect(client.getQueryState(["jev-connector", "u-1", "co-1"])?.status).toBe("success"); });
+    // The switch starts every read over, and Home's dashboard now names the other company.
+    await client.resetQueries();
+    client.setQueryData(["dashboard", "off", "month"], { company_id: "co-2" });
+    await prefetchReviewList(client, "off", null);
+    await waitFor(() => { expect(client.getQueryState(["jev-connector", "u-1", "co-2"])?.status).toBe("success"); });
+    expect(boundJevConnectorScope()).toEqual({ userId: "u-1", companyId: "co-2" });
+    expect(jev.connectorReads).toBe(2);
   });
 });
