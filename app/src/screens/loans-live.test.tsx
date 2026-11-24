@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { companyCurrencyQueryOptions } from "../company-currency";
 import { MY_COMPANIES_KEY } from "../company-role-cache";
+import { QUERY_STALE_MS } from "../query-client";
 import { renderWithProviders } from "../test-render";
 import { myCompaniesFor, TEST_COMPANY_ID } from "../team-test-support";
 import { israelToday } from "../ui/date-math";
@@ -107,7 +108,8 @@ beforeEach(() => {
 
 /** The cache as the app holds it after list_my_companies (no session in a test: the user key is null). */
 function withCompanies(ownerId: string | null) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // The app's own freshness (query-client.ts): with none, the band's observer, enabled when the currency answers, would read the outlooks again.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: QUERY_STALE_MS } } });
   client.setQueryData([MY_COMPANIES_KEY, null], myCompaniesFor("u1", ownerId));
   return client;
 }
