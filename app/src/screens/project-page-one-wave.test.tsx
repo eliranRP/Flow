@@ -56,8 +56,9 @@ vi.mock("../lib/supabase", () => {
   return { getSupabase: () => ({ from: table, rpc: (name: string, args: Record<string, unknown> = {}) => rpc(name, args) }) };
 });
 
-function renderLive() {
+function renderLive(seed?: (client: QueryClient) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  seed?.(client);
   return { client, ...render(
     <QueryClientProvider client={client}>
       <ToastProvider>
@@ -115,13 +116,25 @@ describe("the project page's first view in one wave (FLOW-1270)", () => {
     await vi.waitFor(() => { for (const name of ["expected_months", "project_category_months", "project_forecast_edits_for", "list_categories"]) expect(names()).toContain(name); });
     expect(await screen.findByText("קבלן א")).toBeInTheDocument();
     // The lines were read once for the cash read's own month: the answer's month matches the one asked for at mount.
-    // Cold (no saved company currency) the read starts with the currency still null; when the currency lands the key
-    // is the books currency's and the lines are read once more under it: two reads of each side, no more.
-    // Once the currency is known the read sits under the key the month's profit page reads (project-month-profit-screen.tsx):
-    // going there reuses these lines.
+    // FLOW-1299: the read is keyed on the books currency (null, which the server fills in), so a cold open with no
+    // currency cached, the page's first read, is the only one: one request per side, two in all, not four.
     await vi.waitFor(() => {
-      expect(client.getQueryCache().find({ queryKey: ["breakdown-lines", "project-cash-month", "off", "a", month, "ILS"] })?.state.data).toBeDefined();
+      expect(client.getQueryCache().find({ queryKey: ["breakdown-lines", "project-cash-month", "off", "a", month, ""] })?.state.data).toBeDefined();
     });
-    expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(4);
+    expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(2);
+  });
+
+  it("sends the same two reads, and draws the same lines, when the company currency is cached (FLOW-1299)", async () => {
+    server.answer = true;
+    renderLive((seeded) => { seeded.setQueryData(["company-currency", "off"], "ILS"); });
+    expect(await screen.findByRole("heading", { name: "וילה רעננה" })).toBeInTheDocument();
+    expect(await screen.findByText("קבלן א")).toBeInTheDocument();
+    await vi.waitFor(() => { expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(2); });
+    // The same request as the cold open: the books currency, which the server fills in, not a currency the page names.
+    for (const call of server.rpcCalls.filter((item) => item.name === "project_cash_month_lines")) {
+      expect(call.args).toMatchObject({ p_project: "a", p_month: `${month}-01` });
+      expect(call.args).not.toHaveProperty("p_currency");
+    }
+    expect(names().filter((name) => name === "project_cash_month_lines")).toHaveLength(2);
   });
 });
