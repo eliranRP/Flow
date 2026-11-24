@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(17);
+select plan(18);
 
 do $users$
 begin
@@ -121,17 +121,18 @@ insert into public.forecast_overrides (company_id, month, item_key, amount_minor
   (pg_temp.id('co'), '2026-09', 'party:income:' || pg_temp.id('retainer') || ':ILS', null, '2026-09-15', false);
 
 
--- The TypeScript builder's answer for each case's reads (the reads' output run through buildMonthForecast), ids as @label@.
+-- The TypeScript builder's answer for each case's reads (the reads' output run through buildMonthForecast), ids as @label@,
+-- with each item as month_forecast sends it: no currency, expected_on or late_days, and no null field (absent = null).
 create temp table mf_ts (tag text primary key, doc text);
 grant all on mf_ts to authenticated, service_role;
 insert into mf_ts values ('sep20', $ts$
 {"items": [
-  {"key": "party:income:@retainer@:ILS", "direction": "income", "kind": "recurring", "name": "Example Retainer", "currency": "ILS", "usual": 820000, "day": 10, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 820000, "due_on": "2026-09-15", "moved_out": false, "overridden": true},
-  {"key": "party:expense:@rent@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Rent", "currency": "ILS", "usual": 255000, "day": 5, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 260000, "due_on": null, "moved_out": false, "overridden": true},
-  {"key": "party:expense:@tea@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Tea", "currency": "ILS", "usual": 3000, "day": 12, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 3000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "invoice:@inv@", "direction": "income", "kind": "invoice", "name": "mf:inv", "currency": "ILS", "usual": 300000, "day": null, "description": "mf:inv", "category_id": null, "project_id": null, "project_name": null, "pace": null, "line_start": null, "expected_on": null, "late_days": 0, "minor": 300000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "invoice:@supinv@", "direction": "expense", "kind": "invoice", "name": "mf:supinv", "currency": "ILS", "usual": 45000, "day": null, "description": "mf:supinv", "category_id": null, "project_id": null, "project_name": null, "pace": null, "line_start": null, "expected_on": null, "late_days": 0, "minor": 45000, "due_on": null, "moved_out": true, "overridden": true},
-  {"key": "added:@edit_add@", "direction": "income", "kind": "added", "name": "Utility refund", "currency": "ILS", "usual": 17176, "day": null, "description": null, "category_id": "@refund@", "project_id": "@house@", "project_name": null, "pace": "month", "line_start": "2026-09", "expected_on": null, "late_days": 0, "minor": 17176, "due_on": null, "moved_out": false, "overridden": false}
+  {"key": "party:income:@retainer@:ILS", "direction": "income", "kind": "recurring", "name": "Example Retainer", "usual": 820000, "day": 10, "pace": "month", "minor": 820000, "due_on": "2026-09-15", "moved_out": false, "overridden": true},
+  {"key": "party:expense:@rent@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Rent", "usual": 255000, "day": 5, "pace": "month", "minor": 260000, "moved_out": false, "overridden": true},
+  {"key": "party:expense:@tea@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Tea", "usual": 3000, "day": 12, "pace": "month", "minor": 3000, "moved_out": false, "overridden": false},
+  {"key": "invoice:@inv@", "direction": "income", "kind": "invoice", "name": "mf:inv", "usual": 300000, "description": "mf:inv", "minor": 300000, "moved_out": false, "overridden": false},
+  {"key": "invoice:@supinv@", "direction": "expense", "kind": "invoice", "name": "mf:supinv", "usual": 45000, "description": "mf:supinv", "minor": 45000, "moved_out": true, "overridden": true},
+  {"key": "added:@edit_add@", "direction": "income", "kind": "added", "name": "Utility refund", "usual": 17176, "category_id": "@refund@", "project_id": "@house@", "pace": "month", "line_start": "2026-09", "minor": 17176, "moved_out": false, "overridden": false}
 ],
  "income": ["party:income:@retainer@:ILS", "invoice:@inv@", "added:@edit_add@"],
  "expense": ["party:expense:@rent@:ILS"],
@@ -141,12 +142,12 @@ insert into mf_ts values ('sep20', $ts$
 $ts$);
 insert into mf_ts values ('sep30', $ts$
 {"items": [
-  {"key": "party:income:@retainer@:ILS", "direction": "income", "kind": "recurring", "name": "Example Retainer", "currency": "ILS", "usual": 820000, "day": 10, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 820000, "due_on": "2026-09-15", "moved_out": false, "overridden": true},
-  {"key": "party:expense:@rent@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Rent", "currency": "ILS", "usual": 255000, "day": 5, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 260000, "due_on": null, "moved_out": false, "overridden": true},
-  {"key": "party:expense:@tea@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Tea", "currency": "ILS", "usual": 3000, "day": 12, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 3000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "invoice:@inv@", "direction": "income", "kind": "invoice", "name": "mf:inv", "currency": "ILS", "usual": 300000, "day": null, "description": "mf:inv", "category_id": null, "project_id": null, "project_name": null, "pace": null, "line_start": null, "expected_on": null, "late_days": 0, "minor": 300000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "invoice:@supinv@", "direction": "expense", "kind": "invoice", "name": "mf:supinv", "currency": "ILS", "usual": 45000, "day": null, "description": "mf:supinv", "category_id": null, "project_id": null, "project_name": null, "pace": null, "line_start": null, "expected_on": null, "late_days": 0, "minor": 45000, "due_on": null, "moved_out": true, "overridden": true},
-  {"key": "added:@edit_add@", "direction": "income", "kind": "added", "name": "Utility refund", "currency": "ILS", "usual": 17176, "day": null, "description": null, "category_id": "@refund@", "project_id": "@house@", "project_name": null, "pace": "month", "line_start": "2026-09", "expected_on": null, "late_days": 0, "minor": 17176, "due_on": null, "moved_out": false, "overridden": false}
+  {"key": "party:income:@retainer@:ILS", "direction": "income", "kind": "recurring", "name": "Example Retainer", "usual": 820000, "day": 10, "pace": "month", "minor": 820000, "due_on": "2026-09-15", "moved_out": false, "overridden": true},
+  {"key": "party:expense:@rent@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Rent", "usual": 255000, "day": 5, "pace": "month", "minor": 260000, "moved_out": false, "overridden": true},
+  {"key": "party:expense:@tea@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Tea", "usual": 3000, "day": 12, "pace": "month", "minor": 3000, "moved_out": false, "overridden": false},
+  {"key": "invoice:@inv@", "direction": "income", "kind": "invoice", "name": "mf:inv", "usual": 300000, "description": "mf:inv", "minor": 300000, "moved_out": false, "overridden": false},
+  {"key": "invoice:@supinv@", "direction": "expense", "kind": "invoice", "name": "mf:supinv", "usual": 45000, "description": "mf:supinv", "minor": 45000, "moved_out": true, "overridden": true},
+  {"key": "added:@edit_add@", "direction": "income", "kind": "added", "name": "Utility refund", "usual": 17176, "category_id": "@refund@", "project_id": "@house@", "pace": "month", "line_start": "2026-09", "minor": 17176, "moved_out": false, "overridden": false}
 ],
  "income": ["party:income:@retainer@:ILS", "invoice:@inv@", "added:@edit_add@"],
  "expense": ["party:expense:@rent@:ILS"],
@@ -156,13 +157,13 @@ insert into mf_ts values ('sep30', $ts$
 $ts$);
 insert into mf_ts values ('oct01', $ts$
 {"items": [
-  {"key": "party:income:@retainer@:ILS", "direction": "income", "kind": "recurring", "name": "Example Retainer", "currency": "ILS", "usual": 800000, "day": 10, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 800000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "party:expense:@power@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Power", "currency": "ILS", "usual": 12000, "day": 7, "description": null, "category_id": null, "project_id": "@house@", "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 12000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "party:expense:@rent@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Rent", "currency": "ILS", "usual": 250000, "day": 5, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 250000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "party:expense:@tea@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Tea", "currency": "ILS", "usual": 3000, "day": 12, "description": null, "category_id": null, "project_id": null, "project_name": null, "pace": "month", "line_start": null, "expected_on": null, "late_days": 0, "minor": 3000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "invoice:@inv@", "direction": "income", "kind": "invoice", "name": "mf:inv", "currency": "ILS", "usual": 300000, "day": null, "description": "mf:inv", "category_id": null, "project_id": null, "project_name": null, "pace": null, "line_start": null, "expected_on": null, "late_days": 0, "minor": 300000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "invoice:@supinv@", "direction": "expense", "kind": "invoice", "name": "mf:supinv", "currency": "ILS", "usual": 45000, "day": null, "description": "mf:supinv", "category_id": null, "project_id": null, "project_name": null, "pace": null, "line_start": null, "expected_on": null, "late_days": 0, "minor": 45000, "due_on": null, "moved_out": false, "overridden": false},
-  {"key": "added:@edit_add@", "direction": "income", "kind": "added", "name": "Utility refund", "currency": "ILS", "usual": 17176, "day": null, "description": null, "category_id": "@refund@", "project_id": "@house@", "project_name": null, "pace": "month", "line_start": "2026-09", "expected_on": null, "late_days": 0, "minor": 17176, "due_on": null, "moved_out": false, "overridden": false}
+  {"key": "party:income:@retainer@:ILS", "direction": "income", "kind": "recurring", "name": "Example Retainer", "usual": 800000, "day": 10, "pace": "month", "minor": 800000, "moved_out": false, "overridden": false},
+  {"key": "party:expense:@power@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Power", "usual": 12000, "day": 7, "project_id": "@house@", "pace": "month", "minor": 12000, "moved_out": false, "overridden": false},
+  {"key": "party:expense:@rent@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Rent", "usual": 250000, "day": 5, "pace": "month", "minor": 250000, "moved_out": false, "overridden": false},
+  {"key": "party:expense:@tea@:ILS", "direction": "expense", "kind": "recurring", "name": "Example Tea", "usual": 3000, "day": 12, "pace": "month", "minor": 3000, "moved_out": false, "overridden": false},
+  {"key": "invoice:@inv@", "direction": "income", "kind": "invoice", "name": "mf:inv", "usual": 300000, "description": "mf:inv", "minor": 300000, "moved_out": false, "overridden": false},
+  {"key": "invoice:@supinv@", "direction": "expense", "kind": "invoice", "name": "mf:supinv", "usual": 45000, "description": "mf:supinv", "minor": 45000, "moved_out": false, "overridden": false},
+  {"key": "added:@edit_add@", "direction": "income", "kind": "added", "name": "Utility refund", "usual": 17176, "category_id": "@refund@", "project_id": "@house@", "pace": "month", "line_start": "2026-09", "minor": 17176, "moved_out": false, "overridden": false}
 ],
  "income": ["party:income:@retainer@:ILS", "invoice:@inv@", "added:@edit_add@"],
  "expense": ["party:expense:@rent@:ILS", "invoice:@supinv@", "party:expense:@power@:ILS"],
@@ -217,6 +218,9 @@ select is(public.month_forecast('2026-09', '2026-09-20') - 'build',
   'month, base and the overrides come with the build');
 select is(jsonb_array_length(public.month_forecast('2026-09', '2026-09-20')->'overrides'), 3, 'the three overrides of the month');
 
+select ok(not exists (select 1 from jsonb_array_elements(public.month_forecast('2026-09', '2026-09-20')->'build'->'items') i
+    where i ? 'currency' or i ? 'expected_on' or i ? 'late_days' or jsonb_strip_nulls(i) <> i),
+  'no item carries currency, expected_on, late_days or a null field');
 select throws_ok($$ select public.month_forecast('2026-13', '2026-09-20') $$, '22023', 'validation', 'a month that is not one is refused');
 select throws_ok($$ select public.month_forecast(null, '2026-09-20') $$, '22023', 'validation', 'so is none');
 
@@ -241,9 +245,10 @@ select ok(
 select ok(
   has_function_privilege('authenticated', 'public.month_forecast(text, date)', 'execute')
   and has_function_privilege('authenticated', 'private.month_forecast_build(jsonb)', 'execute')
+  and has_function_privilege('service_role', 'public.month_forecast(text, date)', 'execute')
   and not has_function_privilege('anon', 'public.month_forecast(text, date)', 'execute')
   and not has_function_privilege('anon', 'private.month_forecast_build(jsonb)', 'execute'),
-  'authenticated executes both, anon neither');
+  'authenticated executes both, service_role the read, anon neither');
 
 select * from finish();
 rollback;

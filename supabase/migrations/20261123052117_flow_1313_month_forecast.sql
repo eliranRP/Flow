@@ -14,6 +14,8 @@
 -- private.flow_today() (Asia/Jerusalem), which expected_months applies itself: authenticated cannot execute
 -- private.flow_today(), and the date the build uses (expected.today) is the one expected_months answers with.
 --
+-- Answer: each item leaves out currency, expected_on, late_days and its null fields (absent = null).
+--
 -- Order: the lists are sorted by amount, then by name. The app's builder uses localeCompare(.., "he"); the database
 -- sorts the name by its lowercased code points, which agrees for Latin names and puts Hebrew after Latin, but is not
 -- ICU's order for every Hebrew pair. The app keeps sorting rows itself where it shows them (plan, section 2).
@@ -258,6 +260,7 @@ declare
   expected jsonb;
   overrides jsonb;
   base text;
+  built jsonb;
 begin
   if p_month is null or p_month !~ '^[0-9]{4}-(0[1-9]|1[0-2])$' then
     raise exception 'validation' using errcode = '22023';
@@ -268,26 +271,31 @@ begin
   expected := public.expected_months(0, null, p_today);
   overrides := public.forecast_overrides_for(p_month);
   base := private.company_base_currency(private.readable_company_id());
+  built := private.month_forecast_build(jsonb_build_object(
+    'base', base,
+    'expected', expected,
+    'unpaid', public.list_unpaid(),
+    'overrides', overrides,
+    'edits', edits->'edits',
+    'overheadProjectId', edits->>'overhead_project_id'
+  ));
+  -- Smaller answer: each item leaves out currency (always base), expected_on and late_days (never set here: no
+  -- payment terms) and its null fields. The build itself stays whole, as the vectors have it.
   return jsonb_build_object(
     'month', p_month,
     'base', base,
     'overrides', overrides,
-    'build', private.month_forecast_build(jsonb_build_object(
-      'base', base,
-      'expected', expected,
-      'unpaid', public.list_unpaid(),
-      'overrides', overrides,
-      'edits', edits->'edits',
-      'overheadProjectId', edits->>'overhead_project_id'
-    ))
+    'build', jsonb_set(built, '{items}', coalesce((
+      select jsonb_agg(jsonb_strip_nulls(i - 'currency' - 'expected_on' - 'late_days') order by o)
+      from jsonb_array_elements(built->'items') with ordinality t(i, o)), '[]'::jsonb))
   );
 end;
 $$;
 
 comment on function public.month_forecast(text, date) is
-  'FLOW-1313. The month-end forecast in one read: { month, base, overrides, build } where build is private.month_forecast_build over expected_months, list_unpaid, forecast_overrides_for, company_forecast_edits_for and the company currency. p_today (default: today in Israel) goes to expected_months, the only one of them that takes a date.';
+  'FLOW-1313. The month-end forecast in one read: { month, base, overrides, build } where build is private.month_forecast_build over expected_months, list_unpaid, forecast_overrides_for, company_forecast_edits_for and the company currency. p_today (default: today in Israel) goes to expected_months, the only one of them that takes a date. Items leave out currency (= base), expected_on (null) and late_days (0), and any null field: absent = null. p_month (overrides and edits) and p_today''s month (which charges are due or seen) may differ; the answer then mixes the two as the app''s five reads did, and nothing refuses it.';
 
 revoke all on function public.month_forecast(text, date) from public, anon, authenticated;
-grant execute on function public.month_forecast(text, date) to authenticated;
+grant execute on function public.month_forecast(text, date) to authenticated, service_role;
 
 commit;
