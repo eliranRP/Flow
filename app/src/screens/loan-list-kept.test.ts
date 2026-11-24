@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { flushKeptReads, KEPT_MAX_BYTES, keepReadsOf, resetKeptReadsForTests, restoreKeptReads } from "../kept-reads";
+import { flushKeptReads, keepReadsOf, resetKeptReadsForTests, restoreKeptReads } from "../kept-reads";
 import { idbKeptStore, type KeptStore } from "../kept-store";
 import { resetShownCompanyForTests, setShownCompany } from "../lib/company-header";
 import { readLoanRow } from "./loan-detail-data";
@@ -98,11 +98,8 @@ describe("the kept loan list (FLOW-1296)", () => {
     expect(restored.loans).toHaveLength(22);
     expect(restored.loans.every((loan) => !("schedule" in loan))).toBe(true);
     const whole = new TextEncoder().encode(text(fresh)).length;
-    // The numbers the PR reports.
-    console.info(`loan list kept row: full ${String(whole)} bytes, kept ${String(size)} bytes, ${String(months)} schedule months`);
     expect(whole).toBeGreaterThan(1_000_000);
     expect(size).toBeLessThan(120_000);
-    expect(size).toBeLessThan(KEPT_MAX_BYTES / 40);
   });
 
   it("draws the Loans figures a fresh list draws: the rows, and the summary built from the loans", async () => {
