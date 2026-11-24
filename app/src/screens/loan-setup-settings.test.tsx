@@ -78,10 +78,6 @@ vi.mock("../lib/supabase", () => ({
             }),
           };
         }
-        if (table === "loan_unsplit_payments") {
-          // FLOW-1264: no bank line waits to be split to a loan.
-          return { select: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) };
-        }
         throw new Error(table);
       },
     };

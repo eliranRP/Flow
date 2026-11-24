@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import type { LoanKind, LoanScheduleRow, LoanStatus } from "@flow/shared";
+import type { LoanKind, LoanOutlooks, LoanStatus } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
-import { rateOnDate } from "@flow/shared";
+import { loadReadSchemas } from "../load-read-schemas";
 import { getSupabase } from "../lib/supabase";
+import { readyClient } from "../ready-client";
 import { assertNoError } from "../use-write";
 import { LOAN_KIND_LIST_LABEL } from "./loan-copy";
-import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetailDbRow } from "./loan-detail-data";
+import type { LoanDetailDbRow } from "./loan-detail-data";
 import type { LoanBalanceRow } from "./loan-match";
-import { latePayment, loanOutlook, type OutlookLoan, scheduleRowsOf } from "./loan-outlook";
-import { readLoanBalances, readProjectNames, readUnsplitPayments } from "./loan-reads";
+import { loanOutlook, type OutlookLoan } from "./loan-outlook";
+import { readLoanBalances, readProjectNames } from "./loan-reads";
 
 /**
  * FLOW-106 §3.1, FLOW-1046. The loans list: open loans and closed loans (the פעילות / נסגרו segment), each in
@@ -21,8 +22,6 @@ export type LoanListRow = LoanBalanceRow & {
   /** Missing reads as open. */
   status?: LoanStatus;
   closedOn?: string | null;
-  /** The annual rate in force today, in ppm. Missing (a sample) leaves the rate out of the row. */
-  ratePpm?: number;
   /** FLOW-1046: the next scheduled payment; missing for a demand loan, a closed one, or a sample without it. */
   next?: { dueDate: string; amountMinor: bigint };
   /** FLOW-1258: the due date of a scheduled payment past its grace with nothing recorded for it; missing when on time. */
@@ -79,69 +78,42 @@ export function showsLoanBalance(row: Pick<LoanListRow, "status" | "balanceMinor
   return !(row.status === "closed" && row.balanceMinor === 0n);
 }
 
-/** The rate in force on a day, as rateInForce reads it (loan-detail-data.ts), from the list's read. */
-function rateInForRow(loan: LoanDetailDbRow, today: string): number | undefined {
-  if (typeof loan.annual_rate_ppm !== "number") return undefined;
-  const rates = (Array.isArray(loan.loan_rates) ? loan.loan_rates : [])
-    .map((rate) => ({ effectiveDate: rate.effective_date, annualRatePpm: rate.annual_rate_ppm }))
-    .sort((a, b) => (a.effectiveDate < b.effectiveDate ? -1 : 1));
-  return rateOnDate(loan.annual_rate_ppm, rates, today);
-}
-
 /**
  * FLOW-1046: an open loan's next scheduled payment, its parts summed; null for a closed loan or one with no schedule.
- * `rows` is the loan's schedule (scheduleRowsOf), passed in when the caller already built it (FLOW-1260).
+ * FLOW-1316: the Loans list reads this from `loan_outlooks`; the dev and preview sample store (loan-detail-store.ts) still builds it here.
  */
-export function nextPaymentOf(loan: OutlookLoan, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): LoanListRow["next"] | null {
-  const outlook = loan.status === "open" ? loanOutlook(loan, today, rows) : null;
+export function nextPaymentOf(loan: OutlookLoan, today: string): LoanListRow["next"] | null {
+  const outlook = loan.status === "open" ? loanOutlook(loan, today) : null;
   if (outlook == null) return null;
   const { dueDate, principalMinor, interestMinor, escrowMinor } = outlook.next;
   return { dueDate, amountMinor: principalMinor + interestMinor + escrowMinor };
 }
 
-/** The loans of a company: the list's rows (alphabetical) and each loan's full detail for the band's figures. */
+/** The loans of a company: the list's rows (alphabetical, without the outlooks) and each loan's detail row and balance for the band's figures. */
 export type LoanListData = {
   rows: LoanListRow[];
-  /** Each loan's row, its balance (mapped to a LoanDetail by the band's summary) and its schedule (FLOW-1260). A kept list has no schedule (FLOW-1296): left out, the outlook builds it. */
-  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null; schedule?: readonly LoanScheduleRow[] | null }>;
+  loans: Array<{ row: LoanDetailDbRow; balance: { balanceMinor: bigint; flaggedParts: number } | null }>;
 };
 
-/** The list's loan columns: the detail's, and the day the loan was added (FLOW-1263, the late check). */
-const LOAN_LIST_COLUMNS = `${LOAN_DETAIL_COLUMNS}, created_at` as const;
+/** The list's loan columns: the detail's, without the rates (FLOW-1316: no schedule is built from them here, and nothing draws the rate). */
+const LOAN_LIST_COLUMNS =
+  "id, company_id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, kind, interest_only_months, amortization_months, status, closed_on, refinanced_into_id, project_id, closing_paid_minor, interest_category_id, escrow_category_id, principal_category_id, fees_category_id" as const;
 
-/** The later of two ISO dates, either missing. */
-function laterOf(a: string | null | undefined, b: string | null | undefined): string | null {
-  if (a == null) return b ?? null;
-  if (b == null) return a;
-  return a > b ? a : b;
-}
-
-/** One read, shared by the list and the band's summary through the same query key. */
-export async function readLoanList(companyId: string | null, today: string = israelToday()): Promise<LoanListData> {
+/** One read, shared by the list and the band's summary through the same query key. FLOW-1316: the next payments and late marks come from `loan_outlooks` (readLoanOutlooks), not from here. */
+export async function readLoanList(companyId: string | null): Promise<LoanListData> {
   const supabase = getSupabase();
   if (!supabase || companyId == null) return { rows: [], loans: [] };
-  // Four reads at once: none needs another's answer.
-  const [loans, byLoan, projectNames, unsplit] = await Promise.all([
+  // Three reads at once: none needs another's answer.
+  const [loans, byLoan, projectNames] = await Promise.all([
     supabase.from("loans").select(LOAN_LIST_COLUMNS).eq("company_id", companyId).order("name"),
     readLoanBalances(supabase, companyId),
     readProjectNames(supabase, companyId),
-    readUnsplitPayments(supabase, companyId),
   ]);
   assertNoError(loans);
   const built = (loans.data ?? []).map((loan) => {
     const balance = byLoan.get(loan.id);
     // A balance row missing from the read: nothing counted against it, so the principal is left.
     const balanceMinor = BigInt(balance?.balance_minor ?? loan.principal_minor);
-    const outlookLoan = readLoanRow(loan, { balanceMinor, flaggedParts: 0 });
-    // FLOW-1260: the loan's schedule is built once here; its next payment and its late flag both read it.
-    const schedule = scheduleRowsOf(outlookLoan);
-    const next = nextPaymentOf(outlookLoan, today, schedule);
-    // FLOW-1264: a bank line not split to the loan yet that matches its payment counts as paid for this check.
-    const lastPaidOn = laterOf(balance?.last_paid_on, unsplit.get(loan.id));
-    // The day it was added, in Israel time, as `today` is; none when the read has no valid time.
-    const addedAt = Date.parse(loan.created_at);
-    const addedOn = Number.isNaN(addedAt) ? null : israelToday(new Date(addedAt));
-    const lateOn = latePayment(outlookLoan, { lastPaidOn, addedOn }, today, schedule);
     const row: LoanListRow = {
       id: loan.id,
       name: loan.name,
@@ -153,17 +125,46 @@ export async function readLoanList(companyId: string | null, today: string = isr
       kind: loan.kind,
       status: loan.status,
       closedOn: loan.closed_on,
-      ratePpm: rateInForRow(loan, today),
-      ...(next == null ? {} : { next }),
-      ...(lateOn == null ? {} : { lateOn }),
     };
-    const detail = { row: loan, balance: balance == null ? null : { balanceMinor, flaggedParts: balance.flagged_parts ?? 0 }, schedule };
+    const detail = { row: loan, balance: balance == null ? null : { balanceMinor, flaggedParts: balance.flagged_parts ?? 0 } };
     return { row, detail };
   });
   return { rows: sortLoans(built.map((item) => item.row)), loans: built.map((item) => item.detail) };
 }
 
-/** The loans with their balances, kind and status, alphabetical. */
+/**
+ * FLOW-1316: the open loans' outlooks, one read of `loan_outlooks(p_today)` (FLOW-1310), as the answer comes. A failed
+ * read throws, so the screen shows its failed state with retry.
+ */
+export async function readLoanOutlooks(companyId: string | null, today: string = israelToday()): Promise<LoanOutlooks> {
+  if (companyId == null) return [];
+  const supabase = await readyClient();
+  const { data, error } = await supabase.rpc("loan_outlooks", { p_today: today });
+  if (error) throw error;
+  return (await loadReadSchemas()).loanOutlooksSchema.parse(data);
+}
+
+/**
+ * The list's rows with each open loan's next payment and late mark from the outlooks. A loan absent from the answer
+ * has neither (a closed or demand loan keeps its row); `next.amount_minor` is the sum of the payment's parts.
+ */
+export function withOutlooks(rows: readonly LoanListRow[], outlooks: LoanOutlooks): LoanListRow[] {
+  const byLoan = new Map(outlooks.map((outlook) => [outlook.loan_id, outlook]));
+  return rows.map((row) => {
+    const outlook = byLoan.get(row.id);
+    if (outlook == null) return row;
+    return {
+      ...row,
+      ...(outlook.next == null ? {} : { next: { dueDate: outlook.next.due_date, amountMinor: outlook.next.amount_minor } }),
+      ...(outlook.late_on == null ? {} : { lateOn: outlook.late_on }),
+    };
+  });
+}
+
+/**
+ * The loans with their balances, kind and status, alphabetical, without the outlooks (the loan page reads the names).
+ * The Loans screen adds them with useLoanOutlooks and withOutlooks.
+ */
 export function useLoanList(companyId: string | null) {
   return useQuery({
     queryKey: ["loans", companyId, "list"],
@@ -171,5 +172,16 @@ export function useLoanList(companyId: string | null) {
     retry: false,
     queryFn: () => readLoanList(companyId),
     select: (data) => data.rows,
+  });
+}
+
+/** FLOW-1316: the open loans' outlooks from today (Israel). The key names the day, so a kept answer serves the same day only. */
+export function useLoanOutlooks(companyId: string | null) {
+  const today = israelToday();
+  return useQuery({
+    queryKey: ["loans", companyId, "outlooks", today],
+    enabled: companyId != null,
+    retry: false,
+    queryFn: () => readLoanOutlooks(companyId, today),
   });
 }

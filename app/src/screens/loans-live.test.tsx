@@ -1,15 +1,17 @@
 import { QueryClient } from "@tanstack/react-query";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { companyCurrencyQueryOptions } from "../company-currency";
 import { MY_COMPANIES_KEY } from "../company-role-cache";
 import { renderWithProviders } from "../test-render";
 import { myCompaniesFor, TEST_COMPANY_ID } from "../team-test-support";
+import { israelToday } from "../ui/date-math";
 import { readLoanList } from "./loan-list";
+import { LOANS_ERROR_TITLE } from "./loans-host";
 import { LoansScreen } from "./loans-screen";
 
-// The live Loans tab: the company from what the app holds, and the list's four reads at once.
+// The live Loans tab: the company from what the app holds, the list's three reads at once, and its outlooks (FLOW-1316) in one request.
 
 type Pending = { table: string; resolve: (value: { data: unknown; error: null }) => void };
 
@@ -20,21 +22,11 @@ const db = vi.hoisted(() => ({
   currency: null as string | null,
   hold: false,
   selects: [] as Array<{ table: string; columns: string }>,
-  // FLOW-1260: how many times the schedule builder ran.
-  scheduleRuns: 0,
+  // FLOW-1316: loan_outlooks: its calls with their arguments, what it answers, and whether it fails.
+  outlookCalls: [] as unknown[],
+  outlooks: [] as unknown[],
+  outlooksFail: false,
 }));
-
-// The builder is counted, and otherwise runs as it does (FLOW-1260).
-vi.mock("@flow/shared", async (original) => {
-  const shared = await original<typeof import("@flow/shared")>();
-  return {
-    ...shared,
-    buildLoanSchedule: (terms: Parameters<typeof shared.buildLoanSchedule>[0]) => {
-      db.scheduleRuns += 1;
-      return shared.buildLoanSchedule(terms);
-    },
-  };
-});
 
 let answers: Record<string, unknown> = {};
 
@@ -60,8 +52,12 @@ function query(table: string) {
 const supabase = vi.hoisted(() => ({
   from: (table: string) => query(table),
   // get_dashboard never answers: the list must not wait for it.
-  rpc: (name: string) => {
+  rpc: (name: string, args?: unknown) => {
     db.rpc.push(name);
+    if (name === "loan_outlooks") {
+      db.outlookCalls.push(args);
+      return Promise.resolve(db.outlooksFail ? { data: null, error: { message: "boom" } } : { data: db.outlooks, error: null });
+    }
     if (name === "mcp_company_loan_currency" && db.currency != null) return Promise.resolve({ data: db.currency, error: null });
     return new Promise(() => undefined);
   },
@@ -99,7 +95,9 @@ beforeEach(() => {
   db.currency = null;
   db.hold = false;
   db.selects = [];
-  db.scheduleRuns = 0;
+  db.outlookCalls = [];
+  db.outlooks = [];
+  db.outlooksFail = false;
   answers = {
     loans: [loanRow("l1", "הלוואת גשר", "p1"), loanRow("l2", "הלוואת ציוד", null)],
     loan_balances: [{ loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, currency: "ILS" }],
@@ -115,57 +113,48 @@ function withCompanies(ownerId: string | null) {
 }
 
 describe("live Loans tab", () => {
-  it("sends the loans, balances, project names and unsplit payments reads together, before any answers", async () => {
+  it("sends the loans, balances and project names reads together, before any answers, and no schedule or unsplit-payments read", async () => {
     db.hold = true;
     const read = readLoanList(TEST_COMPANY_ID);
     await Promise.resolve();
-    expect(db.pending.map((p) => p.table).sort()).toEqual(["loan_balances", "loan_unsplit_payments", "loans", "projects"]);
+    expect(db.pending.map((p) => p.table).sort()).toEqual(["loan_balances", "loans", "projects"]);
     for (const p of db.pending) p.resolve({ data: answers[p.table] ?? [], error: null });
     const list = await read;
     expect(list.rows.map((row) => [row.name, row.projectName, row.balanceMinor])).toEqual([
       ["הלוואת גשר", "בית הברוש", 4_000_000n],
       ["הלוואת ציוד", null, 5_000_000n],
     ]);
+    // Rows carry no next payment or late mark: those come from loan_outlooks.
+    expect(list.rows.every((row) => row.next == null && row.lateOn == null)).toBe(true);
   });
 
-  it("marks a loan late from its last payment, a line not split yet included, and the day it was added (FLOW-1258, FLOW-1263, FLOW-1264)", async () => {
-    const scheduled = { payment_minor: 60_000, start_date: "2026-01-01", created_at: "2025-12-20T08:00:00Z" };
-    answers.loans = [
-      { ...loanRow("l1", "הלוואת גשר", "p1"), ...scheduled },
-      { ...loanRow("l2", "הלוואת ציוד", null), ...scheduled },
-      { ...loanRow("l3", "הלוואת מחסן", null), ...scheduled },
-      { ...loanRow("l4", "הלוואת רכב", null), ...scheduled },
-    ];
-    answers.loan_balances = [
-      { loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-11-05" },
-      { loan_id: "l2", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-09-05" },
-      { loan_id: "l3", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-09-05" },
-      { loan_id: "l4", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: null },
-    ];
-    // l3's November payment came in from the bank but is not split to it yet.
-    answers.loan_unsplit_payments = [{ loan_id: "l3", last_on: "2026-11-04" }];
-    const list = await readLoanList(TEST_COMPANY_ID, "2026-11-22");
-    expect(list.rows.map((row) => [row.name, row.lateOn])).toEqual([
-      ["הלוואת גשר", undefined],
-      ["הלוואת מחסן", undefined],
-      ["הלוואת ציוד", "2026-11-01"],
-      // Never paid in the books and added before its dates: late for the latest.
-      ["הלוואת רכב", "2026-11-01"],
-    ]);
+  it("reads the loans without the rates and the day each was added: nothing on the list draws them (FLOW-1316)", async () => {
+    await readLoanList(TEST_COMPANY_ID);
+    const loans = db.selects.find((select) => select.table === "loans");
+    expect(loans?.columns).not.toContain("loan_rates");
+    expect(loans?.columns).not.toContain("created_at");
   });
 
-  it("builds each open loan's schedule once, for its next payment and its late flag (FLOW-1260)", async () => {
-    const scheduled = { payment_minor: 60_000, start_date: "2026-01-01" };
-    answers.loans = [{ ...loanRow("l1", "הלוואת גשר", "p1"), ...scheduled }, { ...loanRow("l2", "הלוואת ציוד", null), ...scheduled }];
-    answers.loan_balances = [
-      { loan_id: "l1", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-11-05" },
-      { loan_id: "l2", balance_minor: 4_000_000, flagged_parts: 0, last_paid_on: "2026-09-05" },
-    ];
-    const list = await readLoanList(TEST_COMPANY_ID, "2026-11-22");
-    // Per loan: the schedule on its own terms, built once and read by both the late flag and the next payment; and the
-    // schedule from its balance, which only the next payment reads. Before FLOW-1260 the terms schedule was built twice.
-    expect(db.scheduleRuns).toBe(4);
-    expect(list.rows.map((row) => [row.name, row.next != null, row.lateOn])).toEqual([["הלוואת גשר", true, undefined], ["הלוואת ציוד", true, "2026-11-01"]]);
+  it("asks loan_outlooks once, with today in Israel, for the list and the band together (FLOW-1316)", async () => {
+    answers.loans = [{ ...loanRow("l1", "הלוואת גשר", "p1"), payment_minor: 60_000 }, loanRow("l2", "הלוואת ציוד", null)];
+    db.currency = "ILS";
+    db.outlooks = [{ loan_id: "l1", next: { due_date: "2026-12-01", interest_minor: 16_000, escrow_minor: 0, principal_minor: 44_000, amount_minor: 60_000 }, ahead_minor: 720_000, late_on: "2026-11-01" }];
+    renderWithProviders(<LoansScreen />, { route: "/loans", client: withCompanies("u1") });
+    const row = await screen.findByRole("button", { name: /^הלוואת גשר, / });
+    expect(row).toBeInTheDocument();
+    // The next payment is the answer's, and the band reads the same query.
+    expect(await screen.findByText(/התשלום הבא · הלוואת גשר/)).toBeInTheDocument();
+    expect(db.outlookCalls).toEqual([{ p_today: israelToday() }]);
+  });
+
+  it("shows the usual failed state with retry when loan_outlooks fails, and the list when it answers again (FLOW-1316)", async () => {
+    db.outlooksFail = true;
+    renderWithProviders(<LoansScreen />, { route: "/loans", client: withCompanies("u1") });
+    expect(await screen.findByText(LOANS_ERROR_TITLE)).toBeInTheDocument();
+    db.outlooksFail = false;
+    fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
+    expect(await screen.findByRole("button", { name: /^הלוואת גשר, / })).toBeInTheDocument();
+    expect(db.outlookCalls).toHaveLength(2);
   });
 
   it("shows each loan in its own currency, read from the loan and not from its balance (FLOW-1261)", async () => {

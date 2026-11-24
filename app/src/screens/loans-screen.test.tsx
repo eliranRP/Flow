@@ -20,8 +20,8 @@ const business = {
 };
 
 const twoLoans = [
-  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון", ratePpm: 62_500, kind: "amortizing" as const },
-  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: null, projectName: null, ratePpm: 105_000, kind: "interest_only" as const },
+  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון", kind: "amortizing" as const },
+  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: null, projectName: null, kind: "interest_only" as const },
 ];
 
 const withClosed = [

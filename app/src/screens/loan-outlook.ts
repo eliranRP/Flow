@@ -151,6 +151,9 @@ export type LoanPaidFacts = { lastPaidOn: string | null; addedOn: string | null 
  * since the loan's history may predate the books, and with the day unknown nothing is. One payment pays one date: a
  * late payment made within EARLY_PAY_DAYS of the next date covers that date too, so a missed month right after a late
  * one shows a month later.
+ * FLOW-1316: the Loans list reads this from `loan_outlooks` (`late_on`); the shared vectors (loan-outlook-vectors.test.ts)
+ * hold the database's answer to this builder's.
+ * @forTests
  */
 export function latePayment(loan: OutlookLoan, paid: LoanPaidFacts, today: string, rows: readonly LoanScheduleRow[] | null = scheduleRowsOf(loan)): string | null {
   if (loan.status !== "open" || loan.balanceMinor <= 0n || rows == null) return null;

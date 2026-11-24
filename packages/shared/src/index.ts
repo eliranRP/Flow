@@ -156,6 +156,8 @@ export type {
   CashToDay,
   CashYears,
 } from "./cash.ts";
+export { loanOutlooksSchema } from "./loan-outlooks.ts";
+export type { LoanOutlooks } from "./loan-outlooks.ts";
 export { weeklySummarySchema } from "./weekly-summary.ts";
 export type { WeeklySummary } from "./weekly-summary.ts";
 export { projectsCashMonthSchema } from "./projects-cash.ts";

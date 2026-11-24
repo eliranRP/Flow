@@ -1,32 +1,50 @@
-import { useCallback } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { LoanOutlooks } from "@flow/shared";
 import type { LoanCurrency } from "./loan-form";
-import { readLoanList, type LoanListData } from "./loan-list";
-import { loanListSummary, type LoanListSummary } from "./loan-list-summary";
-import { loanOutlook } from "./loan-outlook";
+import { readLoanList, useLoanOutlooks, type LoanListData } from "./loan-list";
+import { loanListSummary, type LoanListEntry, type LoanListSummary } from "./loan-list-summary";
 import { readLoanRow } from "./loan-detail-data";
-import { israelToday } from "../ui/date-math";
 
 /**
- * FLOW-139. The summary card's figures for one currency. It reads the list's own query (the same key,
- * so the loans are read once) and maps each loan to its outlook from today's Israeli-calendar date.
- * Null until the loans are read.
+ * FLOW-1316: each loan with its outlook from `loan_outlooks`. A loan absent from the answer (a demand or closed loan)
+ * has none, and adds its balance only; so does one the answer holds only for a late mark (no next payment).
+ */
+export function summaryEntries(loans: LoanListData["loans"], outlooks: LoanOutlooks): LoanListEntry[] {
+  const byLoan = new Map(outlooks.map((outlook) => [outlook.loan_id, outlook]));
+  return loans.map(({ row, balance }) => {
+    const outlook = byLoan.get(row.id);
+    const next = outlook?.next;
+    return {
+      loan: readLoanRow(row, balance),
+      outlook: next == null
+        ? null
+        : {
+            next: { dueDate: next.due_date, principalMinor: next.principal_minor, interestMinor: next.interest_minor, escrowMinor: next.escrow_minor },
+            aheadMinor: outlook?.ahead_minor ?? next.amount_minor,
+          },
+    };
+  });
+}
+
+/**
+ * FLOW-139. The summary card's figures for one currency. It reads the list's own query and the outlooks' (the same
+ * keys as the list, so each is read once; FLOW-1316: the outlooks are `loan_outlooks`, whose `ahead_minor` is summed
+ * for the currency). Null until both are read.
  */
 export function useLoanSummary(companyId: string | null, currency: LoanCurrency | null): LoanListSummary | null {
-  const today = israelToday();
-  const summary = useQuery({
+  const on = companyId != null && currency != null;
+  const list = useQuery({
     queryKey: ["loans", companyId, "list"],
-    enabled: companyId != null && currency != null,
+    enabled: on,
     retry: false,
     queryFn: () => readLoanList(companyId),
-    select: useCallback((data: LoanListData): LoanListSummary | null => {
-      if (currency == null) return null;
-      const entries = data.loans.map(({ row, balance, schedule }) => {
-        const loan = readLoanRow(row, balance);
-        return { loan, outlook: loanOutlook(loan, today, schedule) };
-      });
-      return loanListSummary(entries, currency);
-    }, [currency, today]),
   });
-  return summary.data ?? null;
+  const outlooks = useLoanOutlooks(on ? companyId : null);
+  const loans = list.data?.loans;
+  const answer = outlooks.data;
+  return useMemo(
+    () => (currency == null || loans == null || answer == null ? null : loanListSummary(summaryEntries(loans, answer), currency)),
+    [currency, loans, answer],
+  );
 }

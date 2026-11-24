@@ -33,6 +33,7 @@ export {
   sumitStatusSchema,
   transactionDetailSchema,
   unpaidRowSchema,
+  loanOutlooksSchema,
   weeklySummarySchema,
 } from "@flow/shared";
 export { parseTxnMetaList } from "./txn-meta-parse";

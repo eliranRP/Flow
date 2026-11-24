@@ -15,6 +15,7 @@ import type { ReadSchemas } from "./load-read-schemas";
  * - "project-forecast-edits": the project page's forecast card (one project, one month) and Profit's next month
  *   (the whole company, slim answer only).
  * - "loans" "company-forecast": Profit's next month (with company_next_month_inputs and the categories).
+ * - "loans" companyId "list" and "outlooks": the Loans list and its band (the list rows and each loan's detail; the next payments, late marks and 12-month figure). The list is also the loan page's loan choices and the summary page's loans.
  * - "breakdown-lines" "cash": Home's first 20 lines of a side; "project-cash-month": the project page's month lines.
  * - "dashboard" "cash-to-day" and "weekly-summary": Home's change pills and its weekly card.
  * - "transfer-match-count" and "utility-refund-count": Home's דורש טיפול rows. (The Jev count is Review's, FLOW-1272.)
@@ -85,21 +86,11 @@ function payersValid(_schemas: ReadSchemas | null, json: unknown): boolean {
 const onePage = (data: unknown): boolean => isRecord(data) && Array.isArray(data.pages) && data.pages.length === 1 && Array.isArray(data.pageParams);
 
 /**
- * FLOW-1296: the loan list without each loan's schedule (about 160 bytes a month of every open loan's term, most of the row).
- * The Loans screen reads `rows`, which carry each loan's next payment and late date. The summary builds a loan's outlook
- * from `loans[].schedule`, and builds the schedule itself when the field is missing (a fresh read keeps `null` for a
- * loan with none). `rows` stay whole: their late date needs the loan's payments, which `loans` does not hold.
+ * FLOW-1316: the loan list's rows hold no next payment, late date or rate any more (the outlooks are their own read,
+ * `loan_outlooks`, kept below), and a list kept before that carries them: it is not used, and the list is read again.
  */
-function loanListSaved(data: unknown): unknown {
-  if (!isRecord(data) || !Array.isArray(data.loans)) return data;
-  const trimmed = (loan: unknown): unknown => {
-    if (!isRecord(loan)) return loan;
-    const rest: Record<string, unknown> = { ...loan };
-    delete rest.schedule;
-    return rest;
-  };
-  return { ...data, loans: data.loans.map(trimmed) };
-}
+const isLoanListRows = (rows: unknown): boolean =>
+  isRows(rows, "id") && (rows as Array<Record<string, unknown>>).every((row) => !("next" in row) && !("lateOn" in row) && !("ratePpm" in row));
 
 export const KEPT_RULES: readonly KeptRule[] = [
   // Home and Projects. FLOW-1292: the rest of Home's first view (the attention counts, the change pills, the weekly card, the first lines).
@@ -126,7 +117,9 @@ export const KEPT_RULES: readonly KeptRule[] = [
   rule("project forecast edits", (k) => k.length === 4 && k[0] === "project-forecast-edits" && off(k, 1) && typeof k[2] === "string" && k[2] !== "company" && typeof k[3] === "string", (_s, json) => isRows(json, "id") && (json as Array<Record<string, unknown>>).every((row) => typeof row.kind === "string" && typeof row.pace === "string")),
   rule("categories", (k) => k.length === 2 && k[0] === "categories" && off(k, 1), bySchema((s) => s.categoryRowSchema.array())),
   // Loans.
-  rule("loan list", (k) => k[0] === "loans" && typeof k[1] === "string" && k[2] === "list", (_s, json) => isRecord(json) && isRows(json.rows, "id") && Array.isArray(json.loans), { save: loanListSaved }),
+  rule("loan list", (k) => k[0] === "loans" && typeof k[1] === "string" && k[2] === "list", (_s, json) => isRecord(json) && isLoanListRows(json.rows) && Array.isArray(json.loans)),
+  // FLOW-1316: the open loans' outlooks (`loan_outlooks`, the day in the key): the Loans list's next payments and late marks, and the band's 12-month figure.
+  rule("loan outlooks", (k) => k.length === 4 && k[0] === "loans" && typeof k[1] === "string" && k[2] === "outlooks" && typeof k[3] === "string", bySchema((s) => s.loanOutlooksSchema)),
   // Recurring.
   rule("recurring schedule", (k) => k.length === 1 && k[0] === "recurring-schedule", (_s, json) => isRows(json, "party_id")),
   rule("recurring changes", (k) => k[0] === "recurring-changes" && off(k, 1), bySchema((s) => s.recurringChangesSchema)),

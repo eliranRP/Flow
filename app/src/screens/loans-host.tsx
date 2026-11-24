@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useId, useRef, useState, type Ref, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type Ref, type ReactNode } from "react";
 import type { LoanKind } from "@flow/shared";
 import { BackIcon } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
@@ -18,7 +18,7 @@ import {
   type LoanInsert,
 } from "./loan-form";
 import { useCompanyCurrencyQuery } from "../company-currency";
-import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
+import { groupLoans, useLoanList, useLoanOutlooks, withOutlooks, type LoanListRow } from "./loan-list";
 import { useOnline } from "../ui/band-states";
 import { useLoanSummary } from "./loan-summary-entries";
 import type { LoanListSummary } from "./loan-list-summary";
@@ -151,6 +151,9 @@ export function LoansHost({
     return false;
   }, adoptNew);
   const balances = useLoanList(sample == null ? companyId : null);
+  // FLOW-1316: the next payments and late marks are `loan_outlooks`, read beside the list (one wave). A failed outlooks read fails the list: its rows would otherwise draw without them.
+  const outlooks = useLoanOutlooks(sample == null ? companyId : null);
+  const liveRows = useMemo(() => (balances.data == null || outlooks.data == null ? null : withOutlooks(balances.data, outlooks.data)), [balances.data, outlooks.data]);
   const holdWrites = useHoldWrites();
   const online = useOnline();
   const emptyButton = useRef<HTMLButtonElement>(null);
@@ -237,9 +240,9 @@ export function LoansHost({
   }
 
   const picking = view !== "form";
-  const loading = sample === "loading" || (sample == null && balances.isLoading);
-  const failed = sample === "error" || (sample == null && balances.isError);
-  const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
+  const loading = sample === "loading" || (sample == null && (balances.isLoading || outlooks.isLoading));
+  const failed = sample === "error" || (sample == null && (balances.isError || outlooks.isError));
+  const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (liveRows ?? []) : [];
   // Only closed loans: the empty state shows, with "הלוואות שנסגרו (N)" under it (§3.1).
   const empty = !loading && !failed && groupLoans(rows).open.length === 0;
   const newLoanReturn = empty ? emptyButton : newButton;
@@ -256,8 +259,8 @@ export function LoansHost({
         summary,
         currency,
         holdWrites,
-        retrying: sample == null && balances.isFetching,
-        retry: () => { if (sample == null) void balances.refetch(); },
+        retrying: sample == null && (balances.isFetching || outlooks.isFetching),
+        retry: () => { if (sample != null) return; if (balances.isError) void balances.refetch(); if (outlooks.isError) void outlooks.refetch(); },
         openNew: () => { setLoanSheet(true); },
         newRef: newButton,
         emptyRef: emptyButton,
