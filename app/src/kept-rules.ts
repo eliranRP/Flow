@@ -7,11 +7,12 @@ import type { ReadSchemas } from "./load-read-schemas";
  * preview's key (anything but "off") is never kept.
  *
  * Who reads a kept key, where that is not plain from its name:
- * - "expected-months" (the company's, and each project's): Home's forecast, the forecast screen, Profit's next month
- *   (company) and the project page's forecast card (project).
+ * - "expected-months" (the company's, and each project's): Profit's next month (company) and the project page's
+ *   forecast card (project). FLOW-1314: Home's forecast and the forecast screen read month_forecast instead.
  * - "categories" (list_categories): Home, the project page's forecast card, Profit's next month and the pickers.
  * - the overhead project ("company-overhead"): Profit, Recurring, Forecast and next month.
- * - "month-forecast" overrides: Home's נותר לשלם and the forecast, the project page's forecast card.
+ * - "month-forecast" overrides: Home's נותר לשלם, the recurring screen, Profit's next month and the project page's forecast card.
+ * - "month-forecast" "answer" (FLOW-1314, month_forecast): Home's forecast row and the forecast screen, one read.
  * - "project-forecast-edits": the project page's forecast card (one project, one month) and Profit's next month
  *   (the whole company, slim answer only).
  * - "loans" "company-forecast": Profit's next month (with company_next_month_inputs and the categories).
@@ -101,6 +102,14 @@ function loanListSaved(data: unknown): unknown {
   return { ...data, loans: data.loans.map(trimmed) };
 }
 
+/** The month forecast as the page holds it: month, currency, the build's items and four lists, its two totals (bigints, digit strings in the JSON form) and the overrides. */
+function monthForecastValid(_schemas: ReadSchemas | null, json: unknown): boolean {
+  if (!isRecord(json) || typeof json.month !== "string" || typeof json.base !== "string" || !Array.isArray(json.overrides) || !isRecord(json.build)) return false;
+  const { build } = json;
+  const item = (row: unknown): boolean => isRecord(row) && typeof row.key === "string" && typeof row.name === "string" && isMinorString(row.usual) && isMinorString(row.minor);
+  return ["items", "income", "expense", "moved", "small"].every((list) => Array.isArray(build[list]) && (build[list] as unknown[]).every(item)) && isMinorString(build.incomeTotal) && isMinorString(build.expenseTotal) && typeof build.changed === "number";
+}
+
 export const KEPT_RULES: readonly KeptRule[] = [
   // Home and Projects. FLOW-1292: the rest of Home's first view (the attention counts, the change pills, the weekly card, the first lines).
   rule("dashboard", (k) => k[0] === "dashboard" && off(k, 1), bySchema((s) => s.dashboardSchema)),
@@ -150,7 +159,8 @@ export const KEPT_RULES: readonly KeptRule[] = [
   // The forecast.
   rule("expected months", (k) => k[0] === "expected-months" && off(k, 1), bySchema((s) => s.expectedMonthsSchema)),
   rule("missing bills", (k) => k[0] === "missing-bills" && off(k, 1), bySchema((s) => s.missingBillsSchema)),
-  rule("month forecast", (k) => k[0] === "month-forecast" && off(k, 1) && typeof k[2] === "string" && k[2] !== "overrides", (_s, json) => isRecord(json) && typeof json.month === "string" && typeof json.base === "string" && isRecord(json.build) && Array.isArray(json.overrides)),
+  // FLOW-1314: the month_forecast read, as the page holds it (its build is buildMonthForecast's, with bigint amounts).
+  rule("month forecast", (k) => k.length === 4 && k[0] === "month-forecast" && off(k, 1) && k[2] === "answer" && typeof k[3] === "string", monthForecastValid),
   rule("forecast overrides", (k) => k[0] === "month-forecast" && off(k, 1) && k[2] === "overrides", (_s, json) => Array.isArray(json)),
 ];
 

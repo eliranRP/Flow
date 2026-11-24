@@ -58,6 +58,7 @@ export const readRpcs = new Set([
   "mcp_company_loan_currency",
   "mcp_loan_payments",
   "missing_bills",
+  "month_forecast",
   "my_invites",
   "party_charges",
   "payment_recurring",

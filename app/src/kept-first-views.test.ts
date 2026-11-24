@@ -37,6 +37,8 @@ const categories = categoryRowSchema.array().parse([{ id: "c1", name: "חשמל"
 const edits = [{ id: "e1", kind: "change", row_key: "k", category_id: null, direction: "expense", amount_minor: 100, pace: "month", start_month: "2026-12" }];
 const inputs = { month: "2026-12", overhead_project_id: null, projects: [], general: [], edits: [] };
 const loans = [{ id: "l1", currency: "ILS", balanceMinor: 900n, principalMinor: 1000n, rates: [], categoryIds: {} }];
+const forecastItem = { key: "party:expense:s1:ILS", direction: "expense", kind: "recurring", name: "חשמל", currency: "ILS", usual: 20000n, minor: 20000n, day: 5, description: null, due_on: null, moved_out: false, overridden: false, expected_on: null, late_days: 0, category_id: null, project_id: null, project_name: null, pace: "month", line_start: null };
+const forecast = { month: "2026-11", base: "ILS", overrides: [], build: { items: [forecastItem], income: [], expense: [forecastItem], moved: [], small: [], incomeTotal: 0n, expenseTotal: 20000n, changed: 0 } };
 
 type Case = { name: string; key: unknown[]; good: unknown; bad: unknown; preview: unknown[] };
 const CASES: Case[] = [
@@ -52,6 +54,7 @@ const CASES: Case[] = [
   { name: "categories", key: ["categories", "off"], good: categories, bad: [{ id: "c1", name: "חשמל", kind: "other" }], preview: ["categories", "empty"] },
   { name: "company next month inputs", key: ["project-forecast-edits", "off", "company", "2026-11-23", false], good: inputs, bad: { month: "2026-12" }, preview: ["project-forecast-edits", "empty", "company", "2026-11-23", false] },
   { name: "company forecast loans", key: ["loans", "company-forecast", "off"], good: loans, bad: [{ id: "l1", currency: "EUR", balanceMinor: 1n, rates: [] }], preview: ["loans", "company-forecast", "empty"] },
+  { name: "month forecast (FLOW-1314)", key: ["month-forecast", "off", "answer", "2026-11"], good: forecast, bad: { ...forecast, build: { ...forecast.build, expenseTotal: 20000.5 } }, preview: ["month-forecast", "empty", "answer", "2026-11"] },
 ];
 
 function newClient(): QueryClient {
