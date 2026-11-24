@@ -27,6 +27,8 @@ const USER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const COMPANY_A = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const COMPANY_B = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const UNPAID = ["unpaid", "off"] as const;
+/** A month forecast with nothing in it, in the shape the kept rule checks (FLOW-1314). */
+const EMPTY_BUILD = { items: [], income: [], expense: [], moved: [], small: [], incomeTotal: 0n, expenseTotal: 0n, changed: 0 };
 const DASHBOARD = ["dashboard", "off", { from: null, to: null }] as const;
 
 let store: KeptStore;
@@ -281,11 +283,11 @@ describe("kept reads (FLOW-1267)", () => {
     const at = Date.now();
     for (const [index, month] of ["2026-07", "2026-08", "2026-09"].entries()) {
       // The month forecast, padded so three of them pass the cap.
-      await client.query({ queryKey: ["month-forecast", "off", month], queryFn: () => Promise.resolve({ month, base: "ILS", build: {}, overrides: [], pad: big }) });
-      client.getQueryCache().find({ queryKey: ["month-forecast", "off", month] })?.setState({ dataUpdatedAt: at + index });
+      await client.query({ queryKey: ["month-forecast", "off", "answer", month], queryFn: () => Promise.resolve({ month, base: "ILS", build: EMPTY_BUILD, overrides: [], pad: big }) });
+      client.getQueryCache().find({ queryKey: ["month-forecast", "off", "answer", month] })?.setState({ dataUpdatedAt: at + index });
       await flushKeptReads();
     }
-    const left = (await store.all()).map((item) => (JSON.parse(item.key) as unknown[])[2] as string).sort();
+    const left = (await store.all()).map((item) => (JSON.parse(item.key) as unknown[])[3] as string).sort();
     expect(left).toEqual(["2026-08", "2026-09"]);
   });
 
@@ -408,11 +410,11 @@ describe("kept reads (FLOW-1267)", () => {
     const client = newClient();
     keepReadsOf(client);
     await read(client, ["company-currency", "off"], "USD");
-    await read(client, ["month-forecast", "off", "2026-11"], { month: "2026-11", base: "ILS", build: {}, overrides: [], note: "א".repeat(100) });
+    await read(client, ["month-forecast", "off", "answer", "2026-11"], { month: "2026-11", base: "ILS", build: EMPTY_BUILD, overrides: [], note: "א".repeat(100) });
     await flushKeptReads();
     const saved = await store.all();
     const forecast = saved.find((item) => item.key.includes("month-forecast"));
-    expect(forecast?.size).toBe(new TextEncoder().encode(JSON.stringify(forecast?.data)).length);
+    expect(forecast?.size).toBe(new TextEncoder().encode(JSON.stringify(forecast?.data, (_key, value: unknown) => (typeof value === "bigint" ? value.toString() : value))).length);
     expect(forecast?.size).toBeGreaterThan(200);
   });
 
