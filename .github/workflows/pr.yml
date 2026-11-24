@@ -241,11 +241,7 @@ jobs:
         run: pnpm --filter @flow/app exec playwright install chromium
       - name: Wait for local Supabase
         timeout-minutes: 8
-        run: |
-          set -euo pipefail
-          while [ ! -f "$RUNNER_TEMP/supabase-start.exit" ]; do sleep 2; done
-          cat "$RUNNER_TEMP/supabase-start.log"
-          test "$(cat "$RUNNER_TEMP/supabase-start.exit")" = 0
+        run: bash scripts/ci-supabase-wait.sh
       # The smoke reads the same local API in every shard, so the first Playwright shard runs it alone.
       - name: flow-mcp answers on the local API
         if: matrix.part == '1/4'

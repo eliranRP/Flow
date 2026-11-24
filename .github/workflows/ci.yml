@@ -515,7 +515,8 @@ jobs:
       - name: Start local Supabase in the background
         run: |
           # The exit file appears only once it holds the full status (written, then renamed).
-          # The script times a start out at 3 minutes, stops, retries once, and logs docker ps -a on failure.
+          # The script times a start out at 2 minutes (healthy starts take 61 to 96 s), stops, retries inside a
+          # 330 s budget, and logs docker ps -a on failure. ci-supabase-wait.sh reads its exit file.
           (bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
@@ -562,11 +563,7 @@ jobs:
         run: bash scripts/ci-apt-cache.sh psql
       - name: Wait for local Supabase
         timeout-minutes: 8
-        run: |
-          set -euo pipefail
-          while [ ! -f "$RUNNER_TEMP/supabase-start.exit" ]; do sleep 2; done
-          cat "$RUNNER_TEMP/supabase-start.log"
-          test "$(cat "$RUNNER_TEMP/supabase-start.exit")" = 0
+        run: bash scripts/ci-supabase-wait.sh
       # The smoke reads the same local API in every shard, so the first Playwright shard runs it alone.
       - name: flow-mcp answers on the local API
         if: matrix.part == '1/4'
@@ -732,6 +729,18 @@ jobs:
 
       - name: Smoke the production hostname
         run: bash scripts/cd-smoke.sh "$GITHUB_SHA"
+
+      # The live smoke installs Playwright's system packages. Without this cache the Ubuntu mirror served the
+      # font packages at about 100 KB/s and the step ran out of time (FLOW-1319). Read only: check (storybook) saves it.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flow-apt
+          key: ${{ runner.os }}-playwright-apt-1.65.1-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.65.1
+
+      - name: Restore Playwright system packages
+        run: bash scripts/ci-apt-cache.sh restore
 
       - name: Read-only smoke of the live app
         timeout-minutes: 15
