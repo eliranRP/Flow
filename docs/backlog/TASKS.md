@@ -866,6 +866,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1314"></a>[FLOW-1314](tasks/FLOW-1314.md) | Perf: Home's forecast row and the Forecast screen read the month forecast | SMALL (perf) |
 | <a id="flow-1315"></a>[FLOW-1315](tasks/FLOW-1315.md) | Perf: the project page reads the project forecast | MEDIUM (perf) |
 | <a id="flow-1316"></a>[FLOW-1316](tasks/FLOW-1316.md) | Perf: the Loans list reads its outlooks | MEDIUM (perf) |
+| <a id="flow-1318"></a>[FLOW-1318](tasks/FLOW-1318.md) | Perf: company_forecast builds each loan's payments for the months asked only, and gathers only the first due date | SMALL/MEDIUM (perf) |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |
 | <a id="flow-1282"></a>[FLOW-1282](tasks/FLOW-1282.md) | Perf: Projects and Recurring draw only the rows on screen | MEDIUM (perf) |
