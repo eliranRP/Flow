@@ -1,5 +1,5 @@
 import { dueInMonth, type ExpectedParty, monthIndex, paceMonths, type ProjectCategoryMonths } from "@flow/shared";
-import { type ForecastCategory, type ForecastLoan, type LoanCash, loanCashOnly, loanParts } from "./project-next-loans";
+import { type ForecastCategory, type ForecastLoan, type LoanCash, loanCashOnly, loanParts, newPaymentsLeftMemo, type PaymentsLeftMemo } from "./project-next-loans";
 
 /**
  * A project's forecast for next month (the ProfitProject card, the ProfitNext page and its edit page), in
@@ -195,6 +195,8 @@ export function nextMonthForecast(input: {
   /** The project's loans, and the company's categories their parts file to. */
   loans?: readonly ForecastLoan[];
   categories?: readonly ForecastCategory[];
+  /** FLOW-1304: the build's payments-left memo (companyNextMonthForecast passes its own); a fresh one when absent. */
+  payments?: PaymentsLeftMemo;
   /**
    * yyyy-mm, a later month than next month (the company's rest of the year, decision 0200): the same rules
    * for that month. Default: next month.
@@ -205,7 +207,7 @@ export function nextMonthForecast(input: {
   const thisMonth = input.today.slice(0, 7);
   // A loan payment is not a profit line: the loan's own rows stand for its interest and escrow.
   const charges = input.recurring.filter((party) => party.project_id === input.projectId && party.pays_loan !== true);
-  const loanMonth = { projectId: input.projectId, currency: input.currency, month, today: input.today, loans: input.loans ?? [] };
+  const loanMonth = { projectId: input.projectId, currency: input.currency, month, today: input.today, loans: input.loans ?? [], payments: input.payments ?? newPaymentsLeftMemo() };
   const loans = loanParts({ ...loanMonth, categories: input.categories ?? [] })
     .map((part): NextMonthRow => ({
       key: `avg:${part.categoryId}`,

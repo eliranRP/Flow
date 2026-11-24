@@ -1,7 +1,7 @@
 import { formatAmountText, type CategoryRow, type ExpectedParty, type ProjectCategoryMonths } from "@flow/shared";
 import { incomeNote, isRent, type RentCategory } from "./next-month-chart";
 import { monthWord } from "./project-next-edit";
-import type { ForecastLoan } from "./project-next-loans";
+import { type ForecastLoan, newPaymentsLeftMemo, type PaymentsLeftMemo } from "./project-next-loans";
 import { applyForecastEdits, cashForecast, nextMonthForecast, nextMonthKey, type NextMonthForecast, type NextMonthRow, type ProjectForecastEdit } from "./project-next-month";
 
 /**
@@ -123,6 +123,11 @@ export type CompanyForecastInput = {
    * `party:<direction>:<party>:<currency>[:<project|none>]`). Each takes the charge's row out of its part.
    */
   skips?: readonly string[];
+  /**
+   * FLOW-1304: the loans' payments left for this read, shared by every part and month of one build. companyRestOfYear
+   * passes one memo to all its months; a build without one makes its own.
+   */
+  payments?: PaymentsLeftMemo;
 };
 
 /**
@@ -145,7 +150,9 @@ function skippedRows(forecast: NextMonthForecast): string[] {
   return (forecast.skipped ?? []).map((row) => row.key);
 }
 
-export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNextMonth {
+export function companyNextMonthForecast(read: CompanyForecastInput): CompanyNextMonth {
+  // FLOW-1304: one payments-left memo for the whole build: the projects' parts and the general costs' share it.
+  const input = { ...read, payments: read.payments ?? newPaymentsLeftMemo() };
   const month = input.month ?? nextMonthKey(input.today);
   const overhead = input.inputs.overhead_project_id;
   const build = (projectId: string, rows: readonly CategoryMonthsRow[], recurring: readonly ExpectedParty[], loans: readonly ForecastLoan[]) => nextMonthForecast({
@@ -156,6 +163,7 @@ export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNe
     categoryMonths: asCategoryMonths(projectId, rows),
     loans,
     categories: input.categories,
+    payments: input.payments,
     month,
   });
   // Only the projects the read lists: a finished project's charges, loans and edits add nothing.
@@ -230,6 +238,7 @@ export function companyGeneralForecast(input: CompanyForecastInput, month = inpu
       categoryMonths: asCategoryMonths(GENERAL, input.inputs.general),
       loans,
       categories: input.categories,
+      payments: input.payments,
       month,
     }),
     [...input.inputs.edits.filter((edit) => overhead != null && edit.project_id === overhead), ...skipEdits(input.skips, null, overhead, month)],
