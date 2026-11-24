@@ -2,7 +2,7 @@
 // FLOW-1277: the splash's timer constants are the numbers of its motion tokens.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { SPLASH_END_MS, SPLASH_FADE_MS, SPLASH_WORD_DELAY_MS } from "./splash";
+import { SPLASH_END_MS, SPLASH_FADE_MS, SPLASH_FAILSAFE_MS, SPLASH_FINISH_MS, SPLASH_MIN_MS, SPLASH_WORD_DELAY_MS } from "./splash";
 
 const tokensCss = readFileSync(new URL("../../../design/system/implementation-tokens.css", import.meta.url), "utf8");
 
@@ -21,5 +21,12 @@ describe("the splash timing constants", () => {
     expect(token("--motion-splash-fill")).toBe("2400ms");
     expect(token("--motion-splash-wave")).toBe("600ms");
     expect(SPLASH_END_MS + SPLASH_FADE_MS).toBe(2860);
+  });
+
+  it("(FLOW-1303) keep the minimum short of the animation, and the failsafe long enough for it plus the fade", () => {
+    expect(SPLASH_MIN_MS).toBe(800);
+    expect(SPLASH_MIN_MS + SPLASH_FINISH_MS).toBeLessThan(SPLASH_END_MS);
+    expect(SPLASH_FAILSAFE_MS).toBe(3000);
+    expect(SPLASH_FAILSAFE_MS).toBeGreaterThanOrEqual(SPLASH_END_MS + SPLASH_FADE_MS);
   });
 });

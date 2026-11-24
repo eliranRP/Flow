@@ -1,18 +1,26 @@
-import { useCallback, useEffect, useId, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import "./lazy.css";
+import { watchHomeReady } from "./splash-ready";
 import { Wordmark } from "./wordmark";
 
 /**
  * FLOW-1277: the splash. A violet tile fills with liquid and ends as the app icon (a violet tile, a white F);
  * the wordmark fades in under it. Decorative: aria-hidden, no focusable part, so it never holds focus or
- * is read out. The owner's pick, 2026-11-23: concept N3, slowed down.
+ * is read out. The owner's pick, 2026-11-23: concept N3, slowed down. FLOW-1303 (the owner's choice,
+ * 2026-11-24, "End when data is ready"): it ends when Home's first figures are drawn, not on a fixed clock.
  */
 
 // The same numbers as the --motion-splash-word* tokens (the test checks them); the timer below needs them in JS.
 export const SPLASH_WORD_DELAY_MS = 2300;
 export const SPLASH_WORD_MS = 400;
-/** When the fade out starts: the wordmark has arrived. */
+/** When the animation reaches its end state (the wordmark has arrived): the longest it runs. */
 export const SPLASH_END_MS = SPLASH_WORD_DELAY_MS + SPLASH_WORD_MS;
+/** The least the splash stays on screen before its fade out, whatever the data does. */
+export const SPLASH_MIN_MS = 800;
+/** When the data is ready early, the rest of the animation is sped up to arrive in this long. */
+export const SPLASH_FINISH_MS = 400;
+/** The splash is gone by this long after it shows, data or not (its fade out included). */
+export const SPLASH_FAILSAFE_MS = 3000;
 /** The fade out, the value of --motion-toast-out. A tap uses the same quick fade. */
 export const SPLASH_FADE_MS = 160;
 /** Reduced motion: the finished icon and wordmark stay this long. */
@@ -67,24 +75,56 @@ export function SplashMark({ at }: { at?: number }) {
 }
 
 /**
- * The overlay over the app: the page colour, the mark in the middle. The app is mounted and loading under
- * it. It leaves by itself after the wordmark has arrived (after a short hold under reduced motion), or at a
- * tap or a key; `onDone` runs once its fade out is over.
+ * Plays what is left of the animation faster, so it reaches its end state in `ms` instead of being cut off
+ * mid-wave. Only the playback rate changes, so the motion stays continuous. A browser without the Web
+ * Animations API leaves the animation as it is; the fade out still follows.
  */
-export function Splash({ onDone }: { onDone: () => void }) {
+function finishWithin(overlay: HTMLElement, remainingMs: number, ms: number) {
+  if (ms <= 0 || remainingMs <= ms || typeof overlay.getAnimations !== "function") return;
+  for (const animation of overlay.getAnimations({ subtree: true })) animation.updatePlaybackRate(remainingMs / ms);
+}
+
+/**
+ * The overlay over the app: the page colour, the mark in the middle. The app is mounted and loading under
+ * it. It ends when Home's first figures are drawn (or the app shows a login or an error screen): after at
+ * least `SPLASH_MIN_MS`, with the rest of the fill brought quickly to its end. With no data it stays until
+ * the failsafe, `SPLASH_FAILSAFE_MS` in all. A tap or a key skips it. Under reduced motion it shows the
+ * finished icon for a short hold and does not wait for data. `onDone` runs once its fade out is over.
+ * `watch` is for stories: how it learns the data is ready.
+ */
+export function Splash({ onDone, watch = watchHomeReady }: { onDone: () => void; watch?: typeof watchHomeReady }) {
   const [leaving, setLeaving] = useState(false);
+  const overlay = useRef<HTMLDivElement>(null);
   const leave = useCallback(() => {
     setLeaving(true);
   }, []);
   useEffect(() => {
+    if (leaving) return;
     const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(leave, reduced ? SPLASH_REDUCED_HOLD_MS : SPLASH_END_MS);
+    const shownAt = performance.now();
+    const timers: number[] = [];
+    let stopWatching: () => void = () => undefined;
+    if (reduced) {
+      timers.push(window.setTimeout(leave, SPLASH_REDUCED_HOLD_MS));
+    } else {
+      timers.push(window.setTimeout(leave, SPLASH_FAILSAFE_MS - SPLASH_FADE_MS));
+      stopWatching = watch(() => {
+        // The fade out starts after the minimum and after the fill has had `SPLASH_FINISH_MS` to arrive,
+        // but never later than the animation's own end.
+        const elapsed = performance.now() - shownAt;
+        const remaining = Math.max(SPLASH_END_MS - elapsed, 0);
+        const wait = Math.min(Math.max(SPLASH_MIN_MS - elapsed, SPLASH_FINISH_MS), remaining);
+        if (overlay.current) finishWithin(overlay.current, remaining, wait);
+        timers.push(window.setTimeout(leave, wait));
+      });
+    }
     window.addEventListener("keydown", leave);
     return () => {
-      window.clearTimeout(timer);
+      stopWatching();
+      for (const timer of timers) window.clearTimeout(timer);
       window.removeEventListener("keydown", leave);
     };
-  }, [leave]);
+  }, [leaving, leave, watch]);
   useEffect(() => {
     if (!leaving) return;
     const timer = window.setTimeout(onDone, SPLASH_FADE_MS);
@@ -93,7 +133,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
     };
   }, [leaving, onDone]);
   return (
-    <div className="ui-splash" data-leaving={leaving || undefined} aria-hidden="true" onPointerDown={leave}>
+    <div ref={overlay} className="ui-splash" data-leaving={leaving || undefined} aria-hidden="true" onPointerDown={leave}>
       <SplashMark />
     </div>
   );
