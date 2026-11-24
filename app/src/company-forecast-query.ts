@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { forecastRowsOf, forecastTotalsOf, type CompanyForecastRows, type CompanyForecastTotals } from "./company-forecast-map";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { forecastRowsOf, forecastTotalsOf, withSkips, type CompanyForecastRows, type CompanyForecastTotals } from "./company-forecast-map";
+import { futureForecastKey } from "./forecast-future-keys";
+import { setCompanyForecastPatch } from "./forecast-month";
 import { useForecastOverrides } from "./forecast-skip";
 import { useHomePreview } from "./preview";
 import { readyClient } from "./ready-client";
@@ -63,3 +65,34 @@ export function useCompanyMonthRows(today: string, month: string, enabled: boole
     refetch: () => Promise.all(reads.map((read) => read.refetch())),
   };
 }
+
+/**
+ * A skip, reset or undo drawn at once in every cached 'rows' answer of the month (forecast-month.ts calls this at the tap):
+ * the rows move as withSkips moves them, and the month's totals with them. The keys the month holds are those of the rows
+ * taken out (`skipped`); `change` gives the keys after the write. Returns the undo for a failed write, which puts the answers back
+ * if no other change has touched them since.
+ */
+function patchRows(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
+  const patched: Array<{ key: readonly unknown[]; before: CompanyForecastRows; after: CompanyForecastRows }> = [];
+  const queries = client.getQueryCache().findAll({ queryKey: ["month-forecast"], predicate: (query) => query.queryKey[2] === "company" && query.queryKey[3] === "rows" && query.queryKey[5] === month });
+  for (const query of queries) {
+    const before = query.state.data as CompanyForecastRows | undefined;
+    if (before == null) continue;
+    const keyOf = futureForecastKey(before.forecast, before.currency);
+    const now = before.forecast.skipped.flatMap(({ row, projectId }) => keyOf(row.key, projectId) ?? []);
+    const forecast = withSkips(before.forecast, new Set(change(now)), before.currency);
+    if (forecast === before.forecast) continue;
+    const [first, ...rest] = before.months;
+    if (first == null) continue;
+    // The income note's counts (`income`) are not moved: they follow the read after the write.
+    const month0 = { ...first, incomeMinor: forecast.incomeMinor, expenseMinor: forecast.expenseMinor, netMinor: forecast.netMinor, cashOnlyMinor: forecast.parts.reduce((sum, part) => sum + part.forecast.cashOnlyMinor, 0n), projects: forecast.parts.filter((part) => part.projectId != null).length, general: forecast.parts.some((part) => part.projectId == null) };
+    const after: CompanyForecastRows = { ...before, forecast, months: [month0, ...rest] };
+    client.setQueryData(query.queryKey, after);
+    patched.push({ key: query.queryKey, before, after });
+  }
+  return () => {
+    for (const { key, before, after } of patched) if (client.getQueryData(key) === after) client.setQueryData(key, before);
+  };
+}
+
+setCompanyForecastPatch(patchRows);

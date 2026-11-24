@@ -43,23 +43,23 @@ type Row = Record<string, unknown>;
 
 const isRow = (value: unknown): value is Row => typeof value === "object" && value !== null && !Array.isArray(value);
 
-function shapeError(what: string): Error {
-  return new Error(`company_forecast: ${what}`);
+function shapeError(): Error {
+  return new Error("company_forecast: unexpected answer");
 }
 
 /** An amount as a JSON number in minor units (a digit string too), refused when it is not a safe integer; to the app's bigint. */
-function minorOf(value: unknown, what: string): bigint {
+function minorOf(value: unknown): bigint {
   if (typeof value === "number" && Number.isSafeInteger(value)) return BigInt(value);
   if (typeof value === "string" && /^-?\d+$/.test(value)) {
     const amount = BigInt(value);
     if (amount <= BigInt(Number.MAX_SAFE_INTEGER) && amount >= -BigInt(Number.MAX_SAFE_INTEGER)) return amount;
   }
-  throw shapeError(`${what} is not a safe whole amount`);
+  throw shapeError();
 }
 
-function countOf(value: unknown, what: string): number {
+function countOf(value: unknown): number {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
-  throw shapeError(`${what} is not a count`);
+  throw shapeError();
 }
 
 function textOf(row: Row, field: string): string | null {
@@ -67,32 +67,32 @@ function textOf(row: Row, field: string): string | null {
   return typeof value === "string" ? value : null;
 }
 
-function factsOf(value: unknown, what: string): IncomeFacts {
-  if (!isRow(value)) throw shapeError(`${what} is not an object`);
-  return { rows: countOf(value.rows, `${what} rows`), recurring: countOf(value.recurring, `${what} recurring`), rent: countOf(value.rent, `${what} rent`), name: textOf(value, "name") };
+function factsOf(value: unknown): IncomeFacts {
+  if (!isRow(value)) throw shapeError();
+  return { rows: countOf(value.rows), recurring: countOf(value.recurring), rent: countOf(value.rent), name: textOf(value, "name") };
 }
 
 function monthOf(value: unknown): { totals: ForecastMonthTotals; raw: Row } {
-  if (!isRow(value) || typeof value.month !== "string") throw shapeError("a month has no name");
+  if (!isRow(value) || typeof value.month !== "string") throw shapeError();
   return {
     raw: value,
     totals: {
       month: value.month,
-      incomeMinor: minorOf(value.income_minor, "the income"),
-      expenseMinor: minorOf(value.expense_minor, "the expense"),
-      netMinor: minorOf(value.net_minor, "the net"),
-      cashOnlyMinor: minorOf(value.cash_only_minor, "the cash only"),
-      projects: countOf(value.projects, "the projects"),
+      incomeMinor: minorOf(value.income_minor),
+      expenseMinor: minorOf(value.expense_minor),
+      netMinor: minorOf(value.net_minor),
+      cashOnlyMinor: minorOf(value.cash_only_minor),
+      projects: countOf(value.projects),
       general: value.general === true,
-      income: factsOf(value.income, "the month's income"),
+      income: factsOf(value.income),
     },
   };
 }
 
 function totalsOf(answer: unknown): { totals: CompanyForecastTotals; raws: Row[]; raw: Row } {
-  if (!isRow(answer) || typeof answer.today !== "string" || typeof answer.currency !== "string" || !Array.isArray(answer.months)) throw shapeError("the answer has no today, currency or months");
+  if (!isRow(answer) || typeof answer.today !== "string" || typeof answer.currency !== "string" || !Array.isArray(answer.months)) throw shapeError();
   const months = answer.months.map(monthOf);
-  return { totals: { today: answer.today, currency: answer.currency, months: months.map((month) => month.totals), income: factsOf(answer.income, "the income") }, raws: months.map((month) => month.raw), raw: answer };
+  return { totals: { today: answer.today, currency: answer.currency, months: months.map((month) => month.totals), income: factsOf(answer.income) }, raws: months.map((month) => month.raw), raw: answer };
 }
 
 /** company_forecast with 'totals': each month's totals, as the card and the year view read them. */
@@ -100,30 +100,27 @@ export function forecastTotalsOf(answer: unknown): CompanyForecastTotals {
   return totalsOf(answer).totals;
 }
 
-const KINDS = new Set(["recurring", "loan", "average", "added"]);
-const PACES = new Set(["once", "month", "2months", "quarter", "year"]);
-
 function rowOf(value: unknown): NextMonthRow {
-  if (!isRow(value)) throw shapeError("a row is not an object");
+  if (!isRow(value)) throw shapeError();
   const key = textOf(value, "key");
   const { kind, direction, pace } = value;
-  if (key == null || typeof kind !== "string" || !KINDS.has(kind) || (direction !== "income" && direction !== "expense")) throw shapeError("a row has no key, kind or direction");
-  if (pace != null && (typeof pace !== "string" || !PACES.has(pace))) throw shapeError("a row's pace is not one");
+  if (key == null || typeof kind !== "string" || (direction !== "income" && direction !== "expense")) throw shapeError();
+  if (pace != null && typeof pace !== "string") throw shapeError();
   return {
     key,
     kind: kind as NextMonthRow["kind"],
     direction,
     name: textOf(value, "name") ?? "",
     date: textOf(value, "date"),
-    minor: minorOf(value.minor, "a row's amount"),
+    minor: minorOf(value.minor),
     categoryId: textOf(value, "category_id"),
-    wasMinor: value.was_minor == null ? null : minorOf(value.was_minor, "a row's was_minor"),
+    wasMinor: value.was_minor == null ? null : minorOf(value.was_minor),
     pace: (pace ?? null) as ForecastPace | null,
   };
 }
 
-function rowsIn(value: unknown, what: string): NextMonthRow[] {
-  if (!Array.isArray(value)) throw shapeError(`${what} is not a list`);
+function rowsIn(value: unknown): NextMonthRow[] {
+  if (!Array.isArray(value)) throw shapeError();
   return value.map(rowOf);
 }
 
@@ -151,10 +148,10 @@ export function orderRows(rows: readonly NextMonthRow[]): NextMonthRow[] {
 }
 
 function loanCashOf(value: unknown): LoanCash[] {
-  if (!Array.isArray(value)) throw shapeError("loan_cash is not a list");
+  if (!Array.isArray(value)) throw shapeError();
   return value.map((loan): LoanCash => {
-    if (!isRow(loan) || typeof loan.loan_id !== "string" || !Array.isArray(loan.row_category_ids) || !loan.row_category_ids.every((id) => typeof id === "string")) throw shapeError("a loan's cash has no loan or categories");
-    return { loanId: loan.loan_id, rowCategoryIds: loan.row_category_ids, minor: minorOf(loan.minor, "a loan's cash") };
+    if (!isRow(loan) || typeof loan.loan_id !== "string" || !Array.isArray(loan.row_category_ids) || !loan.row_category_ids.every((id) => typeof id === "string")) throw shapeError();
+    return { loanId: loan.loan_id, rowCategoryIds: loan.row_category_ids, minor: minorOf(loan.minor) };
   });
 }
 
@@ -206,29 +203,29 @@ export function forecastRowsOf(answer: unknown): CompanyForecastRows {
   const { totals, raws, raw } = totalsOf(answer);
   const [month] = totals.months;
   const [monthRaw] = raws;
-  if (totals.months.length !== 1 || month == null || monthRaw == null) throw shapeError("the answer is not of one month");
-  if (!Array.isArray(monthRaw.parts) || !Array.isArray(monthRaw.skipped) || !Array.isArray(raw.split_keys) || !raw.split_keys.every((key) => typeof key === "string")) throw shapeError("the answer has no parts, skipped or split keys");
+  if (totals.months.length !== 1 || month == null || monthRaw == null) throw shapeError();
+  if (!Array.isArray(monthRaw.parts) || !Array.isArray(monthRaw.skipped) || !Array.isArray(raw.split_keys) || !raw.split_keys.every((key) => typeof key === "string")) throw shapeError();
   const skipped = new Map<string | null, NextMonthRow[]>();
   for (const item of monthRaw.skipped) {
-    if (!isRow(item)) throw shapeError("a skipped row is not an object");
+    if (!isRow(item)) throw shapeError();
     const projectId = textOf(item, "project_id");
     skipped.set(projectId, [...(skipped.get(projectId) ?? []), rowOf(item)]);
   }
   const parts: CompanyForecastPart[] = monthRaw.parts.map((item): CompanyForecastPart => {
-    if (!isRow(item)) throw shapeError("a part is not an object");
+    if (!isRow(item)) throw shapeError();
     const projectId = textOf(item, "project_id");
     const average = item.average_months;
-    if (typeof average !== "number" || !Number.isInteger(average) || average < 1) throw shapeError("a part's average_months is not a count");
+    if (typeof average !== "number" || !Number.isInteger(average) || average < 1) throw shapeError();
     const own = skipped.get(projectId) ?? [];
     skipped.delete(projectId);
     return partOf(partForecast(month.month, {
-      rows: orderRows(rowsIn(item.rows, "a part's rows")),
-      removed: orderRows(rowsIn(item.removed, "a part's removed")),
-      arrived: orderRows(rowsIn(item.arrived, "a part's arrived")),
+      rows: orderRows(rowsIn(item.rows)),
+      removed: orderRows(rowsIn(item.removed)),
+      arrived: orderRows(rowsIn(item.arrived)),
       skipped: orderRows(own),
       averageMonths: average,
       loanCash: loanCashOf(item.loan_cash),
-      cashOnlyMinor: minorOf(item.cash_only_minor, "a part's cash only"),
+      cashOnlyMinor: minorOf(item.cash_only_minor),
     }), projectId);
   });
   // A project with nothing expected still lists what a skip took out of it (the builder lists every project's).
