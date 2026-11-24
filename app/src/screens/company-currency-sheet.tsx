@@ -11,7 +11,9 @@ export const CURRENCY_REFUSED = "אין הרשאה לשנות את מטבע הע
 export const CURRENCY_UNDONE = "מטבע העסק הוחזר";
 
 /** Everything that reads the company currency: its order, the empty row, the loan default. */
-const CURRENCY_KEYS = ["company-currency", "loan-currency", "dashboard", "project", "profit-months", "breakdown", "month-forecast", "expected-months"];
+// FLOW-1299: "breakdown-lines" is here because the project page's month lines are keyed on null (the books currency),
+// so a change of currency must refetch them rather than rely on a new key.
+const CURRENCY_KEYS = ["company-currency", "loan-currency", "dashboard", "project", "profit-months", "breakdown", "breakdown-lines", "month-forecast", "expected-months"];
 
 function currencyFailure(error: Error): WriteFailure {
   const code = (error as Error & { code?: string }).code;

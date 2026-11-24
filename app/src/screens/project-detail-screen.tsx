@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { formatAmountText, type CashLine, type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
-import { useCompanyCurrency, useCompanyCurrencyQuery } from "../company-currency";
+import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
@@ -171,7 +171,6 @@ export function ProjectDetailScreen({
   const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
-  const companyRead = useCompanyCurrencyQuery();
   // Next month's forecast, as the profit page and the צפי page read it: the currency of the project's
   // lifetime figures.
   const lifetimeProject = lifetime.data ?? sample ?? null;
@@ -205,11 +204,12 @@ export function ProjectDetailScreen({
   const forecastSkip = useForecastSkip(thisMonth, skipMonth, overrides.data ?? null);
   // FLOW-1270: the lines read starts at mount. Its month is the cash read's current month, else Israel's today (the
   // server's flow_today): with a skewed device clock the first read is for the client's month, and a different
-  // `months[0]` switches the key, and the read, once the cash read lands. Its currency is the books currency
-  // (project_cash_months' `base_currency`, which is the company currency): that read's once landed, else the company
-  // currency query's (cached from Home), else null, which the server fills in. So the key is the month profit page's.
+  // `months[0]` switches the key, and the read, once the cash read lands.
+  // FLOW-1299: its currency is null, the company's books currency, which the server fills in. That is the currency the
+  // page's cash read is in (project_cash_months' `base_currency` is the same company currency), so one read answers
+  // both a cold open (no currency yet) and a warm one: the key never changes, and the lines are not read twice.
   const linesMonth = cash.data?.months[0]?.month.slice(0, 7) ?? thisMonth;
-  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, cash.data?.base_currency ?? companyRead.data ?? null, sample == null);
+  const monthLines = useProjectCashMonthLinesQuery(projectId, linesMonth, null, sample == null);
   // The schedule and the month's lines are read only for a live page (not a sample or a preview).
   const linesLive = sample == null && preview === "off";
   // FLOW-1135: the property's utilities (who pays each), and, once one is the tenant's, its bills not refunded.
