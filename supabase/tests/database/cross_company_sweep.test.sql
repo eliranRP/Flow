@@ -649,7 +649,7 @@ begin
     ('merge_category', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
     ('restore_loan', jsonb_build_object('p_loan_id', pg_temp.lit(pg_temp.sid('loan_gone')))),
     ('restore_category', jsonb_build_object('p_category_id', pg_temp.lit(pg_temp.sid('category_gone')))),
-    ('reopen_review', jsonb_build_object('p_id', pg_temp.lit(pg_temp.sid('review_done')))), ('company_forecast', jsonb_build_object('p_months', pg_temp.lit(array[to_char(current_date + interval '1 month', 'YYYY-MM')]::text[]), 'p_detail', pg_temp.lit('rows'::text))), -- FLOW-1307: next month (p_today is today) and a detail it takes
+    ('reopen_review', jsonb_build_object('p_id', pg_temp.lit(pg_temp.sid('review_done')))), ('company_forecast', jsonb_build_object('p_months', pg_temp.lit(array[to_char((now() at time zone 'Asia/Jerusalem')::date + interval '1 month', 'YYYY-MM')]::text[]), 'p_detail', pg_temp.lit('rows'::text), 'p_today', pg_temp.lit((now() at time zone 'Asia/Jerusalem')::date))), -- FLOW-1307: next month in Israel, that day
     ('reopen_invite', jsonb_build_object('p_invite_id', pg_temp.lit(pg_temp.sid('invite_declined')))),
     ('mcp_move_category_lines', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
     ('mcp_set_bank_accounts', jsonb_build_object('p_account_ids', pg_temp.lit(array['victim-acct-1']::text[]), 'p_from', 'null::text')),

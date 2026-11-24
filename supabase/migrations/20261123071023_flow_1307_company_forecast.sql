@@ -18,8 +18,8 @@
 -- - public.company_forecast(p_months, p_detail, p_today): security invoker. Gathers what the app gathers today
 --   (company_next_month_inputs, expected_months(0), the loans with their balances, rates and stored schedules, the
 --   categories, the company currency) and builds the months asked. p_months are months of the forecast (next month to
---   12 months ahead of p_today), each once, answered in that order; p_detail is 'totals' or 'rows'. Anything else is
---   refused with 22023; a caller with no company with 42501 (company_next_month_inputs).
+--   12 months ahead of p_today), each once, answered in that order; p_detail is 'totals' or 'rows', and 'rows' takes
+--   one month only. Anything else is refused with 22023; a caller with no company with 42501 (company_next_month_inputs).
 --
 -- Answer of public.company_forecast (absent = null; amounts are minor units of the company currency):
 --   { today, currency,
@@ -31,15 +31,19 @@
 --                                                                  of those are rent (isRent), and the name when one
 --     income: { rows, recurring, rent, name } }                    the same over every month asked, each stream once
 --                                                                  (restIncomeNote)
---   'rows' adds, per month,
+--   'rows' (one month) adds, per month,
 --     parts: [{ project_id, income_minor, expense_minor, cash_only_minor, average_months,
 --               rows, removed, arrived, loan_cash: [{ loan_id, row_category_ids, minor }] }]
 --                                                                  the parts with a row, projects by id, then the
---                                                                  general costs (no project_id)
+--                                                                  general costs (no project_id), which are listed
+--                                                                  even with no row (rows []: then they count in no
+--                                                                  total), as companyGeneralForecast gives them
 --     skipped: [{ project_id, ...row }]                            every part's rows a skip took out (FLOW-1079)
 --   and, once, split_keys: the parties split by project (FLOW-1096).
 --   A row is { key, kind, direction, name, date, minor (signed), category_id, was_minor, pace }.
--- Rows come by key, not in the app's order: the app sorts and words them (Hebrew collation differs, plan section 2).
+-- Order: each list has its rows by key (then amount, day and name), then the lines the user added in the edits' order
+-- (created_at, id), as the builder lists them. The app sorts the rest and words them (Hebrew collation differs, plan
+-- section 2).
 --
 -- Today: p_today null is today in Israel (Asia/Jerusalem), inline, since authenticated cannot execute
 -- private.flow_today() (as FLOW-1313 and FLOW-1310). The same day goes to every read gathered.
@@ -218,7 +222,9 @@ as $$
   select left(p_key, 4)::integer * 12 + substr(p_key, 6, 2)::integer - 1;
 $$;
 
--- How many months apart a pace's charges or edits come (paceMonths); anything else is monthly.
+-- How many months apart a pace's charges or edits come (paceMonths); anything else is monthly. It repeats
+-- private.pace_months on purpose: that one answers null for an unknown pace (the app's paceMonths answers 1), and it is
+-- not granted to authenticated, which inlining into the caller's query needs. Keep the two apart.
 create function private.forecast_pace_months(p_pace text)
 returns integer
 language sql
@@ -445,7 +451,7 @@ begin
       select pm.m, pm.pid, 'rec:' || p.direction || ':' || p.party as key, 'recurring' as kind, p.direction, p.name,
         d.date,
         case when p.direction = 'income' then abs(p.amount) else -abs(p.amount) end as minor,
-        p.cat as category_id, null::text as pace
+        p.cat as category_id, null::text as pace, null::bigint as seq
       from pm
       join party p on p.pid = pm.pid
       cross join lateral (select pm.m || '-' || lpad(greatest(1, least(coalesce(p.day, 1), pm.last))::text, 2, '0') as date) d
@@ -455,14 +461,14 @@ begin
         and (p.ends_on is null or d.date collate "C" <= p.ends_on)
       union all
       -- The loans' interest and escrow due in the month, each under its category's key.
-      select lp.m, lp.pid, 'avg:' || lp.cat, 'loan', 'expense', lp.name, null, -lp.minor, lp.cat, null
+      select lp.m, lp.pid, 'avg:' || lp.cat, 'loan', 'expense', lp.name, null, -lp.minor, lp.cat, null, null
       from loan_part lp
       union all
       -- One average row per category nothing fills.
       select pm.m, pm.pid,
         case when av.id is null then 'avg:none' else 'avg:' || av.id end, 'average', 'expense',
         case when av.id is null then 'אחר' else coalesce(av.name, '') end,
-        null, -av.average, av.id, null
+        null, -av.average, av.id, null, null
       from pm
       join average av on av.pid = pm.pid
       where av.id is null or not exists (select 1 from filled fl where fl.m = pm.m and fl.pid = pm.pid and fl.cat = av.id)
@@ -516,13 +522,13 @@ begin
         and coalesce(skip.f[3], '') <> ''
         and (skip.f[5] is null or case when pm.pid = '' then skip.f[5] = 'none' or skip.f[5] = overhead else skip.f[5] = pm.pid end)
     ),
-    -- The lines the user added (applyForecastEdits), after the rows.
+    -- The lines the user added (applyForecastEdits), after the rows, in the edits' order (seq).
     added as (
       select edit.m, edit.pid, 'add:' || edit.id as key, 'added' as kind,
         case when edit.direction = 'income' then 'income' else 'expense' end as direction,
         coalesce(edit.category_name, '') as name, null::text as date,
         case when edit.direction = 'income' then edit.amount else -edit.amount end as minor,
-        edit.category_id, edit.pace
+        edit.category_id, edit.pace, edit.n as seq
       from edit
       where edit.kind = 'add' and edit.amount is not null
     ),
@@ -547,7 +553,7 @@ begin
         case when c.row_key is null then r.minor when r.direction = 'income' then c.amount else -c.amount end as minor,
         r.category_id,
         case when c.row_key is null then null else r.minor end as was_minor,
-        r.pace,
+        r.pace, r.seq,
         case when rm.row_key is null then 'row' when rm.page then 'removed' else 'skipped' end as list,
         rm.row_key is null and av.key is not null as arrived
       from (select * from base union all select * from added) r
@@ -556,7 +562,7 @@ begin
       left join arrival av on av.m = r.m and av.pid = r.pid and av.key = r.key
     ),
     row_json as (
-      select e.m, e.pid, e.list, e.arrived, e.key, e.minor, e.kind, e.category_id, e.name,
+      select e.m, e.pid, e.list, e.arrived, e.key, e.minor, e.kind, e.category_id, e.name, e.seq,
         case when with_rows then jsonb_strip_nulls(jsonb_build_object(
           'key', e.key, 'kind', e.kind, 'direction', e.direction, 'name', e.name, 'date', e.date, 'minor', e.minor,
           'category_id', e.category_id, 'was_minor', e.was_minor, 'pace', e.pace)) end as j,
@@ -569,10 +575,11 @@ begin
         coalesce(sum(r.minor) filter (where r.list = 'row' and not r.arrived and r.minor > 0), 0)::bigint as income,
         coalesce(-sum(r.minor) filter (where r.list = 'row' and not r.arrived and r.minor < 0), 0)::bigint as expense,
         count(*) filter (where r.list = 'row' and not r.arrived) > 0 as kept,
-        -- Rows by key (then amount, day and name), not in the app's order: the app sorts them.
-        coalesce(jsonb_agg(r.j order by r.key collate "C", r.minor, r.day collate "C", r.name collate "C") filter (where with_rows and r.list = 'row' and not r.arrived), '[]'::jsonb) as rows,
-        coalesce(jsonb_agg(r.j order by r.key collate "C", r.minor, r.day collate "C", r.name collate "C") filter (where with_rows and r.list = 'removed'), '[]'::jsonb) as removed,
-        coalesce(jsonb_agg(r.j order by r.key collate "C", r.minor, r.day collate "C", r.name collate "C") filter (where with_rows and r.list = 'row' and r.arrived), '[]'::jsonb) as arrived
+        -- Rows by key (then amount, day and name), the added lines last in the edits' order, as the builder lists
+        -- them; the app sorts the rest.
+        coalesce(jsonb_agg(r.j order by r.seq nulls first, r.key collate "C", r.minor, r.day collate "C", r.name collate "C") filter (where with_rows and r.list = 'row' and not r.arrived), '[]'::jsonb) as rows,
+        coalesce(jsonb_agg(r.j order by r.seq nulls first, r.key collate "C", r.minor, r.day collate "C", r.name collate "C") filter (where with_rows and r.list = 'removed'), '[]'::jsonb) as removed,
+        coalesce(jsonb_agg(r.j order by r.seq nulls first, r.key collate "C", r.minor, r.day collate "C", r.name collate "C") filter (where with_rows and r.list = 'row' and r.arrived), '[]'::jsonb) as arrived
       from row_json r
       group by r.m, r.pid
     ),
@@ -594,7 +601,8 @@ begin
     part_out as (
       select pm.m, pm.ord, pm.pid, pm.pord, dv.d as average_months,
         coalesce(pr.income, 0) as income, coalesce(pr.expense, 0) as expense, coalesce(pc.cash_only, 0) as cash_only,
-        coalesce(pr.kept, false) as kept, pr.rows, pr.removed, pr.arrived, coalesce(pc.loan_cash, '[]'::jsonb) as loan_cash
+        coalesce(pr.kept, false) as kept, coalesce(pr.rows, '[]'::jsonb) as rows, coalesce(pr.removed, '[]'::jsonb) as removed,
+        coalesce(pr.arrived, '[]'::jsonb) as arrived, coalesce(pc.loan_cash, '[]'::jsonb) as loan_cash
       from pm
       join divisor dv on dv.pid = pm.pid
       left join part_rows pr on pr.m = pm.m and pr.pid = pm.pid
@@ -628,14 +636,15 @@ begin
       from income_row ir
       group by ir.m
     ),
-    -- companyNextMonthForecast: the parts with a row, summed.
+    -- companyNextMonthForecast: the parts with a row, summed. The general costs' part is listed even with no row
+    -- (companyGeneralForecast), so the overhead project's page has its removed rows; it counts only with a row.
     month_parts as (
       select po.m,
-        sum(po.income)::bigint as income,
-        sum(po.expense)::bigint as expense,
-        sum(po.cash_only)::bigint as cash_only,
-        count(*) filter (where po.pid <> '') as projects,
-        bool_or(po.pid = '') as general,
+        sum(po.income) filter (where po.kept)::bigint as income,
+        sum(po.expense) filter (where po.kept)::bigint as expense,
+        sum(po.cash_only) filter (where po.kept)::bigint as cash_only,
+        count(*) filter (where po.kept and po.pid <> '') as projects,
+        bool_or(po.kept and po.pid = '') as general,
         jsonb_agg(
           case when po.pid = '' then '{}'::jsonb else jsonb_build_object('project_id', po.pid) end || jsonb_build_object(
             'income_minor', po.income,
@@ -648,13 +657,13 @@ begin
             'loan_cash', po.loan_cash
           ) order by po.pord) filter (where with_rows) as parts
       from part_out po
-      where po.kept
+      where po.kept or po.pid = ''
       group by po.m
     ),
     month_skipped as (
       select r.m,
         jsonb_agg(case when r.pid = '' then '{}'::jsonb else jsonb_build_object('project_id', r.pid) end || r.j
-          order by r.pid collate "C", r.key collate "C", r.minor, r.day collate "C", r.name collate "C") as skipped
+          order by r.pid collate "C", r.seq nulls first, r.key collate "C", r.minor, r.day collate "C", r.name collate "C") as skipped
       from row_json r
       where with_rows and r.list = 'skipped'
       group by r.m
@@ -742,7 +751,9 @@ begin
   if p_detail is null or p_detail not in ('totals', 'rows')
      or p_months is null or cardinality(p_months) = 0
      or exists (select 1 from unnest(p_months) m where m is null or not m = any(horizon))
-     or (select count(distinct m) from unnest(p_months) m) <> cardinality(p_months) then
+     or (select count(distinct m) from unnest(p_months) m) <> cardinality(p_months)
+     -- Rows for one month only: a page lists one month (12 months of rows are about 1.4 MB).
+     or (p_detail = 'rows' and cardinality(p_months) > 1) then
     raise exception 'validation' using errcode = '22023';
   end if;
   -- Refuses a caller with no company first (42501), as the other reads do. The later months' edits only when a
@@ -815,7 +826,7 @@ end;
 $$;
 
 comment on function public.company_forecast(text[], text, date) is
-  'FLOW-1307. The company forecast of Profit''s next-month card and year view, Home''s future months and the company forecast pages in one read. p_months: yyyy-mm months of the forecast (next month to 12 months ahead), each once, answered in that order. p_detail ''totals'': { today, currency, months: [{ month, income_minor, expense_minor, net_minor, cash_only_minor, projects, general, income: { rows, recurring, rent, name } }], income } (income over every month asked, each stream once). ''rows'' adds per month parts: [{ project_id, income_minor, expense_minor, cash_only_minor, average_months, rows, removed, arrived, loan_cash }] and skipped, and split_keys. absent = null; rows unsorted (by key), the app sorts them. p_today default: today in Israel. security invoker: the caller''s company only.';
+  'FLOW-1307. The company forecast of Profit''s next-month card and year view, Home''s future months and the company forecast pages in one read. p_months: yyyy-mm months of the forecast (next month to 12 months ahead), each once, answered in that order; one month only with ''rows''. p_detail ''totals'': { today, currency, months: [{ month, income_minor, expense_minor, net_minor, cash_only_minor, projects, general, income: { rows, recurring, rent, name } }], income } (income over every month asked, each stream once). ''rows'' (one month) adds parts: [{ project_id, income_minor, expense_minor, cash_only_minor, average_months, rows, removed, arrived, loan_cash }] (the parts with a row, and always the general costs, with no project_id) and skipped, and split_keys. absent = null; rows by key, then the added lines in the edits'' order; the app sorts them. A bad month or detail, or more than one month of rows, is refused (22023). p_today default: today in Israel. security invoker: the caller''s company only.';
 
 revoke all on function public.company_forecast(text[], text, date) from public, anon, authenticated;
 grant execute on function public.company_forecast(text[], text, date) to authenticated, service_role;

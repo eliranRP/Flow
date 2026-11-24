@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { ExpectedParty, LoanKind, LoanStatus } from "@flow/shared";
-import { companyNextMonthForecast, splitPartyKeys, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
+import { companyGeneralForecast, companyNextMonthForecast, splitPartyKeys, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import { companyMonthInput } from "./company-year-forecast";
 import { isRent, type RentCategory } from "./next-month-chart";
 import { type ForecastCategory, type ForecastLoan, newPaymentsLeftMemo } from "./project-next-loans";
@@ -122,8 +122,13 @@ function rowJson(row: NextMonthRow): Record<string, unknown> {
   };
 }
 
+/**
+ * A part's list as the database gives it: its rows by key, then the lines the user added in the builder's own order
+ * (the edits' order, which the app cannot rebuild from the keys).
+ */
 function rowsJson(rows: readonly NextMonthRow[]): Record<string, unknown>[] {
-  return rows.map((row) => ({ row })).sort(byKey).map(({ row }) => rowJson(row));
+  const sorted = rows.filter((row) => row.kind !== "added").map((row) => ({ row })).sort(byKey).map(({ row }) => row);
+  return [...sorted, ...rows.filter((row) => row.kind === "added")].map(rowJson);
 }
 
 /**
@@ -142,7 +147,26 @@ function incomeFacts(rows: readonly NextMonthRow[], categories: readonly RentCat
   };
 }
 
-function monthJson(forecast: CompanyNextMonth, categories: readonly RentCategory[]): Record<string, unknown> {
+/** One part of the month, as private.company_forecast_build writes it. */
+function partJson(projectId: string | null, part: CompanyNextMonth["parts"][number]["forecast"]): Record<string, unknown> {
+  return {
+    ...(projectId == null ? {} : { project_id: projectId }),
+    income_minor: Number(part.incomeMinor),
+    expense_minor: Number(part.expenseMinor),
+    cash_only_minor: Number(part.cashOnlyMinor),
+    average_months: part.averageMonths,
+    rows: rowsJson(part.rows),
+    removed: rowsJson(part.removed),
+    arrived: rowsJson(part.arrived),
+    loan_cash: [...part.loanCash]
+      .sort((a, b) => compare(a.loanId, b.loanId))
+      .map((loan) => ({ loan_id: loan.loanId, row_category_ids: loan.rowCategoryIds, minor: Number(loan.minor) })),
+  };
+}
+
+/** The month's answer; the general costs' part is listed even with no row (companyGeneralForecast), counting in no total. */
+function monthJson(forecast: CompanyNextMonth, input: CompanyForecastInput, categories: readonly RentCategory[]): Record<string, unknown> {
+  const general = forecast.parts.some((part) => part.projectId == null) ? [] : [partJson(null, companyGeneralForecast(input, forecast.month))];
   const cashOnly = forecast.parts.reduce((sum, part) => sum + part.forecast.cashOnlyMinor, 0n);
   return {
     month: forecast.month,
@@ -153,19 +177,7 @@ function monthJson(forecast: CompanyNextMonth, categories: readonly RentCategory
     projects: forecast.parts.filter((part) => part.projectId != null).length,
     general: forecast.parts.some((part) => part.projectId == null),
     income: incomeFacts(forecast.rows, categories),
-    parts: forecast.parts.map(({ projectId, forecast: part }) => ({
-      ...(projectId == null ? {} : { project_id: projectId }),
-      income_minor: Number(part.incomeMinor),
-      expense_minor: Number(part.expenseMinor),
-      cash_only_minor: Number(part.cashOnlyMinor),
-      average_months: part.averageMonths,
-      rows: rowsJson(part.rows),
-      removed: rowsJson(part.removed),
-      arrived: rowsJson(part.arrived),
-      loan_cash: [...part.loanCash]
-        .sort((a, b) => compare(a.loanId, b.loanId))
-        .map((loan) => ({ loan_id: loan.loanId, row_category_ids: loan.rowCategoryIds, minor: Number(loan.minor) })),
-    })),
+    parts: [...forecast.parts.map(({ projectId, forecast: part }) => partJson(projectId, part)), ...general],
     skipped: forecast.skipped
       .map(({ projectId, row }) => (projectId == null ? { row } : { project: projectId, row }))
       .sort(byKey)
@@ -178,7 +190,8 @@ function companyForecastAnswer(input: CompanyForecastVectorInput): unknown {
   const recurring: ExpectedParty[] = input.recurring.map((party) => ({ ...party, typical_amount_minor: BigInt(party.typical_amount_minor) }));
   const read = { currency: input.currency, today: input.today, recurring, loans: input.loans.map(toLoan), categories: input.categories, inputs: input.inputs };
   const payments = newPaymentsLeftMemo();
-  const forecasts = input.months.map((month) => companyNextMonthForecast({ ...companyMonthInput(read, month), skips: input.inputs.skips?.[month] ?? [], payments }));
+  const monthInputs = input.months.map((month): CompanyForecastInput => ({ ...companyMonthInput(read, month), skips: input.inputs.skips?.[month] ?? [], payments }));
+  const forecasts = monthInputs.map((monthInput) => companyNextMonthForecast(monthInput));
   // restIncomeNote: each stream once, however many months it comes in.
   const streams = new Map<string, CompanyRow>();
   for (const forecast of forecasts) {
@@ -188,7 +201,7 @@ function companyForecastAnswer(input: CompanyForecastVectorInput): unknown {
     }
   }
   return {
-    months: forecasts.map((forecast) => monthJson(forecast, input.categories)),
+    months: forecasts.map((forecast, index) => monthJson(forecast, monthInputs[index] as CompanyForecastInput, input.categories)),
     income: incomeFacts([...streams.values()], input.categories),
     split_keys: [...splitPartyKeys(recurring)].sort(compare),
   };

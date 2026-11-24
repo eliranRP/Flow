@@ -91,7 +91,7 @@ The database core also takes an optional `dueDates` on a loan (its stored schedu
   split_keys: [...] }
 ```
 
-A row is `{ key, kind, direction, name, date, minor, category_id, was_minor, pace }`. Rows are listed by key (then amount, day and name), not in the app's order: the database returns them so and the app sorts them. The parts are the projects by id, then the general costs (no `project_id`). The vectors run through the app's builders in `app/src/company-forecast-vectors.test.ts`.
+A row is `{ key, kind, direction, name, date, minor, category_id, was_minor, pace }`. Each list has its rows by key (then amount, day and name), then the lines the user added in the edits' order, as the builder lists them (the app sorts the rest, and cannot rebuild the edits' order from the keys). The parts are the projects with a row by id, then the general costs (no `project_id`), listed even with no row, as `companyGeneralForecast` gives them; they count in the totals only with a row. The vectors run through the app's builders in `app/src/company-forecast-vectors.test.ts`.
 
 ## Where they run
 
