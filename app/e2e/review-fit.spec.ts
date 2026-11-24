@@ -13,6 +13,11 @@ async function box(locator: Locator, what: string) {
   return found;
 }
 
+/** Rubik loads with font-display: swap. A box read before the swap has the fallback face's advance widths (CI: x 207 against 204.296875). */
+async function fontsReady(page: Page) {
+  await page.evaluate(() => document.fonts.ready);
+}
+
 async function focused(page: Page): Promise<string> {
   return page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent.trim() ?? "");
 }
@@ -22,6 +27,7 @@ test("the plural auto-approved count keeps to one line at 320, inside the header
   await page.goto(fit);
   const auto = page.locator(".ui-review-queue .ui-review-auto");
   await expect(auto).toHaveText("12 אושרו אוטומטית היום");
+  await fontsReady(page);
   // One line of text: the label is no taller than one line box (the digits sit on the same baseline).
   const label = await auto.locator(".ui-btn-label").evaluate((node) => ({
     height: node.getBoundingClientRect().height,
@@ -38,6 +44,7 @@ test("at 320x693 the worst-case card ends above the bar, and אישור, שינ�
   await page.setViewportSize({ width: 320, height: 693 });
   await page.goto(fit);
   await expect(page.locator(".ui-review-reason")).toBeVisible();
+  await fontsReady(page);
   const supplier = page.getByRole("heading", { name: "חומרי בניין ואינסטלציה לדוגמה בע״מ" });
   const nameLine = await supplier.evaluate((node) => Number.parseFloat(getComputedStyle(node).lineHeight));
   expect((await box(supplier, "the supplier")).height, "the supplier wraps").toBeGreaterThan(nameLine * 1.5);
@@ -60,6 +67,7 @@ test("the counter reserves no blank digit under 10, and stays put from 9 to 10 o
   const counter = page.locator(".ui-review-counter");
   const meter = page.locator(".ui-review-segments");
   await expect(counter).toHaveText("פריט 1 מתוך 12");
+  await fontsReady(page);
   const first = { counter: await box(counter, "the counter"), meter: await box(meter, "the bar") };
   for (let step = 2; step <= 10; step += 1) {
     await page.locator(".ui-action-bar").getByRole("button", { name: "דלג" }).click();
