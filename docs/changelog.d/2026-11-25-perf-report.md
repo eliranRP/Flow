@@ -1,0 +1,1 @@
+Daily perf report 2026-11-25 (decisions 0230 and 0271), the first after the FLOW-1275 program: `company_forecast` meets its 300 ms budget, and Profit's year view shows fresh data in 1.1 s (2.5 to 3.5 s on 11-24). The diff review found a December bug in Profit's year card and a skip that re-read the company forecast (#1298, #1299), and files FLOW-1324 to FLOW-1335.

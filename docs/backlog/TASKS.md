@@ -725,6 +725,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1317"></a>[FLOW-1317](tasks/FLOW-1317.md) | review-fit e2e: wait for the webfont before measuring the counter and the layout | BUG (e2e) |
 | <a id="flow-1319"></a>[FLOW-1319](tasks/FLOW-1319.md) | CI: stop the runner stalls on "Wait for local Supabase" and on apt | CI/infra |
 | <a id="flow-1321"></a>[FLOW-1321](tasks/FLOW-1321.md) | CI: main red on the Edge Function source scan, and the pr check never runs it | BUG (CI) |
+| <a id="flow-1333"></a>[FLOW-1333](tasks/FLOW-1333.md) | Reviewer follow-ups from #1295 to #1297 | BACKLOG NIT |
 | <a id="flow-839"></a>[FLOW-839](tasks/FLOW-839.md) | A daily and weekly security scan agent | SMALL CYCLE (docs) |
 | <a id="flow-840"></a>[FLOW-840](tasks/FLOW-840.md) | The edge functions use zod 4.6.7, as the app does | SMALL CYCLE |
 | <a id="flow-841"></a>[FLOW-841](tasks/FLOW-841.md) | The Content-Security-Policy is enforced | SMALL CYCLE |
@@ -884,6 +885,17 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1273"></a>[FLOW-1273](tasks/FLOW-1273.md) | Perf: code a screen needs loads with the screen, not after its data | SMALL (perf) |
 | <a id="flow-1274"></a>[FLOW-1274](tasks/FLOW-1274.md) | Perf: profile each main screen's main thread on the phone and cut the largest costs | MEDIUM (perf) |
 | <a id="flow-1275"></a>[FLOW-1275](tasks/FLOW-1275.md) | Plan: forecast, loan and profit math in the database, with summary tables kept current on write | PLAN FIRST |
+| <a id="flow-1324"></a>[FLOW-1324](tasks/FLOW-1324.md) | Perf: loan schedule reads order by due date, and the new schedule tables get statistics | SMALL (perf, database) |
+| <a id="flow-1325"></a>[FLOW-1325](tasks/FLOW-1325.md) | Perf: trim the month forecast, loan outlook and forecast totals answers | MEDIUM (perf, database and app) |
+| <a id="flow-1326"></a>[FLOW-1326](tasks/FLOW-1326.md) | Perf: company forecast rows without the repeated category and the unread part fields | MEDIUM (perf, database, app and flow-mcp) |
+| <a id="flow-1327"></a>[FLOW-1327](tasks/FLOW-1327.md) | Perf: the project card reads and keeps only what it draws | MEDIUM (perf, design trade) |
+| <a id="flow-1328"></a>[FLOW-1328](tasks/FLOW-1328.md) | Perf: kept rows keyed by an old day are dropped at launch | SMALL (perf) |
+| <a id="flow-1329"></a>[FLOW-1329](tasks/FLOW-1329.md) | Perf: the project page's forecast read starts at once, in the right currency | SMALL/MEDIUM (perf) |
+| <a id="flow-1330"></a>[FLOW-1330](tasks/FLOW-1330.md) | Perf: one company forecast read for Profit's month card and year view, and the overrides inside the rows answer | SMALL (perf) |
+| <a id="flow-1331"></a>[FLOW-1331](tasks/FLOW-1331.md) | Perf: the loan schedule tables keep only what their readers use | SMALL (database) |
+| <a id="flow-1332"></a>[FLOW-1332](tasks/FLOW-1332.md) | Perf: the latency script times the reads the screens now make | SMALL (tooling) |
+| <a id="flow-1334"></a>[FLOW-1334](tasks/FLOW-1334.md) | Perf: Profit's year forecast starts with the screen's first read (changes the FLOW-1080 order) | SMALL (perf) |
+| <a id="flow-1335"></a>[FLOW-1335](tasks/FLOW-1335.md) | Profit's kept totals after a project edit, and the recurring screens' refresh | SMALL (perf, freshness) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
