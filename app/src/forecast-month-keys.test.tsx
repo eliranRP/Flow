@@ -11,12 +11,13 @@ import { renderWithProviders } from "./test-render";
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: unknown }>({ data: null, error: null })));
 vi.mock("./lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
 
-const reads = { forecast: 0, expected: 0 };
+const reads = { forecast: 0, expected: 0, other: 0 };
 
 function Probe() {
   const set = useSetForecastItem("2026-11");
   const reset = useResetForecastMonth("2026-11");
-  useQuery({ queryKey: ["month-forecast", "off", "2026-11"], queryFn: () => { reads.forecast += 1; return Promise.resolve({}); } });
+  useQuery({ queryKey: ["month-forecast", "off", "answer", "2026-11"], queryFn: () => { reads.forecast += 1; return Promise.resolve({}); } });
+  useQuery({ queryKey: ["month-forecast", "off", "answer", "2026-12"], queryFn: () => { reads.other += 1; return Promise.resolve({}); } });
   useQuery({ queryKey: ["expected-months", "off", "company", 0], queryFn: () => { reads.expected += 1; return Promise.resolve({}); } });
   return (
     <>
@@ -27,16 +28,19 @@ function Probe() {
 }
 
 describe("the month forecast's writes (FLOW-1191, FLOW-1201)", () => {
-  it.each(["set", "reset"])("%s refetches the month forecast on screen, and not expected_months", async (name) => {
+  it.each(["set", "reset"])("%s refetches the written month's forecast answer on screen, and not expected_months or another month's", async (name) => {
     reads.forecast = 0;
     reads.expected = 0;
+    reads.other = 0;
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderWithProviders(<Probe />, { client });
-    await waitFor(() => { expect(reads).toEqual({ forecast: 1, expected: 1 }); });
+    await waitFor(() => { expect(reads).toEqual({ forecast: 1, expected: 1, other: 1 }); });
     fireEvent.click(screen.getByRole("button", { name }));
     await waitFor(() => { expect(reads.forecast).toBe(2); });
     await waitFor(() => { expect(client.isFetching()).toBe(0); });
     expect(reads.forecast).toBe(2);
     expect(reads.expected).toBe(1);
+    // FLOW-1323: only the written month's answer is read again, not another month's.
+    expect(reads.other).toBe(1);
   });
 });

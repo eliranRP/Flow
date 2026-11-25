@@ -226,6 +226,23 @@ export function forgetKeptReads(): Promise<unknown> {
   return enqueue(() => store.clear());
 }
 
+/**
+ * FLOW-1323: a write that changes some answers drops their kept rows (whether or not the cache still holds them), so a cold start
+ * does not put the pre-write figures back. A read still waiting for its write-out goes too.
+ */
+export function dropKeptReads(match: (key: readonly unknown[]) => boolean): Promise<unknown> {
+  for (const [hash, row] of [...pending]) {
+    const key = parseKey(row.key);
+    if (key != null && match(key)) pending.delete(hash);
+  }
+  return enqueue(async () => {
+    const ids = (await store.all()).filter((row) => { const key = parseKey(row.key); return key != null && match(key); }).map((row) => row.id);
+    if (ids.length === 0) return;
+    for (const id of ids) index.delete(id);
+    await store.remove(ids);
+  });
+}
+
 /** A kept read in the cache that no fresh read has replaced yet. */
 function isKept(query: Query): boolean {
   return showing.has(query.queryHash) && query.state.isInvalidated && query.state.data !== undefined;
