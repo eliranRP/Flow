@@ -1,3 +1,4 @@
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../test-render";
 import { describe, expect, it } from "vitest";
 import { groupLoansByKind, type LoanListRow } from "./loan-list";
@@ -40,6 +41,14 @@ describe("loanRowHint", () => {
   it("says the next payment and the project, ממתין לבדיקה first when payments wait", () => {
     expect(loanRowHint(row("a", "א", { projectName: "דירת הגפן", next: { dueDate: "2026-11-20", amountMinor: 524_000n } }))).toBe("הבא 20/11 · $5,240 · דירת הגפן");
     expect(loanRowHint(row("a", "א", { flaggedParts: 2, kind: "demand" }))).toBe("ממתין לבדיקה · בלי תשלום קבוע · בלי פרויקט");
+  });
+
+  it("says בלי תשלום קבוע for a loan with no next payment when the outlooks are known, and leaves the part out when they are not (FLOW-1339)", () => {
+    expect(loanRowHint(row("a", "א", { projectName: "דירת הגפן" }))).toBe("בלי תשלום קבוע · דירת הגפן");
+    expect(loanRowHint(row("a", "א", { projectName: "דירת הגפן", outlooksUnknown: true }))).toBe("דירת הגפן");
+    expect(loanRowHint(row("a", "א", { flaggedParts: 1, outlooksUnknown: true }))).toBe("ממתין לבדיקה · בלי פרויקט");
+    expect(loanRowHint(row("a", "א", { kind: "demand", outlooksUnknown: true }))).toBe("בלי תשלום קבוע · בלי פרויקט");
+    expect(loanRowHint(row("a", "א", { outlooksUnknown: true, next: { dueDate: "2026-11-20", amountMinor: 524_000n } }))).toBe("הבא 20/11 · $5,240 · בלי פרויקט");
   });
 
   it("says how and when a closed loan ended", () => {
@@ -85,5 +94,14 @@ describe("a row's hint (FLOW-1338)", () => {
     expect(whole).toEqual([" · הבא 15/11 · $1,312"]);
     const cut = [...container.querySelectorAll(".ui-hint-part:not(.ui-hint-part-whole)")].map((part) => part.textContent);
     expect(cut.join("|")).not.toContain("הבא");
+  });
+
+  it("keeps בלי תשלום קבוע out of the row's text and label when the outlooks are not known (FLOW-1339)", () => {
+    const rows = [row("a", "משכנתא", { projectName: "פרויקט גפן", outlooksUnknown: true })];
+    const { container, rerender } = renderWithProviders(<LoansList ctx={ctx(rows)} />, { route: "/loans" });
+    expect(container.textContent).not.toContain("בלי תשלום קבוע");
+    expect(screen.getByRole("button", { name: /^משכנתא, / }).getAttribute("aria-label")).not.toContain("בלי תשלום קבוע");
+    rerender(<LoansList ctx={ctx([row("a", "משכנתא", { projectName: "פרויקט גפן" })])} />);
+    expect(container.textContent).toContain("בלי תשלום קבוע");
   });
 });

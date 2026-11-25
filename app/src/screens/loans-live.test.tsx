@@ -171,6 +171,7 @@ describe("live Loans tab", () => {
       expect(screen.queryByText(/אין הלוואות/)).not.toBeInTheDocument();
       expect(screen.queryByText(LOANS_ERROR_TITLE)).not.toBeInTheDocument();
       expect(screen.getByText(/אין חיבור/)).toBeInTheDocument();
+      expect(screen.queryByText(/בלי תשלום קבוע/)).not.toBeInTheDocument();
       expect(db.outlookCalls).toEqual([]);
     } finally {
       onlineManager.setOnline(true);

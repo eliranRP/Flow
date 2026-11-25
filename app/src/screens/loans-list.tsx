@@ -40,6 +40,7 @@ function money(minor: bigint, currency: string): string {
  * FLOW-1046: one row's line under its name. Open: ממתין לבדיקה first when payments wait, then the next payment
  * ("הבא 20/11 · $5,240", or בלי תשלום קבוע for a loan with no schedule), then the project. Closed: how and when
  * it ended ("נפרעה 08/2026"), then the project. The kind is the group's head, so the row leaves it out.
+ * FLOW-1339: with today's outlooks not known (`outlooksUnknown`), the next-payment part is left out: an unknown is not a "none". A demand loan keeps "בלי תשלום קבוע": it never has a schedule.
  */
 export function loanRowHint(row: LoanListRow): string {
   return loanRowHintParts(row).map((part) => part.text).join(" · ");
@@ -53,8 +54,10 @@ function loanRowHintParts(row: LoanListRow): Array<{ text: string; whole?: true 
     const when = row.closedOn == null || row.closedOn === "" ? label : `${label} ${monthYear(row.closedOn)}`;
     return [{ text: when }, { text: project }];
   }
-  const next = row.next == null ? { text: "בלי תשלום קבוע" } : { text: `הבא ${dayMonth(row.next.dueDate)} · ${money(row.next.amountMinor, row.currency)}`, whole: true as const };
-  return [...(row.flaggedParts > 0 ? [{ text: "ממתין לבדיקה" }] : []), next, { text: project }];
+  const next = row.next != null
+    ? [{ text: `הבא ${dayMonth(row.next.dueDate)} · ${money(row.next.amountMinor, row.currency)}`, whole: true as const }]
+    : row.outlooksUnknown && row.kind !== "demand" ? [] : [{ text: "בלי תשלום קבוע" }];
+  return [...(row.flaggedParts > 0 ? [{ text: "ממתין לבדיקה" }] : []), ...next, { text: project }];
 }
 
 /**

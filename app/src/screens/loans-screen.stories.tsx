@@ -22,8 +22,8 @@ const pagesLoans: LoanListRow[] = [
   { id: "l3", name: "גישור הגפן", currency: "USD", balanceMinor: 8_000_000n, flaggedParts: 0, projectId: "p2", projectName: "פרויקט גפן", next: { dueDate: "2026-12-01", amountMinor: 210_000n }, lateOn: "2026-11-01" },
 ];
 
-/** FLOW-1337: the kept list on a new day, offline: no outlooks for today, so no next payment and no late mark. */
-const KEPT_ROWS: LoanListRow[] = pagesLoans.map(({ next: _next, lateOn: _lateOn, ...row }) => row);
+/** FLOW-1337: the kept list on a new day, offline: no outlooks for today, so no next payment and no late mark, and the rows do not say בלי תשלום קבוע (FLOW-1339). */
+const KEPT_ROWS: LoanListRow[] = pagesLoans.map(({ next: _next, lateOn: _lateOn, ...row }) => ({ ...row, outlooksUnknown: true as const }));
 
 /** Long names and many rows, for the long-content state (V3-States). */
 const LONG_ROWS: LoanListRow[] = Array.from({ length: 14 }, (_, index) => ({
@@ -215,6 +215,7 @@ export const ListOfflineNewDay: Story = {
     await canvas.findByRole("button", { name: /^משכנתא אלון, / });
     await expect(canvas.queryByText(/אין הלוואות/)).toBeNull();
     await expect(canvas.getByText(/אין חיבור/)).toBeVisible();
+    await expect(canvas.queryByText(/בלי תשלום קבוע/)).toBeNull();
   },
 };
 
