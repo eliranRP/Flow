@@ -162,7 +162,7 @@ describe("live Loans tab", () => {
   it("offline on a new day, with the list kept and no outlooks for today, draws the loans and the offline line, never the empty state (FLOW-1337)", async () => {
     const client = withCompanies("u1");
     // Yesterday's outlooks sit under yesterday's key: today's read has no data and, offline, never starts.
-    await client.prefetchQuery({ queryKey: ["loans", TEST_COMPANY_ID, "list"], queryFn: () => readLoanList(TEST_COMPANY_ID) });
+    await client.query({ queryKey: ["loans", TEST_COMPANY_ID, "list"], queryFn: () => readLoanList(TEST_COMPANY_ID) });
     onlineManager.setOnline(false);
     try {
       renderWithProviders(<LoansScreen />, { route: "/loans", client });

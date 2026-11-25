@@ -159,7 +159,7 @@ export const Attention393: Story = {
       for (const part of line.querySelectorAll<HTMLElement>(".ui-hint-part")) {
         const rect = part.getBoundingClientRect();
         const shown = rect.bottom <= box.bottom + 0.5 && rect.top >= box.top - 0.5;
-        const text = part.textContent ?? "";
+        const text = part.textContent;
         // A shown payment part is whole (its scroll width fits); a part that is not shown is below the line.
         if (shown && text.includes("הבא")) {
           const inner = part.querySelector<HTMLElement>(".ui-hint-text");
