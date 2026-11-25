@@ -22,6 +22,9 @@ const pagesLoans: LoanListRow[] = [
   { id: "l3", name: "גישור הגפן", currency: "USD", balanceMinor: 8_000_000n, flaggedParts: 0, projectId: "p2", projectName: "פרויקט גפן", next: { dueDate: "2026-12-01", amountMinor: 210_000n }, lateOn: "2026-11-01" },
 ];
 
+/** FLOW-1337: the kept list on a new day, offline: no outlooks for today, so no next payment and no late mark. */
+const KEPT_ROWS: LoanListRow[] = pagesLoans.map(({ next: _next, lateOn: _lateOn, ...row }) => row);
+
 /** Long names and many rows, for the long-content state (V3-States). */
 const LONG_ROWS: LoanListRow[] = Array.from({ length: 14 }, (_, index) => ({
   id: `long-${String(index)}`,
@@ -39,13 +42,13 @@ const LONG_ROWS: LoanListRow[] = Array.from({ length: 14 }, (_, index) => ({
  * Stories pick the loans by name, never as args: the loans carry bigint amounts, and Storybook sends
  * args across the manager channel with JSON.stringify (story-args.test.ts).
  */
-type LoansData = "pages" | "rows" | "long" | "empty" | "loading" | "error";
+type LoansData = "pages" | "kept" | "rows" | "long" | "empty" | "loading" | "error";
 
 /** FLOW-962: the offline stories' read, 09:41 Israel time. */
 const OFFLINE_SINCE = Date.UTC(2026, 9, 9, 6, 41);
 
 function Tab({ data, closedOpen = false, viewer = false, offline = false }: { data: LoansData; closedOpen?: boolean; viewer?: boolean; offline?: boolean }) {
-  const loans: LoansSample["loans"] = data === "pages" ? pagesLoans : data === "rows" ? ROWS : data === "long" ? LONG_ROWS : data === "empty" ? [] : data;
+  const loans: LoansSample["loans"] = data === "pages" ? pagesLoans : data === "kept" ? KEPT_ROWS : data === "rows" ? ROWS : data === "long" ? LONG_ROWS : data === "empty" ? [] : data;
   const screen = (
     <LoansScreen
       sample={{ ...pagesBusiness, loans, loanCurrency: "USD", ...(data === "rows" || data === "pages" ? { summary: LOAN_SUMMARY_SAMPLE } : {}), ...(offline ? { offlineSince: OFFLINE_SINCE } : {}) }}
@@ -143,6 +146,31 @@ export const Attention320: Story = {
   },
 };
 
+/** FLOW-1338: at 393 a row's "הבא dd/mm · $amount" shows whole or drops with what follows; never "הבא…". */
+export const Attention393: Story = {
+  name: "Loans, attention, hint at 393",
+  args: { data: "pages" },
+  globals: { viewport: { value: "flow393", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(393);
+    await within(canvasElement).findByRole("link", { name: "2 תשלומים ממתינים לבדיקה · משכנתא אלון" });
+    for (const line of canvasElement.querySelectorAll<HTMLElement>(".ui-row-hint-line")) {
+      const box = line.getBoundingClientRect();
+      for (const part of line.querySelectorAll<HTMLElement>(".ui-hint-part")) {
+        const rect = part.getBoundingClientRect();
+        const shown = rect.bottom <= box.bottom + 0.5 && rect.top >= box.top - 0.5;
+        const text = part.textContent ?? "";
+        // A shown payment part is whole (its scroll width fits); a part that is not shown is below the line.
+        if (shown && text.includes("הבא")) {
+          const inner = part.querySelector<HTMLElement>(".ui-hint-text");
+          await expect(inner == null || inner.scrollWidth <= inner.clientWidth + 1).toBe(true);
+          await expect(text).toMatch(/הבא \d\d\/\d\d · /);
+        }
+      }
+    }
+  },
+};
+
 /** One card hidden: the head offers "1 הוסתרו · הצגה". */
 export const AttentionSomeHidden: Story = {
   name: "Loans, attention, one hidden",
@@ -176,6 +204,18 @@ export const LongContent: Story = {
 export const ListOffline: Story = {
   name: "Offline",
   args: { data: "rows", offline: true },
+};
+
+/** FLOW-1337: a new day offline: the list is kept, today's outlooks are not. The loans show, never "אין הלוואות". */
+export const ListOfflineNewDay: Story = {
+  name: "Offline, new day",
+  args: { data: "kept", offline: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: /^משכנתא אלון, / });
+    await expect(canvas.queryByText(/אין הלוואות/)).toBeNull();
+    await expect(canvas.getByText(/אין חיבור/)).toBeVisible();
+  },
 };
 
 export const Empty: Story = {
