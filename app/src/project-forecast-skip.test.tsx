@@ -1,7 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { priorPatch, useResetForecastMonth, useSetForecastItem } from "./forecast-month";
+import { priorPatch, useSetForecastItem } from "./forecast-month";
+import { useResetForecastMonth } from "./forecast-month-screen";
 import { useProjectNextMonth } from "./next-month-for-project";
 import { projectForecastOf, type ProjectForecastRead } from "./project-forecast-map";
 import { projectForecastKey } from "./project-forecast-query";

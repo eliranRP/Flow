@@ -3,7 +3,8 @@ import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/s
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
-import { daysLeftInMonth, type ForecastPatch, nextMonth, priorPatch, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
+import { type ForecastPatch, priorPatch, useSetForecastItem } from "../forecast-month";
+import { daysLeftInMonth, nextMonth, useResetForecastMonth, useRestoreForecast } from "../forecast-month-screen";
 import { useForecastMoves } from "../forecast-move";
 import { type MonthForecast, useMonthForecastQuery } from "../month-forecast-query";
 import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart, monthEndTakeaway } from "../forecast-chart";
