@@ -187,7 +187,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     return restRead.data == null ? null : restOfTotals(today, restRead.data.months, restRead.data.income);
   }, [sampled, long, sampleCurrency, today, restRead.data]);
   // Data already cached (from Home, or an earlier visit, or kept on the device) shows at once; only a read not yet started waits.
-  const nextWaiting = !fromSample && ((askNow && nextRead.isPending && !nextRead.isPaused) || (wantsForecast && !afterPaint && nextRead.data == null));
+  // FLOW-1322: in December the rest of the year has no month, so its read is disabled and never loads: nothing to wait for.
+  const noRestMonths = long && restMonths.length === 0;
+  const nextWaiting = !fromSample && !noRestMonths && ((askNow && nextRead.isPending && !nextRead.isPaused) || (wantsForecast && !afterPaint && nextRead.data == null));
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   // FLOW-1271: the year's project reads start at mount for the year the address asks for, without waiting for the years' read to say
   // it exists (a year with no data shows this year, and its reads then follow).
