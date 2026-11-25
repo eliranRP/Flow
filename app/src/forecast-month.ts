@@ -1,5 +1,5 @@
 import type { ForecastOverrideRow } from "@flow/shared";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQueryClient, type Query, type QueryClient } from "@tanstack/react-query";
 import { dropKeptReads } from "./kept-reads";
 import { getSupabase } from "./lib/supabase";
 import { forecastScope } from "./forecast-scope";
@@ -85,22 +85,37 @@ function withSkip(keys: readonly string[], key: string, out: boolean | undefined
  * failed write leaves them as the other writes left them.
  */
 function changeSkips(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
-  watchForecastWrites(client);
-  const undoForecast = patchCompanyForecast(client, month, change);
-  // Without the project page's patch loaded (nothing has opened a project this session) a project forecast can only be a kept one, which the skip would leave ahead of the books: those of this month are dropped, so the page reads them fresh. The skip is per month: another month's answer is not touched.
-  if (projectForecastPatch == null) client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isProjectForecast(query) && query.queryKey[4] === month });
-  const undoProject = projectForecastPatch?.(client, month, change);
+  const touch = watchForecastWrites(client);
+  const scope = forecastScope(month);
+  // A read of this month's forecast under way would land the pre-skip answer over the patch: it is stopped (its cancel puts the state it started from back, a moment later, so the patch is made again then) and noted, to be read again once the month's writes have settled.
+  const reading = client.getQueryCache().findAll({ queryKey: ["month-forecast"], predicate: (query) => isForecastOf(query.queryKey, month) && query.state.fetchStatus === "fetching" });
+  const patch = (): (() => void) => {
+    // Without a patch loaded (nothing has opened the company's forecast or a project this session) a forecast of this month can only be a kept one, which the skip would leave ahead of the books: it is dropped, so the page reads it fresh. The skip is per month: another month's answer is not touched.
+    client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => (query.queryKey[2] === "company" ? companyForecastPatch == null : projectForecastPatch == null) && isForecastOf(query.queryKey, month) });
+    const undos = [companyForecastPatch?.(client, month, change), projectForecastPatch?.(client, month, change)];
+    return () => { for (const undo of undos) undo?.(); };
+  };
+  for (const query of reading) touch(scope, query.queryKey);
+  const cancelled = client.cancelQueries({ queryKey: ["month-forecast"], predicate: (query) => reading.includes(query) });
+  const undo = patch();
+  let again: () => void = () => undefined;
+  if (reading.length > 0) void cancelled.then(() => { again = patch(); });
   // The device's kept rows of the answers this skip changes go too (a cold start would put the pre-skip figures back); the patched answers in memory stay.
   void dropKeptReads(keptForecastOf(month));
   return () => {
-    undoForecast();
-    undoProject?.();
+    again();
+    undo();
   };
+}
+
+/** The company's or a project's forecast answer that holds `month` (company 'rows' name one month, 'totals' the months asked, joined with a comma; a project's key has its month at 4). */
+function isForecastOf(key: readonly unknown[], month: string): boolean {
+  return key[0] === "month-forecast" && ((key[2] === "company" && answersMonth(key, month)) || (key[2] === "project" && key[4] === month));
 }
 
 /** The kept reads a skip of `month` makes stale (`null`: all of them): the company's totals that include the month, and the project forecasts of the month. */
 function keptForecastOf(month: string | null): (key: readonly unknown[]) => boolean {
-  return (key) => key[0] === "month-forecast" && ((key[2] === "company" && key[3] === "totals" && (month == null || answersMonth(key, month))) || (key[2] === "project" && (month == null || key[4] === month)));
+  return (key) => key[0] === "month-forecast" && (key[2] === "project" || key[3] === "totals") && (month == null || isForecastOf(key, month));
 }
 
 /** Whether a company forecast's key is for this month: its 'rows' name one, its 'totals' the months asked, joined with a comma. */
@@ -125,17 +140,6 @@ export function setProjectForecastPatch(patch: CompanyForecastPatch): void {
 const isProjectForecast = (query: { queryKey: readonly unknown[] }): boolean => query.queryKey[2] === "project";
 
 /**
- * FLOW-1308: a skip, reset or undo moves the cached company forecast of its month at once (rows, totals and the income note
- * follow the tap, and the cached totals of that month with them); the patch drops the totals it cannot move. Without the patch
- * loaded (no screen has read the forecast this session) only a kept 'totals' can be cached, and it is dropped when it is for this month
- * (a skip is per month: the answers for other months are not touched, FLOW-1323). Returns the undo.
- */
-function patchCompanyForecast(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
-  if (companyForecastPatch == null) client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && answersMonth(query.queryKey, month) });
-  return companyForecastPatch?.(client, month, change) ?? (() => undefined);
-}
-
-/**
  * FLOW-1323: what a successful skip, reset or undo of `month` reads again: only its overrides and its month_forecast answer, when a
  * screen holds them (the patch at the tap moved the company's and the projects' forecasts, which are not read again: that read is
  * the 102 KB company_forecast, and the write would wait for it). Not awaited, so the month's next write is not queued behind it. The
@@ -153,39 +157,71 @@ function afterWrite(client: QueryClient, month: string) {
  */
 function dropInactiveForecasts(client: QueryClient, month?: string) {
   const all = month == null;
-  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => isCompanyForecast(query) && (all || (String(query.queryKey[5]).includes(",") && answersMonth(query.queryKey, month))) });
-  if (all) {
-    client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: isProjectForecast });
-    void dropKeptReads(keptForecastOf(null));
-  }
+  client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: (query) => (all ? isCompanyForecast(query) || isProjectForecast(query) : isCompanyForecast(query) && String(query.queryKey[5]).includes(",") && answersMonth(query.queryKey, month)) });
+  if (all) void dropKeptReads(keptForecastOf(null));
 }
 
-const watchedClients = new WeakSet<QueryClient>();
+/** Notes a forecast query of a scope's month: it is read again (or dropped, when no screen holds it) once the scope's writes have settled. */
+type Touch = (scope: string, key: readonly unknown[]) => void;
+type Noted = Map<string, Set<string>>;
+const watchedClients = new WeakMap<QueryClient, Touch>();
 
 /**
  * FLOW-1214 (review): a write that fails can leave the cache ahead of the server. An overlapping write's delta is recorded
  * at its tap, so a later undo can remove or restore a key the server never changed, and a restore that fails partway
  * leaves the rows before it on the server. So once every write of a month's scope has settled and one of them failed,
  * the forecasts no screen holds are dropped and the active ones are read again: the cache ends at the server's answer.
+ *
+ * FLOW-1323: a forecast read of the month that was under way at a tap, or that begins while one of the month's writes is out,
+ * may carry the pre-skip answer over the patch, and nothing reads the forecast after a skip. Those queries are noted
+ * (`touch`), and when the scope settles each is read again if a screen holds it and dropped, with its kept row, if none does.
  */
-function watchForecastWrites(client: QueryClient) {
-  if (watchedClients.has(client)) return;
-  watchedClients.add(client);
+function watchForecastWrites(client: QueryClient): Touch {
+  const watched = watchedClients.get(client);
+  if (watched != null) return watched;
   const failedScopes = new Set<string>();
-  client.getMutationCache().subscribe((event) => {
+  const touched: Noted = new Map();
+  const mutations = client.getMutationCache();
+  const touch: Touch = (scope, key) => {
+    touched.set(scope, (touched.get(scope) ?? new Set<string>()).add(JSON.stringify(key)));
+  };
+  watchedClients.set(client, touch);
+  const prefix = forecastScope("");
+  const pendingIn = (scope: string) => mutations.findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
+  client.getQueryCache().subscribe((event) => {
+    if (event.type !== "updated" || event.action.type !== "fetch") return;
+    const key = (event.query as Query).queryKey;
+    for (const write of mutations.findAll({ predicate: (other) => other.state.status === "pending" })) {
+      const scope = write.options.scope?.id;
+      if (scope?.startsWith(prefix) === true && isForecastOf(key, scope.slice(prefix.length))) touch(scope, key);
+    }
+  });
+  mutations.subscribe((event) => {
     if (event.type !== "updated") return;
     const { mutation } = event;
     const scope = mutation.options.scope?.id;
-    if (scope == null || !scope.startsWith(forecastScope(""))) return;
+    if (scope == null || !scope.startsWith(prefix)) return;
     if (mutation.state.status === "error") failedScopes.add(scope);
-    if (!failedScopes.has(scope) || mutation.state.status === "pending") return;
-    const unsettled = client.getMutationCache().findAll({ predicate: (other) => other.options.scope?.id === scope && other.state.status === "pending" });
-    if (unsettled.length > 0) return;
+    if (mutation.state.status === "pending" || pendingIn(scope).length > 0) return;
+    const held = touched.get(scope);
+    touched.delete(scope);
+    if (held != null) readAgain(client, held);
+    if (!failedScopes.has(scope)) return;
     failedScopes.delete(scope);
     dropInactiveForecasts(client);
-    void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: isCompanyForecast });
-    void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: isProjectForecast });
+    void client.invalidateQueries({ queryKey: ["month-forecast"], type: "active", predicate: (query) => isCompanyForecast(query) || isProjectForecast(query) });
   });
+  return touch;
+}
+
+/** FLOW-1323: the noted queries, once their scope has settled: read again where a screen holds one, removed where none does; their kept rows go either way. */
+function readAgain(client: QueryClient, hashes: ReadonlySet<string>) {
+  void dropKeptReads((key) => hashes.has(JSON.stringify(key)));
+  for (const hash of hashes) {
+    const queryKey = JSON.parse(hash) as readonly unknown[];
+    client.removeQueries({ queryKey, exact: true, type: "inactive" });
+    void client.invalidateQueries({ queryKey, exact: true });
+  }
 }
 
 /** The patch that puts an item back to its prior state (null: Flow's number). */

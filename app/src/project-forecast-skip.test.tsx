@@ -117,7 +117,7 @@ describe("a skip changes the project's figures on the tap (FLOW-1315)", () => {
     answer({ data: null, error: null });
     await waitFor(() => { expect(client.isMutating()).toBe(0); });
     // FLOW-1323: the patch at the tap is the answer; the write does not read the project's forecast again.
-    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    await waitFor(() => { expect(client.isFetching()).toBe(0); });
     expect(reads()).toHaveLength(1);
     expect(text("figures")).toBe("415000 34000 381000");
     expect(text("skipped")).toBe("rec:expense:power");

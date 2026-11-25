@@ -227,16 +227,14 @@ export function forgetKeptReads(): Promise<unknown> {
 }
 
 /**
- * FLOW-1323: a write that changes some answers drops their kept rows (whether or not the cache still holds them), so a cold start
+ * FLOW-1323: a write that changes some answers drops their kept rows (whether or not the cache still holds them; found by id), so a cold start
  * does not put the pre-write figures back. A read still waiting for its write-out goes too.
  */
 export function dropKeptReads(match: (key: readonly unknown[]) => boolean): Promise<unknown> {
-  for (const [hash, row] of [...pending]) {
-    const key = parseKey(row.key);
-    if (key != null && match(key)) pending.delete(hash);
-  }
+  for (const [hash, row] of pending) if (match(parseKey(row.key) ?? [])) pending.delete(hash);
   return enqueue(async () => {
-    const ids = (await store.all()).filter((row) => { const key = parseKey(row.key); return key != null && match(key); }).map((row) => row.id);
+    // The id is the key's hash (its JSON): the ids are read without the rows' data, and an id that is not a key is left alone.
+    const ids = (await store.ids()).filter((id) => { const key = parseKey(id); return key != null && match(key); });
     if (ids.length === 0) return;
     for (const id of ids) index.delete(id);
     await store.remove(ids);

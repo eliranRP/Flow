@@ -25,14 +25,15 @@ const PROJECT_OTHER = ["month-forecast", "off", "project", "p1", "2027-01", TODA
 const KEPT = [TOTALS_M, TOTALS_YEAR, TOTALS_LATER, PROJECT_M, PROJECT_OTHER];
 const ALL = [ROWS_M, ROWS_OTHER, TOTALS_M, TOTALS_YEAR, TOTALS_LATER, PROJECT_M, PROJECT_OTHER];
 
-function memoryStore(rows: KeptRow[]): KeptStore & { ids: () => string[] } {
+function memoryStore(rows: KeptRow[]): KeptStore & { left: () => string[] } {
   const held = new Map(rows.map((row) => [row.id, row]));
   return {
     all: () => Promise.resolve([...held.values()]),
+    ids: () => Promise.resolve([...held.keys()]),
     put: (next) => { for (const row of next) held.set(row.id, row); return Promise.resolve(); },
     remove: (ids) => { for (const id of ids) held.delete(id); return Promise.resolve(); },
     clear: () => { held.clear(); return Promise.resolve(); },
-    ids: () => [...held.keys()].sort(),
+    left: () => [...held.keys()].sort(),
   };
 }
 
@@ -67,7 +68,7 @@ describe("a skip of one month drops only the answers that include it (FLOW-1323)
     expect([ROWS_M, TOTALS_M, TOTALS_YEAR, PROJECT_M].map((key) => held(client, key))).toEqual([false, false, false, false]);
     expect([ROWS_OTHER, TOTALS_LATER, PROJECT_OTHER].map((key) => held(client, key))).toEqual([true, true, true]);
     // On the device: the kept rows of the dropped answers go too, so a cold start does not put them back.
-    expect(store.ids()).toEqual([TOTALS_LATER, PROJECT_OTHER].map((key) => hashKey(key)).sort());
+    expect(store.left()).toEqual([TOTALS_LATER, PROJECT_OTHER].map((key) => hashKey(key)).sort());
   });
 
   it("after a refused write drops every inactive company and project forecast and their kept rows, as before", async () => {
@@ -80,6 +81,6 @@ describe("a skip of one month drops only the answers that include it (FLOW-1323)
     await waitFor(() => { expect(client.isMutating()).toBe(0); });
     await waitFor(() => { expect(ALL.some((key) => held(client, key))).toBe(false); });
     await flushKeptReads();
-    await waitFor(() => { expect(store.ids()).toEqual([]); });
+    await waitFor(() => { expect(store.left()).toEqual([]); });
   });
 });

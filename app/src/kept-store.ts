@@ -20,6 +20,8 @@ export type KeptRow = {
 
 export type KeptStore = {
   all(): Promise<KeptRow[]>;
+  /** The ids alone (a row's id is its query's hash, its key as JSON): no row's data is read. */
+  ids(): Promise<string[]>;
   put(rows: readonly KeptRow[]): Promise<void>;
   remove(ids: readonly string[]): Promise<void>;
   clear(): Promise<void>;
@@ -58,6 +60,7 @@ export function idbKeptStore(factory: () => IDBFactory | undefined = () => globa
   };
   return {
     all: async () => ((await run("readonly", (store) => store.getAll()))?.result ?? []) as KeptRow[],
+    ids: async () => ((await run("readonly", (store) => store.getAllKeys()))?.result ?? []) as string[],
     // A value that cannot be cloned is not kept; the others are.
     put: async (rows) => { await run("readwrite", (store) => { for (const row of rows) try { store.put(row); } catch { /* not kept */ } }); },
     remove: async (ids) => { await run("readwrite", (store) => { for (const id of ids) store.delete(id); }); },
