@@ -648,6 +648,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1263"></a>[FLOW-1263](tasks/FLOW-1263.md) | Loans: a loan never paid in the books stays late | BUG |
 | <a id="flow-1264"></a>[FLOW-1264](tasks/FLOW-1264.md) | Loans: a payment not yet split to its loan is not called late | BUG |
 | <a id="flow-1265"></a>[FLOW-1265](tasks/FLOW-1265.md) | A row's one-line hint shows a sliver of its hidden second line | SMALL UI |
+| <a id="flow-1337"></a>[FLOW-1337](tasks/FLOW-1337.md) | Loans list offline on a new day shows the loans, not "אין הלוואות" | SMALL UI |
+| <a id="flow-1338"></a>[FLOW-1338](tasks/FLOW-1338.md) | A loan row's hint keeps "הבא dd/mm" whole | SMALL UI |
 | <a id="flow-1277"></a>[FLOW-1277](tasks/FLOW-1277.md) | A splash screen: the icon fills with liquid on every cold start | UI |
 
 ## Onboarding, Settings and connectors
