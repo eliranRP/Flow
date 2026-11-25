@@ -47,6 +47,8 @@ describe("loanRowHint", () => {
     expect(loanRowHint(row("a", "א", { projectName: "דירת הגפן" }))).toBe("בלי תשלום קבוע · דירת הגפן");
     expect(loanRowHint(row("a", "א", { projectName: "דירת הגפן", outlooksUnknown: true }))).toBe("דירת הגפן");
     expect(loanRowHint(row("a", "א", { flaggedParts: 1, outlooksUnknown: true }))).toBe("ממתין לבדיקה · בלי פרויקט");
+    expect(loanRowHint(row("a", "א", { kind: "demand", outlooksUnknown: true }))).toBe("בלי תשלום קבוע · בלי פרויקט");
+    expect(loanRowHint(row("a", "א", { outlooksUnknown: true, next: { dueDate: "2026-11-20", amountMinor: 524_000n } }))).toBe("הבא 20/11 · $5,240 · בלי פרויקט");
   });
 
   it("says how and when a closed loan ended", () => {
