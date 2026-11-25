@@ -12,7 +12,7 @@ import { GroupHead } from "../ui/group-head";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, ChevronIcon, PlusIcon } from "../ui/icons";
 import { PercentIcon } from "../ui/icons-later";
-import { List, ListRow } from "../ui/list-row";
+import { List, ListRow, WholeHint } from "../ui/list-row";
 import { PartsBar } from "../ui/parts-bar";
 import { useScrolledPast } from "../ui/screen-header";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -42,14 +42,19 @@ function money(minor: bigint, currency: string): string {
  * it ended ("נפרעה 08/2026"), then the project. The kind is the group's head, so the row leaves it out.
  */
 export function loanRowHint(row: LoanListRow): string {
+  return loanRowHintParts(row).map((part) => part.text).join(" · ");
+}
+
+/** The hint's parts: the next payment's date and amount are one part, shown whole or dropped together (FLOW-1338). */
+function loanRowHintParts(row: LoanListRow): Array<{ text: string; whole?: true }> {
   const project = row.projectName ?? "בלי פרויקט";
   if (isClosedLoan(row)) {
     const label = row.status == null ? "" : LOAN_STATUS_LABEL[row.status];
     const when = row.closedOn == null || row.closedOn === "" ? label : `${label} ${monthYear(row.closedOn)}`;
-    return [when, project].join(" · ");
+    return [{ text: when }, { text: project }];
   }
-  const next = row.next == null ? "בלי תשלום קבוע" : `הבא ${dayMonth(row.next.dueDate)} · ${money(row.next.amountMinor, row.currency)}`;
-  return [row.flaggedParts > 0 ? "ממתין לבדיקה" : null, next, project].filter((part): part is string => part != null).join(" · ");
+  const next = row.next == null ? { text: "בלי תשלום קבוע" } : { text: `הבא ${dayMonth(row.next.dueDate)} · ${money(row.next.amountMinor, row.currency)}`, whole: true as const };
+  return [...(row.flaggedParts > 0 ? [{ text: "ממתין לבדיקה" }] : []), next, { text: project }];
 }
 
 /**
@@ -149,7 +154,7 @@ function LoanRow({ row, onOpen }: { row: LoanListRow; onOpen: (id: string) => vo
       variant="project"
       layout="flat"
       title={row.name}
-      hintParts={hint.split(" · ")}
+      hintParts={loanRowHintParts(row).map((part) => (part.whole ? <WholeHint>{part.text}</WholeHint> : part.text))}
       tone={row.flaggedParts > 0 && !closed ? "warning" : undefined}
       icon={closed ? <StatusMark kind="paid" /> : row.next == null ? undefined : <StatusMark kind={row.lateOn != null ? "late" : "due"} />}
       agorot={row.balanceMinor}

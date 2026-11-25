@@ -153,7 +153,8 @@ export function LoansHost({
   const balances = useLoanList(sample == null ? companyId : null);
   // FLOW-1316: the next payments and late marks are `loan_outlooks`, read beside the list (one wave). A failed outlooks read fails the list: its rows would otherwise draw without them.
   const outlooks = useLoanOutlooks(sample == null ? companyId : null);
-  const liveRows = useMemo(() => (balances.data == null || outlooks.data == null ? null : withOutlooks(balances.data, outlooks.data)), [balances.data, outlooks.data]);
+  // FLOW-1337: the outlooks sit under today's key, so on a new day offline they have no data (paused, not failed): the kept list still draws, with no next payment or late mark, never the empty state. A failed read fails the list (below).
+  const liveRows = useMemo(() => (balances.data == null ? null : withOutlooks(balances.data, outlooks.data ?? [])), [balances.data, outlooks.data]);
   const holdWrites = useHoldWrites();
   const online = useOnline();
   const emptyButton = useRef<HTMLButtonElement>(null);
@@ -240,6 +241,7 @@ export function LoansHost({
   }
 
   const picking = view !== "form";
+  // Online, the rows wait for the outlooks (one wave); paused offline with the list kept, they draw without.
   const loading = sample === "loading" || (sample == null && (balances.isLoading || outlooks.isLoading));
   const failed = sample === "error" || (sample == null && (balances.isError || outlooks.isError));
   const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (liveRows ?? []) : [];

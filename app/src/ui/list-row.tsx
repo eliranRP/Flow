@@ -1,4 +1,4 @@
-import { useId, type ReactNode, type Ref } from "react";
+import { isValidElement, useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { Amount } from "./amount";
@@ -531,7 +531,7 @@ function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
   return (
     <span className="ui-hint-parts">
       {parts.map((part, index) => {
-        const whole = typeof part === "string" && !/\p{L}/u.test(part);
+        const whole = (typeof part === "string" && !/\p{L}/u.test(part)) || (isValidElement(part) && part.type === WholeHint);
         return (
           <span key={index} className={whole ? "ui-hint-part ui-hint-part-whole" : "ui-hint-part"} data-clip-ok="">
             {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
@@ -545,6 +545,11 @@ function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
       })}
     </span>
   );
+}
+
+/** A hint part shown whole or dropped, never cut, though it has letters ("הבא 15/11 · $1,312"; FLOW-1338). */
+export function WholeHint({ children }: { children: string }) {
+  return <>{children}</>;
 }
 
 function isPartList(hint: ReactNode | readonly ReactNode[]): hint is readonly ReactNode[] {

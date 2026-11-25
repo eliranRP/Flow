@@ -1,6 +1,8 @@
+import { renderWithProviders } from "../test-render";
 import { describe, expect, it } from "vitest";
 import { groupLoansByKind, type LoanListRow } from "./loan-list";
-import { loanRowHint, loansAttention } from "./loans-list";
+import { LoansList, loanRowHint, loansAttention } from "./loans-list";
+import type { LoansHostCtx } from "./loans-host";
 
 // FLOW-1046: the Loans list's groups by kind, its row lines and its דורש טיפול cards. Invented loans.
 
@@ -66,3 +68,22 @@ describe("loansAttention", () => {
   });
 });
 
+
+describe("a row's hint (FLOW-1338)", () => {
+  const ctx = (rows: LoanListRow[]): LoansHostCtx => ({
+    rows, loading: false, failed: false, empty: false, summary: null, currency: "USD", holdWrites: false, retrying: false,
+    retry: () => undefined, openNew: () => undefined, newRef: { current: null }, emptyRef: { current: null }, openLoan: () => undefined,
+    summaryHref: "/loans/summary", offline: false, offlineSince: null, loanHref: (id) => `/loans/${id}`,
+  });
+
+  it("keeps the next payment's date with its amount as one part that shows whole or drops, never cut to הבא…", () => {
+    const { container } = renderWithProviders(
+      <LoansList ctx={ctx([row("a", "משכנתא", { flaggedParts: 1, projectName: "פרויקט גפן", next: { dueDate: "2026-11-15", amountMinor: 131_200n } })])} />,
+      { route: "/loans" },
+    );
+    const whole = [...container.querySelectorAll(".ui-hint-part-whole")].map((part) => part.textContent);
+    expect(whole).toEqual([" · הבא 15/11 · $1,312"]);
+    const cut = [...container.querySelectorAll(".ui-hint-part:not(.ui-hint-part-whole)")].map((part) => part.textContent);
+    expect(cut.join("|")).not.toContain("הבא");
+  });
+});

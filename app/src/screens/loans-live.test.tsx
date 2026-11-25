@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { onlineManager, QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -157,6 +157,24 @@ describe("live Loans tab", () => {
     fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
     expect(await screen.findByRole("button", { name: /^הלוואת גשר, / })).toBeInTheDocument();
     expect(db.outlookCalls).toHaveLength(2);
+  });
+
+  it("offline on a new day, with the list kept and no outlooks for today, draws the loans and the offline line, never the empty state (FLOW-1337)", async () => {
+    const client = withCompanies("u1");
+    // Yesterday's outlooks sit under yesterday's key: today's read has no data and, offline, never starts.
+    await client.query({ queryKey: ["loans", TEST_COMPANY_ID, "list"], queryFn: () => readLoanList(TEST_COMPANY_ID) });
+    onlineManager.setOnline(false);
+    try {
+      renderWithProviders(<LoansScreen />, { route: "/loans", client });
+      expect(await screen.findByRole("button", { name: /^הלוואת גשר, / })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^הלוואת ציוד, / })).toBeInTheDocument();
+      expect(screen.queryByText(/אין הלוואות/)).not.toBeInTheDocument();
+      expect(screen.queryByText(LOANS_ERROR_TITLE)).not.toBeInTheDocument();
+      expect(screen.getByText(/אין חיבור/)).toBeInTheDocument();
+      expect(db.outlookCalls).toEqual([]);
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it("shows each loan in its own currency, read from the loan and not from its balance (FLOW-1261)", async () => {
