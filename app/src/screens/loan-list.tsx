@@ -26,6 +26,8 @@ export type LoanListRow = LoanBalanceRow & {
   next?: { dueDate: string; amountMinor: bigint };
   /** FLOW-1258: the due date of a scheduled payment past its grace with nothing recorded for it; missing when on time. */
   lateOn?: string;
+  /** FLOW-1339: today's outlooks are not known (offline on a new day, list kept), so a missing `next` means unknown, not "no fixed payment". */
+  outlooksUnknown?: true;
 };
 
 export function isClosedLoan(row: Pick<LoanListRow, "status">): boolean {

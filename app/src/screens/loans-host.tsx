@@ -154,7 +154,12 @@ export function LoansHost({
   // FLOW-1316: the next payments and late marks are `loan_outlooks`, read beside the list (one wave). A failed outlooks read fails the list: its rows would otherwise draw without them.
   const outlooks = useLoanOutlooks(sample == null ? companyId : null);
   // FLOW-1337: the outlooks sit under today's key, so on a new day offline they have no data (paused, not failed): the kept list still draws, with no next payment or late mark, never the empty state. A failed read fails the list (below).
-  const liveRows = useMemo(() => (balances.data == null ? null : withOutlooks(balances.data, outlooks.data ?? [])), [balances.data, outlooks.data]);
+  // FLOW-1339: and those rows say so (`outlooksUnknown`), so a row does not read the missing next payment as "בלי תשלום קבוע".
+  const liveRows = useMemo(() => {
+    if (balances.data == null) return null;
+    if (outlooks.data == null) return balances.data.map((row): LoanListRow => ({ ...row, outlooksUnknown: true }));
+    return withOutlooks(balances.data, outlooks.data);
+  }, [balances.data, outlooks.data]);
   const holdWrites = useHoldWrites();
   const online = useOnline();
   const emptyButton = useRef<HTMLButtonElement>(null);
