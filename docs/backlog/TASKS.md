@@ -871,6 +871,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1316"></a>[FLOW-1316](tasks/FLOW-1316.md) | Perf: the Loans list reads its outlooks | MEDIUM (perf) |
 | <a id="flow-1318"></a>[FLOW-1318](tasks/FLOW-1318.md) | Perf: company_forecast builds each loan's payments for the months asked only, and gathers only the first due date | SMALL/MEDIUM (perf) |
 | <a id="flow-1320"></a>[FLOW-1320](tasks/FLOW-1320.md) | Perf: company_forecast reads the recurring charges once, and its first call on a connection costs less | MEDIUM (perf) |
+| <a id="flow-1323"></a>[FLOW-1323](tasks/FLOW-1323.md) | Perf: a forecast skip reads only the overrides, and drops only the answers of its month | MEDIUM (perf) |
 | <a id="flow-1322"></a>[FLOW-1322](tasks/FLOW-1322.md) | Profit's year view: the rest-of-year card waits forever in December | BUG |
 | <a id="flow-1280"></a>[FLOW-1280](tasks/FLOW-1280.md) | Plan: cold Home's start-up, where FLOW-1116's early reads did not help | PLAN FIRST (perf) |
 | <a id="flow-1281"></a>[FLOW-1281](tasks/FLOW-1281.md) | Perf: stop reading layout in a screen's first commit | MEDIUM (perf) |

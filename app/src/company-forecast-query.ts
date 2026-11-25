@@ -12,7 +12,7 @@ import { readyClient } from "./ready-client";
  * 'totals' for Profit's next-month card (one month) and its year view (every month left in the year), and with 'rows'
  * for one month's page (Home's month to come, the company's צפי and תזרים pages). It replaces the four reads the app made and
  * built from (expected months, the loans, the company's inputs, the categories). The keys are under "month-forecast", so a
- * skip, a project's edit or a sync refreshes them as it refreshes the month forecast. Only 'totals' is kept on the device
+ * project's edit or a sync refreshes them as it refreshes the month forecast (a skip patches them at the tap and reads none, FLOW-1323). Only 'totals' is kept on the device
  * (kept-rules.ts): it is what the card draws; the rows are far bigger and not a first view.
  */
 

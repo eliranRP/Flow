@@ -9,8 +9,8 @@ import type { NextMonthRow } from "./project-next-month";
  * (the month forecast's `set_forecast_item`, written from the צפי page, Home and the charge's page) and the project page's own
  * removal of a row. The same rules the database applies: a skip is a one-month removal of the party's row (`rec:<direction>:<party>`,
  * skipEdits), a row goes to the list apart with its amount out of the totals, and back again in the builders' order. What no row
- * holds (a loan's cash, which a removal of its every row takes out) follows with the read after the write, which refreshes
- * every forecast under "month-forecast".
+ * holds (a loan's cash, which a removal of its every row takes out) follows with the read after the project page's own removal (a skip removes one row, and no
+ * loan's cash with it, so a skip reads nothing, FLOW-1323).
  */
 
 /** The row a skip key (`party:<direction>:<party>:<currency>[:<project|none>]`) takes out of a project's page, or null when it is not this page's. */

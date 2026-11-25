@@ -11,8 +11,8 @@ import { readyClient } from "./ready-client";
  * (`israelToday()`) and, for a project whose figures are not in the company's currency, that currency (`null`: the company's, which
  * is what the database answers when it is not asked). It replaces
  * the six reads the project page's card, its צפי page and its edit page made and built from (the charges, the category months, the
- * edits, the overrides, the loans in get_project and the categories). The key is under "month-forecast", so a skip, a project's
- * edit and a finished sync refresh it as they refresh the month forecast; the writes also patch it at the tap (below).
+ * edits, the overrides, the loans in get_project and the categories). The key is under "month-forecast", so a project's
+ * edit and a finished sync refresh it as they refresh the month forecast; a skip patches it at the tap (below) and reads nothing (FLOW-1323).
  */
 
 /** The query key: the project, the month, the day and the currency asked for ("company" when none is). The skip and edit writes find these by that shape. */

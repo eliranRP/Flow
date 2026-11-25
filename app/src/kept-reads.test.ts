@@ -7,6 +7,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { demoDashboard, demoProject, demoUnpaid } from "./demo/model";
 import {
+  dropKeptReads,
   flushKeptReads,
   forgetKeptReads,
   KEPT_MAX_AGE_MS,
@@ -478,5 +479,28 @@ describe("kept reads (FLOW-1267)", () => {
     const page = renderHook(() => useCompanyYears(today, true), { wrapper });
     await vi.waitFor(() => { expect(page.result.current.failed).toBe(true); });
     expect(page.result.current.readAt).toBe(savedAt);
+  });
+
+  // FLOW-1323: a write drops the kept rows of the answers it changes, found by id, with no row's data read.
+  it("dropKeptReads deletes the stored rows whose key matches and leaves the others; ids that are not keys are left alone", async () => {
+    const mine = ["month-forecast", "off", "project", "p1", "2026-12", "2026-11-24", "company"];
+    const other = ["month-forecast", "off", "project", "p1", "2027-01", "2026-11-24", "company"];
+    await store.put([row({ key: JSON.stringify(mine) }), row({ key: JSON.stringify(other) }), row({ id: "not-a-key", key: JSON.stringify(UNPAID) })]);
+    const all = vi.spyOn(store, "all");
+    await dropKeptReads((key) => key[4] === "2026-12");
+    expect(all).not.toHaveBeenCalled();
+    expect(await store.all().then((rows) => rows.map((item) => item.id).sort())).toEqual([hashKey(other), "not-a-key"].sort());
+  });
+
+  it("dropKeptReads also drops a read still waiting to be written, so a later flush does not keep it", async () => {
+    const client = newClient();
+    keepReadsOf(client);
+    const key = ["month-forecast", "off", "project", "p1", "2026-12", "2026-11-24", "company"];
+    const kept = ["month-forecast", "off", "project", "p1", "2027-01", "2026-11-24", "company"];
+    await read(client, key, {});
+    await read(client, kept, {});
+    await dropKeptReads((candidate) => candidate[4] === "2026-12");
+    await flushKeptReads();
+    expect((await store.all()).map((item) => item.id)).toEqual([hashKey(kept)]);
   });
 });
