@@ -1,5 +1,5 @@
 import { formatAmountText, type ForecastItem } from "@flow/shared";
-import { weekEndDay } from "../forecast-month";
+import { weekEndDay } from "../forecast-month-screen";
 import { Amount } from "../ui/amount";
 import { cx } from "../ui/cx";
 import { SwipeRow } from "../ui/swipe-row";

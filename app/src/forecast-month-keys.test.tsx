@@ -1,7 +1,8 @@
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useResetForecastMonth, useSetForecastItem } from "./forecast-month";
+import { useSetForecastItem } from "./forecast-month";
+import { useResetForecastMonth } from "./forecast-month-screen";
 import { renderWithProviders } from "./test-render";
 
 // FLOW-1191: the month forecast's writes change forecast_overrides, which expected_months does not read, so a write

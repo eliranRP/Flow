@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { chargeChangeViews, lateItemName, lateTarget } from "./forecast";
 import { monthForecastBoardSample, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
-import { nextMonth } from "./forecast-month";
+import { nextMonth } from "./forecast-month-screen";
 
 // --- forecast.test.tsx
 

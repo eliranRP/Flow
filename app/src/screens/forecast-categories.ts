@@ -1,6 +1,6 @@
 import type { ForecastBuild, ForecastItem } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { monthEndDay } from "../forecast-month";
+import { monthEndDay } from "../forecast-month-screen";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview } from "../preview";
 import { readyClient } from "../ready-client";

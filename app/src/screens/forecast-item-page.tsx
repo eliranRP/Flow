@@ -1,7 +1,8 @@
 import { formatAmountText, type ForecastItem } from "@flow/shared";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { monthEndDay, nextMonth, type ForecastPatch, weekEndDay } from "../forecast-month";
+import type { ForecastPatch } from "../forecast-month";
+import { monthEndDay, nextMonth, weekEndDay } from "../forecast-month-screen";
 import { chargeHref } from "../recurring-charge";
 import { BackButton, liveSheetStack } from "../ui/back";
 import { Button } from "../ui/button";
