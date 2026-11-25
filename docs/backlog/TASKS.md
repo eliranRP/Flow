@@ -487,6 +487,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1031"></a>[FLOW-1031](tasks/FLOW-1031.md) | Home keeps the forecast row's place while it loads | SMALL UI |
 | <a id="flow-1164"></a>[FLOW-1164](tasks/FLOW-1164.md) | Editors and sheets: move the saves that can run twice onto `saveFlow` | BUG |
 | <a id="flow-1165"></a>[FLOW-1165](tasks/FLOW-1165.md) | Review and transaction picks: one undo slot shared by overlapping picks; delete during a write | BUG |
+| <a id="flow-1340"></a>[FLOW-1340](tasks/FLOW-1340.md) | The change sheet's third queued pick is lost when it repeats the shown value | SMALL CYCLE |
 | <a id="flow-1167"></a>[FLOW-1167](tasks/FLOW-1167.md) | Shared UI parts: holds and flags that can stay set (toast, sheet, list hold, swipes, disconnect, reload) | BUG |
 
 ## Projects and reports

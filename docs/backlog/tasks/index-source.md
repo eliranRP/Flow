@@ -479,6 +479,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-1031
 - FLOW-1164
 - FLOW-1165
+- FLOW-1340
 - FLOW-1167
 
 ## Projects and reports
