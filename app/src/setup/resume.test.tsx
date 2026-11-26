@@ -7,7 +7,7 @@ import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { SetupLanding, SetupResume } from "./entry";
 import { resetSetupResumeForTests } from "./route";
-import { emptySetupStore, readSetupStore, writeSetupStore } from "./storage";
+import { emptySetupStore, writeSetupStore } from "./storage";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
