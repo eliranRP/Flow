@@ -856,7 +856,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1297"></a>[FLOW-1297](tasks/FLOW-1297.md) | Perf: Review's reads on load (the company id, the categories read twice, the overhead project's prefetch) | SMALL (perf) |
 | <a id="flow-1298"></a>[FLOW-1298](tasks/FLOW-1298.md) | Perf: Loans reads the company currency from Home's key, and its list in fewer requests | SMALL (perf), then MEDIUM |
 | <a id="flow-1299"></a>[FLOW-1299](tasks/FLOW-1299.md) | Perf: the project page's month lines are read twice on a cold open | SMALL (perf) |
-| <a id="flow-1300"></a>[FLOW-1300](tasks/FLOW-1300.md) | Perf: every API read stalls up to 8 s in production at times (the recurring reads average 0.64 to 0.89 s against 0.1 to 0.14 s warm) | MEDIUM (perf, investigate first; priority) |
+| <a id="flow-1300"></a>[FLOW-1300](tasks/FLOW-1300.md) | Perf: every API read stalls up to 8 s in production at times (the recurring reads average 0.64 to 0.91 s against 0.1 to 0.14 s warm) | MEDIUM (perf, investigate first; priority) |
 | <a id="flow-1301"></a>[FLOW-1301](tasks/FLOW-1301.md) | Perf: restore the open screen's kept reads first, and keep them past an hour | SMALL (perf) |
 | <a id="flow-1302"></a>[FLOW-1302](tasks/FLOW-1302.md) | Perf: two small response and kept-size trims | SMALL (perf) |
 | <a id="flow-1303"></a>[FLOW-1303](tasks/FLOW-1303.md) | The splash ends when Home's figures are drawn | SMALL UI |
