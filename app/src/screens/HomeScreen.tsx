@@ -36,7 +36,7 @@ import { screenPhase } from "../query-phase";
 import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useDashboardQuery, useUnpaidQuery } from "../use-books";
-import { SetupHomeSlot } from "../setup/home";
+import { SetupHomeSlot } from "../setup/entry";
 import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
