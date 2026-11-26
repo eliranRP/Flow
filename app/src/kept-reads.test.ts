@@ -3,7 +3,7 @@ import { hashKey, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { renderHook, act } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { IDBFactory } from "fake-indexeddb";
+import { IDBDatabase, IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { demoDashboard, demoProject, demoUnpaid } from "./demo/model";
 import {
@@ -502,5 +502,20 @@ describe("kept reads (FLOW-1267)", () => {
     await dropKeptReads((candidate) => candidate[4] === "2026-12");
     await flushKeptReads();
     expect((await store.all()).map((item) => item.id)).toEqual([hashKey(kept)]);
+  });
+
+  // FLOW-1341: once the put-back has indexed the rows, a drop does not read the store first: no transaction when nothing matches, one write when something does.
+  it("dropKeptReads opens no transaction when no kept row matches, and a single write when some do", async () => {
+    const mine = ["month-forecast", "off", "overrides", "2026-12"];
+    const other = ["month-forecast", "off", "overrides", "2027-01"];
+    await store.put([row({ key: JSON.stringify(mine) }), row({ key: JSON.stringify(other) })]);
+    await restoreKeptReads(newClient());
+    const open = vi.spyOn(IDBDatabase.prototype, "transaction");
+    await dropKeptReads((key) => key[3] === "2030-01");
+    expect(open).not.toHaveBeenCalled();
+    await dropKeptReads((key) => key[3] === "2026-12");
+    expect(open.mock.calls.map((call) => call[1])).toEqual(["readwrite"]);
+    open.mockRestore();
+    expect((await store.all()).map((item) => item.id)).toEqual([hashKey(other)]);
   });
 });

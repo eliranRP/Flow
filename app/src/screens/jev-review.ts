@@ -2,7 +2,8 @@ import { getSupabase } from "../lib/supabase";
 import { isJevReasonKind, type JevReasonInfo, type ReviewFlag, type ReviewFlagKind } from "../review-copy";
 import { writeJevConnectorFlag } from "./jev-connector-scope";
 import { jevQueueKey } from "./jev-connector-scope";
-import { abortError, signalled, withJevDeadline } from "./jev-deadline";
+import { signalled } from "../signalled";
+import { abortError, withJevDeadline } from "./jev-deadline";
 export { JEV_READ_MS, withJevDeadline } from "./jev-deadline";
 
 export {
