@@ -59,7 +59,7 @@ export function withSkip(keys: readonly string[], key: string, out: boolean | un
 export function changeSkips(client: QueryClient, month: string, change: (keys: readonly string[]) => readonly string[]): () => void {
   const scope = forecastScope(month);
   touch(client, scope);
-  void loadSettle().then((settle) => { settle.watchWrites(client); });
+  void loadSettle().then((settle) => { settle.watchWrites(client); }, () => { settleWithoutChunk(client); });
   // A read of this month's forecast under way would land the pre-skip answer over the patch: it is stopped (its cancel puts the state it started from back, a moment later, so the patch is made again then) and noted, to be read again once the month's writes have settled.
   const reading = client.getQueryCache().findAll({ queryKey: ["month-forecast"], predicate: (query) => isForecastOf(query.queryKey, month) && query.state.fetchStatus === "fetching" });
   const patch = (): (() => void) => {
@@ -150,6 +150,22 @@ export function burstsOf(client: QueryClient): Map<string, Settled> {
     }
   });
   return bursts;
+}
+
+/**
+ * The settle chunk could not load (a tab on a build whose files are gone): once no write is out, every forecast read is
+ * read again (or marked stale, and read when a screen opens), so the cache ends at the server's answer, as after a failed write. Dearer than the chunk's own settle, and rare.
+ */
+function settleWithoutChunk(client: QueryClient): void {
+  const settle = (): void => {
+    if (client.isMutating() > 0) return;
+    stop();
+    burstsOf(client).clear();
+    void client.invalidateQueries({ queryKey: ["month-forecast"] });
+    void dropKeptReads((key) => key[0] === "month-forecast");
+  };
+  const stop = client.getMutationCache().subscribe((event) => { if (event.type === "updated") settle(); });
+  settle();
 }
 
 /** Starts the scope's burst (a tap) or notes a forecast query of the scope's month, whose key is given. */

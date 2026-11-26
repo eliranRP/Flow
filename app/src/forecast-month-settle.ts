@@ -71,8 +71,11 @@ function settleForecastWrites(client: QueryClient, month: string, settled: Settl
  */
 function afterWrite(client: QueryClient, month: string): void {
   dropInactiveForecasts(client, month);
-  const own = (query: { queryKey: readonly unknown[] }) => (query.queryKey[2] === "overrides" || query.queryKey[2] === "answer") && query.queryKey[3] === month;
+  const ownKey = (key: readonly unknown[]) => key[0] === "month-forecast" && (key[2] === "overrides" || key[2] === "answer") && key[3] === month;
+  const own = (query: { queryKey: readonly unknown[] }) => ownKey(query.queryKey);
   client.removeQueries({ queryKey: ["month-forecast"], type: "inactive", predicate: own });
+  // A pre-skip answer kept while the write was out (a read that landed then) goes too; a screen that holds one reads it again, and that read is kept.
+  void dropKeptReads(ownKey);
   void client.invalidateQueries({ queryKey: ["month-forecast"], predicate: own });
 }
 
