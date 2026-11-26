@@ -362,3 +362,32 @@ describe("CompanyProfitScreen live, each view's first reads start at mount, the 
     expect(years).toEqual(["2025-01-01", "2025-01-01"]);
   });
 });
+
+describe("CompanyProfitScreen live, the year and since-the-start totals start at mount (FLOW-1334)", () => {
+  it.each(["year", "all"])("the %s view asks for every month left in the year before get_profit_months answers", async (period) => {
+    answerBreakdowns();
+    answerProfitMonths();
+    let release: () => void = () => undefined;
+    calls.heldMonths = new Promise<void>((resolve) => { release = resolve; });
+    renderWithProviders(<CompanyProfitScreen />, { route: `/profit?period=${period}` });
+    await waitFor(() => { expect(calls.names).toContain("get_profit_months"); });
+    // The months read is still held: the totals read has gone out anyway, beside it.
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
+    expect(calls.args.company_forecast).toEqual([{ p_months: ["2026-11", "2026-12"], p_detail: "totals", p_today: "2026-10-20" }]);
+    release();
+    expect(await screen.findByText(/נספר לפי/)).toBeInTheDocument();
+    expect(calls.names.filter((name) => name === "company_forecast")).toHaveLength(1);
+  });
+
+  it("the month view's totals still wait for the figures, not for get_profit_months", async () => {
+    answerBreakdowns();
+    answerProfitMonths();
+    let release: () => void = () => undefined;
+    calls.heldMonths = new Promise<void>((resolve) => { release = resolve; });
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    await waitFor(() => { expect(document.querySelectorAll(".ui-cp-list .ui-cp-row").length).toBeGreaterThan(0); });
+    await waitFor(() => { expect(calls.names).toContain("company_forecast"); });
+    expect(calls.args.company_forecast).toEqual([{ p_months: ["2026-11"], p_detail: "totals", p_today: "2026-10-20" }]);
+    release();
+  });
+});
