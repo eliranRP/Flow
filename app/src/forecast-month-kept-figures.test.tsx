@@ -15,7 +15,7 @@ import { renderWithProviders } from "./test-render";
 // FLOW-1341: a skip deletes the device's kept copies of the answers it changes at the tap, and keeps the patched ones again once the server has
 // accepted it, so a cold start draws Profit's card and the project card at their post-skip figures at once, not as skeletons (and never the
 // pre-skip figures). Invented keys only; the kept rows are checked against the real schemas when they are put back.
-const server = vi.hoisted(() => ({ project: null, rows: null, totals: null }));
+const server = vi.hoisted((): { project: unknown; rows: unknown; totals: unknown } => ({ project: null, rows: null, totals: null }));
 vi.mock("./lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: { p_detail?: string }) => {
