@@ -13,12 +13,15 @@ export { SetupLanding } from "./landing";
  * FLOW-1342. The setup screens' code (on-demand.tsx: route.tsx, home.tsx and what they share) is not in Home's first
  * load. These are the parts that stay in it: they decide from the saved flags whether setup matters to
  * this user, and only then load the rest. Every one draws nothing, before and after the load, so Home
- * does not move. A failed load is silent (a missed resume or toast, as an offline cold start had), never
- * the app's error screen.
+ * does not move. A failed load is retried twice (1.5 s, then 4 s later), silent, never the app's error
+ * screen; after the last a missed resume or toast is what an offline cold start had.
  */
 
 const loadResume = () => import("./on-demand").then((m) => m.SetupResume);
 const loadSlot = () => import("./on-demand").then((m) => m.SetupHomeSlot);
+
+/** After a failed load, wait this long and try again; it gives up after the last. */
+const RETRY_MS = [1500, 4000];
 
 /** The component once `wanted` is true and its module has loaded; null until then. */
 function useOnDemand<P>(load: () => Promise<ComponentType<P>>, wanted: boolean): ComponentType<P> | null {
@@ -26,11 +29,15 @@ function useOnDemand<P>(load: () => Promise<ComponentType<P>>, wanted: boolean):
   useEffect(() => {
     if (!wanted || loaded != null) return;
     let live = true;
-    load().then(
-      (component) => { if (live) setLoaded(() => component); },
-      () => undefined,
-    );
-    return () => { live = false; };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attempt = (n: number) => {
+      load().then(
+        (component) => { if (live) setLoaded(() => component); },
+        () => { if (live && n < RETRY_MS.length) timer = setTimeout(() => { attempt(n + 1); }, RETRY_MS[n]); },
+      );
+    };
+    attempt(0);
+    return () => { live = false; clearTimeout(timer); };
   }, [wanted, loaded, load]);
   return loaded;
 }

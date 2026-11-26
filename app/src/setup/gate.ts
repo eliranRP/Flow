@@ -56,8 +56,8 @@ async function serverFlags(userId: string, companyId: string): Promise<unknown> 
 
 /**
  * Whether the saved flags of this user and company pass `test`. This phone's copy answers at once; with
- * no copy that passes (a new phone, or a run another phone started) the row on the server answers, the
- * one read setup made on a cold start before. A failed read does not pass. Nothing is read until `active`.
+ * no copy that passes (a new phone, or a run another phone started) the row on the server answers (a read
+ * on a new phone with a run open, as setup made on a cold start before; setup's own read then follows). A failed read does not pass. Nothing is read until `active`.
  */
 export function useSetupFlags(userId: string | null, companyId: string | null, active: boolean, test: (state: unknown) => boolean): boolean {
   const live = active && userId != null && companyId != null;

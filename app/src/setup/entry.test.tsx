@@ -29,11 +29,15 @@ const dashboard = {
 };
 
 /** How many times each setup module was imported: the chunk is loaded when its module's factory ran. */
-const loads = vi.hoisted(() => ({ route: 0, home: 0, toastRule: false }));
+const loads = vi.hoisted(() => ({ route: 0, home: 0, toastRule: false, failRoute: 0, noCompany: false }));
 const calls = vi.hoisted(() => ({ from: [] as string[] }));
 const gate = vi.hoisted(() => ({ setupRow: null as { state: unknown } | null }));
 
 vi.mock("./on-demand", async (importOriginal) => {
+  if (loads.failRoute > 0) {
+    loads.failRoute -= 1;
+    throw new Error("chunk load failed");
+  }
   loads.route += 1;
   return importOriginal();
 });
@@ -66,7 +70,7 @@ const supabase = {
   },
   rpc: (name: string) => {
     if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(userId, userId), error: null });
-    if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+    if (name === "get_dashboard") return Promise.resolve({ data: loads.noCompany ? { ...dashboard, company_id: null } : dashboard, error: null });
     return Promise.resolve({ data: null, error: null });
   },
   from: (table: string) => {
@@ -120,6 +124,8 @@ describe("setup code loads when needed (FLOW-1342)", () => {
     if (loads.route > 0) (await import("./route")).resetSetupResumeForTests();
     resetSetupLandingForTests();
     loads.toastRule = false;
+    loads.noCompany = false;
+    loads.failRoute = 0;
     gate.setupRow = null;
     calls.from.length = 0;
     localStorage.clear();
@@ -162,6 +168,15 @@ describe("setup code loads when needed (FLOW-1342)", () => {
     await settle();
     expect(loads.route).toBe(0);
     expect(router.state.location.pathname).toBe("/");
+  });
+
+  it("a failed chunk load is retried, and the owner with no company reaches the welcome screen", async () => {
+    loads.noCompany = true;
+    loads.failRoute = 1;
+    const router = renderResume();
+    await waitFor(() => { expect(router.state.location.pathname).toBe("/setup/welcome"); }, { timeout: 4000 });
+    expect(loads.failRoute).toBe(0);
+    expect(loads.route).toBe(1);
   });
 
   it("the cold-start resume loads the setup code after the first paint, then redirects", async () => {

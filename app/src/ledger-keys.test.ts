@@ -19,6 +19,7 @@ const ACCOUNT_KEYS = [
   "jev-key-status",
   "jev-integration",
   "setup-state",
+  "setup-gate",
   "setup-jev",
   "setup-loans",
   "setup-base-currency",
