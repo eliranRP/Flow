@@ -116,16 +116,7 @@ export default defineConfig(({ mode }) => {
       rolldownOptions: {
         // Vite 8: rolldown splits what Home loads up front into one file per shared module, and
         // each file gzips on its own. One chunk for the up-front graph keeps Home one download, as on Vite 7.
-        // FLOW-1342: the setup code Home loads on demand (setup/entry.tsx) is one chunk, not one per shared module;
-        // a chunk of a few KB gzips badly, and each file adds its import list.
-        output: {
-          codeSplitting: {
-            groups: [
-              { name: "index", tags: ["$initial"] },
-              { name: "setup", test: /\/src\/setup\/(?:on-demand|route|home|model|storage|server-store|store|facts)\.tsx?$/ },
-            ],
-          },
-        },
+        output: { codeSplitting: { groups: [{ name: "index", tags: ["$initial"] }] } },
       },
     },
     server: {
