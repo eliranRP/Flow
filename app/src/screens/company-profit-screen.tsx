@@ -164,14 +164,17 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // the same reads; a past year or an earlier month reads none of them.
   const forecastYear = yearsData == null ? askedYear : viewYear;
   const wantsForecast = period === "month" ? onCurrent : period === "all" || forecastYear === currentYear;
-  // FLOW-1080 (as Home, FLOW-1019): the next-month reads start once the figures are drawn, so they do not share
-  // the link with the figures' own reads; a return with the figures cached reads them at once.
-  const afterPaint = useAfterFirstPaint(long ? yearsData != null : model != null);
+  // FLOW-1080 (as Home, FLOW-1019): the month view's next-month read starts once its figures are drawn, so it does not
+  // share the link with the figures' own reads; a return with the figures cached reads it at once. FLOW-1334: the year
+  // and since-the-start views' read (every month left in the year, one company_forecast of 0.3 to 2.6 KB) starts at mount,
+  // beside get_profit_months, so it waits for nothing.
+  const afterPaint = useAfterFirstPaint(model != null);
+  const forecastGate = long || afterPaint;
   // FLOW-1308: one read of company_forecast ('totals'): next month for the card, every month left in the year for the year views.
   const nextMonth = nextMonthKey(today);
   const restMonths = useMemo(() => restOfYearMonths(today), [today]);
   const fromSample = sample?.next != null;
-  const askNow = wantsForecast && afterPaint && !fromSample;
+  const askNow = wantsForecast && forecastGate && !fromSample;
   const cardRead = useCompanyForecastTotals(today, [nextMonth], askNow && !long);
   const restRead = useCompanyForecastTotals(today, restMonths, askNow && long);
   const nextRead = long ? restRead : cardRead;
@@ -189,7 +192,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   // Data already cached (from Home, or an earlier visit, or kept on the device) shows at once; only a read not yet started waits.
   // FLOW-1322: in December the rest of the year has no month, so its read is disabled and never loads: nothing to wait for.
   const noRestMonths = long && restMonths.length === 0;
-  const nextWaiting = !fromSample && !noRestMonths && ((askNow && nextRead.isPending && !nextRead.isPaused) || (wantsForecast && !afterPaint && nextRead.data == null));
+  const nextWaiting = !fromSample && !noRestMonths && ((askNow && nextRead.isPending && !nextRead.isPaused) || (wantsForecast && !forecastGate && nextRead.data == null));
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   // FLOW-1271: the year's project reads start at mount for the year the address asks for, without waiting for the years' read to say
   // it exists (a year with no data shows this year, and its reads then follow).
