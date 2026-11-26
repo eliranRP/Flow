@@ -21,7 +21,7 @@ import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
 import { PullRefresh } from "./ui/pull-refresh";
 import { HomeScreen } from "./screens/HomeScreen";
-import { SetupLanding, SetupResume } from "./setup/route";
+import { SetupLanding, SetupResume } from "./setup/entry";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, preloadSheet, screenLoaders } from "./screen-loaders";

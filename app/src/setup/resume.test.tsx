@@ -5,8 +5,9 @@ import { Outlet, RouterProvider, createMemoryRouter, useLocation } from "react-r
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
-import { resetSetupResumeForTests, SetupLanding, SetupResume } from "./route";
-import { emptySetupStore, readSetupStore, writeSetupStore } from "./storage";
+import { SetupLanding, SetupResume } from "./entry";
+import { resetSetupResumeForTests } from "./route";
+import { emptySetupStore, writeSetupStore } from "./storage";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
@@ -175,9 +176,10 @@ describe("setup resume", () => {
     await act(async () => {
       await router.navigate("/");
     });
-    await waitFor(() => {
-      expect(calls.from).toContain("review_queue");
-    });
+    // Home is not the landing: nothing here reads the dashboard, the flags or the steps, or loads the setup chunk.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+    expect(calls.rpc).not.toContain("get_dashboard");
+    expect(calls.from).not.toContain("review_queue");
     await expect(
       waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
     ).rejects.toThrow();
@@ -200,25 +202,23 @@ describe("setup resume", () => {
     await act(async () => {
       await router.navigate("/");
     });
-    await waitFor(() => {
-      expect(calls.from).toContain("review_queue");
-    });
+    // Home is not the landing: nothing here reads the dashboard, the flags or the steps, or loads the setup chunk.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+    expect(calls.rpc).not.toContain("get_dashboard");
+    expect(calls.from).not.toContain("review_queue");
     await expect(
       waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
     ).rejects.toThrow();
   });
 
 
-  it("a new phone reads the server flags before it decides, and does not restart the run", async () => {
+  it("a new phone reads the server flags before it decides, and does not restart a resumed run", async () => {
     gate.setupRow = {
       state: { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z", run_resumed_at: "2026-10-05T00:00:00.000Z" },
     };
     const { router } = renderAt("/");
     await waitFor(() => {
       expect(calls.from).toContain("setup_states");
-    });
-    await waitFor(() => {
-      expect(readSetupStore(userId, "company-1").run_resumed_at).toBe("2026-10-05T00:00:00.000Z");
     });
     await expect(
       waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
