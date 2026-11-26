@@ -2,6 +2,7 @@ import type { ForecastBuild, ForecastItem, ForecastOverrideRow } from "@flow/sha
 import { useQuery } from "@tanstack/react-query";
 import { useHomePreview } from "./preview";
 import { readyClient } from "./ready-client";
+import { signalled } from "./signalled";
 import { israelToday } from "./ui/date-math";
 
 /**
@@ -121,10 +122,10 @@ export function useMonthForecastQuery(month: string, active = true) {
     // Under "month-forecast", so the forecast's writes refresh it. The preview part comes first after the name, as in the other keys.
     queryKey: ["month-forecast", preview, "answer", month],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<MonthForecast> => {
+    queryFn: async ({ signal }): Promise<MonthForecast> => {
       const supabase = await readyClient();
       // A failed read fails the forecast, as before: the screens show their failed state with its retry.
-      const { data, error } = await supabase.rpc("month_forecast", { p_month: month, p_today: israelToday() });
+      const { data, error } = await signalled(supabase.rpc("month_forecast", { p_month: month, p_today: israelToday() }), signal);
       if (error) throw error;
       return monthForecastOf(data);
     },

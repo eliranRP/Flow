@@ -2,14 +2,13 @@ import type { ForecastOverrideRow } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { forecastScope } from "./forecast-scope";
-import { afterWrite, changeSkips, withSkip } from "./forecast-month";
+import { changeSkips, withSkip } from "./forecast-month";
 import { assertNoError, useWrite } from "./use-write";
 
 /**
  * FLOW-1336: what only the lazy forecast screens use (screens/forecast-screen.tsx, forecast-item-page.tsx, forecast-parts.tsx,
  * forecast-categories.ts): the month's date helpers and the reset and its undo. Kept out of forecast-month.ts, which Home's
- * entry imports for the skip path, so they load with those screens' chunks. The shared skip path (changeSkips, afterWrite,
- * withSkip) stays in forecast-month.ts, since a tap on Home runs it synchronously.
+ * entry imports for the skip path, so they load with those screens' chunks. The shared skip path (changeSkips, withSkip) stays in forecast-month.ts, since a tap on Home runs it synchronously.
  */
 
 /** The last day of a YYYY-MM month (yyyy-mm-dd): the "עד סוף החודש" choice. */
@@ -43,14 +42,13 @@ export function daysLeftInMonth(today: string, month: string): number {
 export function useResetForecastMonth(month: string) {
   const client = useQueryClient();
   return useWrite({
-    onSuccess: () => { afterWrite(client, month); },
     apply: () => changeSkips(client, month, () => []),
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("reset_forecast_month", { p_month: month }));
     },
-    // FLOW-1323: no refetch of the month-forecast prefix (the company and project forecasts sit under it): afterWrite reads only the month's overrides and answer.
+    // FLOW-1323: no refetch of the month-forecast prefix (the company and project forecasts sit under it): the month's writes, once settled, read only its overrides and answer.
     keys: [],
     failure: "לא הצלחנו לאפס את הצפי",
     place: "top",
@@ -62,7 +60,6 @@ export function useResetForecastMonth(month: string) {
 export function useRestoreForecast(month: string) {
   const client = useQueryClient();
   return useWrite<ForecastOverrideRow[]>({
-    onSuccess: () => { afterWrite(client, month); },
     apply: (rows) => changeSkips(client, month, (keys) => rows.reduce((next, row) => withSkip(next, row.item_key, row.moved_out), keys)),
     run: async (rows) => {
       const supabase = getSupabase();
@@ -72,7 +69,7 @@ export function useRestoreForecast(month: string) {
         assertNoError(await supabase.rpc("set_forecast_item", { p_month: month, p_item_key: row.item_key, p_patch: patch }));
       }
     },
-    // FLOW-1323: no refetch of the month-forecast prefix (the company and project forecasts sit under it): afterWrite reads only the month's overrides and answer.
+    // FLOW-1323: no refetch of the month-forecast prefix (the company and project forecasts sit under it): the month's writes, once settled, read only its overrides and answer.
     keys: [],
     failure: "לא הצלחנו להחזיר את הצפי",
     place: "top",

@@ -6,6 +6,7 @@ import { useForecastOverrides } from "./forecast-skip";
 import { incomeFactsOf, type RentCategory } from "./next-month-chart";
 import { useHomePreview } from "./preview";
 import { readyClient } from "./ready-client";
+import { signalled } from "./signalled";
 
 /**
  * FLOW-1308 (plan FLOW-1275, slice 7): the company's forecast, one read each: `company_forecast` (FLOW-1307) with
@@ -22,9 +23,9 @@ export function useCompanyForecastTotals(today: string, months: readonly string[
   return useQuery({
     queryKey: ["month-forecast", preview, "company", "totals", today, months.join(",")],
     enabled: enabled && preview === "off" && months.length > 0,
-    queryFn: async (): Promise<CompanyForecastTotals> => {
+    queryFn: async ({ signal }): Promise<CompanyForecastTotals> => {
       const supabase = await readyClient();
-      const { data, error } = await supabase.rpc("company_forecast", { p_months: [...months], p_detail: "totals", p_today: today });
+      const { data, error } = await signalled(supabase.rpc("company_forecast", { p_months: [...months], p_detail: "totals", p_today: today }), signal);
       if (error) throw error;
       return forecastTotalsOf(data);
     },
@@ -37,9 +38,9 @@ export function useCompanyForecastRows(today: string, month: string, enabled: bo
   return useQuery({
     queryKey: ["month-forecast", preview, "company", "rows", today, month],
     enabled: enabled && preview === "off",
-    queryFn: async (): Promise<CompanyForecastRows> => {
+    queryFn: async ({ signal }): Promise<CompanyForecastRows> => {
       const supabase = await readyClient();
-      const { data, error } = await supabase.rpc("company_forecast", { p_months: [month], p_detail: "rows", p_today: today });
+      const { data, error } = await signalled(supabase.rpc("company_forecast", { p_months: [month], p_detail: "rows", p_today: today }), signal);
       if (error) throw error;
       return forecastRowsOf(data);
     },

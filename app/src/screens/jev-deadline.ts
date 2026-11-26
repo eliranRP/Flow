@@ -7,13 +7,6 @@ export function abortError(reason?: unknown): Error {
   return reason instanceof Error ? reason : new DOMException("The operation was aborted.", "AbortError");
 }
 
-export function signalled<T>(query: T, signal?: AbortSignal): T {
-  if (signal == null || query == null || typeof query !== "object") return query;
-  const candidate = query as { abortSignal?: (next: AbortSignal) => T };
-  if (typeof candidate.abortSignal !== "function") return query;
-  return candidate.abortSignal(signal);
-}
-
 /**
  * One second, no retry. A stall returns `fallback`. The caller's abort still rejects
  * so React Query can drop the read when the card unmounts.

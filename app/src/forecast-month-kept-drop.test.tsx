@@ -22,6 +22,9 @@ const TOTALS_YEAR = ["month-forecast", "off", "company", "totals", TODAY, `${MON
 const TOTALS_LATER = ["month-forecast", "off", "company", "totals", TODAY, "2027-01,2027-02"];
 const PROJECT_M = ["month-forecast", "off", "project", "p1", MONTH, TODAY, "company"];
 const PROJECT_OTHER = ["month-forecast", "off", "project", "p1", "2027-01", TODAY, "company"];
+const ANSWER_M = ["month-forecast", "off", "answer", MONTH];
+const OVERRIDES_M = ["month-forecast", "off", "overrides", MONTH];
+const ANSWER_OTHER = ["month-forecast", "off", "answer", "2027-01"];
 const KEPT = [TOTALS_M, TOTALS_YEAR, TOTALS_LATER, PROJECT_M, PROJECT_OTHER];
 const ALL = [ROWS_M, ROWS_OTHER, TOTALS_M, TOTALS_YEAR, TOTALS_LATER, PROJECT_M, PROJECT_OTHER];
 
@@ -82,5 +85,17 @@ describe("a skip of one month drops only the answers that include it (FLOW-1323)
     await waitFor(() => { expect(ALL.some((key) => held(client, key))).toBe(false); });
     await flushKeptReads();
     await waitFor(() => { expect(store.left()).toEqual([]); });
+  });
+
+  // FLOW-1341: a skip from the project page holds no month answer in memory, but the device's kept copies of it (Home's forecast row, the month's skips) are as stale.
+  it("deletes the device's kept answer and overrides of the month (none held by a screen) and leaves another month's", async () => {
+    const store = memoryStore([ANSWER_M, OVERRIDES_M, ANSWER_OTHER].map(keptRow));
+    resetKeptReadsForTests(store);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithProviders(<Skip />, { client });
+    fireEvent.click(screen.getByRole("button", { name: "skip" }));
+    await waitFor(() => { expect(client.isMutating()).toBe(0); });
+    await flushKeptReads();
+    expect(store.left()).toEqual([hashKey(ANSWER_OTHER)]);
   });
 });

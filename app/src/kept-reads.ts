@@ -38,9 +38,11 @@ const showing = new Set<string>();
 const pending = new Map<string, Omit<KeptRow, "version" | "size">>();
 const startedFor = new Map<string, string>();
 const index = new Map<string, { at: number; size: number }>();
+/** The index holds every row of the store (the put-back has read them): a drop that matches none of them needs no store. */
+let indexed = false;
 
 /** Who a read may be kept for now: the signed-in user and the company the app shows. */
-function ownerNow(): string | null {
+export function ownerNow(): string | null {
   const user = shownCompanyUser();
   const company = shownCompanyId();
   return user == null || company == null ? null : `${user}|${company}`;
@@ -149,6 +151,7 @@ export async function restoreKeptReads(client: QueryClient, now = Date.now()): P
       void client.refetchQueries({ queryKey: key, exact: true, type: "active" });
     }
   }
+  indexed = true;
   if (drop.length > 0) await store.remove(drop);
 }
 
@@ -189,13 +192,17 @@ export function keepReadsOf(client: QueryClient): () => void {
     // A hand-written copy (Review's list state) is kept only beside the read it belongs to, begun for the same owner.
     const readFor = manual ? (rule.pair == null ? owner : (startedFor.get(hashKey(rule.pair(key))) ?? null)) : (startedFor.get(hash) ?? null);
     if (!manual) startedFor.delete(hash);
-    const data: unknown = query.state.data;
-    const { dataUpdatedAt } = query.state;
-    if (owner == null || readFor !== owner || data == null || dataUpdatedAt === 0) return;
-    if (rule.keep != null && !rule.keep(data)) return;
-    pending.set(hash, { id: hash, owner, at: dataUpdatedAt, key: JSON.stringify(key), data: rule.save == null ? data : rule.save(data) });
-    schedule();
+    if (owner == null || readFor !== owner || query.state.data == null || query.state.dataUpdatedAt === 0) return;
+    queueRead(query as Query, rule, owner);
   });
+}
+
+/** Queues the query's data to be written, as the rule keeps it; nothing when the rule says it is not worth keeping. FLOW-1341: a write that patched an answer in memory queues it too (forecast-month-settle.ts). */
+export function queueRead(query: Query, rule: KeptRule, owner: string): void {
+  const { data, dataUpdatedAt } = query.state;
+  if (rule.keep != null && !rule.keep(data)) return;
+  pending.set(query.queryHash, { id: query.queryHash, owner, at: dataUpdatedAt, key: JSON.stringify(query.queryKey), data: rule.save == null ? data : rule.save(data) });
+  schedule();
 }
 
 /**
@@ -233,8 +240,10 @@ export function forgetKeptReads(): Promise<unknown> {
 export function dropKeptReads(match: (key: readonly unknown[]) => boolean): Promise<unknown> {
   for (const [hash, row] of pending) if (match(parseKey(row.key) ?? [])) pending.delete(hash);
   return enqueue(async () => {
-    // The id is the key's hash (its JSON): the ids are read without the rows' data, and an id that is not a key is left alone.
-    const ids = (await store.ids()).filter((id) => { const key = parseKey(id); return key != null && match(key); });
+    // The id is the key's hash (its JSON), and an id that is not a key is left alone. Once the put-back has indexed the rows, the index names the ids
+    // (FLOW-1341): a tap that matches none opens no transaction, one that matches makes a single write. Before it, the ids are read first.
+    const matches = (id: string): boolean => { const key = parseKey(id); return key != null && match(key); };
+    const ids = indexed ? [...index.keys()].filter(matches) : (await store.ids()).filter(matches);
     if (ids.length === 0) return;
     for (const id of ids) index.delete(id);
     await store.remove(ids);
@@ -294,6 +303,7 @@ export function resetKeptReadsForTests(next: KeptStore = idbKeptStore()): void {
   queue = Promise.resolve();
   restoredFor = null;
   hydrating = false;
+  indexed = false;
   checkedFor = undefined;
   showing.clear();
   startedFor.clear();
