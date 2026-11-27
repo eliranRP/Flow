@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@flow/shared";
 import { withCompanyHeader } from "./company-header";
+import { withReadCap } from "./read-cap";
 
 /** True for an absolute URL with a host. No zod here: this file is on Home's first load (FLOW-804). */
 function isUrl(value: string): boolean {
@@ -39,7 +40,8 @@ export const supabase: SupabaseClient<Database> | null =
           persistSession: true,
         },
         // FLOW-601: every API call names the company the app shows (x-flow-company).
-        global: { fetch: withCompanyHeader() },
+        // FLOW-1344: and at most four REST/RPC requests in flight at once (read-cap.ts).
+        global: { fetch: withReadCap(withCompanyHeader()) },
       })
     : null;
 
