@@ -906,6 +906,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1335"></a>[FLOW-1335](tasks/FLOW-1335.md) | Profit's kept totals after a project edit, and the recurring screens' refresh | SMALL (perf, freshness) |
 | <a id="flow-1336"></a>[FLOW-1336](tasks/FLOW-1336.md) | Perf: room under the Home bundle budget | SMALL (perf, bundle) |
 | <a id="flow-1341"></a>[FLOW-1341](tasks/FLOW-1341.md) | Perf: a burst of skips reads once, and the device keeps the skipped figures | MEDIUM (perf) |
+| <a id="flow-1345"></a>[FLOW-1345](tasks/FLOW-1345.md) | Perf: a skip keeps the kept forecasts of the projects it did not change | SMALL (perf) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |

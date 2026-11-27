@@ -1,0 +1,1 @@
+Daily perf report 2026-11-27 (decisions 0230 and 0271): Loans, Recurring, Profit's month and year views and Forecast show their data under 0.5 s on a repeat visit. The production stalls are memory, not CPU (FLOW-1300 updated); with the owner's go, FLOW-1343 removes Home's empty setup card and FLOW-1344 caps the app at 4 reads in flight. Files FLOW-1345.
