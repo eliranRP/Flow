@@ -1,24 +1,23 @@
 import { useEffect, useLayoutEffect, useState, type ComponentType } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth";
-import { useHomePreview, usePreviewMode } from "../preview";
+import { usePreviewMode } from "../preview";
 import { useDashboardQuery } from "../use-books";
-import { flagsMayResume, flagsOpenForSlot, useSetupFlags } from "./gate";
+import { useSetupMayResume } from "./gate";
 import { noteSetupLanding, setupLandingPath } from "./landing";
 import { useSetupViewer } from "./viewer";
 
 export { SetupLanding } from "./landing";
 
 /**
- * FLOW-1342. The setup screens' code (on-demand.tsx: route.tsx, home.tsx and what they share) is not in Home's first
+ * FLOW-1342. The setup screens' code (on-demand.tsx: route.tsx and what it shares) is not in Home's first
  * load. These are the parts that stay in it: they decide from the saved flags whether setup matters to
  * this user, and only then load the rest. Every one draws nothing, before and after the load, so Home
  * does not move. A failed load is retried twice (1.5 s, then 4 s later), silent, never the app's error
- * screen; after the last a missed resume or toast is what an offline cold start had.
+ * screen; after the last a missed resume is what an offline cold start had.
  */
 
 const loadResume = () => import("./on-demand").then((m) => m.SetupResume);
-const loadSlot = () => import("./on-demand").then((m) => m.SetupHomeSlot);
 
 /** After a failed load, wait this long and try again; it gives up after the last. */
 const RETRY_MS = [1500, 4000];
@@ -60,23 +59,7 @@ export function SetupResume() {
   const dashboard = useDashboardQuery(launch);
   const answered = dashboard.data != null;
   const companyId = dashboard.data?.company_id ?? null;
-  const mayResume = useSetupFlags(userId, companyId, launch && answered, flagsMayResume);
+  const mayResume = useSetupMayResume(userId, companyId, launch && answered);
   const Loaded = useOnDemand(loadResume, mayResume || (launch && answered && companyId == null));
   return Loaded ? <Loaded /> : null;
-}
-
-/**
- * Home's slot for the setup completed toast. Its chunk loads only for a run still open on this phone or
- * in the saved copy; Home's first paint never waits for it.
- */
-export function SetupHomeSlot(props: { emptyHome: boolean }) {
-  const preview = useHomePreview();
-  const { status, session } = useAuth();
-  const userId = session?.user.id ?? null;
-  const live = preview === "off" && status === "authed" && userId != null;
-  const dashboard = useDashboardQuery(live);
-  const companyId = dashboard.data?.company_id ?? null;
-  const open = useSetupFlags(userId, companyId, live, flagsOpenForSlot);
-  const Loaded = useOnDemand(loadSlot, open);
-  return Loaded ? <Loaded {...props} /> : null;
 }

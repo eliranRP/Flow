@@ -1,4 +1,5 @@
 import { getSupabase } from "../lib/supabase";
+import { resetGateForTests, takeGateRow } from "./gate";
 import type { SetupStore } from "./storage";
 
 /**
@@ -11,6 +12,9 @@ import type { SetupStore } from "./storage";
  * flags another phone saved. Uploads for one key run one after another and send the local copy
  * as it is when they run, so the newest object is the last one sent. After a failed read nothing
  * is uploaded for the rest of the page load. Before a company exists nothing is uploaded.
+ *
+ * FLOW-1343. When Home's gate (gate.ts) already read the row this page load, that answer is the read: the row
+ * is read once per cold start, not once by the gate and again here.
  */
 
 /** The local copy, passed in so this module does not import storage back. */
@@ -40,6 +44,7 @@ export function resetSetupServerForTests(): void {
   failed.clear();
   reads.clear();
   uploads.clear();
+  resetGateForTests();
 }
 
 /**
@@ -53,19 +58,23 @@ export async function setupUploadsSettled(): Promise<void> {
 async function readRow(userId: string, companyId: string, local: LocalSetupCopy): Promise<void> {
   const key = serverKey(userId, companyId);
   try {
-    const supabase = getSupabase();
-    if (!supabase || typeof supabase.from !== "function") return;
-    const { data, error } = await supabase
-      .from("setup_states")
-      .select("state")
-      .eq("company_id", companyId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error) {
-      failed.add(key);
-      return;
+    const seeded = takeGateRow(userId, companyId);
+    let row: { state?: unknown } | null = seeded ?? null;
+    if (seeded == null) {
+      const supabase = getSupabase();
+      if (!supabase || typeof supabase.from !== "function") return;
+      const { data, error } = await supabase
+        .from("setup_states")
+        .select("state")
+        .eq("company_id", companyId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) {
+        failed.add(key);
+        return;
+      }
+      row = data;
     }
-    const row = data as { state?: unknown } | null;
     if (row?.state == null) {
       // No row yet: flags this phone kept before FLOW-506 go up once.
       if (!local.isEmpty(local.read())) dirty.add(key);

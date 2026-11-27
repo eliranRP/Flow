@@ -1,14 +1,13 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { myCompaniesFor } from "../team-test-support";
-import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
-import { SetupHomeSlot, SetupResume } from "./entry";
-import { flagsMayResume, flagsOpenForSlot, gateStorageKey } from "./gate";
+import { SetupResume } from "./entry";
+import { flagsMayResume, gateStorageKey, resetGateForTests } from "./gate";
 import { resetSetupLandingForTests } from "./landing";
 import { runMayResume } from "./model";
 import { emptySetupStore, parseSetupStore, setupStorageKey, writeSetupStore, type SetupStore } from "./storage";
@@ -29,7 +28,7 @@ const dashboard = {
 };
 
 /** How many times each setup module was imported: the chunk is loaded when its module's factory ran. */
-const loads = vi.hoisted(() => ({ route: 0, home: 0, toastRule: false, failRoute: 0, noCompany: false }));
+const loads = vi.hoisted(() => ({ route: 0, failRoute: 0, noCompany: false }));
 const calls = vi.hoisted(() => ({ from: [] as string[] }));
 const gate = vi.hoisted(() => ({ setupRow: null as { state: unknown } | null }));
 
@@ -41,16 +40,6 @@ vi.mock("./on-demand", async (importOriginal) => {
   loads.route += 1;
   return importOriginal();
 });
-vi.mock("./home", async (importOriginal) => {
-  loads.home += 1;
-  return importOriginal();
-});
-// The completed-toast rule is off in the app until #622; the toast mechanism is what this keeps working.
-vi.mock("./model", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./model")>();
-  return { ...actual, shouldShowCompletedToast: () => loads.toastRule };
-});
-
 function chain(data: unknown) {
   const result = { data, error: null };
   const next = {
@@ -85,22 +74,6 @@ vi.mock("../lib/supabase", () => ({ getSupabase: () => supabase }));
 const at = "2026-10-04T00:00:00.000Z";
 const openRun: SetupStore = { ...emptySetupStore(), flow_at: at, run_started_at: at };
 
-function renderSlot() {
-  const router = createMemoryRouter([{ path: "/", element: <SetupHomeSlot emptyHome /> }], { initialEntries: ["/"] });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <AuthProvider>
-        <BooksProvider>
-          <ToastProvider>
-            <RouterProvider router={router} />
-          </ToastProvider>
-        </BooksProvider>
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-}
-
 function renderResume() {
   const router = createMemoryRouter([{ path: "/", element: <SetupResume /> }, { path: "/setup/:step", element: <p>step</p> }], { initialEntries: ["/"] });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -122,8 +95,8 @@ const settle = () => act(async () => { await new Promise((resolve) => setTimeout
 describe("setup code loads when needed (FLOW-1342)", () => {
   afterEach(async () => {
     if (loads.route > 0) (await import("./route")).resetSetupResumeForTests();
+    resetGateForTests();
     resetSetupLandingForTests();
-    loads.toastRule = false;
     loads.noCompany = false;
     loads.failRoute = 0;
     gate.setupRow = null;
@@ -142,24 +115,34 @@ describe("setup code loads when needed (FLOW-1342)", () => {
       expect(flagsMayResume(JSON.parse(JSON.stringify(store)))).toBe(runMayResume(parseSetupStore(JSON.stringify(store)), false));
     }
     expect(flagsMayResume(null)).toBe(false);
-    expect(flagsOpenForSlot({ ...openRun, completed_toast_at: at })).toBe(false);
-    expect(flagsOpenForSlot({ ...openRun, finished_at: at })).toBe(false);
-    expect(flagsOpenForSlot(openRun)).toBe(true);
   });
 
-  it("Home loads neither setup module for a user who is not in setup", async () => {
-    renderSlot();
-    await waitFor(() => { expect(calls.from).toContain("setup_states"); });
+  /** A phone's saved copy, without the upload writeSetupStore queues (that reads the row). */
+  const saveLocal = (store: SetupStore) => { localStorage.setItem(setupStorageKey(userId, "company-1"), JSON.stringify(store)); };
+  const reads = (table: string) => calls.from.filter((name) => name === table).length;
+  const stepReads = () => ["company_integrations", "review_queue", "loans"].flatMap((table) => calls.from.filter((name) => name === table));
+
+  it("a mid-setup owner already resumed: no setup code, no setup_states read, no step reads", async () => {
+    saveLocal({ ...openRun, run_resumed_at: at });
+    const router = renderResume();
     await settle();
-    expect(loads.home).toBe(0);
     expect(loads.route).toBe(0);
+    expect(reads("setup_states")).toBe(0);
+    expect(stepReads()).toEqual([]);
+    expect(router.state.location.pathname).toBe("/");
   });
 
-  it("Home loads neither setup module for a user whose run finished", async () => {
-    writeSetupStore(userId, "company-1", { ...openRun, finished_at: at });
-    renderSlot();
-    await settle();
-    expect(loads.home).toBe(0);
+  it("an owner who finished or skipped, with a local copy: no setup_states read", async () => {
+    for (const done of [{ finished_at: at }, { skipped_all_at: at }]) {
+      saveLocal({ ...openRun, ...done });
+      const router = renderResume();
+      await settle();
+      expect(router.state.location.pathname).toBe("/");
+      expect(reads("setup_states")).toBe(0);
+      calls.from.length = 0;
+      localStorage.clear();
+    }
+    expect(loads.route).toBe(0);
   });
 
   it("the cold-start resume does not load the setup code for a user with no run", async () => {
@@ -194,17 +177,12 @@ describe("setup code loads when needed (FLOW-1342)", () => {
     await waitFor(() => { expect(router.state.location.pathname).toMatch(/^\/setup\//); });
   });
 
-  it("shows the completed toast once for an open run, and then stops loading the slot", async () => {
-    loads.toastRule = true;
-    writeSetupStore(userId, "company-1", openRun);
-    const first = renderSlot();
-    expect(await screen.findByText("ההגדרה הושלמה.")).toBeInTheDocument();
-    expect(screen.getAllByText("ההגדרה הושלמה.")).toHaveLength(1);
-    const stamped = JSON.parse(localStorage.getItem(setupStorageKey(userId, "company-1")) ?? "{}") as { completed_toast_at?: string };
-    expect(stamped.completed_toast_at).toEqual(expect.any(String));
-    first.unmount();
-    renderSlot();
+  it("a new phone with an open run resumes after one setup_states read, the chunk reusing the gate's row", async () => {
+    gate.setupRow = { state: openRun };
+    const router = renderResume();
+    await waitFor(() => { expect(router.state.location.pathname).toMatch(/^\/setup\//); });
     await settle();
-    expect(screen.queryByText("ההגדרה הושלמה.")).toBeNull();
+    expect(loads.route).toBe(1);
+    expect(reads("setup_states")).toBe(1);
   });
 });

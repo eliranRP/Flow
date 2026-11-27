@@ -5,8 +5,9 @@ import { loadSetupState, uploadSetupState, type LocalSetupCopy } from "./server-
  * setup_states on the server keeps the same object across devices (FLOW-506, server-store.ts).
  *
  * FLOW-514: the seven-step flow reads `skipped` keys "1"-"7" and the stamps below. The jsonb row needs
- * no migration. The legacy stamps (confirmed_lists_at, ios_steps_seen_at, card_dismissed_at,
- * completed_toast_at) stay only because the Home card (setup/home.tsx) still reads them until #622.
+ * no migration. A row that still holds the Home card's stamps (confirmed_lists_at, ios_steps_seen_at,
+ * card_dismissed_at, completed_toast_at; the card and toast are gone, FLOW-1343) parses: the parse reads
+ * only the fields below, so those keys are dropped on the next save.
  */
 
 /** A lender the bank lines suggested and the owner picked in step 4. Setup state only (no loan row). */
@@ -29,11 +30,6 @@ export type SetupStore = {
   installed_at: string | null;
   skipped_all_at: string | null;
   finished_at: string | null;
-  /** Legacy: read by the Home card (setup/home.tsx) until #622 merges. */
-  confirmed_lists_at: string | null;
-  ios_steps_seen_at: string | null;
-  card_dismissed_at: string | null;
-  completed_toast_at: string | null;
 };
 
 const SKIP_KEYS = ["1", "2", "3", "4", "5", "6", "7"] as const;
@@ -52,10 +48,6 @@ export function emptySetupStore(): SetupStore {
     installed_at: null,
     skipped_all_at: null,
     finished_at: null,
-    confirmed_lists_at: null,
-    ios_steps_seen_at: null,
-    card_dismissed_at: null,
-    completed_toast_at: null,
   };
 }
 
@@ -109,10 +101,6 @@ export function parseSetupStore(raw: string | null): SetupStore {
     installed_at: stamp(row.installed_at),
     skipped_all_at: stamp(row.skipped_all_at),
     finished_at: stamp(row.finished_at),
-    confirmed_lists_at: stamp(row.confirmed_lists_at),
-    ios_steps_seen_at: stamp(row.ios_steps_seen_at),
-    card_dismissed_at: stamp(row.card_dismissed_at),
-    completed_toast_at: stamp(row.completed_toast_at),
   };
 }
 
@@ -175,10 +163,6 @@ export function mergeSetupStores(server: SetupStore, local: SetupStore): SetupSt
     installed_at: later(server.installed_at, local.installed_at),
     skipped_all_at: later(server.skipped_all_at, local.skipped_all_at),
     finished_at: later(server.finished_at, local.finished_at),
-    confirmed_lists_at: later(server.confirmed_lists_at, local.confirmed_lists_at),
-    ios_steps_seen_at: later(server.ios_steps_seen_at, local.ios_steps_seen_at),
-    card_dismissed_at: later(server.card_dismissed_at, local.card_dismissed_at),
-    completed_toast_at: later(server.completed_toast_at, local.completed_toast_at),
   };
 }
 

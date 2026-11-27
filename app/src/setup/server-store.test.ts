@@ -107,22 +107,22 @@ describe("setup flags on the server", () => {
   });
 
   it("a write on a page that never read the row merges into it instead of wiping it", async () => {
-    // A cold /review?setup=1 on a phone with no local flags: the other phone closed the card and skipped step 2.
-    server.row = { state: { ...skippedTwo, card_dismissed_at: "2026-10-09T03:00:00.000Z" } };
+    // A cold /review?setup=1 on a phone with no local flags: the other phone finished setup.
+    server.row = { state: { ...skippedTwo, finished_at: "2026-10-09T03:00:00.000Z" } };
     writeSetupStore(user, company, { ...emptySetupStore(), sample_review_at: "2026-10-09T04:00:00.000Z" });
     await setupUploadsSettled();
-    const merged = { ...skippedTwo, card_dismissed_at: "2026-10-09T03:00:00.000Z", sample_review_at: "2026-10-09T04:00:00.000Z" };
+    const merged = { ...skippedTwo, finished_at: "2026-10-09T03:00:00.000Z", sample_review_at: "2026-10-09T04:00:00.000Z" };
     expect(server.saves.map((u) => u.p_state)).toEqual([merged]);
     expect(readSetupStore(user, company)).toEqual(merged);
   });
 
   it("sends the newest copy last when writes come close together", async () => {
     server.row = { state: skippedTwo };
-    writeSetupStore(user, company, { ...skippedTwo, confirmed_lists_at: "2026-10-09T05:00:00.000Z" });
+    writeSetupStore(user, company, { ...skippedTwo, loans_at: "2026-10-09T05:00:00.000Z" });
     writeSetupStore(user, company, { ...readSetupStore(user, company), installed_at: "2026-10-09T05:01:00.000Z" });
     await setupUploadsSettled();
     expect(server.saves.at(-1)?.p_state).toMatchObject({
-      confirmed_lists_at: "2026-10-09T05:00:00.000Z",
+      loans_at: "2026-10-09T05:00:00.000Z",
       installed_at: "2026-10-09T05:01:00.000Z",
       skipped: { "2": "2026-10-09T00:01:00.000Z" },
     });
