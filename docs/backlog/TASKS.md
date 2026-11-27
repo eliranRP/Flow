@@ -901,6 +901,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1331"></a>[FLOW-1331](tasks/FLOW-1331.md) | Perf: the loan schedule tables keep only what their readers use | SMALL (database) |
 | <a id="flow-1332"></a>[FLOW-1332](tasks/FLOW-1332.md) | Perf: the latency script times the reads the screens now make | SMALL (tooling) |
 | <a id="flow-1342"></a>[FLOW-1342](tasks/FLOW-1342.md) | Perf: the setup screens load when needed, for room under the Home budget | SMALL (perf, bundle) |
+| <a id="flow-1343"></a>[FLOW-1343](tasks/FLOW-1343.md) | Perf: Home stops loading setup for a card that draws nothing | SMALL (perf) |
 | <a id="flow-1334"></a>[FLOW-1334](tasks/FLOW-1334.md) | Perf: Profit's year forecast starts with the screen's first read (changes the FLOW-1080 order) | SMALL (perf) |
 | <a id="flow-1335"></a>[FLOW-1335](tasks/FLOW-1335.md) | Profit's kept totals after a project edit, and the recurring screens' refresh | SMALL (perf, freshness) |
 | <a id="flow-1336"></a>[FLOW-1336](tasks/FLOW-1336.md) | Perf: room under the Home bundle budget | SMALL (perf, bundle) |

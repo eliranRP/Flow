@@ -15,6 +15,14 @@ describe("setup storage", () => {
     expect(setupStorageKey("user-a", null)).toBe("flow.setup.user-a.none");
   });
 
+  it("still parses a row that holds the removed Home card and toast stamps, and drops them", () => {
+    const at = "2026-10-04T00:00:00.000Z";
+    const old = { confirmed_lists_at: at, ios_steps_seen_at: at, card_dismissed_at: at, completed_toast_at: at };
+    const parsed = parseSetupStore(JSON.stringify({ run_started_at: at, finished_at: at, ...old }));
+    expect(parsed.finished_at).toBe(at);
+    for (const key of Object.keys(old)) expect(key in parsed).toBe(false);
+  });
+
   it("treats malformed JSON as an empty store and ignores a null user", () => {
     localStorage.setItem(setupStorageKey("user-a", "company-a"), "{");
     expect(readSetupStore("user-a", "company-a")).toEqual(emptySetupStore());

@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "../lib/supabase";
 
 /**
- * FLOW-1342. What Home's first load knows about setup, so the setup chunk (route.tsx, home.tsx and the
- * modules they share) loads only for a user it matters to. Reads the saved flags as plain JSON and
+ * FLOW-1342. What Home's first load knows about setup, so the setup chunk (route.tsx and the
+ * modules it shares) loads only for a user it matters to. Reads the saved flags as plain JSON and
  * imports nothing from storage.ts, model.ts or store.tsx: those are the chunk.
  */
 
@@ -27,14 +27,15 @@ export function flagsMayResume(state: unknown): boolean {
 }
 
 /**
- * A run still open on Home: started, not finished or skipped, and the completed toast not shown yet. Only
- * such a run can show the toast, so only it loads home.tsx.
+ * The run finished, skipped everything, or took its one resume, on this phone. For Home's cold start that
+ * decision is final: no server read is made, even when the server row lacks the stamp (the setup store's
+ * first read of a page load would write the server row over this copy and clear it). The next time the
+ * setup store mounts (Settings, /setup) the server row still replaces the local copy.
  */
-export function flagsOpenForSlot(state: unknown): boolean {
+function flagsFinal(state: unknown): boolean {
   const flags = asFlags(state);
   if (flags == null) return false;
-  return stamped(flags, "run_started_at")
-    && !stamped(flags, "skipped_all_at") && !stamped(flags, "finished_at") && !stamped(flags, "completed_toast_at");
+  return stamped(flags, "finished_at") || stamped(flags, "skipped_all_at") || stamped(flags, "run_resumed_at");
 }
 
 function localFlags(userId: string, companyId: string): unknown {
@@ -46,28 +47,51 @@ function localFlags(userId: string, companyId: string): unknown {
   }
 }
 
+/** Rows the gate read, for server-store.ts to take instead of reading the same row again. */
+const gateRows = new Map<string, { state: unknown }>();
+const rowKey = (userId: string, companyId: string) => `${userId}.${companyId}`;
+
+/** The row the gate read for this key (once), or undefined when it did not read one. */
+export function takeGateRow(userId: string, companyId: string): { state: unknown } | undefined {
+  const key = rowKey(userId, companyId);
+  const row = gateRows.get(key);
+  gateRows.delete(key);
+  return row;
+}
+
+/** Tests reset what the gate kept. */
+export function resetGateForTests(): void {
+  gateRows.clear();
+}
+
 async function serverFlags(userId: string, companyId: string): Promise<unknown> {
   const supabase = getSupabase();
   if (!supabase || typeof supabase.from !== "function") return null;
   const { data, error } = await supabase.from("setup_states").select("state").eq("company_id", companyId).eq("user_id", userId).maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as { state?: unknown } | null)?.state ?? null;
+  const state = (data as { state?: unknown } | null)?.state ?? null;
+  // Kept for the setup store only when the chunk will load; a "no" row would otherwise outlive this check.
+  if (flagsMayResume(state)) gateRows.set(rowKey(userId, companyId), { state });
+  return state;
 }
 
 /**
- * Whether the saved flags of this user and company pass `test`. This phone's copy answers at once; with
- * no copy that passes (a new phone, or a run another phone started) the row on the server answers (a read
- * on a new phone with a run open, as setup made on a cold start before; setup's own read then follows). A failed read does not pass. Nothing is read until `active`.
+ * Whether this user's saved flags let the one automatic resume still happen. This phone's copy answers
+ * at once: a run it may resume says yes, a finished, skipped or resumed one says no for good (no read).
+ * With no such copy (a new phone, or a run another phone started) the row on the server answers, one read,
+ * which setup's own store then reuses (takeGateRow). A failed read says no. Nothing is read until `active`.
  */
-export function useSetupFlags(userId: string | null, companyId: string | null, active: boolean, test: (state: unknown) => boolean): boolean {
+export function useSetupMayResume(userId: string | null, companyId: string | null, active: boolean): boolean {
   const live = active && userId != null && companyId != null;
-  const local = live && test(localFlags(userId, companyId));
+  const local = live ? localFlags(userId, companyId) : null;
+  const final = flagsFinal(local);
+  const yes = !final && flagsMayResume(local);
   const server = useQuery({
     queryKey: ["setup-gate", userId, companyId],
-    enabled: live && !local,
+    enabled: live && !final && !yes,
     queryFn: () => serverFlags(userId as string, companyId as string),
     staleTime: Infinity,
     retry: false,
   });
-  return local || (live && test(server.data));
+  return yes || (live && !final && flagsMayResume(server.data));
 }

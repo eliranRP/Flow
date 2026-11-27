@@ -269,9 +269,3 @@ export function approveSample(store: SetupStore, at: string): SetupStore {
   delete skipped["6"];
   return { ...store, sample_review_at: at, skipped };
 }
-
-/* -- Legacy: the completed toast stays gated off until #622 removes the Home slot. */
-
-export function shouldShowCompletedToast(_store: SetupStore, _facts: SetupFacts): boolean {
-  return false;
-}
