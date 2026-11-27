@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "../lib/supabase";
 
 /**
- * FLOW-1342. What Home's first load knows about setup, so the setup chunk (route.tsx, home.tsx and the
- * modules they share) loads only for a user it matters to. Reads the saved flags as plain JSON and
+ * FLOW-1342. What Home's first load knows about setup, so the setup chunk (route.tsx and the
+ * modules it shares) loads only for a user it matters to. Reads the saved flags as plain JSON and
  * imports nothing from storage.ts, model.ts or store.tsx: those are the chunk.
  */
 
@@ -27,9 +27,10 @@ export function flagsMayResume(state: unknown): boolean {
 }
 
 /**
- * A stamp that never clears (storage.ts keeps the later one, withPatch never sets null): the run finished,
- * skipped everything, or took its one resume. On this phone's copy the resume decision is final, so no
- * server read can change it.
+ * The run finished, skipped everything, or took its one resume, on this phone. For Home's cold start that
+ * decision is final: no server read is made, even when the server row lacks the stamp (the setup store's
+ * first read of a page load would write the server row over this copy and clear it). The next time the
+ * setup store mounts (Settings, /setup) the server row still replaces the local copy.
  */
 function flagsFinal(state: unknown): boolean {
   const flags = asFlags(state);
@@ -69,7 +70,8 @@ async function serverFlags(userId: string, companyId: string): Promise<unknown> 
   const { data, error } = await supabase.from("setup_states").select("state").eq("company_id", companyId).eq("user_id", userId).maybeSingle();
   if (error) throw new Error(error.message);
   const state = (data as { state?: unknown } | null)?.state ?? null;
-  gateRows.set(rowKey(userId, companyId), { state });
+  // Kept for the setup store only when the chunk will load; a "no" row would otherwise outlive this check.
+  if (flagsMayResume(state)) gateRows.set(rowKey(userId, companyId), { state });
   return state;
 }
 

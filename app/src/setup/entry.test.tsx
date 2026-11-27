@@ -7,7 +7,7 @@ import { AuthProvider } from "../auth";
 import { myCompaniesFor } from "../team-test-support";
 import { BooksProvider } from "../use-books";
 import { SetupResume } from "./entry";
-import { flagsMayResume, gateStorageKey } from "./gate";
+import { flagsMayResume, gateStorageKey, resetGateForTests } from "./gate";
 import { resetSetupLandingForTests } from "./landing";
 import { runMayResume } from "./model";
 import { emptySetupStore, parseSetupStore, setupStorageKey, writeSetupStore, type SetupStore } from "./storage";
@@ -95,6 +95,7 @@ const settle = () => act(async () => { await new Promise((resolve) => setTimeout
 describe("setup code loads when needed (FLOW-1342)", () => {
   afterEach(async () => {
     if (loads.route > 0) (await import("./route")).resetSetupResumeForTests();
+    resetGateForTests();
     resetSetupLandingForTests();
     loads.noCompany = false;
     loads.failRoute = 0;
@@ -137,11 +138,11 @@ describe("setup code loads when needed (FLOW-1342)", () => {
       const router = renderResume();
       await settle();
       expect(router.state.location.pathname).toBe("/");
+      expect(reads("setup_states")).toBe(0);
       calls.from.length = 0;
       localStorage.clear();
     }
     expect(loads.route).toBe(0);
-    expect(reads("setup_states")).toBe(0);
   });
 
   it("the cold-start resume does not load the setup code for a user with no run", async () => {

@@ -29,7 +29,7 @@ export function SetupResume() {
   const { status, session } = useAuth();
   const userId = session?.user.id ?? null;
   const viewer = useSetupViewer();
-  // Home is the only launch surface. A cold /review must not call get_dashboard or leave the card.
+  // Home is the only launch surface. A cold /review must not call get_dashboard.
   const launch = home && !preview && status === "authed" && viewer.ready && !viewer.viewer;
   const dashboard = useDashboardQuery(launch);
   const { store, ready: storeReady } = useSetupStore(userId, launch ? dashboard.data?.company_id ?? null : null);
