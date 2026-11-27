@@ -33,8 +33,8 @@ export function SetupResume() {
   const launch = home && !preview && status === "authed" && viewer.ready && !viewer.viewer;
   const dashboard = useDashboardQuery(launch);
   const { store, ready: storeReady } = useSetupStore(userId, launch ? dashboard.data?.company_id ?? null : null);
-  // The step reads (SUMIT, Mercury, Jev, review, loans) only while a run could resume, as
-  // SetupHomeSlot waits for a started run: a finished, skipped or resumed run never reads them.
+  // The step reads (SUMIT, Mercury, Jev, review, loans) only while a run could resume: a finished,
+  // skipped or resumed run never reads them.
   const facts = useSetupFacts(launch, storeReady && runMayResume(store, userId != null && sessionEntered(userId)));
   const navigate = useNavigate();
   const acted = useRef("");
@@ -42,7 +42,7 @@ export function SetupResume() {
     // Read here, after the layout effects recorded the landing.
     const resumeAtLandingHome = setupLandingPath() === "/" && pathname === "/" && resumeConsideredFor !== userId;
     if (!resumeAtLandingHome || preview || status !== "authed" || !userId || !viewer.ready || viewer.viewer || !facts.ready || !storeReady) return;
-    const signature = `${facts.companyId ?? ""}:${store.run_started_at ?? ""}:${store.run_resumed_at ?? ""}:${store.card_dismissed_at ?? ""}`;
+    const signature = `${facts.companyId ?? ""}:${store.run_started_at ?? ""}:${store.run_resumed_at ?? ""}`;
     if (acted.current === signature) return;
     const at = new Date().toISOString();
     const entered = sessionEntered(userId);

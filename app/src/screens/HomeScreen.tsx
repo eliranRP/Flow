@@ -36,7 +36,6 @@ import { screenPhase } from "../query-phase";
 import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
 import { useDashboardQuery, useUnpaidQuery } from "../use-books";
-import { SetupHomeSlot } from "../setup/entry";
 import { chargeChangeViews, lateCounts, lateItemName, lateTarget, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
@@ -127,7 +126,6 @@ export function CashEmptyHome({
           <li>תזרים צפוי לסוף החודש לפי הקבועים והחשבוניות</li>
         </ul>
       </section>
-      <SetupHomeSlot emptyHome />
     </div>
   );
 }
@@ -359,7 +357,6 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       forecastPending={isCurrent && !previewing && monthForecast.data == null && !monthForecast.isError}
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
-      checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       activity={activity}
       skip={skip}
       canSkipFuture={!previewing && !holdForecast}
@@ -401,7 +398,6 @@ export function CashHome({
   attentionFailed = false,
   onAttentionRetry,
   example,
-  checklist,
   weekly,
   company,
   sameDay = null,
@@ -437,7 +433,6 @@ export function CashHome({
   onAttentionRetry?: () => void;
   /** Storybook sample label. The live home never passes it. */
   example?: ReactNode;
-  checklist?: ReactNode;
   /** FLOW-956: last week's summary card, under the band (Sunday to Tuesday, the current month). */
   weekly?: ReactNode;
   /** FLOW-1036: the month's activity reads (the current month only); null draws no activity. */
@@ -604,7 +599,6 @@ export function CashHome({
             <AttentionCards rows={attention} storageKey="home" />
           </div>
         )}
-        {checklist}
       </div>
 
       {isFuture ? (
