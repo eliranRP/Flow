@@ -8,6 +8,7 @@ import {
   shownCompanyId,
   withCompanyHeader,
 } from "./company-header";
+import { withReadCap } from "./read-cap";
 
 const USER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const USER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -104,5 +105,31 @@ describe("company header (FLOW-601)", () => {
     expect(shownCompanyId()).toBe(COMPANY_A);
     expect(shownCompanyFor(USER_A)).toBe(COMPANY_A);
     expect(shownCompanyFor(USER_B)).toBeNull();
+  });
+
+  it("a request queued behind the read cap still names the company it was issued under (FLOW-1344)", async () => {
+    const pending: Array<() => void> = [];
+    const base = vi.fn(
+      (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Promise<Response>((resolve) => {
+          pending.push(() => {
+            resolve(new Response("{}"));
+          });
+        }),
+    );
+    const fetcher = withCompanyHeader(withReadCap(base, 1));
+    setShownCompany(USER_A, COMPANY_A);
+    const first = fetcher(`${API}/rest/v1/rpc/get_dashboard`, { method: "POST" });
+    const queued = fetcher(`${API}/rest/v1/projects`, { method: "POST", body: "{}" });
+    setShownCompany(USER_A, COMPANY_B);
+    expect(base).toHaveBeenCalledTimes(1);
+    pending[0]?.();
+    await first;
+    await vi.waitFor(() => {
+      expect(base).toHaveBeenCalledTimes(2);
+    });
+    expect(sentHeader(base)).toBe(COMPANY_A);
+    pending[1]?.();
+    await queued;
   });
 });

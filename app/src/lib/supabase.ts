@@ -40,8 +40,9 @@ export const supabase: SupabaseClient<Database> | null =
           persistSession: true,
         },
         // FLOW-601: every API call names the company the app shows (x-flow-company).
-        // FLOW-1344: and at most four REST/RPC requests in flight at once (read-cap.ts).
-        global: { fetch: withReadCap(withCompanyHeader()) },
+        // FLOW-1344: and at most four REST/RPC requests in flight at once (read-cap.ts). The header is
+        // set before the queue, so a request issued under one company never goes out naming the next.
+        global: { fetch: withCompanyHeader(withReadCap((input, init) => fetch(input, init))) },
       })
     : null;
 

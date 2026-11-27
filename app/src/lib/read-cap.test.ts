@@ -144,4 +144,18 @@ describe("supabase client", () => {
     await Promise.all(ps);
     expect(f.peak()).toBe(MAX_REST_IN_FLIGHT);
   });
+
+  it("frees the slot when the fetch throws before returning a promise", async () => {
+    let throwNext = true;
+    const run = vi.fn(() => {
+      if (throwNext) {
+        throwNext = false;
+        throw new TypeError("bad input");
+      }
+      return Promise.resolve(new Response("{}"));
+    }) as unknown as typeof fetch;
+    const cap = withReadCap(run, 1);
+    await expect(cap(REST)).rejects.toThrow("bad input");
+    await expect(cap(REST)).resolves.toBeInstanceOf(Response);
+  });
 });

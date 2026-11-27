@@ -4,8 +4,10 @@
  * rest wait their turn here, first in, first out. Only `/rest/v1/` is capped: auth (token refresh),
  * storage, edge functions and realtime go straight through, so a refresh never waits behind reads.
  * A slot is held until the fetch promise settles (the response headers arrive), not until the body
- * is read. An aborted request that is still queued leaves the queue and rejects with the signal's reason
- * (an AbortError unless abort() was given another) without being sent. Nothing is retried. supabase-js passes (url, init), so the signal is init's.
+ * is read, and also when `run` throws. An aborted request that is still queued leaves the queue and
+ * rejects with the signal's reason (an AbortError unless abort() was given another) without being
+ * sent. Nothing is retried. supabase-js passes (url, init), so the signal is init's. Wrap this inside
+ * withCompanyHeader, so the company header is fixed when a request is issued, not when it is sent.
  */
 export const MAX_REST_IN_FLIGHT = 4;
 
@@ -19,7 +21,10 @@ export function withReadCap(run: typeof fetch, max = MAX_REST_IN_FLIGHT): typeof
   };
   return (input, init) => {
     if (!(input as string | URL).toString().includes("/rest/v1/")) return run(input, init);
-    const send = (): Promise<Response> => run(input, init).finally(release);
+    const send = (): Promise<Response> =>
+      new Promise<Response>((r) => {
+        r(run(input, init));
+      }).finally(release);
     if (active < max) {
       active++;
       return send();
