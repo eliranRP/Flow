@@ -410,7 +410,9 @@ select is(
 );
 -- FLOW-860: the private definers authenticated can execute, by full signature. Each resolves the
 -- caller's company itself (auth.uid(), readable_company_id(), current_company_id()), runs as a
--- trigger, or (company_base_currency) takes a company id that every caller passes from one of those.
+-- trigger, or (company_base_currency) takes a company id. That one reads only a company's base
+-- currency; the functions in public that reach it pass the caller's company, and the private helpers
+-- that pass an argument through (category_rollup_rows, category_month_parents) are not served by the API.
 -- A new one, or a new overload, is added here in the change that grants it.
 select is(
   (select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text), '{}')
