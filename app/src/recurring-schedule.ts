@@ -122,8 +122,8 @@ export function useRecurringScheduleQuery(enabled = true) {
   return useQuery({
     queryKey: ["recurring-schedule"],
     enabled,
-    queryFn: async (): Promise<ScheduleRow[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<ScheduleRow[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("recurring_schedule", {});
       if (error) throw error;
       if (!Array.isArray(data)) throw new Error("recurring_schedule");

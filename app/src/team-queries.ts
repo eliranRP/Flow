@@ -53,7 +53,7 @@ export function useMyCompaniesQuery(active = true, retry: false | number = false
     queryFn: async ({ signal }): Promise<MyCompanies> => {
       if (userId == null) throw new Error("no user");
       const sent = shownCompanyFor(userId);
-      const data = await api.listMyCompanies();
+      const data = await api.listMyCompanies(signal);
       // A sign-out clears the cache and aborts this read. A late answer saves nothing.
       signal.throwIfAborted();
       if (!sample && shownCompanyFor(userId) === sent) {
@@ -82,7 +82,7 @@ export function useMyInvitesQuery(active = true) {
   return useQuery({
     queryKey: [MY_INVITES_KEY, userId],
     enabled: active && signedIn && userId != null && api.ready(),
-    queryFn: () => api.myInvites(),
+    queryFn: ({ signal }) => api.myInvites(signal),
   });
 }
 

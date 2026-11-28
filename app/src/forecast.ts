@@ -104,8 +104,8 @@ export function useMissingBillsQuery(active = true) {
   return useQuery({
     queryKey: ["missing-bills", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<MissingBill[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<MissingBill[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("missing_bills", {});
       if (error) throw error;
       return (await loadReadSchemas()).missingBillsSchema.parse(data);
@@ -119,8 +119,8 @@ export function useRecurringChangesQuery(active = true) {
   return useQuery({
     queryKey: ["recurring-changes", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<RecurringChange[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<RecurringChange[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("recurring_changes", {});
       if (error) throw error;
       return (await loadReadSchemas()).recurringChangesSchema.parse(data);
@@ -138,8 +138,8 @@ export function useProjectRecurringChangesQuery(projectId: string, active = true
   return useQuery({
     queryKey: ["recurring-changes", preview, "project", projectId],
     enabled: active && preview === "off" && projectId !== "",
-    queryFn: async (): Promise<RecurringChange[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<RecurringChange[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("project_recurring_changes", { p_project: projectId });
       if (error) throw error;
       // Null: the project is not this company's.

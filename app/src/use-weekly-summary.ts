@@ -11,8 +11,8 @@ export function useWeeklySummaryQuery(weekStart: string | null) {
   return useQuery({
     queryKey: ["dashboard", "weekly-summary", weekStart],
     enabled: weekStart != null,
-    queryFn: async (): Promise<WeeklySummary> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<WeeklySummary> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("weekly_summary", { p_week_start: weekStart ?? "" });
       if (error) throw error;
       return (await loadReadSchemas()).weeklySummarySchema.parse(data);

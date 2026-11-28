@@ -1,15 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
+import { signalled } from "./signalled";
 import { type HomePreview, useHomePreview } from "./preview";
 
 /**
  * The stored company currency, `companies.base_currency` (0147), through the same RPC the MCP
  * loan default reads. Failing loudly, so Settings and the forecast can tell a failure from a shekel company.
  */
-export async function readStoredCurrency(): Promise<string> {
+export async function readStoredCurrency(context?: { signal: AbortSignal }): Promise<string> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
-  const { data, error } = await supabase.rpc("mcp_company_loan_currency");
+  const { data, error } = await signalled(supabase.rpc("mcp_company_loan_currency"), context?.signal);
   if (error) throw new Error(error.message);
   if (typeof data !== "string" || !/^[A-Z]{3}$/.test(data)) throw new Error("validation");
   return data;

@@ -2,7 +2,7 @@ import { projectCategoryMonthsSchema, type ProjectCategoryMonthRow, type Project
 import { useQuery } from "@tanstack/react-query";
 import type { PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 
 /**
  * FLOW-401 (decision 0149, owner's v5 "clean"): in the month view a small up mark sits on a category
@@ -21,8 +21,8 @@ export function projectCategoryMonthsOptions(preview: string, projectId: string,
   return {
     // Under "project", so every write that refreshes the project refreshes the marks too.
     queryKey: ["project", "category-months", preview, projectId, day] as const,
-    queryFn: async (): Promise<ProjectCategoryMonths | null> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<ProjectCategoryMonths | null> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("project_category_months", { p_project_id: projectId, p_today: day ?? undefined });
       if (error) throw error;
       return data == null ? null : projectCategoryMonthsSchema.parse(data);

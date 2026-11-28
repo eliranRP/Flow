@@ -120,7 +120,7 @@ describe("company header (FLOW-601)", () => {
     const fetcher = withCompanyHeader(withReadCap(base, 1));
     setShownCompany(USER_A, COMPANY_A);
     const first = fetcher(`${API}/rest/v1/rpc/get_dashboard`, { method: "POST" });
-    const queued = fetcher(`${API}/rest/v1/projects`, { method: "POST", body: "{}" });
+    const queued = fetcher(`${API}/rest/v1/projects`);
     setShownCompany(USER_A, COMPANY_B);
     expect(base).toHaveBeenCalledTimes(1);
     pending[0]?.();
@@ -131,5 +131,16 @@ describe("company header (FLOW-601)", () => {
     expect(sentHeader(base)).toBe(COMPANY_A);
     pending[1]?.();
     await queued;
+  });
+
+  it("a write that goes ahead of queued reads names the company it was issued under (FLOW-1348)", () => {
+    const base = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>(() => undefined));
+    const fetcher = withCompanyHeader(withReadCap(base, 1));
+    setShownCompany(USER_A, COMPANY_A);
+    void fetcher(`${API}/rest/v1/rpc/get_dashboard`, { method: "POST" });
+    void fetcher(`${API}/rest/v1/rpc/set_category`, { method: "POST", body: "{}" });
+    setShownCompany(USER_A, COMPANY_B);
+    expect(base).toHaveBeenCalledTimes(2);
+    expect(sentHeader(base)).toBe(COMPANY_A);
   });
 });

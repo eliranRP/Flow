@@ -13,7 +13,7 @@ import type {
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { loadReadSchemas } from "./load-read-schemas";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
 import { type TxnMeta } from "./txn-meta";
@@ -74,8 +74,8 @@ function rpcArgs(period: PeriodChoice): { p_from?: string; p_to?: string } {
 export function dashboardQueryOptions(preview: HomePreview, period: PeriodChoice) {
   return {
     queryKey: ["dashboard", preview, period],
-    queryFn: async (): Promise<Dashboard> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<Dashboard> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("get_dashboard", rpcArgs(period));
       if (error) throw error;
       return (await loadReadSchemas()).dashboardSchema.parse(data);
@@ -98,8 +98,8 @@ export function useDashboardQuery(active = true) {
 export function unpaidQueryOptions(preview: string) {
   return {
     queryKey: ["unpaid", preview],
-    queryFn: async (): Promise<UnpaidRow[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<UnpaidRow[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("list_unpaid");
       if (error) throw error;
       return (await loadReadSchemas()).unpaidRowSchema.array().parse(data);
@@ -117,8 +117,8 @@ export function useFiledTodayQuery(active = true) {
   return useQuery({
     queryKey: ["filed-today", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<FiledTodayRow[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<FiledTodayRow[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("list_auto_assigned_today");
       if (error) throw error;
       return (await loadReadSchemas()).filedTodaySchema.array().parse(data);
@@ -129,8 +129,8 @@ export function useFiledTodayQuery(active = true) {
 export function categoriesQueryOptions(preview: string) {
   return {
     queryKey: ["categories", preview] as const,
-    queryFn: async (): Promise<CategoryRow[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<CategoryRow[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("list_categories");
       if (error) throw error;
       return (await loadReadSchemas()).categoryRowSchema.array().parse(data);
@@ -164,8 +164,8 @@ export function useSumitStatusQuery(active = true) {
   return useQuery({
     queryKey: ["sumit", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<SumitStatus> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<SumitStatus> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("sumit_status");
       if (error) throw error;
       return (await loadReadSchemas()).sumitStatusSchema.parse(data);
@@ -217,8 +217,8 @@ export function projectQueryOptions(preview: HomePreview, projectId: string, per
   // The company's basis (0170) is not in the key: a change of it drops every kept read (company-basis-sheet.tsx).
   return {
     queryKey: ["project", preview, projectId, range?.p_from ?? null, range?.p_to ?? null] as const,
-    queryFn: async (): Promise<ProjectDetail> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<ProjectDetail> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("get_project", {
         p_id: projectId,
         // get_project's period overload needs p_basis present; null is the company's basis (0170).
@@ -264,12 +264,12 @@ export function useProjectCategoryQuery(
     queryKey: ["project-category", preview, projectId, categoryId, currency, range?.p_from ?? null, range?.p_to ?? null],
     enabled: preview === "off" && projectId !== "" && categoryId !== "",
     initialPageParam: 0,
-    queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<ProjectCategoryPage> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("list_project_category", {
         p_project: projectId,
         p_category: categoryId,
-        p_offset: pageParam,
+        p_offset: q.pageParam,
         p_limit: CATEGORY_PAGE,
         ...(currency === "" ? {} : { p_currency: currency }),
         ...(range ?? {}),
@@ -288,8 +288,8 @@ export function useProfitMonthsQuery(projectId: string, period: PeriodChoice) {
   return useQuery({
     queryKey: ["profit-months", preview, projectId, range?.p_from ?? null, range?.p_to ?? null],
     enabled: preview === "off" && projectId !== "",
-    queryFn: async (): Promise<ProfitMonths> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<ProfitMonths> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("get_profit_months", {
         p_project_id: projectId,
         ...(range ?? {}),
@@ -305,8 +305,8 @@ export function useProjectWaitingQuery(projectId: string) {
   return useQuery({
     queryKey: ["project-waiting", preview, projectId],
     enabled: preview === "off" && projectId !== "",
-    queryFn: async (): Promise<ProjectWaitingRow[]> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<ProjectWaitingRow[]> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("project_waiting", { p_project: projectId });
       if (error) throw error;
       return (await loadReadSchemas()).projectWaitingSchema.parse(data);
@@ -374,7 +374,7 @@ export function useLineMetaPageQuery(transactionIds: readonly string[], enabled 
     enabled: enabled && preview === "off" && ids.length > 0,
     staleTime: 5 * 60_000,
     retry: 1,
-    queryFn: () => readLineMetaPage(client, preview, ids),
+    queryFn: (q) => readLineMetaPage(client, preview, ids, q),
   });
 }
 
@@ -385,7 +385,7 @@ export function lineMetaPageQueryKey(preview: string, ids: readonly string[]) {
   return ["line-meta", preview, "page", ids.join(",")] as const;
 }
 
-export async function readLineMetaPage(client: QueryClient, preview: string, ids: readonly string[]): Promise<Map<string, TxnMeta>> {
+export async function readLineMetaPage(client: QueryClient, preview: string, ids: readonly string[], q?: Ctx): Promise<Map<string, TxnMeta>> {
   const out = new Map<string, TxnMeta>();
   const missing: string[] = [];
   for (const id of ids) {
@@ -397,7 +397,7 @@ export async function readLineMetaPage(client: QueryClient, preview: string, ids
     }
   }
   if (missing.length === 0) return out;
-  const supabase = await readyClient();
+  const supabase = await readyClient(q);
   // FLOW-315: `get_line_meta` reads at most LINE_META_MAX ids a call and drops the rest, so a longer
   // list goes in chunks; an id is cached as "no details" only when its own chunk was read.
   const chunks: string[][] = [];

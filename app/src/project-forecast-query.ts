@@ -4,8 +4,7 @@ import { setProjectForecastPatch } from "./forecast-month";
 import { useHomePreview } from "./preview";
 import { projectForecastOf, type ProjectForecastRead } from "./project-forecast-map";
 import { skippedKeysOf, withRowRemoved, withSkipsChanged } from "./project-forecast-patch";
-import { readyClient } from "./ready-client";
-import { signalled } from "./signalled";
+import { readyClient, type Ctx } from "./ready-client";
 
 /**
  * FLOW-1315 (plan FLOW-1275, slice 9): a project's forecast for one month, one read: `project_forecast` (FLOW-1309) with the day
@@ -24,9 +23,9 @@ export function projectForecastKey(preview: string, projectId: string, month: st
 export function projectForecastOptions(preview: string, projectId: string, month: string, today: string, currency: string | null) {
   return {
     queryKey: projectForecastKey(preview, projectId, month, today, currency),
-    queryFn: async ({ signal }: { signal: AbortSignal }): Promise<ProjectForecastRead | null> => {
-      const supabase = await readyClient();
-      const { data, error } = await signalled(supabase.rpc("project_forecast", { p_project: projectId, p_month: month, p_today: today, ...(currency == null ? {} : { p_currency: currency }) }), signal);
+    queryFn: async (q: Ctx): Promise<ProjectForecastRead | null> => {
+      const supabase = await readyClient(q);
+      const { data, error } = await supabase.rpc("project_forecast", { p_project: projectId, p_month: month, p_today: today, ...(currency == null ? {} : { p_currency: currency }) });
       if (error) throw error;
       return projectForecastOf(data, projectId);
     },

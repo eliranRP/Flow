@@ -28,7 +28,7 @@ describe("cashToDayQueryOptions", () => {
       { currency: "USD", in_minor: 9000, out_minor: 0 },
     ];
     const options = cashToDayQueryOptions("off", "2026-06", 11);
-    const rows = await options.queryFn();
+    const rows = await options.queryFn({ signal: new AbortController().signal });
     expect(rpc.calls).toEqual([{ name: "cash_month_to_day", args: { p_month: "2026-06-01", p_day: 11 } }]);
     expect(rows).toEqual([
       { currency: "ILS", in_minor: 120000n, out_minor: 45000n },
