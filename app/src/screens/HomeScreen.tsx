@@ -149,35 +149,9 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const holdWrites = useHoldOwnerSettings();
   const previewing = preview !== "off";
   const cash = useCashMonthsQuery();
-  const years = useCashYearsQuery();
   const dashboard = useDashboardQuery();
-  const unpaid = useUnpaidQuery();
-  // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
-  const changes = useRecurringChangesQuery();
-  // FLOW-941: suggested transfers between two Mercury connections, a count. A failed read hides the row.
-  const transfers = useTransferMatchCountQuery();
-  // FLOW-1135: the utility bills the tenant did not pay back, a count and a total. A failed read hides the row.
-  const utilities = useUtilityRefundCountQuery();
-  // FLOW-955 (owner): Jev's bookings waiting for review count in לאישור too.
-  const jevBookings = useJevBookingCountQuery();
   // FLOW-1015: the קבועים tip is for an owner who had the tab: one with recurring rows.
   const recurringOwner = useReturningRecurringOwner(!previewing);
-
-  const today = israelToday();
-  const currentKey = today.slice(0, 7);
-  const firstKey = years.data?.first_month ? cashMonthKey(years.data.first_month) : null;
-  // FLOW-1056, FLOW-1066: the forecast's months (next month to 12 ahead) are months Home shows; a preview has no
-  // forecast, so it stops at this one.
-  const withForecast = !previewing;
-  const monthKey = homeMonthKey(location.search, today, firstKey, withForecast);
-  const isCurrent = monthKey === currentKey;
-  const isFuture = homeMonthState(monthKey, currentKey) === "future";
-  const older = useCashMonthData(monthKey);
-  const base = cash.data?.base_currency ?? "ILS";
-  // FLOW-364: the previous month up to the same day (the current month), and the month-end forecast for the
-  // forecast row (FLOW-1008: the תזרים צפוי screen's own read, so both show one number). Both on the current month only.
-  const sameDay = useCashToDayQuery(shiftMonthKey(monthKey, -1), Number(today.slice(8, 10)), isCurrent);
-
   const cashPhase = screenPhase(preview, cash);
   const dashboardPhase = screenPhase(preview, dashboard);
   // Home waits on cash_months alone when it holds a line. Only a company with no recent line
@@ -194,6 +168,24 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const online = useOnline();
   // FLOW-1019 (owner, 2026-11-03): the forecast row and החודש הבא read once Home has drawn its figures.
   const afterPaint = useAfterFirstPaint(showBooks);
+  // FLOW-1346: cash_years waits for first paint too. It only bounds the month picker's earliest month (firstKey).
+  const years = useCashYearsQuery(afterPaint);
+
+  const today = israelToday();
+  const currentKey = today.slice(0, 7);
+  const firstKey = years.data?.first_month ? cashMonthKey(years.data.first_month) : null;
+  // FLOW-1056, FLOW-1066: the forecast's months (next month to 12 ahead) are months Home shows; a preview has no
+  // forecast, so it stops at this one.
+  const withForecast = !previewing;
+  const monthKey = homeMonthKey(location.search, today, firstKey, withForecast);
+  const isCurrent = monthKey === currentKey;
+  const isFuture = homeMonthState(monthKey, currentKey) === "future";
+  const older = useCashMonthData(monthKey);
+  const base = cash.data?.base_currency ?? "ILS";
+  // FLOW-364: the previous month up to the same day (the current month), and the month-end forecast for the
+  // forecast row (FLOW-1008: the תזרים צפוי screen's own read, so both show one number). Both on the current month only.
+  const sameDay = useCashToDayQuery(shiftMonthKey(monthKey, -1), Number(today.slice(8, 10)), isCurrent);
+
   const monthForecast = useMonthForecastQuery(currentKey, isCurrent && afterPaint);
   // FLOW-403: late recurring bills, a count on the attention box. A failed read just hides the row.
   // FLOW-1248: without the charges taken out of this month, so the overrides are read with the bills.
@@ -231,6 +223,18 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const linesKey = isFuture ? currentKey : monthKey;
   const linesIn = useCashLinesQuery(linesKey, "in", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
   const linesOut = useCashLinesQuery(linesKey, "out", base, !isFuture && afterPaint, null, HOME_LINES_PAGE);
+  // FLOW-1346: the attention counts also wait for first paint, and are declared after the after-paint reads above. Effects
+  // run in declaration order, so under the four-request cap (FLOW-1344) the forecast and the month's lines go out first; at
+  // mount, the counts queued ahead of them. FLOW-1259's late reads stay at mount (FLOW-1019's forecast stays after paint).
+  // FLOW-955 (owner): Jev's bookings waiting for review count in לאישור too.
+  const jevBookings = useJevBookingCountQuery(afterPaint);
+  // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
+  const changes = useRecurringChangesQuery(afterPaint);
+  // FLOW-941: suggested transfers between two Mercury connections, a count. A failed read hides the row.
+  const transfers = useTransferMatchCountQuery(afterPaint);
+  // FLOW-1135: the utility bills the tenant did not pay back, a count and a total. A failed read hides the row.
+  const utilities = useUtilityRefundCountQuery(afterPaint);
+  const unpaid = useUnpaidQuery(afterPaint);
 
   function retry() {
     if (previewing) {

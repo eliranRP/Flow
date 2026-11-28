@@ -158,9 +158,9 @@ describe("Home's cold load (FLOW-1019)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
-    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "list_unpaid")).toBe(true); });
-    // Home's figures are not drawn yet: nothing of the forecast's has gone out (its overrides read is the late bills', at mount: FLOW-1259).
-    for (const name of ["month_forecast", "cash_month_lines"]) {
+    await waitFor(() => { expect(rpc.calls.some((c) => c.name === "forecast_overrides_for")).toBe(true); });
+    // Home's figures are not drawn yet: nothing of the forecast's, the month's lines' or the attention counts' has gone out (FLOW-1346). Its overrides read is the late bills', at mount (FLOW-1259).
+    for (const name of ["month_forecast", "cash_month_lines", "list_unpaid"]) {
       expect(rpc.calls.some((c) => c.name === name)).toBe(false);
     }
     releaseCash();
@@ -176,6 +176,39 @@ describe("Home's cold load (FLOW-1019)", () => {
     expect(rpc.calls.filter((c) => c.name === "list_unpaid")).toHaveLength(1);
     // FLOW-1056: next month's forecast is read on next month only.
     expect(rpc.calls.some((c) => c.name === "company_next_month_inputs")).toBe(false);
+  });
+});
+
+// FLOW-1346: under the four-request cap (FLOW-1344) the reads that wait for first paint go out in this order: cash_years
+// (it only bounds the month picker), the forecast, the month's two line lists, then the attention counts. The late reads
+// (FLOW-1259) and the cash reads start at mount, and none of the after-paint ones before the figures draw.
+const AFTER_PAINT_READS = ["cash_years", "month_forecast", "cash_month_lines", "list_jev_bookings", "recurring_changes", "count_transfer_matches", "count_utility_refunds", "list_unpaid"];
+const ATTENTION_COUNTS = ["list_jev_bookings", "recurring_changes", "count_transfer_matches", "count_utility_refunds", "list_unpaid"];
+
+describe("Home's cold read order (FLOW-1346)", () => {
+  it("sends the forecast and the month's lines before the attention counts, all after the figures draw", async () => {
+    let releaseCash: () => void = () => undefined;
+    const cashHeld = new Promise<void>((resolve) => { releaseCash = resolve; });
+    rpc.impl = (name) => {
+      if (name === "cash_months") return cashHeld.then(() => ({ data: cash, error: null }));
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard(0), error: null });
+      if (name === "count_transfer_matches") return Promise.resolve({ data: 0, error: null });
+      if (name === "list_unpaid" || name === "missing_bills" || name === "list_jev_bookings" || name === "recurring_schedule") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const names = () => rpc.calls.map((c) => c.name);
+    renderWithProviders(<Routes><Route path="/" element={<HomeScreen />} /></Routes>, { route: "/" });
+    // At mount, with the figures held: the late reads go out, and no after-paint read has.
+    await waitFor(() => { expect(names()).toEqual(expect.arrayContaining(["missing_bills", "forecast_overrides_for"])); });
+    for (const name of AFTER_PAINT_READS) expect(names()).not.toContain(name);
+    releaseCash();
+    await screen.findByText("תזרים · עד היום");
+    await waitFor(() => { expect(names()).toEqual(expect.arrayContaining(AFTER_PAINT_READS)); });
+    const order = names();
+    const forecastAt = order.indexOf("month_forecast");
+    const lastLineAt = order.lastIndexOf("cash_month_lines");
+    expect(forecastAt).toBeLessThan(order.indexOf("cash_month_lines"));
+    for (const name of ATTENTION_COUNTS) expect(order.indexOf(name)).toBeGreaterThan(Math.max(forecastAt, lastLineAt));
   });
 });
 
