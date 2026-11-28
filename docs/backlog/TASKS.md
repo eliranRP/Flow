@@ -652,6 +652,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1337"></a>[FLOW-1337](tasks/FLOW-1337.md) | Loans list offline on a new day shows the loans, not "אין הלוואות" | SMALL UI |
 | <a id="flow-1338"></a>[FLOW-1338](tasks/FLOW-1338.md) | A loan row's hint keeps "הבא dd/mm" whole | SMALL UI |
 | <a id="flow-1339"></a>[FLOW-1339](tasks/FLOW-1339.md) | Offline on a new day, a loan row does not say "בלי תשלום קבוע" | SMALL UI |
+| <a id="flow-1351"></a>[FLOW-1351](tasks/FLOW-1351.md) | Loans' "ממתין לבדיקה" cards say which loan at 393 | PLAN FIRST |
 | <a id="flow-1277"></a>[FLOW-1277](tasks/FLOW-1277.md) | A splash screen: the icon fills with liquid on every cold start | UI |
 
 ## Onboarding, Settings and connectors
