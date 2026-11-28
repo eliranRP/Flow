@@ -2,13 +2,16 @@
 -- TRUNCATE, TRIGGER or REFERENCES; anon executes nothing in public; role postgres's default
 -- privileges in public grant nothing to authenticated or anon; and every SECURITY DEFINER function
 -- in public that authenticated can execute is on the list below. A new client RPC is added to the
--- list in the same change that grants it; a revoked or dropped one leaves it. Invented data only.
+-- list in the same change that grants it; a revoked or dropped one leaves it. FLOW-860: no client
+-- role can insert, update or delete a table or view in public but the one column grant listed, and
+-- every SECURITY DEFINER function in private that authenticated can execute is on its own list (it
+-- is not served by the API, but invoker functions and policies run it as the caller). Invented data only.
 
 begin;
 
 set local search_path = public, extensions;
 
-select plan(16);
+select plan(20);
 
 create temp table pg_allowed (sig text primary key);
 insert into pg_allowed (sig) values
@@ -339,6 +342,41 @@ select is(
   '{}'::text[],
   'no table or view in public grants TRUNCATE, TRIGGER or REFERENCES to authenticated or anon'
 );
+-- FLOW-860: the clients write through functions only. No client role holds a table-level INSERT,
+-- UPDATE or DELETE on a table or view in public; the one column-level write left is UPDATE on
+-- companies' own settings (under its RLS policy), and its columns are pinned below.
+select is(
+  (select coalesce(array_agg(c.relname || ':' || r.role || ':' || pr.priv
+     order by c.relname, r.role, pr.priv), '{}')
+   from pg_class c
+   cross join (values ('authenticated'), ('anon')) r(role)
+   cross join (values ('INSERT'), ('UPDATE'), ('DELETE')) pr(priv)
+   where c.relnamespace = 'public'::regnamespace
+     and c.relkind in ('r', 'p', 'v', 'm', 'f')
+     and has_table_privilege(r.role, c.oid, pr.priv)),
+  '{}'::text[],
+  'no client role holds a table-level INSERT, UPDATE or DELETE on a table or view in public'
+);
+select is(
+  (select coalesce(array_agg(c.relname || ':' || r.role || ':' || pr.priv
+     order by c.relname, r.role, pr.priv), '{}')
+   from pg_class c
+   cross join (values ('authenticated'), ('anon')) r(role)
+   cross join (values ('INSERT'), ('UPDATE')) pr(priv)
+   where c.relnamespace = 'public'::regnamespace
+     and c.relkind in ('r', 'p', 'v', 'm', 'f')
+     and has_any_column_privilege(r.role, c.oid, pr.priv)),
+  array['companies:authenticated:UPDATE'],
+  'the one column-level client write in public is the UPDATE on companies'
+);
+select is(
+  (select coalesce(array_agg(cp.column_name::text order by cp.column_name::text), '{}')
+   from information_schema.column_privileges cp
+   where cp.table_schema = 'public' and cp.table_name = 'companies'
+     and cp.grantee = 'authenticated' and cp.privilege_type = 'UPDATE'),
+  array['after_overhead', 'name', 'tax_id', 'updated_at', 'vat_rate_bp', 'vat_registered'],
+  'authenticated may update only these columns of companies'
+);
 select is(
   (select coalesce(array_agg(privilege_type::text order by privilege_type), '{}')
    from information_schema.role_table_grants
@@ -369,6 +407,39 @@ select is(
    where d.sig not in (select sig from pg_allowed)),
   '{}'::text[],
   'every definer in public that authenticated can execute is on the allowlist'
+);
+-- FLOW-860: the private definers authenticated can execute, by full signature. Each resolves the
+-- caller's company itself (auth.uid(), readable_company_id(), current_company_id()), runs as a
+-- trigger, or (company_base_currency) takes a company id. That one reads only a company's base
+-- currency; the functions in public that reach it pass the caller's company, and the private helpers
+-- that pass an argument through (category_rollup_rows, category_month_parents) are not served by the API.
+-- A new one, or a new overload, is added here in the change that grants it.
+select is(
+  (select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text collate "C"), '{}')
+   from pg_proc p
+   where p.pronamespace = 'private'::regnamespace
+     and p.prosecdef
+     and has_function_privilege('authenticated', p.oid, 'execute')),
+  array[
+    'private.active_company()',
+    'private.can_read_thread_file(text)',
+    'private.can_upload_thread_file(text)',
+    'private.company_base_currency(uuid)',
+    'private.current_company_id()',
+    'private.filed_today_rows()',
+    'private.forecast_gather(date,uuid,text)',
+    'private.is_read_only()',
+    'private.line_cash_state(uuid)',
+    'private.line_pnl_state(uuid,uuid,uuid)',
+    'private.line_pnl_states(uuid[])',
+    'private.line_pnl_states(uuid[],uuid,uuid)',
+    'private.owner_company_id()',
+    'private.readable_company_id()',
+    'private.review_forecast_matches(uuid[])',
+    'private.review_held_changes(uuid[])',
+    'private.seed_default_categories()',
+    'private.sumit_connection_rows()'],
+  'every definer in private that authenticated can execute is on its list, by signature'
 );
 select is(
   (select coalesce(array_agg(a.sig order by a.sig), '{}') from pg_allowed a
