@@ -13,6 +13,7 @@ import {
   KEPT_MAX_AGE_MS,
   KEPT_MAX_BYTES,
   KEPT_VERSION,
+  keepKeptCompaniesFor,
   keepKeptReadsFor,
   keepReadsOf,
   resetKeptReadsForTests,
@@ -146,16 +147,64 @@ describe("kept reads (FLOW-1267)", () => {
     await restoreKeptReads(another);
     expect(another.getQueryData(UNPAID)).toBeUndefined();
     expect(await store.all()).toEqual([]);
-    // No company shown: nothing is restored and nothing is kept (the session's user then drops the old rows).
+    // No company shown: nothing is restored and nothing is kept. A sound row of this user stays, for when its company is shown again
+    // (an expired one goes, FLOW-862).
     setShownCompany(USER_A, null);
-    await store.put([row({ at: 1 })]);
+    const sound = row({});
+    await store.put([sound]);
     const none = newClient();
     keepReadsOf(none);
     await restoreKeptReads(none);
     expect(none.getQueryData(UNPAID)).toBeUndefined();
     await read(none, UNPAID, demoUnpaid());
     await flushKeptReads();
-    expect(await store.all()).toEqual([row({ at: 1 })]);
+    expect(await store.all()).toEqual([sound]);
+  });
+
+  // FLOW-862: the user's company list came in: the kept reads of a company the user no longer belongs to go; the others' stay.
+  it("drops the kept reads of a company the user no longer belongs to, the cache's put-back of it too, and keeps the companies still listed", async () => {
+    const currency = JSON.stringify(["company-currency", "off"]);
+    const first = newClient();
+    keepReadsOf(first);
+    await read(first, UNPAID, demoUnpaid());
+    await flushKeptReads();
+    const client = newClient();
+    await restoreKeptReads(client);
+    expect(client.getQueryData(UNPAID)).toBeDefined();
+    // A read kept for company B after the put-back (a switch), and one of company A still waiting for its write.
+    await store.put([row({ key: currency, data: "USD", owner: `${USER_A}|${COMPANY_B}` })]);
+    keepReadsOf(client);
+    await read(client, DASHBOARD, demoDashboard(null, null, "invoiced"));
+    // The user was removed from company A: the list names only B, and the server shows B.
+    setShownCompany(USER_A, COMPANY_B);
+    await keepKeptCompaniesFor(client, USER_A, [COMPANY_B]);
+    await flushKeptReads();
+    expect(client.getQueryData(UNPAID)).toBeUndefined();
+    expect(await kept()).toEqual(new Set([currency]));
+  });
+
+  it("drops the rows of a company no longer listed before any put-back, and leaves another user's alone", async () => {
+    const currency = JSON.stringify(["company-currency", "off"]);
+    const mine = row({ key: currency, data: "USD", owner: `${USER_A}|${COMPANY_B}` });
+    const theirs = row({ key: JSON.stringify(DASHBOARD), owner: `${USER_B}|${COMPANY_A}` });
+    await store.put([row({}), mine, theirs]);
+    await keepKeptCompaniesFor(newClient(), USER_A, [COMPANY_B]);
+    expect(new Set(await store.all())).toEqual(new Set([mine, theirs]));
+    // No company left at all: every row of this user goes.
+    await keepKeptCompaniesFor(newClient(), USER_A, []);
+    expect(await store.all()).toEqual([theirs]);
+  });
+
+  it("drops the expired rows and the rows of another version even with no company shown (FLOW-862)", async () => {
+    const now = Date.now();
+    const currency = JSON.stringify(["company-currency", "off"]);
+    await store.put([row({ at: now }), row({ key: currency, data: "USD", owner: `${USER_A}|${COMPANY_B}`, at: now })]);
+    setShownCompany(USER_A, null);
+    await restoreKeptReads(newClient(), now + 8 * 86_400_000);
+    expect(await store.all()).toEqual([]);
+    await store.put([row({ key: currency, data: "USD", version: KEPT_VERSION + 1 })]);
+    await restoreKeptReads(newClient(), now);
+    expect(await store.all()).toEqual([]);
   });
 
   it("keeps a read for the company it began for, not the one shown when it lands", async () => {

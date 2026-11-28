@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useAuth } from "./auth";
 import { MY_COMPANIES_KEY, writeRoleCache } from "./company-role-cache";
+import { keepKeptCompaniesFor } from "./kept-reads";
 import { setShownCompany, shownCompanyFor } from "./lib/company-header";
 import { pinReviewLine } from "./review-pin";
 import { useTeamApi, type MyCompanies } from "./team-api";
@@ -65,6 +66,8 @@ export function useMyCompaniesQuery(active = true, retry: false | number = false
           }
         }
         writeRoleCache(userId, data.active_id ?? "", data.role ?? "owner");
+        // FLOW-862: the device keeps no reads of a company this user no longer belongs to.
+        void keepKeptCompaniesFor(client, userId, data.companies.map((company) => company.id));
       }
       return data;
     },
