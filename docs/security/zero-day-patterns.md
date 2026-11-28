@@ -125,6 +125,30 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **In Flow:** MCP tokens, invite links, membership-derived helpers, push subscriptions.
 - **Hunt:** revoke mid-flow in a local test (remove the member, revoke the token) and check what the next step still allows, and for how long.
 
+### P20. A required gate that passes because its job was skipped
+- **Seen in:** GitHub's documentation, "Troubleshooting required status checks" (docs.github.com): a job skipped by a path filter or an `if:` condition reports success, so a required check can pass without running.
+- **Pattern:** the gate is "the summary job is green", and nothing makes sure every change that needs a job actually ran it.
+- **In Flow:** the `changes` job's path rules and the `pr` summary job in `.github/workflows/pr.yml`, and the file lists in `scripts/local-ci.sh`.
+- **Hunt:** for every kind of file the app ships or runs, check which jobs a change to it triggers, and that the summary fails when a needed job did not run. Check that the CI rules and the local gate agree, with a test that fails when a shipped path falls through.
+
+### P21. A check that does not hold what it checked
+- **Seen in:** time-of-check to time-of-use races (MITRE CWE-367); PostgreSQL's documentation, "Transaction Isolation": under READ COMMITTED, each statement sees the rows committed before it starts, so a value read early can change before the write commits.
+- **Pattern:** a guard reads a setting with a plain read and lets a write through, while a concurrent change of that setting commits in between, so the write lands on the wrong side of the rule.
+- **In Flow:** any guard that reads a company-level setting before a write, and any "read, decide, write" in a function that runs with its owner's rights (SECURITY DEFINER).
+- **Hunt:** for each guard, ask what keeps the value it read from changing until the write commits: a row lock (`SELECT ... FOR SHARE`), a constraint, or doing it in one statement. Check the lock order against the writer of the setting, so the two cannot deadlock without a retry.
+
+### P22. The advertised shape differs from the enforced one
+- **Seen in:** OWASP API Security Top 10 2023, API3 "Broken Object Property Level Authorization" and API8 "Security Misconfiguration": an API whose published schema and server-side validation disagree.
+- **Pattern:** a client or agent validates against the published schema and the server against its own, and the two lists drift apart, so a valid call is refused or an unexpected one is accepted.
+- **In Flow:** flow-mcp's published tool specs (`supabase/functions/flow-mcp/tools_specs.ts`) and the argument parsers (`supabase/functions/flow-mcp/tools_schemas.ts` and the tool files); the generated database types against the RPCs.
+- **Hunt:** for each enum, required key and range, check that the spec and the parser read one shared list, and add a test that compares them.
+
+### P23. A second code path skips the row filter
+- **Seen in:** PostgreSQL CVE-2026-120154, "INSERT ... ON CONFLICT can read rows despite row security policies" (https://www.postgresql.org/support/security/CVE-2026-120154/, November 2026): the update branch of an upsert did not apply the policy that a plain read would.
+- **Pattern:** the main path to some rows applies the company filter, and another path to the same rows does not: an upsert's update branch, a view, a function or a report.
+- **In Flow:** row-level security on every table; the table grants client roles hold (none should allow both INSERT and UPDATE); upserts (`INSERT ... ON CONFLICT`) inside functions that run with their owner's rights; views, and whether each runs with the caller's rights (`security_invoker`).
+- **Hunt:** list every path that reads or writes a table's rows and check that each applies the company filter. Pin client table grants in `supabase/tests/database/privilege_guards.test.sql`, and check every upsert's conflict key and update branch for the company.
+
 ## Adding a pattern
 
 Add a new entry when a Stage 2 hunt or a new advisory teaches one. Keep the same shape: what happened (with a public reference), the pattern in one line, where in Flow, how to hunt. Write it in general terms. Never describe how to exploit Flow code that isn't fixed yet.
