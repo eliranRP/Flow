@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHomePreview } from "./preview";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 
 /**
  * FLOW-955 (owner, 2026-10-22), FLOW-1272. Jev's bookings waiting in לאישור, for Home's count and for the
@@ -20,8 +20,8 @@ export function jevBookingsQueryOptions(preview: string, enabled: boolean) {
     // observer that rendered last): none. לאישור waits for this read before its first draw, so a failure ends
     // that wait at once; Home counts a failed read as zero, and the next refresh reads it again.
     retry: false,
-    queryFn: async (): Promise<unknown> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<unknown> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("list_jev_bookings");
       if (error) throw error;
       return data;

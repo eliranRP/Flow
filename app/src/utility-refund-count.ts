@@ -39,8 +39,8 @@ export function useUtilityRefundCountQuery() {
   return useQuery({
     queryKey: ["utility-refund-count", preview],
     enabled: preview === "off",
-    queryFn: async (): Promise<UtilityRefundCount> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<UtilityRefundCount> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("count_utility_refunds", {});
       if (error) throw error;
       return parseUtilityRefundCount(data);

@@ -2,7 +2,7 @@ import type { CashToDay } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview, type HomePreview } from "./preview";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 
 /**
  * FLOW-364. One month's נכנס and יצא up to a day of it (cash_month_to_day, decision 0168's cash
@@ -12,8 +12,8 @@ import { readyClient } from "./ready-client";
 export function cashToDayQueryOptions(preview: HomePreview, monthKey: string, day: number) {
   return {
     queryKey: ["dashboard", "cash-to-day", preview, monthKey, day],
-    queryFn: async (): Promise<CashToDay> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<CashToDay> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("cash_month_to_day", { p_month: `${monthKey}-01`, p_day: day });
       if (error) throw error;
       return (await loadReadSchemas()).cashToDaySchema.parse(data);

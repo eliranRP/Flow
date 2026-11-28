@@ -8,7 +8,7 @@ import type { OverheadProject } from "./overhead-project";
 import { loadReadSchemas } from "./load-read-schemas";
 import { type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 
 type PageRow = NonNullable<BreakdownLinesPage>["rows"][number];
 /** A keyed read's row, or the no-key read's with its category id put back, which has no `category_name`, `currency` or `shared` (FLOW-1228). */
@@ -203,23 +203,23 @@ function rangeArgs(period: PeriodChoice): Range {
   return period.from && period.to ? { p_from: period.from, p_to: period.to } : {};
 }
 
-async function fetchDashboard(period: PeriodChoice): Promise<Dashboard> {
-  const supabase = await readyClient();
+async function fetchDashboard(period: PeriodChoice, q: Ctx): Promise<Dashboard> {
+  const supabase = await readyClient(q);
   const { data, error } = await supabase.rpc("get_dashboard", rangeArgs(period));
   if (error) throw error;
   return (await loadReadSchemas()).dashboardSchema.parse(data);
 }
 
-async function fetchBreakdown(period: PeriodChoice, direction: BreakdownDirection, groupBy: "project" | "category"): Promise<Breakdown> {
-  const supabase = await readyClient();
+async function fetchBreakdown(period: PeriodChoice, direction: BreakdownDirection, groupBy: "project" | "category", q: Ctx): Promise<Breakdown> {
+  const supabase = await readyClient(q);
   const { data, error } = await supabase.rpc("get_breakdown", { ...rangeArgs(period), p_direction: direction, p_group_by: groupBy });
   if (error) throw error;
   return (await loadReadSchemas()).breakdownSchema.parse(data);
 }
 
 /** Every page of one category group's counted lines (or a direction's kept-out lines), in the company currency. */
-async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string, currency: string, excluded = false): Promise<KeyedRow[]> {
-  const supabase = await readyClient();
+async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string, currency: string, q: Ctx, excluded = false): Promise<KeyedRow[]> {
+  const supabase = await readyClient(q);
   const rows: KeyedRow[] = [];
   for (let offset = 0; ; offset += LINES_PAGE_ALL) {
     const { data, error } = await supabase.rpc("get_breakdown_lines", {
@@ -246,8 +246,8 @@ async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection
  * lines are read again in pages of 200 by offset, the first page's `count` saying how many follow, so they are always
  * complete.
  */
-async function fetchDirectionLines(period: PeriodChoice, direction: BreakdownDirection, currency: string): Promise<AllRows> {
-  const supabase = await readyClient();
+async function fetchDirectionLines(period: PeriodChoice, direction: BreakdownDirection, currency: string, q: Ctx): Promise<AllRows> {
+  const supabase = await readyClient(q);
   const schemas = await loadReadSchemas();
   const readPage = async (limit: number | null, offset: number) => {
     const { data, error } = await supabase.rpc("get_breakdown_lines", {
@@ -344,7 +344,7 @@ function useBreakdownRead(preview: string, month: PeriodChoice, group: "project"
     queryKey: ["breakdown", "company-profit", preview, `${month.from ?? ""}..${month.to ?? ""}`, group, direction],
     enabled,
     placeholderData: keepPreviousData,
-    queryFn: () => fetchBreakdown(month, direction, group),
+    queryFn: (q) => fetchBreakdown(month, direction, group, q),
   });
 }
 
@@ -364,13 +364,13 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     queryKey: ["dashboard", "company-profit", preview, monthRange],
     enabled: live && projectsOn,
     placeholderData: keepPreviousData,
-    queryFn: () => fetchDashboard(month),
+    queryFn: (q) => fetchDashboard(month, q),
   });
   const ytdDashboard = useQuery({
     queryKey: ["dashboard", "company-profit-ytd", preview, ytd.from ?? "", ytd.to ?? ""],
     enabled: live && projectsOn,
     placeholderData: keepPreviousData,
-    queryFn: () => fetchDashboard(ytd),
+    queryFn: (q) => fetchDashboard(ytd, q),
   });
   const categoryIncome = useBreakdownRead(preview, month, "category", "income", live && categoriesOn);
   const categoryExpense = useBreakdownRead(preview, month, "category", "expense", live && categoriesOn);
@@ -401,7 +401,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     queries: lineReads.map((read) => ({
       queryKey: linesCacheKey(preview, monthRange, read.direction, read.keptOut ? "kept-out" : read.key, currency),
       enabled: live && categoriesOn && lineIds.has(read.id),
-      queryFn: () => fetchAllLines(month, read.direction, read.key, currency, read.keptOut),
+      queryFn: (q) => fetchAllLines(month, read.direction, read.key, currency, q, read.keptOut),
     })),
   });
   // FLOW-1210: the date and amount orders' one read of a direction starts with the page, whatever the breakdowns have
@@ -410,7 +410,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, categories
     queries: DIRECTIONS.map((direction) => ({
       queryKey: linesCacheKey(preview, monthRange, direction, "all", currency),
       enabled: live && categoriesOn && linesAll && currencyKnown,
-      queryFn: () => fetchDirectionLines(month, direction, currency),
+      queryFn: (q) => fetchDirectionLines(month, direction, currency, q),
     })),
   });
   const allRows = [allQueries[0]?.data, allQueries[1]?.data] as const;

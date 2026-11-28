@@ -5,7 +5,7 @@ import type { ProjectStatus } from "./company-year-rows";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
 import { useDashboardQuery } from "./use-books";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 
 /**
  * The company profit page's year and since-the-start reads (decision 0200): one get_profit_months read of every
@@ -31,8 +31,8 @@ export function useCompanyYears(today: string, enabled: boolean, sample?: Compan
   const read = useQuery({
     queryKey: ["profit-months", preview, "company", from, to],
     enabled: live,
-    queryFn: async (): Promise<ProfitMonths> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<ProfitMonths> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("get_profit_months", { p_from: from, p_to: to });
       if (error) throw error;
       return (await loadReadSchemas()).profitMonthsSchema.parse(data);
@@ -53,8 +53,8 @@ function yearPeriod(year: string, today: string): { from: string; to: string } {
   return { from: `${year}-01-01`, to: year === today.slice(0, 4) ? today : `${year}-12-31` };
 }
 
-async function readBreakdown(range: { from: string; to: string }, direction: "income" | "expense"): Promise<Breakdown> {
-  const supabase = await readyClient();
+async function readBreakdown(range: { from: string; to: string }, direction: "income" | "expense", q: Ctx): Promise<Breakdown> {
+  const supabase = await readyClient(q);
   const { data, error } = await supabase.rpc("get_breakdown", { p_from: range.from, p_to: range.to, p_direction: direction, p_group_by: "project" });
   if (error) throw error;
   return (await loadReadSchemas()).breakdownSchema.parse(data);
@@ -65,8 +65,8 @@ export function useCompanyYearProjects(year: string, today: string, enabled: boo
   const preview = useHomePreview();
   const live = enabled && sample == null && preview === "off";
   const range = yearPeriod(year, today);
-  const income = useQuery({ queryKey: ["breakdown", "company-year", preview, range.from, range.to, "project", "income"], enabled: live, queryFn: () => readBreakdown(range, "income") });
-  const expense = useQuery({ queryKey: ["breakdown", "company-year", preview, range.from, range.to, "project", "expense"], enabled: live, queryFn: () => readBreakdown(range, "expense") });
+  const income = useQuery({ queryKey: ["breakdown", "company-year", preview, range.from, range.to, "project", "income"], enabled: live, queryFn: (q) => readBreakdown(range, "income", q) });
+  const expense = useQuery({ queryKey: ["breakdown", "company-year", preview, range.from, range.to, "project", "expense"], enabled: live, queryFn: (q) => readBreakdown(range, "expense", q) });
   const dashboard = useDashboardQuery(live);
   if (sample != null) {
     const given = sample.projects[year];

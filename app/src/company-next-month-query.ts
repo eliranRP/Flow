@@ -31,8 +31,8 @@ export function useCompanyProfitMonths(today: string, enabled: boolean, sample?:
   const read = useQuery({
     queryKey: ["profit-months", preview, "company", from, today],
     enabled: live,
-    queryFn: async (): Promise<ProfitMonths> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<ProfitMonths> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("get_profit_months", { p_from: from, p_to: today });
       if (error) throw error;
       return (await loadReadSchemas()).profitMonthsSchema.parse(data);

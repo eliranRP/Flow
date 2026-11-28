@@ -12,8 +12,8 @@ export function useTransferMatchCountQuery() {
   return useQuery({
     queryKey: ["transfer-match-count", preview],
     enabled: preview === "off",
-    queryFn: async (): Promise<number> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<number> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("count_transfer_matches", {});
       if (error) throw error;
       if (typeof data !== "number" || !Number.isInteger(data) || data < 0) throw new Error("count_transfer_matches");

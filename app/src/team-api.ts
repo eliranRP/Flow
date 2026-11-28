@@ -1,6 +1,7 @@
 import { createContext, createElement, useContext, type ReactNode } from "react";
 import { invokeEdge } from "./edge";
 import { getSupabase } from "./lib/supabase";
+import { signalled } from "./signalled";
 import { ROLE_CHOICE_LABEL } from "./ui/role-choice";
 import { assertNoError, isTransientWriteError, type WriteFailure } from "./use-write";
 import type { AcceptResult, InviteResult, MyCompanies, MyInvite, Team, TeamMember } from "./team-schemas";
@@ -34,14 +35,14 @@ export type TeamApi = {
   ready: () => boolean;
   /** An in-memory team (a story, a dev fixture) answers for this user without a session. */
   sampleUser?: string;
-  listMyCompanies: () => Promise<MyCompanies>;
+  listMyCompanies: (signal?: AbortSignal) => Promise<MyCompanies>;
   switchCompany: (companyId: string) => Promise<void>;
   listTeam: () => Promise<Team>;
   inviteMember: (email: string, role: MemberRole) => Promise<InviteResult>;
   cancelInvite: (inviteId: string) => Promise<void>;
   setMemberRole: (userId: string, role: MemberRole) => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
-  myInvites: () => Promise<MyInvite[]>;
+  myInvites: (signal?: AbortSignal) => Promise<MyInvite[]>;
   acceptInvite: (inviteId: string) => Promise<AcceptResult>;
   declineInvite: (inviteId: string) => Promise<void>;
   reopenInvite: (inviteId: string) => Promise<void>;
@@ -69,8 +70,8 @@ export const liveTeamApi: TeamApi = {
     const supabase = getSupabase();
     return supabase != null && typeof supabase.rpc === "function";
   },
-  listMyCompanies: async () => {
-    const result = await client().rpc("list_my_companies");
+  listMyCompanies: async (signal) => {
+    const result = await signalled(client().rpc("list_my_companies"), signal);
     assertNoError(result);
     // A missing payload is a user with no company yet, as a missing company row was before.
     return (await loadSchemas()).myCompaniesSchema.parse(result.data ?? { active_id: null, role: null, companies: [] });
@@ -101,8 +102,8 @@ export const liveTeamApi: TeamApi = {
   removeMember: async (userId) => {
     assertNoError(await client().rpc("remove_member", { p_user_id: userId }));
   },
-  myInvites: async () => {
-    const result = await client().rpc("my_invites");
+  myInvites: async (signal) => {
+    const result = await signalled(client().rpc("my_invites"), signal);
     assertNoError(result);
     return (await loadSchemas()).myInvitesSchema.parse(result.data ?? []);
   },

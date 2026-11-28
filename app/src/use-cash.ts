@@ -4,7 +4,7 @@ import { CASH_MONTHS, cashMonthKey, type CashListSide } from "./cash";
 import { loadReadSchemas } from "./load-read-schemas";
 import { israelToday } from "./ui/date-math";
 import { useHomePreview, type HomePreview } from "./preview";
-import { readyClient } from "./ready-client";
+import { readyClient, type Ctx } from "./ready-client";
 
 /**
  * FLOW-413. The cash reads (decision 0168). Their keys start with "dashboard" and
@@ -22,8 +22,8 @@ export function useCashMonthsQuery(active = true, months = CASH_MONTHS) {
 export function cashMonthsQueryOptions(preview: HomePreview, months: number) {
   return {
     queryKey: ["dashboard", "cash-months", preview, months],
-    queryFn: async (): Promise<CashMonths> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<CashMonths> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("cash_months", { p_months: months });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -35,8 +35,8 @@ export function cashMonthsQueryOptions(preview: HomePreview, months: number) {
 export function cashYearsQueryOptions(preview: HomePreview) {
   return {
     queryKey: ["dashboard", "cash-years", preview],
-    queryFn: async (): Promise<CashYears> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<CashYears> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("cash_years", {});
       if (error) throw error;
       return (await loadReadSchemas()).cashYearsSchema.parse(data);
@@ -53,8 +53,8 @@ export function useCashYearsQuery(active = true) {
 export function cashYearMonthsQueryOptions(preview: HomePreview, year: number) {
   return {
     queryKey: ["dashboard", "cash-year-months", preview, year],
-    queryFn: async (): Promise<CashMonths> => {
-      const supabase = await readyClient();
+    queryFn: async (q: Ctx): Promise<CashMonths> => {
+      const supabase = await readyClient(q);
       const { data, error } = await supabase.rpc("cash_year_months", { p_year: year });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
@@ -107,14 +107,14 @@ export function useCashLinesQuery(month: string, side: CashListSide, currency: s
       return first ? { pages: [first], pageParams: [0] } : undefined;
     } : undefined,
     initialPageParam: 0,
-    queryFn: async ({ pageParam }): Promise<CashLinesPage> => {
-      const supabase = await readyClient();
+    queryFn: async (q): Promise<CashLinesPage> => {
+      const supabase = await readyClient(q);
       const range = {
         p_month: `${month}-01`,
         p_side: side === "kept" ? "not_in_profit" : side,
         p_currency: currency,
         p_limit: pageSize,
-        p_offset: pageParam,
+        p_offset: q.pageParam,
       };
       const { data, error } = projectId == null
         ? await supabase.rpc("cash_month_lines", range)

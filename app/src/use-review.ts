@@ -2,6 +2,7 @@ import type { ReviewCursor, ReviewRow } from "@flow/shared";
 import { skipToken, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "./lib/supabase";
+import { signalled } from "./signalled";
 import { loadReadSchemas, preloadReadSchemas } from "./load-read-schemas";
 import { waitForAccessToken } from "./wait-for-session";
 import { useHomePreview } from "./preview";
@@ -191,10 +192,11 @@ async function readReviewPage(
   supabase: ScopeClient,
   preview: string,
   args: ReviewArgs,
+  signal?: AbortSignal,
 ) {
   // The query builder sends its request each time it is awaited: wrap it once, so the Jev prefetch and this
   // read share one request (they sent two, each a full page).
-  const listed = Promise.resolve(supabase.rpc("list_review_page", args));
+  const listed = Promise.resolve(signalled(supabase.rpc("list_review_page", args), signal));
   // FLOW-1297: the early starts (the scope, the connector, the queue) are Review's own, never a preview's.
   if (preview === "off" && typeof supabase.from === "function") {
     const lookup = beginJevScopeLookup();
@@ -238,7 +240,7 @@ function reviewQueryOptions(preview: string, project: string | null) {
   return {
     // A reviewListKey(...) call, not `key`: ledger-keys.test.ts reads each queryKey's text.
     queryKey: reviewListKey(preview, project),
-    queryFn: async ({ client }: { client: QueryClient }): Promise<ReviewRow[]> => {
+    queryFn: async ({ client, signal }: { client: QueryClient; signal: AbortSignal }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       // FLOW-1273: the schemas this answer is parsed with load beside the read, not after it.
@@ -259,7 +261,7 @@ function reviewQueryOptions(preview: string, project: string | null) {
           p_limit: Math.min(REVIEW_READ_MAX, Math.max(REVIEW_PAGE_SIZE, want - rows.length)),
           ...cursorArgs(next),
           ...(project == null ? {} : { p_project: project }),
-        });
+        }, signal);
         rows = mergePage(rows, page.items);
         next = page.next;
         total = page.total;
