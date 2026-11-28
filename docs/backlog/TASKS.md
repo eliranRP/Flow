@@ -751,6 +751,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-858"></a>[FLOW-858](tasks/FLOW-858.md) | The undo tool advertises every kind it accepts | SMALL CYCLE (infra) |
 | <a id="flow-859"></a>[FLOW-859](tasks/FLOW-859.md) | Undoing a recurring switch puts back the end date it cleared | BUG (low; a correctness gap after FLOW-1266) |
 | <a id="flow-861"></a>[FLOW-861](tasks/FLOW-861.md) | Four hunt patterns from the 2026-11 scans | SMALL CYCLE (docs) |
+| <a id="flow-862"></a>[FLOW-862](tasks/FLOW-862.md) | Kept reads are dropped for a company the user no longer belongs to | SMALL CYCLE (infra) |
 | <a id="flow-853"></a>[FLOW-853](tasks/FLOW-853.md) | The Storybook preview deploys with code from main only | SMALL CYCLE (infra) |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
