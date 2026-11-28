@@ -7,11 +7,11 @@ import { readyClient } from "./ready-client";
  * Home's דורש טיפול row (count_transfer_matches: the last 90 days). Its own small file, so Home's first
  * load takes neither the list's schema nor the screen's code. A failed read just hides the row.
  */
-export function useTransferMatchCountQuery() {
+export function useTransferMatchCountQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["transfer-match-count", preview],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<number> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("count_transfer_matches", {});

@@ -34,11 +34,11 @@ export function parseUtilityRefundCount(data: unknown): UtilityRefundCount {
  * FLOW-1135 (decision 0265): Home's "N חשבונות לא הוחזרו" row. Its own small file, so Home's first load takes
  * neither the list's schema nor the screen's code (as transfer-match-count.ts). A failed read just hides the row.
  */
-export function useUtilityRefundCountQuery() {
+export function useUtilityRefundCountQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["utility-refund-count", preview],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<UtilityRefundCount> => {
       const supabase = await readyClient();
       const { data, error } = await supabase.rpc("count_utility_refunds", {});
