@@ -396,7 +396,7 @@ select is(
      and has_function_privilege('authenticated', p.oid, 'execute')),
   array['active_company', 'can_read_thread_file', 'can_upload_thread_file', 'company_base_currency',
     'current_company_id', 'filed_today_rows', 'forecast_gather', 'is_read_only', 'line_cash_state',
-    'line_pnl_state', 'line_pnl_states', 'owner_company_id', 'readable_company_id', 'review_held_changes',
+    'line_pnl_state', 'line_pnl_states', 'owner_company_id', 'readable_company_id', 'review_forecast_matches', 'review_held_changes',
     'seed_default_categories', 'sumit_connection_rows'],
   'every definer in private that authenticated can execute is on its list'
 );
