@@ -4,5 +4,6 @@ packages:
 
 # FLOW-864: pnpm does not resolve a version published less than 3 days ago (in minutes), so a hijacked
 # release is usually pulled before an install or an update can pick it up. Installs from the lockfile
-# (--frozen-lockfile, as CI runs) resolve nothing and are not affected.
+# (--frozen-lockfile, as CI runs) resolve nothing and are not affected. A security fix that must land
+# sooner names its package in minimumReleaseAgeExclude, in its own PR, and drops it once 3 days pass.
 minimumReleaseAge: 4320
