@@ -2,6 +2,8 @@
 # Minor and patch bumps come grouped in one PR per ecosystem, so the agent lanes see one PR a week, not dozens.
 # Major bumps still open one PR each, since they can break the build. Security updates are not grouped.
 # The Deno edge functions (supabase/functions) are not covered: Dependabot has no Deno ecosystem.
+# FLOW-864: version updates wait 3 days after a release (cooldown), so a hijacked release is usually
+# pulled before it is proposed. Security updates are not delayed by the cooldown.
 
 version: 2
 updates:
@@ -13,6 +15,8 @@ updates:
       day: "sunday"
       timezone: "Asia/Jerusalem"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
     commit-message:
       prefix: "deps"
     groups:
@@ -30,6 +34,8 @@ updates:
       day: "sunday"
       timezone: "Asia/Jerusalem"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
     commit-message:
       prefix: "ci"
     groups:
