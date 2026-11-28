@@ -1,12 +1,13 @@
 -- FLOW-1037 (decision 0255). A recurring charge that moves to another payee: expected_months' handover
 -- leaves it out of this month, missing_bills does not call it late, and the owner's answer
 -- (answer_recurring_handover, mcp_answer_recurring_handover and its undo) ends the old charge and makes
--- the new one recurring, or brings the old one back. Invented data only. Amounts are agorot. "Today" is
+-- the new one recurring, or brings the old one back. FLOW-865: the undo puts back an end date the yes cleared.
+-- Invented data only. Amounts are agorot. "Today" is
 -- 2026-10-20.
 
 begin;
 
-select plan(41);
+select plan(46);
 
 do $users$
 begin
@@ -418,7 +419,53 @@ select is(
   'taken back, neither charge on the project keeps an override'
 );
 
--- 37-40. Who may answer, and another company's charge.
+-- 37-41. FLOW-865: a yes marks the new payee's charge recurring, which clears an end date that has passed; the
+-- undo (the yes taken back) puts it back, unless the owner wrote the charge's end date since. Taking the yes back
+-- also keeps the old charge's end date when it puts back the old charge's own "recurring". These end dates
+-- follow today, so they have always passed.
+create or replace function pg_temp.charge(p_party text)
+returns jsonb
+language sql
+as $$
+  select jsonb_build_object('recurring', o.recurring, 'ends_on', o.ends_on) from public.recurring_overrides o
+  where o.company_id = pg_temp.id('co') and o.party_id = pg_temp.id(p_party) and o.project_id = pg_temp.id('maple');
+$$;
+update public.recurring_overrides o set ends_on = current_date - 40
+where o.company_id = pg_temp.id('co') and o.party_id = pg_temp.id('summit') and o.project_id = pg_temp.id('maple');
+select pg_temp.as_mcp();
+insert into rh_out values ('end1', pg_temp.mcp_answer('rh-end-1', true));
+reset role;
+select is(pg_temp.charge('summit'), jsonb_build_object('recurring', true, 'ends_on', null),
+  'a yes makes the new charge recurring and clears its passed end date');
+select pg_temp.as_mcp();
+select is(public.mcp_undo('rh-undo-end-1', 'recurring_handover', pg_temp.write_of('end1')) ->> 'ok', 'true',
+  'undo the yes');
+reset role;
+select is(pg_temp.charge('summit'), jsonb_build_object('recurring', false, 'ends_on', current_date - 40),
+  'the undo puts back the new charge''s switch and the end date the yes cleared');
+select pg_temp.as_mcp();
+insert into rh_out values ('end2', pg_temp.mcp_answer('rh-end-2', true));
+reset role;
+select tests.authenticate_as('rh_owner');
+select public.set_payment_end(pg_temp.id('summit_maple_10'), null);
+reset role;
+select pg_temp.as_mcp();
+select public.mcp_undo('rh-undo-end-2', 'recurring_handover', pg_temp.write_of('end2'));
+reset role;
+select is(pg_temp.charge('summit'), jsonb_build_object('recurring', false, 'ends_on', null),
+  'an end date the owner cleared after the yes stays cleared after the undo');
+insert into public.recurring_overrides (company_id, direction, party_id, currency, project_id, recurring, ends_on)
+values (pg_temp.id('co'), 'expense', pg_temp.id('northgate'), 'ILS', pg_temp.id('maple'), true, current_date - 40)
+on conflict (company_id, direction, party_id, currency, project_id)
+do update set recurring = excluded.recurring, ends_on = excluded.ends_on;
+select pg_temp.as_mcp();
+insert into rh_out values ('end3', pg_temp.mcp_answer('rh-end-3', true));
+select public.mcp_undo('rh-undo-end-3', 'recurring_handover', pg_temp.write_of('end3'));
+reset role;
+select is(pg_temp.charge('northgate'), jsonb_build_object('recurring', true, 'ends_on', current_date - 40),
+  'taking the yes back puts back the old charge''s own "recurring" and keeps its end date');
+
+-- 42-45. Who may answer, and another company's charge.
 select tests.authenticate_as('rh_viewer');
 select throws_ok(
   format('select public.answer_recurring_handover(%L, %L, %L, %L, %L, true)', 'expense', pg_temp.id('northgate'), 'ILS',
@@ -447,7 +494,7 @@ select throws_ok(
   'a charge with no project has no handover to answer'
 );
 
--- 41. The answers are read and written only through the functions.
+-- 46. The answers are read and written only through the functions.
 select tests.clear_authentication();
 reset role;
 select ok(
