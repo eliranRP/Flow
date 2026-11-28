@@ -415,7 +415,7 @@ select is(
 -- that pass an argument through (category_rollup_rows, category_month_parents) are not served by the API.
 -- A new one, or a new overload, is added here in the change that grants it.
 select is(
-  (select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text), '{}')
+  (select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text collate "C"), '{}')
    from pg_proc p
    where p.pronamespace = 'private'::regnamespace
      and p.prosecdef
