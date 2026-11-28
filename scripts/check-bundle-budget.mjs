@@ -3,7 +3,8 @@
  *
  * - Home entry: the gzip size of the JavaScript and CSS that index.html loads before Home shows
  *   (its module scripts, module preloads and stylesheets).
- * - Total: the gzip size of every JavaScript file in the build.
+ * - Total: the gzip size of every JavaScript file in the build, printed for information only (the owner removed
+ *   its limit on 2026-11-28; the Home entry is the budget).
  *
  * Usage: node scripts/check-bundle-budget.mjs [dist]   (default app/dist)
  * Exit codes: 0 within budget, 1 over a limit, 2 no build to read.
@@ -55,8 +56,8 @@ export function measure(dist) {
 }
 
 /**
- * @param {{ entryGzip: number, totalJsGzip: number }} sizes
- * @param {{ homeEntryGzipKB: number, totalJsGzipKB: number }} budget
+ * @param {{ entryGzip: number }} sizes
+ * @param {{ homeEntryGzipKB: number }} budget
  * @returns {string[]} one line per limit passed
  */
 export function overBudget(sizes, budget) {
@@ -64,9 +65,6 @@ export function overBudget(sizes, budget) {
   const kb = (bytes) => (bytes / 1024).toFixed(1);
   if (sizes.entryGzip > budget.homeEntryGzipKB * 1024) {
     over.push(`Home entry is ${kb(sizes.entryGzip)} KB gzip, over its ${budget.homeEntryGzipKB} KB budget.`);
-  }
-  if (sizes.totalJsGzip > budget.totalJsGzipKB * 1024) {
-    over.push(`All JavaScript is ${kb(sizes.totalJsGzip)} KB gzip, over its ${budget.totalJsGzipKB} KB budget.`);
   }
   return over;
 }
@@ -82,7 +80,7 @@ function main() {
   for (const item of sizes.entry) console.log(`entry ${item.file} ${(item.gzip / 1024).toFixed(1)} KB gzip`);
   console.log(
     `Home entry ${(sizes.entryGzip / 1024).toFixed(1)} / ${budget.homeEntryGzipKB} KB gzip; ` +
-      `all JavaScript ${(sizes.totalJsGzip / 1024).toFixed(1)} / ${budget.totalJsGzipKB} KB gzip.`,
+      `all JavaScript ${(sizes.totalJsGzip / 1024).toFixed(1)} KB gzip (no limit).`,
   );
   const over = overBudget(sizes, budget);
   if (over.length > 0) {
