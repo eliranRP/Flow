@@ -11,6 +11,8 @@ const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   fail: null as { message: string; code?: string } | null,
   gate: null as Promise<void> | null,
+  /** FLOW-865: the line's charge is not recurring yet, and marking it recurring clears this end date. */
+  cleared: undefined as string | undefined,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -57,9 +59,9 @@ vi.mock("../lib/supabase", () => ({
           data: {
             transaction_id: "tx",
             party: { direction: "expense", id: "s1", name: "ספק חשמל לדוגמה", currency: "ILS" },
-            recurring: true,
+            recurring: rpc.cleared === undefined,
             override: null,
-            detected: true,
+            detected: rpc.cleared === undefined,
             typical_day: 4,
             typical_amount_minor: -185000,
             pace: "month",
@@ -69,6 +71,9 @@ vi.mock("../lib/supabase", () => ({
           },
           error: null,
         });
+      }
+      if (name === "set_payment_recurring") {
+        return Promise.resolve({ data: { prior_ends_on: rpc.cleared ?? null }, error: null });
       }
       if (name === "set_payment_pace") {
         const finish = () => ({ data: null, error: rpc.fail });
@@ -92,6 +97,7 @@ beforeEach(() => {
   rpc.calls.length = 0;
   rpc.fail = null;
   rpc.gate = null;
+  rpc.cleared = undefined;
 });
 
 // The first render of the screen in a file is a cold start (about 1.5s in jsdom: the first mount and the first
@@ -123,5 +129,24 @@ describe("the recurring row, live", () => {
     expect(await screen.findByText("לא הצלחנו לעדכן את השורה.")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "כל שנה" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "כל רבעון" })).toBeEnabled();
+  });
+
+  it("the ביטול of a mark-recurring sets the switch back and puts back the end date the switch cleared (FLOW-865)", async () => {
+    rpc.cleared = "2026-09-30";
+    showLive();
+    fireEvent.click(await screen.findByRole("button", { name: /לא קבוע/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "כל חודש" }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    await waitFor(() => {
+      expect(rpc.calls.filter((call) => call.name === "set_payment_end").map((call) => call.args)).toEqual([
+        { p_id: "tx", p_ends_on: "2026-09-30" },
+      ]);
+    });
+    expect(rpc.calls.filter((call) => call.name.startsWith("set_payment_")).map((call) => [call.name, call.args])).toEqual([
+      ["set_payment_recurring", { p_id: "tx", p_recurring: true }],
+      ["set_payment_pace", { p_id: "tx", p_pace: "month" }],
+      ["set_payment_recurring", { p_id: "tx", p_recurring: false }],
+      ["set_payment_end", { p_id: "tx", p_ends_on: "2026-09-30" }],
+    ]);
   });
 });

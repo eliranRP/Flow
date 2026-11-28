@@ -2,14 +2,14 @@
 -- a charge that is over, expected_months stops at the end date, the schedule says it, and set_payment_end and
 -- MCP set_line_end_date (undo line_end) write it. FLOW-859: the undo of a line_recurring write that cleared a
 -- passed end date puts it back, and set_payment_end and set_line_end_date refuse a viewer and another company's
--- line or project.
+-- line or project. FLOW-865: the undo leaves an end date the owner wrote (or cleared) after the write.
 -- Covers set_payment_recurring, mcp_set_line_recurring, mcp_undo, set_payment_end, mcp_set_line_end_date.
 -- Invented data only. Amounts are agorot. The reads take "today" 2026-10-20; the FLOW-859 dates follow
 -- current_date.
 
 begin;
 
-select plan(38);
+select plan(42);
 
 do $users$
 begin
@@ -254,6 +254,49 @@ select is(
    where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent')),
   jsonb_build_object('recurring', null, 'ends_on', current_date + 60),
   'an end date set after the write stays after the undo'
+);
+-- FLOW-865: an end date the owner clears after the write is their newer word too: the undo leaves it cleared,
+-- whether the owner cleared it in the app or through the MCP. A later pace is not an end-date word.
+delete from public.recurring_overrides where company_id = pg_temp.id('co');
+select pg_temp.ends('rent', current_date - 40);
+select pg_temp.as_mcp();
+select public.mcp_set_line_recurring('ed-rec-3', pg_temp.id('rent:2609'), true);
+reset role;
+select tests.authenticate_as('ed_owner');
+select public.set_payment_end(pg_temp.id('rent:2609'), current_date + 30);
+select public.set_payment_end(pg_temp.id('rent:2609'), null);
+reset role;
+select pg_temp.as_mcp();
+select is(public.mcp_undo('ed-undo-rec-3', 'line_recurring', pg_temp.id('rent:2609')) ->> 'ok', 'true',
+  'undo line_recurring after the owner cleared the end date');
+reset role;
+select is(
+  (select count(*) from public.recurring_overrides where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent'))::integer,
+  0,
+  'the switch goes back and the end date the owner cleared in the app stays cleared'
+);
+select pg_temp.ends('rent', current_date - 40);
+select pg_temp.as_mcp();
+select public.mcp_set_line_recurring('ed-rec-4', pg_temp.id('rent:2609'), true);
+select public.mcp_set_line_end_date('ed-end-4', pg_temp.id('rent:2609'), null);
+select public.mcp_undo('ed-undo-rec-4', 'line_recurring', pg_temp.id('rent:2609'));
+reset role;
+select is(
+  (select count(*) from public.recurring_overrides where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent'))::integer,
+  0,
+  'an end date cleared through the MCP after the write stays cleared too'
+);
+select pg_temp.ends('rent', current_date - 40);
+select pg_temp.as_mcp();
+select public.mcp_set_line_recurring('ed-rec-5', pg_temp.id('rent:2609'), true);
+select public.mcp_set_line_pace('ed-pace-5', pg_temp.id('rent:2609'), 'quarter');
+select public.mcp_undo('ed-undo-rec-5', 'line_recurring', pg_temp.id('rent:2609'));
+reset role;
+select is(
+  (select jsonb_build_object('recurring', recurring, 'pace', pace, 'ends_on', ends_on) from public.recurring_overrides
+   where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent')),
+  jsonb_build_object('recurring', null, 'pace', 'quarter', 'ends_on', current_date - 40),
+  'a pace set after the write is not an end-date word: the undo still puts back the end date'
 );
 -- The app's write says the end date it cleared, and null when it cleared none.
 delete from public.recurring_overrides where company_id = pg_temp.id('co');
