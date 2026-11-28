@@ -1,11 +1,15 @@
 -- FLOW-1266: a recurring charge can have an end date (recurring_overrides.ends_on). recurring_parties leaves out
 -- a charge that is over, expected_months stops at the end date, the schedule says it, and set_payment_end and
--- MCP set_line_end_date (undo line_end) write it.
--- Invented data only. Amounts are agorot. The reads take "today" 2026-10-20.
+-- MCP set_line_end_date (undo line_end) write it. FLOW-859: the undo of a line_recurring write that cleared a
+-- passed end date puts it back, and set_payment_end and set_line_end_date refuse a viewer and another company's
+-- line or project.
+-- Covers set_payment_recurring, mcp_set_line_recurring, mcp_undo, set_payment_end, mcp_set_line_end_date.
+-- Invented data only. Amounts are agorot. The reads take "today" 2026-10-20; the FLOW-859 dates follow
+-- current_date.
 
 begin;
 
-select plan(23);
+select plan(38);
 
 do $users$
 begin
@@ -210,6 +214,151 @@ select is(
   public.mcp_undo('ed-undo-2', 'line_end', pg_temp.id('rent:2609')) -> 'error' ->> 'code',
   'conflict',
   'undo after the end date changed again is a conflict'
+);
+reset role;
+
+-- 24-30. FLOW-859: marking a charge recurring again clears an end date that has passed; the undo puts it back.
+-- These dates follow today, so the end date has always passed.
+delete from public.recurring_overrides where company_id = pg_temp.id('co');
+select pg_temp.ends('rent', current_date - 40);
+select pg_temp.as_mcp();
+select is(
+  public.mcp_set_line_recurring('ed-rec-1', pg_temp.id('rent:2609'), true) -> 'data' ? 'prior_ends_on',
+  false,
+  'set_line_recurring answers as before: the end date it cleared stays in the undo log'
+);
+reset role;
+select is(
+  (select jsonb_build_object('recurring', recurring, 'ends_on', ends_on) from public.recurring_overrides
+   where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent')),
+  jsonb_build_object('recurring', true, 'ends_on', null),
+  'marking the ended charge recurring through the MCP clears its passed end date'
+);
+select pg_temp.as_mcp();
+select is(public.mcp_undo('ed-undo-rec-1', 'line_recurring', pg_temp.id('rent:2609')) ->> 'ok', 'true', 'undo line_recurring');
+reset role;
+select is(
+  (select jsonb_build_object('recurring', recurring, 'ends_on', ends_on) from public.recurring_overrides
+   where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent')),
+  jsonb_build_object('recurring', null, 'ends_on', current_date - 40),
+  'the undo puts back the switch and the end date the write cleared: the charge is ended again'
+);
+-- An end date set after the write is the owner's newer word: the undo leaves it.
+select pg_temp.as_mcp();
+select public.mcp_set_line_recurring('ed-rec-2', pg_temp.id('rent:2609'), true);
+select public.mcp_set_line_end_date('ed-end-3', pg_temp.id('rent:2609'), current_date + 60);
+select public.mcp_undo('ed-undo-rec-2', 'line_recurring', pg_temp.id('rent:2609'));
+reset role;
+select is(
+  (select jsonb_build_object('recurring', recurring, 'ends_on', ends_on) from public.recurring_overrides
+   where company_id = pg_temp.id('co') and party_id = pg_temp.id('rent')),
+  jsonb_build_object('recurring', null, 'ends_on', current_date + 60),
+  'an end date set after the write stays after the undo'
+);
+-- The app's write says the end date it cleared, and null when it cleared none.
+delete from public.recurring_overrides where company_id = pg_temp.id('co');
+select pg_temp.ends('rent', current_date - 40);
+select tests.authenticate_as('ed_owner');
+select is(
+  public.set_payment_recurring(pg_temp.id('rent:2609'), true) ->> 'prior_ends_on',
+  (current_date - 40)::text,
+  'set_payment_recurring returns prior_ends_on: the passed end date it cleared'
+);
+select is(
+  public.set_payment_recurring(pg_temp.id('rent:2609'), false) -> 'prior_ends_on',
+  'null'::jsonb,
+  'and null when it cleared none'
+);
+reset role;
+
+-- 31-38. Who may write an end date: a viewer is refused, and another company's line or project is refused.
+do $others$
+begin
+  perform tests.create_supabase_user('ed_viewer', 'ed-viewer@example.com');
+  perform tests.create_supabase_user('ed_other', 'ed-other@example.com');
+end
+$others$;
+insert into public.company_members (company_id, user_id, role)
+values (pg_temp.id('co'), tests.get_supabase_uid('ed_viewer'), 'viewer');
+insert into ed (label, id) values ('co_b', tests.fixture_company('ed_other', 'Example Other End Date LLC'));
+insert into ed (label, id) values ('b_proj', tests.fixture_project(pg_temp.id('co_b'), 'Example Other House'));
+insert into public.suppliers (company_id, name) values (pg_temp.id('co_b'), 'Example Other Rent');
+insert into ed (label, id)
+select 'b_line', tests.fixture_line(pg_temp.id('co_b'), 'ed:b-rent', 50000, 'expense', pg_temp.id('b_proj'), null,
+  current_date - 10);
+update public.transactions t set supplier_id = s.id
+from public.suppliers s
+where t.id = pg_temp.id('b_line') and s.company_id = pg_temp.id('co_b');
+insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
+values (tests.get_supabase_uid('ed_viewer'), pg_temp.id('co'), 'hash-ed-viewer', 'kid', array['read', 'write']::text[], '2099-01-01');
+insert into ed (label, id) select 'viewer_write', id from private.mcp_credentials where token_hash = 'hash-ed-viewer';
+delete from public.recurring_overrides where company_id = pg_temp.id('co');
+
+create or replace function pg_temp.as_mcp_of(p_user text, p_token text)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  uid uuid := tests.get_supabase_uid(p_user);
+  tid uuid;
+begin
+  select id into tid from pg_temp.ed where label = p_token;
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claim.sub', uid::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', uid, 'role', 'authenticated', 'aal', 'aal1', 'mcp_tid', tid)::text, true);
+end;
+$$;
+grant execute on function pg_temp.as_mcp_of(text, text) to authenticated, service_role;
+
+select tests.authenticate_as('ed_viewer');
+select throws_ok(
+  format('select public.set_payment_end(%L, %L)', pg_temp.id('rent:2609'), current_date + 30),
+  '42501', 'forbidden', 'set_payment_end refuses a viewer'
+);
+reset role;
+select pg_temp.as_mcp_of('ed_viewer', 'viewer_write');
+select is(
+  public.mcp_set_line_end_date('ed-v-1', pg_temp.id('rent:2609'), current_date + 30) -> 'error' ->> 'code',
+  'forbidden',
+  'set_line_end_date refuses a viewer'
+);
+reset role;
+select tests.authenticate_as('ed_owner');
+select throws_ok(
+  format('select public.set_payment_end(%L, %L)', pg_temp.id('b_line'), current_date + 30),
+  'P0001', 'transaction not found', 'set_payment_end refuses another company''s line'
+);
+select throws_ok(
+  format('select public.set_payment_end(%L, %L, %L)', pg_temp.id('rent:2609'), current_date + 30, pg_temp.id('b_proj')),
+  'P0001', 'validation', 'set_payment_end refuses another company''s project'
+);
+reset role;
+select pg_temp.as_mcp();
+select is(
+  public.mcp_set_line_end_date('ed-b-1', pg_temp.id('b_line'), current_date + 30) -> 'error',
+  jsonb_build_object('code', 'refused', 'message', 'transaction not found'),
+  'set_line_end_date refuses another company''s line'
+);
+select is(
+  public.mcp_set_line_end_date('ed-b-2', pg_temp.id('rent:2609'), current_date + 30, pg_temp.id('b_proj')) -> 'error' ->> 'code',
+  'refused',
+  'set_line_end_date refuses another company''s project'
+);
+reset role;
+select is(
+  (select count(*) from public.recurring_overrides where company_id in (pg_temp.id('co'), pg_temp.id('co_b')))::integer,
+  0,
+  'and none of the refused writes stored an end date'
+);
+-- The positive control: the owner's own line and charge, through the MCP.
+select pg_temp.as_mcp();
+select is(
+  public.mcp_set_line_end_date('ed-own-1', pg_temp.id('rent:2609'), current_date + 30) -> 'data' ->> 'ends_on',
+  (current_date + 30)::text,
+  'the owner sets the end date of their own line''s charge'
 );
 reset role;
 
