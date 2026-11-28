@@ -2,13 +2,16 @@
 -- TRUNCATE, TRIGGER or REFERENCES; anon executes nothing in public; role postgres's default
 -- privileges in public grant nothing to authenticated or anon; and every SECURITY DEFINER function
 -- in public that authenticated can execute is on the list below. A new client RPC is added to the
--- list in the same change that grants it; a revoked or dropped one leaves it. Invented data only.
+-- list in the same change that grants it; a revoked or dropped one leaves it. FLOW-860: no client
+-- role can insert, update or delete a table or view in public but the one column grant listed, and
+-- every SECURITY DEFINER function in private that authenticated can execute is on its own list (it
+-- is not served by the API, but invoker functions and policies run it as the caller). Invented data only.
 
 begin;
 
 set local search_path = public, extensions;
 
-select plan(16);
+select plan(18);
 
 create temp table pg_allowed (sig text primary key);
 insert into pg_allowed (sig) values
@@ -339,6 +342,20 @@ select is(
   '{}'::text[],
   'no table or view in public grants TRUNCATE, TRIGGER or REFERENCES to authenticated or anon'
 );
+-- FLOW-860: the clients write through functions only. The one grant left is a column-level
+-- UPDATE on companies (the company's own settings, under its RLS policy).
+select is(
+  (select coalesce(array_agg(c.relname || ':' || r.role || ':' || pr.priv order by 1), '{}')
+   from pg_class c
+   cross join (values ('authenticated'), ('anon')) r(role)
+   cross join (values ('INSERT'), ('UPDATE'), ('DELETE')) pr(priv)
+   where c.relnamespace = 'public'::regnamespace
+     and c.relkind in ('r', 'p', 'v', 'm', 'f')
+     and case when pr.priv = 'DELETE' then has_table_privilege(r.role, c.oid, pr.priv)
+              else has_any_column_privilege(r.role, c.oid, pr.priv) end),
+  array['companies:authenticated:UPDATE'],
+  'no client role can insert, update or delete a table or view in public, but the companies column update'
+);
 select is(
   (select coalesce(array_agg(privilege_type::text order by privilege_type), '{}')
    from information_schema.role_table_grants
@@ -369,6 +386,19 @@ select is(
    where d.sig not in (select sig from pg_allowed)),
   '{}'::text[],
   'every definer in public that authenticated can execute is on the allowlist'
+);
+-- FLOW-860: the private definers authenticated can execute. Each resolves the caller's company
+-- itself or runs as a trigger; a new one is added here in the change that grants it.
+select is(
+  (select coalesce(array_agg(distinct p.proname::text order by p.proname::text), '{}') from pg_proc p
+   where p.pronamespace = 'private'::regnamespace
+     and p.prosecdef
+     and has_function_privilege('authenticated', p.oid, 'execute')),
+  array['active_company', 'can_read_thread_file', 'can_upload_thread_file', 'company_base_currency',
+    'current_company_id', 'filed_today_rows', 'forecast_gather', 'is_read_only', 'line_cash_state',
+    'line_pnl_state', 'line_pnl_states', 'owner_company_id', 'readable_company_id', 'review_held_changes',
+    'seed_default_categories', 'sumit_connection_rows'],
+  'every definer in private that authenticated can execute is on its list'
 );
 select is(
   (select coalesce(array_agg(a.sig order by a.sig), '{}') from pg_allowed a
