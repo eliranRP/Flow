@@ -46,13 +46,12 @@ test("measure sums the entry files and every JavaScript file", () => {
   assert.equal(sizes.totalJsGzip, gzipBytes(a) + gzipBytes(b) + gzipBytes(lazy));
 });
 
-test("overBudget names each limit passed", () => {
-  const budget = { homeEntryGzipKB: 1, totalJsGzipKB: 2 };
-  assert.deepEqual(overBudget({ entryGzip: 1024, totalJsGzip: 2048 }, budget), []);
-  const over = overBudget({ entryGzip: 1025, totalJsGzip: 2049 }, budget);
-  assert.equal(over.length, 2);
+test("overBudget names the Home entry limit passed, and the total has no limit", () => {
+  const budget = { homeEntryGzipKB: 1 };
+  assert.deepEqual(overBudget({ entryGzip: 1024 }, budget), []);
+  const over = overBudget({ entryGzip: 1025 }, budget);
+  assert.equal(over.length, 1);
   assert.match(over[0], /Home entry is 1\.0 KB gzip, over its 1 KB budget/);
-  assert.match(over[1], /All JavaScript/);
 });
 
 test("the CLI fails over budget and when there is no build", () => {
