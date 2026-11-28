@@ -754,6 +754,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-860"></a>[FLOW-860](tasks/FLOW-860.md) | The privilege guards cover every client write grant and the private definers | SMALL CYCLE (infra) |
 | <a id="flow-861"></a>[FLOW-861](tasks/FLOW-861.md) | Four hunt patterns from the 2026-11 scans | SMALL CYCLE (docs) |
 | <a id="flow-862"></a>[FLOW-862](tasks/FLOW-862.md) | Kept reads are dropped for a company the user no longer belongs to | SMALL CYCLE (infra) |
+| <a id="flow-863"></a>[FLOW-863](tasks/FLOW-863.md) | The closed-books lock covers a category's rehab flag | SMALL CYCLE (infra) |
 | <a id="flow-864"></a>[FLOW-864](tasks/FLOW-864.md) | New dependency releases wait 3 days | SMALL CYCLE (infra) |
 | <a id="flow-853"></a>[FLOW-853](tasks/FLOW-853.md) | The Storybook preview deploys with code from main only | SMALL CYCLE (infra) |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
