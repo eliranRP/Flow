@@ -911,6 +911,11 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-1336"></a>[FLOW-1336](tasks/FLOW-1336.md) | Perf: room under the Home bundle budget | SMALL (perf, bundle) |
 | <a id="flow-1341"></a>[FLOW-1341](tasks/FLOW-1341.md) | Perf: a burst of skips reads once, and the device keeps the skipped figures | MEDIUM (perf) |
 | <a id="flow-1345"></a>[FLOW-1345](tasks/FLOW-1345.md) | Perf: a skip keeps the kept forecasts of the projects it did not change | SMALL (perf) |
+| <a id="flow-1346"></a>[FLOW-1346](tasks/FLOW-1346.md) | Perf: cold Home sends its first-view reads ahead of the rest under the four-read cap | SMALL (perf; part of FLOW-1300) |
+| <a id="flow-1347"></a>[FLOW-1347](tasks/FLOW-1347.md) | Perf: one read for Home's attention box instead of eight | MEDIUM (perf; owner's go needed) |
+| <a id="flow-1348"></a>[FLOW-1348](tasks/FLOW-1348.md) | Perf: the read queue drops reads nobody waits for, lets writes go first, and frees a hung request's slot | MEDIUM (perf; part of FLOW-1300) |
+| <a id="flow-1349"></a>[FLOW-1349](tasks/FLOW-1349.md) | Perf: the kept-reads sweep fills the index, so the company list answer stops reading the whole kept store | SMALL (perf) |
+| <a id="flow-1350"></a>[FLOW-1350](tasks/FLOW-1350.md) | Perf: the setup check remembers the server's answer, so a cold Home stops asking every time | SMALL (perf) |
 | <a id="flow-1021"></a>[FLOW-1021](tasks/FLOW-1021.md) | "N חיובים קבועים השתנו" opens a list of just the changed charges | BUG |
 | <a id="flow-1022"></a>[FLOW-1022](tasks/FLOW-1022.md) | The total-return card's ⓘ icons and amounts line up | BUG (SMALL UI) |
 | <a id="flow-999"></a>[FLOW-999](tasks/FLOW-999.md) | A search on the תוכנות ומנויים list | PLAN FIRST |
