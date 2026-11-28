@@ -13,7 +13,8 @@ import { keptRuleOf, type KeptRule } from "./kept-rules";
  * - Which reads: kept-rules.ts. Each is written after a successful read, a moment later, in one batch.
  * - Whose: every row names the user and the shown company it was read for. A row of another user or
  *   company is never put back (and is deleted); sign-out and a basis change drop every row; rows older
- *   than a week go; the store holds about 5 MB and drops the oldest rows first.
+ *   than a week go, a company shown or not; the store holds about 5 MB and drops the oldest rows first.
+ *   FLOW-862: the user's company list drops the rows of a company the user no longer belongs to.
  * - A put-back read keeps its real time as dataUpdatedAt (the offline line needs it) and is invalidated, so it is stale: the screen draws it and its query reads again at once.
  *   `useKeptState` says so while it is drawn.
  * - A rule may trim what it keeps (`save`, FLOW-1296): the trimmed data is what is stored and counted.
@@ -37,7 +38,7 @@ let checkedFor: string | null | undefined;
 const showing = new Set<string>();
 const pending = new Map<string, Omit<KeptRow, "version" | "size">>();
 const startedFor = new Map<string, string>();
-const index = new Map<string, { at: number; size: number }>();
+const index = new Map<string, { at: number; size: number; owner: string }>();
 /** The index holds every row of the store (the put-back has read them): a drop that matches none of them needs no store. */
 let indexed = false;
 
@@ -92,7 +93,7 @@ export function flushKeptReads(): Promise<unknown> {
       .filter((row) => row.owner === owner)
       .map((row) => ({ ...row, version: KEPT_VERSION, size: sizeOf(row.data) }));
     if (started !== generation || rows.length === 0) return;
-    for (const row of rows) index.set(row.id, { at: row.at, size: row.size });
+    for (const row of rows) index.set(row.id, { at: row.at, size: row.size, owner: row.owner });
     const evicted = overCap();
     await store.put(rows);
     if (evicted.length > 0) await store.remove(evicted);
@@ -103,29 +104,45 @@ function schedule(): void {
   timer ??= setTimeout(() => { void flushKeptReads(); }, FLUSH_MS);
 }
 
+/** The row's key and rule when it could be put back for its owner: a read on the list, under its key's hash, of this version and inside the week. */
+function soundRow(row: KeptRow, now: number): { key: QueryKey; rule: KeptRule } | null {
+  const key = parseKey(row.key);
+  const rule = key == null ? null : keptRuleOf(key);
+  if (key == null || rule == null || row.version !== KEPT_VERSION || now - row.at > KEPT_MAX_AGE_MS || hashKey(key) !== row.id) return null;
+  return { key, rule };
+}
+
+/** Drops every row of another user, and every row of this one that could not be put back (expired, of another version, off the list). */
+function sweepFor(userId: string, now: number): Promise<unknown> {
+  return enqueue(async () => {
+    const stale = (await store.all()).filter((row) => row.owner.split("|")[0] !== userId || soundRow(row, now) == null).map((row) => row.id);
+    for (const id of stale) index.delete(id);
+    if (stale.length > 0) await store.remove(stale);
+  });
+}
+
 /** Puts the kept reads of this user and company back in the cache, stale; drops the rows that do not belong or do not fit. Nothing is put back before its check. */
 export async function restoreKeptReads(client: QueryClient, now = Date.now()): Promise<void> {
-  const owner = ownerNow();
-  // No user and company yet (a signed-out start, a preview): nothing to put back, and the store is not opened.
+  const user = shownCompanyUser();
+  // No user yet (a signed-out start, a preview): nothing to put back, and the store is not opened.
   // The session, once known, drops the rows of everyone else (keepKeptReadsFor).
-  if (owner == null) return;
+  if (user == null) return;
+  const owner = ownerNow();
+  // FLOW-862: no company shown: nothing is put back, but the rows that could never be put back still go.
+  if (owner == null) { await sweepFor(user, now); return; }
   // The schemas load (one chunk, the slow part on a phone) beside the store's read; the app needs them for its first read anyway.
   const [rows, schemas] = await Promise.all([store.all(), loadReadSchemas().catch(() => null)]);
   const drop: string[] = [];
   const fits: Array<{ row: KeptRow; key: QueryKey; rule: KeptRule }> = [];
   for (const row of rows) {
-    const key = parseKey(row.key);
-    const rule = key == null ? null : keptRuleOf(key);
-    if (key != null && rule != null && row.owner === owner && row.version === KEPT_VERSION && now - row.at <= KEPT_MAX_AGE_MS && hashKey(key) === row.id) {
-      fits.push({ row, key, rule });
-    } else {
-      drop.push(row.id);
-    }
+    const sound = row.owner === owner ? soundRow(row, now) : null;
+    if (sound != null) fits.push({ row, ...sound });
+    else drop.push(row.id);
   }
   for (const { row, key, rule } of fits) {
+    index.set(row.id, { at: row.at, size: row.size, owner: row.owner });
     // The user or company changed while the rows were read: not these rows'. They stay in the store, and count in the cap.
-    if (ownerNow() !== owner) { index.set(row.id, { at: row.at, size: row.size }); continue; }
-    index.set(row.id, { at: row.at, size: row.size });
+    if (ownerNow() !== owner) continue;
     if (!rule.valid(schemas, toJson(row.data))) {
       // A schema that cannot load keeps the row for next time.
       if (schemas != null) { drop.push(row.id); index.delete(row.id); }
@@ -255,24 +272,44 @@ function isKept(query: Query): boolean {
   return showing.has(query.queryHash) && query.state.isInvalidated && query.state.data !== undefined;
 }
 
+/** The cache shows none of the kept reads it was given back. */
+function dropRestored(client: QueryClient): void {
+  const cache = client.getQueryCache();
+  for (const query of cache.findAll({ predicate: isKept })) cache.remove(query);
+  showing.clear();
+  restoredFor = null;
+}
+
 /**
  * The session is known: a load with no user, or another one than the reads were kept for, drops them (as the saved
- * role does, FLOW-603), and the cache shows none of them. The same user again does nothing.
+ * role does, FLOW-603), and the cache shows none of them. The same user again does nothing. The rows that could
+ * never be put back (expired, of another version) go too, whether a company is shown or not (FLOW-862).
  */
 export function keepKeptReadsFor(client: QueryClient, userId: string | null): Promise<unknown> {
-  if (restoredFor != null && restoredFor.split("|")[0] !== userId) {
-    const cache = client.getQueryCache();
-    for (const query of cache.findAll({ predicate: isKept })) cache.remove(query);
-    showing.clear();
-    restoredFor = null;
-  }
+  if (restoredFor != null && restoredFor.split("|")[0] !== userId) dropRestored(client);
   if (userId === checkedFor) return queue;
   checkedFor = userId;
   if (userId == null) return forgetKeptReads();
+  return sweepFor(userId, Date.now());
+}
+
+/**
+ * FLOW-862: the user's company list came in. The kept reads of a company not in it (the user was removed from it, or
+ * left) go: the stored rows, the ones still waiting for their write, and the cache's put-back of them. The rows of
+ * the listed companies stay, so a switch back still draws at once. Before the put-back has indexed the rows, they are read first.
+ */
+export function keepKeptCompaniesFor(client: QueryClient, userId: string, companyIds: readonly string[]): Promise<unknown> {
+  const listed = new Set(companyIds.map((id) => `${userId}|${id}`));
+  const gone = (owner: string): boolean => owner.split("|")[0] === userId && !listed.has(owner);
+  if (restoredFor != null && gone(restoredFor)) dropRestored(client);
+  for (const [hash, row] of pending) if (gone(row.owner)) pending.delete(hash);
   return enqueue(async () => {
-    const stale = (await store.all()).filter((row) => row.owner.split("|")[0] !== userId).map((row) => row.id);
-    for (const id of stale) index.delete(id);
-    if (stale.length > 0) await store.remove(stale);
+    const ids = indexed
+      ? [...index].filter(([, row]) => gone(row.owner)).map(([id]) => id)
+      : (await store.all()).filter((row) => gone(row.owner)).map((row) => row.id);
+    if (ids.length === 0) return;
+    for (const id of ids) index.delete(id);
+    await store.remove(ids);
   });
 }
 
