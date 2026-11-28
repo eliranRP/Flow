@@ -1,6 +1,6 @@
 <a id="flow-862"></a>
 # FLOW-862 · Kept reads are dropped for a company the user no longer belongs to
-- **Type:** SMALL CYCLE (infra) · **Status:** in-progress · **Source:** a review of the kept reads (FLOW-1267), 2026-11-28 (low severity: data kept on the device).
+- **Type:** SMALL CYCLE (infra) · **Status:** in-progress · **Source:** the weekly security scan, 2026-11-28 (a check of what the kept reads keep on the device, FLOW-1267) (low severity: data kept on the device).
 - **Files:** `app/src/kept-reads.ts` (`keepKeptCompaniesFor`, the sweep with no company shown), `app/src/team-queries.ts` (the company list calls it), `app/src/kept-reads.test.ts`, a changelog fragment.
 
 - [x] When the signed-in user's company list arrives, the kept rows of a company not in it go: the stored rows, the ones waiting for their write, and the cache's put-back of them. The rows of the listed companies stay, so a switch back still draws at once.
