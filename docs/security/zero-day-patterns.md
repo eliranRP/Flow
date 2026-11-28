@@ -126,28 +126,28 @@ How the agent uses this file ([runbook](../runbooks/security-scan.md#stage-2-cre
 - **Hunt:** revoke mid-flow in a local test (remove the member, revoke the token) and check what the next step still allows, and for how long.
 
 ### P20. A required gate that passes because its job was skipped
-- **Seen in:** GitHub's own guidance on required checks ("Troubleshooting required status checks": a check skipped by a path filter or a condition reports success); CI setups where a path rule left new kinds of files out of the full run.
-- **Pattern:** the gate is "the summary job is green", and the summary counts a skipped job as passed, so a change the rules don't recognise merges with less checking.
-- **In Flow:** the `changes` job's path rules in `.github/workflows/pr.yml`, the `pr` summary job, and `scripts/local-ci.sh`'s file lists.
-- **Hunt:** for every kind of file the app ships or runs, check which jobs its change triggers, and that the rules in CI and in the local gate agree. Add a test that fails when a shipped path falls through.
+- **Seen in:** GitHub's documentation, "Troubleshooting required status checks" (docs.github.com): a job skipped by a path filter or an `if:` condition reports success, so a required check can pass without running.
+- **Pattern:** the gate is "the summary job is green", and nothing makes sure every change that needs a job actually ran it.
+- **In Flow:** the `changes` job's path rules and the `pr` summary job in `.github/workflows/pr.yml`, and the file lists in `scripts/local-ci.sh`.
+- **Hunt:** for every kind of file the app ships or runs, check which jobs a change to it triggers, and that the summary fails when a needed job did not run. Check that the CI rules and the local gate agree, with a test that fails when a shipped path falls through.
 
 ### P21. A check that does not hold what it checked
-- **Seen in:** time-of-check to time-of-use races (CWE-367); PostgreSQL's "Transaction Isolation" chapter (under READ COMMITTED, each statement sees the rows committed before it starts, so a value read early can change before the write commits).
-- **Pattern:** a guard reads a setting with a plain read and lets the write through, while a concurrent change of that setting commits in between, so the write lands on the wrong side of the rule.
-- **In Flow:** guards that read a company-level setting before a write (the books-closed date, roles, locks); any "read, then decide, then write" in a SECURITY DEFINER function.
-- **Hunt:** for each guard, ask what holds the value it read until the write commits (`FOR SHARE` on the row, a constraint, or one statement). Check the lock order against the writer of the setting, so the two cannot deadlock without a retry.
+- **Seen in:** time-of-check to time-of-use races (MITRE CWE-367); PostgreSQL's documentation, "Transaction Isolation": under READ COMMITTED, each statement sees the rows committed before it starts, so a value read early can change before the write commits.
+- **Pattern:** a guard reads a setting with a plain read and lets a write through, while a concurrent change of that setting commits in between, so the write lands on the wrong side of the rule.
+- **In Flow:** any guard that reads a company-level setting before a write, and any "read, decide, write" in a function that runs with its owner's rights (SECURITY DEFINER).
+- **Hunt:** for each guard, ask what keeps the value it read from changing until the write commits: a row lock (`SELECT ... FOR SHARE`), a constraint, or doing it in one statement. Check the lock order against the writer of the setting, so the two cannot deadlock without a retry.
 
 ### P22. The advertised shape differs from the enforced one
-- **Seen in:** OWASP API Security Top 10 2023, API3 "Broken Object Property Level Authorization" and API8 "Security Misconfiguration": an API whose documented schema and server-side validation disagree.
-- **Pattern:** a client or agent validates against the published schema, the server against its own, and the two lists drift, so a valid call is refused or an unexpected one is accepted.
-- **In Flow:** flow-mcp's tool specs (`tools_specs.ts`) against the zod schemas (`tools_schemas.ts` and the tool files), and generated database types against the RPCs.
-- **Hunt:** for each enum, required key and range, check that the spec and the parser read one list. Add a test that compares them.
+- **Seen in:** OWASP API Security Top 10 2023, API3 "Broken Object Property Level Authorization" and API8 "Security Misconfiguration": an API whose published schema and server-side validation disagree.
+- **Pattern:** a client or agent validates against the published schema and the server against its own, and the two lists drift apart, so a valid call is refused or an unexpected one is accepted.
+- **In Flow:** flow-mcp's published tool specs (`supabase/functions/flow-mcp/tools_specs.ts`) and the argument parsers (`supabase/functions/flow-mcp/tools_schemas.ts` and the tool files); the generated database types against the RPCs.
+- **Hunt:** for each enum, required key and range, check that the spec and the parser read one shared list, and add a test that compares them.
 
 ### P23. A second code path skips the row filter
-- **Seen in:** PostgreSQL CVE-2026-120154 ("INSERT ... ON CONFLICT can read rows despite row security policies", November 2026): the conflict arm of an upsert did not apply the policy that a plain read would.
-- **Pattern:** the main path applies the filter, and an alternate path to the same rows (an upsert's conflict arm, a view, a function, a report) does not.
-- **In Flow:** row-level security on every table, client table grants (none should allow INSERT and UPDATE), definer upserts and their conflict keys, views and their `security_invoker` setting.
-- **Hunt:** list every path that reads or writes a table's rows and check that each applies the company filter. Pin client table grants in `privilege_guards.test.sql`, and check that each definer upsert's conflict key includes `company_id`.
+- **Seen in:** PostgreSQL CVE-2026-120154, "INSERT ... ON CONFLICT can read rows despite row security policies" (https://www.postgresql.org/support/security/CVE-2026-120154/, November 2026): the update branch of an upsert did not apply the policy that a plain read would.
+- **Pattern:** the main path to some rows applies the company filter, and another path to the same rows does not: an upsert's update branch, a view, a function or a report.
+- **In Flow:** row-level security on every table; the table grants client roles hold (none should allow both INSERT and UPDATE); upserts (`INSERT ... ON CONFLICT`) inside functions that run with their owner's rights; views, and whether each runs with the caller's rights (`security_invoker`).
+- **Hunt:** list every path that reads or writes a table's rows and check that each applies the company filter. Pin client table grants in `supabase/tests/database/privilege_guards.test.sql`, and check every upsert's conflict key and update branch for the company.
 
 ## Adding a pattern
 
