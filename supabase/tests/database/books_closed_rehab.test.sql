@@ -3,8 +3,10 @@
 -- the category's posted, paid expense lines filed to a project or shared to one by an allocation) is
 -- refused with the other settings' words (FLOW-1170). Allowed with no closed date; allowed when no line
 -- the change reaches is closed (open lines only, a line filed to no project, an unpaid invoice, an
--- income line); refused with the exact message when one is (a line filed to a project, a closed shared
--- cost's allocation, a closed line's split part); a change to the same value, or one that leaves the
+-- income line, a cost on the overhead project, a cost kept out of the cash view); refused with the
+-- exact message when one is (a line filed to a project, a part given its own project, a closed shared
+-- cost's allocation, a closed line's split part, a cash-off category's line with its own cash choice);
+-- a change to the same value, or one that leaves the
 -- category's rehab as it comes to, allowed; the undo refused; the service role allowed; the MCP envelope
 -- answers refused; company A's date never affects company B.
 -- Invented names and figures, @example.com only. Dates follow current_date.
@@ -12,7 +14,7 @@
 
 begin;
 
-select plan(26);
+select plan(32);
 
 do $users$
 begin
@@ -131,6 +133,12 @@ join (values ('owner', 'hash-br-owner-0001'), ('other', 'hash-br-other-0001')) v
 insert into br (label, id) values
   ('house', tests.fixture_project(pg_temp.id('co'), 'Example Cedar house')),
   ('studio', tests.fixture_project(pg_temp.id('co'), 'Example Cedar studio')),
+  ('office', tests.fixture_project(pg_temp.id('co'), 'Example Cedar office')),
+  ('overhead', tests.fixture_category(pg_temp.id('co'), 'Example office upkeep', 'expense')),
+  ('oh_part', tests.fixture_category(pg_temp.id('co'), 'Example office part', 'expense')),
+  ('cashoff', tests.fixture_category(pg_temp.id('co'), 'Example cash off', 'expense')),
+  ('explicit', tests.fixture_category(pg_temp.id('co'), 'Example own project part', 'expense')),
+  ('rest', tests.fixture_category(pg_temp.id('co'), 'Example rest part', 'expense')),
   ('reno', tests.fixture_category(pg_temp.id('co'), 'Example renovation', 'expense')),
   ('paint', tests.fixture_category(pg_temp.id('co'), 'Example paint', 'expense')),
   ('tools', tests.fixture_category(pg_temp.id('co'), 'Example tools', 'expense')),
@@ -159,6 +167,10 @@ insert into br (label, id) values
   ('s_split', pg_temp.line('co', 's-split', pg_temp.shut(), 'house', 'tools')),
   ('s_kept', pg_temp.line('co', 's-kept', pg_temp.shut(), 'house', 'kept')),
   ('s_sales', pg_temp.line('co', 's-sales', pg_temp.shut(), 'house', 'sales', 'income')),
+  ('s_office', pg_temp.line('co', 's-office', pg_temp.shut(), 'office', 'overhead')),
+  ('s_oh_split', pg_temp.line('co', 's-oh-split', pg_temp.shut(), null, 'rest')),
+  ('s_cashoff', pg_temp.line('co', 's-cashoff', pg_temp.shut(), 'house', 'cashoff')),
+  ('s_explicit', pg_temp.line('co', 's-explicit', pg_temp.shut(), null, 'rest')),
   ('bl_reno', pg_temp.line('co_b', 'b-reno', pg_temp.shut(), 'b_house', 'b_reno'));
 -- An invoice not paid yet; a shared cost, half on each project; a line split, one part filed to parts.
 update public.transactions set cash_date = null where id = pg_temp.id('s_unpaid');
@@ -172,6 +184,21 @@ select tests.line_split(pg_temp.id('s_split'), jsonb_build_array(
 select is(
   (select count(*)::integer from public.legs l where l.transaction_id = pg_temp.id('s_split') and l.category_id = pg_temp.id('parts')),
   1, 'the closed split line has a part filed to parts');
+-- Two closed lines filed to no project, each with one part given its own project: the house, and the
+-- office (the overhead project). A cost filed to the office. A category kept out of the cash view.
+select tests.line_split(pg_temp.id('s_explicit'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('explicit'), 'project_id', pg_temp.id('house'), 'amount_minor', 10000),
+  jsonb_build_object('category_id', pg_temp.id('rest'), 'amount_minor', 2345)));
+select tests.line_split(pg_temp.id('s_oh_split'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('oh_part'), 'project_id', pg_temp.id('office'), 'amount_minor', 10000),
+  jsonb_build_object('category_id', pg_temp.id('rest'), 'amount_minor', 2345)));
+select is(
+  (select count(*)::integer from public.legs l
+   where l.transaction_id in (pg_temp.id('s_explicit'), pg_temp.id('s_oh_split')) and l.project_explicit
+     and l.category_id in (pg_temp.id('explicit'), pg_temp.id('oh_part'))),
+  2, 'each of the two closed lines has a part on its own project');
+update public.companies set overhead_project_id = pg_temp.id('office') where id = pg_temp.id('co');
+update public.categories set in_cash = false where id = pg_temp.id('cashoff');
 
 -- ---------------------------------------------------------------------------------------------
 -- No closed date: the flag changes, through flow-mcp, so it has an undo.
@@ -203,6 +230,8 @@ select is(pg_temp.set_rehab('parts', false), pg_temp.msg(),
 select is(pg_temp.set_rehab('kept', true), pg_temp.msg(),
   'a kept-out category with a closed cost on a project cannot be added to rehab');
 select is(pg_temp.rehab('kept'), null::boolean, 'and it keeps the default');
+select is(pg_temp.set_rehab('explicit', false), pg_temp.msg(),
+  'a category whose closed part has its own project, on a line filed to none, is refused');
 
 -- ---------------------------------------------------------------------------------------------
 -- No line the change reaches is closed, or no line's rehab moves: allowed.
@@ -216,6 +245,16 @@ select is(pg_temp.set_rehab('shared', true), 'ok',
 select is(pg_temp.set_rehab('kept', false), 'ok',
   'a kept-out category is set to false, as its default already is');
 select is(pg_temp.set_rehab('shared', false), pg_temp.msg(), 'and then taken out of rehab, it is refused');
+select is(pg_temp.set_rehab('overhead', false), 'ok',
+  'a category whose closed cost is filed to the overhead project changes: overhead is not rehab');
+select is(pg_temp.set_rehab('oh_part', false), 'ok',
+  'and one whose closed part has the overhead project as its own');
+select is(pg_temp.set_rehab('cashoff', false), 'ok',
+  'a category kept out of the cash view changes: its closed cost is not in rehab');
+-- The closed line's own cash choice keeps it in the cash view, so it is in rehab again.
+update public.transactions set in_cash_override = true where id = pg_temp.id('s_cashoff');
+select is(pg_temp.set_rehab('cashoff', null), pg_temp.msg(),
+  'with the closed line''s own cash choice on, the cash-off category''s change is refused');
 
 -- ---------------------------------------------------------------------------------------------
 -- The service role (a sync or a job) is not refused.

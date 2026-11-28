@@ -9,17 +9,18 @@
 -- envelope as `refused`, so mcp_set_category_rehab and the category_rehab undo answer refused with no
 -- change of their own. The service role and a company with no closed date pass, as for the others.
 --
--- The lines a rehab change reaches are the category's parts as private.project_investment counts them
--- (it reads private.pnl_lines, the posted lines' item legs): an item leg filed to the category, not a
--- draft, of the expense kind, not unpaid (private.line_unpaid), and on a project: the leg's own project,
--- else the line's when the line is filed to one, or the line is a shared cost with an allocation. Of
--- those, only a part whose rehab the change turns (private.category_in_rehab before and after; the
--- default follows the P&L flag and the loan part) is counted, so setting true on a category counted by
--- default, or false on one left out by default, moves nothing and passes. The guard does not repeat the
--- cash view's test (a line kept out of the cash view is not in rehab): that test reads the line's own
--- cash choice and the category's cash flag, each guarded already, and leaving it out only refuses more.
--- A cost on the overhead project is counted as well, for the same reason. Index:
--- legs_company_id_category_id_fk_idx.
+-- The lines a rehab change reaches are exactly the category's parts that private.project_investment
+-- counts (20261113163849_get_project_speed.sql; it reads private.pnl_lines, the posted lines' item
+-- legs): an item leg filed to the category, not a draft, of the expense kind, not unpaid
+-- (private.line_unpaid); on a project that is not the company's overhead project (pnl_lines gives a
+-- cost there the role overhead, which project_investment leaves out): the leg's own project, else the
+-- line's when the line is filed to one; or the line is a shared cost with an allocation; and in the
+-- cash view as project_investment reads it: the line's own cash choice, else the category's cash flag
+-- (a guessed category does not take a line out; the category's flag is the row's current one, as a
+-- change of the cash flag is guarded on its own). Of those, only a part whose rehab the change turns
+-- (private.category_in_rehab before and after; the default follows the P&L flag and the loan part) is
+-- counted, so setting true on a category counted by default, or false on one left out by default,
+-- moves nothing and passes. Index: legs_company_id_category_id_fk_idx.
 --
 -- 1. private.books_closed_setting_guard: the category branch checks the existing three columns only
 --    when one of them changes (a rehab change alone would otherwise reach every line with no cash
@@ -107,8 +108,9 @@ $a$],
           and private.books_closed_hit(closed, t, null)
       );
     end if;
-    -- FLOW-863: the category's parts in a project's rehab, as private.project_investment counts them
-    -- (posted, paid expense parts on a project or shared to one), whose rehab the change turns.
+    -- FLOW-863: the category's parts in a project's rehab, exactly as private.project_investment counts
+    -- them (posted, paid expense parts in the cash view, on a project other than the overhead project
+    -- or shared to one), whose rehab the change turns.
     if not hit and new.rehab is distinct from old.rehab then
       hit := exists (
         select 1 from public.legs l
@@ -116,13 +118,22 @@ $a$],
         where l.company_id = cid and l.category_id = new.id and l.leg_kind = 'item' and not l.draft
           and coalesce(new.kind::text, t.direction::text) = 'expense'
           and not private.line_unpaid(t.direction, t.doc_kind, t.cash_date)
+          -- Not on the overhead project: pnl_lines gives that cost the role overhead.
           and case
             when l.project_explicit then l.project_id is not null
+              and l.project_id is distinct from (select co.overhead_project_id from public.companies co where co.id = cid)
             when t.pnl_role = 'project' then t.project_id is not null
+              and t.project_id is distinct from (select co.overhead_project_id from public.companies co where co.id = cid)
             when t.pnl_role = 'shared' then exists (
               select 1 from public.allocations a where a.company_id = cid and a.transaction_id = t.id)
             else false
           end
+          -- In the cash view, as project_investment reads it (decision 0170).
+          and coalesce(t.in_cash_override, not private.line_category_out(
+            new.in_cash is false,
+            t.category_suggested and l.category_id is not distinct from t.category_id,
+            l.part
+          ))
           and private.category_in_rehab(old.rehab, old.excluded_from_pnl, coalesce(old.loan_part, l.part))
             is distinct from private.category_in_rehab(new.rehab, new.excluded_from_pnl, coalesce(new.loan_part, l.part))
           and private.books_closed_hit(closed, t, null)
