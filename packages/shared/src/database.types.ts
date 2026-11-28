@@ -1241,13 +1241,13 @@ isOneToOne: false
                   ]
                 },"recurring_handovers": {
                   Row: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior": boolean | null,"pace_set": boolean,"party_id": string,"project_id": string,"same": boolean,"set_at": string,"set_by": string | null,"to_pace_prior": string | null,"to_party_id": string,"to_prior": boolean | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior": boolean | null,"pace_set": boolean,"party_id": string,"project_id": string,"same": boolean,"set_at": string,"set_by": string | null,"to_ends_on_prior": string | null,"to_pace_prior": string | null,"to_party_id": string,"to_prior": boolean | null
                   }
                   Insert: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id": string,"project_id": string,"same": boolean,"set_at"?: string,"set_by"?: string | null,"to_pace_prior"?: string | null,"to_party_id": string,"to_prior"?: boolean | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id": string,"project_id": string,"same": boolean,"set_at"?: string,"set_by"?: string | null,"to_ends_on_prior"?: string | null,"to_pace_prior"?: string | null,"to_party_id": string,"to_prior"?: boolean | null
                   }
                   Update: {
-                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id"?: string,"project_id"?: string,"same"?: boolean,"set_at"?: string,"set_by"?: string | null,"to_pace_prior"?: string | null,"to_party_id"?: string,"to_prior"?: boolean | null
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"from_prior"?: boolean | null,"pace_set"?: boolean,"party_id"?: string,"project_id"?: string,"same"?: boolean,"set_at"?: string,"set_by"?: string | null,"to_ends_on_prior"?: string | null,"to_pace_prior"?: string | null,"to_party_id"?: string,"to_prior"?: boolean | null
                   }
                   Relationships: [
                     {
@@ -1285,13 +1285,13 @@ isOneToOne: false
                   ]
                 },"recurring_overrides": {
                   Row: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"ends_on": string | null,"id": string,"pace": string | null,"party_id": string,"project_id": string | null,"recurring": boolean | null,"set_at": string,"set_by": string | null,"typical_amount_minor": number | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"ends_on": string | null,"ends_on_set_at": string | null,"id": string,"pace": string | null,"party_id": string,"project_id": string | null,"recurring": boolean | null,"set_at": string,"set_by": string | null,"typical_amount_minor": number | null
                   }
                   Insert: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"ends_on"?: string | null,"id"?: string,"pace"?: string | null,"party_id": string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"ends_on"?: string | null,"ends_on_set_at"?: string | null,"id"?: string,"pace"?: string | null,"party_id": string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
                   }
                   Update: {
-                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"ends_on"?: string | null,"id"?: string,"pace"?: string | null,"party_id"?: string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"ends_on"?: string | null,"ends_on_set_at"?: string | null,"id"?: string,"pace"?: string | null,"party_id"?: string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null,"typical_amount_minor"?: number | null
                   }
                   Relationships: [
                     {

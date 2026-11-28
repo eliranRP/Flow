@@ -28,7 +28,8 @@ const DEFAULT_PACE: RecurringPace = "month";
 /**
  * FLOW-366 (Lines.dc 113–140): the recurring row under the counted-in row, its pace sheet
  * (כל כמה זמן, with לא קבוע), and the party's history under it. The writes are the same as before:
- * set_payment_recurring, then set_payment_pace, each with an undo toast.
+ * set_payment_recurring, then set_payment_pace, each with an undo toast. The undo of a mark-recurring also
+ * puts back the end date the switch cleared (FLOW-865).
  */
 export function TxnRecurring({
   txn,
@@ -61,6 +62,8 @@ export function TxnRecurring({
   const [saving, setSaving] = useState<PaceChoice | null>(null);
   const paceRow = useRef<HTMLButtonElement>(null);
   const allRef = useRef<HTMLButtonElement>(null);
+  // FLOW-865: the end date the last write's switch cleared, which its ביטול puts back.
+  const cleared = useRef<string | null>(null);
   // A sample without its own recurring state: the line's party, not recurring yet.
   // FLOW-1137: while the read is out the row's value, hint and tag are skeletons, not "לא קבוע" as if read.
   const loading = sample === "loading" || (sample === undefined && recurringQuery.isPending && recurringQuery.fetchStatus !== "idle");
@@ -88,6 +91,7 @@ export function TxnRecurring({
       setSaving(null);
       done.close?.();
       if (done.undo) return;
+      const clearedEnd = cleared.current;
       toast.show({
         message: done.next === "never" ? "סומן כלא קבוע" : paceToast(done.next),
         action: "ביטול",
@@ -97,6 +101,7 @@ export function TxnRecurring({
             next: done.before.recurring ? done.before.pace : "never",
             before: { recurring: done.next !== "never", pace },
             undo: true,
+            clearedEnd,
           });
         },
       });
@@ -106,12 +111,13 @@ export function TxnRecurring({
     },
     run: async (change) => {
       if (sample !== undefined) {
+        cleared.current = null;
         setSampleState(change.next === "never" ? { recurring: false, pace: change.before.pace } : { recurring: true, pace: change.next });
         return;
       }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      await runPaceChange(supabase, change);
+      cleared.current = await runPaceChange(supabase, change);
     },
   });
 

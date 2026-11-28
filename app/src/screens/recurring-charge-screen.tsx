@@ -205,6 +205,8 @@ function ChargeBody({
   const [saving, setSaving] = useState<PaceChoice | null>(null);
   const paceRow = useRef<HTMLButtonElement>(null);
   const allRef = useRef<HTMLButtonElement>(null);
+  // FLOW-865: the end date the last write's switch cleared, which its ביטול puts back.
+  const cleared = useRef<string | null>(null);
   // A not-recurring pick leaves the page once its sheet has closed: a navigate during the close would
   // sit under the sheet's own history entry, and Back would return to the page.
   const leaving = useRef(false);
@@ -320,9 +322,10 @@ function ChargeBody({
       if (done.next === "never" && !done.undo) leaving.current = true;
       done.close?.();
       if (done.undo) return;
+      const clearedEnd = cleared.current;
       const message = done.toast ?? (done.next === "never" ? "סומן כלא קבוע" : paceToast(done.next));
       toast.show(topToast({ message, action: "ביטול", onAction: () => {
-        undoPace(done);
+        undoPace(done, clearedEnd);
       } }));
     },
     onError: () => {
@@ -330,20 +333,23 @@ function ChargeBody({
     },
     run: async (change) => {
       if (!live) {
+        cleared.current = null;
         setPaceLocal(change.next === "never" ? { recurring: false, pace: change.before.pace } : { recurring: true, pace: change.next });
         return;
       }
-      await runPaceChange(liveRpcClient(), change);
+      cleared.current = await runPaceChange(liveRpcClient(), change);
     },
   });
 
-  function undoPace(done: PaceChange) {
+  /** The toast's ביטול: the write back, with the end date the write's switch cleared (FLOW-865). */
+  function undoPace(done: PaceChange, clearedEnd: string | null) {
     write.mutate({
       id: done.id,
       projectId: done.projectId,
       next: done.before.recurring ? done.before.pace : "never",
       before: { recurring: done.next !== "never", pace },
       undo: true,
+      clearedEnd,
     });
   }
 
